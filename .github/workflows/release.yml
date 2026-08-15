@@ -319,7 +319,7 @@ jobs:
 
           appcast_arguments=(
             --ed-key-file -
-            --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
+            --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/"
             --link "https://crestbrowser.com/"
             --versions "$RELEASE_BUILD_NUMBER"
             --maximum-versions 0
@@ -332,6 +332,12 @@ jobs:
             | "$sparkle_root/bin/generate_appcast" \
                 "${appcast_arguments[@]}" \
                 "$feed_source"
+          expected_enclosure_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${RELEASE_ASSET_BASE}.dmg"
+          if ! rg --fixed-strings \
+            "url=\"${expected_enclosure_url}\"" "$feed_source/appcast.xml"; then
+            print -u2 "The generated appcast does not point to the release asset."
+            exit 1
+          fi
 
           git -C "$updates_checkout" init --initial-branch=updates
           git -C "$updates_checkout" remote add origin \
