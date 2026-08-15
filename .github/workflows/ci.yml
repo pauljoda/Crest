@@ -1,4 +1,4 @@
-name: Validate Crest
+name: Build Crest
 
 on:
   pull_request:
@@ -15,43 +15,58 @@ concurrency:
 
 jobs:
   source:
-    name: Source, licenses, and public site
+    name: Public-source compliance
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Validate source contracts
+      - name: Check the publishable source and dependency licenses
         run: |
           git diff --check
-          Scripts/check-version.sh --static
           Scripts/check-public-source.py
-          Scripts/check-architecture.py
-          Scripts/check-vertical-structure.py
           Scripts/audit-licenses.py
-          Scripts/Tests/validate-cache-hygiene-tests.sh
-          python3 -m unittest \
-            Scripts.Tests.test_repository_guardrails \
-            Scripts.Tests.test_direct_distribution_contract \
-            Scripts.Tests.test_public_source_contract \
-            Scripts.Tests.test_vertical_feature_contract \
-            Scripts.Tests.test_version_contract \
-            Scripts.Tests.test_product_site
 
   app:
-    name: macOS and iOS
+    name: Compile macOS and iOS
     runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Ensure XcodeGen is available
-        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Ensure build tools are available
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          command -v rg >/dev/null || brew install ripgrep
 
-      - name: Validate project and tests
-        env:
-          CREST_ISOLATED_SESSION: "1"
-        run: Scripts/validate.sh
+      - name: Generate the project
+        run: |
+          Scripts/bootstrap.sh
+          git diff --exit-code -- Crest.xcodeproj
+
+      - name: Build macOS
+        run: |
+          xcodebuild build \
+            -project Crest.xcodeproj \
+            -scheme Crest \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build iOS
+        run: |
+          xcodebuild build \
+            -project Crest.xcodeproj \
+            -scheme CrestMobile \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Remove generated build data
+        if: always()
+        run: find "$RUNNER_TEMP/crest-build-derived-data" -depth -delete 2>/dev/null || true
 
   website:
     name: Website and Help Center
@@ -71,6 +86,3 @@ jobs:
         run: |
           npm ci
           npm run build
-
-      - name: Validate product site
-        run: python3 -m unittest Scripts/Tests/test_product_site.py

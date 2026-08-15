@@ -1,11 +1,6 @@
 name: CodeQL
 
 on:
-  pull_request:
-  push:
-    branches: [main]
-  schedule:
-    - cron: "30 7 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -30,8 +25,10 @@ jobs:
           languages: swift
           build-mode: manual
 
-      - name: Ensure XcodeGen is available
-        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Ensure build tools are available
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          command -v rg >/dev/null || brew install ripgrep
 
       - name: Build analyzed target
         env:

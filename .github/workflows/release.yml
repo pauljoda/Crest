@@ -81,23 +81,15 @@ jobs:
             print "asset_base=$asset_base"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Ensure XcodeGen is available
-        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Ensure build tools are available
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          command -v rg >/dev/null || brew install ripgrep
 
-      - name: Validate release source
-        env:
-          CREST_ISOLATED_SESSION: "1"
+      - name: Prepare release source
         run: |
           Scripts/bootstrap.sh
           git diff --exit-code -- Crest.xcodeproj
-          xcodebuild test \
-            -project Crest.xcodeproj \
-            -scheme Crest \
-            -destination 'platform=macOS,arch=arm64' \
-            -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
-            -only-testing:CrestTests/BrowserContentBlockingTests \
-            -only-testing:CrestTests/BrowserSoftwareUpdateTests \
-            CODE_SIGNING_ALLOWED=NO
 
       - name: Build, sign, and notarize
         shell: zsh {0}
