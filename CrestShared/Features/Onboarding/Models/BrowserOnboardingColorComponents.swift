@@ -1,0 +1,3 @@
+import SwiftUI
+
+typealias BrowserOnboardingColorComponents = CrestColorComponents

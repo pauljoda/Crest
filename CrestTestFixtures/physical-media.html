@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crest Physical Media Fixture</title>
+  <style>
+    :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+    body { margin: 0; padding: 20px; background: #0c1020; color: #eef1ff; }
+    main { max-width: 680px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p { color: #aeb7d5; }
+    video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #070a13; border-radius: 14px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button { min-height: 44px; padding: 10px 14px; border: 1px solid #ffffff24; border-radius: 12px; background: #293355; color: inherit; font: inherit; }
+    #status { min-height: 24px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Crest Physical Media Fixture</h1>
+    <p>A focused, trusted-action proof for WebKit video and system Picture in Picture.</p>
+    <video id="video" src="sample.mp4" muted playsinline loop controls preload="metadata"></video>
+    <div class="controls">
+      <button id="play" aria-label="Crest Fixture Play">Play</button>
+      <button id="picture-in-picture" aria-label="Crest Fixture Picture in Picture">Picture in Picture</button>
+    </div>
+    <p id="status" role="status">Picture in Picture: ready</p>
+  </main>
+  <script>
+    const video = document.querySelector('#video');
+    const status = document.querySelector('#status');
+    const pictureInPictureButton = document.querySelector('#picture-in-picture');
+    const supportsWebKitPictureInPicture =
+      typeof video.webkitSupportsPresentationMode === 'function'
+      && video.webkitSupportsPresentationMode('picture-in-picture')
+      && typeof video.webkitSetPresentationMode === 'function';
+    const supportsStandardPictureInPicture =
+      typeof video.requestPictureInPicture === 'function';
+
+    function updatePictureInPictureButton(isPresenting) {
+      pictureInPictureButton.textContent = isPresenting
+        ? 'Exit Picture in Picture'
+        : 'Picture in Picture';
+      pictureInPictureButton.setAttribute(
+        'aria-label',
+        isPresenting
+          ? 'Crest Fixture Exit Picture in Picture'
+          : 'Crest Fixture Picture in Picture'
+      );
+    }
+
+    video.addEventListener('enterpictureinpicture', () => updatePictureInPictureButton(true));
+    video.addEventListener('leavepictureinpicture', () => updatePictureInPictureButton(false));
+    video.addEventListener('webkitpresentationmodechanged', () => {
+      const isPresenting = video.webkitPresentationMode === 'picture-in-picture';
+      updatePictureInPictureButton(isPresenting);
+      status.textContent = `Picture in Picture: ${video.webkitPresentationMode}`;
+    });
+
+    document.querySelector('#play').onclick = async () => {
+      try {
+        await video.play();
+        status.textContent = 'Picture in Picture: video playing';
+      } catch (error) {
+        status.textContent = `Picture in Picture play error: ${error.name} · ${error.message}`;
+      }
+    };
+
+    pictureInPictureButton.onclick = async () => {
+      try {
+        if (video.paused) {
+          status.textContent = 'Picture in Picture error: play the video first';
+          return;
+        }
+        if (supportsWebKitPictureInPicture) {
+          video.webkitSetPresentationMode(
+            video.webkitPresentationMode === 'picture-in-picture'
+              ? 'inline'
+              : 'picture-in-picture'
+          );
+          return;
+        }
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+          return;
+        }
+        if (supportsStandardPictureInPicture) {
+          await video.requestPictureInPicture();
+          return;
+        }
+        status.textContent = 'Picture in Picture error: unavailable';
+      } catch (error) {
+        status.textContent = `Picture in Picture error: ${error.name} · ${error.message}`;
+      }
+    };
+  </script>
+</body>
+</html>

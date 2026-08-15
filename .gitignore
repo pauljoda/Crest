@@ -1,0 +1,46 @@
+.DS_Store
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcshareddata/xcdebugger/
+*.moved-aside
+
+# Xcode products and diagnostics
+DerivedData/
+build/
+*.xcarchive
+*.xcresult
+*.xctestproducts
+*.dSYM
+*.dSYM.zip
+*.ipa
+*.p12
+*.p8
+*.mobileprovision
+*.provisionprofile
+
+# Swift package products
+.build/
+.swiftpm/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Local editor and coding-assistant state
+.claude/
+.codex/
+.cursor/
+.idea/
+.vscode/
+AGENT.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Language tool caches
+__pycache__/
+*.py[cod]

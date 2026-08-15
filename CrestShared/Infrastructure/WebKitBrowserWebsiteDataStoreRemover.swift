@@ -1,0 +1,116 @@
+import Foundation
+import WebKit
+
+@MainActor
+struct WebKitBrowserWebsiteDataStoreRemover: BrowserWebsiteDataStoreRemoving {
+    typealias IdentifierProvider = @MainActor () async -> [UUID]
+    typealias RemoveDataStore = @MainActor (UUID) async throws -> Void
+    typealias Sleep = @MainActor (Duration) async throws -> Void
+    typealias ClearDataStore = @MainActor (UUID) async throws -> Void
+    typealias CleanupMarker = @MainActor (UUID) -> Void
+
+    static let defaultRetryDelays: [Duration] = [
+        .milliseconds(125),
+        .milliseconds(250),
+        .milliseconds(500),
+        .seconds(1),
+        .seconds(2),
+        .seconds(4),
+    ]
+
+    private let retryDelays: [Duration]
+    private let identifierProvider: IdentifierProvider
+    private let removeDataStore: RemoveDataStore
+    private let sleep: Sleep
+    private let clearDataStore: ClearDataStore
+    private let recordDeferredCleanup: CleanupMarker
+    private let completeCleanup: CleanupMarker
+    private let acceptsClearedStoreFallback: Bool
+
+    init(
+        retryDelays: [Duration] = Self.defaultRetryDelays,
+        identifierProvider: @escaping IdentifierProvider = {
+            await WKWebsiteDataStore.allDataStoreIdentifiers
+        },
+        removeDataStore: @escaping RemoveDataStore = { identifier in
+            try await WKWebsiteDataStore.remove(forIdentifier: identifier)
+        },
+        sleep: @escaping Sleep = { duration in
+            try await Task.sleep(for: duration)
+        },
+        clearDataStore: @escaping ClearDataStore = { identifier in
+            try await Self.clearWebsiteData(for: identifier)
+        },
+        recordDeferredCleanup: @escaping CleanupMarker = { identifier in
+            BrowserDeferredWebsiteDataStoreCleanup.record(identifier)
+        },
+        completeCleanup: @escaping CleanupMarker = { identifier in
+            BrowserDeferredWebsiteDataStoreCleanup.markRemoved(identifier)
+        },
+        acceptsClearedStoreFallback: Bool = true
+    ) {
+        self.retryDelays = retryDelays
+        self.identifierProvider = identifierProvider
+        self.removeDataStore = removeDataStore
+        self.sleep = sleep
+        self.clearDataStore = clearDataStore
+        self.recordDeferredCleanup = recordDeferredCleanup
+        self.completeCleanup = completeCleanup
+        self.acceptsClearedStoreFallback = acceptsClearedStoreFallback
+    }
+
+    func removePersistentDataStore(for profile: BrowsingProfile) async throws {
+        var lastError: Error?
+        var clearedWebsiteData = false
+
+        for attempt in 0...retryDelays.count {
+            let identifiers = await identifierProvider()
+            guard identifiers.contains(profile.id) else {
+                completeCleanup(profile.id)
+                return
+            }
+
+            do {
+                try await removeDataStore(profile.id)
+                completeCleanup(profile.id)
+                return
+            } catch {
+                if !clearedWebsiteData {
+                    try await clearDataStore(profile.id)
+                    clearedWebsiteData = true
+                }
+                let remainingIdentifiers = await identifierProvider()
+                guard remainingIdentifiers.contains(profile.id) else {
+                    completeCleanup(profile.id)
+                    return
+                }
+                lastError = error
+                guard attempt < retryDelays.count else {
+                    break
+                }
+                try await sleep(retryDelays[attempt])
+            }
+        }
+
+        if clearedWebsiteData, acceptsClearedStoreFallback {
+            recordDeferredCleanup(profile.id)
+            return
+        }
+
+        if let lastError {
+            throw lastError
+        }
+    }
+
+    private static func clearWebsiteData(for identifier: UUID) async throws {
+        let dataStore = WKWebsiteDataStore(forIdentifier: identifier)
+        await withCheckedContinuation { continuation in
+            dataStore.removeData(
+                ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+                modifiedSince: .distantPast
+            ) {
+                continuation.resume()
+            }
+        }
+    }
+}

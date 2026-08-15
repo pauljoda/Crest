@@ -1,0 +1,61 @@
+import SwiftUI
+
+struct BrowserSitePermissionRecordRow: View {
+    let record: BrowserSitePermissionRecord
+    let permissionCenter: BrowserSitePermissionCenter
+
+    var body: some View {
+        HStack(spacing: CrestFormRowMetrics.contentSpacing) {
+            Image(systemName: record.permission.symbol)
+                .frame(width: BrowserPrivacySettingsLayout.permissionIconWidth)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
+                Text(record.origin.displayName)
+                    .lineLimit(1)
+                Text(record.displayLabel)
+                    .font(CrestTypography.metadata)
+                    .foregroundStyle(CrestColor.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: CrestSpacing.small)
+
+            Menu(record.decision.settingsLabel) {
+                Button("Allow") { set(.grantPersistently) }
+                Button("Block") { set(.denyPersistently) }
+                Divider()
+                Button("Ask Again", role: .destructive) {
+                    permissionCenter.reset(recordID: record.id)
+                }
+            }
+            .modifier(BrowserPlatformSitePermissionMenuModifier())
+            .accessibilityLabel(
+                "\(record.displayLabel) for \(record.origin.displayName)"
+            )
+            .accessibilityValue(record.decision.settingsLabel)
+        }
+        .frame(minHeight: CrestFormRowMetrics.minimumHeight)
+    }
+
+    private func set(_ decision: BrowserSitePermissionDecision) {
+        permissionCenter.setDecision(
+            decision,
+            for: record.permission,
+            origin: record.origin,
+            detail: record.detail,
+            in: record.spaceID
+        )
+    }
+}
+
+#Preview("Site Permission Row") {
+    Form {
+        BrowserSitePermissionRecordRow(
+            record: BrowserPrivacySettingsPreviewFixture.record,
+            permissionCenter:
+                BrowserPrivacySettingsPreviewFixture.permissionCenter
+        )
+    }
+}

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Crest Space Probe",
+  "description": "Auditable test extension for validating Space isolation.",
+  "version": "1.0.0",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://extension-probe.crest.test/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://extension-probe.crest.test/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_title": "Crest Space Probe"
+  },
+  "commands": {
+    "addSite": {
+      "suggested_key": {
+        "default": "Alt+Shift+A",
+        "mac": "Alt+Shift+A"
+      },
+      "description": "Add this site"
+    }
+  },
+  "options_ui": {
+    "page": "options/index.html"
+  }
+}

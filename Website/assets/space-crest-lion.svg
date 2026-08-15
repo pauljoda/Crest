@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" role="img" aria-labelledby="title desc">
+  <title id="title">Lion Space crest</title>
+  <desc id="desc">A quartered oxblood shield with a gold bend, laurel trim, and three crowns.</desc>
+  <defs>
+    <clipPath id="shield"><path d="M28 18h184v96c0 72-38 124-92 150-54-26-92-78-92-150z"/></clipPath>
+    <filter id="shadow" x="-30%" y="-20%" width="160%" height="170%"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#09060a" flood-opacity=".34"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <g clip-path="url(#shield)">
+      <path fill="#3c0e1a" d="M20 10h200v260H20z"/>
+      <path fill="#722030" d="M120 10h100v130H120zM20 140h100v130H20z"/>
+      <path fill="#c9a254" d="M-2 59 24 31l220 181-26 31z"/>
+    </g>
+    <path d="M28 18h184v96c0 72-38 124-92 150-54-26-92-78-92-150z" fill="none" stroke="#c9a254" stroke-width="8" stroke-linejoin="round"/>
+    <g fill="none" stroke="#c9a254" stroke-width="5" stroke-linecap="round">
+      <path d="M24 78C5 108 5 174 52 220M216 78c19 30 19 96-28 142"/>
+      <path d="m19 97-13-6m14 27-15-2m18 25-16 3m23 20-15 8m29 12-12 12m188-99 13-6m-14 27 15-2m-18 25 16 3m-23 20 15 8m-29 12 12 12"/>
+    </g>
+    <g fill="#f3d98b">
+      <path d="M100 105h40l-4 22h-32zm4-14 9 9 7-17 7 17 9-9 3 14h-38z"/>
+      <path d="M70 151h34l-4 19H74zm4-12 8 8 6-15 6 15 8-8 3 12H71z"/>
+      <path d="M136 151h34l-4 19h-26zm4-12 8 8 6-15 6 15 8-8 3 12h-34z"/>
+    </g>
+  </g>
+</svg>

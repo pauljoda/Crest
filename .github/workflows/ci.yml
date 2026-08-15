@@ -1,0 +1,76 @@
+name: Validate Crest
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    name: Source, licenses, and public site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate source contracts
+        run: |
+          git diff --check
+          Scripts/check-version.sh --static
+          Scripts/check-public-source.py
+          Scripts/check-architecture.py
+          Scripts/check-vertical-structure.py
+          Scripts/audit-licenses.py
+          Scripts/Tests/validate-cache-hygiene-tests.sh
+          python3 -m unittest \
+            Scripts.Tests.test_repository_guardrails \
+            Scripts.Tests.test_direct_distribution_contract \
+            Scripts.Tests.test_public_source_contract \
+            Scripts.Tests.test_vertical_feature_contract \
+            Scripts.Tests.test_version_contract \
+            Scripts.Tests.test_product_site
+
+  app:
+    name: macOS and iOS
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Ensure XcodeGen is available
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+
+      - name: Validate project and tests
+        env:
+          CREST_ISOLATED_SESSION: "1"
+        run: Scripts/validate.sh
+
+  website:
+    name: Website and Help Center
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: HelpCenter/package-lock.json
+
+      - name: Build Help Center
+        working-directory: HelpCenter
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate product site
+        run: python3 -m unittest Scripts/Tests/test_product_site.py

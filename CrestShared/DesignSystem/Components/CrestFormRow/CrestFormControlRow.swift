@@ -1,0 +1,52 @@
+import SwiftUI
+
+/// A labelled row with a distinct native control on its trailing edge.
+struct CrestFormControlRow<Control: View>: View {
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey?
+    let systemImage: String
+    var tint: Color = CrestBrandTheme.accent
+    @ViewBuilder let control: () -> Control
+
+    init(
+        _ title: LocalizedStringKey,
+        subtitle: LocalizedStringKey? = nil,
+        systemImage: String,
+        tint: Color = CrestBrandTheme.accent,
+        @ViewBuilder control: @escaping () -> Control
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.systemImage = systemImage
+        self.tint = tint
+        self.control = control
+    }
+
+    var body: some View {
+        HStack(spacing: CrestFormRowMetrics.contentSpacing) {
+            CrestFormRowLabel(
+                title: title,
+                subtitle: subtitle,
+                systemImage: systemImage,
+                tint: tint
+            )
+            Spacer(minLength: CrestSpacing.small)
+            control()
+        }
+        .frame(minHeight: CrestFormRowMetrics.minimumHeight)
+    }
+}
+
+#Preview("Form Control Row") {
+    Form {
+        CrestFormControlRow(
+            "Block Trackers",
+            subtitle: "Apply protection in this Space",
+            systemImage: "shield.lefthalf.filled"
+        ) {
+            Toggle("Block Trackers", isOn: .constant(true))
+                .labelsHidden()
+        }
+    }
+    .formStyle(.grouped)
+}

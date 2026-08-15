@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Media Permission Probe</title>
+</head>
+<body>
+  <main>
+    <h1>Media Permission Probe</h1>
+    <button id="camera" type="button">Request Camera</button>
+    <button id="microphone" type="button">Request Microphone</button>
+    <p id="status" aria-live="polite">Ready</p>
+  </main>
+  <script>
+    async function requestMedia(constraints, label) {
+      const status = document.querySelector("#status");
+      status.textContent = `Requesting ${label}`;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        status.textContent = `${label} granted`;
+        stream.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        status.textContent = `${label} denied: ${error.name} — ${error.message}`;
+      }
+    }
+
+    document.querySelector("#camera").addEventListener("click", () => {
+      requestMedia({ video: true }, "Camera");
+    });
+    document.querySelector("#microphone").addEventListener("click", () => {
+      requestMedia({ audio: true }, "Microphone");
+    });
+  </script>
+</body>
+</html>

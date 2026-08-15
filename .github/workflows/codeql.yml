@@ -1,0 +1,54 @@
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    name: Swift security analysis
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@faaa5d804fc648d0fdb28822a8e36cf7d0a6132c # v4.37.7
+        with:
+          languages: swift
+          build-mode: manual
+
+      - name: Ensure XcodeGen is available
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+
+      - name: Build analyzed target
+        env:
+          CREST_ISOLATED_SESSION: "1"
+        run: |
+          Scripts/bootstrap.sh
+          xcodebuild build \
+            -project Crest.xcodeproj \
+            -scheme Crest \
+            -configuration Debug \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/crest-codeql-derived-data" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@faaa5d804fc648d0fdb28822a8e36cf7d0a6132c # v4.37.7
+
+      - name: Remove generated build data
+        if: always()
+        run: find "$RUNNER_TEMP/crest-codeql-derived-data" -depth -delete 2>/dev/null || true

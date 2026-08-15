@@ -1,0 +1,38 @@
+{
+  "runtimeDependencies": [
+    {
+      "identity": "sparkle",
+      "name": "Sparkle",
+      "version": "2.9.5",
+      "license": "MIT",
+      "notice": "ThirdParty/Sparkle-LICENSE.txt"
+    }
+  ],
+  "developmentTools": {
+    "Periphery": "MIT",
+    "XcodeGen": "MIT"
+  },
+  "workflowActionRepositories": {
+    "actions/attest": "MIT",
+    "actions/checkout": "MIT",
+    "actions/configure-pages": "MIT",
+    "actions/deploy-pages": "MIT",
+    "actions/setup-node": "MIT",
+    "actions/upload-pages-artifact": "MIT",
+    "github/codeql-action": "MIT source; CodeQL CLI terms"
+  },
+  "helpCenterDirectDependencies": {
+    "@docusaurus/core": "MIT",
+    "@docusaurus/preset-classic": "MIT",
+    "@mdx-js/react": "MIT",
+    "clsx": "MIT",
+    "prism-react-renderer": "MIT",
+    "react": "MIT",
+    "react-dom": "MIT"
+  },
+  "knownNpmLicenseMetadataExceptions": {
+    "eval": "MIT",
+    "format": "MIT",
+    "require-like": "MIT"
+  }
+}

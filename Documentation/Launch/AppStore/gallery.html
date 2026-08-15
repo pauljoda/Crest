@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crest App Store gallery</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #101827;
+      --ink-raised: #18243a;
+      --paper: #fffaf0;
+      --parchment: #eee3cc;
+      --gold: #d2ad58;
+      --coral: #dc5b47;
+      --sky: #78a9c7;
+      --sage: #738d72;
+      --display: "Iowan Old Style", Baskerville, "Palatino Linotype", Georgia, serif;
+      --sans: "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; background: #05070b; }
+    body { color: var(--paper); font-family: var(--sans); }
+
+    .slide {
+      --field: #0d2034;
+      --accent: #37699e;
+      --charge: #bd8e27;
+      position: relative;
+      display: none;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 28%),
+        linear-gradient(118deg, #101827 0 58%, #151d30 58% 100%);
+    }
+
+    .slide.is-active { display: block; }
+
+    .slide::before {
+      position: absolute;
+      z-index: -3;
+      inset: 0;
+      content: "";
+      opacity: .28;
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      background-size: 78px 78px;
+      mask-image: linear-gradient(90deg, black, transparent 76%);
+    }
+
+    .standard {
+      position: absolute;
+      z-index: -2;
+      right: -13%;
+      bottom: -8%;
+      width: 82%;
+      height: 58%;
+      opacity: .82;
+      background:
+        linear-gradient(158deg, transparent 0 48%, rgba(255,255,255,.08) 48% 50%, transparent 50%),
+        linear-gradient(155deg, var(--field) 0 42%, var(--accent) 42% 67%, var(--charge) 67% 100%);
+      clip-path: polygon(0 0, 100% 0, 100% 90%, 50% 100%, 0 90%);
+      filter: saturate(.92);
+    }
+
+    .rule {
+      position: absolute;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 16px;
+      background: linear-gradient(90deg, var(--coral) 0 18%, var(--gold) 18% 49%, var(--sky) 49% 74%, var(--sage) 74%);
+    }
+
+    .brand {
+      position: absolute;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand img {
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 28px rgba(0,0,0,.45));
+    }
+
+    .brand span, .eyebrow, .index, .capture-note {
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .copy { position: absolute; z-index: 4; }
+    h1, p { margin: 0; }
+    h1 {
+      color: var(--paper);
+      font-family: var(--display);
+      font-weight: 400;
+      letter-spacing: -.055em;
+      line-height: .88;
+      text-wrap: balance;
+    }
+    .eyebrow { color: var(--gold); }
+    .lede { color: rgba(255,250,240,.72); line-height: 1.42; text-wrap: balance; }
+    .index { position: absolute; z-index: 4; color: rgba(255,250,240,.34); }
+
+    .device {
+      position: absolute;
+      z-index: 3;
+      overflow: hidden;
+      background: #050607;
+      border: 2px solid rgba(255,255,255,.2);
+      box-shadow:
+        0 70px 180px rgba(0,0,0,.66),
+        0 0 0 14px rgba(255,255,255,.018);
+    }
+
+    .device img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    .device.contain img { object-fit: contain; background: #111725; }
+    .capture-note {
+      position: absolute;
+      z-index: 5;
+      color: rgba(255,250,240,.56);
+    }
+
+    .iphone-slide { width: 1242px; height: 2688px; }
+    .iphone-slide .brand { top: 66px; left: 76px; }
+    .iphone-slide .brand img { width: 58px; height: 58px; }
+    .iphone-slide .brand span { font: 700 30px/1 var(--display); letter-spacing: .025em; text-transform: none; }
+    .iphone-slide .copy { top: 190px; left: 76px; width: 1090px; }
+    .iphone-slide .eyebrow { margin-bottom: 28px; font-size: 23px; }
+    .iphone-slide h1 { max-width: 1080px; font-size: 114px; }
+    .iphone-slide .lede { max-width: 1030px; margin-top: 36px; font-size: 39px; }
+    .iphone-slide .index { top: 82px; right: 76px; font-size: 22px; }
+    .iphone-slide .device {
+      top: 760px;
+      left: 181px;
+      width: 880px;
+      height: 1912px;
+      border-radius: 112px 112px 0 0;
+    }
+    .iphone-slide .capture-note { right: 62px; bottom: 36px; font-size: 18px; }
+
+    .ipad-slide { width: 2064px; height: 2752px; }
+    .ipad-slide .brand { top: 86px; left: 104px; }
+    .ipad-slide .brand img { width: 72px; height: 72px; }
+    .ipad-slide .brand span { font: 700 38px/1 var(--display); letter-spacing: .025em; text-transform: none; }
+    .ipad-slide .copy { top: 260px; left: 104px; width: 1856px; }
+    .ipad-slide .eyebrow { margin-bottom: 38px; font-size: 31px; }
+    .ipad-slide h1 { max-width: 1770px; font-size: 166px; }
+    .ipad-slide .lede { max-width: 1600px; margin-top: 42px; font-size: 50px; }
+    .ipad-slide .index { top: 112px; right: 104px; font-size: 28px; }
+    .ipad-slide .device {
+      top: 1260px;
+      left: 100px;
+      width: 1864px;
+      height: 1398px;
+      border-radius: 72px;
+    }
+    .ipad-slide .device img { background: var(--ink); object-fit: contain; }
+    .ipad-slide .capture-note { right: 86px; bottom: 38px; font-size: 21px; }
+
+    @media screen {
+      body:not(.capture-mode) { padding: 24px; }
+      body:not(.capture-mode) .slide.is-active { transform-origin: top left; }
+    }
+  </style>
+</head>
+<body class="capture-mode">
+  <main id="gallery"></main>
+  <script>
+    const assets = "../../../Website/assets/";
+    const logo = `${assets}crest-logo.svg`;
+
+    const slides = [
+      {
+        id: "iphone-01", kind: "iphone", eyebrow: "Spaces, properly separated",
+        title: "Every Space is its own browser.",
+        lede: "Tabs, history, cookies, passwords, permissions, and website data move together—and stay apart.",
+        image: "crest-work-iphone-sidebar-2026.png", palette: ["#0d2034", "#37699e", "#bd8e27"]
+      },
+      {
+        id: "iphone-02", kind: "iphone", eyebrow: "Native on iPhone",
+        title: "The page stays primary.",
+        lede: "Compact chrome keeps browsing full-screen. Your complete sidebar is one gesture away.",
+        image: "crest-work-iphone-2026.png", palette: ["#0d2034", "#37699e", "#bd8e27"]
+      },
+      {
+        id: "iphone-03", kind: "iphone", eyebrow: "Space Forge",
+        title: "Make every Space unmistakable.",
+        lede: "Choose a crest, palette, and banner—or keep things quiet with a traditional gradient.",
+        image: "crest-spaces-iphone-2026.png", palette: ["#2b2034", "#dc5b47", "#d2ad58"]
+      },
+      {
+        id: "iphone-04", kind: "iphone", eyebrow: "A whole context moves",
+        title: "Move between worlds.",
+        lede: "Work, personal life, and private browsing keep their own identity, accounts, and data.",
+        image: "crest-personal-iphone.png", palette: ["#345738", "#738d72", "#dc5b47"]
+      },
+      {
+        id: "iphone-05", kind: "iphone", eyebrow: "A calmer sidebar",
+        title: "Tabs that stay organized.",
+        lede: "Favorites, saved folders, pinned pages, and today’s tabs live in one focused place.",
+        image: "crest-work-iphone.png", palette: ["#0d2034", "#37699e", "#bd8e27"]
+      },
+      {
+        id: "iphone-06", kind: "iphone", eyebrow: "Privacy by architecture",
+        title: "The boundary is the feature.",
+        lede: "A Space changes the visual standard because the browser underneath it changed too.",
+        image: "crest-personal-iphone.png", palette: ["#345738", "#b5a381", "#b83b2d"]
+      },
+
+      {
+        id: "ipad-01", kind: "ipad", eyebrow: "Crest for iPad",
+        title: "One browser. Two calm panes.",
+        lede: "The sidebar stays beside the page, so projects and tabs remain visible without crowding the web.",
+        image: "crest-work-ipad-2026.png", palette: ["#0d2034", "#37699e", "#bd8e27"]
+      },
+      {
+        id: "ipad-02", kind: "ipad", eyebrow: "Spaces, properly separated",
+        title: "Work and personal stay apart.",
+        lede: "Switch the Space and the entire browser context changes with it—visibly and structurally.",
+        image: "crest-personal-ipad.png", palette: ["#345738", "#738d72", "#dc5b47"]
+      },
+      {
+        id: "ipad-03", kind: "ipad", eyebrow: "Space Forge",
+        title: "Make every Space unmistakable.",
+        lede: "Native settings pair a live sidebar preview with the identity, palette, and appearance controls it owns.",
+        image: "crest-spaces-ipad-2026.png", palette: ["#2b2034", "#dc5b47", "#d2ad58"]
+      },
+      {
+        id: "ipad-04", kind: "ipad", eyebrow: "A calmer sidebar",
+        title: "Your projects stay in sight.",
+        lede: "Favorites, folders, saved tabs, and current tabs remain one glance from the page.",
+        image: "crest-work-ipad.png", palette: ["#0d2034", "#37699e", "#bd8e27"]
+      },
+      {
+        id: "ipad-05", kind: "ipad", eyebrow: "A whole browser moves",
+        title: "Identity carries the boundary.",
+        lede: "The crest and banner tell you immediately which accounts, history, passwords, and permissions are active.",
+        image: "crest-personal-ipad.png", palette: ["#345738", "#b5a381", "#b83b2d"]
+      },
+      {
+        id: "ipad-06", kind: "ipad", eyebrow: "Native on every screen",
+        title: "Designed for the screen in your hands.",
+        lede: "Crest adapts the same Space model to iPad instead of stretching a desktop browser over touch.",
+        image: "crest-work-ipad-2026.png", palette: ["#0d2034", "#37699e", "#bd8e27"]
+      }
+    ];
+
+    const requested = new URLSearchParams(location.search).get("slide") ?? slides[0].id;
+    const gallery = document.querySelector("#gallery");
+
+    for (const [position, slide] of slides.entries()) {
+      const section = document.createElement("section");
+      section.id = slide.id;
+      section.className = `slide ${slide.kind}-slide${slide.id === requested ? " is-active" : ""}`;
+      section.style.setProperty("--field", slide.palette[0]);
+      section.style.setProperty("--accent", slide.palette[1]);
+      section.style.setProperty("--charge", slide.palette[2]);
+      const ordinal = String(position % 6 + 1).padStart(2, "0");
+      section.innerHTML = `
+        <div class="rule"></div>
+        <div class="standard" aria-hidden="true"></div>
+        <div class="brand"><img src="${logo}" alt=""><span>Crest</span></div>
+        <p class="index">${ordinal} / 06</p>
+        <div class="copy" data-copy>
+          <p class="eyebrow">${slide.eyebrow}</p>
+          <h1>${slide.title}</h1>
+          <p class="lede">${slide.lede}</p>
+        </div>
+        <figure class="device${slide.contain ? " contain" : ""}">
+          <img src="${assets}${slide.image}" alt="Real Crest interface capture">
+        </figure>
+      `;
+      gallery.append(section);
+    }
+  </script>
+</body>
+</html>

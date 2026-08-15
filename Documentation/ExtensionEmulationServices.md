@@ -1,0 +1,194 @@
+# Extension emulation services
+
+WebKit fixes the JavaScript surface `WKWebExtension` exposes. Namespaces Chrome
+extensions expect but WebKit does not implement — `notifications`, `history`,
+`topSites`, `identity`, `omnibox` — can only be offered by prepending a polyfill
+to an extension's background scripts and bridging its calls to the app over the
+existing native-messaging delegate path.
+
+This document describes the **app-side services** that bridge binds to. The
+polyfills and the bridge itself are separate work; nothing here imports WebKit
+or knows that an extension exists. Each service is a port protocol with an
+adapter behind it, and each has an in-memory double that ships in the app target
+so tests, SwiftUI previews, and isolated launches all use the same seam.
+
+## Layout
+
+| Concern | Ports | Service / adapter | Double |
+| --- | --- | --- | --- |
+| Notifications | `CrestShared/Application/BrowserExtensionServices/Notifications/Ports/` | `BrowserExtensionNotificationService` (Application), `BrowserExtensionNotificationSystemCenter` (CrestMac) | `InMemoryBrowserExtensionNotificationCenter` |
+| History and top sites | `CrestShared/Application/BrowserExtensionServices/History/Ports/` | `BrowserStoreExtensionHistoryService` (Application) | `InMemoryBrowserExtensionHistoryStore` |
+| Web auth | `CrestShared/Application/BrowserExtensionServices/WebAuthentication/Ports/` | `BrowserExtensionWebAuthenticationService` (Application), `BrowserExtensionWebAuthenticationSystemSession` (CrestMac) | `InMemoryBrowserExtensionWebAuthenticationSession` |
+| Omnibox | `CrestShared/Application/BrowserExtensionServices/Omnibox/Ports/` | `BrowserOmniboxRegistry` (Application) plus command-palette integration | `InMemoryBrowserOmniboxProvider` |
+
+Domain values live under `CrestShared/Domain/BrowserExtensionServices/`. The
+Application layer may import only Foundation, Dispatch, and Observation, so
+every framework seam is expressed in Crest's own types and implemented in a
+platform root.
+
+Extensions are identified to these services by
+`BrowserExtensionServiceClientID`, an opaque non-empty string. It is deliberately
+not `BrowserChromeExtensionID`, which only accepts 32-character Web Store
+identifiers and so cannot name an unpacked development extension.
+
+## Notifications — `chrome.notifications`
+
+`BrowserExtensionNotificationHandling` covers authorization, `create`, `clear`,
+`getAll`, and a per-extension `AsyncStream` of interactions.
+
+The host notification center is addressed through a second, framework-neutral
+port, `BrowserExtensionNotificationCentering`. That split keeps the routing
+rules — which extension owns a notification, whether authorization permits a
+delivery, who hears about a click — in the Application layer where they are
+testable without a real notification center.
+
+**Identity encoding.** Notification identifiers are chosen by untrusted
+extension JavaScript and are unique only within one extension, so the host
+identifier combines both. A plain delimiter would be forgeable: an extension
+could embed the delimiter and address another extension's notification. The
+client identifier is therefore length-prefixed in UTF-8 bytes, which makes the
+split point independent of either identifier's contents. All of this lives in
+`BrowserExtensionNotificationIdentityCodec`.
+
+**Grouping.** Every notification from one extension shares a thread identifier,
+so the host collapses them the way it collapses any other app's group. Buttons
+force one category per notification, because `UNNotificationAction`s are
+declared on categories and every notification may carry different buttons;
+categories are withdrawn together with their notification.
+
+**Authorization.** A denied host returns `.authorizationDenied` rather than
+throwing. An extension that ignores a rejected promise still behaves
+predictably. An undetermined state prompts once, then caches the answer for the
+rest of the process.
+
+**Enumeration** reads the host back rather than trusting local bookkeeping, so a
+notification the person dismissed from Notification Center disappears from
+`getAll`.
+
+## History — `chrome.history` and `chrome.topSites`
+
+Crest has **no history database**. History is a `[BrowserHistoryEntry]` array on
+each `BrowserSpace`, owned by `BrowserStore` and persisted as per-Space JSON
+under `crest.history.v1.<space-uuid>`. That shapes the whole port.
+
+**Scoping.** Every entry point takes a `BrowserSpaceRuntimeAssignment`, not a
+bare `SpaceID`, mirroring how Crest's own history mutations are scoped. A scope
+that no longer resolves — a replaced or deleting Space — yields empty reads and
+`false` writes rather than silently falling through to the selected Space.
+
+**Fields Crest cannot supply.** Two Chrome fields have no counterpart and are
+reported honestly rather than guessed:
+
+- `typedCount` is always `0`. Crest does not distinguish a typed address from a
+  followed link.
+- `getVisits` returns at most **two** visits — `firstVisitedAt` and
+  `lastVisitedAt` — regardless of `visitCount`, because Crest keeps one row per
+  URL rather than one row per visit. Transitions are always `link`.
+
+**Deletion.** `deleteUrl` and `deleteRange` did not exist before this work;
+browsing only ever appended, and history could only be cleared wholesale. They
+are added as `BrowserSession.removeHistory(...)` and
+`BrowserStore.deleteHistory(...)`, narrowing the persisted save scope to
+`.history(in:)` and staging an explicit-delete tombstone, exactly as
+`clearHistory` already did. `deleteRange` judges an entry by its last visit
+only: an older visit to a page that was also opened after the window cannot be
+removed on its own.
+
+**Change events.** The store publishes none — no Combine subject, no
+notification, no delegate. Rather than polling, the service snapshots a Space's
+history when an extension first subscribes and re-diffs it whenever Observation
+reports that `BrowserStore.sessionRevision` moved. That keeps `onVisited`
+working for ordinary browsing, which never calls this service at all. The cost
+is coalescing: several visits landing between two observation ticks produce one
+event per URL.
+
+**Top sites** are derived on demand by `BrowserExtensionTopSitePolicy`. Raw
+visit count alone would pin a site somebody used heavily last spring above one
+they use daily now, so counts are weighted by recency — the frecency shape
+Firefox popularized.
+
+## Web auth — `identity.launchWebAuthFlow`
+
+This is the service with a hard platform constraint, and it is worth stating
+plainly.
+
+Chrome extensions almost always pass a redirect URL of the form
+`https://<extension-id>.chromiumapp.org/*`. Chrome does not own that domain
+either — it watches its own web view and intercepts the first navigation whose
+URL starts with the expected prefix.
+
+`ASWebAuthenticationSession` cannot reproduce that. Its callback is declared up
+front and comes in two shapes:
+
+- `.customScheme(_:)` matches a custom URL scheme. It needs no configuration,
+  and Crest uses it whenever an extension supplies one.
+- `.https(host:path:)` (macOS 14.4+) matches a real web URL, but only for a host
+  the app is *associated* with. That requires a
+  `com.apple.developer.associated-domains` entitlement naming
+  `webcredentials:<host>` **and** an `apple-app-site-association` file served by
+  that host listing Crest's bundle identifier. The system refuses to start a
+  session whose callback fails that check.
+
+Crest controls neither `chromiumapp.org` nor the association file Google would
+have to publish for it. An `https` redirect on an unassociated host is therefore
+rejected up front with `.unsupportedCallback` rather than started and left to
+hang forever. `BrowserExtensionWebAuthenticationService` is constructed with the
+set of hosts Crest genuinely is associated with, so legitimate first-party
+`https` callbacks keep working.
+
+**Supporting `chromiumapp.org` flows properly needs a Crest-owned
+authentication window** that watches navigation the way Chrome does. That is
+deliberately not attempted here.
+
+Two checks bracket the session. A callback the system cannot service is refused
+before any window appears, and a redirect the system does return is re-checked
+against the prefix the extension actually asked for — which keeps a provider
+that redirects somewhere unexpected from handing an extension a URL, and any
+token in its fragment, that it never requested.
+
+The presentation anchor follows the house pattern: `NSApp.keyWindow ??
+NSApp.mainWindow`, resolved before the session starts, held weakly, and a
+missing window fails with `.presentationFailure` instead of trapping.
+
+## Omnibox — `chrome.omnibox`
+
+Crest's address bar renders no suggestions of its own; everything the person
+sees comes from `BrowserCommandPalette`. Its sources are `static func`s appended
+in a fixed order inside `BrowserCommandPaletteResults.results(for:)`, and before
+this work there was no keyword, prefix, or scope concept anywhere in the app.
+
+`BrowserOmniboxRegistry` maps a keyword to a `BrowserOmniboxSuggesting`
+provider. One keyword has one owner; re-registering returns the displaced
+provider so a caller can tell a genuine refresh from a collision between two
+extensions that both want `gh`.
+
+**Activation.** `BrowserOmniboxInput.parse` requires a separating space: `yt` on
+its own is still a plain search for those letters, and only `yt ` hands the
+address bar over. That matches Chrome and keeps a keyword from hijacking a
+prefix the person is still typing.
+
+**Replacement, not addition.** When a keyword resolves, its rows replace every
+other source rather than joining them, as Chrome's keyword mode does. This also
+means the ordinary result ordering is untouched whenever no keyword matches.
+
+**Async providers in a synchronous pipeline.** `results(for:)` is a pure
+synchronous function run on a detached task, and providers are main-actor
+isolated and asynchronous. `BrowserCommandPaletteModel` therefore resolves the
+provider, awaits its suggestions on the main actor, and passes only values —
+`BrowserCommandPaletteOmniboxContext` — across to the detached preparation. The
+provider reference never leaves the main actor.
+
+**Acceptance.** Rows carry a `BrowserOmniboxAcceptance` naming their keyword, so
+a row prepared under one keyword can never be delivered to whichever provider
+happens to be registered by the time it is clicked. Disposition comes from how
+the palette was presented — editing an address keeps the result in the current
+tab, the new-tab launcher opens a new one — because the palette has no
+modifier-aware submit path today.
+
+**Deletable rows** offer *Remove Suggestion* in their context menu, which calls
+`onDeleteSuggestion`. A context menu was chosen over Chrome's Shift-Delete chord
+because the palette's focused text field consumes that key.
+
+The registry the shipped palette consults is `BrowserOmniboxRegistry.shared`. It
+starts empty, so until something registers a keyword the palette behaves exactly
+as it did before.

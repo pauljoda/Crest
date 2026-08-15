@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" role="img" aria-labelledby="title desc">
+  <title id="title">Storm Space crest</title>
+  <desc id="desc">A quartered midnight lozenge with a brass saltire and three star charges.</desc>
+  <defs>
+    <clipPath id="lozenge"><path d="m120 24 96 116-96 116L24 140z"/></clipPath>
+    <filter id="shadow" x="-30%" y="-20%" width="160%" height="170%"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#070812" flood-opacity=".45"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <g clip-path="url(#lozenge)">
+      <path fill="#151824" d="M18 18h204v244H18z"/>
+      <path fill="#313848" d="M120 18h102v122H120zM18 140h102v122H18z"/>
+      <path d="M-15 22 4 3l251 251-19 19zM236 3l19 19L4 273l-19-19z" fill="#b08f4a"/>
+    </g>
+    <path d="m120 24 96 116-96 116L24 140z" fill="none" stroke="#c3a35f" stroke-width="6" stroke-linejoin="round"/>
+    <g fill="#e0c478">
+      <path d="m120 80 8 21 22 1-17 14 6 22-19-12-19 12 6-22-17-14 22-1z"/>
+      <path d="m85 151 6 16 17 1-13 11 4 17-14-9-15 9 5-17-14-11 18-1z"/>
+      <path d="m155 151 6 16 17 1-13 11 4 17-14-9-15 9 5-17-14-11 18-1z"/>
+    </g>
+  </g>
+</svg>

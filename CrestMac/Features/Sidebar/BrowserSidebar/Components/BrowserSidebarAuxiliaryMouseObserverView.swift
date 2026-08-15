@@ -1,0 +1,93 @@
+import AppKit
+import WebKit
+
+@MainActor
+final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
+    var perform: @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
+    private var eventMonitor: Any?
+
+    init(
+        perform: @escaping @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
+    ) {
+        self.perform = perform
+        super.init(frame: .zero)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        updateEventMonitor()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    func stopMonitoring() {
+        guard let eventMonitor else { return }
+        NSEvent.removeMonitor(eventMonitor)
+        self.eventMonitor = nil
+    }
+
+    private func updateEventMonitor() {
+        stopMonitoring()
+        guard window != nil else { return }
+
+        eventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: .otherMouseDown
+        ) { [weak self] event in
+            self?.handle(event) ?? event
+        }
+    }
+
+    private func handle(_ event: NSEvent) -> NSEvent? {
+        guard event.window === window else { return event }
+
+        guard
+            let action = BrowserSidebarMouseButtonPolicy.action(
+                for: event.buttonNumber
+            )
+        else { return event }
+
+        if let webView = webViewUnderPointer(for: event) {
+            let canNavigatePage: Bool
+            switch action {
+            case .previousSpace:
+                canNavigatePage = webView.canGoBack
+            case .nextSpace:
+                canNavigatePage = webView.canGoForward
+            }
+            if BrowserSidebarMouseButtonPolicy.routesToPage(
+                isOverWebView: true,
+                canNavigatePage: canNavigatePage
+            ) {
+                switch action {
+                case .previousSpace:
+                    webView.goBack()
+                case .nextSpace:
+                    webView.goForward()
+                }
+                return nil
+            }
+        }
+        perform(action)
+        return nil
+    }
+
+    private func webViewUnderPointer(for event: NSEvent) -> WKWebView? {
+        guard let contentView = window?.contentView else { return nil }
+        let location = contentView.convert(event.locationInWindow, from: nil)
+        var candidate = contentView.hitTest(location)
+        while let view = candidate {
+            if let webView = view as? WKWebView {
+                return webView
+            }
+            candidate = view.superview
+        }
+        return nil
+    }
+}

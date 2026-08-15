@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" role="img" aria-labelledby="title desc">
+  <title id="title">Winter Space crest</title>
+  <desc id="desc">A steel seal with a pale ordinary, shield trim, and a single ice snowflake charge.</desc>
+  <defs>
+    <clipPath id="seal"><path d="M120 19 139 33l24-3 11 21 23 7 1 24 17 17-9 22 9 22-17 17-1 24-23 7-11 21-24-3-19 14-19-14-24 3-11-21-23-7-1-24-17-17 9-22-9-22 17-17 1-24 23-7 11-21 24 3z"/></clipPath>
+    <filter id="shadow" x="-30%" y="-20%" width="160%" height="170%"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#07111a" flood-opacity=".4"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <g clip-path="url(#seal)">
+      <path fill="#1e2833" d="M15 14h210v250H15z"/>
+      <path fill="#3e4e5e" d="M95 10h50v255H95z"/>
+    </g>
+    <path d="M120 19 139 33l24-3 11 21 23 7 1 24 17 17-9 22 9 22-17 17-1 24-23 7-11 21-24-3-19 14-19-14-24 3-11-21-23-7-1-24-17-17 9-22-9-22 17-17 1-24 23-7 11-21 24 3z" fill="none" stroke="#86adc4" stroke-width="5" stroke-linejoin="round"/>
+    <g transform="translate(120 140)" fill="none" stroke="#b5d4e5" stroke-width="9" stroke-linecap="round">
+      <path d="M0-58v116M-50-29 50 29M50-29-50 29"/>
+      <path d="m0-58-12 15m12-15 12 15M0 58l-12-15M0 58l12-15M-50-29l19-3m-19 3 7 18M50 29l-19 3m19-3-7-18M50-29l-19-3m19 3-7 18M-50 29l19 3m-19-3 7-18" stroke-width="6"/>
+    </g>
+  </g>
+</svg>

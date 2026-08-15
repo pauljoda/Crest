@@ -1,0 +1,41 @@
+{
+  "rules": {
+    "missing-direct-preview": {
+      "reason": "Add a deterministic direct #Preview beside the visual type.",
+      "violations": [
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Components/BrowserSidebarReorderIndicatorLine.swift", "BrowserSidebarReorderIndicatorLine"]
+      ]
+    },
+    "multiple-primary-types": {
+      "reason": "Split primary types into one matching Swift file each.",
+      "violations": [
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Components/BrowserSidebarReorderLiftGesture.swift", "BrowserSidebarReorderLiftGesture,BrowserSidebarReorderLiftPhase"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Support/BrowserSidebarReorderIndicator.swift", "BrowserSidebarReorderIndicator,BrowserSidebarReorderIndicatorMetrics"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Support/BrowserSidebarReorderItem.swift", "BrowserSidebarReorderItem,BrowserSidebarReorderItemID"]
+      ]
+    },
+    "multiple-top-level-declarations": {
+      "reason": "Keep exactly one file-scope declaration per Swift file.",
+      "violations": [
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Components/BrowserSidebarReorderSourceModifier.swift", "BrowserSidebarReorderSourceModifier,extension View"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Components/BrowserSidebarReorderZoneModifier.swift", "BrowserSidebarReorderZoneModifier,extension View"]
+      ]
+    },
+    "nested-named-type": {
+      "reason": "Move nested named types into matching files unless they are private CodingKeys.",
+      "violations": [
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Services/BrowserSidebarReorderState.swift", "Lift"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Support/BrowserSidebarReorderIndicator.swift", "Side"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Support/BrowserSidebarReorderPolicy.swift", "SlotLayout"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Support/BrowserSidebarReorderTarget.swift", "Kind"],
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Support/BrowserSidebarReorderZone.swift", "Target"]
+      ]
+    },
+    "view-file-extra-primary": {
+      "reason": "Move hidden values and helpers out of the View file.",
+      "violations": [
+        ["CrestShared/Features/Sidebar/Components/BrowserSidebarDrag/Components/BrowserSidebarReorderLiftGesture.swift", "BrowserSidebarReorderLiftPhase"]
+      ]
+    }
+  }
+}

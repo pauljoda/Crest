@@ -1,0 +1,44 @@
+import SwiftUI
+
+struct BrowserSpaceCrestOrdinaryView: View {
+    let ordinary: BrowserSpaceCrestOrdinary
+    let backplateSymbol: String
+    let outlineSystemImage: String?
+    let color: Color
+    let size: CGFloat
+
+    @ViewBuilder
+    var body: some View {
+        if ordinary == .bordure, let outlineSystemImage {
+            Image(systemName: outlineSystemImage)
+                .font(.system(size: size * 0.72, weight: .black))
+                .foregroundStyle(color)
+        } else if ordinary != .none {
+            BrowserSpaceCrestOrdinaryShape(
+                ordinary: ordinary,
+                color: color,
+                size: size
+            )
+            .mask {
+                BrowserSpaceCrestBackplateMask(
+                    systemImage: backplateSymbol,
+                    size: size
+                )
+            }
+        }
+    }
+}
+
+#Preview("Crest Ordinary", traits: .sizeThatFitsLayout) {
+    let branding = BrowserSpaceBrandingPreviewFixture.crestBranding
+
+    BrowserSpaceCrestOrdinaryView(
+        ordinary: branding.crest.ordinary,
+        backplateSymbol: branding.crest.backplate.systemImage ?? "shield.fill",
+        outlineSystemImage: branding.crest.backplate.outlineSystemImage,
+        color: branding.secondaryColor.color,
+        size: 112
+    )
+    .frame(width: 112, height: 112)
+    .padding()
+}

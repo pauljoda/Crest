@@ -1,0 +1,375 @@
+name: Publish macOS release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - stable
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: crest-macos-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Sign, notarize, and publish
+    runs-on: xcode-27
+    timeout-minutes: 90
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release identity
+        id: release
+        shell: zsh {0}
+        env:
+          REQUESTED_CHANNEL: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+
+          marketing_version="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' Config/Version.xcconfig)"
+          build_number="$GITHUB_RUN_NUMBER"
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            channel=stable
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            channel="$REQUESTED_CHANNEL"
+          else
+            channel=nightly
+          fi
+
+          if [[ "$channel" == "stable" ]]; then
+            expected_tag="v${marketing_version}"
+            if [[ "$GITHUB_REF_TYPE" != "tag" || "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
+              print -u2 "Stable releases must run from the ${expected_tag} tag."
+              exit 1
+            fi
+            release_tag="$expected_tag"
+            release_title="Crest ${marketing_version}"
+            asset_base="Crest-${marketing_version}-arm64"
+          else
+            release_tag="nightly-${build_number}"
+            release_title="Crest ${marketing_version} Nightly ${build_number}"
+            asset_base="Crest-${marketing_version}-nightly-${build_number}-arm64"
+          fi
+
+          {
+            print "channel=$channel"
+            print "marketing_version=$marketing_version"
+            print "build_number=$build_number"
+            print "release_tag=$release_tag"
+            print "release_title=$release_title"
+            print "asset_base=$asset_base"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure XcodeGen is available
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+
+      - name: Validate release source
+        env:
+          CREST_ISOLATED_SESSION: "1"
+        run: |
+          Scripts/bootstrap.sh
+          git diff --exit-code -- Crest.xcodeproj
+          xcodebuild test \
+            -project Crest.xcodeproj \
+            -scheme Crest \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
+            -only-testing:CrestTests/BrowserContentBlockingTests \
+            -only-testing:CrestTests/BrowserSoftwareUpdateTests \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build, sign, and notarize
+        shell: zsh {0}
+        env:
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY_BASE64 }}
+          DEVELOPER_ID_APPLICATION_P12_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_BASE64 }}
+          DEVELOPER_ID_APPLICATION_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_PASSWORD }}
+          DEVELOPER_ID_PROVISIONING_PROFILE_BASE64: ${{ secrets.DEVELOPER_ID_PROVISIONING_PROFILE_BASE64 }}
+          RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ steps.release.outputs.build_number }}
+        run: |
+          set -euo pipefail
+
+          release_root="$RUNNER_TEMP/crest-release"
+          archive_path="$release_root/Crest.xcarchive"
+          export_path="$release_root/export"
+          publish_path="$release_root/publish"
+          staging_path="$release_root/dmg-root"
+          keychain_path="$RUNNER_TEMP/crest-signing.keychain-db"
+          api_key_path="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+          p12_path="$RUNNER_TEMP/developer-id-application.p12"
+          profile_path="$RUNNER_TEMP/crest-developer-id.provisionprofile"
+          installed_profile_directory="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          installed_profile_path="$installed_profile_directory/${GITHUB_RUN_ID}-crest.provisionprofile"
+          keychain_password="$(openssl rand -hex 24)"
+          original_keychain="$(security default-keychain -d user | tr -d '"')"
+
+          cleanup_signing() {
+            security default-keychain -d user -s "$original_keychain" >/dev/null 2>&1 || true
+            security delete-keychain "$keychain_path" >/dev/null 2>&1 || true
+            find \
+              "$api_key_path" \
+              "$p12_path" \
+              "$profile_path" \
+              "$installed_profile_path" \
+              -delete 2>/dev/null || true
+          }
+          trap cleanup_signing EXIT INT TERM HUP
+
+          mkdir -p "$release_root" "$publish_path" "$staging_path"
+          print -r -- "$DEVELOPER_ID_APPLICATION_P12_BASE64" | base64 -D > "$p12_path"
+          print -r -- "$APP_STORE_CONNECT_API_PRIVATE_KEY_BASE64" | base64 -D > "$api_key_path"
+          print -r -- "$DEVELOPER_ID_PROVISIONING_PROFILE_BASE64" \
+            | base64 -D > "$profile_path"
+          chmod 600 "$p12_path" "$api_key_path" "$profile_path"
+
+          profile_plist="$release_root/developer-id-profile.plist"
+          security cms -D -i "$profile_path" > "$profile_plist"
+          test "$(plutil -extract Name raw "$profile_plist")" = "Crest Developer ID"
+          mkdir -p "$installed_profile_directory"
+          cp "$profile_path" "$installed_profile_path"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$p12_path" \
+            -k "$keychain_path" \
+            -P "$DEVELOPER_ID_APPLICATION_P12_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$keychain_password" \
+            "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" "$original_keychain"
+          security default-keychain -d user -s "$keychain_path"
+
+          identity_hash="$(
+            security find-identity -v -p codesigning "$keychain_path" \
+              | awk '/Developer ID Application: .*\(3U2R97HLXF\)/ { print $2; exit }'
+          )"
+          if [[ -z "$identity_hash" ]]; then
+            print -u2 "The imported archive does not contain Crest's Developer ID Application identity."
+            exit 1
+          fi
+
+          xcodebuild archive \
+            -project Crest.xcodeproj \
+            -scheme Crest \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -archivePath "$archive_path" \
+            -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
+            CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
+            DEVELOPMENT_TEAM=3U2R97HLXF \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"
+
+          xcodebuild -exportArchive \
+            -archivePath "$archive_path" \
+            -exportPath "$export_path" \
+            -exportOptionsPlist Config/DeveloperIDExportOptions.plist
+
+          app_path="$export_path/Crest.app"
+          test -d "$app_path"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          test "$(defaults read "$app_path/Contents/Info" CFBundleIdentifier)" = "com.pauldavis.crest"
+          test "$(lipo -archs "$app_path/Contents/MacOS/Crest")" = "arm64"
+          exported_entitlements="$release_root/exported-entitlements.plist"
+          codesign -d --entitlements :- "$app_path" \
+            > "$exported_entitlements" 2>/dev/null
+          test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.application-identifier' "$exported_entitlements")" \
+            = "3U2R97HLXF.com.pauldavis.crest"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.aps-environment' "$exported_entitlements")" \
+            = "production"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.icloud-container-identifiers:0' "$exported_entitlements")" \
+            = "iCloud.com.pauldavis.crest"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$exported_entitlements")" \
+            = "3U2R97HLXF.com.pauldavis.crest"
+
+          notarization_zip="$release_root/Crest-notarization.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" "$notarization_zip"
+          xcrun notarytool submit "$notarization_zip" \
+            --key "$api_key_path" \
+            --key-id "$APP_STORE_CONNECT_API_KEY_ID" \
+            --issuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            --wait
+          xcrun stapler staple "$app_path"
+          xcrun stapler validate "$app_path"
+          spctl --assess --type execute --verbose=4 "$app_path"
+
+          ditto "$app_path" "$staging_path/Crest.app"
+          ln -s /Applications "$staging_path/Applications"
+          dmg_path="$publish_path/${RELEASE_ASSET_BASE}.dmg"
+          diskutil image create from \
+            --volumeName Crest \
+            --format ULFO \
+            "$staging_path" \
+            "$dmg_path"
+          codesign --force --timestamp --sign "$identity_hash" "$dmg_path"
+          xcrun notarytool submit "$dmg_path" \
+            --key "$api_key_path" \
+            --key-id "$APP_STORE_CONNECT_API_KEY_ID" \
+            --issuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            --wait
+          xcrun stapler staple "$dmg_path"
+          xcrun stapler validate "$dmg_path"
+          spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg_path"
+
+          ditto -c -k --keepParent \
+            "$archive_path/dSYMs/Crest.app.dSYM" \
+            "$publish_path/${RELEASE_ASSET_BASE}.dSYM.zip"
+          (
+            cd "$publish_path"
+            shasum -a 256 "${RELEASE_ASSET_BASE}.dmg" \
+              > "${RELEASE_ASSET_BASE}.dmg.sha256"
+          )
+
+      - name: Attest release disk image
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/crest-release/publish/${{ steps.release.outputs.asset_base }}.dmg
+
+      - name: Create GitHub Release
+        shell: zsh {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
+          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
+          RELEASE_TITLE: ${{ steps.release.outputs.release_title }}
+        run: |
+          set -euo pipefail
+          publish_path="$RUNNER_TEMP/crest-release/publish"
+          release_notes="$RUNNER_TEMP/crest-release/release-notes.md"
+
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="$RELEASE_TAG" \
+            -f target_commitish="$GITHUB_SHA" \
+            --jq .body > "$release_notes"
+
+          release_arguments=(
+            "$RELEASE_TAG"
+            "$publish_path/${RELEASE_ASSET_BASE}.dmg"
+            "$publish_path/${RELEASE_ASSET_BASE}.dmg.sha256"
+            "$publish_path/${RELEASE_ASSET_BASE}.dSYM.zip"
+            --title "$RELEASE_TITLE"
+            --notes-file "$release_notes"
+          )
+          if [[ "$RELEASE_CHANNEL" == "stable" ]]; then
+            release_arguments+=(--verify-tag --latest)
+          else
+            release_arguments+=(--target "$GITHUB_SHA" --prerelease)
+          fi
+          gh release create "${release_arguments[@]}"
+
+      - name: Publish signed Sparkle appcast
+        shell: zsh {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ steps.release.outputs.build_number }}
+          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
+          SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          sparkle_version=2.9.5
+          sparkle_archive_sha256=015336b601493e05c237964954bff6191370003d94edefe663724c88840d73cc
+          sparkle_root="$RUNNER_TEMP/Sparkle-${sparkle_version}"
+          feed_source="$RUNNER_TEMP/crest-appcast-source"
+          updates_checkout="$RUNNER_TEMP/crest-updates-branch"
+          release_root="$RUNNER_TEMP/crest-release"
+          mkdir -p "$sparkle_root" "$feed_source" "$updates_checkout"
+
+          gh release download "$sparkle_version" \
+            --repo sparkle-project/Sparkle \
+            --pattern "Sparkle-${sparkle_version}.tar.xz" \
+            --dir "$sparkle_root"
+          print "${sparkle_archive_sha256}  ${sparkle_root}/Sparkle-${sparkle_version}.tar.xz" \
+            | shasum -a 256 -c -
+          tar -xf "$sparkle_root/Sparkle-${sparkle_version}.tar.xz" -C "$sparkle_root"
+
+          if git fetch origin updates; then
+            git show FETCH_HEAD:appcast.xml > "$feed_source/appcast.xml"
+          fi
+          cp \
+            "$release_root/publish/${RELEASE_ASSET_BASE}.dmg" \
+            "$feed_source/${RELEASE_ASSET_BASE}.dmg"
+          cp \
+            "$release_root/release-notes.md" \
+            "$feed_source/${RELEASE_ASSET_BASE}.md"
+
+          appcast_arguments=(
+            --ed-key-file -
+            --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
+            --link "https://crestbrowser.com/"
+            --versions "$RELEASE_BUILD_NUMBER"
+            --maximum-versions 0
+            --embed-release-notes
+          )
+          if [[ "$RELEASE_CHANNEL" == "nightly" ]]; then
+            appcast_arguments+=(--channel nightly)
+          fi
+          print -r -- "$SPARKLE_EDDSA_PRIVATE_KEY" \
+            | "$sparkle_root/bin/generate_appcast" \
+                "${appcast_arguments[@]}" \
+                "$feed_source"
+
+          git -C "$updates_checkout" init --initial-branch=updates
+          git -C "$updates_checkout" remote add origin \
+            "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          if git -C "$updates_checkout" fetch --depth=1 origin updates; then
+            git -C "$updates_checkout" checkout -B updates FETCH_HEAD
+          fi
+          cp "$feed_source/appcast.xml" "$updates_checkout/appcast.xml"
+          printf '%s\n' \
+            '# Crest software updates' \
+            '' \
+            'This branch is written by the production release workflow. The signed appcast points only to notarized assets in GitHub Releases.' \
+            > "$updates_checkout/README.md"
+          git -C "$updates_checkout" add appcast.xml README.md
+          git -C "$updates_checkout" config user.name "github-actions[bot]"
+          git -C "$updates_checkout" config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$updates_checkout" commit \
+            -m "chore(updates): publish ${RELEASE_TAG}"
+          git -C "$updates_checkout" push origin HEAD:updates
+
+      - name: Remove generated release data
+        if: always()
+        run: |
+          find \
+            "$RUNNER_TEMP/crest-release" \
+            "$RUNNER_TEMP/crest-release-derived-data" \
+            "$RUNNER_TEMP/crest-appcast-source" \
+            "$RUNNER_TEMP/crest-updates-branch" \
+            "$RUNNER_TEMP/Sparkle-2.9.5" \
+            -depth -delete 2>/dev/null || true

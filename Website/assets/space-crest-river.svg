@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" role="img" aria-labelledby="title desc">
+  <title id="title">River Space crest</title>
+  <desc id="desc">A navy roundel divided on the bend, with double-ring trim and a rust compass charge.</desc>
+  <defs>
+    <clipPath id="roundel"><circle cx="120" cy="138" r="94"/></clipPath>
+    <filter id="shadow" x="-30%" y="-20%" width="160%" height="170%"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#06111c" flood-opacity=".38"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <g clip-path="url(#roundel)">
+      <path fill="#0f1e2e" d="M18 36h204v204H18z"/>
+      <path fill="#22486c" d="m-20 226 238-238 64 64L44 290z"/>
+      <path fill="#a85c41" d="m-7 244 238-238 16 16L9 260z"/>
+    </g>
+    <circle cx="120" cy="138" r="98" fill="none" stroke="#b98a69" stroke-width="5"/>
+    <circle cx="120" cy="138" r="84" fill="none" stroke="#b98a69" stroke-width="3"/>
+    <g transform="translate(120 138)" fill="#d2a083">
+      <path d="m0-60 13 44 43-12-34 30 34 30-43-12L0 64-13 20l-43 12 34-30-34-30 43 12z"/>
+      <circle r="16" fill="#0f1e2e" stroke="#d2a083" stroke-width="6"/>
+      <path d="M0-46 8-8 0 0l-8-8z" fill="#f1c4a8"/>
+    </g>
+  </g>
+</svg>
