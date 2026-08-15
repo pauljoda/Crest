@@ -48,6 +48,8 @@ jobs:
 
           marketing_version="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' Config/Version.xcconfig)"
           build_number="$GITHUB_RUN_NUMBER"
+          release_date="$(date -u +%Y-%m-%d)"
+          short_sha="$(git rev-parse --short=7 "$GITHUB_SHA")"
 
           if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             channel=stable
@@ -67,9 +69,9 @@ jobs:
             release_title="Crest ${marketing_version}"
             asset_base="Crest-${marketing_version}-arm64"
           else
-            release_tag="nightly-${build_number}"
-            release_title="Crest ${marketing_version} Nightly ${build_number}"
-            asset_base="Crest-${marketing_version}-nightly-${build_number}-arm64"
+            release_tag="nightly-${release_date}-${short_sha}"
+            release_title="Crest ${marketing_version} Nightly ${release_date} (${short_sha})"
+            asset_base="Crest-${marketing_version}-nightly-${release_date}-${short_sha}-arm64"
           fi
 
           {

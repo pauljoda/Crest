@@ -9,6 +9,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Named public nightly tags, release titles, and assets with their UTC date and source commit instead of an opaque workflow run number, while retaining the monotonic build number only for Sparkle's internal update ordering.
 - Kept the release tag as a directory in generated Sparkle download URLs and made publication reject an appcast that does not point to its exact GitHub Release asset.
 - Authenticated the release workflow's isolated update-feed repository so a notarized GitHub Release can create and advance the Sparkle appcast branch.
 - Removed absolute build-machine paths from the published Help Center assets and made every Help Center build sanitize its generated configuration before publication.
