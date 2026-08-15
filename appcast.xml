@@ -1,0 +1,23 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Crest</title>
+        <item>
+            <title>0.3.0</title>
+            <pubDate>Sat, 15 Aug 2026 22:54:30 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[**Full Changelog**: https://github.com/pauljoda/Crest/compare/nightly-3...nightly-2026-08-15-96af10b
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-2026-08-15-96af10b/Crest-0.3.0-nightly-2026-08-15-96af10b-arm64.dmg" length="7889663" type="application/octet-stream" sparkle:edSignature="Z5Lpm4639O9h0qEX6QdbxV4v80dC6xxcV4srQKwqvFilf06c3cDaoCL3qrL5LUxtjHH6G0FqqbuJ2NHm2pDDCg=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: 6+2KzWk8dUc7etWoAX5i4z9Wkf47oqAtGQHiRCDCUtk/e+2s4MEoc9okgBAum0+hGdYo1RrxRiZl9XryzfoMBA==
+length: 1449
+-->
