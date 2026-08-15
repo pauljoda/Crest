@@ -78,6 +78,9 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
+    /// Pages announced to extensions that no tab in the session owns, resolved
+    /// for the adapters WebKit asks about them.
+    @ObservationIgnored private var transientExtensionPages: [TabID: BrowserPage] = [:]
     @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
     /// Where unloaded tabs leave their WebKit session state. Always nil for a
@@ -298,7 +301,9 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         for tabID: TabID,
         in spaceID: SpaceID
     ) -> BrowserPage? {
-        guard let page = pages[tabID], page.spaceID == spaceID else {
+        guard let page = pages[tabID] ?? transientExtensionPages[tabID],
+            page.spaceID == spaceID
+        else {
             return nil
         }
         return page
@@ -357,6 +362,24 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         space: BrowserSpace?,
         at time: Date = .now
     ) {
+        startInitialNavigations(
+            presentCards(tab: tab, space: space, at: time)
+        )
+    }
+
+    /// Builds and presents the cards `tab` brings on screen without navigating
+    /// any of them, answering the cards whose first load is still owed.
+    ///
+    /// Creation and navigation are separate steps so a caller that has
+    /// extensions attached can announce the new cards as tabs in between.
+    /// WebKit resolves a content script's `runtime` messages by mapping its web
+    /// view onto an announced tab, and a document-start script that runs before
+    /// its card is announced is rejected rather than queued.
+    private func presentCards(
+        tab: BrowserTab?,
+        space: BrowserSpace?,
+        at time: Date
+    ) -> [(tab: BrowserTab, page: BrowserPage)] {
         let interval = Self.lifecycleSignposter.beginInterval("Select Browser Page")
         defer {
             Self.lifecycleSignposter.endInterval("Select Browser Page", interval)
@@ -367,7 +390,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             !spacesDeletingData.contains(space.id)
         else {
             deactivatePagePresentation(at: time)
-            return
+            return []
         }
         // Every member of the selected tab's split group is a live card, so
         // each one is built and started here. A card the person can see must
@@ -375,8 +398,14 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         let members = presentedMembers(for: tab, in: space)
         let memberPages = members.map { (tab: $0, page: page(for: $0, space: space)) }
         activate(tab.id, presenting: members.map(\.id), at: time)
-        for member in memberPages {
-            loadInitialURL(for: member.tab, into: member.page)
+        return memberPages
+    }
+
+    private func startInitialNavigations(
+        _ cards: [(tab: BrowserTab, page: BrowserPage)]
+    ) {
+        for card in cards {
+            loadInitialURL(for: card.tab, into: card.page)
         }
     }
 
@@ -401,12 +430,16 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     }
 
     func select(session: BrowserSession, at time: Date) {
-        select(
+        let cards = presentCards(
             tab: session.selectedTab,
             space: session.selectedSpace,
             at: time
         )
+        // Announce the cards before they navigate, so every new web view gets
+        // the same standing with extensions that an ordinary tab open provides
+        // by the time its content scripts run.
         extensionControllerPool.reconcileExtensionState(in: session)
+        startInitialNavigations(cards)
         reconcileCredentialAccess(in: session)
     }
 
@@ -808,8 +841,22 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     ) -> BrowserTransientPageLease? {
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard canHostTransientPage(matching: assignment) else { return nil }
+        let tabID = TabID()
+        // Announce the page before the lease's initializer navigates it. WebKit
+        // injects content scripts during that load and answers their `runtime`
+        // messages only for a web view it can map onto an announced tab, so a
+        // page announced afterwards leaves its first script unanswered for the
+        // life of the document — the state a reload is otherwise needed to clear.
+        announceTransientExtensionPage(
+            makePage(space: space),
+            as: tabID,
+            url: url,
+            in: space.id
+        )
+        guard let page = transientExtensionPages[tabID] else { return nil }
         let lease = BrowserTransientPageLease(
-            page: makePage(space: space),
+            extensionTabID: tabID,
+            page: page,
             url: url,
             contentBlockingPolicy:
                 space.browsingPreferences.contentBlockingPolicy,
@@ -820,10 +867,54 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
                 else { return nil }
                 return makePage(space: space)
             },
-            userActivity: onUserActivity
+            userActivity: onUserActivity,
+            extensionPageDidChange: { [weak self] page in
+                guard let self else { return }
+                if let page {
+                    announceTransientExtensionPage(
+                        page,
+                        as: tabID,
+                        url: url,
+                        in: space.id
+                    )
+                } else {
+                    withdrawTransientExtensionPage(tabID, in: space.id)
+                }
+            }
         )
         transientLeases[lease.id] = WeakBrowserTransientPageLease(lease)
         return lease
+    }
+
+    /// Makes `page` resolvable under `tabID` and tells extensions it exists.
+    ///
+    /// Resolution is established first: WebKit asks the adapter for its web view
+    /// while handling the announcement, and an adapter that cannot answer is a
+    /// tab extensions can see but not reach.
+    private func announceTransientExtensionPage(
+        _ page: BrowserPage,
+        as tabID: TabID,
+        url: URL,
+        in spaceID: SpaceID
+    ) {
+        transientExtensionPages[tabID] = page
+        extensionControllerPool.registerTransientExtensionTab(
+            BrowserExtensionTransientTab(id: tabID, url: url),
+            in: spaceID
+        )
+    }
+
+    private func withdrawTransientExtensionPage(
+        _ tabID: TabID,
+        in spaceID: SpaceID
+    ) {
+        guard transientExtensionPages.removeValue(forKey: tabID) != nil else {
+            return
+        }
+        extensionControllerPool.unregisterTransientExtensionTab(
+            tabID,
+            in: spaceID
+        )
     }
 
     @discardableResult

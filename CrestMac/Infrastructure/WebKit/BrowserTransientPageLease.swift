@@ -8,6 +8,9 @@ import os
 @MainActor
 final class BrowserTransientPageLease {
     let id = UUID()
+    /// The identity this lease's page is announced under, so extensions can
+    /// address the page the person is actually reading.
+    let extensionTabID: TabID
     let spaceID: SpaceID
     let profileID: UUID
     var assignment: BrowserSpaceRuntimeAssignment {
@@ -25,18 +28,26 @@ final class BrowserTransientPageLease {
     @ObservationIgnored private var reloadURL: URL
     @ObservationIgnored private let rebuild: () -> BrowserPage?
     @ObservationIgnored private let userActivity: () -> Void
+    /// Reports the page now standing behind `extensionTabID`, or its absence.
+    ///
+    /// Called before a rebuilt page is navigated, because the announcement has
+    /// to precede the load that injects content scripts into it.
+    @ObservationIgnored private let extensionPageDidChange: (BrowserPage?) -> Void
     @ObservationIgnored private var contentBlockingPolicy: BrowserContentBlockingPolicy
     @ObservationIgnored private var balancedContentRuleLists: [WKContentRuleList]
     @ObservationIgnored private var isInvalidated = false
 
     init(
+        extensionTabID: TabID,
         page: BrowserPage,
         url: URL,
         contentBlockingPolicy: BrowserContentBlockingPolicy,
         balancedContentRuleLists: [WKContentRuleList],
         rebuild: @escaping () -> BrowserPage?,
-        userActivity: @escaping () -> Void
+        userActivity: @escaping () -> Void,
+        extensionPageDidChange: @escaping (BrowserPage?) -> Void = { _ in }
     ) {
+        self.extensionTabID = extensionTabID
         self.page = page
         spaceID = page.spaceID
         profileID = page.profileID
@@ -45,7 +56,11 @@ final class BrowserTransientPageLease {
         self.balancedContentRuleLists = balancedContentRuleLists
         self.rebuild = rebuild
         self.userActivity = userActivity
+        self.extensionPageDidChange = extensionPageDidChange
         page.monitorUserActivity(userActivity)
+        // The page is announced before this point, by whoever built it: this
+        // load is what injects content scripts, and they cannot be answered
+        // for a page extensions have not been told about.
         page.load(url)
     }
 
@@ -60,6 +75,7 @@ final class BrowserTransientPageLease {
             balancedRuleLists: balancedContentRuleLists
         )
         page.monitorUserActivity(userActivity)
+        extensionPageDidChange(page)
         page.load(reloadURL)
         self.page = page
         wasReleasedForMemoryPressure = false
@@ -71,12 +87,14 @@ final class BrowserTransientPageLease {
         page.prepareForSpaceDeletion()
         self.page = nil
         wasReleasedForMemoryPressure = true
+        extensionPageDidChange(nil)
     }
 
     func release() {
         isInvalidated = true
         page?.prepareForSpaceDeletion()
         page = nil
+        extensionPageDidChange(nil)
     }
 
     func applyContentBlocking(
@@ -100,6 +118,9 @@ final class BrowserTransientPageLease {
         isInvalidated = true
         page.stopMonitoringUserActivity()
         self.page = nil
+        // The page is becoming a real tab, which announces itself. Holding the
+        // transient announcement open would describe one web view twice.
+        extensionPageDidChange(nil)
         return page
     }
 }

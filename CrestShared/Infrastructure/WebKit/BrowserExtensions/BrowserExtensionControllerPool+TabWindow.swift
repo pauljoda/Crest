@@ -18,6 +18,20 @@ extension BrowserExtensionControllerPool {
         tabWindowCoordinator.reconcile(session: session)
     }
 
+    func registerTransientExtensionTab(
+        _ tab: BrowserExtensionTransientTab,
+        in spaceID: SpaceID
+    ) {
+        tabWindowCoordinator.registerTransientTab(tab, in: spaceID)
+    }
+
+    func unregisterTransientExtensionTab(
+        _ tabID: TabID,
+        in spaceID: SpaceID
+    ) {
+        tabWindowCoordinator.unregisterTransientTab(tabID, in: spaceID)
+    }
+
     func extensionWindow(
         in spaceID: SpaceID
     ) -> BrowserExtensionWindowAdapter? {

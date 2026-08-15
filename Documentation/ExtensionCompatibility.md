@@ -365,9 +365,78 @@ permanently awake and is the decision a manifest makes with
 `persistent`/`background.page`, not one a host app should make on an extension's
 behalf.
 
-If pages keep rendering against a stopped background after this change, that is
-the content-script half of the same WebKit behavior, and it needs an answer in
-WebKit rather than in Crest.
+That reasoning holds for a *stopped background*. It does not cover the other way
+a content script goes unanswered, which turned out to be Crest's own and is
+fixed below.
+
+### A content script cannot be answered for a page extensions were never told about
+
+WebKit answers a content script's `runtime` messages only for a web view it can
+map onto a tab the host has announced. For an unannounced page it rejects the
+message outright — `Tab not found for message for content script message`,
+surfacing to the extension as `Invalid call to runtime.sendMessage(). Tab not
+found.` and recorded as `WKWebExtensionContextErrorDomain Code=7`. Nothing
+retries it, so an extension that asks its background for configuration at
+document start keeps whatever partial state it applied while asking, for the
+life of that document. Reloading the page fixes it permanently, because the
+second injection happens after the announcement.
+
+This is not the stopped-worker defect. Measured in an ordinary session on
+August 15, 2026, the failure occurred with the extension's background page alive
+and its worker running, and no background page was constructed at all in
+response — the message never reached the background to wake it:
+
+```
+17:22:43.423  pageProxyID=7505  WebPageProxy::constructor
+17:22:43.427  pageProxyID=7505  WebPageProxy::loadRequest:          ← +4ms
+17:22:43.586  pageProxyID=7505  WebPageProxy::didCommitLoadForFrame
+17:22:43.653  [WebKit:Extensions] Tab not found for message for content script message
+17:22:43.848  [WebKit:Extensions] Invalid call to runtime.sendMessage(). Tab not found.
+```
+
+Three pages in one session showed it, each constructed and navigated within
+4–7 milliseconds. Each one that was later reloaded produced no second error:
+
+```
+16:17:45.373 constructor → 16:17:45.378 loadRequest → 16:17:46.104 Tab not found
+16:17:49.301 reload:      → 16:17:49.892 commit     → (no error)
+```
+
+Two Crest paths built a web view and navigated it before that web view was
+anything extensions had been told about:
+
+- **A Peek.** `BrowserPagePool.makeTransientPageLease` builds a page with the
+  Space's extension controller attached, and `BrowserTransientPageLease`'s
+  initializer navigates it. The lease never enters the session, and the tab
+  coordinator's whole model is session-derived, so the page was never announced
+  at all — not late, never. A Peek promoted into a tab or a split card carries
+  its already-broken document across, which is how the same symptom reached
+  Split View.
+- **The cards a selection presents.** `BrowserPagePool.select(session:)` started
+  every presented card's initial navigation before reconciling extension state,
+  so the announcement trailed the load that injects content scripts.
+
+Both now announce first. Selection builds its cards, announces them, then
+navigates them; a Peek's page is registered as a transient tab and announced
+before the lease's first load, and the announcement is withdrawn when the lease
+is released, evicted under memory pressure, or handed to a real tab that
+announces itself.
+
+Announcing a Peek is the truthful description rather than a convenient one. The
+page is a live document in that Space with the extension's content scripts
+already running inside it; hiding it from `tabs` while executing extension code
+in it was the dishonest half of the previous arrangement, not the disclosure. It
+is announced as an ordinary unselected tab and never as the active one, so
+"a Peek is never the active page" still holds.
+
+`BrowserExtensionTransientTabAnnouncementTests` pins both orders, and fails
+against the previous ones: the Peek page is never announced, and a split
+member is announced only after its web view is already loading.
+
+The stopped-worker residual is unchanged and unfixable from the app: a content
+script whose message *is* routed correctly can still reach a background inside
+the 40–115 second window where WebKit keeps a reaped worker's page alive, and
+nothing app-side distinguishes that state.
 
 Evidence, gathered August 13, 2026:
 
