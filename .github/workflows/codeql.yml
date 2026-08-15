@@ -47,7 +47,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Analyze
-        uses: github/codeql-action/analyze@faaa5d804fc648d0fdb28822a8e36cf7d0a6132c # v4.37.7
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
 
       - name: Remove generated build data
         if: always()
