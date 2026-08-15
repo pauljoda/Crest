@@ -6,6 +6,7 @@ import Sparkle
 @Observable
 final class BrowserSoftwareUpdateService {
     static let channelPreferenceKey = "crest.software-update.channel"
+    static let defaultChannelInfoKey = "CrestDefaultUpdateChannel"
 
     let model: BrowserSoftwareUpdateModel
     private(set) var isEnabled: Bool
@@ -24,14 +25,22 @@ final class BrowserSoftwareUpdateService {
 
     init(
         isEnabled: Bool,
-        preferences: UserDefaults? = .standard
+        preferences: UserDefaults? = .standard,
+        defaultChannel: BrowserSoftwareUpdateChannel? = nil
     ) {
+        let bundledDefaultChannel = defaultChannel
+            ?? BrowserSoftwareUpdateChannel(
+                rawValue: Bundle.main.object(
+                    forInfoDictionaryKey: Self.defaultChannelInfoKey
+                ) as? String ?? ""
+            )
+            ?? .stable
         let channel =
             BrowserSoftwareUpdateChannel(
                 rawValue: preferences?.string(
                     forKey: Self.channelPreferenceKey
                 ) ?? ""
-            ) ?? .stable
+            ) ?? bundledDefaultChannel
         let model = BrowserSoftwareUpdateModel()
         let userDriver = BrowserSoftwareUpdateUserDriver(
             model: model,
@@ -59,6 +68,14 @@ final class BrowserSoftwareUpdateService {
 
     func setAutomaticallyChecksForUpdates(_ isEnabled: Bool) {
         updater.automaticallyChecksForUpdates = isEnabled
+    }
+
+    var automaticallyDownloadsUpdates: Bool {
+        updater.automaticallyDownloadsUpdates
+    }
+
+    func setAutomaticallyDownloadsUpdates(_ isEnabled: Bool) {
+        updater.automaticallyDownloadsUpdates = isEnabled
     }
 
     func checkForUpdates() {

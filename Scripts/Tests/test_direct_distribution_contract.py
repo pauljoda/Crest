@@ -46,7 +46,7 @@ class DirectDistributionContractTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, workflow)
 
-        self.assertEqual(workflow.count("CODE_SIGNING_ALLOWED=NO"), 1)
+        self.assertNotIn("CODE_SIGNING_ALLOWED=NO", workflow)
         self.assertNotIn("CODE_SIGN_STYLE=Automatic", workflow)
         self.assertNotIn("hdiutil create", workflow)
 

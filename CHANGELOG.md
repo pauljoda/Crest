@@ -7,6 +7,10 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Enabled automatic update checks, downloads, and installation by default for direct macOS builds while keeping both controls available in Settings.
+
 ### Fixed
 
 - Told extensions about a Peek's page and about each card a selection presents before those pages start loading, so an extension's content scripts can reach its background on the first try. WebKit answers a content script only for a web view it can map onto an announced tab, so a Peek — whose page the session never carried as a tab at all — left extensions like Dark Reader holding the partial styling they applied while asking, until the page was reloaded. Promoting such a Peek into a tab or a split card carried the half-styled document with it.
@@ -41,6 +45,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added a signed Development update channel that publishes the latest public `main` commit through a rolling GitHub prerelease and a dedicated Sparkle appcast.
 - Added a SwiftUI-native Sparkle 2 update experience for direct macOS releases, with stable and nightly channels backed by signed GitHub Release appcasts.
 - Added GitHub workflows that validate the source, sign and notarize arm64 Mac disk images, publish checksums and provenance, deploy the product site, and advance the update feed only after immutable release assets exist.
 - Opened the project under the Mozilla Public License 2.0 with explicit third-party notices, contributor and security guidance, and a separate trademark policy that reserves Crest branding for official distributions.

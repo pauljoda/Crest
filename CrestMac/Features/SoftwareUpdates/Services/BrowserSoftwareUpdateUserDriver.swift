@@ -154,6 +154,10 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         channel.allowedSparkleChannels
     }
 
+    func feedURLString(for updater: SPUUpdater) -> String? {
+        channel.customFeedURL?.absoluteString
+    }
+
     private func noUpdateMessage(_ error: any Error) -> String {
         let error = error as NSError
         return [error.localizedDescription, error.localizedRecoverySuggestion]

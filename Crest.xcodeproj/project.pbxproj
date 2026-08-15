@@ -21498,6 +21498,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
 				CODE_SIGN_ENTITLEMENTS = CrestMac/Configuration/Crest.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
+				CREST_DEFAULT_UPDATE_CHANNEL = stable;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CrestMac/Configuration/Crest-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -21600,6 +21601,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
 				CODE_SIGN_ENTITLEMENTS = CrestMac/Configuration/Crest.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
+				CREST_DEFAULT_UPDATE_CHANNEL = stable;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "CrestMac/Configuration/Crest-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (

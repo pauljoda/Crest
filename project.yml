@@ -66,6 +66,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest
         PRODUCT_MODULE_NAME: Crest
         PRODUCT_NAME: Crest
+        CREST_DEFAULT_UPDATE_CHANNEL: stable
     scheme:
       testTargets:
         - CrestTests

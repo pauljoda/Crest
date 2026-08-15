@@ -21,13 +21,58 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
             Bundle.main.object(forInfoDictionaryKey: "SUVerifyUpdateBeforeExtraction") as? Bool,
             true
         )
+        XCTAssertEqual(
+            Bundle.main.object(forInfoDictionaryKey: "SUEnableAutomaticChecks") as? Bool,
+            true
+        )
+        XCTAssertEqual(
+            Bundle.main.object(forInfoDictionaryKey: "SUAutomaticallyUpdate") as? Bool,
+            true
+        )
+        XCTAssertEqual(
+            Bundle.main.object(forInfoDictionaryKey: "CrestDefaultUpdateChannel") as? String,
+            "stable"
+        )
     }
 
-    func testStableAndNightlyChannelsMapToSparkleWithoutExcludingStableUpdates() {
+    func testReleaseChannelsMapToTheirSignedFeedsAndSparkleChannels() {
         XCTAssertEqual(BrowserSoftwareUpdateChannel.stable.allowedSparkleChannels, [])
+        XCTAssertNil(BrowserSoftwareUpdateChannel.stable.customFeedURL)
         XCTAssertEqual(
             BrowserSoftwareUpdateChannel.nightly.allowedSparkleChannels,
             ["nightly"]
+        )
+        XCTAssertNil(BrowserSoftwareUpdateChannel.nightly.customFeedURL)
+        XCTAssertEqual(
+            BrowserSoftwareUpdateChannel.development.allowedSparkleChannels,
+            ["development"]
+        )
+        XCTAssertEqual(
+            BrowserSoftwareUpdateChannel.development.customFeedURL?.absoluteString,
+            "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml"
+        )
+    }
+
+    func testBundledChannelBecomesTheDefaultUntilTheUserChoosesAnother() {
+        let suiteName = "BrowserSoftwareUpdateTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suiteName)!
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+
+        let service = BrowserSoftwareUpdateService(
+            isEnabled: false,
+            preferences: preferences,
+            defaultChannel: .development
+        )
+
+        XCTAssertEqual(service.channel, .development)
+
+        service.channel = .nightly
+
+        XCTAssertEqual(
+            preferences.string(
+                forKey: BrowserSoftwareUpdateService.channelPreferenceKey
+            ),
+            BrowserSoftwareUpdateChannel.nightly.rawValue
         )
     }
 

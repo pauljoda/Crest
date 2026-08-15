@@ -9,6 +9,7 @@ xcuserdata/
 
 # Xcode products and diagnostics
 DerivedData/
+.codex-build/
 build/
 *.xcarchive
 *.xcresult

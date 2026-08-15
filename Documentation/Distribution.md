@@ -16,6 +16,7 @@ build supports native extension companions.
 | --- | --- | --- | --- |
 | Stable | Push an exact `v<marketing-version>` tag | Latest, non-prerelease | Default |
 | Nightly | Daily schedule or manual workflow dispatch | Prerelease | `nightly` |
+| Development | Every push to public `main` | Rolling prerelease | `development` |
 
 The marketing version comes from `Config/Version.xcconfig`. Stable tags must
 match it exactly. Build numbers come from the GitHub Actions run number so each
@@ -25,8 +26,15 @@ The appcast is hosted at:
 
 `https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml`
 
-The `updates` branch is workflow-owned. It contains only the appcast and a
-short README; release binaries remain immutable GitHub Release assets. GitHub
+Development builds use a separate signed feed so frequent commits cannot prune
+stable or nightly entries:
+
+`https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml`
+
+The `updates` branch is workflow-owned. It contains only the appcasts and a
+short README. Stable and nightly binaries remain immutable GitHub Release
+assets. Development assets are named with their UTC date and source commit and
+the latest three are retained on one rolling `development` prerelease. GitHub
 Packages is not part of the desktop distribution path.
 
 ## Publication order
@@ -79,8 +87,11 @@ Before publishing a stable tag:
 6. install the published disk image on a clean macOS account and exercise both
    a manual update check and the normal relaunch path.
 
-Nightly builds use the same signing, notarization, and verification gates as a
-stable build. The only differences are the prerelease label and Sparkle channel.
+Nightly and development builds use the same signing, notarization, and
+verification gates as a stable build. Development publication keeps only the
+latest queued public commit when pushes arrive faster than Apple notarization.
+Every distributed build defaults to its own channel, while an existing user
+choice remains authoritative.
 
 ## Verify a downloaded release
 

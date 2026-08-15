@@ -82,6 +82,12 @@
 	<string>NSApplication</string>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>CrestDefaultUpdateChannel</key>
+	<string>$(CREST_DEFAULT_UPDATE_CHANNEL)</string>
 	<key>SUPublicEDKey</key>
 	<string>x/dBoNAjtYIa+JKUUHY48NYepidnElHTo3w2VMyqzLA=</string>
 	<key>SURequireSignedFeed</key>

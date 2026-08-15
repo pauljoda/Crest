@@ -2,6 +2,8 @@ name: Publish macOS release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
   schedule:
@@ -14,6 +16,7 @@ on:
         default: nightly
         type: choice
         options:
+          - development
           - nightly
           - stable
 
@@ -51,8 +54,10 @@ jobs:
           release_date="$(date -u +%Y-%m-%d)"
           short_sha="$(git rev-parse --short=7 "$GITHUB_SHA")"
 
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_TYPE" == "tag" ]]; then
             channel=stable
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            channel=development
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             channel="$REQUESTED_CHANNEL"
           else
@@ -68,10 +73,14 @@ jobs:
             release_tag="$expected_tag"
             release_title="Crest ${marketing_version}"
             asset_base="Crest-${marketing_version}-arm64"
-          else
+          elif [[ "$channel" == "nightly" ]]; then
             release_tag="nightly-${release_date}-${short_sha}"
             release_title="Crest ${marketing_version} Nightly ${release_date} (${short_sha})"
             asset_base="Crest-${marketing_version}-nightly-${release_date}-${short_sha}-arm64"
+          else
+            release_tag=development
+            release_title="Crest ${marketing_version} Development ${release_date} (${short_sha})"
+            asset_base="Crest-${marketing_version}-development-${release_date}-${short_sha}-arm64"
           fi
 
           {
@@ -102,6 +111,7 @@ jobs:
           DEVELOPER_ID_PROVISIONING_PROFILE_BASE64: ${{ secrets.DEVELOPER_ID_PROVISIONING_PROFILE_BASE64 }}
           RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
           RELEASE_BUILD_NUMBER: ${{ steps.release.outputs.build_number }}
+          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
         run: |
           set -euo pipefail
 
@@ -177,6 +187,7 @@ jobs:
             -archivePath "$archive_path" \
             -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
+            CREST_DEFAULT_UPDATE_CHANNEL="$RELEASE_CHANNEL" \
             DEVELOPMENT_TEAM=3U2R97HLXF \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
@@ -260,12 +271,23 @@ jobs:
           publish_path="$RUNNER_TEMP/crest-release/publish"
           release_notes="$RUNNER_TEMP/crest-release/release-notes.md"
 
-          gh api \
-            --method POST \
-            "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
-            -f tag_name="$RELEASE_TAG" \
-            -f target_commitish="$GITHUB_SHA" \
-            --jq .body > "$release_notes"
+          if [[ "$RELEASE_CHANNEL" == "development" ]]; then
+            short_sha="$(git rev-parse --short=7 "$GITHUB_SHA")"
+            printf '%s\n' \
+              '# Crest development build' \
+              '' \
+              "Built automatically from [\`${short_sha}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})." \
+              '' \
+              'Development builds are signed and notarized, but may be less reliable than stable releases.' \
+              > "$release_notes"
+          else
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$RELEASE_TAG" \
+              -f target_commitish="$GITHUB_SHA" \
+              --jq .body > "$release_notes"
+          fi
 
           release_arguments=(
             "$RELEASE_TAG"
@@ -275,12 +297,33 @@ jobs:
             --title "$RELEASE_TITLE"
             --notes-file "$release_notes"
           )
-          if [[ "$RELEASE_CHANNEL" == "stable" ]]; then
+          if [[ "$RELEASE_CHANNEL" == "development" ]] \
+              && gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload \
+              "$RELEASE_TAG" \
+              "$publish_path/${RELEASE_ASSET_BASE}.dmg" \
+              "$publish_path/${RELEASE_ASSET_BASE}.dmg.sha256" \
+              "$publish_path/${RELEASE_ASSET_BASE}.dSYM.zip" \
+              --clobber
+            gh api \
+              --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/git/refs/tags/${RELEASE_TAG}" \
+              -f sha="$GITHUB_SHA" \
+              -F force=true \
+              >/dev/null
+            gh release edit \
+              "$RELEASE_TAG" \
+              --title "$RELEASE_TITLE" \
+              --notes-file "$release_notes" \
+              --prerelease \
+              --latest=false
+          elif [[ "$RELEASE_CHANNEL" == "stable" ]]; then
             release_arguments+=(--verify-tag --latest)
+            gh release create "${release_arguments[@]}"
           else
             release_arguments+=(--target "$GITHUB_SHA" --prerelease)
+            gh release create "${release_arguments[@]}"
           fi
-          gh release create "${release_arguments[@]}"
 
       - name: Publish signed Sparkle appcast
         shell: zsh {0}
@@ -300,6 +343,13 @@ jobs:
           updates_checkout="$RUNNER_TEMP/crest-updates-branch"
           release_root="$RUNNER_TEMP/crest-release"
           mkdir -p "$sparkle_root" "$feed_source" "$updates_checkout"
+          if [[ "$RELEASE_CHANNEL" == "development" ]]; then
+            appcast_filename=appcast-development.xml
+            maximum_versions=3
+          else
+            appcast_filename=appcast.xml
+            maximum_versions=0
+          fi
 
           gh release download "$sparkle_version" \
             --repo sparkle-project/Sparkle \
@@ -310,7 +360,10 @@ jobs:
           tar -xf "$sparkle_root/Sparkle-${sparkle_version}.tar.xz" -C "$sparkle_root"
 
           if git fetch origin updates; then
-            git show FETCH_HEAD:appcast.xml > "$feed_source/appcast.xml"
+            if git cat-file -e "FETCH_HEAD:${appcast_filename}" 2>/dev/null; then
+              git show "FETCH_HEAD:${appcast_filename}" \
+                > "$feed_source/${appcast_filename}"
+            fi
           fi
           cp \
             "$release_root/publish/${RELEASE_ASSET_BASE}.dmg" \
@@ -324,11 +377,12 @@ jobs:
             --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/"
             --link "https://crestbrowser.com/"
             --versions "$RELEASE_BUILD_NUMBER"
-            --maximum-versions 0
+            --maximum-versions "$maximum_versions"
             --embed-release-notes
+            -o "$feed_source/${appcast_filename}"
           )
-          if [[ "$RELEASE_CHANNEL" == "nightly" ]]; then
-            appcast_arguments+=(--channel nightly)
+          if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
+            appcast_arguments+=(--channel "$RELEASE_CHANNEL")
           fi
           print -r -- "$SPARKLE_EDDSA_PRIVATE_KEY" \
             | "$sparkle_root/bin/generate_appcast" \
@@ -336,7 +390,8 @@ jobs:
                 "$feed_source"
           expected_enclosure_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${RELEASE_ASSET_BASE}.dmg"
           if ! rg --fixed-strings \
-            "url=\"${expected_enclosure_url}\"" "$feed_source/appcast.xml"; then
+            "url=\"${expected_enclosure_url}\"" \
+            "$feed_source/${appcast_filename}"; then
             print -u2 "The generated appcast does not point to the release asset."
             exit 1
           fi
@@ -351,19 +406,34 @@ jobs:
           if git -C "$updates_checkout" fetch --depth=1 origin updates; then
             git -C "$updates_checkout" checkout -B updates FETCH_HEAD
           fi
-          cp "$feed_source/appcast.xml" "$updates_checkout/appcast.xml"
+          cp \
+            "$feed_source/${appcast_filename}" \
+            "$updates_checkout/${appcast_filename}"
           printf '%s\n' \
             '# Crest software updates' \
             '' \
-            'This branch is written by the production release workflow. The signed appcast points only to notarized assets in GitHub Releases.' \
+            'This branch is written by the production release workflow. Its signed stable, nightly, and development appcasts point only to notarized assets in GitHub Releases.' \
             > "$updates_checkout/README.md"
-          git -C "$updates_checkout" add appcast.xml README.md
+          git -C "$updates_checkout" add "$appcast_filename" README.md
           git -C "$updates_checkout" config user.name "github-actions[bot]"
           git -C "$updates_checkout" config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$updates_checkout" commit \
             -m "chore(updates): publish ${RELEASE_TAG}"
           git -C "$updates_checkout" push origin HEAD:updates
+
+          if [[ "$RELEASE_CHANNEL" == "development" ]]; then
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
+              --jq '.assets | map(. + {build: (.name | sub("\\.dmg(\\.sha256)?$"; "") | sub("\\.dSYM\\.zip$"; ""))}) | group_by(.build) | sort_by(map(.created_at) | max) | reverse | .[3:] | .[][] | .name' \
+              | while IFS= read -r stale_asset; do
+                  [[ -n "$stale_asset" ]] || continue
+                  gh release delete-asset \
+                    "$RELEASE_TAG" \
+                    "$stale_asset" \
+                    --yes
+                done
+          fi
 
       - name: Remove generated release data
         if: always()

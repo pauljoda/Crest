@@ -3,6 +3,7 @@ import Foundation
 enum BrowserSoftwareUpdateChannel: String, CaseIterable, Identifiable, Sendable {
     case stable
     case nightly
+    case development
 
     var id: Self { self }
 
@@ -10,6 +11,7 @@ enum BrowserSoftwareUpdateChannel: String, CaseIterable, Identifiable, Sendable 
         switch self {
         case .stable: "Stable"
         case .nightly: "Nightly"
+        case .development: "Development"
         }
     }
 
@@ -18,7 +20,9 @@ enum BrowserSoftwareUpdateChannel: String, CaseIterable, Identifiable, Sendable 
         case .stable:
             "Recommended releases intended for everyday use."
         case .nightly:
-            "Early builds from current development. Nightly builds may be less reliable."
+            "Daily snapshots of current development. Nightly builds may be less reliable."
+        case .development:
+            "The latest signed build from public main. Development builds can change several times a day."
         }
     }
 
@@ -26,6 +30,18 @@ enum BrowserSoftwareUpdateChannel: String, CaseIterable, Identifiable, Sendable 
         switch self {
         case .stable: []
         case .nightly: ["nightly"]
+        case .development: ["development"]
+        }
+    }
+
+    var customFeedURL: URL? {
+        switch self {
+        case .stable, .nightly:
+            nil
+        case .development:
+            URL(
+                string: "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml"
+            )
         }
     }
 }

@@ -13,6 +13,15 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
                 )
             )
 
+            Toggle(
+                "Download and install updates automatically",
+                isOn: Binding(
+                    get: { softwareUpdates.automaticallyDownloadsUpdates },
+                    set: softwareUpdates.setAutomaticallyDownloadsUpdates
+                )
+            )
+            .disabled(!softwareUpdates.automaticallyChecksForUpdates)
+
             Picker(
                 "Update channel",
                 selection: Binding(
