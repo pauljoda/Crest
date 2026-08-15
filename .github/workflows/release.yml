@@ -87,9 +87,7 @@ jobs:
           command -v rg >/dev/null || brew install ripgrep
 
       - name: Prepare release source
-        run: |
-          Scripts/bootstrap.sh
-          git diff --exit-code -- Crest.xcodeproj
+        run: Scripts/bootstrap.sh
 
       - name: Build, sign, and notarize
         shell: zsh {0}

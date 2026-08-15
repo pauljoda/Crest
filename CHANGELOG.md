@@ -72,7 +72,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Focused hosted automation on publishable-source compliance, clean macOS and iOS compilation, Help Center generation, and signed release packaging; the broader test suites remain local gates while the public workflow settles, and dependency updates arrive as grouped monthly maintenance instead of a stream of individual pull requests.
+- Focused hosted automation on publishable-source compliance, clean macOS and iOS compilation from the authoritative `project.yml`, Help Center generation, and signed release packaging; the broader test suites and generated-project byte comparison remain local gates while the public workflow settles, and dependency updates arrive as grouped monthly maintenance instead of a stream of individual pull requests.
 - Made GitHub Releases the only macOS distribution path while retaining TestFlight and the App Store for iPhone and iPad.
 - Reduced built-in content blocking to Crest's bundled local tracking-prevention rules. Downloadable AdGuard-compatible lists and their conversion pipeline were removed; broader blocking remains available through user-installed extensions.
 - Kept tabs loaded after they are first opened so switching tabs does not reload them, while continuing to load only the selected tab at launch and releasing the oldest eligible background pages under memory pressure. Active tabs, playing media, camera or microphone use, and tabs marked **Keep Loaded** remain resident; mobile uses a more conservative release budget.

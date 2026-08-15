@@ -40,9 +40,7 @@ jobs:
           command -v rg >/dev/null || brew install ripgrep
 
       - name: Generate the project
-        run: |
-          Scripts/bootstrap.sh
-          git diff --exit-code -- Crest.xcodeproj
+        run: Scripts/bootstrap.sh
 
       - name: Build macOS
         run: |
