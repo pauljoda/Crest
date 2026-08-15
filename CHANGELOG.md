@@ -9,6 +9,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Advanced Crest's development builds to the 0.4.0 release line.
 - Enabled automatic update checks, downloads, and installation by default for direct macOS builds while keeping both controls available in Settings.
 
 ### Fixed
