@@ -336,8 +336,10 @@ jobs:
           git -C "$updates_checkout" init --initial-branch=updates
           git -C "$updates_checkout" remote add origin \
             "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          git -C "$updates_checkout" config credential.helper \
-            "!gh auth git-credential"
+          authorization_header="$(git config --get "http.${GITHUB_SERVER_URL}/.extraheader")"
+          git -C "$updates_checkout" config \
+            "http.${GITHUB_SERVER_URL}/.extraheader" "$authorization_header"
+          unset authorization_header
           if git -C "$updates_checkout" fetch --depth=1 origin updates; then
             git -C "$updates_checkout" checkout -B updates FETCH_HEAD
           fi
