@@ -7,6 +7,23 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.4.0</title>
+            <pubDate>Sun, 16 Aug 2026 07:56:05 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>development</sparkle:channel>
+            <sparkle:version>1015</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Crest development build
+
+Built automatically from [`9e4532a`](https://github.com/pauljoda/Crest/commit/9e4532a1e3ae7a8270bd59751f965344a810c847).
+
+Development builds are signed and notarized, but may be less reliable than stable releases.
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.4.0-development-2026-08-16-9e4532a-arm64.dmg" length="7912200" type="application/octet-stream" sparkle:edSignature="aBcmOO02akQyE6raZ70W3Prb1OsVoMCIMjQ5p1HkKWWx55BPSD3ubVaj+QmfOXqpzpgrmPsHGEuOo3ucyJd+Dw=="/>
+        </item>
+        <item>
+            <title>0.4.0</title>
             <pubDate>Sun, 16 Aug 2026 07:45:44 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
@@ -39,26 +56,9 @@ Development builds are signed and notarized, but may be less reliable than stabl
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.4.0-development-2026-08-16-bff917c-arm64.dmg" length="7921417" type="application/octet-stream" sparkle:edSignature="LTl8Ke85yHOYuXuXoOb3R0qlqNmd61uRTq376wx0JdXvqrrOL3phaO1OIX8jQK3NOWdUtAfL1hlvhs/7hiByBA=="/>
         </item>
-        <item>
-            <title>0.4.0</title>
-            <pubDate>Sun, 16 Aug 2026 06:37:30 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>12</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Crest development build
-
-Built automatically from [`6355a54`](https://github.com/pauljoda/Crest/commit/6355a54639578a775a9da73b34968597afec39fe).
-
-Development builds are signed and notarized, but may be less reliable than stable releases.
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.4.0-development-2026-08-16-6355a54-arm64.dmg" length="7907081" type="application/octet-stream" sparkle:edSignature="xQgnmkIummsP8CWX7vq80DS1nxl+3mpLqlDuHEtkrZhiT/zNcWr/4Be9mgJzUh0RZ/bPc1KaO5hrRI62cpw4Dw=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: UjHOXd/hnapC+xwJMkAenxIv30SM0Y8v4H7MmVmW1VvDlNdZsE0t/ybdcxT/6ctG/lGd2MD5xzj6Cr9j8EazBA==
-length: 3867
+edSignature: cKBa+woI4UPZrTpv/Bo7A0BhqjzhwfRJsK5zjmxRarkegreYaqS1hocKZveorOcfhTmBqsDSJlEW8mS/R7aHBw==
+length: 3869
 -->
