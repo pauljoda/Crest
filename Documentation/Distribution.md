@@ -16,7 +16,7 @@ build supports native extension companions.
 | --- | --- | --- | --- |
 | Stable | Push an exact `v<marketing-version>` tag | Latest, non-prerelease | Default |
 | Nightly | Daily schedule or manual workflow dispatch | Prerelease | `nightly` |
-| Development | Every push to public `main` | Rolling prerelease | `development` |
+| Development | Manual workflow dispatch after local validation | Rolling prerelease | `development` |
 
 The marketing version comes from `Config/Version.xcconfig`. Stable tags must
 match it exactly. Distributed build numbers add the GitHub Actions run number
@@ -94,6 +94,27 @@ verification gates as a stable build. Development publication keeps only the
 latest queued public commit when pushes arrive faster than Apple notarization.
 Every distributed build defaults to its own channel, while an existing user
 choice remains authoritative.
+
+## Local macOS iteration
+
+Maintainers can build and install the real Release configuration without
+publishing an update:
+
+```bash
+Scripts/install-local-macos-release.sh
+```
+
+The command requires Crest's Developer ID identity and provisioning profile in
+the local keychain/Xcode profile directory. It archives with production iCloud,
+push, keychain, hardened-runtime, and extension-companion signing, verifies the
+export, replaces `/Applications/Crest.app`, and relaunches it. It reuses the
+installed build number by default so a local iteration does not outrank the
+next published Sparkle build. Set `CREST_LOCAL_BUILD_NUMBER` only when a
+specific local bundle version is needed.
+
+Ordinary commits to `main` do not publish or advance an appcast. After a local
+build passes the signed-app extension and update checks, dispatch **Publish
+macOS release** with the `development` channel from the validated commit.
 
 ## Verify a downloaded release
 

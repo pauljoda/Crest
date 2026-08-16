@@ -2,8 +2,6 @@ name: Publish macOS release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*.*.*"
   schedule:
@@ -13,7 +11,7 @@ on:
       channel:
         description: Release channel
         required: true
-        default: nightly
+        default: development
         type: choice
         options:
           - development
