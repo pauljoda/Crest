@@ -6,6 +6,7 @@ application_path="/Applications/Crest.app"
 team_id="3U2R97HLXF"
 signing_identity="Developer ID Application"
 provisioning_profile="Crest Developer ID"
+development_appcast_url="https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml"
 
 cd "$repository_root"
 
@@ -42,6 +43,21 @@ if [[ -z "$build_number" && -d "$application_path" ]]; then
   } 2>/dev/null || true)"
 fi
 build_number="${build_number:-1}"
+if [[ -z "${CREST_LOCAL_BUILD_NUMBER:-}" && "$build_number" =~ '^[0-9]+$' ]]; then
+  published_build_number="$({
+    curl --fail --silent --show-error --location \
+      --connect-timeout 3 \
+      --max-time 5 \
+      "$development_appcast_url" \
+      | sed -n \
+        's|.*<sparkle:version>\([0-9][0-9]*\)</sparkle:version>.*|\1|p' \
+      | sed -n '1p'
+  } || true)"
+  if [[ "$published_build_number" =~ '^[0-9]+$' ]] \
+    && (( published_build_number > build_number )); then
+    build_number="$published_build_number"
+  fi
+fi
 if [[ ! "$build_number" =~ '^[0-9]+([.][0-9]+)*$' ]]; then
   print -u2 "Invalid local build number: $build_number"
   exit 1

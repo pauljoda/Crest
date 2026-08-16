@@ -108,9 +108,10 @@ The command requires Crest's Developer ID identity and provisioning profile in
 the local keychain/Xcode profile directory. It archives with production iCloud,
 push, keychain, hardened-runtime, and extension-companion signing, verifies the
 export, replaces `/Applications/Crest.app`, and relaunches it. It reuses the
-installed build number by default so a local iteration does not outrank the
-next published Sparkle build. Set `CREST_LOCAL_BUILD_NUMBER` only when a
-specific local bundle version is needed.
+greater of the installed build number and current development appcast by
+default. That prevents the current public build from immediately replacing a
+local iteration without outranking the next published Sparkle build. Set
+`CREST_LOCAL_BUILD_NUMBER` only when a specific local bundle version is needed.
 
 Ordinary commits to `main` do not publish or advance an appcast. After a local
 build passes the signed-app extension and update checks, dispatch **Publish
