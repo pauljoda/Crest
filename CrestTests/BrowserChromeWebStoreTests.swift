@@ -17,6 +17,21 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    private func generatedJavaScriptURL(
+        in root: URL,
+        prefix: String
+    ) throws -> URL {
+        let matches = try FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: nil
+        ).filter {
+            $0.lastPathComponent.hasPrefix(prefix + "-")
+                && $0.pathExtension == "js"
+        }
+        XCTAssertEqual(matches.count, 1)
+        return try XCTUnwrap(matches.first)
+    }
+
     func testStoreItemRecognizesDarkReaderAndRejectsUntrustedLookalikes() throws {
         let item = try XCTUnwrap(
             BrowserChromeWebStoreItem(
@@ -217,7 +232,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    func testCompatibilityLayerHostsAnyModuleWorkerInABackgroundPage()
+    func testCompatibilityLayerPreservesAnyModuleWorkerBehindBootstrap()
         throws
     {
         let fileManager = FileManager.default
@@ -296,60 +311,78 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let background = try XCTUnwrap(
             updated["background"] as? [String: Any]
         )
-        XCTAssertEqual(updated["manifest_version"] as? Int, 2)
-        XCTAssertNotNil(updated["browser_action"])
-        XCTAssertNil(updated["action"])
-        XCTAssertEqual(
-            background["page"] as? String,
-            "crest-webextension-background.html"
+        let bootstrapName = try XCTUnwrap(
+            background["service_worker"] as? String
         )
-        XCTAssertEqual(background["persistent"] as? Bool, true)
-        XCTAssertNil(background["service_worker"])
-        XCTAssertNil(background["type"])
+        let updatedContentScripts = try XCTUnwrap(
+            updated["content_scripts"] as? [[String: Any]]
+        )
+        let preparedContentScripts = try XCTUnwrap(
+            updatedContentScripts.first?["js"] as? [String]
+        )
+        let compatibilityScriptName = try XCTUnwrap(
+            preparedContentScripts.first
+        )
+        XCTAssertEqual(updated["manifest_version"] as? Int, 3)
+        XCTAssertNotNil(updated["action"])
+        XCTAssertNil(updated["browser_action"])
+        XCTAssertTrue(
+            bootstrapName.hasPrefix(
+                "crest-webextension-background-bootstrap-"
+            )
+        )
+        XCTAssertTrue(bootstrapName.hasSuffix(".js"))
+        XCTAssertTrue(
+            compatibilityScriptName.hasPrefix(
+                "crest-webextension-compatibility-"
+            )
+        )
+        XCTAssertTrue(compatibilityScriptName.hasSuffix(".js"))
+        XCTAssertNil(background["persistent"])
+        XCTAssertEqual(background["type"] as? String, "module")
         let preparedWorker = try String(
             contentsOf: workerURL,
             encoding: .utf8
         )
         XCTAssertEqual(preparedWorker, "globalThis.started = true;")
 
-        let backgroundPage = try String(
-            contentsOf: root.appending(
-                path: "crest-webextension-background.html"
-            ),
-            encoding: .utf8
-        )
-        XCTAssertTrue(
-            backgroundPage.contains(
-                #"src="crest-webextension-compatibility.js""#
-            )
-        )
-        XCTAssertTrue(
-            backgroundPage.contains(
-                #"type="module" src="crest-webextension-background-bootstrap.js""#
-            )
-        )
-        XCTAssertFalse(
-            backgroundPage.contains(
-                #"type="module" src="background/background.js""#
-            )
-        )
-
         let bootstrapScript = try String(
             contentsOf: root.appending(
-                path: "crest-webextension-background-bootstrap.js"
+                path: bootstrapName
             ),
             encoding: .utf8
         )
         XCTAssertTrue(
-            bootstrapScript.contains(#"import("./background/background.js")"#)
+            bootstrapScript.contains(
+                #"import "./\#(compatibilityScriptName)";"#
+            )
+        )
+        XCTAssertTrue(
+            bootstrapScript.contains(
+                #"import "./background/background.js";"#
+            )
         )
         XCTAssertFalse(bootstrapScript.contains("__crest"))
 
         let compatibilityScript = try String(
             contentsOf: root.appending(
-                path: "crest-webextension-compatibility.js"
+                path: compatibilityScriptName
             ),
             encoding: .utf8
+        )
+        let compatibilityFingerprint = Data(
+            SHA256.hash(data: Data(compatibilityScript.utf8)).prefix(8)
+        ).hexString
+        XCTAssertEqual(
+            compatibilityScriptName,
+            "crest-webextension-compatibility-\(compatibilityFingerprint).js"
+        )
+        let bootstrapFingerprint = Data(
+            SHA256.hash(data: Data(bootstrapScript.utf8)).prefix(8)
+        ).hexString
+        XCTAssertEqual(
+            bootstrapName,
+            "crest-webextension-background-bootstrap-\(bootstrapFingerprint).js"
         )
         for requiredSurface in [
             "notifications",
@@ -360,6 +393,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "storageManaged",
             "onChanged",
             "installFallbacks",
+            "namespaceFacade",
+            "installNamespaceFacades",
             "installNativeAliases",
             "installMissingRoot",
             "serviceWorkerClients",
@@ -391,7 +426,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let preparedPopup = try String(contentsOf: popupURL, encoding: .utf8)
         XCTAssertTrue(
             preparedPopup.contains(
-                #"src="/crest-webextension-compatibility.js""#
+                #"src="/\#(compatibilityScriptName)""#
             )
         )
         let preparedAppPage = try String(
@@ -400,7 +435,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertTrue(
             preparedAppPage.contains(
-                #"src="/crest-webextension-compatibility.js""#
+                #"src="/\#(compatibilityScriptName)""#
             )
         )
         let preparedSandboxPage = try String(
@@ -409,15 +444,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertFalse(
             preparedSandboxPage.contains(
-                #"src="/crest-webextension-compatibility.js""#
+                #"src="/\#(compatibilityScriptName)""#
             )
         )
-        let updatedContentScripts = try XCTUnwrap(
-            updated["content_scripts"] as? [[String: Any]]
-        )
         XCTAssertEqual(
-            updatedContentScripts.first?["js"] as? [String],
-            ["crest-webextension-compatibility.js", "content.js"]
+            preparedContentScripts,
+            [compatibilityScriptName, "content.js"]
         )
     }
 
@@ -510,8 +542,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             )
         )
         let source = try String(
-            contentsOf: root.appending(
-                path: "crest-webextension-compatibility.js"
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
             ),
             encoding: .utf8
         )
@@ -556,8 +589,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             )
         )
         let source = try String(
-            contentsOf: root.appending(
-                path: "crest-webextension-compatibility.js"
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
             ),
             encoding: .utf8
         )
@@ -672,8 +706,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             )
         )
         let source = try String(
-            contentsOf: root.appending(
-                path: "crest-webextension-compatibility.js"
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
             ),
             encoding: .utf8
         )
@@ -688,9 +723,23 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                         : undefined;
                 }
             };
+            const nativeCommittedEvent = Object.freeze({
+                receiver: "native-event"
+            });
+            const nativeWebNavigation = Object.preventExtensions({
+                onCommitted: nativeCommittedEvent,
+                getFrame() {
+                    return this === nativeWebNavigation
+                        ? { receiver: "native-namespace" }
+                        : undefined;
+                }
+            });
             Object.defineProperty(globalThis, "chrome", {
                 configurable: true,
-                value: { runtime: nativeRuntime }
+                value: {
+                    runtime: nativeRuntime,
+                    webNavigation: nativeWebNavigation
+                }
             });
             \(source)
             JSON.stringify({
@@ -699,6 +748,17 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 resource: chrome.runtime.getURL("images/icon.png"),
                 sameRoot: chrome === browser,
                 sameRuntime: chrome.runtime === nativeRuntime,
+                sameCommittedEvent:
+                    chrome.webNavigation.onCommitted
+                        === nativeCommittedEvent,
+                nativeNamespaceReceiver:
+                    chrome.webNavigation.getFrame()?.receiver,
+                addedNavigationEvent:
+                    typeof chrome.webNavigation
+                        .onCreatedNavigationTarget?.addListener,
+                enumerableNavigationEvent:
+                    Object.keys(chrome.webNavigation)
+                        .includes("onCreatedNavigationTarget"),
                 nativeReceiver:
                     browser.runtime.connectNative("")?.receiver
             })
@@ -722,6 +782,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertEqual(result["sameRoot"] as? Bool, true)
         XCTAssertEqual(result["sameRuntime"] as? Bool, true)
+        XCTAssertEqual(result["sameCommittedEvent"] as? Bool, true)
+        XCTAssertEqual(
+            result["nativeNamespaceReceiver"] as? String,
+            "native-namespace"
+        )
+        XCTAssertEqual(result["addedNavigationEvent"] as? String, "function")
+        XCTAssertEqual(result["enumerableNavigationEvent"] as? Bool, true)
         XCTAssertEqual(result["nativeReceiver"] as? String, "native")
     }
 
@@ -766,11 +833,10 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
 
         XCTAssertNotEqual(prepared.resourceURL, source)
-        XCTAssertTrue(
-            fileManager.fileExists(
-                atPath: prepared.resourceURL.appending(
-                    path: "crest-webextension-background.html"
-                ).path
+        XCTAssertNoThrow(
+            try generatedJavaScriptURL(
+                in: prepared.resourceURL,
+                prefix: "crest-webextension-background-bootstrap"
             )
         )
         let storedManifest = try XCTUnwrap(
@@ -844,8 +910,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
 
         let compatibilityScript = try String(
-            contentsOf: root.appending(
-                path: "crest-webextension-compatibility.js"
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
             ),
             encoding: .utf8
         )
@@ -992,8 +1059,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertNotNil(prepared.retainedAccess)
         XCTAssertTrue(fileManager.fileExists(atPath: archiveURL.path))
         let compatibilityScript = try String(
-            contentsOf: prepared.resourceURL.appending(
-                path: "crest-webextension-compatibility.js"
+            contentsOf: generatedJavaScriptURL(
+                in: prepared.resourceURL,
+                prefix: "crest-webextension-compatibility"
             ),
             encoding: .utf8
         )

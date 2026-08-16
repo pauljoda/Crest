@@ -15,7 +15,7 @@ runtime only supplies an absent member.
 1. **WebKit substrate.** `WKWebExtension` and `WKWebExtensionController` keep
    ownership of extension execution and document integration.
 2. **JavaScript compatibility runtime.** A generated, versioned runtime is
-   loaded before transformed background content, declared content scripts, and
+   loaded before prepared background content, declared content scripts, and
    packaged extension pages. It normalizes the `chrome` and `browser` roots,
    preserves the declared manifest, and provides bounded local adapters where
    no native round trip is needed.
@@ -55,27 +55,27 @@ resources that request a capability known to need normalization. Both formats
 enter the same preparer after their store-specific acquisition and provenance
 checks. It supports:
 
-- Manifest V3 module workers through a generated persistent background page
-  that loads the compatibility runtime before importing the declared module;
-- classic service workers through persistent `background.scripts`, with the
-  generated runtime inserted before the declared worker;
+- Manifest V3 module workers through a generated module-worker bootstrap that
+  statically imports the compatibility runtime before the declared module;
+- classic service workers through a generated classic-worker bootstrap that
+  imports the compatibility runtime before the declared worker;
 - Manifest V2 `background.scripts` by inserting the runtime first;
 - declared content scripts and every packaged HTML extension page. This
   includes internal routes reached from a popup or options page even when the
   manifest does not name them directly. Manifest sandbox pages are excluded,
   because injecting privileged extension APIs there would violate the sandbox;
-- native-first `chrome`/`browser` capability augmentation, an exact
+- native-first `chrome`/`browser` capability augmentation, namespace-only
+  facades for WebKit objects that cannot be extended in place, an exact
   `runtime.getManifest()` fallback, managed-storage empty-policy semantics,
   optional navigation events, and a document-backed offscreen-page adapter
   that uses the URL supplied by the extension.
 
 For a Manifest V3 package that enters this layer, the temporary host manifest
-is projected to the equivalent Manifest V2 document-background shape that
-WebKit can keep alive reliably on direct-distribution macOS. Host and optional
-host permissions, `action`, web-accessible resources, and extension-page CSP
-are translated mechanically. The extension still observes its authored
-Manifest V3 document through `runtime.getManifest()`. Only the temporary copy
-is transformed; verified store bytes are never rewritten.
+stays Manifest V3. Only its `background.service_worker` path is redirected to a
+bootstrap with the same classic-or-module shape. Generated filenames are
+content-addressed, so a runtime change forces WebKit to refresh the worker
+registration without changing the extension's context identity or storage.
+Only the temporary copy is prepared; verified store bytes are never rewritten.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
 The app-service broker described below is the next boundary to connect; until a
@@ -99,10 +99,12 @@ engine that created the isolated content world.
 The generated runtime captures WebKit's existing `chrome` and `browser` roots.
 It copies an absent top-level native namespace from the other root, fills only
 missing capability members, and defines the missing root name as an alias only
-when WebKit supplied a single root. Existing native object identity and method
-receivers are preserved. `runtime.getManifest()` is the deliberate exception:
-it returns the extension's authored manifest rather than Crest's temporary host
-projection.
+when WebKit supplied a single root. When WebKit exposes a non-augmentable
+namespace, Crest overlays that namespace alone: original members and events are
+returned unchanged, and original methods are bound to the native namespace.
+The roots, `runtime`, and messaging objects keep their native identity.
+`runtime.getManifest()` is the deliberate exception: it returns the extension's
+authored manifest rather than Crest's temporary worker redirection.
 
 The host still has one required responsibility: every live web view that can
 run extension content must be announced to `WKWebExtensionController` before

@@ -418,15 +418,27 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             "manifest_version": 3,
             "name": "Native Delegate Test",
             "version": "1.0",
-            "permissions": ["nativeMessaging"],
-            "background": ["service_worker": "background.js"],
+            "permissions": [
+                "nativeMessaging",
+                "storage",
+                "webNavigation",
+            ],
+            "background": [
+                "service_worker": "background.js",
+                "type": "module",
+            ],
         ]
         try JSONSerialization.data(withJSONObject: manifest).write(
             to: extensionURL.appending(path: "manifest.json")
         )
         try Data(
-            "browser.runtime.sendNativeMessage('com.example.echo', {ping: 'pong'});"
-                .utf8
+            """
+            const stored = await browser.storage.local.get();
+            await browser.runtime.sendNativeMessage(
+                'com.example.echo',
+                { ping: 'pong', storedKeys: Object.keys(stored).length }
+            );
+            """.utf8
         ).write(to: extensionURL.appending(path: "background.js"))
         let extensionID = try XCTUnwrap(
             BrowserChromeExtensionID(
@@ -446,6 +458,27 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 publisherKeyHashHex: String(repeating: "b", count: 64)
             )
         )
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer()
+                .installCompatibilityLayer(
+                    in: extensionURL,
+                    requestedPermissions: [
+                        "nativeMessaging",
+                        "storage",
+                        "webNavigation",
+                    ],
+                    runtimeIdentity: BrowserExtensionRuntimeIdentity(
+                        extensionID: extensionID.rawValue,
+                        uniqueIdentifier: "native-delegate-test",
+                        baseURL: try XCTUnwrap(
+                            URL(
+                                string:
+                                    "crest-extension://native-delegate-test/"
+                            )
+                        )
+                    )
+                )
+        )
 
         _ = try await pool.loadExtension(
             at: extensionURL,
@@ -455,7 +488,11 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             permissionSnapshot:
                 BrowserExtensionInstallationPermissionPolicy
                 .reviewedRequiredAccess(
-                    permissions: ["nativeMessaging"],
+                    permissions: [
+                        "nativeMessaging",
+                        "storage",
+                        "webNavigation",
+                    ],
                     hosts: []
                 )
         )
@@ -464,8 +501,12 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(handler.hostName, "com.example.echo")
         XCTAssertEqual(handler.extensionID, extensionID)
         XCTAssertEqual(
-            (handler.message as? [String: String])?["ping"],
+            (handler.message as? [String: Any])?["ping"] as? String,
             "pong"
+        )
+        XCTAssertEqual(
+            (handler.message as? [String: Any])?["storedKeys"] as? Int,
+            0
         )
     }
 
@@ -1850,12 +1891,17 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             "version": "1.0",
             "permissions": ["storage", "tabs", "webNavigation"],
             "host_permissions": ["<all_urls>"],
-            "background": ["service_worker": "background.js"],
-            "content_scripts": [[
-                "matches": ["<all_urls>"],
-                "js": ["content.js"],
-                "run_at": "document_start",
-            ]],
+            "background": [
+                "service_worker": "background.js",
+                "type": "module",
+            ],
+            "content_scripts": [
+                [
+                    "matches": ["<all_urls>"],
+                    "js": ["content.js"],
+                    "run_at": "document_start",
+                ]
+            ],
         ]
         try JSONSerialization.data(withJSONObject: manifest).write(
             to: extensionURL.appending(path: "manifest.json")
@@ -1891,6 +1937,21 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                             { type: "crest-reverse-message" },
                             (reverseResponse) => reply({
                                 stage: "background-received",
+                                backgroundStorageSession:
+                                    typeof browser.storage?.session?.get
+                                        === "function",
+                                backgroundOffscreen:
+                                    typeof chrome.offscreen?.createDocument
+                                        === "function",
+                                backgroundOffscreenReason:
+                                    chrome.offscreen?.Reason?.LOCAL_STORAGE,
+                                backgroundClients:
+                                    typeof globalThis.clients?.matchAll
+                                        === "function",
+                                backgroundCreatedNavigationTarget:
+                                    typeof chrome.webNavigation
+                                        ?.onCreatedNavigationTarget
+                                        ?.addListener === "function",
                                 queriedTabID,
                                 messageTabID: sender?.tab?.id,
                                 messageFrameID: sender?.frameId,
@@ -1925,6 +1986,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                     browser.runtime.getManifest().manifest_version,
                 browserStorageLocal:
                     typeof browser.storage?.local?.get === "function",
+                contentStorageSession:
+                    typeof browser.storage?.session?.get === "function",
                 browserStorageManaged:
                     typeof browser.storage?.managed?.onChanged?.addListener
                         === "function",
@@ -2010,7 +2073,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             ) as? String,
                 let data = encoded.data(using: .utf8)
             {
-                response = try JSONSerialization.jsonObject(with: data)
+                response =
+                    try JSONSerialization.jsonObject(with: data)
                     as? [String: Any]
                 if response?["reverseResponse"] as? String
                     == "reverse-complete"
@@ -2047,6 +2111,18 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(identity["chromeManifestVersion"] as? Int, 3)
         XCTAssertEqual(identity["browserManifestVersion"] as? Int, 3)
         XCTAssertEqual(identity["browserStorageLocal"] as? Bool, true)
+        XCTAssertEqual(identity["backgroundStorageSession"] as? Bool, true)
+        XCTAssertEqual(identity["backgroundOffscreen"] as? Bool, true)
+        XCTAssertEqual(
+            identity["backgroundOffscreenReason"] as? String,
+            "LOCAL_STORAGE"
+        )
+        XCTAssertEqual(identity["backgroundClients"] as? Bool, true)
+        XCTAssertEqual(
+            identity["backgroundCreatedNavigationTarget"] as? Bool,
+            true
+        )
+        XCTAssertEqual(identity["contentStorageSession"] as? Bool, false)
         XCTAssertEqual(identity["browserStorageManaged"] as? Bool, true)
         XCTAssertNil(
             identity["error"],

@@ -135,18 +135,27 @@ The package layer currently loads before supported Manifest V2 and V3
 background forms, declared content scripts, and packaged HTML extension pages.
 That last category intentionally includes internal routes reached from a popup
 or options page even when the manifest does not name them directly; manifest
-sandbox pages remain untouched. Manifest V3 packages that need compatibility
-are projected into an equivalent persistent Manifest V2 background shape in
-the temporary host copy. The declared Manifest V3 document remains what the
-extension sees through `runtime.getManifest()`.
+sandbox pages remain untouched. A Manifest V3 service worker remains a
+Manifest V3 service worker. Crest points the temporary manifest at a generated
+bootstrap of the same worker type, which loads the compatibility runtime before
+the package's declared worker. The extension sees its authored manifest through
+`runtime.getManifest()`.
 
-The runtime preserves WebKit's native objects. It copies a missing namespace or
-member from the other native `chrome`/`browser` root where possible and fills
-only absent capabilities. If WebKit supplies only one root, the missing global
-name becomes an alias to that same native object. Native `runtime`, `tabs`,
-events, messaging methods, Ports, and sender metadata are never replaced or
-proxied; an offscreen document uses the extension-supplied URL rather than a
-package-specific path.
+Generated runtime and service-worker filenames include a digest of the runtime
+source. A runtime change therefore gives WebKit a new worker URL and forces its
+registration to refresh, while the context identifier and extension storage
+remain stable. Without that content address, WebKit can continue running a
+previously registered bootstrap after Crest itself has been updated.
+
+The runtime preserves WebKit's native roots and `runtime` object. It copies a
+missing namespace from the other native `chrome`/`browser` root where possible
+and fills only absent capabilities. If an existing WebKit namespace is not
+augmentable, a namespace-only facade exposes the missing members while
+returning the original native values and binding native methods to their
+original receiver. Native messaging methods, events, Ports, and sender metadata
+remain WebKit-owned. If WebKit supplies only one root, the missing global name
+becomes an alias to that same native object. An offscreen document uses the
+extension-supplied URL rather than a package-specific path.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
@@ -206,41 +215,31 @@ boundary.
 
 ## 1Password live validation
 
-The signed Chrome Web Store package for 1Password 8.12.30.21 completed the
-following path in Crest for Mac on August 10, 2026:
+The signed Chrome Web Store package for 1Password 8.12.32.33 now reaches the
+native-companion boundary without an extension-specific patch. In a fresh
+Manifest V3 worker inspection on August 16, 2026, it initialized persistent and
+session storage, loaded its WASM and XAM components, finished background
+initialization, and sent its account request through Crest's native-messaging
+port. The earlier missing `storage.managed`, `runtime.getManifest()`, passkey,
+and `webNavigation.onCreatedNavigationTarget` members no longer stop startup.
 
-1. **Add to Crest** opened Crest's native review sheet.
-2. The extension installed and appeared as **Running**.
-3. Its welcome and setup interface rendered.
-4. **Sign in** opened a normal Crest tab at `my.1password.com`.
-5. Unified logs verified that Crest's native-messaging bridge launched
-   `/Applications/1Password.app/Contents/MacOS/1Password-BrowserSupport`.
-6. Adding `/Applications/Crest.app` in **1Password → Settings → Browser**
-   displayed and completed 1Password's explicit browser-authorization review.
+1Password then deliberately rejected the unsigned development copy with
+`BrowserVerificationFailed` / `UnknownBrowser`. This is not a WebExtension API
+gap. On macOS, 1Password authenticates the browser's code signature and allows
+an unsupported browser only after the person explicitly trusts it. The
+supported path is:
 
-The original account handoff exposed a distribution boundary. A full
-bidirectional native-message trace showed the extension sending
-`NmRequestAccounts`, followed by 1Password's helper returning
-`BrowserVerificationFailed` with `BrowserSignatureInvalid`. That measurement
-used an Apple Development certificate.
+1. Install the Developer ID-signed Crest build at `/Applications/Crest.app`.
+2. Open and unlock 1Password.
+3. Choose **Settings → Browser → Add Browser** and select Crest.
+4. Restart Crest and confirm the popup, account discovery, and a real field
+   fill.
 
-That measurement proves installation, normal navigation, persistent native-port
-transport, companion launch, and the trusted-browser review UI.
-
-On August 16, 2026, a Developer ID build completed the next generic-runtime
-gate. 1Password's packaged Settings route rendered **Integration status:
-Connected**, displayed the signed-in account and selected vault, and its toolbar
-popup left the loading spinner and rendered a site result. A fresh page
-inspection contained neither the earlier `savePasskeys` missing-member error nor
-the background-message timeout. The fixes were package-wide page injection,
-content/background messaging, and independent `chrome`/`browser` namespace
-bootstrap; none branches on 1Password's identifier or patches its source.
-
-That validates pairing, account discovery, settings, popup startup, and the
-extension/companion connection. A matching saved login was not available on the
-test page, so field autofill remains a separate certification step. Website
-passkey registration is also separate: WebKit rejects it until Crest's signed
-build carries Apple's managed browser public-key-credential entitlement.
+Crest must not masquerade as Chrome, weaken that verification, or auto-edit
+1Password's trust list. A debug build outside Applications is expected to fail
+this handshake. Website passkey registration is also a separate boundary:
+WebKit rejects it until Crest's signed build carries Apple's managed browser
+public-key-credential entitlement.
 
 Official references:
 
@@ -309,9 +308,11 @@ popup's opening handshake. The shipped 4.9.129 manifest declares only
 `background.service_worker`; it no longer offers the document-environment
 alternative the rewrite used to select.
 
-Removing the rewrite also keeps the runtime package byte-identical to the
-verified CRX3 payload. Dark Reader loads directly from its stored signed
-archive instead of an expanded, edited copy in a temporary directory.
+Removing the rewrite keeps the stored package byte-identical to the verified
+store payload. If Dark Reader requests a capability in the shared overlay,
+Crest prepares the same temporary, capability-selected runtime copy used for
+every other extension; it does not edit Dark Reader's source or retain that
+copy as the installed package.
 
 The popup's earlier "stuck on the loader" behavior is corrected in Crest's own
 action path rather than in the extension. A user-invoked toolbar or pinned
@@ -505,7 +506,7 @@ site, popup, update, or optional workflow.
 | --- | --- | --- | --- |
 | Dark Reader | 4.9.129 | Loads cleanly | Installs unmodified; live page attachment and popup reopen verified separately |
 | uBlock Origin Lite | 2026.804.1652 | Loads cleanly | Declarative Net Request package loaded without a startup error |
-| 1Password | 8.12.30.21 | Connected / autofill certification pending | Developer ID build verified companion pairing, account and vault discovery, settings rendering, popup startup, and clean generic message routing. A matching-login autofill test remains |
+| 1Password | 8.12.32.33 | Worker clean / signed-browser authorization pending | The generic MV3 worker reaches 1Password's native core and sends its account request. An unsigned development copy is rejected as `UnknownBrowser`; the installed Developer ID build must be added through 1Password's supported **Add Browser** flow before popup and field-fill certification |
 | SponsorBlock | 6.1.6 | Loads cleanly | No manifest or startup runtime error observed |
 | Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load; notification-click handling is unsupported by WebKit, and account unlock/autofill has not been certified |
 | Grammarly | 14.1319.0 | Partial / experimental | Managed storage plus cookie and telemetry limits are reported |

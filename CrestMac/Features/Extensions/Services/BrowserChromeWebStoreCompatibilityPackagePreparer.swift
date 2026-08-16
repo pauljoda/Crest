@@ -1,12 +1,7 @@
+import CryptoKit
 import Foundation
 
 struct BrowserWebExtensionCompatibilityPackagePreparer {
-    private static let compatibilityScriptName =
-        "crest-webextension-compatibility.js"
-    private static let backgroundPageName =
-        "crest-webextension-background.html"
-    private static let backgroundBootstrapName =
-        "crest-webextension-background-bootstrap.js"
     private static let legacyBackgroundPreludePattern =
         #"(?s)\A// Crest's WKWebExtension host currently has no notifications API\.\s*.*?Object\.defineProperty\(globalThis, \"chrome\", \{\s*value: crestChromeCompatibility,\s*configurable: true\s*\}\);\s*\}\s*"#
     private static let emulatedPermissions: Set<String> = [
@@ -123,32 +118,38 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             manifest: manifest,
             runtimeIdentity: runtimeIdentity
         )
+        let compatibilityScriptName = Self.generatedJavaScriptName(
+            prefix: "crest-webextension-compatibility",
+            source: compatibilityScript
+        )
         try compatibilityScript.write(
-            to: resourceURL.appending(path: Self.compatibilityScriptName),
+            to: resourceURL.appending(path: compatibilityScriptName),
             atomically: true,
             encoding: .utf8
         )
         var installed = try installBackgroundCompatibility(
             in: resourceURL,
-            manifest: &manifest
+            manifest: &manifest,
+            compatibilityScriptName: compatibilityScriptName
         )
         installed =
             try installExtensionPageCompatibility(
                 in: resourceURL,
-                manifest: manifest
+                manifest: manifest,
+                compatibilityScriptName: compatibilityScriptName
             ) || installed
         installed =
-            Self.installContentScriptCompatibility(in: &manifest)
+            Self.installContentScriptCompatibility(
+                in: &manifest,
+                compatibilityScriptName: compatibilityScriptName
+            )
             || installed
 
         guard installed else {
             try? fileManager.removeItem(
-                at: resourceURL.appending(path: Self.compatibilityScriptName)
+                at: resourceURL.appending(path: compatibilityScriptName)
             )
             return false
-        }
-        if manifestVersion == 3 {
-            Self.installManifestV2HostCompatibility(in: &manifest)
         }
         let updatedManifestData = try JSONSerialization.data(
             withJSONObject: manifest,
@@ -160,7 +161,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
     private func installBackgroundCompatibility(
         in resourceURL: URL,
-        manifest: inout [String: Any]
+        manifest: inout [String: Any],
+        compatibilityScriptName: String
     ) throws -> Bool {
         guard var background = manifest["background"] as? [String: Any] else {
             return false
@@ -185,30 +187,22 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     encoding: .utf8
                 )
             }
-            if background["type"] as? String == "module" {
-                try installModuleBackgroundPage(
-                    in: resourceURL,
-                    serviceWorker: serviceWorker
-                )
-                manifest["background"] = [
-                    "page": Self.backgroundPageName,
-                    "persistent": false,
-                ]
-            } else {
-                manifest["background"] = [
-                    "scripts": [
-                        Self.compatibilityScriptName,
-                        serviceWorker,
-                    ],
-                    "persistent": false,
-                ]
-            }
+            let isModule = background["type"] as? String == "module"
+            let backgroundBootstrapName = try installServiceWorkerBootstrap(
+                in: resourceURL,
+                serviceWorker: serviceWorker,
+                isModule: isModule,
+                compatibilityScriptName: compatibilityScriptName
+            )
+            background["service_worker"] = backgroundBootstrapName
+            background.removeValue(forKey: "persistent")
+            manifest["background"] = background
             return true
         }
 
         if var scripts = background["scripts"] as? [String] {
-            if !scripts.contains(Self.compatibilityScriptName) {
-                scripts.insert(Self.compatibilityScriptName, at: 0)
+            if !scripts.contains(compatibilityScriptName) {
+                scripts.insert(compatibilityScriptName, at: 0)
             }
             background["scripts"] = scripts
             manifest["background"] = background
@@ -218,7 +212,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         if let page = background["page"] as? String {
             return try injectCompatibilityScript(
                 into: page,
-                in: resourceURL
+                in: resourceURL,
+                compatibilityScriptName: compatibilityScriptName
             )
         }
         return false
@@ -238,36 +233,32 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         return String(source[range.upperBound...])
     }
 
-    private func installModuleBackgroundPage(
+    private func installServiceWorkerBootstrap(
         in resourceURL: URL,
-        serviceWorker: String
-    ) throws {
-        let workerSpecifier = Self.javascriptStringLiteral(
-            "./\(serviceWorker)"
+        serviceWorker: String,
+        isModule: Bool,
+        compatibilityScriptName: String
+    ) throws -> String {
+        let compatibilitySpecifier = Self.javascriptStringLiteral(
+            "./\(compatibilityScriptName)"
         )
-        let backgroundBootstrap = "import(\(workerSpecifier));"
+        let workerSpecifier = Self.javascriptStringLiteral("./\(serviceWorker)")
+        let backgroundBootstrap =
+            if isModule {
+                "import \(compatibilitySpecifier);\nimport \(workerSpecifier);"
+            } else {
+                "importScripts(\(compatibilitySpecifier), \(workerSpecifier));"
+            }
+        let backgroundBootstrapName = Self.generatedJavaScriptName(
+            prefix: "crest-webextension-background-bootstrap",
+            source: backgroundBootstrap
+        )
         try backgroundBootstrap.write(
-            to: resourceURL.appending(path: Self.backgroundBootstrapName),
+            to: resourceURL.appending(path: backgroundBootstrapName),
             atomically: true,
             encoding: .utf8
         )
-        let backgroundPage =
-            """
-            <!doctype html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <script src="\(Self.compatibilityScriptName)"></script>
-              <script type="module" src="\(Self.backgroundBootstrapName)"></script>
-            </head>
-            <body></body>
-            </html>
-            """
-        try backgroundPage.write(
-            to: resourceURL.appending(path: Self.backgroundPageName),
-            atomically: true,
-            encoding: .utf8
-        )
+        return backgroundBootstrapName
     }
 
     static func requiresCompatibilityLayer(
@@ -276,63 +267,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         !emulatedPermissions.isDisjoint(with: requestedPermissions)
     }
 
-    private static func installManifestV2HostCompatibility(
-        in manifest: inout [String: Any]
-    ) {
-        manifest["manifest_version"] = 2
-
-        var permissions = manifest["permissions"] as? [String] ?? []
-        for host in manifest["host_permissions"] as? [String] ?? []
-        where !permissions.contains(host) {
-            permissions.append(host)
-        }
-        manifest["permissions"] = permissions
-        manifest.removeValue(forKey: "host_permissions")
-
-        var optionalPermissions =
-            manifest["optional_permissions"] as? [String] ?? []
-        for host in manifest["optional_host_permissions"] as? [String] ?? []
-        where !optionalPermissions.contains(host) {
-            optionalPermissions.append(host)
-        }
-        if !optionalPermissions.isEmpty {
-            manifest["optional_permissions"] = optionalPermissions
-        }
-        manifest.removeValue(forKey: "optional_host_permissions")
-
-        if manifest["browser_action"] == nil,
-            let action = manifest["action"]
-        {
-            manifest["browser_action"] = action
-        }
-        manifest.removeValue(forKey: "action")
-
-        if var background = manifest["background"] as? [String: Any] {
-            background.removeValue(forKey: "service_worker")
-            background["persistent"] = true
-            manifest["background"] = background
-        }
-
-        if let declarations =
-            manifest["web_accessible_resources"] as? [[String: Any]]
-        {
-            manifest["web_accessible_resources"] = declarations.flatMap {
-                $0["resources"] as? [String] ?? []
-            }
-        }
-
-        if let contentSecurityPolicy =
-            manifest["content_security_policy"] as? [String: Any],
-            let extensionPages =
-                contentSecurityPolicy["extension_pages"] as? String
-        {
-            manifest["content_security_policy"] = extensionPages
-        }
-    }
-
     private func installExtensionPageCompatibility(
         in resourceURL: URL,
-        manifest: [String: Any]
+        manifest: [String: Any],
+        compatibilityScriptName: String
     ) throws -> Bool {
         var installed = false
         let sandboxPages = Self.sandboxPagePaths(in: manifest)
@@ -368,7 +306,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             installed =
                 try injectCompatibilityScript(
                     into: relativePath,
-                    in: resourceURL
+                    in: resourceURL,
+                    compatibilityScriptName: compatibilityScriptName
                 ) || installed
         }
         return installed
@@ -385,7 +324,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     }
 
     private static func installContentScriptCompatibility(
-        in manifest: inout [String: Any]
+        in manifest: inout [String: Any],
+        compatibilityScriptName: String
     ) -> Bool {
         guard
             var declarations = manifest["content_scripts"]
@@ -410,7 +350,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
     private func injectCompatibilityScript(
         into relativePath: String,
-        in resourceURL: URL
+        in resourceURL: URL,
+        compatibilityScriptName: String
     ) throws -> Bool {
         let pageURL = try validatedResourceURL(
             for: relativePath,
@@ -418,13 +359,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         )
         var source = try String(contentsOf: pageURL, encoding: .utf8)
         let compatibilityTag =
-            #"<script src="/crest-webextension-compatibility.js"></script>"#
-        let relativeCompatibilityTag =
-            #"<script src="crest-webextension-compatibility.js"></script>"#
+            #"<script src="/\#(compatibilityScriptName)"></script>"#
         var tags: [String] = []
-        if !source.contains(compatibilityTag),
-            !source.contains(relativeCompatibilityTag)
-        {
+        if !source.contains(compatibilityTag) {
             tags.append(compatibilityTag)
         }
         guard !tags.isEmpty else { return false }
@@ -520,6 +457,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             preconditionFailure("A Swift String must encode as JSON.")
         }
         return literal
+    }
+
+    private static func generatedJavaScriptName(
+        prefix: String,
+        source: String
+    ) -> String {
+        let digest = SHA256.hash(data: Data(source.utf8))
+        let fingerprint = digest.prefix(8).map {
+            String(format: "%02x", $0)
+        }.joined()
+        return "\(prefix)-\(fingerprint).js"
     }
 
     private static func webExtensionCompatibilityScript(
@@ -868,6 +816,124 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     return nativeRoot;
                 };
+                const namespaceFacade = (nativeValue, fallback) => {
+                    if (nativeValue === undefined || nativeValue === null) {
+                        return fallback;
+                    }
+                    if (
+                        !fallback
+                        || typeof fallback !== "object"
+                        || (typeof nativeValue !== "object"
+                            && typeof nativeValue !== "function")
+                    ) {
+                        return nativeValue;
+                    }
+
+                    const overlays = new Map();
+                    for (const [property, fallbackValue] of
+                        Object.entries(fallback)) {
+                        let existing;
+                        try { existing = nativeValue[property]; } catch {}
+                        if (existing === undefined) {
+                            overlays.set(property, fallbackValue);
+                            continue;
+                        }
+                        if (
+                            fallbackValue
+                            && typeof fallbackValue === "object"
+                            && (typeof existing === "object"
+                                || typeof existing === "function")
+                        ) {
+                            const nested = namespaceFacade(
+                                existing,
+                                fallbackValue
+                            );
+                            if (nested !== existing) {
+                                overlays.set(property, nested);
+                            }
+                        }
+                    }
+                    if (overlays.size === 0) return nativeValue;
+
+                    const boundMethods = new Map();
+                    return new Proxy(Object.create(null), {
+                        get(_, property) {
+                            if (overlays.has(property)) {
+                                return overlays.get(property);
+                            }
+                            let value;
+                            try {
+                                value = Reflect.get(
+                                    nativeValue,
+                                    property,
+                                    nativeValue
+                                );
+                            } catch {
+                                return undefined;
+                            }
+                            if (typeof value !== "function") return value;
+                            if (!boundMethods.has(property)) {
+                                boundMethods.set(
+                                    property,
+                                    value.bind(nativeValue)
+                                );
+                            }
+                            return boundMethods.get(property);
+                        },
+                        set(_, property, value) {
+                            try {
+                                return Reflect.set(
+                                    nativeValue,
+                                    property,
+                                    value,
+                                    nativeValue
+                                );
+                            } catch {
+                                return false;
+                            }
+                        },
+                        has(_, property) {
+                            return overlays.has(property)
+                                || property in nativeValue;
+                        },
+                        ownKeys() {
+                            const keys = new Set(
+                                Reflect.ownKeys(nativeValue)
+                            );
+                            for (const property of overlays.keys()) {
+                                keys.add(property);
+                            }
+                            return Array.from(keys);
+                        },
+                        getOwnPropertyDescriptor(_, property) {
+                            if (!overlays.has(property)
+                                && !(property in nativeValue)) {
+                                return undefined;
+                            }
+                            let nativeDescriptor;
+                            try {
+                                nativeDescriptor =
+                                    Reflect.getOwnPropertyDescriptor(
+                                        nativeValue,
+                                        property
+                                    );
+                            } catch {}
+                            return {
+                                value: overlays.has(property)
+                                    ? overlays.get(property)
+                                    : Reflect.get(
+                                        nativeValue,
+                                        property,
+                                        nativeValue
+                                    ),
+                                writable: true,
+                                configurable: true,
+                                enumerable:
+                                    nativeDescriptor?.enumerable ?? true
+                            };
+                        }
+                    });
+                };
                 const nativeCapabilityNames = [
                     "action", "alarms", "bookmarks", "browserAction",
                     "commands", "contentScripts", "contextMenus", "cookies",
@@ -909,6 +975,35 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     installedRoots.add(root);
                     installCompatibility(root);
                 }
+                const installNamespaceFacades = (root, alternateRoot) => {
+                    if (!root) return;
+                    const fallbacks = fallbacksFor(root);
+                    for (const property of nativeCapabilityNames) {
+                        if (property === "runtime") continue;
+                        let nativeValue;
+                        try { nativeValue = root[property]; } catch {}
+                        if (nativeValue === undefined && alternateRoot) {
+                            try {
+                                nativeValue = alternateRoot[property];
+                            } catch {}
+                        }
+                        const fallback = fallbacks[property];
+                        if (fallback === undefined) continue;
+                        const facade = namespaceFacade(nativeValue, fallback);
+                        if (facade === nativeValue) continue;
+                        try {
+                            Object.defineProperty(root, property, {
+                                value: facade,
+                                configurable: true,
+                                enumerable: true
+                            });
+                        } catch {
+                            try { root[property] = facade; } catch {}
+                        }
+                    }
+                };
+                installNamespaceFacades(nativeChrome, nativeBrowser);
+                installNamespaceFacades(nativeBrowser, nativeChrome);
                 const installMissingRoot = (name, root) => {
                     if (!root || globalThis[name] !== undefined) return;
                     try {

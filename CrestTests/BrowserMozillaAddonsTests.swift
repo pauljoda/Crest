@@ -681,13 +681,12 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             preparedManifest["background"] as? [String: Any]
         )
         let scripts = try XCTUnwrap(background["scripts"] as? [String])
-        XCTAssertEqual(
-            Array(scripts.prefix(2)),
-            [
-                "crest-webextension-background-marker.js",
-                "crest-webextension-compatibility.js",
-            ]
+        XCTAssertTrue(
+            scripts.first?.hasPrefix(
+                "crest-webextension-compatibility-"
+            ) == true
         )
+        XCTAssertEqual(scripts.dropFirst().first, "background.js")
     }
 
     func testFirefoxOnlyManifestKeysSurfaceAsWarningsRatherThanBlockers()

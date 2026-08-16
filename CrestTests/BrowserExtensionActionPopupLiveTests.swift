@@ -18,6 +18,7 @@ import XCTest
 @MainActor
 final class BrowserExtensionActionPopupLiveTests: XCTestCase {
     private let darkReaderID = "eimadpbcbfnmbkopoojfekhnkhdbieeh"
+    private let onePasswordID = "aeblfdkhhhdcdjpifhhbdiojplfjncoa"
     private let sponsorBlockID = "mnjggcdmjocbbbhaepdhchncahnbgone"
 
     /// Long enough for WebKit to evict a nonpersistent background that has
@@ -232,6 +233,39 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             )
             assertNoStalledHostCall(outcome.hostCalls, label: label)
         }
+    }
+
+    func testLiveOnePasswordPopupCompletesItsBackgroundHandshake() async throws {
+        try skipUnlessLiveRunRequested()
+        let candidate = try await candidate(
+            extensionID: onePasswordID,
+            slug: "1password-password-manager"
+        )
+        let outcome = try await popupOutcome(
+            candidate: candidate,
+            extensionID: onePasswordID,
+            activeTabURL: try XCTUnwrap(
+                URL(string: "https://fill.dev/form/identity-simple")
+            ),
+            viaRestoration: false,
+            viaPopover: true
+        )
+
+        XCTAssertTrue(outcome.presentsPopup)
+        XCTAssertNotNil(
+            outcome.readyMilliseconds,
+            """
+            1Password's popup never received its initial view from the \
+            background worker. Text: \(outcome.renderedText.prefix(300)). \
+            Runtime errors: \(outcome.contextErrors)
+            """
+        )
+        XCTAssertFalse(
+            outcome.renderedText.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty,
+            "1Password left only its loading spinner visible."
+        )
     }
 
     private func assertNoStalledHostCall(
