@@ -85,6 +85,26 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
         )
     }
 
+    func testCrestExtensionURLsRemainInsideWebKit() throws {
+        let extensionURL = try XCTUnwrap(
+            URL(
+                string:
+                    "crest-extension://extension-fixture/options.html"
+            )
+        )
+
+        XCTAssertEqual(
+            BrowserExternalSchemePolicy.disposition(for: extensionURL),
+            .webKit
+        )
+        XCTAssertEqual(
+            BrowserPopupSchemeRouting.classify(
+                destinationURL: extensionURL
+            ),
+            .popupPolicy
+        )
+    }
+
     private func makePage() throws -> BrowserPage {
         let tab = BrowserTab.startPage()
         let space = BrowserSpace(

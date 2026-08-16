@@ -132,11 +132,22 @@ verified store archive remains unchanged, so restoration and updates always
 start from the verified bytes.
 
 The package layer currently loads before supported Manifest V2 and V3
-background forms, declared content scripts, and manifest-owned pages such as
-popups and options. A proxy preserves every WebKit implementation and fills
-only missing members. The declared manifest is embedded as the exact fallback
-for `runtime.getManifest()`; an offscreen document uses the extension-supplied
-URL rather than a package-specific path.
+background forms, declared content scripts, and packaged HTML extension pages.
+That last category intentionally includes internal routes reached from a popup
+or options page even when the manifest does not name them directly; manifest
+sandbox pages remain untouched. A proxy preserves every WebKit implementation
+and fills only missing members. The declared manifest is embedded as the exact
+fallback for `runtime.getManifest()`; an offscreen document uses the
+extension-supplied URL rather than a package-specific path.
+
+Where WebKit exposes messaging but cannot reliably return a background reply,
+the runtime provides one generic transport. Extension pages use a package-local
+`BroadcastChannel`; content scripts use a reserved native Port whose background
+endpoint replays the request to registered `runtime.onMessage` listeners. Both
+callback and Promise replies are supported, external-extension messages still
+fall through to WebKit, and separate native `chrome` and `browser` namespace
+objects are bootstrapped independently. The transport is selected by execution
+context and capability, never by extension identity.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
@@ -212,11 +223,22 @@ bidirectional native-message trace showed the extension sending
 used an Apple Development certificate.
 
 That measurement proves installation, normal navigation, persistent native-port
-transport, companion launch, and the trusted-browser review UI. A later
-Developer ID build removed signing as the explanation for JavaScript startup
-failures, but unlock and autofill are still not certified. The current work
-treats 1Password as one conformance fixture for the generic compatibility
-runtime; it carries no 1Password ID branch or source patch.
+transport, companion launch, and the trusted-browser review UI.
+
+On August 16, 2026, a Developer ID build completed the next generic-runtime
+gate. 1Password's packaged Settings route rendered **Integration status:
+Connected**, displayed the signed-in account and selected vault, and its toolbar
+popup left the loading spinner and rendered a site result. A fresh page
+inspection contained neither the earlier `savePasskeys` missing-member error nor
+the background-message timeout. The fixes were package-wide page injection,
+content/background messaging, and independent `chrome`/`browser` namespace
+bootstrap; none branches on 1Password's identifier or patches its source.
+
+That validates pairing, account discovery, settings, popup startup, and the
+extension/companion connection. A matching saved login was not available on the
+test page, so field autofill remains a separate certification step. Website
+passkey registration is also separate: WebKit rejects it until Crest's signed
+build carries Apple's managed browser public-key-credential entitlement.
 
 Official references:
 
@@ -369,30 +391,25 @@ the background page is torn down, after which it recovers on its own.
 `Documentation/WebKitExtensionWorkerReport.md` carries the full measurements,
 the log correlations, and the reproduction instructions.
 
-### Why this covers popups and not content scripts
+### Messaging does not require an extension-specific wake-up
 
-An extension's content scripts wait on the same background, and Dark Reader's
-leave a granted page part-styled while they do. Crest does not warm the
-background for them, because there is nothing to warm it *between*:
-`WKWebExtensionControllerDelegate` has no callback on the content-script side at
-all. Its two messaging methods — `sendMessage:toApplicationWithIdentifier:` and
-`connectUsingMessagePort:` — are the native-messaging seam between the extension
-and the host app, not the seam between a content script and its background.
-WebKit injects content scripts and carries their `runtime` traffic entirely
-inside its own machinery, so no app-side call can be placed in that path.
+Popup warm-up remains useful because Crest directly controls popup creation.
+It is not the compatibility transport for ordinary extension messages.
 
-The popup is different in kind: it is the one background-dependent surface whose
-creation Crest itself triggers, in a method WebKit hands it, so Crest can order
-the two. The only lever that would reach content scripts is calling
-`loadBackgroundContent` speculatively — on every navigation into a tab any
-enabled extension can read — which would keep every nonpersistent background
-permanently awake and is the decision a manifest makes with
-`persistent`/`background.page`, not one a host app should make on an extension's
-behalf.
+The generated runtime now covers extension-page and content-script requests at
+the WebExtension API boundary. Packaged extension pages communicate with the
+marked background through a package-scoped `BroadcastChannel`; content scripts
+use a reserved native Port, which gives WebKit a standard background-liveness
+signal without keeping every extension permanently awake. The marked background
+replays each request to the namespace's registered `runtime.onMessage`
+listeners and returns the first callback, Promise, or `return true` response.
 
-That reasoning holds for a *stopped background*. It does not cover the other way
-a content script goes unanswered, which turned out to be Crest's own and is
-fixed below.
+This is still capability mapping rather than a patch to Dark Reader, 1Password,
+or any other extension. The `chrome` and `browser` roots are initialized
+independently because WebKit can expose them as distinct native objects. An
+extension that registers through one namespace therefore receives messages
+sent through that same namespace, instead of losing its listener when the other
+root finishes bootstrapping.
 
 ### A content script cannot be answered for a page extensions were never told about
 
@@ -458,10 +475,12 @@ is announced as an ordinary unselected tab and never as the active one, so
 against the previous ones: the Peek page is never announced, and a split
 member is announced only after its web view is already loading.
 
-The stopped-worker residual is unchanged and unfixable from the app: a content
-script whose message *is* routed correctly can still reach a background inside
-the 40–115 second window where WebKit keeps a reaped worker's page alive, and
-nothing app-side distinguishes that state.
+The current content-script transport no longer depends on WebKit's one-shot
+`runtime.sendMessage` reply path. Its reserved Port is owned by the marked
+background context, and the request is replayed only after that endpoint is
+available. The page-announcement ordering above is still required: WebKit must
+know which tab owns the content script before it can establish even that
+standard Port.
 
 Evidence, gathered August 13, 2026:
 
@@ -488,7 +507,7 @@ site, popup, update, or optional workflow.
 | --- | --- | --- | --- |
 | Dark Reader | 4.9.129 | Loads cleanly | Installs unmodified; live page attachment and popup reopen verified separately |
 | uBlock Origin Lite | 2026.804.1652 | Loads cleanly | Declarative Net Request package loaded without a startup error |
-| 1Password | 8.12.30.21 | Partial / compatibility audit active | Setup, sign-in navigation, persistent native messaging, BrowserSupport launch, and browser-authorization UI were verified in an earlier build. The current Developer ID build removes signing as the generic runtime-error explanation, but pairing and autofill remain unverified |
+| 1Password | 8.12.30.21 | Connected / autofill certification pending | Developer ID build verified companion pairing, account and vault discovery, settings rendering, popup startup, and clean generic message routing. A matching-login autofill test remains |
 | SponsorBlock | 6.1.6 | Loads cleanly | No manifest or startup runtime error observed |
 | Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load; notification-click handling is unsupported by WebKit, and account unlock/autofill has not been certified |
 | Grammarly | 14.1319.0 | Partial / experimental | Managed storage plus cookie and telemetry limits are reported |

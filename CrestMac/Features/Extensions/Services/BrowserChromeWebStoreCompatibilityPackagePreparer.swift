@@ -7,6 +7,10 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
         "crest-webextension-background.html"
     private static let backgroundBootstrapName =
         "crest-webextension-background-bootstrap.js"
+    private static let backgroundMarkerName =
+        "crest-webextension-background-marker.js"
+    private static let backgroundMarkerScript =
+        "globalThis.__crestIsWebExtensionBackground = true;"
     private static let legacyBackgroundPreludePattern =
         #"(?s)\A// Crest's WKWebExtension host currently has no notifications API\.\s*.*?Object\.defineProperty\(globalThis, \"chrome\", \{\s*value: crestChromeCompatibility,\s*configurable: true\s*\}\);\s*\}\s*"#
     private static let emulatedPermissions: Set<String> = [
@@ -37,7 +41,8 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
 
     func prepareStoredResource(
         _ storedResourceURL: URL,
-        requestedPermissions: [String]
+        requestedPermissions: [String],
+        runtimeIdentity: BrowserExtensionRuntimeIdentity
     ) throws -> BrowserChromeWebStorePreparedPackage? {
         guard
             Self.requiresCompatibilityLayer(
@@ -76,7 +81,8 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
             }
             let installed = try installCompatibilityLayer(
                 in: resourceURL,
-                requestedPermissions: requestedPermissions
+                requestedPermissions: requestedPermissions,
+                runtimeIdentity: runtimeIdentity
             )
             guard installed else {
                 try? fileManager.removeItem(at: rootURL)
@@ -96,7 +102,8 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
     @discardableResult
     func installCompatibilityLayer(
         in resourceURL: URL,
-        requestedPermissions: [String]
+        requestedPermissions: [String],
+        runtimeIdentity: BrowserExtensionRuntimeIdentity
     ) throws -> Bool {
         guard
             Self.requiresCompatibilityLayer(
@@ -117,10 +124,16 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 .invalidBackgroundManifest
         }
         let compatibilityScript = try Self.webExtensionCompatibilityScript(
-            manifest: manifest
+            manifest: manifest,
+            runtimeIdentity: runtimeIdentity
         )
         try compatibilityScript.write(
             to: resourceURL.appending(path: Self.compatibilityScriptName),
+            atomically: true,
+            encoding: .utf8
+        )
+        try Self.backgroundMarkerScript.write(
+            to: resourceURL.appending(path: Self.backgroundMarkerName),
             atomically: true,
             encoding: .utf8
         )
@@ -141,6 +154,9 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
         guard installed else {
             try? fileManager.removeItem(
                 at: resourceURL.appending(path: Self.compatibilityScriptName)
+            )
+            try? fileManager.removeItem(
+                at: resourceURL.appending(path: Self.backgroundMarkerName)
             )
             return false
         }
@@ -190,7 +206,13 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                     "persistent": false,
                 ]
             } else {
-                try (compatibilityScript + "\n\n" + originalWorker).write(
+                try (
+                    Self.backgroundMarkerScript
+                    + "\n"
+                    + compatibilityScript
+                    + "\n\n"
+                    + originalWorker
+                ).write(
                     to: workerURL,
                     atomically: true,
                     encoding: .utf8
@@ -200,18 +222,28 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
         }
 
         if var scripts = background["scripts"] as? [String] {
-            if !scripts.contains(Self.compatibilityScriptName) {
-                scripts.insert(Self.compatibilityScriptName, at: 0)
-                background["scripts"] = scripts
-                manifest["background"] = background
+            if !scripts.contains(Self.backgroundMarkerName) {
+                scripts.insert(Self.backgroundMarkerName, at: 0)
             }
+            if !scripts.contains(Self.compatibilityScriptName) {
+                let markerIndex = scripts.firstIndex(
+                    of: Self.backgroundMarkerName
+                ) ?? 0
+                scripts.insert(
+                    Self.compatibilityScriptName,
+                    at: markerIndex + 1
+                )
+            }
+            background["scripts"] = scripts
+            manifest["background"] = background
             return true
         }
 
         if let page = background["page"] as? String {
             return try injectCompatibilityScript(
                 into: page,
-                in: resourceURL
+                in: resourceURL,
+                marksBackground: true
             )
         }
         return false
@@ -256,6 +288,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
             <html>
             <head>
               <meta charset="utf-8">
+              <script src="\(Self.backgroundMarkerName)"></script>
               <script src="\(Self.compatibilityScriptName)"></script>
               <script type="module" src="\(Self.backgroundBootstrapName)"></script>
             </head>
@@ -280,54 +313,51 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
         manifest: [String: Any]
     ) throws -> Bool {
         var installed = false
-        for path in Self.extensionPagePaths(in: manifest) {
+        let sandboxPages = Self.sandboxPagePaths(in: manifest)
+        guard let enumerator = fileManager.enumerator(
+            at: resourceURL,
+            includingPropertiesForKeys: [
+                .isRegularFileKey,
+                .isSymbolicLinkKey,
+            ]
+        ) else { return false }
+
+        let resourcePath = resourceURL.standardizedFileURL.path
+        for case let pageURL as URL in enumerator {
+            let values = try pageURL.resourceValues(
+                forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
+            )
+            guard
+                values.isRegularFile == true,
+                values.isSymbolicLink != true,
+                ["html", "htm"].contains(
+                    pageURL.pathExtension.lowercased()
+                )
+            else { continue }
+
+            let pagePath = pageURL.standardizedFileURL.path
+            guard pagePath.hasPrefix(resourcePath + "/") else { continue }
+            let relativePath = String(
+                pagePath.dropFirst(resourcePath.count + 1)
+            )
+            guard !sandboxPages.contains(relativePath) else { continue }
             installed =
                 try injectCompatibilityScript(
-                    into: path,
+                    into: relativePath,
                     in: resourceURL
                 ) || installed
         }
         return installed
     }
 
-    private static func extensionPagePaths(
+    private static func sandboxPagePaths(
         in manifest: [String: Any]
     ) -> Set<String> {
-        var paths = Set<String>()
-        for key in ["action", "browser_action", "page_action"] {
-            if let section = manifest[key] as? [String: Any],
-                let path = section["default_popup"] as? String
-            {
-                paths.insert(path)
-            }
-        }
-        if let path = manifest["options_page"] as? String {
-            paths.insert(path)
-        }
-        if let section = manifest["options_ui"] as? [String: Any],
-            let path = section["page"] as? String
-        {
-            paths.insert(path)
-        }
-        if let section = manifest["side_panel"] as? [String: Any],
-            let path = section["default_path"] as? String
-        {
-            paths.insert(path)
-        }
-        if let path = manifest["devtools_page"] as? String {
-            paths.insert(path)
-        }
-        if let overrides = manifest["chrome_url_overrides"]
-            as? [String: String]
-        {
-            paths.formUnion(overrides.values)
-        }
-        if let sandbox = manifest["sandbox"] as? [String: Any],
+        guard
+            let sandbox = manifest["sandbox"] as? [String: Any],
             let pages = sandbox["pages"] as? [String]
-        {
-            paths.formUnion(pages)
-        }
-        return paths
+        else { return [] }
+        return Set(pages.filter(isSafeRelativePath))
     }
 
     private static func installContentScriptCompatibility(
@@ -356,16 +386,36 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
 
     private func injectCompatibilityScript(
         into relativePath: String,
-        in resourceURL: URL
+        in resourceURL: URL,
+        marksBackground: Bool = false
     ) throws -> Bool {
         let pageURL = try validatedResourceURL(
             for: relativePath,
             in: resourceURL
         )
         var source = try String(contentsOf: pageURL, encoding: .utf8)
-        let tag =
+        let compatibilityTag =
             #"<script src="/crest-webextension-compatibility.js"></script>"#
-        guard !source.contains(tag) else { return false }
+        let relativeCompatibilityTag =
+            #"<script src="crest-webextension-compatibility.js"></script>"#
+        let markerTag =
+            #"<script src="/crest-webextension-background-marker.js"></script>"#
+        let relativeMarkerTag =
+            #"<script src="crest-webextension-background-marker.js"></script>"#
+        var tags: [String] = []
+        if marksBackground,
+            !source.contains(markerTag),
+            !source.contains(relativeMarkerTag)
+        {
+            tags.append(markerTag)
+        }
+        if !source.contains(compatibilityTag),
+            !source.contains(relativeCompatibilityTag)
+        {
+            tags.append(compatibilityTag)
+        }
+        guard !tags.isEmpty else { return false }
+        let injection = tags.joined(separator: "\n")
 
         if let headStart = source.range(
             of: "<head",
@@ -376,9 +426,15 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 range: headStart.lowerBound..<source.endIndex
             )
         {
-            source.insert(contentsOf: "\n\(tag)", at: headEnd.upperBound)
+            source.insert(
+                contentsOf: "\n\(injection)",
+                at: headEnd.upperBound
+            )
         } else {
-            source.insert(contentsOf: tag + "\n", at: source.startIndex)
+            source.insert(
+                contentsOf: injection + "\n",
+                at: source.startIndex
+            )
         }
         try source.write(to: pageURL, atomically: true, encoding: .utf8)
         return true
@@ -454,7 +510,8 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
     }
 
     private static func webExtensionCompatibilityScript(
-        manifest: [String: Any]
+        manifest: [String: Any],
+        runtimeIdentity: BrowserExtensionRuntimeIdentity
     ) throws -> String {
         let manifestData = try JSONSerialization.data(
             withJSONObject: manifest,
@@ -479,6 +536,12 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 const primaryRoot = nativeChrome ?? nativeBrowser;
                 if (!primaryRoot) return;
                 const declaredManifest = Object.freeze(\(manifestLiteral));
+                const extensionID = \(javascriptStringLiteral(runtimeIdentity.extensionID));
+                const extensionBaseURL = \(javascriptStringLiteral(runtimeIdentity.baseURL.absoluteString));
+                const fallbackResourceURL = (path = "") => new URL(
+                    String(path),
+                    extensionBaseURL
+                ).href;
 
                 const noopEvent = Object.freeze({
                     addListener() {},
@@ -528,7 +591,10 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                     {
                         get(target, property) {
                             const value = Reflect.get(target, property, target);
-                            return value === undefined ? fallback[property] : value;
+                            if (value === undefined) return fallback[property];
+                            return typeof value === "function"
+                                ? value.bind(target)
+                                : value;
                         },
                         has(target, property) {
                             return property in target || property in fallback;
@@ -751,36 +817,106 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                         ? nativeEvent.hasListener.bind(nativeEvent)
                         : () => false;
                     const listeners = new Map();
-                    const handledMessages = new WeakSet();
+                    const handledMessages = new Set();
+                    let extensionPageMessaging;
+                    let contentScriptMessaging;
                     let completeInitialization;
                     let isComplete = false;
                     const initialization = new Promise((resolve) => {
                         completeInitialization = resolve;
                     });
-                    const markHandled = (message) => {
-                        if (
-                            (typeof message === "object" && message !== null)
-                            || typeof message === "function"
+                    const keepsMessageChannelOpen = (result) => (
+                        result === true
+                        || (result !== null
+                            && (typeof result === "object"
+                                || typeof result === "function")
+                            && typeof result.then === "function")
+                    );
+                    const isThenable = (value) => (
+                        value !== null
+                        && (typeof value === "object"
+                            || typeof value === "function")
+                        && typeof value.then === "function"
+                    );
+                    const normalizedSelfMessage = (args) => {
+                        const values = Array.from(args);
+                        const callback = typeof values.at(-1) === "function"
+                            ? values.pop()
+                            : undefined;
+                        if (values.length === 0) return undefined;
+
+                        let targetExtensionID;
+                        let message;
+                        if (values.length >= 3) {
+                            targetExtensionID = values[0];
+                            message = values[1];
+                        } else if (
+                            values.length === 2
+                            && typeof values[0] === "string"
                         ) {
-                            handledMessages.add(message);
+                            const possibleOptions = values[1];
+                            const optionKeys = possibleOptions
+                                && typeof possibleOptions === "object"
+                                ? Object.keys(possibleOptions)
+                                : [];
+                            const isOptions = possibleOptions == null
+                                || optionKeys.every(
+                                    (key) => key === "includeTlsChannelId"
+                                );
+                            if (isOptions) {
+                                message = values[0];
+                            } else {
+                                targetExtensionID = values[0];
+                                message = values[1];
+                            }
+                        } else {
+                            message = values[0];
+                        }
+                        if (
+                            targetExtensionID !== undefined
+                            && targetExtensionID !== extensionID
+                        ) {
+                            return undefined;
+                        }
+                        return { message, callback };
+                    };
+                    const isExtensionPage = () => {
+                        if (typeof location === "undefined") return false;
+                        try {
+                            const base = new URL(extensionBaseURL);
+                            return location.protocol === base.protocol
+                                && location.host === base.host;
+                        } catch {
+                            return false;
                         }
                     };
-                    const wasHandled = (message) => (
-                        ((typeof message === "object" && message !== null)
-                            || typeof message === "function")
-                        && handledMessages.has(message)
-                    );
+                    const markHandled = (message) => {
+                        handledMessages.add(message);
+                    };
+                    const wasHandled = (message) =>
+                        handledMessages.has(message);
                     const wrappedListener = (listener) => {
                         let wrapped = listeners.get(listener);
                         if (wrapped) return wrapped;
 
                         wrapped = (message, sender, sendResponse) => {
+                            let didRespond = false;
+                            const trackedSendResponse = (...args) => {
+                                didRespond = true;
+                                markHandled(message);
+                                return sendResponse(...args);
+                            };
                             const result = listener(
                                 message,
                                 sender,
-                                sendResponse
+                                trackedSendResponse
                             );
-                            if (result !== false) markHandled(message);
+                            if (
+                                didRespond
+                                || keepsMessageChannelOpen(result)
+                            ) {
+                                markHandled(message);
+                            }
                             return result;
                         };
                         listeners.set(listener, wrapped);
@@ -789,9 +925,13 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                     const eventCompatibility = new Proxy(nativeEvent, {
                         get(target, property) {
                             if (property === "addListener") {
-                                return (listener) => nativeAdd(
-                                    wrappedListener(listener)
-                                );
+                                return (listener) => {
+                                    nativeAdd(wrappedListener(listener));
+                                    extensionPageMessaging
+                                        ?.retryPendingRequests();
+                                    contentScriptMessaging
+                                        ?.retryPendingRequests();
+                                };
                             }
                             if (property === "removeListener") {
                                 return (listener) => {
@@ -822,7 +962,12 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                                     sender,
                                     sendResponse
                                 );
-                                if (result !== false) return;
+                                if (
+                                    wasHandled(message)
+                                    || keepsMessageChannelOpen(result)
+                                ) {
+                                    return;
+                                }
                             }
                         });
                         return true;
@@ -834,24 +979,460 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                         isComplete = true;
                         nativeRemove(replayAfterInitialization);
                         completeInitialization();
+                        queueMicrotask(() => handledMessages.clear());
+                    };
+                    const previousBackgroundCompletion = globalThis
+                        .__crestCompleteWebExtensionBackgroundBootstrap;
+                    const completeBackgroundBootstrap = () => {
+                        previousBackgroundCompletion?.();
+                        finish();
                     };
                     try {
                         Object.defineProperty(
                             globalThis,
                             "__crestCompleteWebExtensionBackgroundBootstrap",
-                            { value: finish, configurable: true }
+                            {
+                                value: completeBackgroundBootstrap,
+                                configurable: true
+                            }
                         );
                     } catch {
                         globalThis.__crestCompleteWebExtensionBackgroundBootstrap =
-                            finish;
+                            completeBackgroundBootstrap;
                     }
+                    const invokePendingRequest = (request) => {
+                        if (request.isSettled || request.isClaimed) return;
+
+                        for (const listener of listeners.keys()) {
+                            if (request.attemptedListeners.has(listener)) {
+                                continue;
+                            }
+                            request.attemptedListeners.add(listener);
+                            let didRespond = false;
+                            const sendResponse = (response) => {
+                                didRespond = true;
+                                request.respond(response);
+                                return true;
+                            };
+                            let result;
+                            try {
+                                result = listener(
+                                    request.message,
+                                    request.sender,
+                                    sendResponse
+                                );
+                            } catch {
+                                continue;
+                            }
+                            if (didRespond) return;
+                            if (result === true) {
+                                request.isClaimed = true;
+                                return;
+                            }
+                            if (isThenable(result)) {
+                                request.isClaimed = true;
+                                Promise.resolve(result).then(
+                                    (response) => request.respond(response),
+                                    (error) => request.respond(
+                                        undefined,
+                                        String(error)
+                                    )
+                                );
+                                return;
+                            }
+                        }
+                    };
+                    extensionPageMessaging = (() => {
+                        if (typeof BroadcastChannel !== "function") {
+                            return undefined;
+                        }
+
+                        let channel;
+                        try {
+                            channel = new BroadcastChannel(
+                                `crest-webextension-messages:${extensionID}`
+                            );
+                        } catch {
+                            return undefined;
+                        }
+
+                        const contextToken = globalThis.crypto
+                            ?.randomUUID?.()
+                            ?? `${Date.now()}-${Math.random()}`;
+                        const pendingIncoming = new Map();
+                        const pendingOutgoing = new Map();
+                        const responseTimeoutMilliseconds = 30_000;
+                        let requestSequence = 0;
+                        const receiveRequest = (payload) => {
+                            if (
+                                payload.senderToken === contextToken
+                                || pendingIncoming.has(payload.requestID)
+                            ) {
+                                return;
+                            }
+                            const request = {
+                                requestID: payload.requestID,
+                                message: payload.message,
+                                sender: payload.sender ?? {
+                                    id: extensionID,
+                                    url: "",
+                                    origin: extensionBaseURL
+                                },
+                                attemptedListeners: new Set(),
+                                isClaimed: false,
+                                isSettled: false
+                            };
+                            request.respond = (response, error) => {
+                                if (request.isSettled) return;
+                                request.isSettled = true;
+                                clearTimeout(request.timeout);
+                                pendingIncoming.delete(request.requestID);
+                                channel.postMessage({
+                                    kind: "response",
+                                    requestID: request.requestID,
+                                    senderToken: contextToken,
+                                    response,
+                                    error
+                                });
+                            };
+                            request.timeout = setTimeout(() => {
+                                request.isSettled = true;
+                                pendingIncoming.delete(request.requestID);
+                            }, responseTimeoutMilliseconds);
+                            pendingIncoming.set(request.requestID, request);
+                            invokePendingRequest(request);
+                        };
+                        const receiveResponse = (payload) => {
+                            const pending = pendingOutgoing.get(
+                                payload.requestID
+                            );
+                            if (!pending) return;
+
+                            pendingOutgoing.delete(payload.requestID);
+                            clearTimeout(pending.timeout);
+                            if (pending.callback) {
+                                queueMicrotask(() => pending.callback(
+                                    payload.response
+                                ));
+                            } else if (payload.error) {
+                                pending.reject(new Error(payload.error));
+                            } else {
+                                pending.resolve(payload.response);
+                            }
+                        };
+                        channel.addEventListener("message", (event) => {
+                            const payload = event.data;
+                            if (
+                                !payload
+                                || typeof payload !== "object"
+                                || payload.senderToken === contextToken
+                            ) {
+                                return;
+                            }
+                            if (payload.kind === "request") {
+                                receiveRequest(payload);
+                            } else if (payload.kind === "response") {
+                                receiveResponse(payload);
+                            }
+                        });
+                        const sendMessage = (...args) => {
+                            const normalized = normalizedSelfMessage(args);
+                            if (!normalized) {
+                                return { handled: false };
+                            }
+
+                            const requestID =
+                                `${contextToken}:${++requestSequence}`;
+                            const sender = {
+                                id: extensionID,
+                                url: typeof location === "undefined"
+                                    ? ""
+                                    : location.href,
+                                origin: extensionBaseURL
+                            };
+                            if (normalized.callback) {
+                                const timeout = setTimeout(() => {
+                                    pendingOutgoing.delete(requestID);
+                                    normalized.callback(undefined);
+                                }, responseTimeoutMilliseconds);
+                                pendingOutgoing.set(requestID, {
+                                    callback: normalized.callback,
+                                    timeout
+                                });
+                                channel.postMessage({
+                                    kind: "request",
+                                    requestID,
+                                    senderToken: contextToken,
+                                    message: normalized.message,
+                                    sender
+                                });
+                                return { handled: true, value: undefined };
+                            }
+                            const value = new Promise((resolve, reject) => {
+                                const timeout = setTimeout(() => {
+                                    pendingOutgoing.delete(requestID);
+                                    reject(new Error(
+                                        "No extension page handled the message."
+                                    ));
+                                }, responseTimeoutMilliseconds);
+                                pendingOutgoing.set(requestID, {
+                                    resolve,
+                                    reject,
+                                    timeout
+                                });
+                                channel.postMessage({
+                                    kind: "request",
+                                    requestID,
+                                    senderToken: contextToken,
+                                    message: normalized.message,
+                                    sender
+                                });
+                            });
+                            return { handled: true, value };
+                        };
+                        return {
+                            canSend: isExtensionPage,
+                            sendMessage,
+                            retryPendingRequests() {
+                                for (const request of pendingIncoming.values()) {
+                                    invokePendingRequest(request);
+                                }
+                            }
+                        };
+                    })();
+                    contentScriptMessaging = (() => {
+                        const portName =
+                            "crest-webextension-runtime-messages-v1";
+                        const responseTimeoutMilliseconds = 30_000;
+                        const onConnect = nativeRuntime.onConnect;
+                        const nativeConnect = nativeRuntime.connect;
+
+                        if (
+                            globalThis.__crestIsWebExtensionBackground === true
+                        ) {
+                            if (typeof onConnect?.addListener !== "function") {
+                                return undefined;
+                            }
+
+                            const pendingIncoming = new Set();
+                            onConnect.addListener((port) => {
+                                if (
+                                    port?.name !== portName
+                                    || typeof port.onMessage?.addListener
+                                        !== "function"
+                                    || typeof port.postMessage !== "function"
+                                ) {
+                                    return;
+                                }
+
+                                const requests = new Set();
+                                const settleRequest = (request) => {
+                                    request.isSettled = true;
+                                    clearTimeout(request.timeout);
+                                    requests.delete(request);
+                                    pendingIncoming.delete(request);
+                                };
+                                port.onMessage.addListener((payload) => {
+                                    if (
+                                        !payload
+                                        || payload.kind !== "request"
+                                        || typeof payload.requestID !== "string"
+                                    ) {
+                                        return;
+                                    }
+
+                                    const request = {
+                                        requestID: payload.requestID,
+                                        message: payload.message,
+                                        sender: port.sender ?? {
+                                            id: extensionID,
+                                            url: "",
+                                            origin: extensionBaseURL
+                                        },
+                                        attemptedListeners: new Set(),
+                                        isClaimed: false,
+                                        isSettled: false
+                                    };
+                                    request.respond = (response, error) => {
+                                        if (request.isSettled) return;
+                                        settleRequest(request);
+                                        try {
+                                            port.postMessage({
+                                                kind: "response",
+                                                requestID: request.requestID,
+                                                response,
+                                                error
+                                            });
+                                        } catch {}
+                                    };
+                                    request.timeout = setTimeout(
+                                        () => settleRequest(request),
+                                        responseTimeoutMilliseconds
+                                    );
+                                    requests.add(request);
+                                    pendingIncoming.add(request);
+                                    invokePendingRequest(request);
+                                });
+                                if (
+                                    typeof port.onDisconnect?.addListener
+                                    === "function"
+                                ) {
+                                    port.onDisconnect.addListener(() => {
+                                        for (const request of requests) {
+                                            settleRequest(request);
+                                        }
+                                    });
+                                }
+                            });
+
+                            return {
+                                canSend: () => false,
+                                sendMessage: () => ({ handled: false }),
+                                retryPendingRequests() {
+                                    for (const request of pendingIncoming) {
+                                        invokePendingRequest(request);
+                                    }
+                                }
+                            };
+                        }
+
+                        if (
+                            isExtensionPage()
+                            || typeof nativeConnect !== "function"
+                        ) {
+                            return undefined;
+                        }
+
+                        let port;
+                        let requestSequence = 0;
+                        const pendingOutgoing = new Map();
+                        const settlePending = (requestID, payload = {}) => {
+                            const pending = pendingOutgoing.get(requestID);
+                            if (!pending) return;
+
+                            pendingOutgoing.delete(requestID);
+                            clearTimeout(pending.timeout);
+                            if (pending.callback) {
+                                queueMicrotask(() => pending.callback(
+                                    payload.response
+                                ));
+                            } else if (payload.error) {
+                                pending.reject(new Error(payload.error));
+                            } else {
+                                pending.resolve(payload.response);
+                            }
+                        };
+                        const disconnect = () => {
+                            port = undefined;
+                            for (const requestID of pendingOutgoing.keys()) {
+                                settlePending(requestID, {
+                                    error: "The extension background disconnected."
+                                });
+                            }
+                        };
+                        const connectedPort = () => {
+                            if (port) return port;
+
+                            let nextPort;
+                            try {
+                                nextPort = nativeConnect.call(nativeRuntime, {
+                                    name: portName
+                                });
+                            } catch {
+                                return undefined;
+                            }
+                            if (
+                                !nextPort
+                                || typeof nextPort.postMessage !== "function"
+                                || typeof nextPort.onMessage?.addListener
+                                    !== "function"
+                            ) {
+                                return undefined;
+                            }
+                            port = nextPort;
+                            nextPort.onMessage.addListener((payload) => {
+                                if (
+                                    payload?.kind !== "response"
+                                    || typeof payload.requestID !== "string"
+                                ) {
+                                    return;
+                                }
+                                settlePending(payload.requestID, payload);
+                            });
+                            if (
+                                typeof nextPort.onDisconnect?.addListener
+                                === "function"
+                            ) {
+                                nextPort.onDisconnect.addListener(disconnect);
+                            }
+                            return nextPort;
+                        };
+                        const sendMessage = (...args) => {
+                            const normalized = normalizedSelfMessage(args);
+                            if (!normalized) return { handled: false };
+
+                            const activePort = connectedPort();
+                            if (!activePort) return { handled: false };
+
+                            const requestID =
+                                `content:${Date.now()}:${++requestSequence}`;
+                            let value;
+                            let pending;
+                            if (normalized.callback) {
+                                pending = { callback: normalized.callback };
+                            } else {
+                                value = new Promise((resolve, reject) => {
+                                    pending = { resolve, reject };
+                                });
+                            }
+                            pending.timeout = setTimeout(() => {
+                                settlePending(requestID, {
+                                    error: "No extension background handled the message."
+                                });
+                            }, responseTimeoutMilliseconds);
+                            pendingOutgoing.set(requestID, pending);
+                            try {
+                                activePort.postMessage({
+                                    kind: "request",
+                                    requestID,
+                                    message: normalized.message
+                                });
+                            } catch {
+                                pendingOutgoing.delete(requestID);
+                                clearTimeout(pending.timeout);
+                                return { handled: false };
+                            }
+                            return { handled: true, value };
+                        };
+                        return {
+                            canSend: () => true,
+                            sendMessage,
+                            retryPendingRequests() {}
+                        };
+                    })();
                     return {
                         nativeRoot,
-                        onMessage: eventCompatibility
+                        onMessage: eventCompatibility,
+                        extensionPageMessaging,
+                        contentScriptMessaging
                     };
                 };
-                const messageBootstrap = createMessageBootstrap(primaryRoot);
+                const messageBootstraps = new Map();
+                const messageBootstrapFor = (nativeRoot) => {
+                    if (!nativeRoot) return undefined;
+                    let bootstrap = messageBootstraps.get(nativeRoot);
+                    if (bootstrap) return bootstrap;
+
+                    bootstrap = createMessageBootstrap(nativeRoot);
+                    if (bootstrap) messageBootstraps.set(nativeRoot, bootstrap);
+                    return bootstrap;
+                };
+                messageBootstrapFor(primaryRoot);
                 const runtime = {
+                    id: extensionID,
+                    getURL(path = "") {
+                        return fallbackResourceURL(path);
+                    },
                     requestUpdateCheck(...args) {
                         const callback = args.at(-1);
                         if (typeof callback === "function") {
@@ -881,6 +1462,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 const compatibleRuntimeFor = (nativeRoot) => {
                     const nativeRuntime = nativeRoot?.runtime;
                     if (!nativeRuntime) return runtime;
+                    const messageBootstrap = messageBootstrapFor(nativeRoot);
 
                     return new Proxy(nativeRuntime, {
                         get(target, property) {
@@ -896,8 +1478,83 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                                     args
                                 );
                             }
+                            if (property === "sendMessage") {
+                                const nativeSendMessage = Reflect.get(
+                                    target,
+                                    property,
+                                    target
+                                );
+                                const messageRouting = [
+                                    messageBootstrap?.extensionPageMessaging,
+                                    messageBootstrap?.contentScriptMessaging
+                                ].find((candidate) => candidate?.canSend());
+                                if (messageRouting) {
+                                    return (...args) => {
+                                        const attempt = messageRouting
+                                            .sendMessage(...args);
+                                        if (attempt.handled) {
+                                            return attempt.value;
+                                        }
+                                        if (
+                                            typeof nativeSendMessage
+                                            !== "function"
+                                        ) {
+                                            return runtime[property];
+                                        }
+                                        return nativeSendMessage.apply(
+                                            target,
+                                            args
+                                        );
+                                    };
+                                }
+                                if (typeof nativeSendMessage !== "function") {
+                                    return runtime[property];
+                                }
+                                return (...args) => nativeSendMessage.apply(
+                                    target,
+                                    args
+                                );
+                            }
+                            if (property === "id") {
+                                const nativeID = Reflect.get(
+                                    target,
+                                    property,
+                                    target
+                                );
+                                return typeof nativeID === "string"
+                                    && nativeID.length > 0
+                                    ? nativeID
+                                    : extensionID;
+                            }
+                            if (property === "getURL") {
+                                return (path = "") => {
+                                    const nativeGetURL = Reflect.get(
+                                        target,
+                                        property,
+                                        target
+                                    );
+                                    if (typeof nativeGetURL === "function") {
+                                        try {
+                                            const nativeURL = nativeGetURL.call(
+                                                target,
+                                                path
+                                            );
+                                            if (
+                                                typeof nativeURL === "string"
+                                                && nativeURL.length > 0
+                                            ) {
+                                                return new URL(nativeURL).href;
+                                            }
+                                        } catch {}
+                                    }
+                                    return fallbackResourceURL(path);
+                                };
+                            }
                             const value = Reflect.get(target, property, target);
-                            return value === undefined ? runtime[property] : value;
+                            if (value === undefined) return runtime[property];
+                            return typeof value === "function"
+                                ? value.bind(target)
+                                : value;
                         }
                     });
                 };

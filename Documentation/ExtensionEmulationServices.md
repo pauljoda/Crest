@@ -16,9 +16,9 @@ runtime only supplies an absent member.
    ownership of extension execution and document integration.
 2. **JavaScript compatibility runtime.** A generated, versioned runtime is
    loaded before transformed background content, declared content scripts, and
-   manifest-owned extension pages such as popups and options. It normalizes the
-   `chrome` and `browser` roots, preserves the declared manifest, and provides
-   bounded local adapters where no native round trip is needed.
+   packaged extension pages. It normalizes the `chrome` and `browser` roots,
+   preserves the declared manifest, and provides bounded local adapters where
+   no native round trip is needed.
 3. **Crest capability broker.** APIs that need application state call one
    permission-checked broker. The broker resolves the extension and Space from
    the loaded context; JavaScript never supplies or overrides that identity.
@@ -58,17 +58,44 @@ capability known to need normalization. It supports:
 - classic service workers by prepending the same generated runtime to the
   temporary worker copy;
 - Manifest V2 `background.scripts` by inserting the runtime first;
-- declared content scripts and manifest-owned popup, options, side-panel,
-  DevTools, and URL-override pages;
+- declared content scripts and every packaged HTML extension page. This
+  includes internal routes reached from a popup or options page even when the
+  manifest does not name them directly. Manifest sandbox pages are excluded,
+  because injecting privileged extension APIs there would violate the sandbox;
 - native-first `chrome`/`browser` namespace overlays, an exact
   `runtime.getManifest()` fallback, managed-storage empty-policy semantics,
-  optional navigation events, background message-startup buffering, and a
-  document-backed offscreen-page adapter that uses the URL supplied by the
-  extension.
+  optional navigation events, a cross-context messaging transport, background
+  message-startup buffering, and a document-backed offscreen-page adapter that
+  uses the URL supplied by the extension.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
 The app-service broker described below is the next boundary to connect; until a
 service is connected, its local adapter must stay bounded or explicitly reject.
+
+## Cross-context messaging
+
+WebKit's native `runtime.sendMessage` remains the first choice. Crest supplies
+a transport only in contexts where WebKit exposes the API but does not carry a
+reply reliably between an extension page or content script and an extension's
+background content.
+
+- Extension pages use a package-scoped `BroadcastChannel`. The generated
+  runtime is present in both the sending page and background document, so this
+  path does not cross into website JavaScript.
+- Content scripts use a reserved native `runtime.connect` Port. The background
+  marker installed before the compatibility runtime identifies the one context
+  allowed to receive those requests and replay them to its registered
+  `runtime.onMessage` listeners.
+- Requests preserve callback, Promise, `return true`, and first-response
+  behavior. External-extension messages continue through WebKit rather than
+  entering Crest's internal transport.
+- `chrome` and `browser` are bootstrapped independently. WebKit may expose them
+  as different native objects, so completing one namespace must not discard
+  listeners registered through the other.
+
+The marker and reserved Port name are Crest protocol details, not extension
+identifiers. No extension source is inspected or patched, and the transport is
+selected by context and available capability alone.
 
 ## App-side service layout
 

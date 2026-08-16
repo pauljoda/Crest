@@ -117,10 +117,17 @@ extension BrowserExtensionInstallationController {
         )
         var didLoadNewContext = false
         do {
+            let runtimeIdentity = BrowserExtensionRuntimeIdentifierPolicy
+                .identity(
+                    extensionID: extensionID,
+                    source: source,
+                    spaceID: space.id
+                )
             let compatibilityPackage = try BrowserChromeWebStoreCompatibilityPackagePreparer()
                 .prepareStoredResource(
                     package.resourceURL,
-                    requestedPermissions: candidate.requestedPermissions
+                    requestedPermissions: candidate.requestedPermissions,
+                    runtimeIdentity: runtimeIdentity
                 )
             if let existingContext = runtime.loadedContext(
                 extensionID: extensionID,

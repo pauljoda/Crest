@@ -3,6 +3,12 @@ import WebKit
 
 @MainActor
 final class BrowserExtensionRuntimeContextController {
+    private static let customURLSchemeRegistration: Void = {
+        WKWebExtension.MatchPattern.registerCustomURLScheme(
+            BrowserExtensionRuntimeIdentifierPolicy.urlScheme
+        )
+    }()
+
     private struct ControllerEntry {
         let profileID: UUID
         let controller: WKWebExtensionController
@@ -30,6 +36,7 @@ final class BrowserExtensionRuntimeContextController {
             any BrowserExtensionStoredResourcePreparing,
         usesEphemeralWebKitStorage: Bool
     ) {
+        _ = Self.customURLSchemeRegistration
         self.persistence = persistence
         self.permissions = permissions
         self.contextObserver = contextObserver
@@ -227,11 +234,13 @@ final class BrowserExtensionRuntimeContextController {
         // parts a developer most needs Web Inspector for.
         context.isInspectable = true
         context.inspectionName = webExtension.displayName ?? extensionID
-        context.uniqueIdentifier = uniqueIdentifier(
-            for: extensionID,
-            in: space.id,
-            source: source
+        let runtimeIdentity = BrowserExtensionRuntimeIdentifierPolicy.identity(
+            extensionID: extensionID,
+            source: source,
+            spaceID: space.id
         )
+        context.uniqueIdentifier = runtimeIdentity.uniqueIdentifier
+        context.baseURL = runtimeIdentity.baseURL
         context.unsupportedAPIs = unsupportedAPIs
         let restoreError = permissions.apply(permissionSnapshot, to: context)
         if case .chromeWebStore(let chromeSource) = source,
@@ -462,15 +471,4 @@ final class BrowserExtensionRuntimeContextController {
         persistence.updateSummary(runtimeSummary, in: spaceID)
     }
 
-    private func uniqueIdentifier(
-        for extensionID: String,
-        in spaceID: SpaceID,
-        source: BrowserExtensionInstallationSource?
-    ) -> String {
-        BrowserExtensionRuntimeIdentifierPolicy.identifier(
-            extensionID: extensionID,
-            source: source,
-            spaceID: spaceID
-        )
-    }
 }

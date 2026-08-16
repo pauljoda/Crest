@@ -11,6 +11,7 @@ enum BrowserExternalSchemePolicy {
         "https",
         "about",
         "blob",
+        "crest-extension",
         "data",
         "webkit-extension",
     ]

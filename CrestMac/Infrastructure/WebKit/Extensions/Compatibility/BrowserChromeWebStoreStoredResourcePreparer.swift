@@ -33,7 +33,13 @@ struct BrowserChromeWebStoreStoredResourcePreparer:
                 try compatibilityPreparer
                 .prepareStoredResource(
                     resourceURL,
-                    requestedPermissions: installation.requestedPermissions
+                    requestedPermissions: installation.requestedPermissions,
+                    runtimeIdentity: BrowserExtensionRuntimeIdentifierPolicy
+                        .identity(
+                            extensionID: installation.id,
+                            source: installation.source,
+                            spaceID: installation.spaceID
+                        )
                 )
         else {
             return BrowserExtensionStoredResource(resourceURL: resourceURL)
