@@ -813,6 +813,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     const nativeHas = typeof nativeEvent.hasListener === "function"
                         ? nativeEvent.hasListener.bind(nativeEvent)
                         : () => false;
+                    const nativeSendMessage =
+                        typeof nativeRuntime.sendMessage === "function"
+                            ? nativeRuntime.sendMessage.bind(nativeRuntime)
+                            : undefined;
+                    const bridgeWakeMessageKey =
+                        "__crestRuntimeBridgeWake";
+                    const isBridgeWakeMessage = (message) => (
+                        message !== null
+                        && typeof message === "object"
+                        && message[bridgeWakeMessageKey] === 1
+                    );
                     const listeners = new Map();
                     const handledMessages = new Set();
                     let extensionPageMessaging;
@@ -897,6 +908,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (wrapped) return wrapped;
 
                         wrapped = (message, sender, sendResponse) => {
+                            if (isBridgeWakeMessage(message)) return false;
+
                             let didRespond = false;
                             const trackedSendResponse = (...args) => {
                                 didRespond = true;
@@ -950,6 +963,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         sender,
                         sendResponse
                     ) => {
+                        if (isBridgeWakeMessage(message)) return false;
+
                         initialization.then(() => {
                             if (wasHandled(message)) return;
 
@@ -1059,10 +1074,32 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         const pendingIncoming = new Map();
                         const pendingOutgoing = new Map();
                         const responseTimeoutMilliseconds = 30_000;
+                        const backgroundProbeIntervalMilliseconds = 50;
+                        const isBackgroundContext = globalThis
+                            .__crestIsWebExtensionBackground === true;
                         let requestSequence = 0;
+                        const wakeBackground = () => {
+                            if (
+                                isBackgroundContext
+                                || typeof nativeSendMessage !== "function"
+                            ) {
+                                return;
+                            }
+                            try {
+                                const result = nativeSendMessage(
+                                    { [bridgeWakeMessageKey]: 1 },
+                                    () => { void nativeRuntime.lastError; }
+                                );
+                                if (isThenable(result)) {
+                                    Promise.resolve(result).catch(() => {});
+                                }
+                            } catch {}
+                        };
                         const receiveRequest = (payload) => {
                             if (
                                 payload.senderToken === contextToken
+                                || (payload.recipientToken !== undefined
+                                    && payload.recipientToken !== contextToken)
                                 || pendingIncoming.has(payload.requestID)
                             ) {
                                 return;
@@ -1099,14 +1136,22 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             pendingIncoming.set(request.requestID, request);
                             invokePendingRequest(request);
                         };
+                        const takePendingOutgoing = (requestID) => {
+                            const pending = pendingOutgoing.get(requestID);
+                            if (!pending) return undefined;
+
+                            pendingOutgoing.delete(requestID);
+                            clearTimeout(pending.timeout);
+                            clearTimeout(pending.wakeTimer);
+                            clearInterval(pending.probeInterval);
+                            return pending;
+                        };
                         const receiveResponse = (payload) => {
-                            const pending = pendingOutgoing.get(
+                            const pending = takePendingOutgoing(
                                 payload.requestID
                             );
                             if (!pending) return;
 
-                            pendingOutgoing.delete(payload.requestID);
-                            clearTimeout(pending.timeout);
                             if (pending.callback) {
                                 queueMicrotask(() => pending.callback(
                                     payload.response
@@ -1117,6 +1162,32 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 pending.resolve(payload.response);
                             }
                         };
+                        const receiveBackgroundProbe = (payload) => {
+                            if (!isBackgroundContext) return;
+
+                            channel.postMessage({
+                                kind: "background-ready",
+                                requestID: payload.requestID,
+                                recipientToken: payload.senderToken,
+                                senderToken: contextToken
+                            });
+                        };
+                        const receiveBackgroundReady = (payload) => {
+                            if (payload.recipientToken !== contextToken) return;
+
+                            const pending = pendingOutgoing.get(
+                                payload.requestID
+                            );
+                            if (!pending || pending.didSend) return;
+
+                            pending.didSend = true;
+                            clearTimeout(pending.wakeTimer);
+                            clearInterval(pending.probeInterval);
+                            channel.postMessage({
+                                ...pending.request,
+                                recipientToken: payload.senderToken
+                            });
+                        };
                         channel.addEventListener("message", (event) => {
                             const payload = event.data;
                             if (
@@ -1126,12 +1197,32 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             ) {
                                 return;
                             }
-                            if (payload.kind === "request") {
+                            if (payload.kind === "background-probe") {
+                                receiveBackgroundProbe(payload);
+                            } else if (payload.kind === "background-ready") {
+                                receiveBackgroundReady(payload);
+                            } else if (payload.kind === "request") {
                                 receiveRequest(payload);
                             } else if (payload.kind === "response") {
                                 receiveResponse(payload);
                             }
                         });
+                        const beginOutgoingDelivery = (pending) => {
+                            const postProbe = () => channel.postMessage({
+                                kind: "background-probe",
+                                requestID: pending.request.requestID,
+                                senderToken: contextToken
+                            });
+                            pending.probeInterval = setInterval(
+                                postProbe,
+                                backgroundProbeIntervalMilliseconds
+                            );
+                            pending.wakeTimer = setTimeout(
+                                wakeBackground,
+                                0
+                            );
+                            postProbe();
+                        };
                         const sendMessage = (...args) => {
                             const normalized = normalizedSelfMessage(args);
                             if (!normalized) {
@@ -1147,48 +1238,49 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     : location.href,
                                 origin: extensionBaseURL
                             };
+                            const request = {
+                                kind: "request",
+                                requestID,
+                                senderToken: contextToken,
+                                message: normalized.message,
+                                sender
+                            };
                             if (normalized.callback) {
                                 const timeout = setTimeout(() => {
-                                    pendingOutgoing.delete(requestID);
+                                    takePendingOutgoing(requestID);
                                     normalized.callback(undefined);
                                 }, responseTimeoutMilliseconds);
-                                pendingOutgoing.set(requestID, {
+                                const pending = {
                                     callback: normalized.callback,
-                                    timeout
-                                });
-                                channel.postMessage({
-                                    kind: "request",
-                                    requestID,
-                                    senderToken: contextToken,
-                                    message: normalized.message,
-                                    sender
-                                });
+                                    request,
+                                    timeout,
+                                };
+                                pendingOutgoing.set(requestID, pending);
+                                beginOutgoingDelivery(pending);
                                 return { handled: true, value: undefined };
                             }
                             const value = new Promise((resolve, reject) => {
                                 const timeout = setTimeout(() => {
-                                    pendingOutgoing.delete(requestID);
+                                    takePendingOutgoing(requestID);
                                     reject(new Error(
                                         "No extension page handled the message."
                                     ));
                                 }, responseTimeoutMilliseconds);
-                                pendingOutgoing.set(requestID, {
+                                const pending = {
                                     resolve,
                                     reject,
-                                    timeout
-                                });
-                                channel.postMessage({
-                                    kind: "request",
-                                    requestID,
-                                    senderToken: contextToken,
-                                    message: normalized.message,
-                                    sender
-                                });
+                                    request,
+                                    timeout,
+                                };
+                                pendingOutgoing.set(requestID, pending);
+                                beginOutgoingDelivery(pending);
                             });
                             return { handled: true, value };
                         };
                         return {
-                            canSend: isExtensionPage,
+                            canSend: () => (
+                                isExtensionPage() && !isBackgroundContext
+                            ),
                             sendMessage,
                             retryPendingRequests() {
                                 for (const request of pendingIncoming.values()) {

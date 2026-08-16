@@ -142,12 +142,15 @@ extension-supplied URL rather than a package-specific path.
 
 Where WebKit exposes messaging but cannot reliably return a background reply,
 the runtime provides one generic transport. Extension pages use a package-local
-`BroadcastChannel`; content scripts use a reserved native Port whose background
-endpoint replays the request to registered `runtime.onMessage` listeners. Both
-callback and Promise replies are supported, external-extension messages still
-fall through to WebKit, and separate native `chrome` and `browser` namespace
-objects are bootstrapped independently. The transport is selected by execution
-context and capability, never by extension identity.
+`BroadcastChannel`. Before sending, a page discovers a ready background
+receiver and asks WebKit to wake an evicted background when necessary; the real
+extension payload is delivered only after that handshake. Content scripts use
+a reserved native Port whose background endpoint replays the request to
+registered `runtime.onMessage` listeners. Both callback and Promise replies are
+supported, external-extension messages still fall through to WebKit, and
+separate native `chrome` and `browser` namespace objects are bootstrapped
+independently. The transport is selected by execution context and capability,
+never by extension identity.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned

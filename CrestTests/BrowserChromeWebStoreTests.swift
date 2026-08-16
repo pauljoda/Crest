@@ -985,8 +985,18 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     globalThis.bridgedCallbackResponse = response?.type;
                 }
             );
+            const outgoingProbe = globalThis.fakeExtensionChannel.posts.find(
+                (entry) => entry.kind === "background-probe"
+            );
+            globalThis.fakeExtensionChannel.emit({
+                kind: "background-ready",
+                requestID: outgoingProbe.requestID,
+                recipientToken: outgoingProbe.senderToken,
+                senderToken: "remote-background"
+            });
             const outgoingRequest = globalThis.fakeExtensionChannel.posts.find(
                 (entry) => entry.kind === "request"
+                    && entry.requestID === outgoingProbe.requestID
             );
             globalThis.fakeExtensionChannel.emit({
                 kind: "response",
@@ -1024,6 +1034,161 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 "globalThis.nativeSendCount"
             ) as? Int
         XCTAssertEqual(nativeSendCount, 1)
+    }
+
+    func testExtensionPageMessageWaitsForBackgroundBridgeStartup()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-page-startup-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Page Startup Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(
+            ChromeWebStoreTestSchemeHandler(),
+            forURLScheme: "crest-extension"
+        )
+        let webView = WKWebView(
+            frame: .zero,
+            configuration: configuration
+        )
+        try await ChromeWebStoreNavigationWaiter(webView: webView).load(
+            URLRequest(
+                url: fixtureRuntimeIdentity.baseURL.appending(
+                    path: "popup.html"
+                )
+            )
+        )
+
+        _ = try await webView.evaluateJavaScript(
+            """
+            class FakeBroadcastChannel {
+                static channels = [];
+
+                constructor(name) {
+                    this.name = name;
+                    this.listeners = [];
+                    FakeBroadcastChannel.channels.push(this);
+                }
+
+                addEventListener(type, listener) {
+                    if (type === "message") this.listeners.push(listener);
+                }
+
+                postMessage(value) {
+                    for (const channel of FakeBroadcastChannel.channels) {
+                        if (channel === this || channel.name !== this.name) {
+                            continue;
+                        }
+                        queueMicrotask(() => {
+                            for (const listener of channel.listeners) {
+                                listener({ data: value });
+                            }
+                        });
+                    }
+                }
+            }
+            Object.defineProperty(globalThis, "BroadcastChannel", {
+                configurable: true,
+                value: FakeBroadcastChannel
+            });
+            const nativeOnMessage = {
+                addListener() {},
+                removeListener() {},
+                hasListener() { return false; }
+            };
+            const nativeRuntime = {
+                onMessage: nativeOnMessage,
+                sendMessage(message, callback) {
+                    globalThis.nativeWakeMessages ??= [];
+                    globalThis.nativeWakeMessages.push(message);
+                    callback?.();
+                },
+                getManifest() { return { manifest_version: 3 }; }
+            };
+            Object.defineProperty(globalThis, "browser", {
+                configurable: true,
+                value: { runtime: nativeRuntime }
+            });
+            \(source)
+            globalThis.startupResponse = undefined;
+            browser.runtime.sendMessage(
+                { name: "get-popup-config" },
+                (response) => {
+                    globalThis.startupResponse = response?.type;
+                }
+            );
+            setTimeout(() => {
+                const background = new BroadcastChannel(
+                    "crest-webextension-messages:fixture-extension-id"
+                );
+                background.addEventListener("message", ({ data }) => {
+                    if (data.kind === "background-probe") {
+                        background.postMessage({
+                            kind: "background-ready",
+                            requestID: data.requestID,
+                            recipientToken: data.senderToken,
+                            senderToken: "delayed-background"
+                        });
+                        return;
+                    }
+                    if (data.kind !== "request") return;
+                    background.postMessage({
+                        kind: "response",
+                        requestID: data.requestID,
+                        senderToken: "delayed-background",
+                        response: { type: "PopupConfig" }
+                    });
+                });
+            }, 10);
+            """
+        )
+        try await Task.sleep(for: .milliseconds(150))
+
+        let response = try await webView.evaluateJavaScript(
+            "globalThis.startupResponse"
+        ) as? String
+        let wakeVersion = try await webView.evaluateJavaScript(
+            "globalThis.nativeWakeMessages?.[0]?.__crestRuntimeBridgeWake"
+        ) as? Int
+
+        XCTAssertEqual(response, "PopupConfig")
+        XCTAssertEqual(wakeVersion, 1)
     }
 
     func testContentScriptMessageBridgeUsesRuntimePortForCallbackResponses()

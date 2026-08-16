@@ -90,7 +90,13 @@ background content.
 
 - Extension pages use a package-scoped `BroadcastChannel`. The generated
   runtime is present in both the sending page and background document, so this
-  path does not cross into website JavaScript.
+  path does not cross into website JavaScript. A sender first probes for a
+  background receiver. If WebKit has evicted the nonpersistent background, a
+  private no-payload native message wakes it; the actual extension message is
+  sent only after the receiver answers and is targeted to that context. This
+  prevents a popup's first request from being lost while a Manifest V3 module
+  is still starting, without exposing the transport signal to extension
+  listeners.
 - Content scripts use a reserved native `runtime.connect` Port. The background
   marker installed before the compatibility runtime identifies the one context
   allowed to receive those requests and replay them to its registered
