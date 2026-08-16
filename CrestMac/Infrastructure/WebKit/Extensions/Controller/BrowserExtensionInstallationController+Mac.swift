@@ -108,28 +108,20 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
-        let compatibilityPackage = try BrowserChromeWebStoreCompatibilityPackagePreparer().prepare(
+        let package = try persistence.stage(
             candidate.verifiedPackage,
-            requestedPermissions: candidate.requestedPermissions
+            in: space.id
         )
-        let package: BrowserExtensionPackage
-        if let compatibilityPackage {
-            package = try persistence.stageVerifiedChromeResource(
-                compatibilityPackage.resourceURL,
-                extensionID: candidate.source.extensionID,
-                in: space.id
-            )
-        } else {
-            package = try persistence.stage(
-                candidate.verifiedPackage,
-                in: space.id
-            )
-        }
         let source = BrowserExtensionInstallationSource.chromeWebStore(
             candidate.source
         )
         var didLoadNewContext = false
         do {
+            let compatibilityPackage = try BrowserChromeWebStoreCompatibilityPackagePreparer()
+                .prepareStoredResource(
+                    package.resourceURL,
+                    requestedPermissions: candidate.requestedPermissions
+                )
             if let existingContext = runtime.loadedContext(
                 extensionID: extensionID,
                 in: space.id
@@ -138,7 +130,8 @@ extension BrowserExtensionInstallationController {
                 runtime.releaseContext(extensionID: extensionID, in: space.id)
             }
             let context = try await runtime.loadExtension(
-                at: package.resourceURL,
+                at: compatibilityPackage?.resourceURL
+                    ?? package.resourceURL,
                 extensionID: extensionID,
                 in: space,
                 unsupportedAPIs: Set(previous?.unsupportedAPIs ?? []),
@@ -196,6 +189,13 @@ extension BrowserExtensionInstallationController {
                 retaining: package.packageName,
                 in: space.id
             )
+            if let compatibilityPackage {
+                runtime.retainRuntimeResourceAccess(
+                    compatibilityPackage,
+                    extensionID: extensionID,
+                    in: space.id
+                )
+            }
             return runtimeSummary
         } catch {
             if didLoadNewContext,

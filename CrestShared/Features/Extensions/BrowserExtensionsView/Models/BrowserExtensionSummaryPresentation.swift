@@ -59,21 +59,6 @@ enum BrowserExtensionSummaryPresentation {
             )
         }
 
-        if summary.id == "aeblfdkhhhdcdjpifhhbdiojplfjncoa",
-            summary.requestedPermissions.contains("nativeMessaging")
-        {
-            return BrowserExtensionIssuePresentation(
-                title: String(
-                    localized: "1Password can’t connect to its companion app"
-                ),
-                message: String(
-                    localized:
-                        "1Password requires the production-signed Crest for Mac release. Development-signed builds can’t complete sign-in, unlocking, or filling. After installing Crest in Applications, add it in 1Password’s Browser settings."
-                ),
-                technicalDetails: summary.errors
-            )
-        }
-
         if let message = summary.compatibilityAssessment.blockingIssues.first
             .map({
                 BrowserExtensionCompatibilityPresentation.message(

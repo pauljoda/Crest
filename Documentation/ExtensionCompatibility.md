@@ -123,6 +123,33 @@ unimplemented on purpose rather than faked:
   tab on macOS opens Crest's command palette rather than loading a page, so
   there is no URL for an extension to replace.
 
+## Crest compatibility runtime
+
+Crest uses WebKit as the extension engine and adds one browser-neutral runtime
+above it. The runtime is selected by requested capabilities and manifest shape,
+not by extension ID or vendor. It is installed into a temporary copy while the
+verified store archive remains unchanged, so restoration and updates always
+start from the verified bytes.
+
+The package layer currently loads before supported Manifest V2 and V3
+background forms, declared content scripts, and manifest-owned pages such as
+popups and options. A proxy preserves every WebKit implementation and fills
+only missing members. The declared manifest is embedded as the exact fallback
+for `runtime.getManifest()`; an offscreen document uses the extension-supplied
+URL rather than a package-specific path.
+
+An earlier experimental build could save its generated worker prelude inside
+an unpacked stored package. The current preparer recognizes that Crest-owned
+prelude and removes it only from the temporary runtime copy. It never rewrites
+the user's stored package and the migration does not inspect extension identity.
+
+Compatibility fixes are accepted only as reusable capabilities with a fixture.
+Crest does not carry extension-ID switches or literal patches to an extension's
+source. Engine-owned behavior such as isolated-world creation, CSP, request
+interception, and WebAuthn remains WebKit's responsibility. See
+`Documentation/ExtensionEmulationServices.md` for the runtime and native broker
+boundary.
+
 ## Native companion distribution boundary
 
 - Ordinary WebExtensions can use APIs implemented by WebKit.
@@ -178,20 +205,18 @@ following path in Crest for Mac on August 10, 2026:
 6. Adding `/Applications/Crest.app` in **1Password → Settings → Browser**
    displayed and completed 1Password's explicit browser-authorization review.
 
-The final account handoff exposed a distribution boundary. A full bidirectional
-native-message trace showed the extension sending `NmRequestAccounts`, followed
-by 1Password's helper returning `BrowserVerificationFailed` with
-`BrowserSignatureInvalid`. The tested Crest build used an Apple Development
-certificate. Removing the debug entitlement was necessary for a hardened
-Release build, but did not make that development certificate acceptable to
-1Password.
+The original account handoff exposed a distribution boundary. A full
+bidirectional native-message trace showed the extension sending
+`NmRequestAccounts`, followed by 1Password's helper returning
+`BrowserVerificationFailed` with `BrowserSignatureInvalid`. That measurement
+used an Apple Development certificate.
 
-This proves installation, startup, normal navigation, persistent native-port
-transport, companion launch, and the trusted-browser review UI. It does **not**
-prove unlock or autofill. Those require the production-signed Crest release,
-installed in `/Applications`, followed by a fresh 1Password browser
-authorization. The Developer ID identity is now installed; the final signed,
-notarized pairing validation remains outstanding.
+That measurement proves installation, normal navigation, persistent native-port
+transport, companion launch, and the trusted-browser review UI. A later
+Developer ID build removed signing as the explanation for JavaScript startup
+failures, but unlock and autofill are still not certified. The current work
+treats 1Password as one conformance fixture for the generic compatibility
+runtime; it carries no 1Password ID branch or source patch.
 
 Official references:
 
@@ -208,8 +233,8 @@ extension with the official Crest for Mac release instead.
 ## iCloud Passwords live validation
 
 The signed Chrome Web Store package for iCloud Passwords 3.3.0 verifies and
-installs. Crest applies an exact-extension compatibility layer for WebKit APIs
-the package expects but WebKit does not expose:
+installs. Crest's capability-selected runtime supplies optional WebKit APIs the
+package expects but WebKit does not expose:
 
 - `webNavigation.onHistoryStateUpdated`
 - `webNavigation.onTabReplaced`
@@ -463,13 +488,13 @@ site, popup, update, or optional workflow.
 | --- | --- | --- | --- |
 | Dark Reader | 4.9.129 | Loads cleanly | Installs unmodified; live page attachment and popup reopen verified separately |
 | uBlock Origin Lite | 2026.804.1652 | Loads cleanly | Declarative Net Request package loaded without a startup error |
-| 1Password | 8.12.30.21 | Partial / production-signature gated | Setup, sign-in navigation, persistent native messaging, BrowserSupport launch, and browser-authorization UI were verified; the Apple Development build was rejected as `BrowserSignatureInvalid`, so production-signature pairing and autofill remain unverified |
+| 1Password | 8.12.30.21 | Partial / compatibility audit active | Setup, sign-in navigation, persistent native messaging, BrowserSupport launch, and browser-authorization UI were verified in an earlier build. The current Developer ID build removes signing as the generic runtime-error explanation, but pairing and autofill remain unverified |
 | SponsorBlock | 6.1.6 | Loads cleanly | No manifest or startup runtime error observed |
 | Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load; notification-click handling is unsupported by WebKit, and account unlock/autofill has not been certified |
 | Grammarly | 14.1319.0 | Partial / experimental | Managed storage plus cookie and telemetry limits are reported |
 | React Developer Tools | 7.0.1 | Partial / experimental | `chrome.scripting.ExecutionWorld.ISOLATED` is unavailable |
 | Tampermonkey | 5.5.0 | Partial / experimental | WebKit rejects its `tabs.onUpdated` startup registration. Crest now reports loading and reader-mode changes to that event, but the rejected registration is a WebKit boundary and is unchanged |
-| iCloud Passwords | 3.3.0 | Blocked / Apple entitlement pending | The worker loads with exact-package WebKit shims, but Apple's password helper rejects the current unsigned-capability parent; pairing and autofill require the managed browser credential entitlement |
+| iCloud Passwords | 3.3.0 | Blocked / Apple entitlement pending | The worker loads through the generic capability runtime, but Apple's password helper rejects the current unsigned-capability parent; pairing and autofill require the managed browser credential entitlement |
 
 ## Firefox extensions from addons.mozilla.org
 

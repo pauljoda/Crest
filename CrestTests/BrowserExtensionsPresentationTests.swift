@@ -131,7 +131,7 @@ final class BrowserExtensionsPresentationTests: XCTestCase {
         XCTAssertEqual(issue?.technicalDetails, summary.errors)
     }
 
-    func test1PasswordChromeFailureExplainsTheSigningAndTrustRequirements() {
+    func test1PasswordChromeRuntimeFailureDoesNotBlameProductionSigning() {
         let summary = BrowserExtensionSummary(
             id: "aeblfdkhhhdcdjpifhhbdiojplfjncoa",
             displayName: "1Password – Password Manager",
@@ -149,16 +149,12 @@ final class BrowserExtensionsPresentationTests: XCTestCase {
 
         let issue = BrowserExtensionSummaryPresentation.issue(for: summary)
 
-        XCTAssertEqual(
-            issue?.title,
-            "1Password can’t connect to its companion app"
-        )
+        XCTAssertEqual(issue?.title, "This extension ran into a problem")
         XCTAssertEqual(
             issue?.message,
-            "1Password requires the production-signed Crest for Mac release. "
-                + "Development-signed builds can’t complete sign-in, unlocking, "
-                + "or filling. After installing Crest in Applications, add it in "
-                + "1Password’s Browser settings."
+            "Some features may not work correctly. Try turning the extension "
+                + "off and back on. If the problem continues, update or "
+                + "reinstall it."
         )
         XCTAssertEqual(issue?.technicalDetails, summary.errors)
     }

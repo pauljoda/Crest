@@ -1,16 +1,80 @@
-# Extension emulation services
+# Extension compatibility runtime and services
 
-WebKit fixes the JavaScript surface `WKWebExtension` exposes. Namespaces Chrome
-extensions expect but WebKit does not implement — `notifications`, `history`,
-`topSites`, `identity`, `omnibox` — can only be offered by prepending a polyfill
-to an extension's background scripts and bridging its calls to the app over the
-existing native-messaging delegate path.
+WebKit remains Crest's extension engine. It owns package loading, isolated
+worlds, content-script timing, permissions, extension origins, CSP, service
+workers, Declarative Net Request, and the APIs it already implements. Crest
+does not duplicate or replace those security-sensitive engine contracts.
 
-This document describes the **app-side services** that bridge binds to. The
-polyfills and the bridge itself are separate work; nothing here imports WebKit
-or knows that an extension exists. Each service is a port protocol with an
-adapter behind it, and each has an in-memory double that ships in the app target
-so tests, SwiftUI previews, and isolated launches all use the same seam.
+Crest adds a browser-neutral compatibility runtime above that substrate. Its
+only job is to fill a missing standard surface or normalize a semantic mismatch
+that Crest can implement honestly. Native WebKit members always win; the
+runtime only supplies an absent member.
+
+## Architecture contract
+
+1. **WebKit substrate.** `WKWebExtension` and `WKWebExtensionController` keep
+   ownership of extension execution and document integration.
+2. **JavaScript compatibility runtime.** A generated, versioned runtime is
+   loaded before transformed background content, declared content scripts, and
+   manifest-owned extension pages such as popups and options. It normalizes the
+   `chrome` and `browser` roots, preserves the declared manifest, and provides
+   bounded local adapters where no native round trip is needed.
+3. **Crest capability broker.** APIs that need application state call one
+   permission-checked broker. The broker resolves the extension and Space from
+   the loaded context; JavaScript never supplies or overrides that identity.
+4. **App-side services.** Notifications, history/top sites, web
+   authentication, and omnibox behavior live behind framework-neutral ports.
+   They do not import WebKit or know how a package was acquired.
+
+Package preparation is selected from manifest shape and requested
+capabilities, never an extension ID, name, vendor, or hard-coded resource path.
+The verified store archive remains untouched. Crest creates a temporary runtime
+copy on each load and discards it with the WebKit context, so updates and
+restoration always begin from the verified bytes.
+
+For unpacked packages saved by an earlier experimental build, the temporary
+preparer also removes Crest's legacy generated worker prelude from the runtime
+copy. The stored package is not rewritten, and the migration recognizes Crest's
+own code shape rather than an extension identity.
+
+The runtime must not silently claim an engine capability Crest cannot enforce.
+A missing API gets one of three outcomes:
+
+- a native WebKit implementation;
+- a Crest implementation with the same permission and Space boundaries; or
+- an explicit unsupported rejection or diagnostic.
+
+No extension-specific patch is an accepted fourth outcome. A compatibility
+failure becomes a small fixture in the conformance corpus and either produces a
+general capability or remains documented as unsupported.
+
+## Current package layer
+
+The first package layer covers signed Chrome Web Store resources that request a
+capability known to need normalization. It supports:
+
+- Manifest V3 module workers through a generated nonpersistent background page
+  that loads the compatibility runtime before importing the declared module;
+- classic service workers by prepending the same generated runtime to the
+  temporary worker copy;
+- Manifest V2 `background.scripts` by inserting the runtime first;
+- declared content scripts and manifest-owned popup, options, side-panel,
+  DevTools, and URL-override pages;
+- native-first `chrome`/`browser` namespace overlays, an exact
+  `runtime.getManifest()` fallback, managed-storage empty-policy semantics,
+  optional navigation events, background message-startup buffering, and a
+  document-backed offscreen-page adapter that uses the URL supplied by the
+  extension.
+
+This is the reusable JavaScript/package foundation, not full Chrome parity.
+The app-service broker described below is the next boundary to connect; until a
+service is connected, its local adapter must stay bounded or explicitly reject.
+
+## App-side service layout
+
+Each service is a port protocol with an adapter behind it, and each has an
+in-memory double that ships in the app target so tests, SwiftUI previews, and
+isolated launches all use the same seam.
 
 ## Layout
 

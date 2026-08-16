@@ -28,16 +28,11 @@ struct BrowserChromeWebStoreStoredResourcePreparer:
         else {
             return BrowserExtensionStoredResource(resourceURL: resourceURL)
         }
-        let values = try resourceURL.resourceValues(
-            forKeys: [.isDirectoryKey, .isRegularFileKey]
-        )
-        guard values.isDirectory != true,
-            values.isRegularFile == true,
+        guard
             let preparedPackage =
                 try compatibilityPreparer
-                .prepareStoredArchive(
+                .prepareStoredResource(
                     resourceURL,
-                    extensionID: installation.id,
                     requestedPermissions: installation.requestedPermissions
                 )
         else {

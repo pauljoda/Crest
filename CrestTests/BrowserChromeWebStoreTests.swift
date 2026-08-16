@@ -210,10 +210,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    func testOnePasswordCompatibilityLayerPreparesItsModuleWorker() throws {
+    func testCompatibilityLayerHostsAnyModuleWorkerInABackgroundPage()
+        throws
+    {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
-            path: "crest-onepassword-compatibility-test-\(UUID().uuidString)",
+            path: "crest-webextension-compatibility-test-\(UUID().uuidString)",
             directoryHint: .isDirectory
         )
         defer { try? fileManager.removeItem(at: root) }
@@ -223,11 +225,29 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             withIntermediateDirectories: true
         )
         try Data("globalThis.started = true;".utf8).write(to: workerURL)
+        let popupURL = root.appending(path: "popup.html")
+        try Data(
+            "<html><head><script src=\"popup.js\"></script></head></html>"
+                .utf8
+        ).write(to: popupURL)
+        let contentScriptURL = root.appending(path: "content.js")
+        try Data("globalThis.contentStarted = true;".utf8).write(
+            to: contentScriptURL
+        )
         let manifest: [String: Any] = [
             "manifest_version": 3,
+            "name": "Compatibility Fixture",
+            "version": "1.0",
             "background": [
                 "service_worker": "background/background.js",
                 "type": "module",
+            ],
+            "action": ["default_popup": "popup.html"],
+            "content_scripts": [
+                [
+                    "matches": ["https://example.com/*"],
+                    "js": ["content.js"],
+                ]
             ],
         ]
         try JSONSerialization.data(withJSONObject: manifest).write(
@@ -239,10 +259,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            try preparer.installNotificationCompatibilityLayer(
+            try preparer.installCompatibilityLayer(
                 in: root,
-                extensionID: BrowserChromeWebStoreCompatibilityPackagePreparer
-                    .onePasswordExtensionID
+                requestedPermissions: ["nativeMessaging", "notifications"]
             )
         )
 
@@ -257,28 +276,278 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             updated["background"] as? [String: Any]
         )
         XCTAssertEqual(
-            background["service_worker"] as? String,
-            "background/background.js"
+            background["page"] as? String,
+            "crest-webextension-background.html"
         )
+        XCTAssertEqual(background["persistent"] as? Bool, false)
+        XCTAssertNil(background["service_worker"])
+        XCTAssertNil(background["type"])
         let preparedWorker = try String(
             contentsOf: workerURL,
             encoding: .utf8
         )
-        XCTAssertTrue(preparedWorker.contains("crestNotifications"))
-        XCTAssertTrue(
-            preparedWorker.contains("onCreatedNavigationTarget")
+        XCTAssertEqual(preparedWorker, "globalThis.started = true;")
+
+        let backgroundPage = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-background.html"
+            ),
+            encoding: .utf8
         )
-        XCTAssertTrue(preparedWorker.contains("globalThis.started = true;"))
-        XCTAssertFalse(preparedWorker.contains("await import"))
+        XCTAssertTrue(
+            backgroundPage.contains(
+                #"src="crest-webextension-compatibility.js""#
+            )
+        )
+        XCTAssertTrue(
+            backgroundPage.contains(
+                #"type="module" src="crest-webextension-background-bootstrap.js""#
+            )
+        )
+        XCTAssertFalse(
+            backgroundPage.contains(
+                #"type="module" src="background/background.js""#
+            )
+        )
+
+        let bootstrapScript = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-background-bootstrap.js"
+            ),
+            encoding: .utf8
+        )
+        XCTAssertTrue(
+            bootstrapScript.contains(#"import("./background/background.js")"#)
+        )
+        XCTAssertTrue(
+            bootstrapScript.contains(
+                "__crestCompleteWebExtensionBackgroundBootstrap"
+            )
+        )
+
+        let compatibilityScript = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        for requiredSurface in [
+            "notifications",
+            "onCreatedNavigationTarget",
+            "getUserSettings",
+            "addHostAccessRequest",
+            "passwordSavingEnabled",
+            "storageManaged",
+            "onChanged",
+            "browserCompatibility",
+            "installFallbacks",
+            "messageBootstrap",
+            "manifestCompatibility",
+            "serviceWorkerClients",
+            "offscreen",
+            "management",
+            "downloads",
+            "idle",
+            "onAuthRequired",
+            "requestUpdateCheck",
+        ] {
+            XCTAssertTrue(
+                compatibilityScript.contains(requiredSurface),
+                "Missing compatibility surface: \(requiredSurface)"
+            )
+        }
+        XCTAssertTrue(compatibilityScript.contains("declaredManifest"))
+        XCTAssertTrue(compatibilityScript.contains("options?.url"))
+        XCTAssertFalse(
+            compatibilityScript.contains(
+                "aeblfdkhhhdcdjpifhhbdiojplfjncoa"
+            )
+        )
+        XCTAssertFalse(
+            compatibilityScript.contains(
+                "background/offscreen/offscreen.js"
+            )
+        )
+
+        let preparedPopup = try String(contentsOf: popupURL, encoding: .utf8)
+        XCTAssertTrue(
+            preparedPopup.contains(
+                #"src="/crest-webextension-compatibility.js""#
+            )
+        )
+        let updatedContentScripts = try XCTUnwrap(
+            updated["content_scripts"] as? [[String: Any]]
+        )
+        XCTAssertEqual(
+            updatedContentScripts.first?["js"] as? [String],
+            ["crest-webextension-compatibility.js", "content.js"]
+        )
     }
 
-    func testNotificationCompatibilityLayerIsLimitedToVerifiedOnePassword() {
+    func testCompatibilityLayerRemovesALegacyCrestWorkerPrelude() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-legacy-prelude-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        let workerURL = root.appending(path: "background.js")
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let originalWorker = "globalThis.originalWorker = true;\n"
+        let legacyWorker =
+            """
+            // Crest's WKWebExtension host currently has no notifications API.
+            const crestNoopEvent = Object.freeze({});
+            const crestChromeCompatibility = {};
+            Object.defineProperty(globalThis, "chrome", {
+                value: crestChromeCompatibility,
+                configurable: true
+            });
+            }
+
+
+            \(originalWorker)
+            """
+        try Data(legacyWorker.utf8).write(to: workerURL)
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "background": [
+                "service_worker": "background.js",
+                "type": "module",
+            ],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"]
+            )
+        )
+
+        XCTAssertEqual(
+            try String(contentsOf: workerURL, encoding: .utf8),
+            originalWorker
+        )
+    }
+
+    func testGeneratedCompatibilityRuntimeParsesInWebKit() async throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-runtime-parse-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 2,
+            "name": "Runtime Parse Fixture",
+            "version": "1.0",
+            "background": ["scripts": ["background.js"]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"]
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+
+        _ = try await WKWebView().evaluateJavaScript(source)
+    }
+
+    func testStoredExtensionDirectoryIsCopiedBeforeCompatibilityIsApplied()
+        throws
+    {
+        let fileManager = FileManager.default
+        let source = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-stored-source-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: source) }
+        let workerURL = source.appending(path: "background/background.js")
+        try fileManager.createDirectory(
+            at: workerURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.original = true;".utf8).write(to: workerURL)
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "background": [
+                "service_worker": "background/background.js",
+                "type": "module",
+            ],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: source.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in
+                XCTFail("A stored directory must be copied, not expanded.")
+            }
+        )
+
+        let prepared = try XCTUnwrap(
+            preparer.prepareStoredResource(
+                source,
+                requestedPermissions: ["nativeMessaging", "notifications"]
+            )
+        )
+
+        XCTAssertNotEqual(prepared.resourceURL, source)
+        XCTAssertTrue(
+            fileManager.fileExists(
+                atPath: prepared.resourceURL.appending(
+                    path: "crest-webextension-background.html"
+                ).path
+            )
+        )
+        let storedManifest = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(
+                    contentsOf: source.appending(path: "manifest.json")
+                )
+            ) as? [String: Any]
+        )
+        let storedBackground = try XCTUnwrap(
+            storedManifest["background"] as? [String: Any]
+        )
+        XCTAssertEqual(
+            storedBackground["service_worker"] as? String,
+            "background/background.js"
+        )
+        XCTAssertNil(storedBackground["page"])
+    }
+
+    func testCompatibilitySelectionUsesCapabilitiesInsteadOfExtensionIdentity() {
         XCTAssertTrue(
             BrowserChromeWebStoreCompatibilityPackagePreparer
-                .requiresNotificationCompatibilityLayer(
-                    extensionID:
-                        BrowserChromeWebStoreCompatibilityPackagePreparer
-                        .onePasswordExtensionID,
+                .requiresCompatibilityLayer(
                     requestedPermissions: [
                         "nativeMessaging",
                         "notifications",
@@ -287,12 +556,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertFalse(
             BrowserChromeWebStoreCompatibilityPackagePreparer
-                .requiresNotificationCompatibilityLayer(
-                    extensionID: darkReaderID,
-                    requestedPermissions: [
-                        "nativeMessaging",
-                        "notifications",
-                    ]
+                .requiresCompatibilityLayer(
+                    requestedPermissions: ["storage", "alarms"]
                 )
         )
     }
@@ -327,8 +592,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(
             try preparer.installCompatibilityLayer(
                 in: root,
-                extensionID: BrowserChromeWebStoreCompatibilityPackagePreparer
-                    .iCloudPasswordsExtensionID
+                requestedPermissions: ["nativeMessaging", "webNavigation"]
             )
         )
 
@@ -395,7 +659,6 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertFalse(
             BrowserChromeWebStoreCompatibilityPackagePreparer
                 .requiresCompatibilityLayer(
-                    extensionID: darkReaderID,
                     requestedPermissions: storedInstallation
                         .requestedPermissions
                 )
@@ -448,8 +711,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             compatibilityPreparer: compatibilityPreparer
         )
         let iCloudPasswordsID =
-            BrowserChromeWebStoreCompatibilityPackagePreparer
-            .iCloudPasswordsExtensionID
+            "pejdijmoenmkgeppbflobdenhhabjlaj"
         let id = try XCTUnwrap(BrowserChromeExtensionID(iCloudPasswordsID))
         let source = BrowserChromeWebStoreSource(
             extensionID: id,
