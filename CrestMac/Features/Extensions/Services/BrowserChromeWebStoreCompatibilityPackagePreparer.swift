@@ -504,6 +504,91 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     extensionBaseURL
                 ).href;
 
+                const normalizedRuntimes = new WeakSet();
+                const normalizeRuntime = (nativeRuntime) => {
+                    if (
+                        !nativeRuntime
+                        || normalizedRuntimes.has(nativeRuntime)
+                    ) {
+                        return;
+                    }
+                    normalizedRuntimes.add(nativeRuntime);
+
+                    let nativeGetURL;
+                    let descriptor;
+                    try {
+                        nativeGetURL = nativeRuntime.getURL;
+                        descriptor = Reflect.getOwnPropertyDescriptor(
+                            nativeRuntime,
+                            "getURL"
+                        );
+                    } catch {}
+                    const getURL = (path = "") => {
+                        const normalizedPath = String(path);
+                        if (typeof nativeGetURL === "function") {
+                            try {
+                                const nativeURL = Reflect.apply(
+                                    nativeGetURL,
+                                    nativeRuntime,
+                                    [normalizedPath]
+                                );
+                                if (
+                                    typeof nativeURL === "string"
+                                    && nativeURL !== ""
+                                ) {
+                                    return nativeURL;
+                                }
+                            } catch {}
+                        }
+                        return fallbackResourceURL(normalizedPath);
+                    };
+                    try {
+                        Object.defineProperty(nativeRuntime, "getURL", {
+                            value: getURL,
+                            configurable: true,
+                            enumerable: descriptor?.enumerable ?? true
+                        });
+                    } catch {
+                        try { nativeRuntime.getURL = getURL; } catch {}
+                    }
+                };
+
+                const normalizedI18nNamespaces = new WeakSet();
+                const normalizeI18n = (nativeI18n) => {
+                    if (!nativeI18n || normalizedI18nNamespaces.has(nativeI18n)) {
+                        return;
+                    }
+                    normalizedI18nNamespaces.add(nativeI18n);
+
+                    let nativeGetMessage;
+                    let descriptor;
+                    try {
+                        nativeGetMessage = nativeI18n.getMessage;
+                        descriptor = Reflect.getOwnPropertyDescriptor(
+                            nativeI18n,
+                            "getMessage"
+                        );
+                    } catch {}
+                    if (typeof nativeGetMessage !== "function") return;
+                    const getMessage = (name, ...substitutions) => {
+                        if (name === "") return "";
+                        return Reflect.apply(
+                            nativeGetMessage,
+                            nativeI18n,
+                            [name, ...substitutions]
+                        );
+                    };
+                    try {
+                        Object.defineProperty(nativeI18n, "getMessage", {
+                            value: getMessage,
+                            configurable: true,
+                            enumerable: descriptor?.enumerable ?? true
+                        });
+                    } catch {
+                        try { nativeI18n.getMessage = getMessage; } catch {}
+                    }
+                };
+
                 const noopEvent = Object.freeze({
                     addListener() {},
                     removeListener() {},
@@ -798,6 +883,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const installCompatibility = (nativeRoot) => {
                     if (!nativeRoot) return;
 
+                    normalizeRuntime(nativeRoot.runtime);
+                    normalizeI18n(nativeRoot.i18n);
                     const { runtime: runtimeFallback, ...fallbacks } =
                         fallbacksFor(nativeRoot);
                     installFallbacks(nativeRoot, fallbacks);

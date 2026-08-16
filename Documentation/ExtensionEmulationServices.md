@@ -7,8 +7,10 @@ does not duplicate or replace those security-sensitive engine contracts.
 
 Crest adds a browser-neutral compatibility runtime above that substrate. Its
 only job is to fill a missing standard surface or normalize a semantic mismatch
-that Crest can implement honestly. Native WebKit members always win; the
-runtime only supplies an absent member.
+that Crest can implement honestly. Native WebKit objects and engine behavior
+remain authoritative. A native method is wrapped only when its exposed calling
+contract differs from the shared WebExtension contract, and the wrapper still
+delegates to that native method before using a bounded fallback.
 
 ## Architecture contract
 
@@ -67,8 +69,9 @@ checks. It supports:
 - native-first `chrome`/`browser` capability augmentation, namespace-only
   facades for WebKit objects that cannot be extended in place, an exact
   `runtime.getManifest()` fallback, managed-storage empty-policy semantics,
-  optional navigation events, and a document-backed offscreen-page adapter
-  that uses the URL supplied by the extension.
+  receiver-safe `runtime.getURL`, empty-message i18n semantics, optional
+  navigation events, and a document-backed offscreen-page adapter that uses
+  the URL supplied by the extension.
 
 For a Manifest V3 package that enters this layer, the temporary host manifest
 stays Manifest V3. Only its `background.service_worker` path is redirected to a

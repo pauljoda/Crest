@@ -716,11 +716,26 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             """
             const nativeRuntime = {
                 getManifest() { return { manifest_version: 3 }; },
+                getURL(path = "") {
+                    if (this !== nativeRuntime) return undefined;
+                    return new URL(
+                        String(path),
+                        "crest-extension://fixture-runtime/"
+                    ).href;
+                },
                 sendMessage() {},
                 connectNative() {
                     return this === nativeRuntime
                         ? { receiver: "native" }
                         : undefined;
+                }
+            };
+            const nativeI18n = {
+                getMessage(name) {
+                    if (name === "") {
+                        throw new Error("An empty message name is invalid");
+                    }
+                    return this === nativeI18n ? `native:${name}` : undefined;
                 }
             };
             const nativeCommittedEvent = Object.freeze({
@@ -738,16 +753,23 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 configurable: true,
                 value: {
                     runtime: nativeRuntime,
+                    i18n: nativeI18n,
                     webNavigation: nativeWebNavigation
                 }
             });
             \(source)
+            const detachedGetURL = browser.runtime.getURL;
+            const detachedGetMessage = browser.i18n.getMessage;
             JSON.stringify({
                 id: chrome.runtime.id,
                 root: chrome.runtime.getURL(""),
                 resource: chrome.runtime.getURL("images/icon.png"),
+                detachedRoot: detachedGetURL(""),
+                emptyMessage: detachedGetMessage(""),
+                translatedMessage: detachedGetMessage("known"),
                 sameRoot: chrome === browser,
                 sameRuntime: chrome.runtime === nativeRuntime,
+                sameI18n: chrome.i18n === nativeI18n,
                 sameCommittedEvent:
                     chrome.webNavigation.onCommitted
                         === nativeCommittedEvent,
@@ -780,8 +802,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 path: "images/icon.png"
             ).absoluteString
         )
+        XCTAssertEqual(
+            result["detachedRoot"] as? String,
+            runtimeIdentity.baseURL.absoluteString
+        )
+        XCTAssertEqual(result["emptyMessage"] as? String, "")
+        XCTAssertEqual(result["translatedMessage"] as? String, "native:known")
         XCTAssertEqual(result["sameRoot"] as? Bool, true)
         XCTAssertEqual(result["sameRuntime"] as? Bool, true)
+        XCTAssertEqual(result["sameI18n"] as? Bool, true)
         XCTAssertEqual(result["sameCommittedEvent"] as? Bool, true)
         XCTAssertEqual(
             result["nativeNamespaceReceiver"] as? String,

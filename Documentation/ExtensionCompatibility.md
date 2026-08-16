@@ -149,13 +149,17 @@ previously registered bootstrap after Crest itself has been updated.
 
 The runtime preserves WebKit's native roots and `runtime` object. It copies a
 missing namespace from the other native `chrome`/`browser` root where possible
-and fills only absent capabilities. If an existing WebKit namespace is not
-augmentable, a namespace-only facade exposes the missing members while
-returning the original native values and binding native methods to their
-original receiver. Native messaging methods, events, Ports, and sender metadata
-remain WebKit-owned. If WebKit supplies only one root, the missing global name
-becomes an alias to that same native object. An offscreen document uses the
-extension-supplied URL rather than a package-specific path.
+and fills absent capabilities. A narrowly scoped semantic normalizer is also
+allowed when WebKit exposes a method but does not honor the portable contract.
+For example, `runtime.getURL` remains native-backed but is safe to retain and
+call without its namespace receiver, and an empty `i18n.getMessage` lookup
+returns an empty string. If an existing WebKit namespace is not augmentable, a
+namespace-only facade exposes the missing members while returning the original
+native values and binding native methods to their original receiver. Native
+messaging methods, events, Ports, and sender metadata remain WebKit-owned. If
+WebKit supplies only one root, the missing global name becomes an alias to that
+same native object. An offscreen document uses the extension-supplied URL
+rather than a package-specific path.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
@@ -212,6 +216,28 @@ boundary.
   native-host process exchanging framed JSON, exact Chrome and Firefox manifest
   identity checks, and real `WKWebExtension` backgrounds reaching Crest's
   delegate with their source-appropriate verified identity.
+
+## Primary compatibility gates
+
+Crest uses two deliberately demanding extensions as release-quality validation
+targets. Passing means their real user workflows work in a Developer ID-signed
+build; merely loading the package or hiding its diagnostics is not a pass.
+
+- **uBlock Origin 1.73.0 from Firefox Add-ons** is the Manifest V2 gate. Its
+  background page must finish startup, the popup must show live page statistics,
+  and popup-to-background Ports must work. Network and cosmetic blocking, the
+  per-site power control, logger, dashboard, filter-list updates, settings
+  persistence, and restart restoration must all be exercised.
+- **1Password 8.12.32.33 from the Chrome Web Store** is the Manifest V3 and
+  native-companion gate. Its worker must initialize, connect to the trusted
+  1Password desktop app, render an unlocked popup, search accounts, fill and
+  save a real field, and preserve that connection across a Crest restart.
+  Extension passkey interception is part of this gate once the corresponding
+  browser and website WebAuthn path is available.
+
+Every defect discovered by these gates must become a capability-based fixture.
+Neither extension ID, package name, nor a literal patch to vendor source is an
+acceptable compatibility mechanism.
 
 ## 1Password live validation
 
