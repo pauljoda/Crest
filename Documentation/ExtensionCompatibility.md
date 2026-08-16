@@ -153,13 +153,16 @@ and fills absent capabilities. A narrowly scoped semantic normalizer is also
 allowed when WebKit exposes a method but does not honor the portable contract.
 For example, `runtime.getURL` remains native-backed but is safe to retain and
 call without its namespace receiver, and an empty `i18n.getMessage` lookup
-returns an empty string. If an existing WebKit namespace is not augmentable, a
-namespace-only facade exposes the missing members while returning the original
-native values and binding native methods to their original receiver. Native
-messaging methods, events, Ports, and sender metadata remain WebKit-owned. If
-WebKit supplies only one root, the missing global name becomes an alias to that
-same native object. An offscreen document uses the extension-supplied URL
-rather than a package-specific path.
+returns an empty string. The runtime also supplies the standard idle-callback
+scheduling contract in extension worlds that lack it and acknowledges
+`webRequest.handlerBehaviorChanged()` when there is no browser-side handler
+cache to flush. If an existing WebKit namespace is not augmentable, a
+namespace-only facade exposes the missing members or normalized method while
+returning the original native values and binding native methods to their
+original receiver. Native messaging methods, events, Ports, and sender metadata
+remain WebKit-owned. If WebKit supplies only one root, the missing global name
+becomes an alias to that same native object. An offscreen document uses the
+extension-supplied URL rather than a package-specific path.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned

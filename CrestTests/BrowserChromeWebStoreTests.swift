@@ -402,7 +402,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "management",
             "downloads",
             "idle",
+            "requestIdleCallback",
             "onAuthRequired",
+            "handlerBehaviorChanged",
             "requestUpdateCheck",
         ] {
             XCTAssertTrue(
@@ -712,7 +714,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             ),
             encoding: .utf8
         )
-        let evaluatedResult = try await WKWebView().evaluateJavaScript(
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
             """
             const nativeRuntime = {
                 getManifest() { return { manifest_version: 3 }; },
@@ -730,14 +732,14 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                         : undefined;
                 }
             };
-            const nativeI18n = {
+            const nativeI18n = Object.freeze({
                 getMessage(name) {
                     if (name === "") {
                         throw new Error("An empty message name is invalid");
                     }
                     return this === nativeI18n ? `native:${name}` : undefined;
                 }
-            };
+            });
             const nativeCommittedEvent = Object.freeze({
                 receiver: "native-event"
             });
@@ -749,18 +751,35 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                         : undefined;
                 }
             });
+            const nativeRequestEvent = Object.freeze({
+                receiver: "native-request-event"
+            });
+            const nativeWebRequest = Object.preventExtensions({
+                onBeforeRequest: nativeRequestEvent
+            });
             Object.defineProperty(globalThis, "chrome", {
                 configurable: true,
                 value: {
                     runtime: nativeRuntime,
                     i18n: nativeI18n,
-                    webNavigation: nativeWebNavigation
+                    webNavigation: nativeWebNavigation,
+                    webRequest: nativeWebRequest
                 }
             });
             \(source)
             const detachedGetURL = browser.runtime.getURL;
             const detachedGetMessage = browser.i18n.getMessage;
-            JSON.stringify({
+            let cancelledIdleCallbackRan = false;
+            const cancelledIdleCallback = requestIdleCallback(() => {
+                cancelledIdleCallbackRan = true;
+            });
+            cancelIdleCallback(cancelledIdleCallback);
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            const idleDeadline = await new Promise((resolve) => {
+                requestIdleCallback(resolve);
+            });
+            await browser.webRequest.handlerBehaviorChanged();
+            return JSON.stringify({
                 id: chrome.runtime.id,
                 root: chrome.runtime.getURL(""),
                 resource: chrome.runtime.getURL("images/icon.png"),
@@ -770,9 +789,17 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 sameRoot: chrome === browser,
                 sameRuntime: chrome.runtime === nativeRuntime,
                 sameI18n: chrome.i18n === nativeI18n,
+                cancelledIdleCallbackRan,
+                idleDidTimeout: idleDeadline.didTimeout,
+                idleTimeRemaining: idleDeadline.timeRemaining(),
                 sameCommittedEvent:
                     chrome.webNavigation.onCommitted
                         === nativeCommittedEvent,
+                sameRequestEvent:
+                    chrome.webRequest.onBeforeRequest
+                        === nativeRequestEvent,
+                handlerBehaviorChanged:
+                    typeof chrome.webRequest.handlerBehaviorChanged,
                 nativeNamespaceReceiver:
                     chrome.webNavigation.getFrame()?.receiver,
                 addedNavigationEvent:
@@ -784,7 +811,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 nativeReceiver:
                     browser.runtime.connectNative("")?.receiver
             })
-            """
+            """,
+            arguments: [:],
+            contentWorld: .page
         )
         let resultJSON = try XCTUnwrap(evaluatedResult as? String)
         let result = try XCTUnwrap(
@@ -810,8 +839,19 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["translatedMessage"] as? String, "native:known")
         XCTAssertEqual(result["sameRoot"] as? Bool, true)
         XCTAssertEqual(result["sameRuntime"] as? Bool, true)
-        XCTAssertEqual(result["sameI18n"] as? Bool, true)
+        XCTAssertEqual(result["sameI18n"] as? Bool, false)
+        XCTAssertEqual(result["cancelledIdleCallbackRan"] as? Bool, false)
+        XCTAssertEqual(result["idleDidTimeout"] as? Bool, false)
+        XCTAssertGreaterThanOrEqual(
+            try XCTUnwrap(result["idleTimeRemaining"] as? Double),
+            0
+        )
         XCTAssertEqual(result["sameCommittedEvent"] as? Bool, true)
+        XCTAssertEqual(result["sameRequestEvent"] as? Bool, true)
+        XCTAssertEqual(
+            result["handlerBehaviorChanged"] as? String,
+            "function"
+        )
         XCTAssertEqual(
             result["nativeNamespaceReceiver"] as? String,
             "native-namespace"

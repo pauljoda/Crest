@@ -69,9 +69,11 @@ checks. It supports:
 - native-first `chrome`/`browser` capability augmentation, namespace-only
   facades for WebKit objects that cannot be extended in place, an exact
   `runtime.getManifest()` fallback, managed-storage empty-policy semantics,
-  receiver-safe `runtime.getURL`, empty-message i18n semantics, optional
-  navigation events, and a document-backed offscreen-page adapter that uses
-  the URL supplied by the extension.
+  receiver-safe `runtime.getURL`, empty-message i18n semantics even for a
+  non-augmentable native namespace, idle-callback scheduling, optional
+  navigation events, `webRequest.handlerBehaviorChanged()` acknowledgement,
+  and a document-backed offscreen-page adapter that uses the URL supplied by
+  the extension.
 
 For a Manifest V3 package that enters this layer, the temporary host manifest
 stays Manifest V3. Only its `background.service_worker` path is redirected to a

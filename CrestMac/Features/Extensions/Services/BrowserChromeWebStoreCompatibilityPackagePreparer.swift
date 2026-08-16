@@ -504,6 +504,68 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     extensionBaseURL
                 ).href;
 
+                const installIdleCallbackFallbacks = () => {
+                    if (typeof globalThis.requestIdleCallback !== "function") {
+                        const requestIdleCallback = (callback) => {
+                            if (typeof callback !== "function") {
+                                throw new TypeError(
+                                    "requestIdleCallback requires a callback"
+                                );
+                            }
+                            return globalThis.setTimeout(() => {
+                                const deadlineStartedAt = Date.now();
+                                callback({
+                                    didTimeout: false,
+                                    timeRemaining() {
+                                        return Math.max(
+                                            0,
+                                            50 - (Date.now()
+                                                - deadlineStartedAt)
+                                        );
+                                    }
+                                });
+                            }, 1);
+                        };
+                        try {
+                            Object.defineProperty(
+                                globalThis,
+                                "requestIdleCallback",
+                                {
+                                    value: requestIdleCallback,
+                                    configurable: true,
+                                    writable: true
+                                }
+                            );
+                        } catch {
+                            try {
+                                globalThis.requestIdleCallback =
+                                    requestIdleCallback;
+                            } catch {}
+                        }
+                    }
+                    if (typeof globalThis.cancelIdleCallback !== "function") {
+                        const cancelIdleCallback = (handle) =>
+                            globalThis.clearTimeout(handle);
+                        try {
+                            Object.defineProperty(
+                                globalThis,
+                                "cancelIdleCallback",
+                                {
+                                    value: cancelIdleCallback,
+                                    configurable: true,
+                                    writable: true
+                                }
+                            );
+                        } catch {
+                            try {
+                                globalThis.cancelIdleCallback =
+                                    cancelIdleCallback;
+                            } catch {}
+                        }
+                    }
+                };
+                installIdleCallbackFallbacks();
+
                 const normalizedRuntimes = new WeakSet();
                 const normalizeRuntime = (nativeRuntime) => {
                     if (
@@ -553,12 +615,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 };
 
-                const normalizedI18nNamespaces = new WeakSet();
+                const normalizedI18nNamespaces = new WeakMap();
                 const normalizeI18n = (nativeI18n) => {
-                    if (!nativeI18n || normalizedI18nNamespaces.has(nativeI18n)) {
-                        return;
+                    if (!nativeI18n) return nativeI18n;
+                    if (normalizedI18nNamespaces.has(nativeI18n)) {
+                        return normalizedI18nNamespaces.get(nativeI18n);
                     }
-                    normalizedI18nNamespaces.add(nativeI18n);
 
                     let nativeGetMessage;
                     let descriptor;
@@ -569,7 +631,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             "getMessage"
                         );
                     } catch {}
-                    if (typeof nativeGetMessage !== "function") return;
+                    if (typeof nativeGetMessage !== "function") {
+                        normalizedI18nNamespaces.set(nativeI18n, nativeI18n);
+                        return nativeI18n;
+                    }
                     const getMessage = (name, ...substitutions) => {
                         if (name === "") return "";
                         return Reflect.apply(
@@ -587,6 +652,23 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     } catch {
                         try { nativeI18n.getMessage = getMessage; } catch {}
                     }
+                    try {
+                        if (nativeI18n.getMessage === getMessage) {
+                            normalizedI18nNamespaces.set(
+                                nativeI18n,
+                                nativeI18n
+                            );
+                            return nativeI18n;
+                        }
+                    } catch {}
+
+                    const facade = namespaceFacade(
+                        nativeI18n,
+                        {},
+                        new Map([["getMessage", getMessage]])
+                    );
+                    normalizedI18nNamespaces.set(nativeI18n, facade);
+                    return facade;
                 };
 
                 const noopEvent = Object.freeze({
@@ -819,7 +901,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     },
                     setDetectionInterval() {}
                 };
-                const webRequest = { onAuthRequired: noopEvent };
+                const webRequest = {
+                    onAuthRequired: noopEvent,
+                    handlerBehaviorChanged(...args) {
+                        return callbackOrPromise(args);
+                    }
+                };
                 const webNavigation = {
                     onCreatedNavigationTarget: noopEvent,
                     onHistoryStateUpdated: noopEvent,
@@ -884,7 +971,21 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     if (!nativeRoot) return;
 
                     normalizeRuntime(nativeRoot.runtime);
-                    normalizeI18n(nativeRoot.i18n);
+                    const normalizedI18n = normalizeI18n(nativeRoot.i18n);
+                    if (
+                        normalizedI18n
+                        && normalizedI18n !== nativeRoot.i18n
+                    ) {
+                        try {
+                            Object.defineProperty(nativeRoot, "i18n", {
+                                value: normalizedI18n,
+                                configurable: true,
+                                enumerable: true
+                            });
+                        } catch {
+                            try { nativeRoot.i18n = normalizedI18n; } catch {}
+                        }
+                    }
                     const { runtime: runtimeFallback, ...fallbacks } =
                         fallbacksFor(nativeRoot);
                     installFallbacks(nativeRoot, fallbacks);
@@ -903,22 +1004,31 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     return nativeRoot;
                 };
-                const namespaceFacade = (nativeValue, fallback) => {
+                const namespaceFacade = (
+                    nativeValue,
+                    fallback,
+                    explicitOverlays = new Map()
+                ) => {
                     if (nativeValue === undefined || nativeValue === null) {
                         return fallback;
                     }
                     if (
-                        !fallback
-                        || typeof fallback !== "object"
-                        || (typeof nativeValue !== "object"
-                            && typeof nativeValue !== "function")
+                        (!fallback || typeof fallback !== "object")
+                        && explicitOverlays.size === 0
+                    ) {
+                        return nativeValue;
+                    }
+                    if (
+                        typeof nativeValue !== "object"
+                        && typeof nativeValue !== "function"
                     ) {
                         return nativeValue;
                     }
 
-                    const overlays = new Map();
-                    for (const [property, fallbackValue] of
-                        Object.entries(fallback)) {
+                    const overlays = new Map(explicitOverlays);
+                    for (const [property, fallbackValue] of Object.entries(
+                        fallback ?? {}
+                    )) {
                         let existing;
                         try { existing = nativeValue[property]; } catch {}
                         if (existing === undefined) {
