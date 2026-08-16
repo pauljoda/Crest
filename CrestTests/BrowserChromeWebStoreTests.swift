@@ -543,6 +543,115 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         _ = try await WKWebView().evaluateJavaScript(source)
     }
 
+    func testPrivacySettingsReportEffectiveUncontrollableValuesWithoutRejecting()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-privacy-settings-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Privacy Settings Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["privacy"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        let webView = WKWebView()
+        let evaluatedResult = try await webView.callAsyncJavaScript(
+            """
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; }
+                    }
+                }
+            });
+            \(source)
+            try {
+                const passwords = await browser.privacy.services
+                    .passwordSavingEnabled.get({});
+                await browser.privacy.services.passwordSavingEnabled.set({
+                    value: false
+                });
+                await browser.privacy.services.passwordSavingEnabled.clear({});
+                const passwordsAfterSet = await browser.privacy.services
+                    .passwordSavingEnabled.get({});
+                const cards = await browser.privacy.services
+                    .autofillCreditCardEnabled.get({});
+                const addresses = await browser.privacy.services
+                    .autofillAddressEnabled.get({});
+                return JSON.stringify({
+                    settled: true,
+                    passwords,
+                    passwordsAfterSet,
+                    cards,
+                    addresses
+                });
+            } catch (error) {
+                return JSON.stringify({
+                    settled: true,
+                    error: error?.message ?? String(error)
+                });
+            }
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+        XCTAssertEqual(result["settled"] as? Bool, true)
+        XCTAssertNil(result["error"])
+        for key in ["passwords", "passwordsAfterSet"] {
+            let setting = try XCTUnwrap(result[key] as? [String: Any])
+            XCTAssertEqual(setting["value"] as? Bool, true)
+            XCTAssertEqual(
+                setting["levelOfControl"] as? String,
+                "not_controllable"
+            )
+        }
+        for key in ["cards", "addresses"] {
+            let setting = try XCTUnwrap(result[key] as? [String: Any])
+            XCTAssertEqual(setting["value"] as? Bool, false)
+            XCTAssertEqual(
+                setting["levelOfControl"] as? String,
+                "not_controllable"
+            )
+        }
+    }
+
     func testGeneratedCompatibilityRuntimeSuppliesStableRuntimeIdentityAndURLs()
         async throws
     {

@@ -565,27 +565,22 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                     }
                     return Promise.reject(error);
                 };
-                const setting = Object.freeze({
-                    onChange: noopEvent,
-                    get(...args) {
-                        return callbackOrPromise(args, {
-                            value: false,
-                            levelOfControl: "not_controllable"
-                        });
-                    },
-                    set(...args) {
-                        return rejectCallbackOrPromise(
-                            args,
-                            "This browser setting is not controllable in Crest."
-                        );
-                    },
-                    clear(...args) {
-                        return rejectCallbackOrPromise(
-                            args,
-                            "This browser setting is not controllable in Crest."
-                        );
-                    }
-                });
+                const uncontrollableSetting = (effectiveValue) =>
+                    Object.freeze({
+                        onChange: noopEvent,
+                        get(...args) {
+                            return callbackOrPromise(args, {
+                                value: effectiveValue,
+                                levelOfControl: "not_controllable"
+                            });
+                        },
+                        set(...args) {
+                            return callbackOrPromise(args, undefined);
+                        },
+                        clear(...args) {
+                            return callbackOrPromise(args, undefined);
+                        }
+                    });
                 const overlay = (nativeValue, fallback) => new Proxy(
                     nativeValue ?? {},
                     {
@@ -675,9 +670,9 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                     }
                 };
                 const privacyServices = {
-                    passwordSavingEnabled: setting,
-                    autofillCreditCardEnabled: setting,
-                    autofillAddressEnabled: setting
+                    passwordSavingEnabled: uncontrollableSetting(true),
+                    autofillCreditCardEnabled: uncontrollableSetting(false),
+                    autofillAddressEnabled: uncontrollableSetting(false)
                 };
                 const storageManaged = {
                     onChanged: noopEvent,
