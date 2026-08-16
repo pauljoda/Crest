@@ -1315,6 +1315,89 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             }
 
                             const pendingIncoming = new Set();
+                            const connectedPorts = new Set();
+                            const pendingTabOutgoing = new Map();
+                            let tabRequestSequence = 0;
+                            const takePendingTabOutgoing = (requestID) => {
+                                const pending = pendingTabOutgoing.get(
+                                    requestID
+                                );
+                                if (!pending) return undefined;
+
+                                pendingTabOutgoing.delete(requestID);
+                                clearTimeout(pending.timeout);
+                                return pending;
+                            };
+                            const settleTabOutgoing = (
+                                requestID,
+                                payload = {}
+                            ) => {
+                                const pending = takePendingTabOutgoing(
+                                    requestID
+                                );
+                                if (!pending) return;
+
+                                if (pending.callback) {
+                                    queueMicrotask(() => pending.callback(
+                                        payload.response
+                                    ));
+                                } else if (payload.error) {
+                                    pending.reject(new Error(payload.error));
+                                } else {
+                                    pending.resolve(payload.response);
+                                }
+                            };
+                            const normalizedTabMessage = (args) => {
+                                const values = Array.from(args);
+                                const callback =
+                                    typeof values.at(-1) === "function"
+                                        ? values.pop()
+                                        : undefined;
+                                if (values.length < 2) return undefined;
+
+                                const tabID = values[0];
+                                if (typeof tabID !== "number") {
+                                    return undefined;
+                                }
+                                const options = values.length >= 3
+                                    ? values[2]
+                                    : undefined;
+                                if (
+                                    options !== undefined
+                                    && options !== null
+                                    && typeof options !== "object"
+                                ) {
+                                    return undefined;
+                                }
+                                return {
+                                    tabID,
+                                    message: values[1],
+                                    options: options ?? {},
+                                    callback
+                                };
+                            };
+                            const portMatches = (port, normalized) => {
+                                const sender = port?.sender;
+                                if (sender?.tab?.id !== normalized.tabID) {
+                                    return false;
+                                }
+                                if (
+                                    normalized.options.frameId !== undefined
+                                    && sender.frameId
+                                        !== normalized.options.frameId
+                                ) {
+                                    return false;
+                                }
+                                if (
+                                    normalized.options.documentId
+                                        !== undefined
+                                    && sender.documentId
+                                        !== normalized.options.documentId
+                                ) {
+                                    return false;
+                                }
+                                return true;
+                            };
                             onConnect.addListener((port) => {
                                 if (
                                     port?.name !== portName
@@ -1325,6 +1408,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     return;
                                 }
 
+                                connectedPorts.add(port);
                                 const requests = new Set();
                                 const settleRequest = (request) => {
                                     request.isSettled = true;
@@ -1333,6 +1417,16 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     pendingIncoming.delete(request);
                                 };
                                 port.onMessage.addListener((payload) => {
+                                    if (
+                                        payload?.kind === "tab-response"
+                                        && typeof payload.requestID === "string"
+                                    ) {
+                                        settleTabOutgoing(
+                                            payload.requestID,
+                                            payload
+                                        );
+                                        return;
+                                    }
                                     if (
                                         !payload
                                         || payload.kind !== "request"
@@ -1378,6 +1472,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     === "function"
                                 ) {
                                     port.onDisconnect.addListener(() => {
+                                        connectedPorts.delete(port);
                                         for (const request of requests) {
                                             settleRequest(request);
                                         }
@@ -1385,9 +1480,72 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 }
                             });
 
+                            const sendTabMessage = (...args) => {
+                                const normalized = normalizedTabMessage(args);
+                                if (!normalized) return { handled: false };
+
+                                const recipients = Array.from(
+                                    connectedPorts
+                                ).filter((port) => portMatches(
+                                    port,
+                                    normalized
+                                ));
+                                if (recipients.length === 0) {
+                                    return { handled: false };
+                                }
+
+                                const requestID =
+                                    `tab:${Date.now()}:${++tabRequestSequence}`;
+                                let value;
+                                let pending;
+                                if (normalized.callback) {
+                                    pending = {
+                                        callback: normalized.callback
+                                    };
+                                } else {
+                                    value = new Promise((resolve, reject) => {
+                                        pending = { resolve, reject };
+                                    });
+                                }
+                                pending.timeout = setTimeout(() => {
+                                    settleTabOutgoing(requestID, {
+                                        error: "No extension content script handled the message."
+                                    });
+                                }, responseTimeoutMilliseconds);
+                                pendingTabOutgoing.set(requestID, pending);
+
+                                const payload = {
+                                    kind: "tab-request",
+                                    requestID,
+                                    message: normalized.message,
+                                    sender: {
+                                        id: extensionID,
+                                        url: typeof location === "undefined"
+                                            ? extensionBaseURL
+                                            : location.href,
+                                        origin: extensionOrigin
+                                    }
+                                };
+                                let deliveryCount = 0;
+                                for (const recipient of recipients) {
+                                    try {
+                                        recipient.postMessage(payload);
+                                        deliveryCount += 1;
+                                    } catch {
+                                        connectedPorts.delete(recipient);
+                                    }
+                                }
+                                if (deliveryCount === 0) {
+                                    takePendingTabOutgoing(requestID);
+                                    return { handled: false };
+                                }
+                                return { handled: true, value };
+                            };
+
                             return {
                                 canSend: () => false,
                                 sendMessage: () => ({ handled: false }),
+                                sendTabMessage,
                                 retryPendingRequests() {
                                     for (const request of pendingIncoming) {
                                         invokePendingRequest(request);
@@ -1405,7 +1563,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
                         let port;
                         let requestSequence = 0;
+                        const pendingIncoming = new Map();
                         const pendingOutgoing = new Map();
+                        const settleIncoming = (request) => {
+                            request.isSettled = true;
+                            clearTimeout(request.timeout);
+                            pendingIncoming.delete(request.requestID);
+                        };
                         const settlePending = (requestID, payload = {}) => {
                             const pending = pendingOutgoing.get(requestID);
                             if (!pending) return;
@@ -1424,6 +1588,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         };
                         const disconnect = () => {
                             port = undefined;
+                            for (const request of pendingIncoming.values()) {
+                                settleIncoming(request);
+                            }
                             for (const requestID of pendingOutgoing.keys()) {
                                 settlePending(requestID, {
                                     error: "The extension background disconnected."
@@ -1451,13 +1618,53 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             }
                             port = nextPort;
                             nextPort.onMessage.addListener((payload) => {
+                                if (typeof payload?.requestID !== "string") {
+                                    return;
+                                }
+                                if (payload.kind === "response") {
+                                    settlePending(payload.requestID, payload);
+                                    return;
+                                }
                                 if (
-                                    payload?.kind !== "response"
-                                    || typeof payload.requestID !== "string"
+                                    payload.kind !== "tab-request"
+                                    || pendingIncoming.has(payload.requestID)
                                 ) {
                                     return;
                                 }
-                                settlePending(payload.requestID, payload);
+
+                                const request = {
+                                    requestID: payload.requestID,
+                                    message: payload.message,
+                                    sender: payload.sender ?? {
+                                        id: extensionID,
+                                        url: extensionBaseURL,
+                                        origin: extensionOrigin
+                                    },
+                                    attemptedListeners: new Set(),
+                                    isClaimed: false,
+                                    isSettled: false
+                                };
+                                request.respond = (response, error) => {
+                                    if (request.isSettled) return;
+                                    settleIncoming(request);
+                                    try {
+                                        nextPort.postMessage({
+                                            kind: "tab-response",
+                                            requestID: request.requestID,
+                                            response,
+                                            error
+                                        });
+                                    } catch {}
+                                };
+                                request.timeout = setTimeout(
+                                    () => settleIncoming(request),
+                                    responseTimeoutMilliseconds
+                                );
+                                pendingIncoming.set(
+                                    request.requestID,
+                                    request
+                                );
+                                invokePendingRequest(request);
                             });
                             if (
                                 typeof nextPort.onDisconnect?.addListener
@@ -1507,7 +1714,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return {
                             canSend: () => true,
                             sendMessage,
-                            retryPendingRequests() {}
+                            retryPendingRequests() {
+                                connectedPort();
+                                for (const request of pendingIncoming.values()) {
+                                    invokePendingRequest(request);
+                                }
+                            }
                         };
                     })();
                     return {
@@ -1658,6 +1870,49 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                     });
                 };
+                const compatibleTabsFor = (nativeRoot) => {
+                    const nativeTabs = nativeRoot?.tabs;
+                    const messageBootstrap = messageBootstrapFor(nativeRoot);
+                    const sendTabMessage = messageBootstrap
+                        ?.contentScriptMessaging?.sendTabMessage;
+                    if (
+                        !nativeTabs
+                        && typeof sendTabMessage !== "function"
+                    ) {
+                        return undefined;
+                    }
+
+                    return new Proxy(nativeTabs ?? {}, {
+                        get(target, property) {
+                            if (property === "sendMessage") {
+                                const nativeSendMessage = Reflect.get(
+                                    target,
+                                    property,
+                                    target
+                                );
+                                return (...args) => {
+                                    if (typeof sendTabMessage === "function") {
+                                        const attempt = sendTabMessage(...args);
+                                        if (attempt.handled) {
+                                            return attempt.value;
+                                        }
+                                    }
+                                    return typeof nativeSendMessage === "function"
+                                        ? nativeSendMessage.apply(target, args)
+                                        : undefined;
+                                };
+                            }
+                            const value = Reflect.get(
+                                target,
+                                property,
+                                target
+                            );
+                            return typeof value === "function"
+                                ? value.bind(target)
+                                : value;
+                        }
+                    });
+                };
 
                 const fallbacksFor = (nativeRoot) => ({
                     action,
@@ -1740,10 +1995,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
                     const fallback = compatibilityFor(nativeRoot);
                     const compatibleRuntime = compatibleRuntimeFor(nativeRoot);
+                    const compatibleTabs = compatibleTabsFor(nativeRoot);
                     const compatibleRoot = new Proxy(nativeRoot, {
                         get(target, property) {
                             if (property === "runtime") {
                                 return compatibleRuntime;
+                            }
+                            if (
+                                property === "tabs"
+                                && compatibleTabs !== undefined
+                            ) {
+                                return compatibleTabs;
                             }
                             const value = Reflect.get(target, property, target);
                             return value === undefined
@@ -1751,7 +2013,14 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 : value;
                         },
                         has(target, property) {
-                            return property in target || property in fallback;
+                            return (
+                                property in target
+                                || property in fallback
+                                || (
+                                    property === "tabs"
+                                    && compatibleTabs !== undefined
+                                )
+                            );
                         }
                     });
                     try {

@@ -415,7 +415,10 @@ permanently awake. The marked background
 announces readiness only after the extension's background scripts have finished
 initializing, then replays each request to the namespace's registered
 `runtime.onMessage` listeners and returns the first callback, Promise, or
-`return true` response.
+`return true` response. That reserved Port is bidirectional: background
+`tabs.sendMessage` calls target connected content contexts by tab and optional
+frame or document ID, then return the first content-listener response. If no
+managed content context matches, the call remains on WebKit's native path.
 
 This is still capability mapping rather than a patch to Dark Reader, 1Password,
 or any other extension. The `chrome` and `browser` roots are initialized

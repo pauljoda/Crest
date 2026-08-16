@@ -99,10 +99,12 @@ background content.
   state while a Manifest V3 module is still starting, without exposing the
   transport signal to extension listeners.
 - Content scripts use a reserved, namespace-scoped native `runtime.connect`
-  Port. The background
-  marker installed before the compatibility runtime identifies the one context
-  allowed to receive those requests and replay them to its registered
-  `runtime.onMessage` listeners.
+  Port. The background marker installed before the compatibility runtime
+  identifies the one context allowed to receive those requests and replay them
+  to its registered `runtime.onMessage` listeners. The same Port carries
+  background `tabs.sendMessage` requests in the other direction. Connected
+  content contexts are selected by tab ID and, when supplied, frame ID or
+  document ID; the first response wins as it does in Chrome and Firefox.
 - Requests preserve callback, Promise, `return true`, and first-response
   behavior. Sender objects preserve the verified runtime ID and page URL; for
   extension pages, the synthesized `origin` matches `runtime.getURL("")` with

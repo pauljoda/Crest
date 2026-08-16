@@ -1748,6 +1748,274 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(senderURL, "https://example.com/login")
     }
 
+    func testBackgroundTabMessageBridgeTargetsConnectedContentFrame()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-background-tab-message-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Background Tab Message Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        let webView = WKWebView()
+        try await ChromeWebStoreNavigationWaiter(webView: webView).load(
+            URLRequest(url: URL(string: "https://example.com/")!)
+        )
+        _ = try await webView.evaluateJavaScript(
+            """
+            const nativeMessageListeners = [];
+            const nativeConnectListeners = [];
+            const nativeRuntime = {
+                onMessage: {
+                    addListener(listener) {
+                        nativeMessageListeners.push(listener);
+                    },
+                    removeListener() {},
+                    hasListener(listener) {
+                        return nativeMessageListeners.includes(listener);
+                    }
+                },
+                onConnect: {
+                    addListener(listener) {
+                        nativeConnectListeners.push(listener);
+                    }
+                },
+                sendMessage() {},
+                getManifest() { return { manifest_version: 3 }; }
+            };
+            const nativeTabs = {
+                sendMessage() {
+                    globalThis.nativeTabSendCount =
+                        (globalThis.nativeTabSendCount ?? 0) + 1;
+                }
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: { runtime: nativeRuntime, tabs: nativeTabs }
+            });
+            globalThis.__crestIsWebExtensionBackground = true;
+            \(source)
+
+            const portMessageListeners = [];
+            const fakePort = {
+                name: "crest-webextension-runtime-messages-v1:chrome",
+                sender: {
+                    id: "\(fixtureRuntimeIdentity.uniqueIdentifier)",
+                    url: "https://example.com/login",
+                    origin: "https://example.com",
+                    tab: { id: 42 },
+                    frameId: 3,
+                    documentId: "document-3"
+                },
+                onMessage: {
+                    addListener(listener) {
+                        portMessageListeners.push(listener);
+                    }
+                },
+                onDisconnect: { addListener() {} },
+                postMessage(payload) {
+                    globalThis.backgroundTabPortPosts ??= [];
+                    globalThis.backgroundTabPortPosts.push(payload);
+                    if (payload.kind !== "tab-request") return;
+                    queueMicrotask(() => {
+                        for (const listener of portMessageListeners) {
+                            listener({
+                                kind: "tab-response",
+                                requestID: payload.requestID,
+                                response: { type: "FillComplete" }
+                            });
+                        }
+                    });
+                }
+            };
+            nativeConnectListeners[0](fakePort);
+            chrome.tabs.sendMessage(
+                42,
+                { name: "perform-fill" },
+                { frameId: 3, documentId: "document-3" },
+                (response) => {
+                    globalThis.backgroundTabResponse = response?.type;
+                }
+            );
+            """
+        )
+        try await Task.sleep(for: .milliseconds(25))
+
+        let responseType = try await webView.evaluateJavaScript(
+            "globalThis.backgroundTabResponse"
+        ) as? String
+        XCTAssertEqual(responseType, "FillComplete")
+        let bridgedRequestCount = try await webView.evaluateJavaScript(
+            "globalThis.backgroundTabPortPosts?.length ?? 0"
+        ) as? Int
+        XCTAssertEqual(bridgedRequestCount, 1)
+        let nativeSendCount = try await webView.evaluateJavaScript(
+            "globalThis.nativeTabSendCount ?? 0"
+        ) as? Int
+        XCTAssertEqual(nativeSendCount, 0)
+    }
+
+    func testContentTabMessageBridgeReplaysToRuntimeListeners()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-content-tab-message-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Content Tab Message Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        let webView = WKWebView()
+        try await ChromeWebStoreNavigationWaiter(webView: webView).load(
+            URLRequest(url: URL(string: "https://example.com/login")!)
+        )
+        _ = try await webView.evaluateJavaScript(
+            """
+            const nativeListeners = [];
+            const nativeOnMessage = {
+                addListener(listener) { nativeListeners.push(listener); },
+                removeListener() {},
+                hasListener(listener) {
+                    return nativeListeners.includes(listener);
+                }
+            };
+            const portMessageListeners = [];
+            const fakePort = {
+                name: "",
+                onMessage: {
+                    addListener(listener) {
+                        portMessageListeners.push(listener);
+                    }
+                },
+                onDisconnect: { addListener() {} },
+                postMessage(payload) {
+                    globalThis.contentTabPortPosts ??= [];
+                    globalThis.contentTabPortPosts.push(payload);
+                }
+            };
+            const nativeRuntime = {
+                onMessage: nativeOnMessage,
+                connect(options) {
+                    fakePort.name = options?.name ?? "";
+                    return fakePort;
+                },
+                sendMessage() {},
+                getManifest() { return { manifest_version: 3 }; }
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: { runtime: nativeRuntime }
+            });
+            \(source)
+            chrome.runtime.onMessage.addListener(
+                (message, sender, sendResponse) => {
+                    if (message.name !== "perform-fill") return false;
+                    sendResponse({
+                        type: "FillComplete",
+                        senderOrigin: sender.origin
+                    });
+                    return true;
+                }
+            );
+            for (const listener of portMessageListeners) {
+                listener({
+                    kind: "tab-request",
+                    requestID: "tab-request-1",
+                    message: { name: "perform-fill" },
+                    sender: {
+                        id: "\(fixtureRuntimeIdentity.uniqueIdentifier)",
+                        url: "crest-extension://fixture-runtime/background.js",
+                        origin: "crest-extension://fixture-runtime"
+                    }
+                });
+            }
+            """
+        )
+        try await Task.sleep(for: .milliseconds(25))
+
+        let responseType = try await webView.evaluateJavaScript(
+            """
+            globalThis.contentTabPortPosts?.find(
+                (entry) => entry.requestID === "tab-request-1"
+            )?.response?.type
+            """
+        ) as? String
+        XCTAssertEqual(responseType, "FillComplete")
+        let senderOrigin = try await webView.evaluateJavaScript(
+            """
+            globalThis.contentTabPortPosts?.find(
+                (entry) => entry.requestID === "tab-request-1"
+            )?.response?.senderOrigin
+            """
+        ) as? String
+        XCTAssertEqual(senderOrigin, "crest-extension://fixture-runtime")
+    }
+
     func testStoredExtensionDirectoryIsCopiedBeforeCompatibilityIsApplied()
         throws
     {
