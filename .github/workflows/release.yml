@@ -50,7 +50,10 @@ jobs:
           set -euo pipefail
 
           marketing_version="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' Config/Version.xcconfig)"
-          build_number="$GITHUB_RUN_NUMBER"
+          # Preserve Sparkle ordering across the move to the public repository,
+          # whose Actions run counter restarted below already-installed builds.
+          build_epoch=1000
+          build_number="$((build_epoch + GITHUB_RUN_NUMBER))"
           release_date="$(date -u +%Y-%m-%d)"
           short_sha="$(git rev-parse --short=7 "$GITHUB_SHA")"
 

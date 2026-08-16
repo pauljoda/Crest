@@ -19,8 +19,10 @@ build supports native extension companions.
 | Development | Every push to public `main` | Rolling prerelease | `development` |
 
 The marketing version comes from `Config/Version.xcconfig`. Stable tags must
-match it exactly. Build numbers come from the GitHub Actions run number so each
-published update is strictly newer than the prior build.
+match it exactly. Distributed build numbers add the GitHub Actions run number
+to Crest's public-repository build epoch. The epoch keeps Sparkle ordering
+strictly increasing across the repository migration; the run number keeps every
+subsequent published update newer than the prior build.
 
 The appcast is hosted at:
 

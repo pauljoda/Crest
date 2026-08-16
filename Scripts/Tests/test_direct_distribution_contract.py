@@ -14,6 +14,16 @@ RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 
 
 class DirectDistributionContractTests(unittest.TestCase):
+    def test_release_build_number_survives_the_public_repository_epoch(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text()
+
+        self.assertIn("build_epoch=1000", workflow)
+        self.assertIn(
+            'build_number="$((build_epoch + GITHUB_RUN_NUMBER))"',
+            workflow,
+        )
+        self.assertNotIn('build_number="$GITHUB_RUN_NUMBER"', workflow)
+
     def test_export_uses_the_named_developer_id_profile(self) -> None:
         with EXPORT_OPTIONS.open("rb") as stream:
             options = plistlib.load(stream)
