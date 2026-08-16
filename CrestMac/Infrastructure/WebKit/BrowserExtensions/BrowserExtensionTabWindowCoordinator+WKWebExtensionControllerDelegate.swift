@@ -1,9 +1,74 @@
 import AppKit
+import os
 import WebKit
+
+private let browserExtensionPopupLog = Logger(
+    subsystem: ProductIdentity.serviceNamespace,
+    category: "extension-popup"
+)
 
 extension BrowserExtensionTabWindowCoordinator:
     WKWebExtensionControllerDelegate
 {
+    func requestActionPopup(
+        _ action: WKWebExtension.Action,
+        for context: WKWebExtensionContext,
+        anchor: BrowserExtensionPopupAnchor?
+    ) {
+        let key = ObjectIdentifier(context)
+        let request = BrowserExtensionActionPopupRequest(
+            id: UUID(),
+            anchor: anchor
+        )
+        pendingActionPopupRequests[key] = request
+        BrowserExtensionPopupBackgroundWarmUp(context: context).prepare {
+            [weak self, weak context] outcome in
+            guard let self, let context,
+                self.pendingActionPopupRequests[key]?.id == request.id
+            else {
+                return
+            }
+            switch outcome {
+            case .loaded:
+                pendingActionPopupRequests.removeValue(forKey: key)
+                browserExtensionPopupLog.notice(
+                    """
+                    background ready for \
+                    \(context.uniqueIdentifier, privacy: .public)
+                    """
+                )
+                guard presentActionPopup(action, anchor: request.anchor) else {
+                    browserExtensionPopupLog.error(
+                        """
+                        popup presentation unavailable for \
+                        \(context.uniqueIdentifier, privacy: .public)
+                        """
+                    )
+                    return
+                }
+            case .failed(let error):
+                pendingActionPopupRequests.removeValue(forKey: key)
+                let cocoaError = error as NSError
+                browserExtensionPopupLog.error(
+                    """
+                    background failed for \
+                    \(context.uniqueIdentifier, privacy: .public): \
+                    \(cocoaError.domain, privacy: .public)#\(cocoaError.code, privacy: .public) \
+                    \(cocoaError.localizedDescription, privacy: .public)
+                    """
+                )
+            case .timedOut:
+                pendingActionPopupRequests.removeValue(forKey: key)
+                browserExtensionPopupLog.error(
+                    """
+                    background timed out for \
+                    \(context.uniqueIdentifier, privacy: .public)
+                    """
+                )
+            }
+        }
+    }
+
     @discardableResult
     func presentActionPopup(
         _ action: WKWebExtension.Action,
@@ -26,30 +91,11 @@ extension BrowserExtensionTabWindowCoordinator:
         else {
             return false
         }
-        // Reading `popupPopover` above already began loading the popup
-        // document. Unload it: a popup that reaches an extension's evicted
-        // nonpersistent background has its opening `runtime` message answered
-        // with nothing, and one that reads that answer without guarding it
-        // stays on its startup loader for good. The popup presented below is
-        // loaded only once the background is running again.
-        action.closePopup()
-        BrowserExtensionPopupBackgroundWarmUp(
-            context: action.webExtensionContext
-        ).present {
-            // The presentation is no longer inside the click that asked for
-            // it, so the control it anchors to may have left its window in the
-            // meantime — and AppKit raises rather than declines when it has.
-            guard presentationSource.view.window != nil,
-                let popover = action.popupPopover
-            else {
-                return
-            }
-            popover.show(
-                relativeTo: presentationSource.rect,
-                of: presentationSource.view,
-                preferredEdge: .maxY
-            )
-        }
+        popover.show(
+            relativeTo: presentationSource.rect,
+            of: presentationSource.view,
+            preferredEdge: .maxY
+        )
         return true
     }
 
@@ -63,13 +109,22 @@ extension BrowserExtensionTabWindowCoordinator:
             verifiedEntry(
                 controller: controller,
                 context: context
-            ) != nil,
+            ) != nil
+        else {
+            completionHandler(adapterError(.windowUnavailable))
+            return
+        }
+        let requestedAnchor = pendingActionPopupRequests.removeValue(
+            forKey: ObjectIdentifier(context)
+        )?.anchor
+        guard
             presentActionPopup(
                 action,
-                anchor: BrowserExtensionPopupAnchor(
-                    screenPoint: NSEvent.mouseLocation,
-                    sourceWindow: NSApp.keyWindow
-                )
+                anchor: requestedAnchor
+                    ?? BrowserExtensionPopupAnchor(
+                        screenPoint: NSEvent.mouseLocation,
+                        sourceWindow: NSApp.keyWindow
+                    )
             )
         else {
             completionHandler(adapterError(.windowUnavailable))

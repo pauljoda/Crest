@@ -1,4 +1,5 @@
 import XCTest
+import WebKit
 
 @testable import Crest
 
@@ -70,6 +71,85 @@ final class BrowserExtensionsPresentationTests: XCTestCase {
         )
         XCTAssertEqual(issue?.technicalDetails, summary.errors)
         XCTAssertFalse(issue?.message.contains("TypeError") == true)
+    }
+
+    func testRuntimeDiagnosticsKeepAWorkingExtensionRunning() {
+        let summary = makeSummary(
+            requestedPermissions: ["nativeMessaging"],
+            requestedHosts: [],
+            isEnabled: true,
+            isLoaded: true,
+            diagnostics: [
+                "[Messaging] (background/background.js:5:193047)",
+                "[SignInWith] (background/background.js:75:442010)",
+            ]
+        )
+
+        XCTAssertEqual(
+            BrowserExtensionSummaryPresentation.detailText(for: summary),
+            "Running · 1 permission · 0 site rules"
+        )
+        XCTAssertNil(BrowserExtensionSummaryPresentation.issue(for: summary))
+    }
+
+    func testRuntimeReportSeparatesRecoverableDiagnosticsFromHardFailures() {
+        let scriptDiagnostic = NSError(
+            domain: WKWebExtensionContext.errorDomain,
+            code: 7,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "[Messaging] (background/background.js:5:193047)"
+            ]
+        )
+        let manifestDiagnostic = NSError(
+            domain: WKWebExtension.errorDomain,
+            code: WKWebExtension.Error.invalidManifestEntry.rawValue,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "Empty or invalid command in the commands manifest entry."
+            ]
+        )
+        let backgroundFailure = NSError(
+            domain: WKWebExtensionContext.errorDomain,
+            code: WKWebExtensionContext.Error
+                .backgroundContentFailedToLoad.rawValue,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "The extension background content failed to load."
+            ]
+        )
+        let missingResource = NSError(
+            domain: WKWebExtension.errorDomain,
+            code: WKWebExtension.Error.resourceNotFound.rawValue,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "The extension resource could not be found."
+            ]
+        )
+
+        let report = BrowserExtensionRuntimeReport(
+            errors: [
+                scriptDiagnostic,
+                manifestDiagnostic,
+                backgroundFailure,
+                missingResource,
+            ]
+        )
+
+        XCTAssertEqual(
+            report.diagnostics,
+            [
+                "Empty or invalid command in the commands manifest entry.",
+                "[Messaging] (background/background.js:5:193047)",
+            ]
+        )
+        XCTAssertEqual(
+            report.errors,
+            [
+                "The extension background content failed to load.",
+                "The extension resource could not be found.",
+            ]
+        )
     }
 
     func testBlockingCompatibilityFailureExplainsWhyExtensionCannotRun() {
@@ -298,6 +378,7 @@ final class BrowserExtensionsPresentationTests: XCTestCase {
         isEnabled: Bool,
         isLoaded: Bool,
         errors: [String] = [],
+        diagnostics: [String] = [],
         compatibilitySource: BrowserExtensionCompatibilitySource =
             .chromeWebStore,
         compatibilityAssessment: BrowserExtensionCompatibilityAssessment =
@@ -311,6 +392,7 @@ final class BrowserExtensionsPresentationTests: XCTestCase {
             requestedHosts: requestedHosts,
             unsupportedAPIs: [],
             errors: errors,
+            diagnostics: diagnostics,
             isEnabled: isEnabled,
             isLoaded: isLoaded,
             permissionSnapshot: .empty,

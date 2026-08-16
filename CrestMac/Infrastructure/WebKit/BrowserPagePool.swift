@@ -463,7 +463,10 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     }
 
     func restoreExtensions(in session: BrowserSession) async {
-        guard !browsingMode.isPrivate else { return }
+        guard !browsingMode.isPrivate else {
+            BrowserExtensionStartupLog.skippedPrivateBrowsing()
+            return
+        }
         await extensionControllerPool.restoreEnabledExtensions(
             in: session.spaces
         )

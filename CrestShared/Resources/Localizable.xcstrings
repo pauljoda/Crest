@@ -172,6 +172,7 @@
       }
     },
     "%@ filter preset" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1391,6 +1392,16 @@
         }
       }
     },
+    "1Password requires the production-signed Crest for Mac release. Development-signed builds can’t complete sign-in, unlocking, or filling. After installing Crest in Applications, add it in 1Password’s Browser settings." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتطلب 1Password إصدار Crest لنظام Mac الموقّع للإنتاج. لا تستطيع النسخ الموقّعة للتطوير إكمال تسجيل الدخول أو إلغاء القفل أو الملء. بعد تثبيت Crest في مجلد التطبيقات، أضفه في إعدادات المتصفح في 1Password."
+          }
+        }
+      }
+    },
     "A calmer browser, shaped around the Spaces that matter to you." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1413,6 +1424,7 @@
       }
     },
     "A preset replaces the curated selection and turns off custom lists. You can then adjust any list below to create a custom setup." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1641,6 +1653,7 @@
       }
     },
     "Additional advertising rules maintained by uBlock Origin." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1651,6 +1664,7 @@
       }
     },
     "Additional privacy rules maintained by uBlock Origin." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1733,6 +1747,7 @@
       }
     },
     "Ads" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1763,6 +1778,7 @@
       }
     },
     "Advertising across Nordic-language websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1773,6 +1789,7 @@
       }
     },
     "Advertising on Arabic-language websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1783,6 +1800,7 @@
       }
     },
     "Advertising on Chinese websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1793,6 +1811,7 @@
       }
     },
     "Advertising on Czech and Slovak websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1803,6 +1822,7 @@
       }
     },
     "Advertising on Dutch websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1813,6 +1833,7 @@
       }
     },
     "Advertising on Finnish websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1823,6 +1844,7 @@
       }
     },
     "Advertising on French websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1833,6 +1855,7 @@
       }
     },
     "Advertising on German websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1843,6 +1866,7 @@
       }
     },
     "Advertising on Greek websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1853,6 +1877,7 @@
       }
     },
     "Advertising on Hebrew websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1863,6 +1888,7 @@
       }
     },
     "Advertising on Indian websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1873,6 +1899,7 @@
       }
     },
     "Advertising on Italian websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1883,6 +1910,7 @@
       }
     },
     "Advertising on Korean websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1893,6 +1921,7 @@
       }
     },
     "Advertising on Latvian websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1903,6 +1932,7 @@
       }
     },
     "Advertising on Polish websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1913,6 +1943,7 @@
       }
     },
     "Advertising on Portuguese websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1923,6 +1954,7 @@
       }
     },
     "Advertising on Romanian websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1933,6 +1965,7 @@
       }
     },
     "Advertising on Russian websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1943,6 +1976,7 @@
       }
     },
     "Advertising on Spanish websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1953,6 +1987,7 @@
       }
     },
     "Advertising on Swedish websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1963,6 +1998,7 @@
       }
     },
     "Advertising on Thai websites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -1973,6 +2009,7 @@
       }
     },
     "Advertising rules optimized for Safari." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2013,6 +2050,7 @@
       }
     },
     "All non-regional ad, privacy, annoyance, social, and badware lists." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2095,6 +2133,7 @@
       }
     },
     "Annoyances" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2582,6 +2621,9 @@
         }
       }
     },
+    "Block known ads and trackers" : {
+
+    },
     "Blocked an automatic download from this site." : {
       "localizations" : {
         "ar" : {
@@ -2593,6 +2635,7 @@
       }
     },
     "Blocks tracking scripts and analytics requests." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2674,6 +2717,7 @@
       }
     },
     "Broad tracking protection optimized for Safari." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2979,6 +3023,7 @@
       }
     },
     "Chinese-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3191,6 +3236,7 @@
       }
     },
     "Click’s balanced EasyList, EasyPrivacy, and uBlock selection." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3505,6 +3551,7 @@
       }
     },
     "Compatibility exceptions for sites broken by blocking." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3618,6 +3665,7 @@
       }
     },
     "Cookie consent notices and banners." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3628,6 +3676,7 @@
       }
     },
     "Cookie notices and other disruptive page elements." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3638,6 +3687,7 @@
       }
     },
     "Cookie notices, newsletter prompts, and social widgets." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4040,6 +4090,7 @@
       }
     },
     "Crest checks while the browser is running. A cached copy stays active if a source is temporarily unavailable." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4409,12 +4460,25 @@
         }
       }
     },
+    "Crest uses a small built-in protection set. Install a content-blocking extension for broader coverage or custom lists." : {
+
+    },
     "Crest uses Face ID, Touch ID, or the normal device passcode or password. Private Spaces lock again when Crest leaves the foreground." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "يستخدم Crest بصمة الوجه أو بصمة الإصبع أو رمز دخول الجهاز أو كلمة مروره المعتادة. تُقفل المساحات الخاصة مرة أخرى عندما يغادر Crest الواجهة الأمامية."
+          }
+        }
+      }
+    },
+    "Crest verifies native companion access for Chrome Web Store extensions only. This Firefox add-on’s companion connection isn’t available yet; install its Chrome Web Store version in Crest for Mac instead." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتحقق Crest من وصول التطبيقات المصاحبة لإضافات Chrome Web Store فقط. اتصال التطبيق المصاحب لإضافة Firefox هذه غير متاح بعد؛ ثبّت إصدارها من Chrome Web Store في Crest لنظام Mac بدلاً من ذلك."
           }
         }
       }
@@ -4513,6 +4577,7 @@
       }
     },
     "Custom filter selection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4523,6 +4588,7 @@
       }
     },
     "Custom Lists" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4533,6 +4599,7 @@
       }
     },
     "Custom sources must use HTTPS and provide Adblock Plus-compatible text rules." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4595,6 +4662,7 @@
       }
     },
     "Dandelion Sprout’s Nordic Filters" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4888,6 +4956,7 @@
       }
     },
     "Disables ad and tracker filtering across Crest." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5089,6 +5158,7 @@
       }
     },
     "Dutch-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5121,6 +5191,7 @@
       }
     },
     "EasyList" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5131,6 +5202,7 @@
       }
     },
     "EasyList China" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5141,6 +5213,7 @@
       }
     },
     "EasyList Czech and Slovak" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5151,6 +5224,7 @@
       }
     },
     "EasyList Dutch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5161,6 +5235,7 @@
       }
     },
     "EasyList Germany" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5171,6 +5246,7 @@
       }
     },
     "EasyList Hebrew" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5181,6 +5257,7 @@
       }
     },
     "EasyList Italy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5191,6 +5268,7 @@
       }
     },
     "EasyList Polish" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5201,6 +5279,7 @@
       }
     },
     "EasyList Portuguese" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5211,6 +5290,7 @@
       }
     },
     "EasyList Russian" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5221,6 +5301,7 @@
       }
     },
     "EasyList Spanish" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5231,6 +5312,7 @@
       }
     },
     "EasyList Thailand" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5241,6 +5323,7 @@
       }
     },
     "EasyPrivacy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5353,6 +5436,7 @@
       }
     },
     "Enter a valid HTTPS filter-list URL." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5676,6 +5760,7 @@
       }
     },
     "Fanboy’s Annoyance List" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5686,6 +5771,7 @@
       }
     },
     "Fanboy’s Social Blocking List" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5827,6 +5913,7 @@
       }
     },
     "Finnish EasyList Addition" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6007,6 +6094,7 @@
       }
     },
     "Frellwit’s Swedish Filter" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6017,6 +6105,7 @@
       }
     },
     "French-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6067,6 +6156,7 @@
       }
     },
     "German-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6107,6 +6197,7 @@
       }
     },
     "Greek AdBlock Filter" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6299,6 +6390,7 @@
       }
     },
     "Host-level advertising and tracking protection." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7228,6 +7320,7 @@
       }
     },
     "IndianList" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7334,6 +7427,7 @@
       }
     },
     "Japanese-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7384,6 +7478,7 @@
       }
     },
     "Known malware, scam, and phishing resources." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7434,6 +7529,7 @@
       }
     },
     "Last Updated" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7454,6 +7550,7 @@
       }
     },
     "Latvian List" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7564,6 +7661,7 @@
       }
     },
     "List-KR" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7574,6 +7672,7 @@
       }
     },
     "Liste AR" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7584,6 +7683,7 @@
       }
     },
     "Liste FR" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7789,6 +7889,7 @@
       }
     },
     "Manual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7867,6 +7968,18 @@
           }
         }
       }
+    },
+    "Move Left" : {
+
+    },
+    "Move Right" : {
+
+    },
+    "Move Split Card Left" : {
+
+    },
+    "Move Split Card Right" : {
+
     },
     "Move the pointer to the leading edge to show the sidebar" : {
       "extractionState" : "stale",
@@ -8133,6 +8246,7 @@
       }
     },
     "Newsletter prompts, self-promotion, and general annoyances." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9325,6 +9439,7 @@
       }
     },
     "Peter Lowe’s Ad and Tracking Servers" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9468,6 +9583,7 @@
       }
     },
     "Presets" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9560,6 +9676,7 @@
       }
     },
     "Primary international advertising filter." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9681,6 +9798,7 @@
       }
     },
     "Protection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9833,6 +9951,7 @@
       }
     },
     "Rapid fixes for newly reported advertising problems." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9953,6 +10072,7 @@
       }
     },
     "Regional" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10585,6 +10705,7 @@
       }
     },
     "Romanian List" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10636,6 +10757,7 @@
       }
     },
     "Russian-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11029,6 +11151,7 @@
       }
     },
     "Security" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11391,6 +11514,16 @@
         }
       }
     },
+    "Sign-in, unlocking, and filling won’t work through the Safari extension in Crest. The compatible route requires 1Password for Mac, the Chrome Web Store extension, the official Crest for Mac release, and adding Crest as a trusted browser in 1Password." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لن يعمل تسجيل الدخول أو إلغاء القفل أو الملء عبر إضافة Safari في Crest. يتطلب المسار المتوافق 1Password لنظام Mac وإضافة Chrome Web Store والإصدار الرسمي من Crest لنظام Mac وإضافة Crest كمتصفح موثوق في 1Password."
+          }
+        }
+      }
+    },
     "Simple Symbol" : {
       "localizations" : {
         "ar" : {
@@ -11463,6 +11596,7 @@
       }
     },
     "Social Media" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11473,6 +11607,7 @@
       }
     },
     "Social sharing buttons and embedded widgets." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11483,6 +11618,7 @@
       }
     },
     "Social widgets using Safari-optimized rules." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11625,6 +11761,7 @@
       }
     },
     "Spanish- and Portuguese-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11703,6 +11840,9 @@
           }
         }
       }
+    },
+    "split view cards move reorder rearrange left right arrow" : {
+
     },
     "split view cards side by side columns" : {
       "localizations" : {
@@ -11809,6 +11949,7 @@
       }
     },
     "Standard" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11980,6 +12121,7 @@
       }
     },
     "Strict" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12692,6 +12834,16 @@
         }
       }
     },
+    "This Crest build can’t launch native companion apps. Install the official Crest for Mac release and the companion app to enable this extension." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يمكن لهذا الإصدار من Crest تشغيل التطبيقات المصاحبة الأصلية. ثبّت الإصدار الرسمي من Crest لنظام Mac والتطبيق المصاحب لتمكين هذه الإضافة."
+          }
+        }
+      }
+    },
     "This database has no HTTP or HTTPS history Crest can import." : {
       "localizations" : {
         "ar" : {
@@ -12894,6 +13046,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تنطبق هذه السياسة على %arg فقط. تبقى علامات التبويب المؤهلة قابلة للاسترداد من الأرشيف."
+          }
+        }
+      }
+    },
+    "This Safari extension depends on a native handler that belongs to its Safari app and can’t be reused by Crest. Install the extension’s Chrome Web Store version in Crest for Mac instead." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعتمد إضافة Safari هذه على معالج أصلي يخص تطبيق Safari ولا يمكن لـ Crest إعادة استخدامه. ثبّت إصدار الإضافة من Chrome Web Store في Crest لنظام Mac بدلاً من ذلك."
           }
         }
       }
@@ -13160,6 +13322,7 @@
       }
     },
     "Turkish-language advertising." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13230,6 +13393,7 @@
       }
     },
     "uBlock Annoyances" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13240,6 +13404,7 @@
       }
     },
     "uBlock Badware Risks" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13250,6 +13415,7 @@
       }
     },
     "uBlock Cookie Notices" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13260,6 +13426,7 @@
       }
     },
     "uBlock Filters" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13270,6 +13437,7 @@
       }
     },
     "uBlock Filters — Privacy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13280,6 +13448,7 @@
       }
     },
     "uBlock Filters — Quick Fixes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13290,6 +13459,7 @@
       }
     },
     "uBlock Filters — Unbreak" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14047,56 +14217,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تصغير"
-          }
-        }
-      }
-    },
-    "1Password requires the production-signed Crest for Mac release. Development-signed builds can’t complete sign-in, unlocking, or filling. After installing Crest in Applications, add it in 1Password’s Browser settings." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يتطلب 1Password إصدار Crest لنظام Mac الموقّع للإنتاج. لا تستطيع النسخ الموقّعة للتطوير إكمال تسجيل الدخول أو إلغاء القفل أو الملء. بعد تثبيت Crest في مجلد التطبيقات، أضفه في إعدادات المتصفح في 1Password."
-          }
-        }
-      }
-    },
-    "Crest verifies native companion access for Chrome Web Store extensions only. This Firefox add-on’s companion connection isn’t available yet; install its Chrome Web Store version in Crest for Mac instead." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يتحقق Crest من وصول التطبيقات المصاحبة لإضافات Chrome Web Store فقط. اتصال التطبيق المصاحب لإضافة Firefox هذه غير متاح بعد؛ ثبّت إصدارها من Chrome Web Store في Crest لنظام Mac بدلاً من ذلك."
-          }
-        }
-      }
-    },
-    "Sign-in, unlocking, and filling won’t work through the Safari extension in Crest. The compatible route requires 1Password for Mac, the Chrome Web Store extension, the official Crest for Mac release, and adding Crest as a trusted browser in 1Password." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لن يعمل تسجيل الدخول أو إلغاء القفل أو الملء عبر إضافة Safari في Crest. يتطلب المسار المتوافق 1Password لنظام Mac وإضافة Chrome Web Store والإصدار الرسمي من Crest لنظام Mac وإضافة Crest كمتصفح موثوق في 1Password."
-          }
-        }
-      }
-    },
-    "This Crest build can’t launch native companion apps. Install the official Crest for Mac release and the companion app to enable this extension." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا يمكن لهذا الإصدار من Crest تشغيل التطبيقات المصاحبة الأصلية. ثبّت الإصدار الرسمي من Crest لنظام Mac والتطبيق المصاحب لتمكين هذه الإضافة."
-          }
-        }
-      }
-    },
-    "This Safari extension depends on a native handler that belongs to its Safari app and can’t be reused by Crest. Install the extension’s Chrome Web Store version in Crest for Mac instead." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تعتمد إضافة Safari هذه على معالج أصلي يخص تطبيق Safari ولا يمكن لـ Crest إعادة استخدامه. ثبّت إصدار الإضافة من Chrome Web Store في Crest لنظام Mac بدلاً من ذلك."
           }
         }
       }

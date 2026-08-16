@@ -59,6 +59,53 @@ struct BrowserExtensionIssueSection: View {
     }
 }
 
+struct BrowserExtensionDiagnosticSection: View {
+    let diagnostics: [String]
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.small) {
+            Label("Diagnostics", systemImage: "text.page")
+                .font(.caption.weight(.semibold))
+
+            Button(action: toggleDetails) {
+                HStack(spacing: CrestSpacing.small) {
+                    Image(
+                        systemName: isExpanded
+                            ? "chevron.down"
+                            : "chevron.right"
+                    )
+                    .font(.system(size: 9, weight: .semibold))
+
+                    Text("Technical Details")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Technical Details")
+            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+
+            if isExpanded {
+                BrowserExtensionValueList(
+                    title: "Reported by the extension",
+                    values: diagnostics,
+                    symbol: "chevron.left.forwardslash.chevron.right"
+                )
+                .padding(.top, CrestSpacing.extraSmall)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
+    private func toggleDetails() {
+        withAnimation {
+            isExpanded.toggle()
+        }
+    }
+}
+
 #Preview("Extension Issue", traits: .sizeThatFitsLayout) {
     BrowserExtensionIssueSection(
         issue: BrowserExtensionsPreviewFixture.issue

@@ -232,7 +232,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    func testCompatibilityLayerPreservesAnyModuleWorkerBehindBootstrap()
+    func testCompatibilityLayerHostsAModuleWorkerInABackgroundDocument()
         throws
     {
         let fileManager = FileManager.default
@@ -249,7 +249,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         try Data("globalThis.started = true;".utf8).write(to: workerURL)
         let popupURL = root.appending(path: "popup.html")
         try Data(
-            "<html><head><script src=\"popup.js\"></script></head></html>"
+            """
+            <html><head><script src="popup.js"></script></head>
+            <body aria-label placeholder="" data-i18n-title='  '>
+            <button aria-label="Known message">Open</button>
+            </body></html>
+            """
                 .utf8
         ).write(to: popupURL)
         let appPageURL = root.appending(path: "app/app.html")
@@ -277,6 +282,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 "type": "module",
             ],
             "action": ["default_popup": "popup.html"],
+            "commands": [
+                "_execute_browser_action": [:],
+                "open-dashboard": [
+                    "description": "Open the dashboard"
+                ],
+            ],
             "sandbox": ["pages": ["sandbox.html"]],
             "content_scripts": [
                 [
@@ -311,9 +322,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let background = try XCTUnwrap(
             updated["background"] as? [String: Any]
         )
-        let bootstrapName = try XCTUnwrap(
-            background["service_worker"] as? String
+        let backgroundDocumentName = try XCTUnwrap(
+            background["page"] as? String
         )
+        XCTAssertNil(background["service_worker"])
+        XCTAssertNil(background["scripts"])
+        XCTAssertNil(background["type"])
+        XCTAssertNil(background["preferred_environment"])
         let updatedContentScripts = try XCTUnwrap(
             updated["content_scripts"] as? [[String: Any]]
         )
@@ -326,12 +341,26 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(updated["manifest_version"] as? Int, 3)
         XCTAssertNotNil(updated["action"])
         XCTAssertNil(updated["browser_action"])
+        let commands = try XCTUnwrap(
+            updated["commands"] as? [String: [String: Any]]
+        )
+        XCTAssertNotNil(commands["_execute_action"])
+        XCTAssertNil(commands["_execute_browser_action"])
+        XCTAssertEqual(
+            commands["open-dashboard"]?["description"] as? String,
+            "Open the dashboard"
+        )
         XCTAssertTrue(
-            bootstrapName.hasPrefix(
+            backgroundDocumentName.hasPrefix(
+                "crest-webextension-background-"
+            )
+        )
+        XCTAssertFalse(
+            backgroundDocumentName.hasPrefix(
                 "crest-webextension-background-bootstrap-"
             )
         )
-        XCTAssertTrue(bootstrapName.hasSuffix(".js"))
+        XCTAssertTrue(backgroundDocumentName.hasSuffix(".html"))
         XCTAssertTrue(
             compatibilityScriptName.hasPrefix(
                 "crest-webextension-compatibility-"
@@ -339,30 +368,42 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertTrue(compatibilityScriptName.hasSuffix(".js"))
         XCTAssertNil(background["persistent"])
-        XCTAssertEqual(background["type"] as? String, "module")
         let preparedWorker = try String(
             contentsOf: workerURL,
             encoding: .utf8
         )
         XCTAssertEqual(preparedWorker, "globalThis.started = true;")
 
-        let bootstrapScript = try String(
+        let backgroundDocument = try String(
             contentsOf: root.appending(
-                path: bootstrapName
+                path: backgroundDocumentName
             ),
             encoding: .utf8
         )
-        XCTAssertTrue(
-            bootstrapScript.contains(
-                #"import "./\#(compatibilityScriptName)";"#
-            )
+        let compatibilityTag =
+            #"<script src="/\#(compatibilityScriptName)"></script>"#
+        XCTAssertEqual(
+            backgroundDocument.components(
+                separatedBy: compatibilityTag
+            ).count,
+            2,
+            "The background document must load the compatibility layer exactly once."
         )
-        XCTAssertTrue(
-            bootstrapScript.contains(
-                #"import "./background/background.js";"#
-            )
+        let workerTag =
+            #"<script type="module" src="/background/background.js"></script>"#
+        XCTAssertTrue(backgroundDocument.contains(workerTag))
+        let compatibilityRange = try XCTUnwrap(
+            backgroundDocument.range(of: compatibilityTag)
         )
-        XCTAssertFalse(bootstrapScript.contains("__crest"))
+        let workerRange = try XCTUnwrap(
+            backgroundDocument.range(of: workerTag)
+        )
+        XCTAssertLessThan(
+            compatibilityRange.lowerBound,
+            workerRange.lowerBound,
+            "The compatibility layer must load before the worker module."
+        )
+        XCTAssertFalse(backgroundDocument.contains("__crest"))
 
         let compatibilityScript = try String(
             contentsOf: root.appending(
@@ -377,12 +418,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             compatibilityScriptName,
             "crest-webextension-compatibility-\(compatibilityFingerprint).js"
         )
-        let bootstrapFingerprint = Data(
-            SHA256.hash(data: Data(bootstrapScript.utf8)).prefix(8)
+        let backgroundDocumentFingerprint = Data(
+            SHA256.hash(data: Data(backgroundDocument.utf8)).prefix(8)
         ).hexString
         XCTAssertEqual(
-            bootstrapName,
-            "crest-webextension-background-bootstrap-\(bootstrapFingerprint).js"
+            backgroundDocumentName,
+            "crest-webextension-background-\(backgroundDocumentFingerprint).html"
         )
         for requiredSurface in [
             "notifications",
@@ -399,6 +440,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "installMissingRoot",
             "get() { return facade; }",
             "serviceWorkerClients",
+            "skipWaiting",
             "offscreen",
             "management",
             "downloads",
@@ -407,6 +449,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "onAuthRequired",
             "handlerBehaviorChanged",
             "requestUpdateCheck",
+            "onUpdateAvailable",
+            "normalizeMenuNamespace",
+            "wrappedJSObject",
         ] {
             XCTAssertTrue(
                 compatibilityScript.contains(requiredSurface),
@@ -432,6 +477,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 #"src="/\#(compatibilityScriptName)""#
             )
         )
+        XCTAssertFalse(preparedPopup.contains("<body aria-label"))
+        XCTAssertFalse(preparedPopup.contains("placeholder=\"\""))
+        XCTAssertFalse(preparedPopup.contains("data-i18n-title='  '"))
+        XCTAssertTrue(
+            preparedPopup.contains(#"aria-label="Known message""#)
+        )
         let preparedAppPage = try String(
             contentsOf: appPageURL,
             encoding: .utf8
@@ -454,6 +505,130 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             preparedContentScripts,
             [compatibilityScriptName, "content.js"]
         )
+    }
+
+    func testCompatibilityLayerKeepsAClassicWorkerBehindItsBootstrap() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-classic-worker-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try Data("importScripts('helper.js');".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Classic Worker Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+
+        let updated = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(contentsOf: root.appending(path: "manifest.json"))
+            ) as? [String: Any]
+        )
+        let background = try XCTUnwrap(
+            updated["background"] as? [String: Any]
+        )
+        let bootstrapName = try XCTUnwrap(
+            background["service_worker"] as? String
+        )
+        XCTAssertTrue(
+            bootstrapName.hasPrefix(
+                "crest-webextension-background-bootstrap-"
+            )
+        )
+        XCTAssertNil(background["scripts"])
+        XCTAssertNil(background["page"])
+        let bootstrapScript = try String(
+            contentsOf: root.appending(path: bootstrapName),
+            encoding: .utf8
+        )
+        XCTAssertTrue(bootstrapScript.hasPrefix("importScripts("))
+        XCTAssertTrue(bootstrapScript.contains(#""./background.js""#))
+    }
+
+    func testCompatibilityLayerPrefersDocumentScriptsOverAClassicWorker()
+        throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-dual-background-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Dual Background Fixture",
+            "version": "1.0",
+            "background": [
+                "service_worker": "background.js",
+                "scripts": ["background.js"],
+                "preferred_environment": "service_worker",
+            ],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+
+        let updated = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(contentsOf: root.appending(path: "manifest.json"))
+            ) as? [String: Any]
+        )
+        let background = try XCTUnwrap(
+            updated["background"] as? [String: Any]
+        )
+        let scripts = try XCTUnwrap(background["scripts"] as? [String])
+        XCTAssertEqual(scripts.count, 2)
+        XCTAssertEqual(scripts.last, "background.js")
+        XCTAssertTrue(
+            try XCTUnwrap(scripts.first).hasPrefix(
+                "crest-webextension-compatibility-"
+            )
+        )
+        XCTAssertNil(background["service_worker"])
+        XCTAssertNil(background["preferred_environment"])
     }
 
     func testCompatibilityLayerRemovesALegacyCrestWorkerPrelude() throws {
@@ -1291,18 +1466,37 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             const nativeWebRequest = Object.preventExtensions({
                 onBeforeRequest: nativeRequestEvent
             });
+            const createdMenus = [];
+            const nativeMenus = Object.freeze({
+                create(properties) {
+                    createdMenus.push(properties);
+                    return properties.id;
+                }
+            });
+            const nativeRoot = {
+                runtime: nativeRuntime,
+                menus: nativeMenus,
+                webNavigation: nativeWebNavigation,
+                webRequest: nativeWebRequest
+            };
+            Object.defineProperty(nativeRoot, "i18n", {
+                configurable: false,
+                value: nativeI18n
+            });
             Object.defineProperty(globalThis, "chrome", {
                 configurable: true,
-                value: {
-                    runtime: nativeRuntime,
-                    i18n: nativeI18n,
-                    webNavigation: nativeWebNavigation,
-                    webRequest: nativeWebRequest
-                }
+                value: nativeRoot
             });
             \(source)
             const detachedGetURL = browser.runtime.getURL;
             const detachedGetMessage = browser.i18n.getMessage;
+            const menuID = browser.menus.create({
+                id: "subscribe",
+                targetUrlPatterns: [
+                    "abp:*",
+                    "https://subscribe.example/*"
+                ]
+            });
             let cancelledIdleCallbackRan = false;
             const cancelledIdleCallback = requestIdleCallback(() => {
                 cancelledIdleCallbackRan = true;
@@ -1345,7 +1539,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     Object.keys(chrome.webNavigation)
                         .includes("onCreatedNavigationTarget"),
                 nativeReceiver:
-                    browser.runtime.connectNative("")?.receiver
+                    browser.runtime.connectNative("")?.receiver,
+                updateAvailableEvent:
+                    typeof browser.runtime.onUpdateAvailable?.addListener,
+                menuID,
+                menuTargetPatterns: createdMenus[0]?.targetUrlPatterns,
+                wrappedJSObjectType: typeof globalThis.wrappedJSObject,
+                wrappedSentinel: globalThis.wrappedJSObject?.crestSentinel
             })
             """,
             arguments: [:],
@@ -1399,6 +1599,14 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["addedNavigationEvent"] as? String, "function")
         XCTAssertEqual(result["enumerableNavigationEvent"] as? Bool, true)
         XCTAssertEqual(result["nativeReceiver"] as? String, "native")
+        XCTAssertEqual(result["updateAvailableEvent"] as? String, "function")
+        XCTAssertEqual(result["menuID"] as? String, "subscribe")
+        XCTAssertEqual(
+            result["menuTargetPatterns"] as? [String],
+            ["https://subscribe.example/*"]
+        )
+        XCTAssertEqual(result["wrappedJSObjectType"] as? String, "object")
+        XCTAssertNil(result["wrappedSentinel"])
     }
 
     func testCompatibilityFacadeSurvivesNativeNamespaceRefresh() async throws {
@@ -1530,12 +1738,16 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
 
         XCTAssertNotEqual(prepared.resourceURL, source)
-        XCTAssertNoThrow(
-            try generatedJavaScriptURL(
-                in: prepared.resourceURL,
-                prefix: "crest-webextension-background-bootstrap"
-            )
-        )
+        let preparedBackgroundDocuments =
+            try FileManager.default.contentsOfDirectory(
+                at: prepared.resourceURL,
+                includingPropertiesForKeys: nil
+            ).filter {
+                $0.lastPathComponent.hasPrefix(
+                    "crest-webextension-background-"
+                ) && $0.pathExtension == "html"
+            }
+        XCTAssertEqual(preparedBackgroundDocuments.count, 1)
         let storedManifest = try XCTUnwrap(
             JSONSerialization.jsonObject(
                 with: Data(
@@ -1639,10 +1851,28 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let compatibilityPreparer =
             BrowserChromeWebStoreCompatibilityPackagePreparer(
                 fileManager: fileManager,
-                expandArchive: { _, _ in
-                    XCTFail(
-                        "Dark Reader must restore from its signed package."
+                expandArchive: { archive, destination in
+                    XCTAssertEqual(archive, archiveURL)
+                    let workerURL = destination.appending(
+                        path: "background.js"
                     )
+                    try fileManager.createDirectory(
+                        at: destination,
+                        withIntermediateDirectories: true
+                    )
+                    try Data("globalThis.started = true;".utf8).write(
+                        to: workerURL
+                    )
+                    let manifest: [String: Any] = [
+                        "manifest_version": 3,
+                        "background": [
+                            "service_worker": "background.js"
+                        ],
+                    ]
+                    try JSONSerialization.data(withJSONObject: manifest)
+                        .write(
+                            to: destination.appending(path: "manifest.json")
+                        )
                 }
             )
         let preparer = BrowserChromeWebStoreStoredResourcePreparer(
@@ -1671,9 +1901,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             installation: storedInstallation
         )
 
-        XCTAssertEqual(prepared.resourceURL, archiveURL)
-        XCTAssertNil(prepared.retainedAccess)
-        XCTAssertFalse(
+        XCTAssertNotEqual(prepared.resourceURL, archiveURL)
+        XCTAssertNotNil(prepared.retainedAccess)
+        XCTAssertTrue(
             BrowserChromeWebStoreCompatibilityPackagePreparer
                 .requiresCompatibilityLayer(
                     requestedPermissions: storedInstallation

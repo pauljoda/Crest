@@ -241,31 +241,41 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             extensionID: onePasswordID,
             slug: "1password-password-manager"
         )
-        let outcome = try await popupOutcome(
-            candidate: candidate,
-            extensionID: onePasswordID,
-            activeTabURL: try XCTUnwrap(
-                URL(string: "https://fill.dev/form/identity-simple")
-            ),
-            viaRestoration: false,
-            viaPopover: true
-        )
+        for viaRestoration in [false, true] {
+            let outcome = try await popupOutcome(
+                candidate: candidate,
+                extensionID: onePasswordID,
+                activeTabURL: try XCTUnwrap(
+                    URL(string: "https://fill.dev/form/identity-simple")
+                ),
+                viaRestoration: viaRestoration,
+                viaPopover: true,
+                usesEphemeralWebKitStorage: false
+            )
+            let phase = viaRestoration ? "after restoration" : "after install"
 
-        XCTAssertTrue(outcome.presentsPopup)
-        XCTAssertNotNil(
-            outcome.readyMilliseconds,
-            """
-            1Password's popup never received its initial view from the \
-            background worker. Text: \(outcome.renderedText.prefix(300)). \
-            Runtime errors: \(outcome.contextErrors)
-            """
-        )
-        XCTAssertFalse(
-            outcome.renderedText.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            ).isEmpty,
-            "1Password left only its loading spinner visible."
-        )
+            XCTAssertTrue(outcome.presentsPopup)
+            XCTAssertNotNil(
+                outcome.readyMilliseconds,
+                """
+                1Password's popup never received its initial view from the \
+                background worker \(phase). Text: \
+                \(outcome.renderedText.prefix(300)). Runtime errors: \
+                \(outcome.contextErrors)
+                """
+            )
+            XCTAssertFalse(
+                outcome.renderedText.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                ).isEmpty,
+                "1Password left only its loading spinner visible \(phase)."
+            )
+            XCTAssertTrue(
+                outcome.contextErrors.isEmpty,
+                "1Password reported runtime errors \(phase): "
+                    + "\(outcome.contextErrors)"
+            )
+        }
     }
 
     private func assertNoStalledHostCall(
@@ -313,7 +323,14 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 )!
             )
         )
-        return try await BrowserChromeWebStoreProvider().candidate(for: item)
+        // The debug test host carries no Developer ID signature, so the
+        // build's own native-messaging capability reads unavailable and the
+        // compatibility gate would block password managers before any popup
+        // exists to test. These live tests cover the popup lifecycle, not
+        // the capability gate, so they run as the entitled release build.
+        return try await BrowserChromeWebStoreProvider(
+            nativeMessagingCapability: .available
+        ).candidate(for: item)
     }
 
     private struct PopupOutcome {
@@ -330,7 +347,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         activeTabURL: URL,
         viaRestoration: Bool,
         viaPopover: Bool = false,
-        idleSecondsBeforePresenting: Int = 0
+        idleSecondsBeforePresenting: Int = 0,
+        usesEphemeralWebKitStorage: Bool = true
     ) async throws -> PopupOutcome {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -358,7 +376,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         )
 
         func makePool() -> BrowserExtensionControllerPool {
-            BrowserExtensionControllerPool(
+            let pool = BrowserExtensionControllerPool(
                 packageStore: BrowserExtensionPackageStore(
                     fileManager: fileManager,
                     rootURL: root,
@@ -366,10 +384,21 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 ),
                 registry: BrowserExtensionRegistry(
                     persistence: registryPersistence
-                )
+                ),
+                usesEphemeralWebKitStorage: usesEphemeralWebKitStorage
             )
+            // An available transport whose hosts are all absent: extensions
+            // that talk to a companion app must still bring up their popup
+            // and report its signed-out state.
+            pool.setNativeMessagingHandler(AbsentHostNativeMessagingHandler())
+            return pool
         }
 
+        // The coordinator only holds the session store weakly, the way the
+        // app's own store outlives it, so the fixture must keep the store
+        // alive itself or every session-backed call (tabs.create during an
+        // extension's install onboarding, most visibly) fails midway.
+        var retainedBrowser: BrowserStore?
         func attach(
             to pool: BrowserExtensionControllerPool
         ) -> WKWebView {
@@ -380,6 +409,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 ),
                 persistence: InMemoryBrowserSessionPersistence()
             )
+            retainedBrowser = browser
             let webView = WKWebView(
                 frame: CGRect(x: 0, y: 0, width: 900, height: 700),
                 configuration: BrowserPageConfiguration.make(
@@ -398,6 +428,12 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
 
         var pool = makePool()
         var webView = attach(to: pool)
+        defer { _ = retainedBrowser }
+        func cleanUpPersistentStorage() async {
+            guard !usesEphemeralWebKitStorage else { return }
+            _ = try? await pool.deleteData(for: space)
+            try? await WKWebsiteDataStore.remove(forIdentifier: profile.id)
+        }
         _ = try await pool.installChromeWebStoreExtension(candidate, in: space)
 
         if viaRestoration {
@@ -420,20 +456,26 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
 
         let adapter = pool.extensionTab(tab.id, in: space.id)
         guard let action = context.action(for: adapter) else {
-            return PopupOutcome(
+            let outcome = PopupOutcome(
                 presentsPopup: false,
                 readyMilliseconds: nil,
                 renderedText: "",
                 hostCalls: [],
-                contextErrors: context.errors.map(\.localizedDescription)
+                contextErrors: Self.errorDescriptions(context.errors)
             )
+            await cleanUpPersistentStorage()
+            return outcome
         }
         let presentsPopup = action.presentsPopup
         if viaPopover {
-            // Crest presents through `action.popupPopover` and toggles a shown
-            // popover closed with `action.closePopup()`, which unloads the
-            // popup web view. Drive that exact path, including a close and
-            // reopen, so a popup that only fails on its second load is caught.
+            let toolbarAction = try XCTUnwrap(
+                pool.toolbarActions(in: space.id, tabID: tab.id).first {
+                    $0.id == extensionID
+                }
+            )
+            // Drive Crest's public toolbar-action path, including a close and
+            // reopen, so this covers WebKit's action/delegate lifecycle rather
+            // than only calling the coordinator's popover presenter directly.
             let window = NSWindow(
                 contentRect: CGRect(x: 0, y: 0, width: 1200, height: 800),
                 styleMask: [.titled, .closable, .resizable],
@@ -449,30 +491,20 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 ),
                 sourceWindow: window
             )
-            let coordinator = pool.tabWindowCoordinator
             // An idle run measures the very first presentation, so it must not
             // be preceded by the close-and-reopen warmup that would restart the
             // background before the measured open.
             let warmupPresentations = idleSecondsBeforePresenting > 0 ? 0 : 2
             for _ in 0..<warmupPresentations {
-                guard
-                    coordinator.presentActionPopup(action, anchor: anchor)
-                else {
-                    return PopupOutcome(
-                        presentsPopup: presentsPopup,
-                        readyMilliseconds: nil,
-                        renderedText: "presentActionPopup refused",
-                        hostCalls: [],
-                        contextErrors: context.errors.map(
-                            \.localizedDescription
-                        )
-                    )
-                }
-                try? await Task.sleep(for: .milliseconds(250))
+                pool.perform(toolbarAction, popupAnchor: anchor)
+                try? await Task.sleep(
+                    for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
+                        + .milliseconds(250)
+                )
             }
             // A warmed-up run left the popover closed on its second call, so
             // this is the open being measured either way.
-            _ = coordinator.presentActionPopup(action, anchor: anchor)
+            pool.perform(toolbarAction, popupAnchor: anchor)
             // Presentation waits on the extension's background content, so it
             // lands after the call that asked for it returns. Wait it out here
             // rather than polling `popupPopover`, which would preload the popup
@@ -483,13 +515,15 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             )
         }
         guard let popupWebView = action.popupWebView else {
-            return PopupOutcome(
+            let outcome = PopupOutcome(
                 presentsPopup: presentsPopup,
                 readyMilliseconds: nil,
                 renderedText: "",
                 hostCalls: [],
-                contextErrors: context.errors.map(\.localizedDescription)
+                contextErrors: Self.errorDescriptions(context.errors)
             )
+            await cleanUpPersistentStorage()
+            return outcome
         }
 
         var readyMilliseconds: Int?
@@ -531,13 +565,24 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 contentWorld: .page
             )) as? String).map(Self.decode) ?? []
 
-        return PopupOutcome(
+        let outcome = PopupOutcome(
             presentsPopup: presentsPopup,
             readyMilliseconds: readyMilliseconds,
             renderedText: renderedText,
             hostCalls: hostCalls,
-            contextErrors: context.errors.map(\.localizedDescription)
+            contextErrors: Self.errorDescriptions(context.errors)
         )
+        await cleanUpPersistentStorage()
+        return outcome
+    }
+
+    private static func errorDescriptions(_ errors: [any Error]) -> [String] {
+        errors.map { error in
+            let cocoaError = error as NSError
+            return "\(cocoaError.domain)#\(cocoaError.code): "
+                + "\(cocoaError.localizedDescription) "
+                + "\(cocoaError.userInfo)"
+        }
     }
 
     private func load(_ url: URL, in webView: WKWebView) async {
@@ -623,6 +668,32 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             let detail = entry["detail"] as? String ?? ""
             return "\(kind) [\(time)ms] \(detail)"
         }
+    }
+}
+
+@MainActor
+private final class AbsentHostNativeMessagingHandler:
+    BrowserExtensionNativeMessagingHandling
+{
+    let capability = BrowserExtensionNativeMessagingCapability.available
+
+    func sendMessage(
+        _ message: Any,
+        applicationIdentifier: String?,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        replyHandler: @escaping (Any?, Error?) -> Void
+    ) {
+        replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
+    }
+
+    func connect(
+        port: WKWebExtension.MessagePort,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        completionHandler(BrowserExtensionNativeMessagingError.unavailable)
     }
 }
 

@@ -55,17 +55,18 @@ extension BrowserExtensionToolbarController {
         popupAnchor: BrowserExtensionPopupAnchor?
     ) {
         guard toolbarAction.isEnabled else { return }
-        if let tab = toolbarAction.tab {
-            toolbarAction.context.userGesturePerformed(in: tab)
-        }
         guard toolbarAction.action.presentsPopup else {
             toolbarAction.context.performAction(
                 for: toolbarAction.tab
             )
             return
         }
-        tabWindowCoordinator.presentActionPopup(
+        if let tab = toolbarAction.tab {
+            toolbarAction.context.userGesturePerformed(in: tab)
+        }
+        tabWindowCoordinator.requestActionPopup(
             toolbarAction.action,
+            for: toolbarAction.context,
             anchor: popupAnchor
         )
     }

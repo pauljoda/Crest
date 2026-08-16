@@ -1,7 +1,6 @@
 import WebKit
 
-/// Runs one extension-popup presentation, after the extension's background
-/// content has been loaded or after a deadline passes, whichever comes first.
+/// Resolves one extension-popup background preparation attempt.
 ///
 /// Reading `WKWebExtension.Action.popupPopover` preloads the popup document
 /// straight away, and WebKit evicts a nonpersistent background seconds into a
@@ -11,23 +10,32 @@ import WebKit
 /// Dark Reader destructures the answer, so the exception it throws leaves the
 /// promise its popup awaits unsettled forever.
 ///
-/// The deadline is load-bearing rather than defensive. When background content
-/// genuinely fails to load, WebKit never calls `loadBackgroundContent`'s
-/// completion handler at all, so waiting on that alone would leave a broken
-/// extension's toolbar button inert.
+/// A deadline still bounds versions of WebKit that fail to call the completion
+/// handler, but a deadline is not a successful load. Keeping those outcomes
+/// distinct prevents the caller from presenting a popup whose startup request
+/// has no live background recipient.
 @MainActor
 final class BrowserExtensionPopupBackgroundWarmUp {
-    typealias Load = @MainActor (@escaping @MainActor () -> Void) -> Void
+    enum Outcome {
+        case loaded
+        case failed(any Error)
+        case timedOut
+    }
 
-    /// Long enough for a cold background to come up — one measured about
-    /// 340ms — and short enough that an extension whose background never
-    /// loads still opens its popup while the click that asked for it is
-    /// remembered.
-    nonisolated static let defaultDeadline = Duration.milliseconds(1500)
+    typealias Load =
+        @MainActor (@escaping @MainActor ((any Error)?) -> Void) -> Void
+
+    /// Long enough for a cold background to come up — a small one measured
+    /// about 340ms, and a background document only reports loaded after its
+    /// modules finish evaluating, which for a password manager's
+    /// multi-megabyte worker takes over a second — and short enough that an
+    /// extension whose background never loads still opens its popup while
+    /// the click that asked for it is remembered.
+    nonisolated static let defaultDeadline = Duration.milliseconds(3000)
 
     private let deadline: Duration
     private let load: Load
-    private var hasPresented = false
+    private var hasFinished = false
 
     init(
         deadline: Duration = BrowserExtensionPopupBackgroundWarmUp
@@ -45,28 +53,41 @@ final class BrowserExtensionPopupBackgroundWarmUp {
     ) {
         self.init(deadline: deadline) { loaded in
             guard let context else {
-                loaded()
+                loaded(nil)
                 return
             }
-            context.loadBackgroundContent { _ in
-                MainActor.assumeIsolated { loaded() }
+            guard context.webExtension.hasBackgroundContent else {
+                loaded(nil)
+                return
+            }
+            context.loadBackgroundContent { error in
+                MainActor.assumeIsolated { loaded(error) }
             }
         }
     }
 
-    /// Runs `body` once the background content is loaded or once the deadline
-    /// passes, whichever arrives first, and only ever once.
-    func present(_ body: @escaping @MainActor () -> Void) {
-        load { [self] in presentOnce(body) }
+    /// Reports the first terminal result, exactly once.
+    func prepare(
+        _ body: @escaping @MainActor (Outcome) -> Void
+    ) {
+        load { [self] error in
+            finish(
+                error.map(Outcome.failed) ?? .loaded,
+                body
+            )
+        }
         Task { @MainActor [self] in
             try? await Task.sleep(for: deadline)
-            presentOnce(body)
+            finish(.timedOut, body)
         }
     }
 
-    private func presentOnce(_ body: @MainActor () -> Void) {
-        guard !hasPresented else { return }
-        hasPresented = true
-        body()
+    private func finish(
+        _ outcome: Outcome,
+        _ body: @MainActor (Outcome) -> Void
+    ) {
+        guard !hasFinished else { return }
+        hasFinished = true
+        body(outcome)
     }
 }

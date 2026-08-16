@@ -4,7 +4,10 @@ extension BrowserRootModel {
             width: Double(sidebarWidth),
             isPresented: chrome.columnVisibility != .detailOnly
         )
-        guard !hasRestoredExtensions else { return }
+        guard !hasRestoredExtensions else {
+            BrowserExtensionStartupLog.skippedAlreadyRestored()
+            return
+        }
         await pages.restoreExtensions(in: browser.session)
         await pages.prepareContentBlocking()
         hasRestoredExtensions = true

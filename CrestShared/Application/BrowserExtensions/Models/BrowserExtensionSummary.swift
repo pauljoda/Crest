@@ -9,6 +9,9 @@ struct BrowserExtensionSummary: Equatable, Identifiable {
     /// add a failure the WebKit context itself does not carry, such as a stored
     /// website-access pattern WebKit's parser no longer accepts.
     var errors: [String]
+    /// Recoverable parser and runtime messages retained for troubleshooting.
+    /// These do not imply that the extension stopped running.
+    var diagnostics: [String]
     let isEnabled: Bool
     let isLoaded: Bool
     let permissionSnapshot: BrowserExtensionPermissionSnapshot
@@ -34,6 +37,7 @@ struct BrowserExtensionSummary: Equatable, Identifiable {
         requestedHosts: [String],
         unsupportedAPIs: [String],
         errors: [String],
+        diagnostics: [String] = [],
         isEnabled: Bool,
         isLoaded: Bool,
         permissionSnapshot: BrowserExtensionPermissionSnapshot,
@@ -54,6 +58,7 @@ struct BrowserExtensionSummary: Equatable, Identifiable {
         self.requestedHosts = requestedHosts
         self.unsupportedAPIs = unsupportedAPIs
         self.errors = errors
+        self.diagnostics = diagnostics
         self.isEnabled = isEnabled
         self.isLoaded = isLoaded
         self.permissionSnapshot = permissionSnapshot

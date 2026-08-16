@@ -5,11 +5,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     private static let legacyBackgroundPreludePattern =
         #"(?s)\A// Crest's WKWebExtension host currently has no notifications API\.\s*.*?Object\.defineProperty\(globalThis, \"chrome\", \{\s*value: crestChromeCompatibility,\s*configurable: true\s*\}\);\s*\}\s*"#
     private static let emulatedPermissions: Set<String> = [
+        "contextMenus",
         "downloads",
         "history",
         "identity",
         "idle",
         "management",
+        "menus",
         "notifications",
         "offscreen",
         "omnibox",
@@ -118,6 +120,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             manifest: manifest,
             runtimeIdentity: runtimeIdentity
         )
+        Self.normalizeManifestForWebKit(&manifest)
         let compatibilityScriptName = Self.generatedJavaScriptName(
             prefix: "crest-webextension-compatibility",
             source: compatibilityScript
@@ -187,14 +190,54 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     encoding: .utf8
                 )
             }
-            let isModule = background["type"] as? String == "module"
+
+            // WebKit backs a worker background with one service-worker
+            // registration per origin, and re-registering an unchanged
+            // script resolves against the existing registration without
+            // evaluating the worker again. The second context that loads
+            // the same extension origin — one extension enabled in two
+            // Spaces of a profile — is then told its background loaded
+            // while its `runtime` listeners never come to exist, and its
+            // popup's opening message is answered with nothing. Background
+            // documents are WebKit's other first-class environment for the
+            // same code and are created per context, so worker code moves
+            // into one wherever its module form allows.
+            if background["type"] as? String == "module" {
+                let backgroundDocumentName = try installBackgroundDocument(
+                    in: resourceURL,
+                    serviceWorker: serviceWorker,
+                    compatibilityScriptName: compatibilityScriptName
+                )
+                manifest["background"] = ["page": backgroundDocumentName]
+                return true
+            }
+
+            if var scripts = background["scripts"] as? [String],
+                !scripts.isEmpty
+            {
+                // A dual-environment manifest already ships document-ready
+                // background scripts alongside its worker.
+                if !scripts.contains(compatibilityScriptName) {
+                    scripts.insert(compatibilityScriptName, at: 0)
+                }
+                background["scripts"] = scripts
+                background.removeValue(forKey: "service_worker")
+                background.removeValue(forKey: "preferred_environment")
+                manifest["background"] = background
+                return true
+            }
+
+            // A classic worker may call `importScripts`, which no document
+            // can offer under the extension's content security policy, so
+            // it keeps the worker environment behind the bootstrap.
             let backgroundBootstrapName = try installServiceWorkerBootstrap(
                 in: resourceURL,
                 serviceWorker: serviceWorker,
-                isModule: isModule,
                 compatibilityScriptName: compatibilityScriptName
             )
             background["service_worker"] = backgroundBootstrapName
+            background.removeValue(forKey: "scripts")
+            background.removeValue(forKey: "preferred_environment")
             background.removeValue(forKey: "persistent")
             manifest["background"] = background
             return true
@@ -236,7 +279,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     private func installServiceWorkerBootstrap(
         in resourceURL: URL,
         serviceWorker: String,
-        isModule: Bool,
         compatibilityScriptName: String
     ) throws -> String {
         let compatibilitySpecifier = Self.javascriptStringLiteral(
@@ -244,11 +286,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         )
         let workerSpecifier = Self.javascriptStringLiteral("./\(serviceWorker)")
         let backgroundBootstrap =
-            if isModule {
-                "import \(compatibilitySpecifier);\nimport \(workerSpecifier);"
-            } else {
-                "importScripts(\(compatibilitySpecifier), \(workerSpecifier));"
-            }
+            "importScripts(\(compatibilitySpecifier), \(workerSpecifier));"
         let backgroundBootstrapName = Self.generatedJavaScriptName(
             prefix: "crest-webextension-background-bootstrap",
             source: backgroundBootstrap
@@ -261,10 +299,66 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         return backgroundBootstrapName
     }
 
+    /// The compatibility script tag matches `injectCompatibilityScript`'s
+    /// exactly so the page enumerator recognizes it as already installed.
+    private func installBackgroundDocument(
+        in resourceURL: URL,
+        serviceWorker: String,
+        compatibilityScriptName: String
+    ) throws -> String {
+        let backgroundDocument =
+            """
+            <!DOCTYPE html>
+            <meta charset="utf-8">
+            <script src="/\(compatibilityScriptName)"></script>
+            <script type="module" src="/\(Self.htmlAttributeEscaped(serviceWorker))"></script>
+            """
+        let backgroundDocumentName = Self.generatedFileName(
+            prefix: "crest-webextension-background",
+            pathExtension: "html",
+            source: backgroundDocument
+        )
+        try backgroundDocument.write(
+            to: resourceURL.appending(path: backgroundDocumentName),
+            atomically: true,
+            encoding: .utf8
+        )
+        return backgroundDocumentName
+    }
+
+    private static func htmlAttributeEscaped(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+    }
+
     static func requiresCompatibilityLayer(
         requestedPermissions: [String]
     ) -> Bool {
         !emulatedPermissions.isDisjoint(with: requestedPermissions)
+    }
+
+    private static func normalizeManifestForWebKit(
+        _ manifest: inout [String: Any]
+    ) {
+        guard var commands = manifest["commands"] as? [String: Any]
+        else { return }
+
+        // WebKit uses the cross-version action command name. Preserve the
+        // extension-facing manifest in the generated runtime, while presenting
+        // the equivalent modern spelling to WKWebExtension.
+        for legacyName in [
+            "_execute_browser_action",
+            "_execute_page_action",
+        ] {
+            guard let legacyCommand = commands.removeValue(forKey: legacyName)
+            else { continue }
+            if commands["_execute_action"] == nil {
+                commands["_execute_action"] = legacyCommand
+            }
+        }
+        manifest["commands"] = commands
     }
 
     private func installExtensionPageCompatibility(
@@ -357,34 +451,43 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             for: relativePath,
             in: resourceURL
         )
-        var source = try String(contentsOf: pageURL, encoding: .utf8)
+        let storedSource = try String(contentsOf: pageURL, encoding: .utf8)
+        let emptyLocalizationAttributePattern =
+            #"(?i)(?<=\s)(?:aria-label|placeholder|data-i18n(?:-title|-tip)?)(?:\s*=\s*(?:"\s*"|'\s*'))?(?=\s|/?>)"#
+        var source = storedSource.replacingOccurrences(
+            of: emptyLocalizationAttributePattern,
+            with: "",
+            options: .regularExpression
+        )
         let compatibilityTag =
             #"<script src="/\#(compatibilityScriptName)"></script>"#
         var tags: [String] = []
         if !source.contains(compatibilityTag) {
             tags.append(compatibilityTag)
         }
-        guard !tags.isEmpty else { return false }
-        let injection = tags.joined(separator: "\n")
+        guard source != storedSource || !tags.isEmpty else { return false }
 
-        if let headStart = source.range(
-            of: "<head",
-            options: [.caseInsensitive]
-        ),
-            let headEnd = source.range(
-                of: ">",
-                range: headStart.lowerBound..<source.endIndex
-            )
-        {
-            source.insert(
-                contentsOf: "\n\(injection)",
-                at: headEnd.upperBound
-            )
-        } else {
-            source.insert(
-                contentsOf: injection + "\n",
-                at: source.startIndex
-            )
+        if !tags.isEmpty {
+            let injection = tags.joined(separator: "\n")
+            if let headStart = source.range(
+                of: "<head",
+                options: [.caseInsensitive]
+            ),
+                let headEnd = source.range(
+                    of: ">",
+                    range: headStart.lowerBound..<source.endIndex
+                )
+            {
+                source.insert(
+                    contentsOf: "\n\(injection)",
+                    at: headEnd.upperBound
+                )
+            } else {
+                source.insert(
+                    contentsOf: injection + "\n",
+                    at: source.startIndex
+                )
+            }
         }
         try source.write(to: pageURL, atomically: true, encoding: .utf8)
         return true
@@ -463,11 +566,19 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         prefix: String,
         source: String
     ) -> String {
+        generatedFileName(prefix: prefix, pathExtension: "js", source: source)
+    }
+
+    private static func generatedFileName(
+        prefix: String,
+        pathExtension: String,
+        source: String
+    ) -> String {
         let digest = SHA256.hash(data: Data(source.utf8))
         let fingerprint = digest.prefix(8).map {
             String(format: "%02x", $0)
         }.joined()
-        return "\(prefix)-\(fingerprint).js"
+        return "\(prefix)-\(fingerprint).\(pathExtension)"
     }
 
     private static func webExtensionCompatibilityScript(
@@ -569,6 +680,34 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 };
                 installIdleCallbackFallbacks();
+
+                const installWrappedJSObjectFallback = () => {
+                    const protocol = globalThis.location?.protocol;
+                    if (
+                        typeof protocol === "string"
+                        && protocol.includes("extension")
+                    ) {
+                        return;
+                    }
+                    if (globalThis.wrappedJSObject !== undefined) return;
+
+                    // Firefox exposes the page global through this name. WebKit
+                    // cannot safely reproduce that privilege, but an empty
+                    // object preserves feature probes and lets extensions take
+                    // their normal script-injection fallback instead of
+                    // throwing before it runs.
+                    try {
+                        Object.defineProperty(
+                            globalThis,
+                            "wrappedJSObject",
+                            {
+                                value: Object.create(null),
+                                configurable: true
+                            }
+                        );
+                    } catch {}
+                };
+                installWrappedJSObjectFallback();
 
                 const normalizedRuntimes = new WeakSet();
                 const normalizeRuntime = (nativeRuntime) => {
@@ -672,6 +811,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         new Map([["getMessage", getMessage]])
                     );
                     normalizedI18nNamespaces.set(nativeI18n, facade);
+                    normalizedI18nNamespaces.set(facade, facade);
                     return facade;
                 };
 
@@ -696,6 +836,91 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return undefined;
                     }
                     return Promise.reject(error);
+                };
+                const supportedMenuPattern = (pattern) =>
+                    pattern === "<all_urls>"
+                    || /^(?:\\*|https?|wss?|ftp|file|data):\\/\\//
+                        .test(String(pattern));
+                const normalizedMenuProperties = (properties) => {
+                    if (!properties || typeof properties !== "object") {
+                        return properties;
+                    }
+                    let normalized = properties;
+                    for (const property of [
+                        "documentUrlPatterns",
+                        "targetUrlPatterns"
+                    ]) {
+                        const patterns = properties[property];
+                        if (!Array.isArray(patterns)) continue;
+                        const supported = patterns.filter(
+                            supportedMenuPattern
+                        );
+                        if (supported.length === patterns.length) continue;
+                        if (normalized === properties) {
+                            normalized = { ...properties };
+                        }
+                        normalized[property] = supported;
+                    }
+                    return normalized;
+                };
+                const normalizedMenuNamespaces = new WeakMap();
+                const normalizeMenuNamespace = (nativeMenus) => {
+                    if (!nativeMenus) return nativeMenus;
+                    if (normalizedMenuNamespaces.has(nativeMenus)) {
+                        return normalizedMenuNamespaces.get(nativeMenus);
+                    }
+
+                    const overlays = new Map();
+                    for (const [methodName, propertiesIndex] of [
+                        ["create", 0],
+                        ["update", 1]
+                    ]) {
+                        let nativeMethod;
+                        let descriptor;
+                        try {
+                            nativeMethod = nativeMenus[methodName];
+                            descriptor = Reflect.getOwnPropertyDescriptor(
+                                nativeMenus,
+                                methodName
+                            );
+                        } catch {}
+                        if (typeof nativeMethod !== "function") continue;
+
+                        const method = (...args) => {
+                            const normalizedArguments = Array.from(args);
+                            normalizedArguments[propertiesIndex] =
+                                normalizedMenuProperties(
+                                    normalizedArguments[propertiesIndex]
+                                );
+                            return Reflect.apply(
+                                nativeMethod,
+                                nativeMenus,
+                                normalizedArguments
+                            );
+                        };
+                        try {
+                            Object.defineProperty(nativeMenus, methodName, {
+                                value: method,
+                                configurable: true,
+                                enumerable: descriptor?.enumerable ?? true
+                            });
+                        } catch {
+                            try { nativeMenus[methodName] = method; } catch {}
+                        }
+                        let installedMethod;
+                        try {
+                            installedMethod = nativeMenus[methodName];
+                        } catch {}
+                        if (installedMethod !== method) {
+                            overlays.set(methodName, method);
+                        }
+                    }
+                    const normalized = overlays.size === 0
+                        ? nativeMenus
+                        : namespaceFacade(nativeMenus, {}, overlays);
+                    normalizedMenuNamespaces.set(nativeMenus, normalized);
+                    normalizedMenuNamespaces.set(normalized, normalized);
+                    return normalized;
                 };
                 const requestCapability = (
                     api,
@@ -807,6 +1032,21 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             globalThis.clients = serviceWorkerClients;
                         } catch {}
+                    }
+                }
+                // Worker code hosted in a background document keeps its
+                // worker-lifecycle calls; answering them is harmless where
+                // there is no waiting worker to skip.
+                if (typeof globalThis.skipWaiting !== "function") {
+                    const skipWaiting = () => Promise.resolve();
+                    try {
+                        Object.defineProperty(globalThis, "skipWaiting", {
+                            value: skipWaiting,
+                            configurable: true,
+                            writable: true
+                        });
+                    } catch {
+                        try { globalThis.skipWaiting = skipWaiting; } catch {}
                     }
                 }
 
@@ -1273,6 +1513,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 const runtime = {
                     id: extensionID,
+                    onUpdateAvailable: noopEvent,
                     getURL(path = "") {
                         return fallbackResourceURL(path);
                     },
@@ -1378,6 +1619,26 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             });
                         } catch {
                             try { nativeRoot.i18n = normalizedI18n; } catch {}
+                        }
+                    }
+                    for (const property of ["menus", "contextMenus"]) {
+                        let nativeMenus;
+                        try { nativeMenus = nativeRoot[property]; } catch {}
+                        if (!nativeMenus) continue;
+                        const normalizedMenus = normalizeMenuNamespace(
+                            nativeMenus
+                        );
+                        if (normalizedMenus === nativeMenus) continue;
+                        try {
+                            Object.defineProperty(nativeRoot, property, {
+                                value: normalizedMenus,
+                                configurable: true,
+                                enumerable: true
+                            });
+                        } catch {
+                            try {
+                                nativeRoot[property] = normalizedMenus;
+                            } catch {}
                         }
                     }
                     const { runtime: runtimeFallback, ...fallbacks } =
@@ -1624,6 +1885,81 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 installMissingRoot("chrome", nativeBrowser);
                 installMissingRoot("browser", nativeChrome);
+                const rootFacadeCache = new WeakMap();
+                const rootFacade = (root, alternateRoot) => {
+                    if (!root) return root;
+                    if (rootFacadeCache.has(root)) {
+                        return rootFacadeCache.get(root);
+                    }
+                    const overlays = new Map();
+                    const currentNamespace = (property) => {
+                        let value;
+                        try { value = root[property]; } catch {}
+                        if (value === undefined && alternateRoot) {
+                            try { value = alternateRoot[property]; } catch {}
+                        }
+                        return value;
+                    };
+
+                    const nativeI18n = currentNamespace("i18n");
+                    const normalizedI18n = normalizeI18n(nativeI18n);
+                    if (normalizedI18n !== nativeI18n) {
+                        overlays.set("i18n", normalizedI18n);
+                    }
+                    for (const property of ["menus", "contextMenus"]) {
+                        const nativeMenus = currentNamespace(property);
+                        const normalizedMenus = normalizeMenuNamespace(
+                            nativeMenus
+                        );
+                        if (normalizedMenus !== nativeMenus) {
+                            overlays.set(property, normalizedMenus);
+                        }
+                    }
+                    const nativeRuntime = currentNamespace("runtime");
+                    if (
+                        nativeRuntime
+                        && Object.keys(runtime).some((property) => {
+                            try {
+                                return nativeRuntime[property] === undefined;
+                            } catch {
+                                return true;
+                            }
+                        })
+                    ) {
+                        overlays.set(
+                            "runtime",
+                            namespaceFacade(nativeRuntime, runtime)
+                        );
+                    }
+                    const facade = overlays.size === 0
+                        ? root
+                        : namespaceFacade(root, {}, overlays);
+                    rootFacadeCache.set(root, facade);
+                    return facade;
+                };
+                const installRootFacade = (name, root, alternateRoot) => {
+                    if (!root) return;
+                    const facade = rootFacade(root, alternateRoot);
+                    if (facade === root) return;
+                    try {
+                        Object.defineProperty(globalThis, name, {
+                            value: facade,
+                            configurable: true
+                        });
+                    } catch {
+                        try { globalThis[name] = facade; } catch {}
+                    }
+                };
+                installRootFacade(
+                    "chrome",
+                    globalThis.chrome,
+                    globalThis.browser
+                );
+                installRootFacade(
+                    "browser",
+                    globalThis.browser,
+                    globalThis.chrome
+                );
             })();
             """
     }

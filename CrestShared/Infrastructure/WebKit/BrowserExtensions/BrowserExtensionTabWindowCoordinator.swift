@@ -14,6 +14,10 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
     var verifiedNativeMessagingIdentities: [ObjectIdentifier: BrowserExtensionNativeMessagingIdentity] = [:]
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
+#if os(macOS)
+    var pendingActionPopupRequests:
+        [ObjectIdentifier: BrowserExtensionActionPopupRequest] = [:]
+#endif
     var actionDidUpdate: (() -> Void)?
 
     func connect<
@@ -200,3 +204,10 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         return adapter(for: tabID, in: spaceID)
     }
 }
+
+#if os(macOS)
+struct BrowserExtensionActionPopupRequest {
+    let id: UUID
+    let anchor: BrowserExtensionPopupAnchor?
+}
+#endif

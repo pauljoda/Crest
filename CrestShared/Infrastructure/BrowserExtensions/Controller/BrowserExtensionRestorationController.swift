@@ -23,9 +23,33 @@ final class BrowserExtensionRestorationController {
             )
         }
 
-        for installation in persistence.installations
-        where installation.isEnabled {
+        let installations = persistence.installations
+        BrowserExtensionStartupLog.began(
+            spaceCount: spaces.count,
+            installationCount: installations.count
+        )
+        var enabled = 0
+        var loaded = 0
+        var skippedMissingSpace = 0
+        var failed = 0
+
+        for installation in installations {
+            guard installation.isEnabled else {
+                BrowserExtensionStartupLog.skippedDisabled(
+                    extensionID: installation.id
+                )
+                continue
+            }
+            enabled += 1
             guard let space = spacesByID[installation.spaceID] else {
+                // A record filed under a Space this session does not carry.
+                // Reported rather than dropped: this is how an entire extension
+                // set can disappear without one line of evidence.
+                skippedMissingSpace += 1
+                BrowserExtensionStartupLog.skippedMissingSpace(
+                    extensionID: installation.id,
+                    spaceID: installation.spaceID
+                )
                 continue
             }
             do {
@@ -33,7 +57,17 @@ final class BrowserExtensionRestorationController {
                     installation,
                     in: space
                 )
+                loaded += 1
+                BrowserExtensionStartupLog.loaded(
+                    extensionID: installation.id,
+                    spaceID: installation.spaceID
+                )
             } catch {
+                failed += 1
+                BrowserExtensionStartupLog.failed(
+                    extensionID: installation.id,
+                    error: error
+                )
                 persistence.recordRestoreFailure(
                     error,
                     installation: installation,
@@ -42,6 +76,14 @@ final class BrowserExtensionRestorationController {
                 )
             }
         }
+
+        BrowserExtensionStartupLog.finished(
+            installationCount: installations.count,
+            enabled: enabled,
+            loaded: loaded,
+            skippedMissingSpace: skippedMissingSpace,
+            failed: failed
+        )
     }
 
     func setExtensionEnabled(

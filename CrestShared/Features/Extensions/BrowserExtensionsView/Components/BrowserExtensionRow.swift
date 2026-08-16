@@ -70,6 +70,12 @@ struct BrowserExtensionRow: View {
                     BrowserExtensionIssueSection(issue: issue)
                 }
 
+                if !summary.diagnostics.isEmpty {
+                    BrowserExtensionDiagnosticSection(
+                        diagnostics: summary.diagnostics
+                    )
+                }
+
                 if summary.hasOptionsPage,
                     summary.isLoaded,
                     platformActions.supportsOptionsPage

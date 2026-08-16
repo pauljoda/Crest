@@ -5,75 +5,84 @@ import XCTest
 @MainActor
 final class BrowserExtensionPopupBackgroundWarmUpTests: XCTestCase {
     func testPresentsAsSoonAsBackgroundContentReportsLoaded() {
-        var reportLoaded: (@MainActor () -> Void)?
+        var reportLoaded: (@MainActor (Error?) -> Void)?
         let warmUp = BrowserExtensionPopupBackgroundWarmUp(
             deadline: .seconds(30)
         ) { loaded in
             reportLoaded = loaded
         }
 
-        var presentations = 0
-        warmUp.present { presentations += 1 }
+        var outcomes: [BrowserExtensionPopupBackgroundWarmUp.Outcome] = []
+        warmUp.prepare { outcomes.append($0) }
         XCTAssertEqual(
-            presentations,
+            outcomes.count,
             0,
             "The popup was presented before its background content loaded."
         )
 
-        reportLoaded?()
-        XCTAssertEqual(
-            presentations,
-            1,
-            "The popup was not presented once its background content loaded."
-        )
+        reportLoaded?(nil)
+        guard case .loaded? = outcomes.first else {
+            return XCTFail(
+                "The background preparation did not report a successful load."
+            )
+        }
     }
 
     /// WebKit never calls `loadBackgroundContent`'s completion handler when
     /// background content genuinely fails to load, so a popup that waited only
     /// on that would leave a broken extension's toolbar button inert.
-    func testPresentsAfterTheDeadlineWhenLoadingNeverReports() async throws {
+    func testReportsTimeoutWhenLoadingNeverReports() async throws {
         let warmUp = BrowserExtensionPopupBackgroundWarmUp(
             deadline: .milliseconds(50)
         ) { _ in }
 
-        var presentations = 0
-        warmUp.present { presentations += 1 }
-        XCTAssertEqual(
-            presentations,
-            0,
-            "The popup was presented before the deadline had passed."
-        )
+        var outcomes: [BrowserExtensionPopupBackgroundWarmUp.Outcome] = []
+        warmUp.prepare { outcomes.append($0) }
+        XCTAssertTrue(outcomes.isEmpty)
 
         try await Task.sleep(for: .milliseconds(500))
-        XCTAssertEqual(
-            presentations,
-            1,
-            """
-            The popup was never presented, so an extension whose background \
-            content fails to load has an inert toolbar button.
-            """
-        )
+        guard case .timedOut? = outcomes.first else {
+            return XCTFail("The stalled background did not report a timeout.")
+        }
     }
 
-    func testPresentsOnceWhenLoadingAndTheDeadlineBothArrive() async throws {
-        var reportLoaded: (@MainActor () -> Void)?
+    func testReportsOnceWhenLoadingAndTheDeadlineBothArrive() async throws {
+        var reportLoaded: (@MainActor (Error?) -> Void)?
         let warmUp = BrowserExtensionPopupBackgroundWarmUp(
             deadline: .milliseconds(50)
         ) { loaded in
             reportLoaded = loaded
         }
 
-        var presentations = 0
-        warmUp.present { presentations += 1 }
-        reportLoaded?()
+        var outcomes: [BrowserExtensionPopupBackgroundWarmUp.Outcome] = []
+        warmUp.prepare { outcomes.append($0) }
+        reportLoaded?(nil)
         try await Task.sleep(for: .milliseconds(500))
-        reportLoaded?()
+        reportLoaded?(nil)
 
         XCTAssertEqual(
-            presentations,
+            outcomes.count,
             1,
-            "The popup was presented more than once."
+            "Background preparation finished more than once."
         )
+    }
+
+    func testReportsBackgroundLoadFailureWithoutCallingItLoaded() {
+        struct FixtureError: Error {}
+
+        let warmUp = BrowserExtensionPopupBackgroundWarmUp(
+            deadline: .seconds(30)
+        ) { completion in
+            completion(FixtureError())
+        }
+
+        var outcome: BrowserExtensionPopupBackgroundWarmUp.Outcome?
+        warmUp.prepare { outcome = $0 }
+
+        guard case .failed(let error)? = outcome else {
+            return XCTFail("The background load error was discarded.")
+        }
+        XCTAssertTrue(error is FixtureError)
     }
 
     /// An action can outlive the context it came from. Presenting immediately
@@ -84,9 +93,11 @@ final class BrowserExtensionPopupBackgroundWarmUpTests: XCTestCase {
             deadline: .seconds(30)
         )
 
-        var presentations = 0
-        warmUp.present { presentations += 1 }
+        var outcomes: [BrowserExtensionPopupBackgroundWarmUp.Outcome] = []
+        warmUp.prepare { outcomes.append($0) }
 
-        XCTAssertEqual(presentations, 1)
+        guard case .loaded? = outcomes.first else {
+            return XCTFail("A popup without background content was delayed.")
+        }
     }
 }

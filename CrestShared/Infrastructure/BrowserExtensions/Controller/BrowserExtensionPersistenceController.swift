@@ -2,6 +2,49 @@ import Foundation
 import Observation
 import WebKit
 
+struct BrowserExtensionRuntimeReport {
+    private static let scriptExecutionErrorCode = 7
+
+    let errors: [String]
+    let diagnostics: [String]
+
+    init(errors reportedErrors: [any Error]) {
+        var errors: Set<String> = []
+        var diagnostics: Set<String> = []
+        for reportedError in reportedErrors {
+            let error = reportedError as NSError
+            let description = error.localizedDescription
+            guard !description.isEmpty else { continue }
+            if Self.isDiagnostic(error) {
+                diagnostics.insert(description)
+            } else {
+                errors.insert(description)
+            }
+        }
+        diagnostics.subtract(errors)
+        self.errors = errors.sorted()
+        self.diagnostics = diagnostics.sorted()
+    }
+
+    private static func isDiagnostic(_ error: NSError) -> Bool {
+        if error.domain == WKWebExtensionContext.errorDomain {
+            // WebKit records JavaScript execution messages as private context
+            // error code 7. They are useful extension logs, but do not mean the
+            // context or its background content failed to load.
+            return error.code == scriptExecutionErrorCode
+        }
+        if error.domain == WKWebExtension.errorDomain {
+            return [
+                WKWebExtension.Error.invalidManifestEntry.rawValue,
+                WKWebExtension.Error.invalidDeclarativeNetRequestEntry
+                    .rawValue,
+                WKWebExtension.Error.invalidBackgroundPersistence.rawValue,
+            ].contains(error.code)
+        }
+        return false
+    }
+}
+
 @Observable
 @MainActor
 final class BrowserExtensionPersistenceController {
@@ -209,10 +252,9 @@ final class BrowserExtensionPersistenceController {
         isEnabled: Bool,
         permissionSnapshot: BrowserExtensionPermissionSnapshot
     ) -> BrowserExtensionSummary {
-        let extensionErrors = context.webExtension.errors.map(
-            \.localizedDescription
+        let runtimeReport = BrowserExtensionRuntimeReport(
+            errors: context.webExtension.errors + context.errors
         )
-        let contextErrors = context.errors.map(\.localizedDescription)
         return BrowserExtensionSummary(
             id: extensionID,
             displayName: context.webExtension.displayName ?? extensionID,
@@ -225,7 +267,8 @@ final class BrowserExtensionPersistenceController {
                 .map(\.string)
                 .sorted(),
             unsupportedAPIs: context.unsupportedAPIs.sorted(),
-            errors: Array(Set(extensionErrors + contextErrors)).sorted(),
+            errors: runtimeReport.errors,
+            diagnostics: runtimeReport.diagnostics,
             isEnabled: isEnabled,
             isLoaded: context.isLoaded,
             permissionSnapshot: permissionSnapshot,

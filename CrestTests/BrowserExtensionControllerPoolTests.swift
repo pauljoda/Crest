@@ -88,16 +88,10 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 .configuration.isPersistent)
     }
 
-    /// Reading `popupPopover` preloads the popup document, so presenting one
-    /// inside the click that asked for it loads the popup against whatever
-    /// state the extension's background happens to be in. WebKit stops a
-    /// nonpersistent background seconds into a session and does not always
-    /// bring it back for the popup's opening message, which is answered with
-    /// nothing — an extension that reads that answer without guarding it stays
-    /// on its startup loader for the rest of the session.
-    ///
-    /// The presentation must therefore land after the background has been
-    /// asked for, not within the call that asks.
+    /// Reading `popupPopover` preloads the popup document, so Crest asks WebKit
+    /// to load the extension background before performing the action. The
+    /// action itself must still go through `WKWebExtensionContext` so WebKit
+    /// owns its user-gesture and popup-delegate lifecycle.
     func testToolbarPopupIsPresentedAfterItsBackgroundContentIsAskedFor()
         async throws
     {
@@ -169,14 +163,12 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
-        XCTAssertNotEqual(
-            action.action.popupPopover?.isShown,
-            true,
-            """
-            The popup was presented inside the call that asked for it, so its \
-            document loaded before the extension's background content had \
-            been asked to load.
-            """
+
+        // Do not inspect `popupPopover` while the background is warming: that
+        // property access is itself enough to preload the popup document.
+        try await Task.sleep(
+            for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
+                + .milliseconds(100)
         )
 
         for _ in 0..<400 where action.action.popupPopover?.isShown != true {
@@ -277,6 +269,12 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
 
+        // `popupPopover` preloads the popup, so let the background warm-up
+        // finish before observing WebKit's presentation state.
+        try await Task.sleep(
+            for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
+                + .milliseconds(100)
+        )
         for _ in 0..<200 where action.action.popupPopover?.isShown != true {
             try await Task.sleep(for: .milliseconds(10))
         }
@@ -304,6 +302,10 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         pool.perform(
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
+        )
+        try await Task.sleep(
+            for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
+                + .milliseconds(100)
         )
         for _ in 0..<200 where action.action.popupPopover?.isShown != true {
             try await Task.sleep(for: .milliseconds(10))
@@ -451,12 +453,24 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 typeof chrome.webNavigation
                     ?.onCreatedNavigationTarget?.addListener;
             const stored = await browser.storage.local.get();
+            const emptyMessage = browser.i18n.getMessage('');
+            const menuID = browser.contextMenus.create({
+                id: 'subscribe',
+                title: 'Subscribe',
+                contexts: ['link'],
+                targetUrlPatterns: [
+                    'abp:*',
+                    'https://subscribe.example/*'
+                ]
+            });
             await new Promise((resolve) => setTimeout(resolve, 250));
             await browser.runtime.sendNativeMessage(
                 'com.example.echo',
                 {
                     ping: 'pong',
                     storedKeys: Object.keys(stored).length,
+                    emptyMessage,
+                    menuID,
                     browserCreatedNavigationTarget:
                         typeof browser.webNavigation
                             .onCreatedNavigationTarget?.addListener,
@@ -505,7 +519,10 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                         navigationAllFrames:
                             typeof browser.webNavigation?.getAllFrames,
                         navigationFrame:
-                            typeof browser.webNavigation?.getFrame
+                            typeof browser.webNavigation?.getFrame,
+                        updateAvailableEvent:
+                            typeof browser.runtime.onUpdateAvailable
+                                ?.addListener
                     }
                 }
             );
@@ -580,6 +597,14 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             0
         )
         XCTAssertEqual(
+            (handler.message as? [String: Any])?["emptyMessage"] as? String,
+            ""
+        )
+        XCTAssertEqual(
+            (handler.message as? [String: Any])?["menuID"] as? String,
+            "subscribe"
+        )
+        XCTAssertEqual(
             (handler.message as? [String: Any])?[
                 "browserCreatedNavigationTarget"
             ] as? String,
@@ -608,6 +633,17 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         for (name, kind) in capabilities {
             XCTAssertEqual(kind, "function", "Missing capability: \(name)")
         }
+        let compatibilityErrors = loadedContext.errors.map(
+            \.localizedDescription
+        ).filter {
+            $0.contains("i18n.getMessage")
+                || $0.contains("targetUrlPatterns")
+                || $0.contains("onUpdateAvailable")
+        }
+        XCTAssertTrue(
+            compatibilityErrors.isEmpty,
+            "Compatibility errors: \(compatibilityErrors)"
+        )
     }
 
     func testMappedIdleEventTraversesTheVerifiedCapabilityBroker()
@@ -2290,6 +2326,9 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 browserStorageManaged:
                     typeof browser.storage?.managed?.onChanged?.addListener
                         === "function",
+                wrappedJSObjectType: typeof globalThis.wrappedJSObject,
+                wrappedSentinel:
+                    globalThis.wrappedJSObject?.crestSentinel,
             });
             const directPort = chrome.runtime.connect({
                 name: "crest-direct-port-probe",
@@ -2424,6 +2463,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         XCTAssertEqual(identity["contentStorageSession"] as? Bool, false)
         XCTAssertEqual(identity["browserStorageManaged"] as? Bool, true)
+        XCTAssertEqual(identity["wrappedJSObjectType"] as? String, "object")
+        XCTAssertNil(identity["wrappedSentinel"])
         XCTAssertNil(
             identity["error"],
             "Probe: \(identity); errors: \(contextErrorDescriptions)"
