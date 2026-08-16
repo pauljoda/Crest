@@ -26,8 +26,10 @@ settings:
   configs:
     Debug:
       APS_ENVIRONMENT: development
+      ICLOUD_CONTAINER_ENVIRONMENT: Development
     Release:
       APS_ENVIRONMENT: production
+      ICLOUD_CONTAINER_ENVIRONMENT: Production
       SWIFT_COMPILATION_MODE: singlefile
 packages:
   Sparkle:
@@ -137,6 +139,18 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Crest.app/Crest"
 schemes:
+  CrestMobile Production:
+    build:
+      targets:
+        CrestMobile: all
+    run:
+      config: Release
+    profile:
+      config: Release
+    analyze:
+      config: Release
+    archive:
+      config: Release
   CrestKeychainIntegration:
     build:
       targets:
