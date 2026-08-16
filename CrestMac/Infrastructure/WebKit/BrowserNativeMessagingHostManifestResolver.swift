@@ -74,6 +74,9 @@ struct BrowserNativeMessagingHostManifestResolver {
         hostName: String,
         extensionIdentity: BrowserExtensionNativeMessagingIdentity
     ) throws -> BrowserNativeMessagingHostManifest {
+        if hostName.isEmpty {
+            return try resolveUnnamedHost(for: extensionIdentity)
+        }
         guard Self.isValidHostName(hostName) else {
             throw BrowserNativeMessagingHostError.invalidHostName
         }
@@ -98,24 +101,72 @@ struct BrowserNativeMessagingHostManifestResolver {
                 ]
             )
         }
-        let searchDirectories: [URL]
-        switch extensionIdentity {
-        case .chromeWebStore:
-            searchDirectories = chromeSearchDirectories
-        case .mozillaAddons:
-            searchDirectories = mozillaSearchDirectories
-        }
-        let manifestURL = searchDirectories.lazy
+        let directories = searchDirectories(for: extensionIdentity)
+        let manifestURL = directories.lazy
             .map { $0.appending(path: "\(hostName).json") }
             .first { FileManager.default.isReadableFile(atPath: $0.path) }
         guard let manifestURL else {
             throw BrowserNativeMessagingHostError.hostNotFound(hostName)
         }
+        return try resolveManifest(
+            at: manifestURL,
+            expectedHostName: hostName,
+            extensionIdentity: extensionIdentity
+        )
+    }
+
+    private func resolveUnnamedHost(
+        for extensionIdentity: BrowserExtensionNativeMessagingIdentity
+    ) throws -> BrowserNativeMessagingHostManifest {
+        var matchesByName: [String: BrowserNativeMessagingHostManifest] = [:]
+        if case .chromeWebStore(let extensionID) = extensionIdentity {
+            for host in builtInHosts where host.extensionID == extensionID {
+                let executableURL = host.executableURL.standardizedFileURL
+                guard
+                    FileManager.default.isExecutableFile(
+                        atPath: executableURL.path
+                    )
+                else { continue }
+                matchesByName[host.name] = BrowserNativeMessagingHostManifest(
+                    name: host.name,
+                    executableURL: executableURL,
+                    arguments: [
+                        "chrome-extension://\(extensionID.rawValue)/"
+                    ]
+                )
+            }
+        }
+        for registeredManifest in registeredManifests(
+            for: extensionIdentity
+        ) {
+            guard
+                let host = try? resolveManifest(
+                    at: registeredManifest.url,
+                    expectedHostName: registeredManifest.name,
+                    extensionIdentity: extensionIdentity
+                ), matchesByName[host.name] == nil
+            else { continue }
+            matchesByName[host.name] = host
+        }
+        guard matchesByName.count == 1, let match = matchesByName.values.first
+        else {
+            throw BrowserNativeMessagingHostError.unnamedHostUnavailable
+        }
+        return match
+    }
+
+    private func resolveManifest(
+        at manifestURL: URL,
+        expectedHostName: String?,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity
+    ) throws -> BrowserNativeMessagingHostManifest {
         let data = try Data(contentsOf: manifestURL)
         guard
             let object = try JSONSerialization.jsonObject(with: data)
                 as? [String: Any],
-            object["name"] as? String == hostName,
+            let hostName = object["name"] as? String,
+            Self.isValidHostName(hostName),
+            expectedHostName == nil || expectedHostName == hostName,
             object["type"] as? String == "stdio",
             let path = object["path"] as? String,
             path.hasPrefix("/")
@@ -158,6 +209,47 @@ struct BrowserNativeMessagingHostManifestResolver {
             executableURL: executableURL,
             arguments: arguments
         )
+    }
+
+    private func searchDirectories(
+        for extensionIdentity: BrowserExtensionNativeMessagingIdentity
+    ) -> [URL] {
+        switch extensionIdentity {
+        case .chromeWebStore:
+            chromeSearchDirectories
+        case .mozillaAddons:
+            mozillaSearchDirectories
+        }
+    }
+
+    private func registeredManifests(
+        for extensionIdentity: BrowserExtensionNativeMessagingIdentity
+    ) -> [(name: String, url: URL)] {
+        var seenNames: Set<String> = []
+        var manifests: [(name: String, url: URL)] = []
+        for directory in searchDirectories(for: extensionIdentity) {
+            let contents =
+                (try? FileManager.default.contentsOfDirectory(
+                    at: directory,
+                    includingPropertiesForKeys: [.isRegularFileKey],
+                    options: [.skipsHiddenFiles]
+                )) ?? []
+            let registeredURLs = contents
+                .filter {
+                    $0.pathExtension == "json"
+                        && FileManager.default.isReadableFile(atPath: $0.path)
+                }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            for url in registeredURLs {
+                let name = url.deletingPathExtension().lastPathComponent
+                guard
+                    Self.isValidHostName(name),
+                    seenNames.insert(name).inserted
+                else { continue }
+                manifests.append((name: name, url: url))
+            }
+        }
+        return manifests
     }
 
     private static func isValidHostName(_ value: String) -> Bool {

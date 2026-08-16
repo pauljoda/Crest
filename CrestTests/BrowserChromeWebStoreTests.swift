@@ -397,6 +397,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "installNamespaceFacades",
             "installNativeAliases",
             "installMissingRoot",
+            "get() { return facade; }",
             "serviceWorkerClients",
             "offscreen",
             "management",
@@ -622,12 +623,19 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     .autofillCreditCardEnabled.get({});
                 const addresses = await browser.privacy.services
                     .autofillAddressEnabled.get({});
+                const autofill = await browser.privacy.services
+                    .autofillEnabled.get({});
+                await browser.privacy.services.autofillEnabled.set({
+                    value: false
+                });
+                await browser.privacy.services.autofillEnabled.clear({});
                 return JSON.stringify({
                     settled: true,
                     passwords,
                     passwordsAfterSet,
                     cards,
-                    addresses
+                    addresses,
+                    autofill
                 });
             } catch (error) {
                 return JSON.stringify({
@@ -654,7 +662,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 "not_controllable"
             )
         }
-        for key in ["cards", "addresses"] {
+        for key in ["cards", "addresses", "autofill"] {
             let setting = try XCTUnwrap(result[key] as? [String: Any])
             XCTAssertEqual(setting["value"] as? Bool, false)
             XCTAssertEqual(
@@ -662,6 +670,532 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 "not_controllable"
             )
         }
+    }
+
+    func testNotificationsUseTheCrestCapabilityBroker() async throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-notifications-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Notifications Fixture",
+            "version": "1.0",
+            "permissions": ["nativeMessaging", "notifications"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["nativeMessaging", "notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            const requests = [];
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; },
+                        async sendNativeMessage(host, message) {
+                            requests.push({ host, message });
+                            switch (message.api) {
+                            case "notifications.create":
+                                return {
+                                    notificationIdentifier:
+                                        message.notificationIdentifier,
+                                    presented: true
+                                };
+                            case "notifications.getAll":
+                                return { notificationIdentifiers: ["saved"] };
+                            case "notifications.update":
+                                return { updated: true };
+                            case "notifications.clear":
+                                return { cleared: true };
+                            case "notifications.getPermissionLevel":
+                                return { level: "granted" };
+                            default:
+                                throw new Error(`Unexpected ${message.api}`);
+                            }
+                        }
+                    }
+                }
+            });
+            \(source)
+            const created = await browser.notifications.create("saved", {
+                type: "basic",
+                title: "Saved",
+                message: "The login was saved.",
+                buttons: [{ title: "Open" }]
+            });
+            const all = await browser.notifications.getAll();
+            const updated = await browser.notifications.update("saved", {
+                type: "basic",
+                title: "Updated",
+                message: "The saved login changed.",
+                buttons: [{ title: "Review" }]
+            });
+            const cleared = await browser.notifications.clear("saved");
+            const permission = await browser.notifications
+                .getPermissionLevel();
+            return JSON.stringify({
+                created,
+                all,
+                updated,
+                cleared,
+                permission,
+                requests
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(result["created"] as? String, "saved")
+        XCTAssertEqual(
+            result["all"] as? [String: Bool],
+            ["saved": true]
+        )
+        XCTAssertEqual(result["updated"] as? Bool, true)
+        XCTAssertEqual(result["cleared"] as? Bool, true)
+        XCTAssertEqual(result["permission"] as? String, "granted")
+        let requests = try XCTUnwrap(
+            result["requests"] as? [[String: Any]]
+        )
+        XCTAssertEqual(
+            requests.compactMap { request in
+                (request["message"] as? [String: Any])?["api"] as? String
+            },
+            [
+                "notifications.create",
+                "notifications.getAll",
+                "notifications.update",
+                "notifications.clear",
+                "notifications.getPermissionLevel",
+            ]
+        )
+        let createRequest = try XCTUnwrap(
+            requests.first?["message"] as? [String: Any]
+        )
+        XCTAssertEqual(
+            createRequest["notificationIdentifier"] as? String,
+            "saved"
+        )
+        XCTAssertEqual(createRequest["title"] as? String, "Saved")
+        XCTAssertEqual(
+            createRequest["message"] as? String,
+            "The login was saved."
+        )
+        XCTAssertEqual(
+            createRequest["buttonTitles"] as? [String],
+            ["Open"]
+        )
+        let updateRequest = try XCTUnwrap(
+            requests[2]["message"] as? [String: Any]
+        )
+        XCTAssertEqual(
+            updateRequest["notificationIdentifier"] as? String,
+            "saved"
+        )
+        XCTAssertEqual(updateRequest["title"] as? String, "Updated")
+        XCTAssertEqual(
+            updateRequest["message"] as? String,
+            "The saved login changed."
+        )
+        XCTAssertEqual(
+            updateRequest["buttonTitles"] as? [String],
+            ["Review"]
+        )
+    }
+
+    func testNotificationEventsUseTheCrestCapabilityBrokerPort()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-notification-events-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Notification Events Fixture",
+            "version": "1.0",
+            "permissions": ["nativeMessaging", "notifications"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["nativeMessaging", "notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            let receivedHost;
+            let receivedConfiguration;
+            let disconnectCount = 0;
+            const messageListeners = [];
+            const port = {
+                onMessage: {
+                    addListener(listener) { messageListeners.push(listener); }
+                },
+                onDisconnect: { addListener() {} },
+                postMessage(message) { receivedConfiguration = message; },
+                disconnect() { disconnectCount += 1; }
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; },
+                        connectNative(host) {
+                            receivedHost = host;
+                            return port;
+                        }
+                    }
+                }
+            });
+            \(source)
+            const clicked = [];
+            const buttonClicked = [];
+            const closed = [];
+            const clickedListener = (identifier) => clicked.push(identifier);
+            const buttonListener = (identifier, index) =>
+                buttonClicked.push([identifier, index]);
+            const closedListener = (identifier, byUser) =>
+                closed.push([identifier, byUser]);
+            browser.notifications.onClicked.addListener(clickedListener);
+            browser.notifications.onButtonClicked.addListener(buttonListener);
+            browser.notifications.onClosed.addListener(closedListener);
+            messageListeners[0]?.({
+                api: "notifications.event",
+                kind: "clicked",
+                notificationIdentifier: "saved"
+            });
+            messageListeners[0]?.({
+                api: "notifications.event",
+                kind: "buttonClicked",
+                notificationIdentifier: "saved",
+                buttonIndex: 1
+            });
+            messageListeners[0]?.({
+                api: "notifications.event",
+                kind: "closed",
+                notificationIdentifier: "saved",
+                byUser: true
+            });
+            const hadClickedListener = browser.notifications.onClicked
+                .hasListener(clickedListener);
+            browser.notifications.onClicked.removeListener(clickedListener);
+            browser.notifications.onButtonClicked.removeListener(
+                buttonListener
+            );
+            browser.notifications.onClosed.removeListener(closedListener);
+            return JSON.stringify({
+                receivedHost,
+                receivedConfiguration,
+                clicked,
+                buttonClicked,
+                closed,
+                hadClickedListener,
+                disconnectCount,
+                messageListenerCount: messageListeners.length
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(
+            result["receivedHost"] as? String,
+            "com.pauldavis.crest.webextension-compatibility"
+        )
+        XCTAssertEqual(
+            (result["receivedConfiguration"] as? [String: Any])?["api"]
+                as? String,
+            "notifications.watch"
+        )
+        XCTAssertEqual(result["clicked"] as? [String], ["saved"])
+        XCTAssertEqual(
+            result["buttonClicked"] as? [[AnyHashable]],
+            [["saved", 1]]
+        )
+        XCTAssertEqual(
+            result["closed"] as? [[AnyHashable]],
+            [["saved", true]]
+        )
+        XCTAssertEqual(result["hadClickedListener"] as? Bool, true)
+        XCTAssertEqual(result["disconnectCount"] as? Int, 1)
+        XCTAssertEqual(result["messageListenerCount"] as? Int, 1)
+    }
+
+    func testIdleStateUsesTheCrestCapabilityBroker() async throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-idle-state-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Idle State Fixture",
+            "version": "1.0",
+            "permissions": ["idle", "nativeMessaging"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["idle", "nativeMessaging"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            let receivedHost;
+            let receivedMessage;
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; },
+                        sendNativeMessage(host, message) {
+                            if (arguments.length !== 2) {
+                                throw new Error(
+                                    "Promise-style native messaging accepts two arguments."
+                                );
+                            }
+                            receivedHost = host;
+                            receivedMessage = message;
+                            return Promise.resolve({ state: "active" });
+                        }
+                    }
+                }
+            });
+            \(source)
+            const state = await browser.idle.queryState(300);
+            return JSON.stringify({
+                state,
+                receivedHost,
+                receivedMessage
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(result["state"] as? String, "active")
+        XCTAssertEqual(
+            result["receivedHost"] as? String,
+            "com.pauldavis.crest.webextension-compatibility"
+        )
+        let receivedMessage = try XCTUnwrap(
+            result["receivedMessage"] as? [String: Any]
+        )
+        XCTAssertEqual(receivedMessage["api"] as? String, "idle.queryState")
+        XCTAssertEqual(
+            receivedMessage["detectionIntervalInSeconds"] as? Int,
+            300
+        )
+    }
+
+    func testIdleStateChangeUsesTheCrestCapabilityBrokerPort() async throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-idle-event-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Idle Event Fixture",
+            "version": "1.0",
+            "permissions": ["idle", "nativeMessaging"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["idle", "nativeMessaging"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            let receivedHost;
+            let receivedConfiguration;
+            const messageListeners = [];
+            const disconnectListeners = [];
+            const port = {
+                onMessage: {
+                    addListener(listener) { messageListeners.push(listener); },
+                    removeListener(listener) {
+                        const index = messageListeners.indexOf(listener);
+                        if (index >= 0) messageListeners.splice(index, 1);
+                    }
+                },
+                onDisconnect: {
+                    addListener(listener) {
+                        disconnectListeners.push(listener);
+                    }
+                },
+                postMessage(message) { receivedConfiguration = message; },
+                disconnect() {}
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; },
+                        connectNative(host) {
+                            receivedHost = host;
+                            return port;
+                        }
+                    }
+                }
+            });
+            \(source)
+            let observedState;
+            browser.idle.onStateChanged.addListener((state) => {
+                observedState = state;
+            });
+            browser.idle.setDetectionInterval(45);
+            messageListeners[0]?.({ state: "idle" });
+            return JSON.stringify({
+                receivedHost,
+                receivedConfiguration,
+                observedState,
+                messageListenerCount: messageListeners.length
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(
+            result["receivedHost"] as? String,
+            "com.pauldavis.crest.webextension-compatibility"
+        )
+        let configuration = try XCTUnwrap(
+            result["receivedConfiguration"] as? [String: Any]
+        )
+        XCTAssertEqual(configuration["api"] as? String, "idle.watch")
+        XCTAssertEqual(
+            configuration["detectionIntervalInSeconds"] as? Int,
+            45
+        )
+        XCTAssertEqual(result["observedState"] as? String, "idle")
+        XCTAssertEqual(result["messageListenerCount"] as? Int, 1)
     }
 
     func testGeneratedCompatibilityRuntimeSuppliesStableRuntimeIdentityAndURLs()
@@ -789,6 +1323,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 sameRoot: chrome === browser,
                 sameRuntime: chrome.runtime === nativeRuntime,
                 sameI18n: chrome.i18n === nativeI18n,
+                manifestWorker:
+                    chrome.runtime.getManifest().background?.service_worker,
                 cancelledIdleCallbackRan,
                 idleDidTimeout: idleDeadline.didTimeout,
                 idleTimeRemaining: idleDeadline.timeRemaining(),
@@ -840,6 +1376,10 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["sameRoot"] as? Bool, true)
         XCTAssertEqual(result["sameRuntime"] as? Bool, true)
         XCTAssertEqual(result["sameI18n"] as? Bool, false)
+        XCTAssertEqual(
+            result["manifestWorker"] as? String,
+            "background.js"
+        )
         XCTAssertEqual(result["cancelledIdleCallbackRan"] as? Bool, false)
         XCTAssertEqual(result["idleDidTimeout"] as? Bool, false)
         XCTAssertGreaterThanOrEqual(
@@ -859,6 +1399,94 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["addedNavigationEvent"] as? String, "function")
         XCTAssertEqual(result["enumerableNavigationEvent"] as? Bool, true)
         XCTAssertEqual(result["nativeReceiver"] as? String, "native")
+    }
+
+    func testCompatibilityFacadeSurvivesNativeNamespaceRefresh() async throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-namespace-refresh-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Namespace Refresh Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["webNavigation"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            const nativeCommittedEvent = { receiver: "native-event" };
+            const nativeWebNavigation = {
+                onCommitted: nativeCommittedEvent
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; }
+                    },
+                    webNavigation: nativeWebNavigation
+                }
+            });
+            \(source)
+            const installedBeforeRefresh =
+                typeof chrome.webNavigation
+                    .onCreatedNavigationTarget?.addListener;
+            Reflect.deleteProperty(
+                nativeWebNavigation,
+                "onCreatedNavigationTarget"
+            );
+            return JSON.stringify({
+                installedBeforeRefresh,
+                installedAfterRefresh:
+                    typeof chrome.webNavigation
+                        .onCreatedNavigationTarget?.addListener,
+                preservedNativeEvent:
+                    chrome.webNavigation.onCommitted
+                        === nativeCommittedEvent
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(result["installedBeforeRefresh"] as? String, "function")
+        XCTAssertEqual(result["installedAfterRefresh"] as? String, "function")
+        XCTAssertEqual(result["preservedNativeEvent"] as? Bool, true)
     }
 
     func testStoredExtensionDirectoryIsCopiedBeforeCompatibilityIsApplied()
@@ -2520,6 +3148,7 @@ private final class AuditNativeMessagingHandler:
         _ message: Any,
         applicationIdentifier: String?,
         extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
         replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
@@ -2528,6 +3157,7 @@ private final class AuditNativeMessagingHandler:
     func connect(
         port: WKWebExtension.MessagePort,
         extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
         completionHandler(nil)

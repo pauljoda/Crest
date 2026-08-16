@@ -262,6 +262,14 @@ final class BrowserExtensionRuntimeContextController {
         if let nativeMessagingIdentity {
             tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
                 nativeMessagingIdentity,
+                authorization: BrowserExtensionNativeMessagingAuthorization(
+                    grantedPermissions: Set(
+                        permissionSnapshot.grantedPermissions.keys
+                    ),
+                    clientID: BrowserExtensionServiceClientID(
+                        runtimeIdentity.uniqueIdentifier
+                    )
+                ),
                 for: context
             )
         }

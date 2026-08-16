@@ -970,6 +970,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             ("Dark Reader", darkReaderSlug),
             ("uBlock Origin", "ublock-origin"),
             ("Bitwarden", "bitwarden-password-manager"),
+            ("1Password", "1password-x-password-manager"),
         ]
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -986,8 +987,13 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             ),
             registry: registry
         )
+        pool.setNativeMessagingHandler(
+            BrowserMozillaAddonsAuditNativeMessagingHandler()
+        )
         let space = BrowserSession.preview.spaces[0]
-        let provider = BrowserMozillaAddonsProvider()
+        let provider = BrowserMozillaAddonsProvider(
+            nativeMessagingCapability: .available
+        )
 
         for (name, slug) in addons {
             let item = try XCTUnwrap(
@@ -1284,5 +1290,31 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         let extensionID: BrowserMozillaExtensionID
         let archiveData: Data
         let sha256Hex: String
+    }
+}
+
+@MainActor
+private final class BrowserMozillaAddonsAuditNativeMessagingHandler:
+    BrowserExtensionNativeMessagingHandling
+{
+    let capability = BrowserExtensionNativeMessagingCapability.available
+
+    func sendMessage(
+        _ message: Any,
+        applicationIdentifier: String?,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        replyHandler: @escaping (Any?, Error?) -> Void
+    ) {
+        replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
+    }
+
+    func connect(
+        port: WKWebExtension.MessagePort,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }

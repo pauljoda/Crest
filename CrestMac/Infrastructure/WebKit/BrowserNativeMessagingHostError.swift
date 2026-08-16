@@ -3,6 +3,7 @@ import WebKit
 
 enum BrowserNativeMessagingHostError: LocalizedError, Equatable {
     case invalidHostName
+    case unnamedHostUnavailable
     case hostNotFound(String)
     case invalidManifest
     case originNotAllowed
@@ -16,6 +17,8 @@ enum BrowserNativeMessagingHostError: LocalizedError, Equatable {
         switch self {
         case .invalidHostName:
             "The extension requested an invalid native companion name."
+        case .unnamedHostUnavailable:
+            "Crest could not choose a unique native companion for this extension."
         case .hostNotFound(let name):
             "The native companion \(name) is not installed."
         case .invalidManifest:

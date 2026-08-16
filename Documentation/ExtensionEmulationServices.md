@@ -72,8 +72,8 @@ checks. It supports:
   receiver-safe `runtime.getURL`, empty-message i18n semantics even for a
   non-augmentable native namespace, idle-callback scheduling, optional
   navigation events, `webRequest.handlerBehaviorChanged()` acknowledgement,
-  and a document-backed offscreen-page adapter that uses the URL supplied by
-  the extension.
+  a document-backed offscreen-page adapter that uses the URL supplied by the
+  extension, and broker-backed `idle` and `notifications` APIs.
 
 For a Manifest V3 package that enters this layer, the temporary host manifest
 stays Manifest V3. Only its `background.service_worker` path is redirected to a
@@ -83,8 +83,11 @@ registration without changing the extension's context identity or storage.
 Only the temporary copy is prepared; verified store bytes are never rewritten.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
-The app-service broker described below is the next boundary to connect; until a
-service is connected, its local adapter must stay bounded or explicitly reject.
+The app-service broker currently connects system idle state and notifications.
+Every request is authorized from the verified loaded context, and persistent
+event ports select one permission-checked capability after connection. Until
+another app-side service is connected, its local adapter must stay bounded or
+explicitly reject.
 
 Chrome and Firefox packages intentionally remain distinct acquisition formats,
 not distinct compatibility runtimes. Chrome commonly supplies Manifest V3
@@ -122,6 +125,68 @@ native integration fixture covers content-to-background `runtime.sendMessage`,
 No extension source is inspected or patched, and no extension-specific
 transport exists.
 
+## Native companion broker
+
+WebKit owns the extension-side `runtime.sendNativeMessage()` and
+`runtime.connectNative()` objects. Crest implements the app delegate boundary
+by launching an already registered Chrome or Firefox native host and relaying
+their standard length-prefixed JSON protocol. This child process is the
+extension vendor's companion, not a Crest JavaScript interpreter and not an
+alternate extension engine.
+
+Host resolution is bound to the installation's verified store identity.
+Chrome manifests must contain the exact `chrome-extension://<id>/` origin and
+receive that origin as their first launch argument. Firefox manifests must
+contain the exact Gecko ID and receive the manifest path plus Gecko ID defined
+by Firefox's protocol. Unpacked packages never enter this broker.
+
+Some portable extensions call the native APIs with an empty application name,
+and WebKit then supplies no application identifier to its delegate. Crest may
+infer a host only from registered manifests in the corresponding browser's
+search order. Each candidate must be stored as `<name>.json`, declare the same
+name, explicitly allow the verified identity, and name an executable absolute
+path. A lower-priority duplicate does not bypass a higher-priority
+registration. Exactly one distinct authorized host must remain; otherwise the
+request is rejected. There is no vendor list or extension-specific fallback.
+
+This boundary is sufficient for 1Password's official `1Password-BrowserSupport`
+process. It is not sufficient for uBlock Origin because uBlock's missing
+contract is synchronous request cancellation and mutation inside the browser,
+not a background computation process.
+
+## Request interception broker — required, not implemented
+
+A JavaScript overlay cannot honestly implement blocking `webRequest`. The
+extension must synchronously decide whether a page resource is allowed,
+redirected, or modified before WebKit sends it, and response headers may need a
+second decision before delivery. Injecting hooks into the DOM occurs after the
+network boundary and cannot cover subresources, workers, redirects, or response
+headers reliably.
+
+Full uBlock Origin support therefore requires a native, permission-checked
+request interceptor with:
+
+1. one compiled policy snapshot per extension and Space;
+2. synchronous request and response decisions with bounded latency;
+3. exact `webRequest` listener filters, ordering, and extra-info semantics;
+4. cancellation, redirect, request-header, response-header, and authentication
+   outcomes;
+5. a cache invalidated by `handlerBehaviorChanged()`, filter updates,
+   permission changes, and extension unload;
+6. complete coverage for the main document, subresources, redirects, workers,
+   and extension-initiated traffic without escaping Space isolation;
+7. diagnostics that distinguish an unsupported action from a rule that simply
+   did not match.
+
+Orion's public Debug menu exposes both a **Policy Cache** for WebRequest
+blocking and a **Resource Interceptor**, which is strong evidence that its
+uBlock support also crosses this native request boundary. It does not disclose
+an implementation Crest can copy. Until Crest has a public WebKit hook capable
+of enforcing the contract—or deliberately maintains a reviewed WebKit fork—the
+full Firefox uBlock gate remains incomplete. A helper process can compile and
+evaluate policies, but it cannot intercept traffic by itself; the WebKit host
+still needs an enforceable request hook.
+
 ## App-side service layout
 
 Each service is a port protocol with an adapter behind it, and each has an
@@ -149,8 +214,12 @@ identifiers and so cannot name an unpacked development extension.
 
 ## Notifications — `chrome.notifications`
 
-`BrowserExtensionNotificationHandling` covers authorization, `create`, `clear`,
-`getAll`, and a per-extension `AsyncStream` of interactions.
+`BrowserExtensionNotificationHandling` covers authorization, `create`,
+`update`, `clear`, `getAll`, and a per-extension `AsyncStream` of interactions.
+The JavaScript surface maps those operations plus `getPermissionLevel`,
+`onClicked`, `onButtonClicked`, and `onClosed` through the shared capability
+broker. The extension and Space identity come from the verified WebKit context;
+extension JavaScript cannot choose another notification owner.
 
 The host notification center is addressed through a second, framework-neutral
 port, `BrowserExtensionNotificationCentering`. That split keeps the routing

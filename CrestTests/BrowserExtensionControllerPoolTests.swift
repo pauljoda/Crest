@@ -414,15 +414,29 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             withIntermediateDirectories: true
         )
         defer { try? fileManager.removeItem(at: extensionURL) }
+        let permissions = [
+            "alarms",
+            "contextMenus",
+            "downloads",
+            "idle",
+            "management",
+            "nativeMessaging",
+            "notifications",
+            "offscreen",
+            "privacy",
+            "scripting",
+            "storage",
+            "tabs",
+            "webNavigation",
+            "webRequest",
+            "webRequestAuthProvider",
+            "declarativeNetRequestWithHostAccess",
+        ]
         let manifest: [String: Any] = [
             "manifest_version": 3,
             "name": "Native Delegate Test",
             "version": "1.0",
-            "permissions": [
-                "nativeMessaging",
-                "storage",
-                "webNavigation",
-            ],
+            "permissions": permissions,
             "background": [
                 "service_worker": "background.js",
                 "type": "module",
@@ -433,10 +447,67 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         try Data(
             """
+            const immediateChromeCreatedNavigationTarget =
+                typeof chrome.webNavigation
+                    ?.onCreatedNavigationTarget?.addListener;
             const stored = await browser.storage.local.get();
+            await new Promise((resolve) => setTimeout(resolve, 250));
             await browser.runtime.sendNativeMessage(
                 'com.example.echo',
-                { ping: 'pong', storedKeys: Object.keys(stored).length }
+                {
+                    ping: 'pong',
+                    storedKeys: Object.keys(stored).length,
+                    browserCreatedNavigationTarget:
+                        typeof browser.webNavigation
+                            .onCreatedNavigationTarget?.addListener,
+                    chromeCreatedNavigationTarget:
+                        typeof chrome.webNavigation
+                            .onCreatedNavigationTarget?.addListener,
+                    immediateChromeCreatedNavigationTarget,
+                    manifestVersion:
+                        browser.runtime.getManifest().manifest_version,
+                    capabilities: {
+                        managedStorage:
+                            typeof browser.storage.managed?.get,
+                        sessionStorage:
+                            typeof browser.storage.session?.get,
+                        managementSelf:
+                            typeof browser.management?.getSelf,
+                        notificationCreate:
+                            typeof chrome.notifications?.create,
+                        notificationClick:
+                            typeof chrome.notifications?.onClicked
+                                ?.addListener,
+                        offscreenCreate:
+                            typeof chrome.offscreen?.createDocument,
+                        passwordSavingPreference:
+                            typeof chrome.privacy?.services
+                                ?.passwordSavingEnabled?.get,
+                        hostAccessRequest:
+                            typeof chrome.permissions
+                                ?.addHostAccessRequest,
+                        requestIdleCallback:
+                            typeof globalThis.requestIdleCallback,
+                        serviceWorkerClients:
+                            typeof globalThis.clients?.matchAll,
+                        requestCacheFlush:
+                            typeof chrome.webRequest
+                                ?.handlerBehaviorChanged,
+                        authRequestEvent:
+                            typeof browser.webRequest?.onAuthRequired
+                                ?.addListener,
+                        idleState:
+                            typeof browser.idle?.queryState,
+                        actionSettings:
+                            typeof chrome.action?.getUserSettings,
+                        shadowRootAccess:
+                            typeof chrome.dom?.openOrClosedShadowRoot,
+                        navigationAllFrames:
+                            typeof browser.webNavigation?.getAllFrames,
+                        navigationFrame:
+                            typeof browser.webNavigation?.getFrame
+                    }
+                }
             );
             """.utf8
         ).write(to: extensionURL.appending(path: "background.js"))
@@ -462,11 +533,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             try BrowserWebExtensionCompatibilityPackagePreparer()
                 .installCompatibilityLayer(
                     in: extensionURL,
-                    requestedPermissions: [
-                        "nativeMessaging",
-                        "storage",
-                        "webNavigation",
-                    ],
+                    requestedPermissions: permissions,
                     runtimeIdentity: BrowserExtensionRuntimeIdentity(
                         extensionID: extensionID.rawValue,
                         uniqueIdentifier: "native-delegate-test",
@@ -480,7 +547,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 )
         )
 
-        _ = try await pool.loadExtension(
+        let loadedContext = try await pool.loadExtension(
             at: extensionURL,
             extensionID: extensionID.rawValue,
             in: BrowserSession.preview.spaces[0],
@@ -488,11 +555,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             permissionSnapshot:
                 BrowserExtensionInstallationPermissionPolicy
                 .reviewedRequiredAccess(
-                    permissions: [
-                        "nativeMessaging",
-                        "storage",
-                        "webNavigation",
-                    ],
+                    permissions: permissions,
                     hosts: []
                 )
         )
@@ -501,12 +564,248 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(handler.hostName, "com.example.echo")
         XCTAssertEqual(handler.extensionID, extensionID)
         XCTAssertEqual(
+            handler.authorization?.grantedPermissions,
+            Set(permissions)
+        )
+        XCTAssertEqual(
+            handler.authorization?.clientID?.rawValue,
+            loadedContext.uniqueIdentifier
+        )
+        XCTAssertEqual(
             (handler.message as? [String: Any])?["ping"] as? String,
             "pong"
         )
         XCTAssertEqual(
             (handler.message as? [String: Any])?["storedKeys"] as? Int,
             0
+        )
+        XCTAssertEqual(
+            (handler.message as? [String: Any])?[
+                "browserCreatedNavigationTarget"
+            ] as? String,
+            "function"
+        )
+        XCTAssertEqual(
+            (handler.message as? [String: Any])?[
+                "chromeCreatedNavigationTarget"
+            ] as? String,
+            "function"
+        )
+        XCTAssertEqual(
+            (handler.message as? [String: Any])?[
+                "immediateChromeCreatedNavigationTarget"
+            ] as? String,
+            "function"
+        )
+        XCTAssertEqual(
+            (handler.message as? [String: Any])?["manifestVersion"] as? Int,
+            3
+        )
+        let capabilities = try XCTUnwrap(
+            (handler.message as? [String: Any])?["capabilities"]
+                as? [String: String]
+        )
+        for (name, kind) in capabilities {
+            XCTAssertEqual(kind, "function", "Missing capability: \(name)")
+        }
+    }
+
+    func testMappedIdleEventTraversesTheVerifiedCapabilityBroker()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-idle-capability-extension-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        let permissions = ["idle", "nativeMessaging"]
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Idle Capability Test",
+            "version": "1.0",
+            "permissions": permissions,
+            "background": ["service_worker": "background.js"],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: extensionURL.appending(path: "manifest.json")
+        )
+        try Data(
+            """
+            browser.idle.onStateChanged.addListener(async (state) => {
+                await browser.runtime.sendNativeMessage(
+                    "com.example.idle_capture",
+                    { state }
+                );
+            });
+            browser.idle.setDetectionInterval(45);
+            """.utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer()
+                .installCompatibilityLayer(
+                    in: extensionURL,
+                    requestedPermissions: permissions,
+                    runtimeIdentity: BrowserExtensionRuntimeIdentity(
+                        extensionID: extensionID.rawValue,
+                        uniqueIdentifier: "idle-capability-test",
+                        baseURL: try XCTUnwrap(
+                            URL(
+                                string:
+                                    "crest-extension://idle-capability-test/"
+                            )
+                        )
+                    )
+                )
+        )
+        let handler = IdleCapabilityBrokerHandler()
+        let pool = BrowserExtensionControllerPool()
+        pool.setNativeMessagingHandler(handler)
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: try XCTUnwrap(
+                    URL(
+                        string: "https://chromewebstore.google.com/detail/test/\(extensionID.rawValue)"
+                    )
+                ),
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+
+        _ = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID.rawValue,
+            in: BrowserSession.preview.spaces[0],
+            source: source,
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: permissions,
+                    hosts: []
+                )
+        )
+        await fulfillment(of: [handler.receivedState], timeout: 5)
+
+        XCTAssertEqual(handler.hostName, "com.example.idle_capture")
+        XCTAssertEqual(handler.state, "idle")
+        XCTAssertEqual(
+            handler.authorization?.grantedPermissions,
+            Set(permissions)
+        )
+    }
+
+    func testMappedNotificationEventTraversesTheVerifiedCapabilityBroker()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-notification-capability-extension-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        let permissions = ["nativeMessaging", "notifications"]
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Notification Capability Test",
+            "version": "1.0",
+            "permissions": permissions,
+            "background": ["service_worker": "background.js"],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: extensionURL.appending(path: "manifest.json")
+        )
+        try Data(
+            """
+            browser.notifications.onClicked.addListener(async (identifier) => {
+                await browser.runtime.sendNativeMessage(
+                    "com.example.notification_capture",
+                    { identifier }
+                );
+            });
+            browser.notifications.create("saved", {
+                type: "basic",
+                title: "Saved",
+                message: "The login was saved."
+            });
+            """.utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer()
+                .installCompatibilityLayer(
+                    in: extensionURL,
+                    requestedPermissions: permissions,
+                    runtimeIdentity: BrowserExtensionRuntimeIdentity(
+                        extensionID: extensionID.rawValue,
+                        uniqueIdentifier: "notification-capability-test",
+                        baseURL: try XCTUnwrap(
+                            URL(
+                                string:
+                                    "crest-extension://notification-capability-test/"
+                            )
+                        )
+                    )
+                )
+        )
+        let handler = NotificationCapabilityBrokerHandler()
+        let pool = BrowserExtensionControllerPool()
+        pool.setNativeMessagingHandler(handler)
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: try XCTUnwrap(
+                    URL(
+                        string: "https://chromewebstore.google.com/detail/test/\(extensionID.rawValue)"
+                    )
+                ),
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+
+        let loadedContext = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID.rawValue,
+            in: BrowserSession.preview.spaces[0],
+            source: source,
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: permissions,
+                    hosts: []
+                )
+        )
+        await fulfillment(of: [handler.createdNotification], timeout: 5)
+        try handler.simulateClick()
+        await fulfillment(of: [handler.receivedClick], timeout: 5)
+
+        XCTAssertEqual(handler.clickedIdentifier, "saved")
+        XCTAssertEqual(
+            handler.authorization?.grantedPermissions,
+            Set(permissions)
+        )
+        XCTAssertEqual(
+            handler.authorization?.clientID?.rawValue,
+            loadedContext.uniqueIdentifier
         )
     }
 
@@ -2077,7 +2376,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                     try JSONSerialization.jsonObject(with: data)
                     as? [String: Any]
                 if response?["reverseResponse"] as? String
-                    == "reverse-complete"
+                    == "reverse-complete",
+                    response?["stage"] as? String == "background-received"
                 {
                     break
                 }
@@ -2314,16 +2614,19 @@ private final class NativeMessagingHandlerSpy:
     private(set) var hostName: String?
     private(set) var extensionID: BrowserChromeExtensionID?
     private(set) var extensionIdentity: BrowserExtensionNativeMessagingIdentity?
+    private(set) var authorization: BrowserExtensionNativeMessagingAuthorization?
 
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
         extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
         self.message = message
         hostName = applicationIdentifier
         self.extensionIdentity = extensionIdentity
+        self.authorization = authorization
         if case .chromeWebStore(let extensionID) = extensionIdentity {
             self.extensionID = extensionID
         }
@@ -2334,9 +2637,156 @@ private final class NativeMessagingHandlerSpy:
     func connect(
         port _: WKWebExtension.MessagePort,
         extensionIdentity _: BrowserExtensionNativeMessagingIdentity,
+        authorization _: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
         completionHandler(nil)
+    }
+}
+
+@MainActor
+private final class IdleCapabilityBrokerHandler:
+    BrowserExtensionNativeMessagingHandling
+{
+    let capability = BrowserExtensionNativeMessagingCapability.available
+    let receivedState = XCTestExpectation(
+        description: "Mapped idle state change"
+    )
+    private let broker = BrowserNativeMessagingService(
+        capability: .available,
+        resolver: BrowserNativeMessagingHostManifestResolver(
+            searchDirectories: []
+        ),
+        idleStateProvider: { _ in .idle }
+    )
+    private(set) var hostName: String?
+    private(set) var state: String?
+    private(set) var authorization:
+        BrowserExtensionNativeMessagingAuthorization?
+
+    func sendMessage(
+        _ message: Any,
+        applicationIdentifier: String?,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        replyHandler: @escaping (Any?, Error?) -> Void
+    ) {
+        if applicationIdentifier
+            == BrowserNativeMessagingService.capabilityBrokerIdentifier
+        {
+            broker.sendMessage(
+                message,
+                applicationIdentifier: applicationIdentifier,
+                extensionIdentity: extensionIdentity,
+                authorization: authorization,
+                replyHandler: replyHandler
+            )
+            return
+        }
+        hostName = applicationIdentifier
+        state = (message as? [String: Any])?["state"] as? String
+        self.authorization = authorization
+        replyHandler(["received": true], nil)
+        receivedState.fulfill()
+    }
+
+    func connect(
+        port: WKWebExtension.MessagePort,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        broker.connect(
+            port: port,
+            extensionIdentity: extensionIdentity,
+            authorization: authorization,
+            completionHandler: completionHandler
+        )
+    }
+}
+
+@MainActor
+private final class NotificationCapabilityBrokerHandler:
+    BrowserExtensionNativeMessagingHandling
+{
+    let capability = BrowserExtensionNativeMessagingCapability.available
+    let createdNotification = XCTestExpectation(
+        description: "Mapped notification created"
+    )
+    let receivedClick = XCTestExpectation(
+        description: "Mapped notification click"
+    )
+    private let center = InMemoryBrowserExtensionNotificationCenter()
+    private lazy var broker = BrowserNativeMessagingService(
+        capability: .available,
+        resolver: BrowserNativeMessagingHostManifestResolver(
+            searchDirectories: []
+        ),
+        notificationService: BrowserExtensionNotificationService(
+            center: center
+        ),
+        idleStateProvider: { _ in .active }
+    )
+    private(set) var clickedIdentifier: String?
+    private(set) var authorization:
+        BrowserExtensionNativeMessagingAuthorization?
+
+    func sendMessage(
+        _ message: Any,
+        applicationIdentifier: String?,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        replyHandler: @escaping (Any?, Error?) -> Void
+    ) {
+        if applicationIdentifier
+            == BrowserNativeMessagingService.capabilityBrokerIdentifier
+        {
+            broker.sendMessage(
+                message,
+                applicationIdentifier: applicationIdentifier,
+                extensionIdentity: extensionIdentity,
+                authorization: authorization
+            ) { [weak self] value, error in
+                if (message as? [String: Any])?["api"] as? String
+                    == "notifications.create"
+                {
+                    self?.createdNotification.fulfill()
+                }
+                replyHandler(value, error)
+            }
+            return
+        }
+        clickedIdentifier =
+            (message as? [String: Any])?["identifier"] as? String
+        self.authorization = authorization
+        replyHandler(["received": true], nil)
+        receivedClick.fulfill()
+    }
+
+    func connect(
+        port: WKWebExtension.MessagePort,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        authorization: BrowserExtensionNativeMessagingAuthorization,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
+        broker.connect(
+            port: port,
+            extensionIdentity: extensionIdentity,
+            authorization: authorization,
+            completionHandler: completionHandler
+        )
+    }
+
+    func simulateClick() throws {
+        let systemIdentifier = try XCTUnwrap(
+            center.deliveries.first?.systemIdentifier
+        )
+        center.simulate(
+            BrowserExtensionNotificationSystemEvent(
+                systemIdentifier: systemIdentifier,
+                kind: .clicked
+            )
+        )
     }
 }
 

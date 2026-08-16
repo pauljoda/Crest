@@ -187,6 +187,14 @@ boundary.
   follow the corresponding published protocol. Both formats then use the same
   little-endian framed JSON transport for one-shot `sendNativeMessage` calls
   and persistent `connectNative` ports.
+- WebKit can deliver a native-message request without an application identifier
+  when the extension intentionally passes an empty string. Crest handles that
+  portable form without guessing: it enumerates registered `<name>.json`
+  manifests in browser search order, requires the filename and internal name to
+  agree, filters them by the verified extension identity, and proceeds only
+  when exactly one host remains. Zero matches or an ambiguous result fail
+  closed. Crest never selects a companion from its executable name, bundle
+  identifier, extension name, or vendor.
 - Unpacked extensions are never eligible for native messaging because their
   identity is not store-verified.
 - Safari app-extension native handlers are not portable to Crest. When a
@@ -242,6 +250,23 @@ Every defect discovered by these gates must become a capability-based fixture.
 Neither extension ID, package name, nor a literal patch to vendor source is an
 acceptable compatibility mechanism.
 
+### Completion map
+
+| Gate | Current evidence | Remaining proof or implementation |
+| --- | --- | --- |
+| 1Password package and background | Chrome 8.12.32.33 and Firefox 8.12.32.33 both verify, install, and complete an isolated startup audit without a manifest, runtime, or unsupported-API error; Chrome uses an MV3 worker and Firefox uses an MV2 background page | Keep both packages in the audit; prefer Chrome while its CRX3 provenance and automatic update path remain stronger |
+| 1Password native companion | The Developer ID app launches the registered helper as Crest's child with the verified Chrome origin; framed one-shot and persistent transports have focused fixtures | Finish 1Password's explicit trust authorization, then prove unlocked account discovery and a persistent Port |
+| 1Password popup and page integration | The popup no longer stops on the earlier missing managed-storage, manifest, or navigation members; content scripts are injected at document start | Render a real unlocked popup, search an account, fill and save fields, close/reopen the popup, and repeat after restarting Crest |
+| 1Password passkeys | The package's main-world WebAuthn listeners load and no longer fail at the earlier missing preference surface | Prove create/get interception, user cancellation, system-passkey fallback, and a real saved passkey after the desktop connection is trusted; separately retest native website passkeys when Apple grants Crest's managed browser entitlement |
+| uBlock MV2 runtime and UI | Firefox 1.73.0 background page starts, popup-to-background communication works, and the popup displays live statistics and controls | Exercise dashboard, logger, settings, filter updates, restoration, and cosmetic filtering after the blocking boundary exists |
+| uBlock request enforcement | WebKit exposes the permission and some observation events; the test page shows partial blocking only | Implement an enforceable native request/response interceptor and policy cache, or maintain a reviewed WebKit fork; a JavaScript shim or detached helper alone cannot complete this gate |
+
+The 1Password path does not need a Crest interpreter process. Its official
+`1Password-BrowserSupport` executable is already the correct background
+process. A future uBlock policy evaluator could run out of process for isolation
+and compilation cost, but the browser process would still need a synchronous,
+permission-aware hook into WebKit's request lifecycle.
+
 ## 1Password live validation
 
 The signed Chrome Web Store package for 1Password 8.12.32.33 now reaches the
@@ -251,6 +276,17 @@ session storage, loaded its WASM and XAM components, finished background
 initialization, and sent its account request through Crest's native-messaging
 port. The earlier missing `storage.managed`, `runtime.getManifest()`, passkey,
 and `webNavigation.onCreatedNavigationTarget` members no longer stop startup.
+
+In the Developer ID build installed at `/Applications/Crest.app`, that request
+launches 1Password's registered `1Password-BrowserSupport` executable as a
+direct child of Crest with the exact allowlisted
+`chrome-extension://aeblfdkhhhdcdjpifhhbdiojplfjncoa/` origin. Re-adding the
+current signed app through 1Password's **Add Browser** flow opens a chooser that
+recognizes `/Applications/Crest.app`, but Crest has not yet been added to
+1Password's trusted additional browsers. Account discovery, popup unlock, field
+fill, and restart restoration therefore remain pending. Selecting the app is a
+security-sensitive, persistent grant to the unlocked vault and must be approved
+explicitly by the person using the Mac.
 
 1Password then deliberately rejected the unsigned development copy with
 `BrowserVerificationFailed` / `UnknownBrowser`. This is not a WebExtension API
@@ -526,7 +562,7 @@ Evidence, gathered August 13, 2026:
 
 ## Popular-extension audit
 
-The following signed Chrome Web Store packages were audited on August 10, 2026.
+The following signed Chrome Web Store packages were audited on August 16, 2026.
 Each package verified, installed into an isolated Space, and loaded. "Loads
 cleanly" means no startup error was observed; it does not certify every account,
 site, popup, update, or optional workflow.
@@ -534,11 +570,11 @@ site, popup, update, or optional workflow.
 | Extension | Version tested | Initial result | Measured boundary |
 | --- | --- | --- | --- |
 | Dark Reader | 4.9.129 | Loads cleanly | Installs unmodified; live page attachment and popup reopen verified separately |
-| uBlock Origin Lite | 2026.804.1652 | Loads cleanly | Declarative Net Request package loaded without a startup error |
+| uBlock Origin Lite | 2026.812.1211 | Loads cleanly | Declarative Net Request package loaded without a startup error |
 | 1Password | 8.12.32.33 | Worker clean / signed-browser authorization pending | The generic MV3 worker reaches 1Password's native core and sends its account request. An unsigned development copy is rejected as `UnknownBrowser`; the installed Developer ID build must be added through 1Password's supported **Add Browser** flow before popup and field-fill certification |
 | SponsorBlock | 6.1.6 | Loads cleanly | No manifest or startup runtime error observed |
-| Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load; notification-click handling is unsupported by WebKit, and account unlock/autofill has not been certified |
-| Grammarly | 14.1319.0 | Partial / experimental | Managed storage plus cookie and telemetry limits are reported |
+| Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load. Crest now supplies the missing notification lifecycle and click events through its verified capability broker; account unlock/autofill has not been certified |
+| Grammarly | 14.1320.0 | Partial / experimental | The worker loads; account-cookie access and an initial tab-creation request still report runtime failures |
 | React Developer Tools | 7.0.1 | Partial / experimental | `chrome.scripting.ExecutionWorld.ISOLATED` is unavailable |
 | Tampermonkey | 5.5.0 | Partial / experimental | WebKit rejects its `tabs.onUpdated` startup registration. Crest now reports loading and reader-mode changes to that event, but the rejected registration is a WebKit boundary and is unchanged |
 | iCloud Passwords | 3.3.0 | Blocked / Apple entitlement pending | The worker loads through the generic capability runtime, but Apple's password helper rejects the current unsigned-capability parent; pairing and autofill require the managed browser credential entitlement |
@@ -552,6 +588,37 @@ what WebKit implements natively. Firefox packages still enter the same
 capability-selected overlay as Chrome packages when WebKit omits a requested
 standard API. Crest does not maintain a second Firefox shim or select behavior
 from a vendor or extension ID.
+
+### Choosing a Chrome or Firefox package
+
+Crest should not declare either store universally primary. Source is a product
+of package shape, required APIs, provenance, and update support:
+
+- Prefer a Firefox package when its maintained Manifest V2 background document
+  materially avoids a Manifest V3 service-worker lifecycle problem, or when it
+  is the only maintained full-featured package, as with uBlock Origin.
+- Prefer a Chrome package when its CRX3 signature and Crest's automatic update
+  path are more important and the extension's Manifest V3 worker is already
+  proven in WebKit.
+- Present both when both are available and record compatibility by exact source
+  and version. A pass for one package is not evidence that the other passes.
+
+The current 1Password 8.12.32.33 packages contain the same application code and
+use the same WebExtension APIs. The Firefox package changes the host shape to a
+Manifest V2 `background.page` and adds `webRequestBlocking`; it still needs
+native messaging, page injection, WebAuthn interception, notifications, tabs,
+and navigation. 1Password installs matching native-host manifests for both the
+Chrome ID and Firefox Gecko ID. In the August 16 isolated audits, both packages
+started without a manifest, runtime, or unsupported-API error. Firefox is
+therefore a useful secondary lifecycle gate, not a demonstrated compatibility
+advantage for 1Password and not a substitute for the person's explicit browser
+authorization.
+
+Firefox cannot become Crest's default acquisition path until the remaining
+provenance and update gaps are closed. Crest currently verifies the AMO API's
+TLS-delivered digest, size, identity, and presence of Mozilla signing material,
+but does not yet cryptographically validate the complete signed XPI entry graph
+and does not automatically update Firefox installations.
 
 ### How acquisition is verified
 
@@ -629,7 +696,7 @@ installation. Expect the following to be unavailable:
 ### Firefox package audit
 
 The following listings were acquired, verified, installed into an isolated
-Space, and loaded on August 13, 2026 by
+Space, and loaded on August 16, 2026 by
 `BrowserMozillaAddonsTests.testLiveFirefoxAddonVerifiesInspectsAndLoadsWhenEnabled`.
 "Loads cleanly" means no startup error was observed; it does not certify every
 account, site, popup, update, or optional workflow.
@@ -637,8 +704,9 @@ account, site, popup, update, or optional workflow.
 | Extension | Version tested | Initial result | Measured boundary |
 | --- | --- | --- | --- |
 | Dark Reader | 4.9.129 | Loads cleanly | No manifest or runtime error observed, and no unsupported API reported |
-| uBlock Origin | 1.73.0 | Partial / experimental | WebKit rejects an entry in its `commands` manifest entry, and its background script fails at `vAPI.getURL('').slice`. Its `webRequest` blocking model is not implemented by WebKit |
-| Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load; notification-click handling is unsupported by WebKit. The Firefox build does not request `nativeMessaging`, so it is not blocked before installation |
+| uBlock Origin | 1.73.0 | Partial / experimental | The shared runtime now gets the MV2 background page and popup running; the popup displayed live page statistics and working controls. On the August 16 ad-block test, uBlock reported 89 blocked requests while the page itself confirmed only 33 of 132 tests blocked and still displayed an ad. Full cancellation, redirect, header modification, filter-list behavior, and cosmetic blocking remain uncertified because WebKit does not provide uBlock's blocking `webRequest` contract |
+| Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load, and Crest supplies the missing notification lifecycle and click events through its verified capability broker. The Firefox build does not request `nativeMessaging`; account unlock/autofill remains uncertified |
+| 1Password | 8.12.32.33 | Background clean / signed-browser authorization pending | The MV2 background page loads without a manifest, runtime, or unsupported-API error. Its Firefox native-host registration matches the package's Gecko ID; the same explicit 1Password browser trust and real popup, fill, save, restart, and passkey validation remain required |
 
 The audit is opt-in for the same reason the Chrome one is: it downloads current
 external packages and is not deterministic enough for the ordinary unit-test

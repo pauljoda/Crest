@@ -4,6 +4,343 @@ import XCTest
 
 final class BrowserNativeMessagingTests: XCTestCase {
     @MainActor
+    func testCrestCapabilityBrokerAnswersIdleStateWithoutAnExternalHost()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        var receivedInterval: TimeInterval?
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            ),
+            idleStateProvider: { interval in
+                receivedInterval = interval
+                return .idle
+            }
+        )
+        let response = expectation(description: "Crest capability response")
+        var received: Any?
+        var receivedError: Error?
+
+        service.sendMessage(
+            [
+                "api": "idle.queryState",
+                "detectionIntervalInSeconds": 300,
+            ],
+            applicationIdentifier:
+                "com.pauldavis.crest.webextension-compatibility",
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["idle", "nativeMessaging"]
+            )
+        ) { value, error in
+            received = value
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 1)
+
+        XCTAssertNil(receivedError)
+        XCTAssertEqual(receivedInterval, 300)
+        XCTAssertEqual(
+            (received as? [String: String])?["state"],
+            "idle"
+        )
+    }
+
+    @MainActor
+    func testCrestCapabilityBrokerRequiresTheMappedExtensionPermission()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            ),
+            idleStateProvider: { _ in .active }
+        )
+        let response = expectation(description: "Denied capability response")
+        var received: Any?
+        var receivedError: Error?
+
+        service.sendMessage(
+            [
+                "api": "idle.queryState",
+                "detectionIntervalInSeconds": 300,
+            ],
+            applicationIdentifier:
+                "com.pauldavis.crest.webextension-compatibility",
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["nativeMessaging"]
+            )
+        ) { value, error in
+            received = value
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 1)
+
+        XCTAssertNil(received)
+        XCTAssertEqual(
+            receivedError as? BrowserExtensionCapabilityBrokerError,
+            .permissionDenied("idle")
+        )
+    }
+
+    @MainActor
+    func testIdleWatchPublishesOnlyRealStateTransitions() throws {
+        var sampledInterval: TimeInterval?
+        var sampledState = BrowserExtensionSystemIdleState.active
+        var publishedStates: [String] = []
+        let watch = BrowserExtensionIdleWatch(
+            stateProvider: { interval in
+                sampledInterval = interval
+                return sampledState
+            },
+            publish: { message in
+                if let state = message["state"] as? String {
+                    publishedStates.append(state)
+                }
+            }
+        )
+
+        try watch.configure(
+            [
+                "api": "idle.watch",
+                "detectionIntervalInSeconds": 45,
+            ]
+        )
+        XCTAssertEqual(sampledInterval, 45)
+        XCTAssertEqual(publishedStates, ["active"])
+
+        watch.publishCurrentState()
+        XCTAssertEqual(publishedStates, ["active"])
+
+        sampledState = .idle
+        watch.publishCurrentState()
+        XCTAssertEqual(publishedStates, ["active", "idle"])
+
+        sampledState = .locked
+        watch.publishCurrentState()
+        XCTAssertEqual(publishedStates, ["active", "idle", "locked"])
+    }
+
+    @MainActor
+    func testCrestCapabilityBrokerRoutesNotificationsByVerifiedClient()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let clientID = try XCTUnwrap(
+            BrowserExtensionServiceClientID("extension.space")
+        )
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let notificationService = BrowserExtensionNotificationService(
+            center: center
+        )
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            ),
+            notificationService: notificationService,
+            idleStateProvider: { _ in .active }
+        )
+        let response = expectation(description: "Notification response")
+        var received: Any?
+        var receivedError: Error?
+
+        service.sendMessage(
+            [
+                "api": "notifications.create",
+                "notificationIdentifier": "saved-item",
+                "title": "Saved",
+                "message": "The login was saved.",
+                "buttonTitles": ["Open"],
+            ],
+            applicationIdentifier:
+                BrowserNativeMessagingService.capabilityBrokerIdentifier,
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["nativeMessaging", "notifications"],
+                clientID: clientID
+            )
+        ) { value, error in
+            received = value
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 1)
+
+        XCTAssertNil(receivedError)
+        XCTAssertEqual(
+            (received as? [String: Any])?["notificationIdentifier"] as? String,
+            "saved-item"
+        )
+        let delivery = try XCTUnwrap(center.deliveries.first)
+        XCTAssertEqual(delivery.title, "Saved")
+        XCTAssertEqual(delivery.body, "The login was saved.")
+        XCTAssertEqual(delivery.buttonTitles, ["Open"])
+        XCTAssertEqual(
+            delivery.threadIdentifier,
+            BrowserExtensionNotificationIdentityCodec.threadIdentifier(
+                for: clientID
+            )
+        )
+    }
+
+    @MainActor
+    func testCrestCapabilityBrokerSupportsTheNotificationLifecycle()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let clientID = try XCTUnwrap(
+            BrowserExtensionServiceClientID("extension.space")
+        )
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let notificationService = BrowserExtensionNotificationService(
+            center: center
+        )
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            ),
+            notificationService: notificationService,
+            idleStateProvider: { _ in .active }
+        )
+        let authorization = BrowserExtensionNativeMessagingAuthorization(
+            grantedPermissions: ["nativeMessaging", "notifications"],
+            clientID: clientID
+        )
+
+        let create = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.create",
+                "notificationIdentifier": "saved-item",
+                "title": "Saved",
+                "message": "The login was saved.",
+                "buttonTitles": ["Open"],
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(create.error)
+
+        let getAll = await capabilityResponse(
+            from: service,
+            message: ["api": "notifications.getAll"],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(getAll.error)
+        XCTAssertEqual(
+            (getAll.value as? [String: Any])?["notificationIdentifiers"]
+                as? [String],
+            ["saved-item"]
+        )
+
+        let permission = await capabilityResponse(
+            from: service,
+            message: ["api": "notifications.getPermissionLevel"],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(permission.error)
+        XCTAssertEqual(
+            (permission.value as? [String: String])?["level"],
+            "granted"
+        )
+
+        let update = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.update",
+                "notificationIdentifier": "saved-item",
+                "title": "Updated",
+                "message": "The login changed.",
+                "buttonTitles": [],
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(update.error)
+        XCTAssertEqual(
+            (update.value as? [String: Bool])?["updated"],
+            true
+        )
+        XCTAssertEqual(center.deliveries.first?.title, "Updated")
+
+        let missingUpdate = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.update",
+                "notificationIdentifier": "missing",
+                "title": "Missing",
+                "message": "Not presented.",
+                "buttonTitles": [],
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(missingUpdate.error)
+        XCTAssertEqual(
+            (missingUpdate.value as? [String: Bool])?["updated"],
+            false
+        )
+
+        let clear = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.clear",
+                "notificationIdentifier": "saved-item",
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(clear.error)
+        XCTAssertEqual(
+            (clear.value as? [String: Bool])?["cleared"],
+            true
+        )
+        XCTAssertTrue(center.deliveries.isEmpty)
+
+        let clearAgain = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.clear",
+                "notificationIdentifier": "saved-item",
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(clearAgain.error)
+        XCTAssertEqual(
+            (clearAgain.value as? [String: Bool])?["cleared"],
+            false
+        )
+    }
+
+    @MainActor
     func testMacBuildExchangesAFramedMessageWithACompanionProcess()
         async throws
     {
@@ -278,6 +615,297 @@ final class BrowserNativeMessagingTests: XCTestCase {
                 .originNotAllowed
             )
         }
+    }
+
+    @MainActor
+    private func capabilityResponse(
+        from service: BrowserNativeMessagingService,
+        message: [String: Any],
+        extensionID: BrowserChromeExtensionID,
+        authorization: BrowserExtensionNativeMessagingAuthorization
+    ) async -> (value: Any?, error: Error?) {
+        let reply = expectation(description: "Capability broker response")
+        var receivedValue: Any?
+        var receivedError: Error?
+        service.sendMessage(
+            message,
+            applicationIdentifier:
+                BrowserNativeMessagingService.capabilityBrokerIdentifier,
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: authorization
+        ) { value, error in
+            receivedValue = value
+            receivedError = error
+            reply.fulfill()
+        }
+        await fulfillment(of: [reply], timeout: 1)
+        return (receivedValue, receivedError)
+    }
+
+    func testResolverSelectsTheOnlyAllowedHostForAnUnnamedChromeRequest()
+        throws
+    {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-unnamed-native-host-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = root.appending(path: "host")
+        try Data("#!/bin/sh\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let manifest: [String: Any] = [
+            "name": "com.example.allowed",
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_origins": [
+                "chrome-extension://\(extensionID.rawValue)/"
+            ],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "com.example.allowed.json")
+        )
+        let resolver = BrowserNativeMessagingHostManifestResolver(
+            searchDirectories: [root]
+        )
+
+        let resolved = try resolver.resolve(
+            hostName: "",
+            extensionID: extensionID
+        )
+
+        XCTAssertEqual(resolved.name, "com.example.allowed")
+        XCTAssertEqual(resolved.executableURL, executable)
+        XCTAssertEqual(
+            resolved.arguments,
+            ["chrome-extension://\(extensionID.rawValue)/"]
+        )
+    }
+
+    func testResolverRejectsAnUnnamedRequestWhenMultipleHostsAreAllowed()
+        throws
+    {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-ambiguous-native-host-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = root.appending(path: "host")
+        try Data("#!/bin/sh\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        for hostName in ["com.example.first", "com.example.second"] {
+            let manifest: [String: Any] = [
+                "name": hostName,
+                "path": executable.path,
+                "type": "stdio",
+                "allowed_origins": [
+                    "chrome-extension://\(extensionID.rawValue)/"
+                ],
+            ]
+            try JSONSerialization.data(withJSONObject: manifest).write(
+                to: root.appending(path: "\(hostName).json")
+            )
+        }
+        let resolver = BrowserNativeMessagingHostManifestResolver(
+            searchDirectories: [root]
+        )
+
+        XCTAssertThrowsError(
+            try resolver.resolve(hostName: "", extensionID: extensionID)
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserNativeMessagingHostError,
+                .unnamedHostUnavailable
+            )
+        }
+    }
+
+    func testResolverIgnoresAnUnnamedManifestWhoseFilenameDoesNotMatchItsName()
+        throws
+    {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-misnamed-native-host-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = root.appending(path: "host")
+        try Data("#!/bin/sh\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let manifest: [String: Any] = [
+            "name": "com.example.declared",
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_origins": [
+                "chrome-extension://\(extensionID.rawValue)/"
+            ],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "com.example.registered.json")
+        )
+        let resolver = BrowserNativeMessagingHostManifestResolver(
+            searchDirectories: [root]
+        )
+
+        XCTAssertThrowsError(
+            try resolver.resolve(hostName: "", extensionID: extensionID)
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserNativeMessagingHostError,
+                .unnamedHostUnavailable
+            )
+        }
+    }
+
+    func testResolverPreservesDirectoryPrecedenceForAnUnnamedHost() throws {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-shadowed-native-host-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let first = root.appending(path: "first", directoryHint: .isDirectory)
+        let second = root.appending(path: "second", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(
+            at: first,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: second,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = root.appending(path: "host")
+        try Data("#!/bin/sh\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let hostName = "com.example.shadowed"
+        let deniedManifest: [String: Any] = [
+            "name": hostName,
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_origins": [
+                "chrome-extension://ponmlkjihgfedcbaponmlkjihgfedcba/"
+            ],
+        ]
+        let allowedManifest: [String: Any] = [
+            "name": hostName,
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_origins": [
+                "chrome-extension://\(extensionID.rawValue)/"
+            ],
+        ]
+        try JSONSerialization.data(withJSONObject: deniedManifest).write(
+            to: first.appending(path: "\(hostName).json")
+        )
+        try JSONSerialization.data(withJSONObject: allowedManifest).write(
+            to: second.appending(path: "\(hostName).json")
+        )
+        let resolver = BrowserNativeMessagingHostManifestResolver(
+            searchDirectories: [first, second]
+        )
+
+        XCTAssertThrowsError(
+            try resolver.resolve(hostName: "", extensionID: extensionID)
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserNativeMessagingHostError,
+                .unnamedHostUnavailable
+            )
+        }
+    }
+
+    func testResolverSelectsTheOnlyAllowedHostForAnUnnamedFirefoxRequest()
+        throws
+    {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-unnamed-firefox-host-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = root.appending(path: "host")
+        try Data("#!/bin/sh\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let extensionID = try XCTUnwrap(
+            BrowserMozillaExtensionID("native@example.com")
+        )
+        let hostName = "com.example.firefox_allowed"
+        let manifestURL = root.appending(path: "\(hostName).json")
+        let manifest: [String: Any] = [
+            "name": hostName,
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_extensions": [extensionID.rawValue],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: manifestURL
+        )
+        let resolver = BrowserNativeMessagingHostManifestResolver(
+            chromeSearchDirectories: [],
+            mozillaSearchDirectories: [root]
+        )
+
+        let resolved = try resolver.resolve(
+            hostName: "",
+            extensionIdentity: .mozillaAddons(extensionID)
+        )
+
+        XCTAssertEqual(resolved.name, hostName)
+        XCTAssertEqual(resolved.executableURL, executable)
+        XCTAssertEqual(resolved.arguments.count, 2)
+        XCTAssertEqual(
+            URL(filePath: try XCTUnwrap(resolved.arguments.first))
+                .lastPathComponent,
+            manifestURL.lastPathComponent
+        )
+        XCTAssertEqual(resolved.arguments.last, extensionID.rawValue)
     }
 
     func testResolverRejectsPathTraversalAsAHostName() throws {

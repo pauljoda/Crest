@@ -13,6 +13,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var openCommandSettings: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Bool)?
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
     var verifiedNativeMessagingIdentities: [ObjectIdentifier: BrowserExtensionNativeMessagingIdentity] = [:]
+    var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     var actionDidUpdate: (() -> Void)?
 
     func connect<

@@ -499,6 +499,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const declaredManifest = Object.freeze(\(manifestLiteral));
                 const extensionID = \(javascriptStringLiteral(runtimeIdentity.extensionID));
                 const extensionBaseURL = \(javascriptStringLiteral(runtimeIdentity.baseURL.absoluteString));
+                const capabilityBrokerHost = \(javascriptStringLiteral(
+                    ProductIdentity.serviceNamespace
+                        + ".webextension-compatibility"
+                ));
                 const fallbackResourceURL = (path = "") => new URL(
                     String(path),
                     extensionBaseURL
@@ -693,6 +697,67 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     return Promise.reject(error);
                 };
+                const requestCapability = (
+                    api,
+                    payload,
+                    args,
+                    transform = (response) => response
+                ) => {
+                    const runtime = nativeBrowser?.runtime
+                        ?? primaryRoot?.runtime;
+                    const sendNativeMessage = runtime?.sendNativeMessage;
+                    if (typeof sendNativeMessage !== "function") {
+                        return rejectCallbackOrPromise(
+                            args,
+                            `Crest's ${api} capability is unavailable.`
+                        );
+                    }
+
+                    const request = { api, ...payload };
+                    const response = new Promise((resolve, reject) => {
+                        let settled = false;
+                        const settle = (operation, value) => {
+                            if (settled) return;
+                            settled = true;
+                            operation(value);
+                        };
+                        let returned;
+                        try {
+                            returned = Reflect.apply(
+                                sendNativeMessage,
+                                runtime,
+                                [capabilityBrokerHost, request]
+                            );
+                        } catch (error) {
+                            settle(reject, error);
+                            return;
+                        }
+                        if (returned?.then instanceof Function) {
+                            returned.then(
+                                (value) => settle(resolve, value),
+                                (error) => settle(reject, error)
+                            );
+                        } else if (returned !== undefined) {
+                            settle(resolve, returned);
+                        } else {
+                            settle(
+                                reject,
+                                new Error(
+                                    `Crest's ${api} capability returned no response.`
+                                )
+                            );
+                        }
+                    }).then(transform);
+                    const callback = args.at(-1);
+                    if (typeof callback === "function") {
+                        response.then(
+                            (value) => callback(value),
+                            () => callback(undefined)
+                        );
+                        return undefined;
+                    }
+                    return response;
+                };
                 const uncontrollableSetting = (effectiveValue) =>
                     Object.freeze({
                         onChange: noopEvent,
@@ -745,23 +810,203 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 }
 
+                const notificationListeners = Object.freeze({
+                    clicked: new Set(),
+                    buttonClicked: new Set(),
+                    closed: new Set()
+                });
+                let notificationWatchPort;
+                let notificationWatchReconnectHandle;
+                const notificationListenerCount = () =>
+                    Object.values(notificationListeners).reduce(
+                        (count, listeners) => count + listeners.size,
+                        0
+                    );
+                const publishNotificationEvent = (message) => {
+                    if (
+                        message?.api !== "notifications.event"
+                        || typeof message.notificationIdentifier !== "string"
+                    ) {
+                        return;
+                    }
+                    let argumentsForListeners;
+                    switch (message.kind) {
+                    case "clicked":
+                        argumentsForListeners = [
+                            message.notificationIdentifier
+                        ];
+                        break;
+                    case "buttonClicked":
+                        if (!Number.isInteger(message.buttonIndex)) return;
+                        argumentsForListeners = [
+                            message.notificationIdentifier,
+                            message.buttonIndex
+                        ];
+                        break;
+                    case "closed":
+                        argumentsForListeners = [
+                            message.notificationIdentifier,
+                            Boolean(message.byUser)
+                        ];
+                        break;
+                    default:
+                        return;
+                    }
+                    for (const listener of notificationListeners[message.kind]) {
+                        try { listener(...argumentsForListeners); } catch {}
+                    }
+                };
+                const connectNotificationWatch = () => {
+                    if (
+                        notificationWatchPort
+                        || notificationListenerCount() === 0
+                    ) {
+                        return;
+                    }
+                    const runtime = nativeBrowser?.runtime
+                        ?? primaryRoot?.runtime;
+                    const connectNative = runtime?.connectNative;
+                    if (typeof connectNative !== "function") return;
+                    try {
+                        notificationWatchPort = Reflect.apply(
+                            connectNative,
+                            runtime,
+                            [capabilityBrokerHost]
+                        );
+                    } catch {
+                        notificationWatchPort = undefined;
+                        return;
+                    }
+                    notificationWatchPort?.onMessage?.addListener(
+                        publishNotificationEvent
+                    );
+                    notificationWatchPort?.onDisconnect?.addListener(() => {
+                        notificationWatchPort = undefined;
+                        if (notificationListenerCount() === 0) return;
+                        globalThis.clearTimeout(
+                            notificationWatchReconnectHandle
+                        );
+                        notificationWatchReconnectHandle =
+                            globalThis.setTimeout(
+                                connectNotificationWatch,
+                                1000
+                            );
+                    });
+                    try {
+                        notificationWatchPort?.postMessage({
+                            api: "notifications.watch"
+                        });
+                    } catch {}
+                };
+                const notificationEvent = (kind) => Object.freeze({
+                    addListener(listener) {
+                        if (typeof listener !== "function") return;
+                        notificationListeners[kind].add(listener);
+                        connectNotificationWatch();
+                    },
+                    removeListener(listener) {
+                        notificationListeners[kind].delete(listener);
+                        if (notificationListenerCount() > 0) return;
+                        globalThis.clearTimeout(
+                            notificationWatchReconnectHandle
+                        );
+                        notificationWatchReconnectHandle = undefined;
+                        const port = notificationWatchPort;
+                        notificationWatchPort = undefined;
+                        try { port?.disconnect(); } catch {}
+                    },
+                    hasListener(listener) {
+                        return notificationListeners[kind].has(listener);
+                    },
+                    hasListeners() {
+                        return notificationListeners[kind].size > 0;
+                    }
+                });
                 const notifications = Object.freeze({
-                    onClicked: noopEvent,
-                    onButtonClicked: noopEvent,
-                    onClosed: noopEvent,
+                    onClicked: notificationEvent("clicked"),
+                    onButtonClicked: notificationEvent("buttonClicked"),
+                    onClosed: notificationEvent("closed"),
                     onPermissionLevelChanged: noopEvent,
                     create(...args) {
-                        return rejectCallbackOrPromise(
+                        const hasIdentifier = typeof args[0] === "string";
+                        const options = args[hasIdentifier ? 1 : 0] ?? {};
+                        const notificationIdentifier = hasIdentifier
+                            ? args[0]
+                            : `crest-${Date.now()}-${Math.random()
+                                .toString(36).slice(2)}`;
+                        return requestCapability(
+                            "notifications.create",
+                            {
+                                notificationIdentifier,
+                                title: String(options.title ?? ""),
+                                message: String(options.message ?? ""),
+                                buttonTitles: Array.isArray(options.buttons)
+                                    ? options.buttons.map((button) =>
+                                        String(button?.title ?? "")
+                                    )
+                                    : []
+                            },
                             args,
-                            "Extension notifications are not connected to Crest yet."
+                            (response) =>
+                                response?.notificationIdentifier
+                                    ?? notificationIdentifier
                         );
                     },
-                    clear(...args) { return callbackOrPromise(args, false); },
-                    getAll(...args) { return callbackOrPromise(args, {}); },
-                    getPermissionLevel(...args) {
-                        return callbackOrPromise(args, "denied");
+                    clear(...args) {
+                        return requestCapability(
+                            "notifications.clear",
+                            {
+                                notificationIdentifier: String(args[0] ?? "")
+                            },
+                            args,
+                            (response) => Boolean(response?.cleared)
+                        );
                     },
-                    update(...args) { return callbackOrPromise(args, false); }
+                    getAll(...args) {
+                        return requestCapability(
+                            "notifications.getAll",
+                            {},
+                            args,
+                            (response) => Object.fromEntries(
+                                Array.isArray(
+                                    response?.notificationIdentifiers
+                                )
+                                    ? response.notificationIdentifiers.map(
+                                        (identifier) => [identifier, true]
+                                    )
+                                    : []
+                            )
+                        );
+                    },
+                    getPermissionLevel(...args) {
+                        return requestCapability(
+                            "notifications.getPermissionLevel",
+                            {},
+                            args,
+                            (response) => response?.level === "granted"
+                                ? "granted"
+                                : "denied"
+                        );
+                    },
+                    update(...args) {
+                        const options = args[1] ?? {};
+                        return requestCapability(
+                            "notifications.update",
+                            {
+                                notificationIdentifier:
+                                    String(args[0] ?? ""),
+                                title: String(options.title ?? ""),
+                                message: String(options.message ?? ""),
+                                buttonTitles: Array.isArray(options.buttons)
+                                    ? options.buttons.map((button) =>
+                                        String(button?.title ?? "")
+                                    )
+                                    : []
+                            },
+                            args,
+                            (response) => Boolean(response?.updated)
+                        );
+                    },
                 });
                 const action = {
                     getUserSettings(...args) {
@@ -784,6 +1029,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 const privacyServices = {
                     passwordSavingEnabled: uncontrollableSetting(true),
+                    autofillEnabled: uncontrollableSetting(false),
                     autofillCreditCardEnabled: uncontrollableSetting(false),
                     autofillAddressEnabled: uncontrollableSetting(false)
                 };
@@ -891,15 +1137,128 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                     }
                 };
+                const idleStateChangeListeners = new Set();
+                let idleDetectionIntervalInSeconds = 60;
+                let idleWatchPort;
+                let idleWatchReconnectHandle;
+                const isIdleState = (state) =>
+                    state === "active"
+                    || state === "idle"
+                    || state === "locked";
+                const publishIdleStateChange = (message) => {
+                    const state = message?.state;
+                    if (!isIdleState(state)) return;
+                    for (const listener of idleStateChangeListeners) {
+                        try { listener(state); } catch {}
+                    }
+                };
+                const postIdleWatchConfiguration = () => {
+                    try {
+                        idleWatchPort?.postMessage({
+                            api: "idle.watch",
+                            detectionIntervalInSeconds:
+                                idleDetectionIntervalInSeconds
+                        });
+                    } catch {}
+                };
+                const connectIdleWatch = () => {
+                    if (
+                        idleWatchPort
+                        || idleStateChangeListeners.size === 0
+                    ) {
+                        return;
+                    }
+                    const runtime = nativeBrowser?.runtime
+                        ?? primaryRoot?.runtime;
+                    const connectNative = runtime?.connectNative;
+                    if (typeof connectNative !== "function") return;
+                    try {
+                        idleWatchPort = Reflect.apply(
+                            connectNative,
+                            runtime,
+                            [capabilityBrokerHost]
+                        );
+                    } catch {
+                        idleWatchPort = undefined;
+                        return;
+                    }
+                    idleWatchPort?.onMessage?.addListener(
+                        publishIdleStateChange
+                    );
+                    idleWatchPort?.onDisconnect?.addListener(() => {
+                        idleWatchPort = undefined;
+                        if (idleStateChangeListeners.size === 0) return;
+                        globalThis.clearTimeout(idleWatchReconnectHandle);
+                        idleWatchReconnectHandle = globalThis.setTimeout(
+                            connectIdleWatch,
+                            1000
+                        );
+                    });
+                    postIdleWatchConfiguration();
+                };
+                const idleStateChangedEvent = Object.freeze({
+                    addListener(listener) {
+                        if (typeof listener !== "function") return;
+                        idleStateChangeListeners.add(listener);
+                        connectIdleWatch();
+                    },
+                    removeListener(listener) {
+                        idleStateChangeListeners.delete(listener);
+                        if (idleStateChangeListeners.size > 0) return;
+                        globalThis.clearTimeout(idleWatchReconnectHandle);
+                        idleWatchReconnectHandle = undefined;
+                        const port = idleWatchPort;
+                        idleWatchPort = undefined;
+                        try { port?.disconnect(); } catch {}
+                    },
+                    hasListener(listener) {
+                        return idleStateChangeListeners.has(listener);
+                    },
+                    hasListeners() {
+                        return idleStateChangeListeners.size > 0;
+                    }
+                });
                 const idle = {
-                    onStateChanged: noopEvent,
+                    onStateChanged: idleStateChangedEvent,
                     queryState(...args) {
-                        return rejectCallbackOrPromise(
+                        const detectionIntervalInSeconds = Number(args[0]);
+                        if (
+                            !Number.isFinite(detectionIntervalInSeconds)
+                            || detectionIntervalInSeconds < 0
+                        ) {
+                            return rejectCallbackOrPromise(
+                                args,
+                                "idle.queryState requires a nonnegative interval."
+                            );
+                        }
+                        return requestCapability(
+                            "idle.queryState",
+                            { detectionIntervalInSeconds },
                             args,
-                            "System idle state is not connected to Crest yet."
+                            (response) => {
+                                const state = response?.state;
+                                if (!isIdleState(state)) {
+                                    throw new Error(
+                                        "Crest returned an invalid idle state."
+                                    );
+                                }
+                                return state;
+                            }
                         );
                     },
-                    setDetectionInterval() {}
+                    setDetectionInterval(interval) {
+                        const value = Number(interval);
+                        if (!Number.isFinite(value) || value < 0) {
+                            throw new TypeError(
+                                "idle.setDetectionInterval requires a nonnegative interval."
+                            );
+                        }
+                        idleDetectionIntervalInSeconds = value;
+                        if (idleStateChangeListeners.size > 0) {
+                            connectIdleWatch();
+                            postIdleWatchConfiguration();
+                        }
+                    }
                 };
                 const webRequest = {
                     onAuthRequired: noopEvent,
@@ -916,6 +1275,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     id: extensionID,
                     getURL(path = "") {
                         return fallbackResourceURL(path);
+                    },
+                    getManifest() {
+                        return declaredManifest;
                     },
                     requestUpdateCheck(...args) {
                         const callback = args.at(-1);
@@ -940,7 +1302,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     webNavigation,
                     runtime
                 });
-                const installFallbacks = (nativeValue, fallbacks) => {
+                const installFallbacks = (
+                    nativeValue,
+                    fallbacks,
+                    pinExisting = true
+                ) => {
                     if (!nativeValue) return;
 
                     for (const [property, fallback] of Object.entries(fallbacks)) {
@@ -951,19 +1317,47 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             try {
                                 Object.defineProperty(nativeValue, property, {
                                     value: fallback,
-                                    configurable: true,
+                                    writable: false,
+                                    configurable: false,
                                     enumerable: true
                                 });
                             } catch {
                                 try { nativeValue[property] = fallback; } catch {}
                             }
-                        } else if (
-                            fallback
-                            && typeof fallback === "object"
-                            && (typeof existing === "object"
-                                || typeof existing === "function")
-                        ) {
-                            installFallbacks(existing, fallback);
+                        } else {
+                            try {
+                                const descriptor =
+                                    Reflect.getOwnPropertyDescriptor(
+                                        nativeValue,
+                                        property
+                                    );
+                                if (pinExisting && descriptor?.configurable) {
+                                    Object.defineProperty(
+                                        nativeValue,
+                                        property,
+                                        {
+                                            value: existing,
+                                            writable:
+                                                descriptor.writable ?? false,
+                                            configurable: false,
+                                            enumerable:
+                                                descriptor.enumerable ?? true
+                                        }
+                                    );
+                                }
+                            } catch {}
+                            if (
+                                fallback
+                                && typeof fallback === "object"
+                                && (typeof existing === "object"
+                                    || typeof existing === "function")
+                            ) {
+                                installFallbacks(
+                                    existing,
+                                    fallback,
+                                    pinExisting
+                                );
+                            }
                         }
                     }
                 };
@@ -989,7 +1383,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     const { runtime: runtimeFallback, ...fallbacks } =
                         fallbacksFor(nativeRoot);
                     installFallbacks(nativeRoot, fallbacks);
-                    installFallbacks(nativeRoot.runtime, runtimeFallback);
+                    installFallbacks(
+                        nativeRoot.runtime,
+                        runtimeFallback,
+                        false
+                    );
                     if (nativeRoot.runtime) {
                         try {
                             Object.defineProperty(
@@ -1013,7 +1411,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return fallback;
                     }
                     if (
-                        (!fallback || typeof fallback !== "object")
+                        (!fallback
+                            || typeof fallback !== "object"
+                            || Object.keys(fallback).length === 0)
                         && explicitOverlays.size === 0
                     ) {
                         return nativeValue;
@@ -1025,57 +1425,61 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return nativeValue;
                     }
 
-                    const overlays = new Map(explicitOverlays);
-                    for (const [property, fallbackValue] of Object.entries(
-                        fallback ?? {}
-                    )) {
-                        let existing;
-                        try { existing = nativeValue[property]; } catch {}
-                        if (existing === undefined) {
-                            overlays.set(property, fallbackValue);
-                            continue;
+                    const fallbackValues = new Map(
+                        Object.entries(fallback ?? {})
+                    );
+                    const boundMethods = new Map();
+                    const nestedFacades = new Map();
+                    const resolvedValue = (property) => {
+                        if (explicitOverlays.has(property)) {
+                            return explicitOverlays.get(property);
                         }
+                        let value;
+                        try {
+                            value = Reflect.get(
+                                nativeValue,
+                                property,
+                                nativeValue
+                            );
+                        } catch {}
+                        const fallbackValue = fallbackValues.get(property);
+                        if (value === undefined) return fallbackValue;
                         if (
-                            fallbackValue
+                            fallbackValues.has(property)
+                            && fallbackValue
                             && typeof fallbackValue === "object"
-                            && (typeof existing === "object"
-                                || typeof existing === "function")
+                            && (typeof value === "object"
+                                || typeof value === "function")
                         ) {
-                            const nested = namespaceFacade(
-                                existing,
+                            const cached = nestedFacades.get(property);
+                            if (cached?.nativeValue === value) {
+                                return cached.facade;
+                            }
+                            const facade = namespaceFacade(
+                                value,
                                 fallbackValue
                             );
-                            if (nested !== existing) {
-                                overlays.set(property, nested);
-                            }
+                            nestedFacades.set(property, {
+                                nativeValue: value,
+                                facade
+                            });
+                            return facade;
                         }
-                    }
-                    if (overlays.size === 0) return nativeValue;
-
-                    const boundMethods = new Map();
+                        if (typeof value !== "function") return value;
+                        const cached = boundMethods.get(property);
+                        if (cached?.nativeValue === value) {
+                            return cached.bound;
+                        }
+                        const bound = value.bind(nativeValue);
+                        boundMethods.set(property, {
+                            nativeValue: value,
+                            bound
+                        });
+                        return bound;
+                    };
                     return new Proxy(Object.create(null), {
                         get(_, property) {
-                            if (overlays.has(property)) {
-                                return overlays.get(property);
-                            }
-                            let value;
-                            try {
-                                value = Reflect.get(
-                                    nativeValue,
-                                    property,
-                                    nativeValue
-                                );
-                            } catch {
-                                return undefined;
-                            }
-                            if (typeof value !== "function") return value;
-                            if (!boundMethods.has(property)) {
-                                boundMethods.set(
-                                    property,
-                                    value.bind(nativeValue)
-                                );
-                            }
-                            return boundMethods.get(property);
+                            return resolvedValue(property);
                         },
                         set(_, property, value) {
                             try {
@@ -1090,20 +1494,25 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             }
                         },
                         has(_, property) {
-                            return overlays.has(property)
+                            return explicitOverlays.has(property)
+                                || fallbackValues.has(property)
                                 || property in nativeValue;
                         },
                         ownKeys() {
                             const keys = new Set(
                                 Reflect.ownKeys(nativeValue)
                             );
-                            for (const property of overlays.keys()) {
+                            for (const property of fallbackValues.keys()) {
+                                keys.add(property);
+                            }
+                            for (const property of explicitOverlays.keys()) {
                                 keys.add(property);
                             }
                             return Array.from(keys);
                         },
                         getOwnPropertyDescriptor(_, property) {
-                            if (!overlays.has(property)
+                            if (!explicitOverlays.has(property)
+                                && !fallbackValues.has(property)
                                 && !(property in nativeValue)) {
                                 return undefined;
                             }
@@ -1116,13 +1525,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     );
                             } catch {}
                             return {
-                                value: overlays.has(property)
-                                    ? overlays.get(property)
-                                    : Reflect.get(
-                                        nativeValue,
-                                        property,
-                                        nativeValue
-                                    ),
+                                value: resolvedValue(property),
                                 writable: true,
                                 configurable: true,
                                 enumerable:
@@ -1186,11 +1589,18 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                         const fallback = fallbacks[property];
                         if (fallback === undefined) continue;
-                        const facade = namespaceFacade(nativeValue, fallback);
+                        let facade = namespaceFacade(nativeValue, fallback);
                         if (facade === nativeValue) continue;
                         try {
                             Object.defineProperty(root, property, {
-                                value: facade,
+                                get() { return facade; },
+                                set(value) {
+                                    nativeValue = value;
+                                    facade = namespaceFacade(
+                                        nativeValue,
+                                        fallback
+                                    );
+                                },
                                 configurable: true,
                                 enumerable: true
                             });
