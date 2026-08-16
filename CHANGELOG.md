@@ -14,6 +14,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Made an installed Development or Nightly artifact select its own update channel on first launch instead of inheriting a saved channel from a differently packaged build, while preserving later explicit channel choices.
 - Told extensions about a Peek's page and about each card a selection presents before those pages start loading, so an extension's content scripts can reach its background on the first try. WebKit answers a content script only for a web view it can map onto an announced tab, so a Peek — whose page the session never carried as a tab at all — left extensions like Dark Reader holding the partial styling they applied while asking, until the page was reloaded. Promoting such a Peek into a tab or a split card carried the half-styled document with it.
 - Named public nightly tags, release titles, and assets with their UTC date and source commit instead of an opaque workflow run number, while retaining the monotonic build number only for Sparkle's internal update ordering.
 - Kept the release tag as a directory in generated Sparkle download URLs and made publication reject an appcast that does not point to its exact GitHub Release asset.

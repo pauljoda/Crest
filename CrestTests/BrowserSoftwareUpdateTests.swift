@@ -76,6 +76,56 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         )
     }
 
+    func testInstallingAnArtifactFromAnotherChannelAdoptsItsBundledChannel() {
+        let suiteName = "BrowserSoftwareUpdateTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suiteName)!
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        preferences.set(
+            BrowserSoftwareUpdateChannel.stable.rawValue,
+            forKey: BrowserSoftwareUpdateService.channelPreferenceKey
+        )
+        preferences.set(
+            BrowserSoftwareUpdateChannel.stable.rawValue,
+            forKey: BrowserSoftwareUpdateService.bundledChannelPreferenceKey
+        )
+
+        let service = BrowserSoftwareUpdateService(
+            isEnabled: false,
+            preferences: preferences,
+            defaultChannel: .development
+        )
+
+        XCTAssertEqual(service.channel, .development)
+        XCTAssertEqual(
+            preferences.string(
+                forKey: BrowserSoftwareUpdateService.channelPreferenceKey
+            ),
+            BrowserSoftwareUpdateChannel.development.rawValue
+        )
+    }
+
+    func testUserChoiceSurvivesRelaunchesOfTheSameArtifactChannel() {
+        let suiteName = "BrowserSoftwareUpdateTests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: suiteName)!
+        defer { preferences.removePersistentDomain(forName: suiteName) }
+        preferences.set(
+            BrowserSoftwareUpdateChannel.nightly.rawValue,
+            forKey: BrowserSoftwareUpdateService.channelPreferenceKey
+        )
+        preferences.set(
+            BrowserSoftwareUpdateChannel.development.rawValue,
+            forKey: BrowserSoftwareUpdateService.bundledChannelPreferenceKey
+        )
+
+        let service = BrowserSoftwareUpdateService(
+            isEnabled: false,
+            preferences: preferences,
+            defaultChannel: .development
+        )
+
+        XCTAssertEqual(service.channel, .nightly)
+    }
+
     func testDownloadProgressAccumulatesAndClampsToTheExpectedLength() throws {
         let model = BrowserSoftwareUpdateModel()
 
