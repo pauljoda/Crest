@@ -135,26 +135,18 @@ The package layer currently loads before supported Manifest V2 and V3
 background forms, declared content scripts, and packaged HTML extension pages.
 That last category intentionally includes internal routes reached from a popup
 or options page even when the manifest does not name them directly; manifest
-sandbox pages remain untouched. A proxy preserves every WebKit implementation
-and fills only missing members. The declared manifest is embedded as the exact
-fallback for `runtime.getManifest()`; an offscreen document uses the
-extension-supplied URL rather than a package-specific path.
+sandbox pages remain untouched. Manifest V3 packages that need compatibility
+are projected into an equivalent persistent Manifest V2 background shape in
+the temporary host copy. The declared Manifest V3 document remains what the
+extension sees through `runtime.getManifest()`.
 
-Where WebKit exposes messaging but cannot reliably return a background reply,
-the runtime provides one generic transport. Extension pages use a package-local
-`BroadcastChannel`. Before sending, a page discovers a ready background
-receiver and asks WebKit to wake an evicted background when necessary; the real
-extension payload is delivered only after that receiver has completed its
-generated background bootstrap. Content scripts use
-a reserved native Port whose background endpoint replays the request to
-registered `runtime.onMessage` listeners. Both callback and Promise replies are
-supported, external-extension messages still fall through to WebKit, and
-separate native `chrome` and `browser` namespace objects are bootstrapped and
-routed independently. If WebKit exposes both names as aliases for one object,
-they reuse one route. Synthetic extension-page senders carry the verified
-runtime ID, page URL, and extension origin in the same form returned by
-`runtime.getURL("")` with its root slash removed. The transport is selected by
-execution context and capability, never by extension identity.
+The runtime preserves WebKit's native objects. It copies a missing namespace or
+member from the other native `chrome`/`browser` root where possible and fills
+only absent capabilities. If WebKit supplies only one root, the missing global
+name becomes an alias to that same native object. Native `runtime`, `tabs`,
+events, messaging methods, Ports, and sender metadata are never replaced or
+proxied; an offscreen document uses the extension-supplied URL rather than a
+package-specific path.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
@@ -406,26 +398,17 @@ the log correlations, and the reproduction instructions.
 Popup warm-up remains useful because Crest directly controls popup creation.
 It is not the compatibility transport for ordinary extension messages.
 
-The generated runtime now covers extension-page and content-script requests at
-the WebExtension API boundary. Packaged extension pages communicate with the
-marked background through a package-and-namespace-scoped `BroadcastChannel`;
-content scripts use a reserved namespace-scoped native Port, which gives WebKit
-a standard background-liveness signal without keeping every extension
-permanently awake. The marked background
-announces readiness only after the extension's background scripts have finished
-initializing, then replays each request to the namespace's registered
-`runtime.onMessage` listeners and returns the first callback, Promise, or
-`return true` response. That reserved Port is bidirectional: background
-`tabs.sendMessage` calls target connected content contexts by tab and optional
-frame or document ID, then return the first content-listener response. If no
-managed content context matches, the call remains on WebKit's native path.
+The generated runtime does not transport extension messages. WebKit's native
+`runtime.sendMessage`, `runtime.connect`, and `tabs.sendMessage` paths already
+provide the Chrome/Firefox contract, including callback and Promise replies,
+Port lifetime, and sender tab/frame/document identity, when Crest preserves the
+objects and announces each web view at the correct time. Replacing a native
+root or recursively rewriting its event objects prevents WebKit from delivering
+those events, so the compatibility layer treats their identity as immutable.
 
-This is still capability mapping rather than a patch to Dark Reader, 1Password,
-or any other extension. The `chrome` and `browser` roots are initialized
-independently because WebKit can expose them as distinct native objects. An
-extension that registers through one namespace therefore receives messages
-sent through that same namespace, instead of losing its listener when the other
-root finishes bootstrapping.
+This is capability mapping rather than a patch to Dark Reader, 1Password, or
+any other extension. It also avoids maintaining a second message router whose
+targeting and lifecycle could drift from Chrome, Firefox, and WebKit.
 
 ### A content script cannot be answered for a page extensions were never told about
 
@@ -491,12 +474,11 @@ is announced as an ordinary unselected tab and never as the active one, so
 against the previous ones: the Peek page is never announced, and a split
 member is announced only after its web view is already loading.
 
-The current content-script transport no longer depends on WebKit's one-shot
-`runtime.sendMessage` reply path. Its reserved Port is owned by the marked
-background context, and the request is replayed only after that endpoint is
-available. The page-announcement ordering above is still required: WebKit must
-know which tab owns the content script before it can establish even that
-standard Port.
+The page-announcement ordering above is required for every native message form:
+WebKit must know which tab owns the content script before it can deliver a
+one-shot message or establish a Port. A real-controller fixture now verifies
+content-to-background `runtime.sendMessage`, direct Port sender metadata,
+`tabs.query`, and background-to-content `tabs.sendMessage` together.
 
 Evidence, gathered August 13, 2026:
 

@@ -1831,6 +1831,229 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(metadata["frameID"] as? Int, 0)
     }
 
+    func testCompatibilityBridgeUsesWebKitsContentTabIdentity() async throws {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-content-port-identity-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Content Port Identity Test",
+            "description": "Measures WebKit message sender identity.",
+            "version": "1.0",
+            "permissions": ["storage", "tabs", "webNavigation"],
+            "host_permissions": ["<all_urls>"],
+            "background": ["service_worker": "background.js"],
+            "content_scripts": [[
+                "matches": ["<all_urls>"],
+                "js": ["content.js"],
+                "run_at": "document_start",
+            ]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: extensionURL.appending(path: "manifest.json")
+        )
+        try Data(
+            """
+            chrome.runtime.onConnect.addListener((port) => {
+                if (port.name === "crest-direct-port-probe") {
+                    port.postMessage({
+                        directConnectedTabID: port.sender?.tab?.id,
+                        directConnectedFrameID: port.sender?.frameId,
+                        directConnectedDocumentID: port.sender?.documentId,
+                    });
+                }
+            });
+            chrome.runtime.onMessage.addListener((message, sender, reply) => {
+                if (message?.type !== "crest-content-port-identity") {
+                    return false;
+                }
+                chrome.tabs.query(
+                    { active: true, currentWindow: true },
+                    (tabs) => {
+                        const queriedTabID = tabs[0]?.id;
+                        if (typeof queriedTabID !== "number") {
+                            reply({
+                                stage: "query-found-no-tab",
+                                messageTabID: sender?.tab?.id,
+                            });
+                            return;
+                        }
+                        chrome.tabs.sendMessage(
+                            queriedTabID,
+                            { type: "crest-reverse-message" },
+                            (reverseResponse) => reply({
+                                stage: "background-received",
+                                queriedTabID,
+                                messageTabID: sender?.tab?.id,
+                                messageFrameID: sender?.frameId,
+                                messageDocumentID: sender?.documentId,
+                                reverseResponse: reverseResponse?.type,
+                                reverseError:
+                                    chrome.runtime.lastError?.message,
+                            })
+                        );
+                    }
+                );
+                return true;
+            });
+            """.utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+        try Data(
+            """
+            const updateProbe = (value) => {
+                const current = JSON.parse(
+                    document.documentElement.dataset.crestPortIdentity ?? "{}"
+                );
+                document.documentElement.dataset.crestPortIdentity =
+                    JSON.stringify({ ...current, ...value });
+            };
+            updateProbe({
+                stage: "content-started",
+                chromeRuntimeID: chrome.runtime.id,
+                browserRuntimeID: browser.runtime.id,
+                chromeManifestVersion:
+                    chrome.runtime.getManifest().manifest_version,
+                browserManifestVersion:
+                    browser.runtime.getManifest().manifest_version,
+                browserStorageLocal:
+                    typeof browser.storage?.local?.get === "function",
+                browserStorageManaged:
+                    typeof browser.storage?.managed?.onChanged?.addListener
+                        === "function",
+            });
+            const directPort = chrome.runtime.connect({
+                name: "crest-direct-port-probe",
+            });
+            directPort.onMessage.addListener((message) => updateProbe(message));
+            directPort.onDisconnect.addListener(() => updateProbe({
+                directDisconnected: true,
+                directError: chrome.runtime.lastError?.message,
+            }));
+            chrome.runtime.onMessage.addListener((message, sender, reply) => {
+                if (message?.type !== "crest-reverse-message") return false;
+                updateProbe({
+                    reverseResponse: "reverse-complete",
+                    reverseSenderURL: sender?.url,
+                });
+                reply({ type: "reverse-complete" });
+                return true;
+            });
+            chrome.runtime.sendMessage(
+                { type: "crest-content-port-identity" },
+                (response) => {
+                    updateProbe(response ?? {
+                        stage: "content-no-response",
+                        error: chrome.runtime.lastError?.message,
+                    });
+                }
+            );
+            """.utf8
+        ).write(to: extensionURL.appending(path: "content.js"))
+
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let tab = try XCTUnwrap(browser.session.selectedTab)
+        let runtimeIdentity = BrowserExtensionRuntimeIdentity(
+            extensionID: "content-port-identity",
+            uniqueIdentifier: "content-port-identity.space.\(space.id)",
+            baseURL: try XCTUnwrap(
+                URL(string: "crest-extension://content-port-identity/")
+            )
+        )
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer()
+                .installCompatibilityLayer(
+                    in: extensionURL,
+                    requestedPermissions: ["storage", "tabs", "webNavigation"],
+                    runtimeIdentity: runtimeIdentity
+                )
+        )
+        let pool = BrowserExtensionControllerPool()
+        let controller = pool.controller(for: space)
+        let configuration = BrowserPageConfiguration.make(
+            for: space.profile,
+            webExtensionController: controller
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let pages = PageProviderSpy()
+        pages.webViews[tab.id] = webView
+        pool.connect(browser: browser, pageProvider: pages)
+        let context = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: "content-port-identity",
+            in: space
+        )
+        let origin = try XCTUnwrap(
+            URL(string: "https://extension-probe.crest.test/")
+        )
+        context.setPermissionStatus(.grantedExplicitly, for: .storage)
+        context.setPermissionStatus(.grantedExplicitly, for: .tabs)
+        context.setPermissionStatus(.grantedExplicitly, for: origin)
+        let waiter = ExtensionNavigationWaiter(webView: webView)
+        try await waiter.load(
+            simulatedRequest: URLRequest(url: origin),
+            responseHTML: "<!doctype html><html><body>Port probe</body></html>"
+        )
+
+        var response: [String: Any]?
+        for _ in 0..<400 {
+            if let encoded = try await webView.evaluateJavaScript(
+                "document.documentElement.dataset.crestPortIdentity"
+            ) as? String,
+                let data = encoded.data(using: .utf8)
+            {
+                response = try JSONSerialization.jsonObject(with: data)
+                    as? [String: Any]
+                if response?["reverseResponse"] as? String
+                    == "reverse-complete"
+                {
+                    break
+                }
+            }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        let identity = try XCTUnwrap(
+            response,
+            "Content script did not start. Errors: \(context.errors)"
+        )
+        let contextErrorDescriptions = context.errors.map {
+            let error = $0 as NSError
+            return "\(error.domain)#\(error.code): \(error.localizedDescription)"
+        }
+        XCTAssertEqual(
+            identity["stage"] as? String,
+            "background-received",
+            "Probe: \(identity); errors: \(contextErrorDescriptions)"
+        )
+        XCTAssertEqual(identity["queriedTabID"] as? Int, identity["messageTabID"] as? Int)
+        XCTAssertEqual(identity["directConnectedTabID"] as? Int, identity["messageTabID"] as? Int)
+        XCTAssertEqual(identity["directConnectedFrameID"] as? Int, 0)
+        XCTAssertEqual(identity["messageFrameID"] as? Int, 0)
+        XCTAssertEqual(
+            identity["directConnectedDocumentID"] as? String,
+            identity["messageDocumentID"] as? String
+        )
+        XCTAssertEqual(identity["reverseResponse"] as? String, "reverse-complete")
+        XCTAssertNil(identity["reverseError"])
+        XCTAssertEqual(identity["chromeManifestVersion"] as? Int, 3)
+        XCTAssertEqual(identity["browserManifestVersion"] as? Int, 3)
+        XCTAssertEqual(identity["browserStorageLocal"] as? Bool, true)
+        XCTAssertEqual(identity["browserStorageManaged"] as? Bool, true)
+        XCTAssertNil(
+            identity["error"],
+            "Probe: \(identity); errors: \(contextErrorDescriptions)"
+        )
+    }
+
     func testGrantingRuntimeGatedAccessRestartsLoadedExtension()
         async throws
     {

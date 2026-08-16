@@ -7,10 +7,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         "crest-webextension-background.html"
     private static let backgroundBootstrapName =
         "crest-webextension-background-bootstrap.js"
-    private static let backgroundMarkerName =
-        "crest-webextension-background-marker.js"
-    private static let backgroundMarkerScript =
-        "globalThis.__crestIsWebExtensionBackground = true;"
     private static let legacyBackgroundPreludePattern =
         #"(?s)\A// Crest's WKWebExtension host currently has no notifications API\.\s*.*?Object\.defineProperty\(globalThis, \"chrome\", \{\s*value: crestChromeCompatibility,\s*configurable: true\s*\}\);\s*\}\s*"#
     private static let emulatedPermissions: Set<String> = [
@@ -132,15 +128,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             atomically: true,
             encoding: .utf8
         )
-        try Self.backgroundMarkerScript.write(
-            to: resourceURL.appending(path: Self.backgroundMarkerName),
-            atomically: true,
-            encoding: .utf8
-        )
         var installed = try installBackgroundCompatibility(
             in: resourceURL,
-            manifest: &manifest,
-            compatibilityScript: compatibilityScript
+            manifest: &manifest
         )
         installed =
             try installExtensionPageCompatibility(
@@ -155,10 +145,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             try? fileManager.removeItem(
                 at: resourceURL.appending(path: Self.compatibilityScriptName)
             )
-            try? fileManager.removeItem(
-                at: resourceURL.appending(path: Self.backgroundMarkerName)
-            )
             return false
+        }
+        if manifestVersion == 3 {
+            Self.installManifestV2HostCompatibility(in: &manifest)
         }
         let updatedManifestData = try JSONSerialization.data(
             withJSONObject: manifest,
@@ -170,8 +160,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
     private func installBackgroundCompatibility(
         in resourceURL: URL,
-        manifest: inout [String: Any],
-        compatibilityScript: String
+        manifest: inout [String: Any]
     ) throws -> Bool {
         guard var background = manifest["background"] as? [String: Any] else {
             return false
@@ -206,33 +195,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     "persistent": false,
                 ]
             } else {
-                try
-                    (Self.backgroundMarkerScript
-                    + "\n"
-                    + compatibilityScript
-                    + "\n\n"
-                    + originalWorker).write(
-                        to: workerURL,
-                        atomically: true,
-                        encoding: .utf8
-                    )
+                manifest["background"] = [
+                    "scripts": [
+                        Self.compatibilityScriptName,
+                        serviceWorker,
+                    ],
+                    "persistent": false,
+                ]
             }
             return true
         }
 
         if var scripts = background["scripts"] as? [String] {
-            if !scripts.contains(Self.backgroundMarkerName) {
-                scripts.insert(Self.backgroundMarkerName, at: 0)
-            }
             if !scripts.contains(Self.compatibilityScriptName) {
-                let markerIndex =
-                    scripts.firstIndex(
-                        of: Self.backgroundMarkerName
-                    ) ?? 0
-                scripts.insert(
-                    Self.compatibilityScriptName,
-                    at: markerIndex + 1
-                )
+                scripts.insert(Self.compatibilityScriptName, at: 0)
             }
             background["scripts"] = scripts
             manifest["background"] = background
@@ -242,8 +218,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         if let page = background["page"] as? String {
             return try injectCompatibilityScript(
                 into: page,
-                in: resourceURL,
-                marksBackground: true
+                in: resourceURL
             )
         }
         return false
@@ -270,13 +245,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         let workerSpecifier = Self.javascriptStringLiteral(
             "./\(serviceWorker)"
         )
-        let backgroundBootstrap =
-            """
-            import(\(workerSpecifier)).finally(() => {
-                globalThis
-                    .__crestCompleteWebExtensionBackgroundBootstrap?.();
-            });
-            """
+        let backgroundBootstrap = "import(\(workerSpecifier));"
         try backgroundBootstrap.write(
             to: resourceURL.appending(path: Self.backgroundBootstrapName),
             atomically: true,
@@ -288,7 +257,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             <html>
             <head>
               <meta charset="utf-8">
-              <script src="\(Self.backgroundMarkerName)"></script>
               <script src="\(Self.compatibilityScriptName)"></script>
               <script type="module" src="\(Self.backgroundBootstrapName)"></script>
             </head>
@@ -306,6 +274,60 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         requestedPermissions: [String]
     ) -> Bool {
         !emulatedPermissions.isDisjoint(with: requestedPermissions)
+    }
+
+    private static func installManifestV2HostCompatibility(
+        in manifest: inout [String: Any]
+    ) {
+        manifest["manifest_version"] = 2
+
+        var permissions = manifest["permissions"] as? [String] ?? []
+        for host in manifest["host_permissions"] as? [String] ?? []
+        where !permissions.contains(host) {
+            permissions.append(host)
+        }
+        manifest["permissions"] = permissions
+        manifest.removeValue(forKey: "host_permissions")
+
+        var optionalPermissions =
+            manifest["optional_permissions"] as? [String] ?? []
+        for host in manifest["optional_host_permissions"] as? [String] ?? []
+        where !optionalPermissions.contains(host) {
+            optionalPermissions.append(host)
+        }
+        if !optionalPermissions.isEmpty {
+            manifest["optional_permissions"] = optionalPermissions
+        }
+        manifest.removeValue(forKey: "optional_host_permissions")
+
+        if manifest["browser_action"] == nil,
+            let action = manifest["action"]
+        {
+            manifest["browser_action"] = action
+        }
+        manifest.removeValue(forKey: "action")
+
+        if var background = manifest["background"] as? [String: Any] {
+            background.removeValue(forKey: "service_worker")
+            background["persistent"] = true
+            manifest["background"] = background
+        }
+
+        if let declarations =
+            manifest["web_accessible_resources"] as? [[String: Any]]
+        {
+            manifest["web_accessible_resources"] = declarations.flatMap {
+                $0["resources"] as? [String] ?? []
+            }
+        }
+
+        if let contentSecurityPolicy =
+            manifest["content_security_policy"] as? [String: Any],
+            let extensionPages =
+                contentSecurityPolicy["extension_pages"] as? String
+        {
+            manifest["content_security_policy"] = extensionPages
+        }
     }
 
     private func installExtensionPageCompatibility(
@@ -388,8 +410,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
     private func injectCompatibilityScript(
         into relativePath: String,
-        in resourceURL: URL,
-        marksBackground: Bool = false
+        in resourceURL: URL
     ) throws -> Bool {
         let pageURL = try validatedResourceURL(
             for: relativePath,
@@ -400,17 +421,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             #"<script src="/crest-webextension-compatibility.js"></script>"#
         let relativeCompatibilityTag =
             #"<script src="crest-webextension-compatibility.js"></script>"#
-        let markerTag =
-            #"<script src="/crest-webextension-background-marker.js"></script>"#
-        let relativeMarkerTag =
-            #"<script src="crest-webextension-background-marker.js"></script>"#
         var tags: [String] = []
-        if marksBackground,
-            !source.contains(markerTag),
-            !source.contains(relativeMarkerTag)
-        {
-            tags.append(markerTag)
-        }
         if !source.contains(compatibilityTag),
             !source.contains(relativeCompatibilityTag)
         {
@@ -540,9 +551,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const declaredManifest = Object.freeze(\(manifestLiteral));
                 const extensionID = \(javascriptStringLiteral(runtimeIdentity.extensionID));
                 const extensionBaseURL = \(javascriptStringLiteral(runtimeIdentity.baseURL.absoluteString));
-                const extensionOrigin = extensionBaseURL.endsWith("/")
-                    ? extensionBaseURL.slice(0, -1)
-                    : extensionBaseURL;
                 const fallbackResourceURL = (path = "") => new URL(
                     String(path),
                     extensionBaseURL
@@ -586,21 +594,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             return callbackOrPromise(args, undefined);
                         }
                     });
-                const overlay = (nativeValue, fallback) => new Proxy(
-                    nativeValue ?? {},
-                    {
-                        get(target, property) {
-                            const value = Reflect.get(target, property, target);
-                            if (value === undefined) return fallback[property];
-                            return typeof value === "function"
-                                ? value.bind(target)
-                                : value;
-                        },
-                        has(target, property) {
-                            return property in target || property in fallback;
-                        }
-                    }
-                );
                 const extensionViews = () => {
                     for (const root of [nativeBrowser, nativeChrome]) {
                         const extensionNamespace = root?.extension;
@@ -799,947 +792,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     onHistoryStateUpdated: noopEvent,
                     onTabReplaced: noopEvent
                 };
-                const createMessageBootstrap = (nativeRoot) => {
-                    const nativeRuntime = nativeRoot?.runtime;
-                    const nativeEvent = nativeRuntime?.onMessage;
-                    if (
-                        !nativeRuntime
-                        || typeof nativeEvent?.addListener !== "function"
-                        || typeof nativeEvent?.removeListener !== "function"
-                    ) {
-                        return undefined;
-                    }
-
-                    const runtimeNamespace = nativeRoot === nativeChrome
-                        ? "chrome"
-                        : nativeRoot === nativeBrowser
-                            ? "browser"
-                            : "extension";
-
-                    const nativeAdd = nativeEvent.addListener.bind(nativeEvent);
-                    const nativeRemove =
-                        nativeEvent.removeListener.bind(nativeEvent);
-                    const nativeHas = typeof nativeEvent.hasListener === "function"
-                        ? nativeEvent.hasListener.bind(nativeEvent)
-                        : () => false;
-                    const nativeSendMessage =
-                        typeof nativeRuntime.sendMessage === "function"
-                            ? nativeRuntime.sendMessage.bind(nativeRuntime)
-                            : undefined;
-                    const bridgeWakeMessageKey =
-                        "__crestRuntimeBridgeWake";
-                    const isBridgeWakeMessage = (message) => (
-                        message !== null
-                        && typeof message === "object"
-                        && message[bridgeWakeMessageKey] === 1
-                    );
-                    const listeners = new Map();
-                    const handledMessages = new Set();
-                    let extensionPageMessaging;
-                    let contentScriptMessaging;
-                    let completeInitialization;
-                    let isComplete = false;
-                    const initialization = new Promise((resolve) => {
-                        completeInitialization = resolve;
-                    });
-                    const keepsMessageChannelOpen = (result) => (
-                        result === true
-                        || (result !== null
-                            && (typeof result === "object"
-                                || typeof result === "function")
-                            && typeof result.then === "function")
-                    );
-                    const isThenable = (value) => (
-                        value !== null
-                        && (typeof value === "object"
-                            || typeof value === "function")
-                        && typeof value.then === "function"
-                    );
-                    const normalizedSelfMessage = (args) => {
-                        const values = Array.from(args);
-                        const callback = typeof values.at(-1) === "function"
-                            ? values.pop()
-                            : undefined;
-                        if (values.length === 0) return undefined;
-
-                        let targetExtensionID;
-                        let message;
-                        if (values.length >= 3) {
-                            targetExtensionID = values[0];
-                            message = values[1];
-                        } else if (
-                            values.length === 2
-                            && typeof values[0] === "string"
-                        ) {
-                            const possibleOptions = values[1];
-                            const optionKeys = possibleOptions
-                                && typeof possibleOptions === "object"
-                                ? Object.keys(possibleOptions)
-                                : [];
-                            const isOptions = possibleOptions == null
-                                || optionKeys.every(
-                                    (key) => key === "includeTlsChannelId"
-                                );
-                            if (isOptions) {
-                                message = values[0];
-                            } else {
-                                targetExtensionID = values[0];
-                                message = values[1];
-                            }
-                        } else {
-                            message = values[0];
-                        }
-                        if (
-                            targetExtensionID !== undefined
-                            && targetExtensionID !== extensionID
-                        ) {
-                            return undefined;
-                        }
-                        return { message, callback };
-                    };
-                    const isExtensionPage = () => {
-                        if (typeof location === "undefined") return false;
-                        try {
-                            const base = new URL(extensionBaseURL);
-                            return location.protocol === base.protocol
-                                && location.host === base.host;
-                        } catch {
-                            return false;
-                        }
-                    };
-                    const markHandled = (message) => {
-                        handledMessages.add(message);
-                    };
-                    const wasHandled = (message) =>
-                        handledMessages.has(message);
-                    const wrappedListener = (listener) => {
-                        let wrapped = listeners.get(listener);
-                        if (wrapped) return wrapped;
-
-                        wrapped = (message, sender, sendResponse) => {
-                            if (isBridgeWakeMessage(message)) return false;
-
-                            let didRespond = false;
-                            const trackedSendResponse = (...args) => {
-                                didRespond = true;
-                                markHandled(message);
-                                return sendResponse(...args);
-                            };
-                            const result = listener(
-                                message,
-                                sender,
-                                trackedSendResponse
-                            );
-                            if (
-                                didRespond
-                                || keepsMessageChannelOpen(result)
-                            ) {
-                                markHandled(message);
-                            }
-                            return result;
-                        };
-                        listeners.set(listener, wrapped);
-                        return wrapped;
-                    };
-                    const eventCompatibility = new Proxy(nativeEvent, {
-                        get(target, property) {
-                            if (property === "addListener") {
-                                return (listener) => {
-                                    nativeAdd(wrappedListener(listener));
-                                    extensionPageMessaging
-                                        ?.retryPendingRequests();
-                                    contentScriptMessaging
-                                        ?.retryPendingRequests();
-                                };
-                            }
-                            if (property === "removeListener") {
-                                return (listener) => {
-                                    const wrapped = listeners.get(listener);
-                                    nativeRemove(wrapped ?? listener);
-                                    if (wrapped) listeners.delete(listener);
-                                };
-                            }
-                            if (property === "hasListener") {
-                                return (listener) => nativeHas(
-                                    listeners.get(listener) ?? listener
-                                );
-                            }
-                            return Reflect.get(target, property, target);
-                        }
-                    });
-                    const replayAfterInitialization = (
-                        message,
-                        sender,
-                        sendResponse
-                    ) => {
-                        if (isBridgeWakeMessage(message)) return false;
-
-                        initialization.then(() => {
-                            if (wasHandled(message)) return;
-
-                            for (const listener of listeners.values()) {
-                                const result = listener(
-                                    message,
-                                    sender,
-                                    sendResponse
-                                );
-                                if (
-                                    wasHandled(message)
-                                    || keepsMessageChannelOpen(result)
-                                ) {
-                                    return;
-                                }
-                            }
-                        });
-                        return true;
-                    };
-                    nativeAdd(replayAfterInitialization);
-
-                    const finish = () => {
-                        if (isComplete) return;
-                        isComplete = true;
-                        nativeRemove(replayAfterInitialization);
-                        completeInitialization();
-                        queueMicrotask(() => handledMessages.clear());
-                    };
-                    const previousBackgroundCompletion = globalThis
-                        .__crestCompleteWebExtensionBackgroundBootstrap;
-                    const completeBackgroundBootstrap = () => {
-                        previousBackgroundCompletion?.();
-                        finish();
-                    };
-                    try {
-                        Object.defineProperty(
-                            globalThis,
-                            "__crestCompleteWebExtensionBackgroundBootstrap",
-                            {
-                                value: completeBackgroundBootstrap,
-                                configurable: true
-                            }
-                        );
-                    } catch {
-                        globalThis.__crestCompleteWebExtensionBackgroundBootstrap =
-                            completeBackgroundBootstrap;
-                    }
-                    const invokePendingRequest = (request) => {
-                        if (request.isSettled || request.isClaimed) return;
-
-                        for (const listener of listeners.keys()) {
-                            if (request.attemptedListeners.has(listener)) {
-                                continue;
-                            }
-                            request.attemptedListeners.add(listener);
-                            let didRespond = false;
-                            const sendResponse = (response) => {
-                                didRespond = true;
-                                request.respond(response);
-                                return true;
-                            };
-                            let result;
-                            try {
-                                result = listener(
-                                    request.message,
-                                    request.sender,
-                                    sendResponse
-                                );
-                            } catch {
-                                continue;
-                            }
-                            if (didRespond) return;
-                            if (result === true) {
-                                request.isClaimed = true;
-                                return;
-                            }
-                            if (isThenable(result)) {
-                                request.isClaimed = true;
-                                Promise.resolve(result).then(
-                                    (response) => request.respond(response),
-                                    (error) => request.respond(
-                                        undefined,
-                                        String(error)
-                                    )
-                                );
-                                return;
-                            }
-                        }
-                    };
-                    extensionPageMessaging = (() => {
-                        if (typeof BroadcastChannel !== "function") {
-                            return undefined;
-                        }
-
-                        let channel;
-                        try {
-                            channel = new BroadcastChannel(
-                                `crest-webextension-messages:${extensionID}:${runtimeNamespace}`
-                            );
-                        } catch {
-                            return undefined;
-                        }
-
-                        const contextToken = globalThis.crypto
-                            ?.randomUUID?.()
-                            ?? `${Date.now()}-${Math.random()}`;
-                        const pendingIncoming = new Map();
-                        const pendingOutgoing = new Map();
-                        const responseTimeoutMilliseconds = 30_000;
-                        const backgroundProbeIntervalMilliseconds = 50;
-                        const isBackgroundContext = globalThis
-                            .__crestIsWebExtensionBackground === true;
-                        let requestSequence = 0;
-                        const wakeBackground = () => {
-                            if (
-                                isBackgroundContext
-                                || typeof nativeSendMessage !== "function"
-                            ) {
-                                return;
-                            }
-                            try {
-                                const result = nativeSendMessage(
-                                    { [bridgeWakeMessageKey]: 1 },
-                                    () => { void nativeRuntime.lastError; }
-                                );
-                                if (isThenable(result)) {
-                                    Promise.resolve(result).catch(() => {});
-                                }
-                            } catch {}
-                        };
-                        const receiveRequest = (payload) => {
-                            if (
-                                payload.senderToken === contextToken
-                                || (payload.recipientToken !== undefined
-                                    && payload.recipientToken !== contextToken)
-                                || pendingIncoming.has(payload.requestID)
-                            ) {
-                                return;
-                            }
-                            const request = {
-                                requestID: payload.requestID,
-                                message: payload.message,
-                                sender: payload.sender ?? {
-                                    id: extensionID,
-                                    url: "",
-                                    origin: extensionOrigin
-                                },
-                                attemptedListeners: new Set(),
-                                isClaimed: false,
-                                isSettled: false
-                            };
-                            request.respond = (response, error) => {
-                                if (request.isSettled) return;
-                                request.isSettled = true;
-                                clearTimeout(request.timeout);
-                                pendingIncoming.delete(request.requestID);
-                                channel.postMessage({
-                                    kind: "response",
-                                    requestID: request.requestID,
-                                    senderToken: contextToken,
-                                    response,
-                                    error
-                                });
-                            };
-                            request.timeout = setTimeout(() => {
-                                request.isSettled = true;
-                                pendingIncoming.delete(request.requestID);
-                            }, responseTimeoutMilliseconds);
-                            pendingIncoming.set(request.requestID, request);
-                            invokePendingRequest(request);
-                        };
-                        const takePendingOutgoing = (requestID) => {
-                            const pending = pendingOutgoing.get(requestID);
-                            if (!pending) return undefined;
-
-                            pendingOutgoing.delete(requestID);
-                            clearTimeout(pending.timeout);
-                            clearTimeout(pending.wakeTimer);
-                            clearInterval(pending.probeInterval);
-                            return pending;
-                        };
-                        const receiveResponse = (payload) => {
-                            const pending = takePendingOutgoing(
-                                payload.requestID
-                            );
-                            if (!pending) return;
-
-                            if (pending.callback) {
-                                queueMicrotask(() => pending.callback(
-                                    payload.response
-                                ));
-                            } else if (payload.error) {
-                                pending.reject(new Error(payload.error));
-                            } else {
-                                pending.resolve(payload.response);
-                            }
-                        };
-                        const receiveBackgroundProbe = (payload) => {
-                            if (!isBackgroundContext) return;
-
-                            initialization.then(() => {
-                                channel.postMessage({
-                                    kind: "background-ready",
-                                    requestID: payload.requestID,
-                                    recipientToken: payload.senderToken,
-                                    senderToken: contextToken
-                                });
-                            });
-                        };
-                        const receiveBackgroundReady = (payload) => {
-                            if (payload.recipientToken !== contextToken) return;
-
-                            const pending = pendingOutgoing.get(
-                                payload.requestID
-                            );
-                            if (!pending || pending.didSend) return;
-
-                            pending.didSend = true;
-                            clearTimeout(pending.wakeTimer);
-                            clearInterval(pending.probeInterval);
-                            channel.postMessage({
-                                ...pending.request,
-                                recipientToken: payload.senderToken
-                            });
-                        };
-                        channel.addEventListener("message", (event) => {
-                            const payload = event.data;
-                            if (
-                                !payload
-                                || typeof payload !== "object"
-                                || payload.senderToken === contextToken
-                            ) {
-                                return;
-                            }
-                            if (payload.kind === "background-probe") {
-                                receiveBackgroundProbe(payload);
-                            } else if (payload.kind === "background-ready") {
-                                receiveBackgroundReady(payload);
-                            } else if (payload.kind === "request") {
-                                receiveRequest(payload);
-                            } else if (payload.kind === "response") {
-                                receiveResponse(payload);
-                            }
-                        });
-                        const beginOutgoingDelivery = (pending) => {
-                            const postProbe = () => channel.postMessage({
-                                kind: "background-probe",
-                                requestID: pending.request.requestID,
-                                senderToken: contextToken
-                            });
-                            pending.probeInterval = setInterval(
-                                postProbe,
-                                backgroundProbeIntervalMilliseconds
-                            );
-                            pending.wakeTimer = setTimeout(
-                                wakeBackground,
-                                0
-                            );
-                            postProbe();
-                        };
-                        const sendMessage = (...args) => {
-                            const normalized = normalizedSelfMessage(args);
-                            if (!normalized) {
-                                return { handled: false };
-                            }
-
-                            const requestID =
-                                `${contextToken}:${++requestSequence}`;
-                            const sender = {
-                                id: extensionID,
-                                url: typeof location === "undefined"
-                                    ? ""
-                                    : location.href,
-                                origin: extensionOrigin
-                            };
-                            const request = {
-                                kind: "request",
-                                requestID,
-                                senderToken: contextToken,
-                                message: normalized.message,
-                                sender
-                            };
-                            if (normalized.callback) {
-                                const timeout = setTimeout(() => {
-                                    takePendingOutgoing(requestID);
-                                    normalized.callback(undefined);
-                                }, responseTimeoutMilliseconds);
-                                const pending = {
-                                    callback: normalized.callback,
-                                    request,
-                                    timeout,
-                                };
-                                pendingOutgoing.set(requestID, pending);
-                                beginOutgoingDelivery(pending);
-                                return { handled: true, value: undefined };
-                            }
-                            const value = new Promise((resolve, reject) => {
-                                const timeout = setTimeout(() => {
-                                    takePendingOutgoing(requestID);
-                                    reject(new Error(
-                                        "No extension page handled the message."
-                                    ));
-                                }, responseTimeoutMilliseconds);
-                                const pending = {
-                                    resolve,
-                                    reject,
-                                    request,
-                                    timeout,
-                                };
-                                pendingOutgoing.set(requestID, pending);
-                                beginOutgoingDelivery(pending);
-                            });
-                            return { handled: true, value };
-                        };
-                        return {
-                            canSend: () => (
-                                isExtensionPage() && !isBackgroundContext
-                            ),
-                            sendMessage,
-                            retryPendingRequests() {
-                                for (const request of pendingIncoming.values()) {
-                                    invokePendingRequest(request);
-                                }
-                            }
-                        };
-                    })();
-                    contentScriptMessaging = (() => {
-                        const portName =
-                            `crest-webextension-runtime-messages-v1:${runtimeNamespace}`;
-                        const responseTimeoutMilliseconds = 30_000;
-                        const onConnect = nativeRuntime.onConnect;
-                        const nativeConnect = nativeRuntime.connect;
-
-                        if (
-                            globalThis.__crestIsWebExtensionBackground === true
-                        ) {
-                            if (typeof onConnect?.addListener !== "function") {
-                                return undefined;
-                            }
-
-                            const pendingIncoming = new Set();
-                            const connectedPorts = new Set();
-                            const pendingTabOutgoing = new Map();
-                            let tabRequestSequence = 0;
-                            const takePendingTabOutgoing = (requestID) => {
-                                const pending = pendingTabOutgoing.get(
-                                    requestID
-                                );
-                                if (!pending) return undefined;
-
-                                pendingTabOutgoing.delete(requestID);
-                                clearTimeout(pending.timeout);
-                                return pending;
-                            };
-                            const settleTabOutgoing = (
-                                requestID,
-                                payload = {}
-                            ) => {
-                                const pending = takePendingTabOutgoing(
-                                    requestID
-                                );
-                                if (!pending) return;
-
-                                if (pending.callback) {
-                                    queueMicrotask(() => pending.callback(
-                                        payload.response
-                                    ));
-                                } else if (payload.error) {
-                                    pending.reject(new Error(payload.error));
-                                } else {
-                                    pending.resolve(payload.response);
-                                }
-                            };
-                            const normalizedTabMessage = (args) => {
-                                const values = Array.from(args);
-                                const callback =
-                                    typeof values.at(-1) === "function"
-                                        ? values.pop()
-                                        : undefined;
-                                if (values.length < 2) return undefined;
-
-                                const tabID = values[0];
-                                if (typeof tabID !== "number") {
-                                    return undefined;
-                                }
-                                const options = values.length >= 3
-                                    ? values[2]
-                                    : undefined;
-                                if (
-                                    options !== undefined
-                                    && options !== null
-                                    && typeof options !== "object"
-                                ) {
-                                    return undefined;
-                                }
-                                return {
-                                    tabID,
-                                    message: values[1],
-                                    options: options ?? {},
-                                    callback
-                                };
-                            };
-                            const portMatches = (port, normalized) => {
-                                const sender = port?.sender;
-                                if (sender?.tab?.id !== normalized.tabID) {
-                                    return false;
-                                }
-                                if (
-                                    normalized.options.frameId !== undefined
-                                    && sender.frameId
-                                        !== normalized.options.frameId
-                                ) {
-                                    return false;
-                                }
-                                if (
-                                    normalized.options.documentId
-                                        !== undefined
-                                    && sender.documentId
-                                        !== normalized.options.documentId
-                                ) {
-                                    return false;
-                                }
-                                return true;
-                            };
-                            onConnect.addListener((port) => {
-                                if (
-                                    port?.name !== portName
-                                    || typeof port.onMessage?.addListener
-                                        !== "function"
-                                    || typeof port.postMessage !== "function"
-                                ) {
-                                    return;
-                                }
-
-                                connectedPorts.add(port);
-                                const requests = new Set();
-                                const settleRequest = (request) => {
-                                    request.isSettled = true;
-                                    clearTimeout(request.timeout);
-                                    requests.delete(request);
-                                    pendingIncoming.delete(request);
-                                };
-                                port.onMessage.addListener((payload) => {
-                                    if (
-                                        payload?.kind === "tab-response"
-                                        && typeof payload.requestID === "string"
-                                    ) {
-                                        settleTabOutgoing(
-                                            payload.requestID,
-                                            payload
-                                        );
-                                        return;
-                                    }
-                                    if (
-                                        !payload
-                                        || payload.kind !== "request"
-                                        || typeof payload.requestID !== "string"
-                                    ) {
-                                        return;
-                                    }
-
-                                    const request = {
-                                        requestID: payload.requestID,
-                                        message: payload.message,
-                                        sender: port.sender ?? {
-                                            id: extensionID,
-                                            url: "",
-                                            origin: extensionOrigin
-                                        },
-                                        attemptedListeners: new Set(),
-                                        isClaimed: false,
-                                        isSettled: false
-                                    };
-                                    request.respond = (response, error) => {
-                                        if (request.isSettled) return;
-                                        settleRequest(request);
-                                        try {
-                                            port.postMessage({
-                                                kind: "response",
-                                                requestID: request.requestID,
-                                                response,
-                                                error
-                                            });
-                                        } catch {}
-                                    };
-                                    request.timeout = setTimeout(
-                                        () => settleRequest(request),
-                                        responseTimeoutMilliseconds
-                                    );
-                                    requests.add(request);
-                                    pendingIncoming.add(request);
-                                    invokePendingRequest(request);
-                                });
-                                if (
-                                    typeof port.onDisconnect?.addListener
-                                    === "function"
-                                ) {
-                                    port.onDisconnect.addListener(() => {
-                                        connectedPorts.delete(port);
-                                        for (const request of requests) {
-                                            settleRequest(request);
-                                        }
-                                    });
-                                }
-                            });
-
-                            const sendTabMessage = (...args) => {
-                                const normalized = normalizedTabMessage(args);
-                                if (!normalized) return { handled: false };
-
-                                const recipients = Array.from(
-                                    connectedPorts
-                                ).filter((port) => portMatches(
-                                    port,
-                                    normalized
-                                ));
-                                if (recipients.length === 0) {
-                                    return { handled: false };
-                                }
-
-                                const requestID =
-                                    `tab:${Date.now()}:${++tabRequestSequence}`;
-                                let value;
-                                let pending;
-                                if (normalized.callback) {
-                                    pending = {
-                                        callback: normalized.callback
-                                    };
-                                } else {
-                                    value = new Promise((resolve, reject) => {
-                                        pending = { resolve, reject };
-                                    });
-                                }
-                                pending.timeout = setTimeout(() => {
-                                    settleTabOutgoing(requestID, {
-                                        error: "No extension content script handled the message."
-                                    });
-                                }, responseTimeoutMilliseconds);
-                                pendingTabOutgoing.set(requestID, pending);
-
-                                const payload = {
-                                    kind: "tab-request",
-                                    requestID,
-                                    message: normalized.message,
-                                    sender: {
-                                        id: extensionID,
-                                        url: typeof location === "undefined"
-                                            ? extensionBaseURL
-                                            : location.href,
-                                        origin: extensionOrigin
-                                    }
-                                };
-                                let deliveryCount = 0;
-                                for (const recipient of recipients) {
-                                    try {
-                                        recipient.postMessage(payload);
-                                        deliveryCount += 1;
-                                    } catch {
-                                        connectedPorts.delete(recipient);
-                                    }
-                                }
-                                if (deliveryCount === 0) {
-                                    takePendingTabOutgoing(requestID);
-                                    return { handled: false };
-                                }
-                                return { handled: true, value };
-                            };
-
-                            return {
-                                canSend: () => false,
-                                sendMessage: () => ({ handled: false }),
-                                sendTabMessage,
-                                retryPendingRequests() {
-                                    for (const request of pendingIncoming) {
-                                        invokePendingRequest(request);
-                                    }
-                                }
-                            };
-                        }
-
-                        if (
-                            isExtensionPage()
-                            || typeof nativeConnect !== "function"
-                        ) {
-                            return undefined;
-                        }
-
-                        let port;
-                        let requestSequence = 0;
-                        const pendingIncoming = new Map();
-                        const pendingOutgoing = new Map();
-                        const settleIncoming = (request) => {
-                            request.isSettled = true;
-                            clearTimeout(request.timeout);
-                            pendingIncoming.delete(request.requestID);
-                        };
-                        const settlePending = (requestID, payload = {}) => {
-                            const pending = pendingOutgoing.get(requestID);
-                            if (!pending) return;
-
-                            pendingOutgoing.delete(requestID);
-                            clearTimeout(pending.timeout);
-                            if (pending.callback) {
-                                queueMicrotask(() => pending.callback(
-                                    payload.response
-                                ));
-                            } else if (payload.error) {
-                                pending.reject(new Error(payload.error));
-                            } else {
-                                pending.resolve(payload.response);
-                            }
-                        };
-                        const disconnect = () => {
-                            port = undefined;
-                            for (const request of pendingIncoming.values()) {
-                                settleIncoming(request);
-                            }
-                            for (const requestID of pendingOutgoing.keys()) {
-                                settlePending(requestID, {
-                                    error: "The extension background disconnected."
-                                });
-                            }
-                        };
-                        const connectedPort = () => {
-                            if (port) return port;
-
-                            let nextPort;
-                            try {
-                                nextPort = nativeConnect.call(nativeRuntime, {
-                                    name: portName
-                                });
-                            } catch {
-                                return undefined;
-                            }
-                            if (
-                                !nextPort
-                                || typeof nextPort.postMessage !== "function"
-                                || typeof nextPort.onMessage?.addListener
-                                    !== "function"
-                            ) {
-                                return undefined;
-                            }
-                            port = nextPort;
-                            nextPort.onMessage.addListener((payload) => {
-                                if (typeof payload?.requestID !== "string") {
-                                    return;
-                                }
-                                if (payload.kind === "response") {
-                                    settlePending(payload.requestID, payload);
-                                    return;
-                                }
-                                if (
-                                    payload.kind !== "tab-request"
-                                    || pendingIncoming.has(payload.requestID)
-                                ) {
-                                    return;
-                                }
-
-                                const request = {
-                                    requestID: payload.requestID,
-                                    message: payload.message,
-                                    sender: payload.sender ?? {
-                                        id: extensionID,
-                                        url: extensionBaseURL,
-                                        origin: extensionOrigin
-                                    },
-                                    attemptedListeners: new Set(),
-                                    isClaimed: false,
-                                    isSettled: false
-                                };
-                                request.respond = (response, error) => {
-                                    if (request.isSettled) return;
-                                    settleIncoming(request);
-                                    try {
-                                        nextPort.postMessage({
-                                            kind: "tab-response",
-                                            requestID: request.requestID,
-                                            response,
-                                            error
-                                        });
-                                    } catch {}
-                                };
-                                request.timeout = setTimeout(
-                                    () => settleIncoming(request),
-                                    responseTimeoutMilliseconds
-                                );
-                                pendingIncoming.set(
-                                    request.requestID,
-                                    request
-                                );
-                                invokePendingRequest(request);
-                            });
-                            if (
-                                typeof nextPort.onDisconnect?.addListener
-                                === "function"
-                            ) {
-                                nextPort.onDisconnect.addListener(disconnect);
-                            }
-                            return nextPort;
-                        };
-                        const sendMessage = (...args) => {
-                            const normalized = normalizedSelfMessage(args);
-                            if (!normalized) return { handled: false };
-
-                            const activePort = connectedPort();
-                            if (!activePort) return { handled: false };
-
-                            const requestID =
-                                `content:${Date.now()}:${++requestSequence}`;
-                            let value;
-                            let pending;
-                            if (normalized.callback) {
-                                pending = { callback: normalized.callback };
-                            } else {
-                                value = new Promise((resolve, reject) => {
-                                    pending = { resolve, reject };
-                                });
-                            }
-                            pending.timeout = setTimeout(() => {
-                                settlePending(requestID, {
-                                    error: "No extension background handled the message."
-                                });
-                            }, responseTimeoutMilliseconds);
-                            pendingOutgoing.set(requestID, pending);
-                            try {
-                                activePort.postMessage({
-                                    kind: "request",
-                                    requestID,
-                                    message: normalized.message
-                                });
-                            } catch {
-                                pendingOutgoing.delete(requestID);
-                                clearTimeout(pending.timeout);
-                                return { handled: false };
-                            }
-                            return { handled: true, value };
-                        };
-                        return {
-                            canSend: () => true,
-                            sendMessage,
-                            retryPendingRequests() {
-                                connectedPort();
-                                for (const request of pendingIncoming.values()) {
-                                    invokePendingRequest(request);
-                                }
-                            }
-                        };
-                    })();
-                    return {
-                        nativeRoot,
-                        onMessage: eventCompatibility,
-                        extensionPageMessaging,
-                        contentScriptMessaging
-                    };
-                };
-                const messageBootstraps = new Map();
-                const messageBootstrapFor = (nativeRoot) => {
-                    if (!nativeRoot) return undefined;
-                    let bootstrap = messageBootstraps.get(nativeRoot);
-                    if (bootstrap) return bootstrap;
-
-                    bootstrap = createMessageBootstrap(nativeRoot);
-                    if (bootstrap) messageBootstraps.set(nativeRoot, bootstrap);
-                    return bootstrap;
-                };
-                messageBootstrapFor(primaryRoot);
                 const runtime = {
                     id: extensionID,
                     getURL(path = "") {
@@ -1753,167 +805,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return Promise.resolve({ status: "no_update" });
                     }
                 };
-                const readNativeManifest = (nativeRuntime, args) => {
-                    const getManifest = nativeRuntime?.getManifest;
-                    if (typeof getManifest !== "function") return undefined;
-                    try {
-                        const manifest = getManifest.apply(nativeRuntime, args);
-                        return manifest && typeof manifest === "object"
-                            ? manifest
-                            : undefined;
-                    } catch {
-                        return undefined;
-                    }
-                };
-                const manifestCompatibility = (nativeRuntime, args) => (
-                    readNativeManifest(nativeRuntime, args)
-                    ?? readNativeManifest(nativeChrome?.runtime, args)
-                    ?? readNativeManifest(nativeBrowser?.runtime, args)
-                    ?? declaredManifest
-                );
-                const compatibleRuntimeFor = (nativeRoot) => {
-                    const nativeRuntime = nativeRoot?.runtime;
-                    if (!nativeRuntime) return runtime;
-                    const messageBootstrap = messageBootstrapFor(nativeRoot);
-
-                    return new Proxy(nativeRuntime, {
-                        get(target, property) {
-                            if (
-                                property === "onMessage"
-                                && messageBootstrap?.nativeRoot === nativeRoot
-                            ) {
-                                return messageBootstrap.onMessage;
-                            }
-                            if (property === "getManifest") {
-                                return (...args) => manifestCompatibility(
-                                    target,
-                                    args
-                                );
-                            }
-                            if (property === "sendMessage") {
-                                const nativeSendMessage = Reflect.get(
-                                    target,
-                                    property,
-                                    target
-                                );
-                                const messageRouting = [
-                                    messageBootstrap?.extensionPageMessaging,
-                                    messageBootstrap?.contentScriptMessaging
-                                ].find((candidate) => candidate?.canSend());
-                                if (messageRouting) {
-                                    return (...args) => {
-                                        const attempt = messageRouting
-                                            .sendMessage(...args);
-                                        if (attempt.handled) {
-                                            return attempt.value;
-                                        }
-                                        if (
-                                            typeof nativeSendMessage
-                                            !== "function"
-                                        ) {
-                                            return runtime[property];
-                                        }
-                                        return nativeSendMessage.apply(
-                                            target,
-                                            args
-                                        );
-                                    };
-                                }
-                                if (typeof nativeSendMessage !== "function") {
-                                    return runtime[property];
-                                }
-                                return (...args) => nativeSendMessage.apply(
-                                    target,
-                                    args
-                                );
-                            }
-                            if (property === "id") {
-                                const nativeID = Reflect.get(
-                                    target,
-                                    property,
-                                    target
-                                );
-                                return typeof nativeID === "string"
-                                    && nativeID.length > 0
-                                    ? nativeID
-                                    : extensionID;
-                            }
-                            if (property === "getURL") {
-                                return (path = "") => {
-                                    const nativeGetURL = Reflect.get(
-                                        target,
-                                        property,
-                                        target
-                                    );
-                                    if (typeof nativeGetURL === "function") {
-                                        try {
-                                            const nativeURL = nativeGetURL.call(
-                                                target,
-                                                path
-                                            );
-                                            if (
-                                                typeof nativeURL === "string"
-                                                && nativeURL.length > 0
-                                            ) {
-                                                return new URL(nativeURL).href;
-                                            }
-                                        } catch {}
-                                    }
-                                    return fallbackResourceURL(path);
-                                };
-                            }
-                            const value = Reflect.get(target, property, target);
-                            if (value === undefined) return runtime[property];
-                            return typeof value === "function"
-                                ? value.bind(target)
-                                : value;
-                        }
-                    });
-                };
-                const compatibleTabsFor = (nativeRoot) => {
-                    const nativeTabs = nativeRoot?.tabs;
-                    const messageBootstrap = messageBootstrapFor(nativeRoot);
-                    const sendTabMessage = messageBootstrap
-                        ?.contentScriptMessaging?.sendTabMessage;
-                    if (
-                        !nativeTabs
-                        && typeof sendTabMessage !== "function"
-                    ) {
-                        return undefined;
-                    }
-
-                    return new Proxy(nativeTabs ?? {}, {
-                        get(target, property) {
-                            if (property === "sendMessage") {
-                                const nativeSendMessage = Reflect.get(
-                                    target,
-                                    property,
-                                    target
-                                );
-                                return (...args) => {
-                                    if (typeof sendTabMessage === "function") {
-                                        const attempt = sendTabMessage(...args);
-                                        if (attempt.handled) {
-                                            return attempt.value;
-                                        }
-                                    }
-                                    return typeof nativeSendMessage === "function"
-                                        ? nativeSendMessage.apply(target, args)
-                                        : undefined;
-                                };
-                            }
-                            const value = Reflect.get(
-                                target,
-                                property,
-                                target
-                            );
-                            return typeof value === "function"
-                                ? value.bind(target)
-                                : value;
-                        }
-                    });
-                };
-
                 const fallbacksFor = (nativeRoot) => ({
                     action,
                     browserAction: action,
@@ -1956,91 +847,81 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                     }
                 };
-                const compatibilityFor = (nativeRoot) => {
-                    installFallbacks(nativeRoot, fallbacksFor(nativeRoot));
-                    return ({
-                    action: overlay(nativeRoot.action, action),
-                    browserAction: overlay(nativeRoot.browserAction, action),
-                    permissions: overlay(nativeRoot.permissions, permissions),
-                    privacy: overlay(nativeRoot.privacy, {
-                        services: overlay(
-                            nativeRoot.privacy?.services,
-                            privacyServices
-                        )
-                    }),
-                    storage: overlay(nativeRoot.storage, {
-                        managed: overlay(
-                            nativeRoot.storage?.managed,
-                            storageManaged
-                        )
-                    }),
-                    notifications: overlay(
-                        nativeRoot.notifications,
-                        notifications
-                    ),
-                    offscreen: overlay(nativeRoot.offscreen, offscreen),
-                    management: overlay(nativeRoot.management, management),
-                    downloads: overlay(nativeRoot.downloads, downloads),
-                    idle: overlay(nativeRoot.idle, idle),
-                    webRequest: overlay(nativeRoot.webRequest, webRequest),
-                    webNavigation: overlay(
-                        nativeRoot.webNavigation,
-                        webNavigation
-                    ),
-                    runtime: overlay(nativeRoot.runtime, runtime)
-                    });
-                };
-                const installCompatibility = (name, nativeRoot) => {
+                const installCompatibility = (nativeRoot) => {
                     if (!nativeRoot) return;
 
-                    const fallback = compatibilityFor(nativeRoot);
-                    const compatibleRuntime = compatibleRuntimeFor(nativeRoot);
-                    const compatibleTabs = compatibleTabsFor(nativeRoot);
-                    const compatibleRoot = new Proxy(nativeRoot, {
-                        get(target, property) {
-                            if (property === "runtime") {
-                                return compatibleRuntime;
-                            }
-                            if (
-                                property === "tabs"
-                                && compatibleTabs !== undefined
-                            ) {
-                                return compatibleTabs;
-                            }
-                            const value = Reflect.get(target, property, target);
-                            return value === undefined
-                                ? fallback[property]
-                                : value;
-                        },
-                        has(target, property) {
-                            return (
-                                property in target
-                                || property in fallback
-                                || (
-                                    property === "tabs"
-                                    && compatibleTabs !== undefined
-                                )
+                    const { runtime: runtimeFallback, ...fallbacks } =
+                        fallbacksFor(nativeRoot);
+                    installFallbacks(nativeRoot, fallbacks);
+                    installFallbacks(nativeRoot.runtime, runtimeFallback);
+                    if (nativeRoot.runtime) {
+                        try {
+                            Object.defineProperty(
+                                nativeRoot.runtime,
+                                "getManifest",
+                                {
+                                    value: () => declaredManifest,
+                                    configurable: true
+                                }
                             );
+                        } catch {}
+                    }
+                    return nativeRoot;
+                };
+                const nativeCapabilityNames = [
+                    "action", "alarms", "bookmarks", "browserAction",
+                    "commands", "contentScripts", "contextMenus", "cookies",
+                    "declarativeNetRequest", "devtools", "downloads",
+                    "extension", "history", "i18n", "identity", "idle",
+                    "management", "notifications", "offscreen", "omnibox",
+                    "pageAction", "permissions", "privacy", "runtime",
+                    "scripting", "sessions", "sidePanel", "storage", "tabs",
+                    "topSites", "webNavigation", "webRequest", "windows"
+                ];
+                const installNativeAliases = (target, source) => {
+                    if (!target || !source || target === source) return;
+                    for (const property of nativeCapabilityNames) {
+                        let current;
+                        let nativeValue;
+                        try {
+                            current = target[property];
+                            nativeValue = source[property];
+                        } catch {
+                            continue;
                         }
-                    });
+                        if (current !== undefined || nativeValue === undefined) {
+                            continue;
+                        }
+                        try {
+                            Object.defineProperty(target, property, {
+                                value: nativeValue,
+                                configurable: true,
+                                enumerable: true
+                            });
+                        } catch {}
+                    }
+                };
+                installNativeAliases(nativeChrome, nativeBrowser);
+                installNativeAliases(nativeBrowser, nativeChrome);
+                const installedRoots = new Set();
+                for (const root of [nativeChrome, nativeBrowser]) {
+                    if (!root || installedRoots.has(root)) continue;
+                    installedRoots.add(root);
+                    installCompatibility(root);
+                }
+                const installMissingRoot = (name, root) => {
+                    if (!root || globalThis[name] !== undefined) return;
                     try {
                         Object.defineProperty(globalThis, name, {
-                            value: compatibleRoot,
+                            value: root,
                             configurable: true
                         });
                     } catch {
-                        try { globalThis[name] = compatibleRoot; } catch {}
+                        try { globalThis[name] = root; } catch {}
                     }
-                    return compatibleRoot;
                 };
-                const chromeCompatibility = installCompatibility(
-                    "chrome",
-                    nativeChrome ?? nativeBrowser
-                );
-                const browserCompatibility = installCompatibility(
-                    "browser",
-                    nativeBrowser ?? nativeChrome
-                );
+                installMissingRoot("chrome", nativeBrowser);
+                installMissingRoot("browser", nativeChrome);
             })();
             """
     }

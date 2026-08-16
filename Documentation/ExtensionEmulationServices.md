@@ -55,20 +55,27 @@ resources that request a capability known to need normalization. Both formats
 enter the same preparer after their store-specific acquisition and provenance
 checks. It supports:
 
-- Manifest V3 module workers through a generated nonpersistent background page
+- Manifest V3 module workers through a generated persistent background page
   that loads the compatibility runtime before importing the declared module;
-- classic service workers by prepending the same generated runtime to the
-  temporary worker copy;
+- classic service workers through persistent `background.scripts`, with the
+  generated runtime inserted before the declared worker;
 - Manifest V2 `background.scripts` by inserting the runtime first;
 - declared content scripts and every packaged HTML extension page. This
   includes internal routes reached from a popup or options page even when the
   manifest does not name them directly. Manifest sandbox pages are excluded,
   because injecting privileged extension APIs there would violate the sandbox;
-- native-first `chrome`/`browser` namespace overlays, an exact
+- native-first `chrome`/`browser` capability augmentation, an exact
   `runtime.getManifest()` fallback, managed-storage empty-policy semantics,
-  optional navigation events, a cross-context messaging transport, background
-  message-startup buffering, and a document-backed offscreen-page adapter that
-  uses the URL supplied by the extension.
+  optional navigation events, and a document-backed offscreen-page adapter
+  that uses the URL supplied by the extension.
+
+For a Manifest V3 package that enters this layer, the temporary host manifest
+is projected to the equivalent Manifest V2 document-background shape that
+WebKit can keep alive reliably on direct-distribution macOS. Host and optional
+host permissions, `action`, web-accessible resources, and extension-page CSP
+are translated mechanically. The extension still observes its authored
+Manifest V3 document through `runtime.getManifest()`. Only the temporary copy
+is transformed; verified store bytes are never rewritten.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
 The app-service broker described below is the next boundary to connect; until a
@@ -83,43 +90,30 @@ the runtime selects behavior from API presence and execution context only.
 
 ## Cross-context messaging
 
-WebKit's native `runtime.sendMessage` remains the first choice. Crest supplies
-a transport only in contexts where WebKit exposes the API but does not carry a
-reply reliably between an extension page or content script and an extension's
-background content.
+WebKit owns cross-context messaging without a Crest relay. The compatibility
+runtime never replaces or wraps native `runtime`, `tabs`, `onMessage`,
+`onConnect`, `sendMessage`, or Port objects. That keeps callback and Promise
+behavior, Port lifetime, and sender tab/frame/document identity inside the
+engine that created the isolated content world.
 
-- Extension pages use a package-and-namespace-scoped `BroadcastChannel`. The generated
-  runtime is present in both the sending page and background document, so this
-  path does not cross into website JavaScript. A sender first probes for a
-  background receiver. If WebKit has evicted the nonpersistent background, a
-  private no-payload native message wakes it; the actual extension message is
-  sent only after the receiver finishes its generated background bootstrap,
-  answers, and is targeted to that context. This prevents a popup's first
-  request from being lost or handled against partially initialized extension
-  state while a Manifest V3 module is still starting, without exposing the
-  transport signal to extension listeners.
-- Content scripts use a reserved, namespace-scoped native `runtime.connect`
-  Port. The background marker installed before the compatibility runtime
-  identifies the one context allowed to receive those requests and replay them
-  to its registered `runtime.onMessage` listeners. The same Port carries
-  background `tabs.sendMessage` requests in the other direction. Connected
-  content contexts are selected by tab ID and, when supplied, frame ID or
-  document ID; the first response wins as it does in Chrome and Firefox.
-- Requests preserve callback, Promise, `return true`, and first-response
-  behavior. Sender objects preserve the verified runtime ID and page URL; for
-  extension pages, the synthesized `origin` matches `runtime.getURL("")` with
-  its root slash removed, as browser-origin checks expect. External-extension
-  messages continue through WebKit rather than entering Crest's internal
-  transport.
-- `chrome` and `browser` are bootstrapped independently. When WebKit exposes
-  them as different native objects, their channels and reserved Ports remain
-  separate so a receiver with no listener cannot claim traffic for the other
-  namespace. When WebKit exposes one object through both names, both aliases
-  reuse the same route.
+The generated runtime captures WebKit's existing `chrome` and `browser` roots.
+It copies an absent top-level native namespace from the other root, fills only
+missing capability members, and defines the missing root name as an alias only
+when WebKit supplied a single root. Existing native object identity and method
+receivers are preserved. `runtime.getManifest()` is the deliberate exception:
+it returns the extension's authored manifest rather than Crest's temporary host
+projection.
 
-The marker and reserved Port name are Crest protocol details, not extension
-identifiers. No extension source is inspected or patched, and the transport is
-selected by context and available capability alone.
+The host still has one required responsibility: every live web view that can
+run extension content must be announced to `WKWebExtensionController` before
+navigation begins. Otherwise WebKit cannot associate the isolated-world sender
+with a tab and rejects the extension's own message as “Tab not found.” The
+native integration fixture covers content-to-background `runtime.sendMessage`,
+`runtime.connect` sender metadata, `tabs.query`, and background-to-content
+`tabs.sendMessage` in one round trip.
+
+No extension source is inspected or patched, and no extension-specific
+transport exists.
 
 ## App-side service layout
 
