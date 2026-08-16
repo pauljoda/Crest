@@ -1,20 +1,20 @@
 import Foundation
 
-struct BrowserChromeWebStoreStoredResourcePreparer:
+struct BrowserStoreWebExtensionStoredResourcePreparer:
     BrowserExtensionStoredResourcePreparing
 {
-    private let compatibilityPreparer: BrowserChromeWebStoreCompatibilityPackagePreparer
+    private let compatibilityPreparer: BrowserWebExtensionCompatibilityPackagePreparer
 
     init(fileManager: FileManager = .default) {
         compatibilityPreparer =
-            BrowserChromeWebStoreCompatibilityPackagePreparer(
+            BrowserWebExtensionCompatibilityPackagePreparer(
                 fileManager: fileManager
             )
     }
 
     init(
         compatibilityPreparer:
-            BrowserChromeWebStoreCompatibilityPackagePreparer
+            BrowserWebExtensionCompatibilityPackagePreparer
     ) {
         self.compatibilityPreparer = compatibilityPreparer
     }
@@ -23,9 +23,18 @@ struct BrowserChromeWebStoreStoredResourcePreparer:
         resourceURL: URL,
         installation: BrowserExtensionInstallation
     ) throws -> BrowserExtensionStoredResource {
-        guard case .chromeWebStore(let source) = installation.source,
-            source.extensionID.rawValue == installation.id
-        else {
+        let hasVerifiedStoreIdentity: Bool
+        switch installation.source {
+        case .chromeWebStore(let source):
+            hasVerifiedStoreIdentity =
+                source.extensionID.rawValue == installation.id
+        case .mozillaAddons(let source):
+            hasVerifiedStoreIdentity =
+                source.extensionID.rawValue == installation.id
+        case .unpackedPackage, .safariWebExtension, nil:
+            hasVerifiedStoreIdentity = false
+        }
+        guard hasVerifiedStoreIdentity else {
             return BrowserExtensionStoredResource(resourceURL: resourceURL)
         }
         guard
@@ -34,7 +43,8 @@ struct BrowserChromeWebStoreStoredResourcePreparer:
                 .prepareStoredResource(
                     resourceURL,
                     requestedPermissions: installation.requestedPermissions,
-                    runtimeIdentity: BrowserExtensionRuntimeIdentifierPolicy
+                    runtimeIdentity:
+                        BrowserExtensionRuntimeIdentifierPolicy
                         .identity(
                             extensionID: installation.id,
                             source: installation.source,
@@ -50,3 +60,6 @@ struct BrowserChromeWebStoreStoredResourcePreparer:
         )
     }
 }
+
+typealias BrowserChromeWebStoreStoredResourcePreparer =
+    BrowserStoreWebExtensionStoredResourcePreparer

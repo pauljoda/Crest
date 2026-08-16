@@ -82,6 +82,87 @@ final class BrowserNativeMessagingTests: XCTestCase {
         XCTAssertEqual(echo?["ping"], "pong")
     }
 
+    @MainActor
+    func testFirefoxServiceLaunchesAHostWithItsPublishedArguments()
+        async throws
+    {
+        guard
+            BrowserPlatformExtensionNativeMessagingCapability.currentBuild
+                == .available
+        else {
+            throw XCTSkip("This build cannot launch native hosts.")
+        }
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-firefox-native-transport-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let extensionID = try XCTUnwrap(
+            BrowserMozillaExtensionID(
+                "{d634138d-c276-4fc8-924b-40a0ea21d284}"
+            )
+        )
+        let hostName = "com.example.firefox_echo"
+        let executable = root.appending(path: "firefox-host.py")
+        let script = """
+            #!/usr/bin/python3
+            import json, struct, sys
+            header = sys.stdin.buffer.read(4)
+            size = struct.unpack('<I', header)[0]
+            sys.stdin.buffer.read(size)
+            payload = json.dumps({'arguments': sys.argv[1:]}).encode('utf-8')
+            sys.stdout.buffer.write(struct.pack('<I', len(payload)) + payload)
+            sys.stdout.buffer.flush()
+            """
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let manifestURL = root.appending(path: "\(hostName).json")
+        let manifest: [String: Any] = [
+            "name": hostName,
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_extensions": [extensionID.rawValue],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: manifestURL
+        )
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                chromeSearchDirectories: [],
+                mozillaSearchDirectories: [root]
+            )
+        )
+        let response = expectation(description: "Firefox host response")
+        var receivedArguments: [String]?
+        var receivedError: Error?
+
+        service.sendMessage(
+            ["ping": "pong"],
+            applicationIdentifier: hostName,
+            extensionIdentity: .mozillaAddons(extensionID)
+        ) { value, error in
+            receivedArguments =
+                (value as? [String: Any])?["arguments"] as? [String]
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 5)
+
+        XCTAssertNil(receivedError)
+        XCTAssertEqual(
+            receivedArguments,
+            [manifestURL.path, extensionID.rawValue]
+        )
+    }
+
     func testResolverRequiresAnExactExtensionOrigin() throws {
         let root = FileManager.default.temporaryDirectory.appending(
             path: "crest-native-host-\(UUID().uuidString)",
@@ -133,6 +214,70 @@ final class BrowserNativeMessagingTests: XCTestCase {
                     ))
             )
         )
+    }
+
+    func testResolverRequiresAnExactFirefoxExtensionIDAndInvocation() throws {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-firefox-native-host-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = root.appending(path: "host")
+        try Data("#!/bin/sh\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: executable.path
+        )
+        let hostName = "com.example.firefox_host"
+        let extensionID = try XCTUnwrap(
+            BrowserMozillaExtensionID(
+                "{d634138d-c276-4fc8-924b-40a0ea21d284}"
+            )
+        )
+        let manifestURL = root.appending(path: "\(hostName).json")
+        let manifest: [String: Any] = [
+            "name": hostName,
+            "path": executable.path,
+            "type": "stdio",
+            "allowed_extensions": [extensionID.rawValue],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: manifestURL
+        )
+        let resolver = BrowserNativeMessagingHostManifestResolver(
+            chromeSearchDirectories: [],
+            mozillaSearchDirectories: [root]
+        )
+
+        let resolved = try resolver.resolve(
+            hostName: hostName,
+            extensionIdentity: .mozillaAddons(extensionID)
+        )
+
+        XCTAssertEqual(resolved.executableURL, executable)
+        XCTAssertEqual(
+            resolved.arguments,
+            [manifestURL.path, extensionID.rawValue]
+        )
+        XCTAssertThrowsError(
+            try resolver.resolve(
+                hostName: hostName,
+                extensionIdentity: .mozillaAddons(
+                    try XCTUnwrap(
+                        BrowserMozillaExtensionID("other@example.com")
+                    )
+                )
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserNativeMessagingHostError,
+                .originNotAllowed
+            )
+        }
     }
 
     func testResolverRejectsPathTraversalAsAHostName() throws {

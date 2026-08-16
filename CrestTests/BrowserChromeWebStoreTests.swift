@@ -829,9 +829,10 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         try await Task.sleep(for: .milliseconds(25))
 
-        let replayedResponse = try await webView.evaluateJavaScript(
-            "globalThis.replayedResponse"
-        ) as? String
+        let replayedResponse =
+            try await webView.evaluateJavaScript(
+                "globalThis.replayedResponse"
+            ) as? String
 
         XCTAssertEqual(replayedResponse, "ready")
     }
@@ -1002,23 +1003,26 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         try await Task.sleep(for: .milliseconds(25))
 
-        let responseType = try await webView.evaluateJavaScript(
-            """
-            globalThis.fakeExtensionChannel?.posts.find(
-                (entry) => entry.kind === "response"
-                    && entry.requestID === "request-1"
-            )?.response?.type
-            """
-        ) as? String
+        let responseType =
+            try await webView.evaluateJavaScript(
+                """
+                globalThis.fakeExtensionChannel?.posts.find(
+                    (entry) => entry.kind === "response"
+                        && entry.requestID === "request-1"
+                )?.response?.type
+                """
+            ) as? String
 
         XCTAssertEqual(responseType, "Success")
-        let callbackResponse = try await webView.evaluateJavaScript(
-            "globalThis.bridgedCallbackResponse"
-        ) as? String
+        let callbackResponse =
+            try await webView.evaluateJavaScript(
+                "globalThis.bridgedCallbackResponse"
+            ) as? String
         XCTAssertEqual(callbackResponse, "PopupConfig")
-        let nativeSendCount = try await webView.evaluateJavaScript(
-            "globalThis.nativeSendCount"
-        ) as? Int
+        let nativeSendCount =
+            try await webView.evaluateJavaScript(
+                "globalThis.nativeSendCount"
+            ) as? Int
         XCTAssertEqual(nativeSendCount, 1)
     }
 
@@ -1138,21 +1142,25 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         try await Task.sleep(for: .milliseconds(25))
 
-        let callbackResponse = try await webView.evaluateJavaScript(
-            "globalThis.bridgedContentResponse"
-        ) as? String
+        let callbackResponse =
+            try await webView.evaluateJavaScript(
+                "globalThis.bridgedContentResponse"
+            ) as? String
         XCTAssertEqual(callbackResponse, "FrameAnalysis")
-        let portName = try await webView.evaluateJavaScript(
-            "globalThis.fakePort?.name ?? ''"
-        ) as? String
+        let portName =
+            try await webView.evaluateJavaScript(
+                "globalThis.fakePort?.name ?? ''"
+            ) as? String
         XCTAssertTrue(portName?.contains("crest-webextension") == true)
-        let connectReceiverIsRuntime = try await webView.evaluateJavaScript(
-            "globalThis.bridgeConnectReceiver === globalThis.nativeRuntime"
-        ) as? Bool
+        let connectReceiverIsRuntime =
+            try await webView.evaluateJavaScript(
+                "globalThis.bridgeConnectReceiver === globalThis.nativeRuntime"
+            ) as? Bool
         XCTAssertEqual(connectReceiverIsRuntime, true)
-        let nativeSendCount = try await webView.evaluateJavaScript(
-            "globalThis.nativeSendCount"
-        ) as? Int
+        let nativeSendCount =
+            try await webView.evaluateJavaScript(
+                "globalThis.nativeSendCount"
+            ) as? Int
         XCTAssertEqual(nativeSendCount, 1)
     }
 
@@ -1270,21 +1278,23 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         try await Task.sleep(for: .milliseconds(25))
 
-        let responseType = try await webView.evaluateJavaScript(
-            """
-            globalThis.backgroundPortPosts?.find(
-                (entry) => entry.requestID === "content-request-1"
-            )?.response?.type
-            """
-        ) as? String
+        let responseType =
+            try await webView.evaluateJavaScript(
+                """
+                globalThis.backgroundPortPosts?.find(
+                    (entry) => entry.requestID === "content-request-1"
+                )?.response?.type
+                """
+            ) as? String
         XCTAssertEqual(responseType, "FrameAnalysis")
-        let senderURL = try await webView.evaluateJavaScript(
-            """
-            globalThis.backgroundPortPosts?.find(
-                (entry) => entry.requestID === "content-request-1"
-            )?.response?.senderURL
-            """
-        ) as? String
+        let senderURL =
+            try await webView.evaluateJavaScript(
+                """
+                globalThis.backgroundPortPosts?.find(
+                    (entry) => entry.requestID === "content-request-1"
+                )?.response?.senderURL
+                """
+            ) as? String
         XCTAssertEqual(senderURL, "https://example.com/login")
     }
 
@@ -2933,7 +2943,7 @@ private final class AuditNativeMessagingHandler:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
         replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
@@ -2941,7 +2951,7 @@ private final class AuditNativeMessagingHandler:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         completionHandler: @escaping (Error?) -> Void
     ) {
         completionHandler(nil)

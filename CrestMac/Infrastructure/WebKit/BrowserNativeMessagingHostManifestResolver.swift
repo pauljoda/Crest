@@ -2,21 +2,33 @@ import Foundation
 import WebKit
 
 struct BrowserNativeMessagingHostManifestResolver {
-    let searchDirectories: [URL]
+    let chromeSearchDirectories: [URL]
+    let mozillaSearchDirectories: [URL]
     let builtInHosts: [BrowserNativeMessagingBuiltInHost]
 
     init(
         searchDirectories: [URL],
         builtInHosts: [BrowserNativeMessagingBuiltInHost] = []
     ) {
-        self.searchDirectories = searchDirectories
+        chromeSearchDirectories = searchDirectories
+        mozillaSearchDirectories = searchDirectories
+        self.builtInHosts = builtInHosts
+    }
+
+    init(
+        chromeSearchDirectories: [URL],
+        mozillaSearchDirectories: [URL],
+        builtInHosts: [BrowserNativeMessagingBuiltInHost] = []
+    ) {
+        self.chromeSearchDirectories = chromeSearchDirectories
+        self.mozillaSearchDirectories = mozillaSearchDirectories
         self.builtInHosts = builtInHosts
     }
 
     static func production() -> Self {
         let home = FileManager.default.homeDirectoryForCurrentUser
         return Self(
-            searchDirectories: [
+            chromeSearchDirectories: [
                 home.appending(
                     path: "Library/Application Support/Google/Chrome/NativeMessagingHosts",
                     directoryHint: .isDirectory
@@ -34,6 +46,16 @@ struct BrowserNativeMessagingHostManifestResolver {
                     directoryHint: .isDirectory
                 ),
             ],
+            mozillaSearchDirectories: [
+                home.appending(
+                    path: "Library/Application Support/Mozilla/NativeMessagingHosts",
+                    directoryHint: .isDirectory
+                ),
+                URL(
+                    filePath: "/Library/Application Support/Mozilla/NativeMessagingHosts",
+                    directoryHint: .isDirectory
+                ),
+            ],
             builtInHosts: Self.applePasswordManagerHosts()
         )
     }
@@ -42,12 +64,24 @@ struct BrowserNativeMessagingHostManifestResolver {
         hostName: String,
         extensionID: BrowserChromeExtensionID
     ) throws -> BrowserNativeMessagingHostManifest {
+        try resolve(
+            hostName: hostName,
+            extensionIdentity: .chromeWebStore(extensionID)
+        )
+    }
+
+    func resolve(
+        hostName: String,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity
+    ) throws -> BrowserNativeMessagingHostManifest {
         guard Self.isValidHostName(hostName) else {
             throw BrowserNativeMessagingHostError.invalidHostName
         }
-        if let host = builtInHosts.first(where: {
-            $0.name == hostName && $0.extensionID == extensionID
-        }) {
+        if case .chromeWebStore(let extensionID) = extensionIdentity,
+            let host = builtInHosts.first(where: {
+                $0.name == hostName && $0.extensionID == extensionID
+            })
+        {
             let executableURL = host.executableURL.standardizedFileURL
             guard
                 FileManager.default.isExecutableFile(
@@ -58,8 +92,18 @@ struct BrowserNativeMessagingHostManifestResolver {
             }
             return BrowserNativeMessagingHostManifest(
                 name: hostName,
-                executableURL: executableURL
+                executableURL: executableURL,
+                arguments: [
+                    "chrome-extension://\(extensionID.rawValue)/"
+                ]
             )
+        }
+        let searchDirectories: [URL]
+        switch extensionIdentity {
+        case .chromeWebStore:
+            searchDirectories = chromeSearchDirectories
+        case .mozillaAddons:
+            searchDirectories = mozillaSearchDirectories
         }
         let manifestURL = searchDirectories.lazy
             .map { $0.appending(path: "\(hostName).json") }
@@ -74,15 +118,32 @@ struct BrowserNativeMessagingHostManifestResolver {
             object["name"] as? String == hostName,
             object["type"] as? String == "stdio",
             let path = object["path"] as? String,
-            path.hasPrefix("/"),
-            let origins = object["allowed_origins"] as? [String]
+            path.hasPrefix("/")
         else {
             throw BrowserNativeMessagingHostError.invalidManifest
         }
-        let expectedOrigin =
-            "chrome-extension://\(extensionID.rawValue)/"
-        guard origins.contains(expectedOrigin) else {
-            throw BrowserNativeMessagingHostError.originNotAllowed
+        let arguments: [String]
+        switch extensionIdentity {
+        case .chromeWebStore(let extensionID):
+            guard let origins = object["allowed_origins"] as? [String] else {
+                throw BrowserNativeMessagingHostError.invalidManifest
+            }
+            let expectedOrigin =
+                "chrome-extension://\(extensionID.rawValue)/"
+            guard origins.contains(expectedOrigin) else {
+                throw BrowserNativeMessagingHostError.originNotAllowed
+            }
+            arguments = [expectedOrigin]
+        case .mozillaAddons(let extensionID):
+            guard
+                let extensionIDs = object["allowed_extensions"] as? [String]
+            else {
+                throw BrowserNativeMessagingHostError.invalidManifest
+            }
+            guard extensionIDs.contains(extensionID.rawValue) else {
+                throw BrowserNativeMessagingHostError.originNotAllowed
+            }
+            arguments = [manifestURL.path, extensionID.rawValue]
         }
         let executableURL = URL(filePath: path).standardizedFileURL
         guard
@@ -94,7 +155,8 @@ struct BrowserNativeMessagingHostManifestResolver {
         }
         return BrowserNativeMessagingHostManifest(
             name: hostName,
-            executableURL: executableURL
+            executableURL: executableURL,
+            arguments: arguments
         )
     }
 

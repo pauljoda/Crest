@@ -1,6 +1,6 @@
 import Foundation
 
-struct BrowserChromeWebStoreCompatibilityPackagePreparer {
+struct BrowserWebExtensionCompatibilityPackagePreparer {
     private static let compatibilityScriptName =
         "crest-webextension-compatibility.js"
     private static let backgroundPageName =
@@ -43,7 +43,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
         _ storedResourceURL: URL,
         requestedPermissions: [String],
         runtimeIdentity: BrowserExtensionRuntimeIdentity
-    ) throws -> BrowserChromeWebStorePreparedPackage? {
+    ) throws -> BrowserWebExtensionPreparedPackage? {
         guard
             Self.requiresCompatibilityLayer(
                 requestedPermissions: requestedPermissions
@@ -76,7 +76,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
             } else if resourceValues.isRegularFile == true {
                 try expandArchive(storedResourceURL, resourceURL)
             } else {
-                throw BrowserChromeWebStoreCompatibilityPackageError
+                throw BrowserWebExtensionCompatibilityPackageError
                     .archiveExpansionFailed
             }
             let installed = try installCompatibilityLayer(
@@ -88,7 +88,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 try? fileManager.removeItem(at: rootURL)
                 return nil
             }
-            return BrowserChromeWebStorePreparedPackage(
+            return BrowserWebExtensionPreparedPackage(
                 resourceURL: resourceURL,
                 rootURL: rootURL,
                 fileManager: fileManager
@@ -120,7 +120,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
             let manifestVersion = manifest["manifest_version"] as? Int,
             manifestVersion == 2 || manifestVersion == 3
         else {
-            throw BrowserChromeWebStoreCompatibilityPackageError
+            throw BrowserWebExtensionCompatibilityPackageError
                 .invalidBackgroundManifest
         }
         let compatibilityScript = try Self.webExtensionCompatibilityScript(
@@ -206,17 +206,16 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                     "persistent": false,
                 ]
             } else {
-                try (
-                    Self.backgroundMarkerScript
+                try
+                    (Self.backgroundMarkerScript
                     + "\n"
                     + compatibilityScript
                     + "\n\n"
-                    + originalWorker
-                ).write(
-                    to: workerURL,
-                    atomically: true,
-                    encoding: .utf8
-                )
+                    + originalWorker).write(
+                        to: workerURL,
+                        atomically: true,
+                        encoding: .utf8
+                    )
             }
             return true
         }
@@ -226,9 +225,10 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 scripts.insert(Self.backgroundMarkerName, at: 0)
             }
             if !scripts.contains(Self.compatibilityScriptName) {
-                let markerIndex = scripts.firstIndex(
-                    of: Self.backgroundMarkerName
-                ) ?? 0
+                let markerIndex =
+                    scripts.firstIndex(
+                        of: Self.backgroundMarkerName
+                    ) ?? 0
                 scripts.insert(
                     Self.compatibilityScriptName,
                     at: markerIndex + 1
@@ -314,13 +314,15 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
     ) throws -> Bool {
         var installed = false
         let sandboxPages = Self.sandboxPagePaths(in: manifest)
-        guard let enumerator = fileManager.enumerator(
-            at: resourceURL,
-            includingPropertiesForKeys: [
-                .isRegularFileKey,
-                .isSymbolicLinkKey,
-            ]
-        ) else { return false }
+        guard
+            let enumerator = fileManager.enumerator(
+                at: resourceURL,
+                includingPropertiesForKeys: [
+                    .isRegularFileKey,
+                    .isSymbolicLinkKey,
+                ]
+            )
+        else { return false }
 
         let resourcePath = resourceURL.standardizedFileURL.path
         for case let pageURL as URL in enumerator {
@@ -445,7 +447,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
         in resourceURL: URL
     ) throws -> URL {
         guard Self.isSafeRelativePath(relativePath) else {
-            throw BrowserChromeWebStoreCompatibilityPackageError
+            throw BrowserWebExtensionCompatibilityPackageError
                 .unsafeBackgroundPath
         }
         let candidate = resourceURL.appending(path: relativePath)
@@ -455,7 +457,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 resourceURL.standardizedFileURL.path + "/"
             ), fileManager.fileExists(atPath: candidate.path)
         else {
-            throw BrowserChromeWebStoreCompatibilityPackageError
+            throw BrowserWebExtensionCompatibilityPackageError
                 .unsafeBackgroundPath
         }
         return candidate
@@ -476,11 +478,11 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
             try process.run()
             process.waitUntilExit()
         } catch {
-            throw BrowserChromeWebStoreCompatibilityPackageError
+            throw BrowserWebExtensionCompatibilityPackageError
                 .archiveExpansionFailed
         }
         guard process.terminationStatus == 0 else {
-            throw BrowserChromeWebStoreCompatibilityPackageError
+            throw BrowserWebExtensionCompatibilityPackageError
                 .archiveExpansionFailed
         }
     }
@@ -523,7 +525,7 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
                 encoding: .utf8
             )
         else {
-            throw BrowserChromeWebStoreCompatibilityPackageError
+            throw BrowserWebExtensionCompatibilityPackageError
                 .invalidBackgroundManifest
         }
         return """
@@ -1672,3 +1674,6 @@ struct BrowserChromeWebStoreCompatibilityPackagePreparer {
     }
 
 }
+
+typealias BrowserChromeWebStoreCompatibilityPackagePreparer =
+    BrowserWebExtensionCompatibilityPackagePreparer

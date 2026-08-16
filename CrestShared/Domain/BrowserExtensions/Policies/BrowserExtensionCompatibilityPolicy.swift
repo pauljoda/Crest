@@ -21,12 +21,13 @@ enum BrowserExtensionCompatibilityPolicy {
                 blockingKind = .foreignSafariNativeHandler
             case .unpackedPackage:
                 blockingKind = .unverifiedNativeMessaging
-            case .mozillaAddons:
-                blockingKind = .unsupportedMozillaNativeMessaging
             case .chromeWebStore
             where nativeMessagingCapability == .available:
                 blockingKind = nil
-            case .chromeWebStore:
+            case .mozillaAddons
+            where nativeMessagingCapability == .available:
+                blockingKind = nil
+            case .chromeWebStore, .mozillaAddons:
                 blockingKind = .nativeMessagingUnavailable
             }
             if let blockingKind {

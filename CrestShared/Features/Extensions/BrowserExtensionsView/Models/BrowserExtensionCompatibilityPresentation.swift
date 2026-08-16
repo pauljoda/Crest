@@ -15,11 +15,6 @@ enum BrowserExtensionCompatibilityPresentation {
                 localized:
                     "Crest blocks native companion access for unpacked extensions because their identity can’t be verified. Install the signed Chrome Web Store version instead."
             )
-        case .unsupportedMozillaNativeMessaging:
-            String(
-                localized:
-                    "Crest verifies native companion access for Chrome Web Store extensions only. This Firefox add-on’s companion connection isn’t available yet; install its Chrome Web Store version in Crest for Mac instead."
-            )
         case .foreignSafariNativeHandler:
             String(
                 localized:

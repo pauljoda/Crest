@@ -164,11 +164,14 @@ boundary.
 ## Native companion distribution boundary
 
 - Ordinary WebExtensions can use APIs implemented by WebKit.
-- Crest for Mac supports Chrome native messaging for verified
-  Chrome Web Store installations. It discovers registered Chrome hosts,
-  validates the manifest's exact `allowed_origins` entry against the verified
-  extension ID, exchanges Chrome's little-endian framed JSON, and supports both
-  one-shot `sendNativeMessage` calls and persistent `connectNative` ports.
+- Crest for Mac supports native messaging for verified Chrome Web Store and
+  Firefox Add-ons installations. It discovers each browser format's registered
+  host directories and validates the exact verified identity: Chrome
+  `allowed_origins` entries use `chrome-extension://<id>/`, while Firefox
+  `allowed_extensions` entries use the Gecko ID. Host launch arguments also
+  follow the corresponding published protocol. Both formats then use the same
+  little-endian framed JSON transport for one-shot `sendNativeMessage` calls
+  and persistent `connectNative` ports.
 - Unpacked extensions are never eligible for native messaging because their
   identity is not store-verified.
 - Safari app-extension native handlers are not portable to Crest. When a
@@ -189,8 +192,8 @@ boundary.
   pinning, permission management, status reporting, and removal are covered.
 - **Firefox Add-ons:** listing resolution through Mozilla's public API,
   digest/size/identity verification, native review, per-Space installation,
-  background load, and removal are covered. Native messaging is not available
-  to this path.
+  the shared compatibility overlay, background load, verified native
+  messaging, and removal are covered.
 - **Unpacked WebExtension:** manifest inspection, permission review, isolated
   per-Space installation, runtime loading, and removal are covered. Native
   messaging remains unavailable to this path.
@@ -198,9 +201,9 @@ boundary.
   WebExtension component through **Scan for Apps** or **Choose App**. This does
   not make a third-party Safari native handler portable.
 - **Crest for Mac native messaging:** regression coverage includes a real child
-  native-host process exchanging Chrome-framed JSON and a real
-  `WKWebExtension` background script reaching Crest's native-messaging delegate
-  with its verified Chrome extension ID.
+  native-host process exchanging framed JSON, exact Chrome and Firefox manifest
+  identity checks, and real `WKWebExtension` backgrounds reaching Crest's
+  delegate with their source-appropriate verified identity.
 
 ## 1Password live validation
 
@@ -520,8 +523,10 @@ site, popup, update, or optional workflow.
 Firefox is in several respects a better native fit for WebKit than Chrome.
 `WKWebExtension` accepts Manifest V2 with a persistent background page, and the
 promise-based `browser.*` namespace Firefox extensions are written against is
-what WebKit implements natively. The work is therefore concentrated in
-acquisition and provenance rather than in runtime shims.
+what WebKit implements natively. Firefox packages still enter the same
+capability-selected overlay as Chrome packages when WebKit omits a requested
+standard API. Crest does not maintain a second Firefox shim or select behavior
+from a vendor or extension ID.
 
 ### How acquisition is verified
 
@@ -571,13 +576,16 @@ the CRX3 path's signature verification.
 
 ### Identity and native messaging
 
-Firefox add-ons receive a Space-namespaced runtime identifier
-(`<gecko-id>.space.<space-uuid>`), like every non-Chrome source. Only verified
-Chrome Web Store installations keep their bare store identity, because that
-identity is what Chrome native-messaging hosts match in `allowed_origins`.
+Firefox add-ons receive a Space-namespaced WebKit runtime identifier
+(`<gecko-id>.space.<space-uuid>`), like every non-Chrome source. Native host
+authorization does not reuse that internal identifier. Crest carries the
+verified store identity separately and checks it against the host manifest:
+Chrome uses `allowed_origins`, while Firefox uses `allowed_extensions`.
 
-Native messaging is therefore blocked for Firefox add-ons. An add-on requesting
-`nativeMessaging` is refused before installation with a plain-language reason.
+The separation is intentional. Space isolation remains part of WebKit storage
+and extension origins, while a companion app sees exactly the store identity it
+registered. Unpacked packages still cannot use native messaging because they
+do not have a verified store identity.
 
 ### Expected gaps
 

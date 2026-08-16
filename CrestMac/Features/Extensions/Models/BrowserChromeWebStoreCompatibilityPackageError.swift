@@ -1,6 +1,6 @@
 import Foundation
 
-enum BrowserChromeWebStoreCompatibilityPackageError: LocalizedError {
+enum BrowserWebExtensionCompatibilityPackageError: LocalizedError {
     case invalidBackgroundManifest
     case unsafeBackgroundPath
     case archiveExpansionFailed
@@ -16,3 +16,6 @@ enum BrowserChromeWebStoreCompatibilityPackageError: LocalizedError {
         }
     }
 }
+
+typealias BrowserChromeWebStoreCompatibilityPackageError =
+    BrowserWebExtensionCompatibilityPackageError

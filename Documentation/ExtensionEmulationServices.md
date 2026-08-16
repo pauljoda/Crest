@@ -50,8 +50,10 @@ general capability or remains documented as unsupported.
 
 ## Current package layer
 
-The first package layer covers signed Chrome Web Store resources that request a
-capability known to need normalization. It supports:
+The package layer covers verified Chrome Web Store and Firefox Add-ons
+resources that request a capability known to need normalization. Both formats
+enter the same preparer after their store-specific acquisition and provenance
+checks. It supports:
 
 - Manifest V3 module workers through a generated nonpersistent background page
   that loads the compatibility runtime before importing the declared module;
@@ -71,6 +73,13 @@ capability known to need normalization. It supports:
 This is the reusable JavaScript/package foundation, not full Chrome parity.
 The app-service broker described below is the next boundary to connect; until a
 service is connected, its local adapter must stay bounded or explicitly reject.
+
+Chrome and Firefox packages intentionally remain distinct acquisition formats,
+not distinct compatibility runtimes. Chrome commonly supplies Manifest V3
+module workers and identifies native hosts through `allowed_origins`; Firefox
+can retain Manifest V2 background pages and identifies native hosts through
+`allowed_extensions`. Once those declared format differences are normalized,
+the runtime selects behavior from API presence and execution context only.
 
 ## Cross-context messaging
 

@@ -70,7 +70,7 @@ struct CrestApp: App {
             ? BrowserExtensionControllerPool()
             : BrowserExtensionControllerPool.production(
                 storedResourcePreparer:
-                    BrowserChromeWebStoreStoredResourcePreparer()
+                    BrowserStoreWebExtensionStoredResourcePreparer()
             )
         let privateExtensionControllerPool = BrowserExtensionControllerPool()
         if !usesIsolatedLaunch {

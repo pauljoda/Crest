@@ -12,7 +12,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     weak var pageProvider: (any BrowserExtensionPageProviding)?
     var openCommandSettings: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Bool)?
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
-    var verifiedChromeExtensionIDs: [ObjectIdentifier: BrowserChromeExtensionID] = [:]
+    var verifiedNativeMessagingIdentities: [ObjectIdentifier: BrowserExtensionNativeMessagingIdentity] = [:]
     var actionDidUpdate: (() -> Void)?
 
     func connect<

@@ -5,7 +5,6 @@ enum BrowserExtensionCompatibilityIssueKind:
 {
     case nativeMessagingUnavailable
     case unverifiedNativeMessaging
-    case unsupportedMozillaNativeMessaging
     case foreignSafariNativeHandler
     case knownRuntimeLimitation
 }

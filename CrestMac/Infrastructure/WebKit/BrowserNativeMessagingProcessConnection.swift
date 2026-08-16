@@ -22,7 +22,6 @@ final class BrowserNativeMessagingProcessConnection {
 
     init(
         host: BrowserNativeMessagingHostManifest,
-        extensionID: BrowserChromeExtensionID,
         replyTimeout: Duration? = nil,
         receive: @escaping (Any) -> Void,
         disconnect: @escaping (Error) -> Void
@@ -40,9 +39,7 @@ final class BrowserNativeMessagingProcessConnection {
         // raising SIGPIPE, which would take the whole browser down with it.
         _ = fcntl(input.fileDescriptor, F_SETNOSIGPIPE, 1)
         process.executableURL = host.executableURL
-        process.arguments = [
-            "chrome-extension://\(extensionID.rawValue)/"
-        ]
+        process.arguments = host.arguments
         process.currentDirectoryURL = host.executableURL
             .deletingLastPathComponent()
         process.standardInput = inputPipe
@@ -89,6 +86,27 @@ final class BrowserNativeMessagingProcessConnection {
                 error: BrowserNativeMessagingHostError.timedOut
             )
         }
+    }
+
+    convenience init(
+        host: BrowserNativeMessagingHostManifest,
+        extensionID: BrowserChromeExtensionID,
+        replyTimeout: Duration? = nil,
+        receive: @escaping (Any) -> Void,
+        disconnect: @escaping (Error) -> Void
+    ) throws {
+        try self.init(
+            host: BrowserNativeMessagingHostManifest(
+                name: host.name,
+                executableURL: host.executableURL,
+                arguments: [
+                    "chrome-extension://\(extensionID.rawValue)/"
+                ]
+            ),
+            replyTimeout: replyTimeout,
+            receive: receive,
+            disconnect: disconnect
+        )
     }
 
     func send(_ message: Any) throws {

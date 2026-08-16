@@ -31,7 +31,7 @@ final class BrowserNativeMessagingService:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
         guard capability == .available else {
@@ -41,7 +41,7 @@ final class BrowserNativeMessagingService:
         do {
             let host = try resolver.resolve(
                 hostName: applicationIdentifier ?? "",
-                extensionID: extensionID
+                extensionIdentity: extensionIdentity
             )
             var connection: BrowserNativeMessagingProcessConnection?
             // One reply completes this exchange, so bound the wait: a host that
@@ -49,7 +49,6 @@ final class BrowserNativeMessagingService:
             // for as long as the browser runs.
             connection = try BrowserNativeMessagingProcessConnection(
                 host: host,
-                extensionID: extensionID,
                 replyTimeout: replyTimeout,
                 receive: { value in
                     guard connection != nil else { return }
@@ -72,7 +71,7 @@ final class BrowserNativeMessagingService:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         completionHandler: @escaping (Error?) -> Void
     ) {
         guard capability == .available else {
@@ -84,7 +83,7 @@ final class BrowserNativeMessagingService:
         do {
             let host = try resolver.resolve(
                 hostName: port.applicationIdentifier ?? "",
-                extensionID: extensionID
+                extensionIdentity: extensionIdentity
             )
             let key = ObjectIdentifier(port)
             // A persistent port may idle for as long as the extension keeps it
@@ -92,7 +91,6 @@ final class BrowserNativeMessagingService:
             // this direction stays untimed.
             let connection = try BrowserNativeMessagingProcessConnection(
                 host: host,
-                extensionID: extensionID,
                 receive: { [weak self] message in
                     self?.connections[key]?.port.sendMessage(
                         message,
@@ -134,5 +132,19 @@ final class BrowserNativeMessagingService:
         } catch {
             completionHandler(error)
         }
+    }
+
+    func sendMessage(
+        _ message: Any,
+        applicationIdentifier: String?,
+        extensionID: BrowserChromeExtensionID,
+        replyHandler: @escaping (Any?, Error?) -> Void
+    ) {
+        sendMessage(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            extensionIdentity: .chromeWebStore(extensionID),
+            replyHandler: replyHandler
+        )
     }
 }

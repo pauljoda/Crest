@@ -1,5 +1,10 @@
 import WebKit
 
+enum BrowserExtensionNativeMessagingIdentity: Equatable, Sendable {
+    case chromeWebStore(BrowserChromeExtensionID)
+    case mozillaAddons(BrowserMozillaExtensionID)
+}
+
 @MainActor
 protocol BrowserExtensionNativeMessagingHandling: AnyObject {
     var capability: BrowserExtensionNativeMessagingCapability { get }
@@ -7,13 +12,13 @@ protocol BrowserExtensionNativeMessagingHandling: AnyObject {
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         replyHandler: @escaping (Any?, Error?) -> Void
     )
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         completionHandler: @escaping (Error?) -> Void
     )
 }

@@ -11,17 +11,17 @@ extension BrowserExtensionTabWindowCoordinator {
         nativeMessagingHandler = handler
     }
 
-    func registerVerifiedChromeExtension(
-        _ extensionID: BrowserChromeExtensionID,
+    func registerVerifiedNativeMessagingIdentity(
+        _ identity: BrowserExtensionNativeMessagingIdentity,
         for context: WKWebExtensionContext
     ) {
-        verifiedChromeExtensionIDs[ObjectIdentifier(context)] = extensionID
+        verifiedNativeMessagingIdentities[ObjectIdentifier(context)] = identity
     }
 
     func unregisterNativeMessagingIdentity(
         for context: WKWebExtensionContext
     ) {
-        verifiedChromeExtensionIDs[ObjectIdentifier(context)] = nil
+        verifiedNativeMessagingIdentities[ObjectIdentifier(context)] = nil
     }
 
     func webExtensionController(
@@ -32,7 +32,7 @@ extension BrowserExtensionTabWindowCoordinator {
         replyHandler: @escaping (Any?, (any Error)?) -> Void
     ) {
         guard
-            let extensionID = verifiedChromeExtensionIDs[
+            let extensionIdentity = verifiedNativeMessagingIdentities[
                 ObjectIdentifier(extensionContext)
             ], let nativeMessagingHandler
         else {
@@ -45,7 +45,7 @@ extension BrowserExtensionTabWindowCoordinator {
         nativeMessagingHandler.sendMessage(
             message,
             applicationIdentifier: applicationIdentifier,
-            extensionID: extensionID,
+            extensionIdentity: extensionIdentity,
             replyHandler: replyHandler
         )
     }
@@ -57,7 +57,7 @@ extension BrowserExtensionTabWindowCoordinator {
         completionHandler: @escaping ((any Error)?) -> Void
     ) {
         guard
-            let extensionID = verifiedChromeExtensionIDs[
+            let extensionIdentity = verifiedNativeMessagingIdentities[
                 ObjectIdentifier(extensionContext)
             ], let nativeMessagingHandler
         else {
@@ -68,7 +68,7 @@ extension BrowserExtensionTabWindowCoordinator {
         }
         nativeMessagingHandler.connect(
             port: port,
-            extensionID: extensionID,
+            extensionIdentity: extensionIdentity,
             completionHandler: completionHandler
         )
     }

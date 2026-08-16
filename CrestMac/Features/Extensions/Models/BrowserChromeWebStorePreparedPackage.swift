@@ -1,6 +1,6 @@
 import Foundation
 
-final class BrowserChromeWebStorePreparedPackage {
+final class BrowserWebExtensionPreparedPackage {
     let resourceURL: URL
 
     private let rootURL: URL
@@ -20,3 +20,6 @@ final class BrowserChromeWebStorePreparedPackage {
         try? fileManager.removeItem(at: rootURL)
     }
 }
+
+typealias BrowserChromeWebStorePreparedPackage =
+    BrowserWebExtensionPreparedPackage

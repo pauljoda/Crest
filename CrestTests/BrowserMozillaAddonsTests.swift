@@ -592,17 +592,25 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
     }
 
-    func testFirefoxNativeMessagingIsBlockedUntilItsIdentityCanBeVerified() {
+    func testVerifiedFirefoxNativeMessagingCanUseThePlatformCompanionBridge() {
         let assessment = BrowserExtensionCompatibilityPolicy.assess(
             requestedPermissions: ["nativeMessaging", "storage"],
             source: .mozillaAddons,
             nativeMessagingCapability: .available
         )
 
-        XCTAssertFalse(assessment.canRun)
+        XCTAssertTrue(assessment.canRun)
+        XCTAssertTrue(assessment.issues.isEmpty)
+
+        let unavailable = BrowserExtensionCompatibilityPolicy.assess(
+            requestedPermissions: ["nativeMessaging", "storage"],
+            source: .mozillaAddons,
+            nativeMessagingCapability: .unavailableInAppSandbox
+        )
+        XCTAssertFalse(unavailable.canRun)
         XCTAssertEqual(
-            assessment.blockingIssues.map(\.kind),
-            [.unsupportedMozillaNativeMessaging]
+            unavailable.blockingIssues.map(\.kind),
+            [.nativeMessagingUnavailable]
         )
 
         let ordinary = BrowserExtensionCompatibilityPolicy.assess(
@@ -612,6 +620,74 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
         XCTAssertTrue(ordinary.canRun)
         XCTAssertTrue(ordinary.issues.isEmpty)
+    }
+
+    func testVerifiedFirefoxPackageUsesTheSharedCompatibilityOverlay()
+        throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-firefox-compatibility-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        let resourceURL = root.appending(
+            path: "addon",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: resourceURL,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.started = true;".utf8).write(
+            to: resourceURL.appending(path: "background.js")
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 2,
+            "name": "Firefox Compatibility Probe",
+            "version": "1.0",
+            "background": ["scripts": ["background.js"]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: resourceURL.appending(path: "manifest.json")
+        )
+        let source = try mozillaSource()
+        let storedInstallation = installation(
+            id: source.extensionID.rawValue,
+            spaceID: SpaceID(),
+            source: .mozillaAddons(source),
+            requestedPermissions: ["nativeMessaging", "privacy"]
+        )
+
+        let prepared = try BrowserStoreWebExtensionStoredResourcePreparer(
+            fileManager: fileManager
+        ).prepare(
+            resourceURL: resourceURL,
+            installation: storedInstallation
+        )
+
+        XCTAssertNotEqual(prepared.resourceURL, resourceURL)
+        XCTAssertNotNil(prepared.retainedAccess)
+        let preparedManifest = try XCTUnwrap(
+            try JSONSerialization.jsonObject(
+                with: Data(
+                    contentsOf: prepared.resourceURL.appending(
+                        path: "manifest.json"
+                    )
+                )
+            ) as? [String: Any]
+        )
+        let background = try XCTUnwrap(
+            preparedManifest["background"] as? [String: Any]
+        )
+        let scripts = try XCTUnwrap(background["scripts"] as? [String])
+        XCTAssertEqual(
+            Array(scripts.prefix(2)),
+            [
+                "crest-webextension-background-marker.js",
+                "crest-webextension-compatibility.js",
+            ]
+        )
     }
 
     func testFirefoxOnlyManifestKeysSurfaceAsWarningsRatherThanBlockers()
@@ -976,7 +1052,8 @@ final class BrowserMozillaAddonsTests: XCTestCase {
     private func installation(
         id: String,
         spaceID: SpaceID,
-        source: BrowserExtensionInstallationSource
+        source: BrowserExtensionInstallationSource,
+        requestedPermissions: [String] = ["storage"]
     ) -> BrowserExtensionInstallation {
         BrowserExtensionInstallation(
             id: id,
@@ -985,7 +1062,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             source: source,
             displayName: "Dark Reader",
             version: "4.9.129",
-            requestedPermissions: ["storage"],
+            requestedPermissions: requestedPermissions,
             requestedHosts: ["<all_urls>"],
             unsupportedAPIs: [],
             errors: [],

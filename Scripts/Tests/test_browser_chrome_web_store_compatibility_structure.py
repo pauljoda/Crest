@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ownership and restoration contract for Web Store compatibility packages."""
+"""Ownership and restoration contract for store WebExtension compatibility."""
 
 from __future__ import annotations
 
@@ -17,25 +17,29 @@ LEGACY_AGGREGATE = (
 )
 OWNERS = {
     "CrestMac/Features/Extensions/Models/BrowserChromeWebStoreCompatibilityPackageError.swift": (
-        "BrowserChromeWebStoreCompatibilityPackageError"
+        "BrowserWebExtensionCompatibilityPackageError",
+        "BrowserChromeWebStoreCompatibilityPackageError",
     ),
     "CrestMac/Features/Extensions/Models/BrowserChromeWebStorePreparedPackage.swift": (
-        "BrowserChromeWebStorePreparedPackage"
+        "BrowserWebExtensionPreparedPackage",
+        "BrowserChromeWebStorePreparedPackage",
     ),
     "CrestMac/Features/Extensions/Services/BrowserChromeWebStoreCompatibilityPackagePreparer.swift": (
-        "BrowserChromeWebStoreCompatibilityPackagePreparer"
+        "BrowserWebExtensionCompatibilityPackagePreparer",
+        "BrowserChromeWebStoreCompatibilityPackagePreparer",
     ),
     "CrestMac/Infrastructure/WebKit/Extensions/Compatibility/BrowserChromeWebStoreStoredResourcePreparer.swift": (
-        "BrowserChromeWebStoreStoredResourcePreparer"
+        "BrowserStoreWebExtensionStoredResourcePreparer",
+        "BrowserChromeWebStoreStoredResourcePreparer",
     ),
     "CrestShared/Infrastructure/BrowserExtensions/Compatibility/BrowserExtensionStoredResource.swift": (
-        "BrowserExtensionStoredResource"
+        "BrowserExtensionStoredResource",
     ),
     "CrestShared/Infrastructure/BrowserExtensions/Compatibility/BrowserExtensionStoredResourceIdentityPreparer.swift": (
-        "BrowserExtensionStoredResourceIdentityPreparer"
+        "BrowserExtensionStoredResourceIdentityPreparer",
     ),
     "CrestShared/Infrastructure/BrowserExtensions/Compatibility/BrowserExtensionStoredResourcePreparing.swift": (
-        "BrowserExtensionStoredResourcePreparing"
+        "BrowserExtensionStoredResourcePreparing",
     ),
 }
 
@@ -58,14 +62,16 @@ class BrowserChromeWebStoreCompatibilityStructureTests(unittest.TestCase):
 
     def test_aggregate_is_replaced_by_matching_owner_files(self) -> None:
         self.assertFalse(LEGACY_AGGREGATE.exists())
-        for relative_path, owner in OWNERS.items():
+        for relative_path, owners in OWNERS.items():
             source_path = REPOSITORY_ROOT / relative_path
             with self.subTest(source_path=relative_path):
                 self.assertTrue(source_path.is_file())
                 declarations = self.guard._primary_declarations(
                     source_path.read_text()
                 )
-                self.assertEqual([item.name for item in declarations], [owner])
+                self.assertEqual(
+                    [item.name for item in declarations], list(owners)
+                )
                 self.assertEqual(
                     self.guard._top_level_extensions(source_path.read_text()),
                     [],
@@ -94,7 +100,7 @@ class BrowserChromeWebStoreCompatibilityStructureTests(unittest.TestCase):
         self.assertIn("storedResourcePreparer.prepare", runtime)
         self.assertIn("preparedResource.retainedAccess", runtime)
         self.assertIn("source.extensionID.rawValue == installation.id", adapter)
-        self.assertIn("BrowserChromeWebStoreStoredResourcePreparer()", app)
+        self.assertIn("BrowserStoreWebExtensionStoredResourcePreparer()", app)
 
     def test_split_owners_are_in_the_expected_app_targets(self) -> None:
         project = PROJECT.read_text()

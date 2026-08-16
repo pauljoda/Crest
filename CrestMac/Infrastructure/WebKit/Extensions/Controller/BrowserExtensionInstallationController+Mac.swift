@@ -117,18 +117,13 @@ extension BrowserExtensionInstallationController {
         )
         var didLoadNewContext = false
         do {
-            let runtimeIdentity = BrowserExtensionRuntimeIdentifierPolicy
-                .identity(
-                    extensionID: extensionID,
-                    source: source,
-                    spaceID: space.id
-                )
-            let compatibilityPackage = try BrowserChromeWebStoreCompatibilityPackagePreparer()
-                .prepareStoredResource(
-                    package.resourceURL,
-                    requestedPermissions: candidate.requestedPermissions,
-                    runtimeIdentity: runtimeIdentity
-                )
+            let compatibilityPackage = try prepareCompatibilityPackage(
+                package,
+                extensionID: extensionID,
+                source: source,
+                spaceID: space.id,
+                requestedPermissions: candidate.requestedPermissions
+            )
             if let existingContext = runtime.loadedContext(
                 extensionID: extensionID,
                 in: space.id
@@ -255,6 +250,13 @@ extension BrowserExtensionInstallationController {
         )
         var didLoadNewContext = false
         do {
+            let compatibilityPackage = try prepareCompatibilityPackage(
+                package,
+                extensionID: extensionID,
+                source: source,
+                spaceID: space.id,
+                requestedPermissions: candidate.requestedPermissions
+            )
             if let existingContext = runtime.loadedContext(
                 extensionID: extensionID,
                 in: space.id
@@ -263,7 +265,8 @@ extension BrowserExtensionInstallationController {
                 runtime.releaseContext(extensionID: extensionID, in: space.id)
             }
             let context = try await runtime.loadExtension(
-                at: package.resourceURL,
+                at: compatibilityPackage?.resourceURL
+                    ?? package.resourceURL,
                 extensionID: extensionID,
                 in: space,
                 unsupportedAPIs: Set(previous?.unsupportedAPIs ?? []),
@@ -321,6 +324,13 @@ extension BrowserExtensionInstallationController {
                 retaining: package.packageName,
                 in: space.id
             )
+            if let compatibilityPackage {
+                runtime.retainRuntimeResourceAccess(
+                    compatibilityPackage,
+                    extensionID: extensionID,
+                    in: space.id
+                )
+            }
             return runtimeSummary
         } catch {
             if didLoadNewContext,
@@ -343,6 +353,27 @@ extension BrowserExtensionInstallationController {
     }
 
     private static var mozillaAddonsDisplayName: String { "Firefox Add-ons" }
+
+    private func prepareCompatibilityPackage(
+        _ package: BrowserExtensionPackage,
+        extensionID: String,
+        source: BrowserExtensionInstallationSource,
+        spaceID: SpaceID,
+        requestedPermissions: [String]
+    ) throws -> BrowserWebExtensionPreparedPackage? {
+        try BrowserWebExtensionCompatibilityPackagePreparer()
+            .prepareStoredResource(
+                package.resourceURL,
+                requestedPermissions: requestedPermissions,
+                runtimeIdentity:
+                    BrowserExtensionRuntimeIdentifierPolicy
+                    .identity(
+                        extensionID: extensionID,
+                        source: source,
+                        spaceID: spaceID
+                    )
+            )
+    }
 
     private func restorePreviousInstallation(
         _ previous: BrowserExtensionInstallation?,

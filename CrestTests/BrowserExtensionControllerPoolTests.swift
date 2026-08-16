@@ -469,6 +469,78 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
     }
 
+    func testVerifiedFirefoxExtensionReachesNativeMessagingDelegate()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-firefox-native-delegate-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        let manifest: [String: Any] = [
+            "manifest_version": 2,
+            "name": "Firefox Native Delegate Test",
+            "version": "1.0",
+            "permissions": ["nativeMessaging"],
+            "background": ["scripts": ["background.js"]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: extensionURL.appending(path: "manifest.json")
+        )
+        try Data(
+            "browser.runtime.sendNativeMessage('com.example.echo', {ping: 'pong'});"
+                .utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+        let extensionID = try XCTUnwrap(
+            BrowserMozillaExtensionID("native-delegate@crest.test")
+        )
+        let handler = NativeMessagingHandlerSpy()
+        let pool = BrowserExtensionControllerPool()
+        pool.setNativeMessagingHandler(handler)
+        let source = BrowserExtensionInstallationSource.mozillaAddons(
+            BrowserMozillaAddonsSource(
+                slug: try XCTUnwrap(
+                    BrowserMozillaAddonSlug("native-delegate")
+                ),
+                extensionID: extensionID,
+                storeURL: try XCTUnwrap(
+                    URL(
+                        string:
+                            "https://addons.mozilla.org/firefox/addon/native-delegate/"
+                    )
+                ),
+                version: "1.0",
+                xpiSHA256Hex: String(repeating: "a", count: 64)
+            )
+        )
+
+        _ = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID.rawValue,
+            in: BrowserSession.preview.spaces[0],
+            source: source,
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: ["nativeMessaging"],
+                    hosts: []
+                )
+        )
+        await fulfillment(of: [handler.receivedMessage], timeout: 5)
+
+        XCTAssertEqual(handler.hostName, "com.example.echo")
+        XCTAssertEqual(handler.extensionIdentity, .mozillaAddons(extensionID))
+        XCTAssertEqual(
+            (handler.message as? [String: String])?["ping"],
+            "pong"
+        )
+    }
+
     func testPersistentNativeMessagingPortSurvivesDelayedCompanionReply()
         async throws
     {
@@ -1942,23 +2014,27 @@ private final class NativeMessagingHandlerSpy:
     private(set) var message: Any?
     private(set) var hostName: String?
     private(set) var extensionID: BrowserChromeExtensionID?
+    private(set) var extensionIdentity: BrowserExtensionNativeMessagingIdentity?
 
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionID: BrowserChromeExtensionID,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
         self.message = message
         hostName = applicationIdentifier
-        self.extensionID = extensionID
+        self.extensionIdentity = extensionIdentity
+        if case .chromeWebStore(let extensionID) = extensionIdentity {
+            self.extensionID = extensionID
+        }
         replyHandler(["received": true], nil)
         receivedMessage.fulfill()
     }
 
     func connect(
         port _: WKWebExtension.MessagePort,
-        extensionID _: BrowserChromeExtensionID,
+        extensionIdentity _: BrowserExtensionNativeMessagingIdentity,
         completionHandler: @escaping (Error?) -> Void
     ) {
         completionHandler(nil)

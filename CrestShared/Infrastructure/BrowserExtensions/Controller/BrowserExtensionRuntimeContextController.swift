@@ -205,6 +205,7 @@ final class BrowserExtensionRuntimeContextController {
         source: BrowserExtensionInstallationSource?
     ) throws -> WKWebExtensionContext {
         let compatibility = BrowserExtensionCompatibilityPolicy.assess(
+            extensionID: extensionID,
             requestedPermissions: webExtension.requestedPermissions
                 .map(\.rawValue),
             source: BrowserExtensionCompatibilitySource(
@@ -243,11 +244,24 @@ final class BrowserExtensionRuntimeContextController {
         context.baseURL = runtimeIdentity.baseURL
         context.unsupportedAPIs = unsupportedAPIs
         let restoreError = permissions.apply(permissionSnapshot, to: context)
-        if case .chromeWebStore(let chromeSource) = source,
-            chromeSource.extensionID.rawValue == extensionID
-        {
-            tabWindowCoordinator.registerVerifiedChromeExtension(
-                chromeSource.extensionID,
+        let nativeMessagingIdentity: BrowserExtensionNativeMessagingIdentity?
+        switch source {
+        case .chromeWebStore(let chromeSource)
+        where chromeSource.extensionID.rawValue == extensionID:
+            nativeMessagingIdentity = .chromeWebStore(
+                chromeSource.extensionID
+            )
+        case .mozillaAddons(let mozillaSource)
+        where mozillaSource.extensionID.rawValue == extensionID:
+            nativeMessagingIdentity = .mozillaAddons(
+                mozillaSource.extensionID
+            )
+        default:
+            nativeMessagingIdentity = nil
+        }
+        if let nativeMessagingIdentity {
+            tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
+                nativeMessagingIdentity,
                 for: context
             )
         }
