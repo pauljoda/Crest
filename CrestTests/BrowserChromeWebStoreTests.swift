@@ -966,9 +966,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             });
             \(source)
             browser.runtime.onMessage.addListener(
-                (message, _sender, sendResponse) => {
+                (message, sender, sendResponse) => {
                     if (message.name !== "get-popup-config") return false;
-                    queueMicrotask(() => sendResponse({ type: "Success" }));
+                    queueMicrotask(() => sendResponse({
+                        type: "Success",
+                        senderOrigin: sender.origin
+                    }));
                     return true;
                 }
             );
@@ -1024,6 +1027,31 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             ) as? String
 
         XCTAssertEqual(responseType, "Success")
+        let receivedSenderOrigin =
+            try await webView.evaluateJavaScript(
+                """
+                globalThis.fakeExtensionChannel?.posts.find(
+                    (entry) => entry.kind === "response"
+                        && entry.requestID === "request-1"
+                )?.response?.senderOrigin
+                """
+            ) as? String
+        XCTAssertEqual(
+            receivedSenderOrigin,
+            "crest-extension://fixture-runtime"
+        )
+        let outgoingSenderOrigin =
+            try await webView.evaluateJavaScript(
+                """
+                globalThis.fakeExtensionChannel?.posts.find(
+                    (entry) => entry.kind === "request"
+                )?.sender?.origin
+                """
+            ) as? String
+        XCTAssertEqual(
+            outgoingSenderOrigin,
+            "crest-extension://fixture-runtime"
+        )
         let callbackResponse =
             try await webView.evaluateJavaScript(
                 "globalThis.bridgedCallbackResponse"

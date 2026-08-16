@@ -540,6 +540,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const declaredManifest = Object.freeze(\(manifestLiteral));
                 const extensionID = \(javascriptStringLiteral(runtimeIdentity.extensionID));
                 const extensionBaseURL = \(javascriptStringLiteral(runtimeIdentity.baseURL.absoluteString));
+                const extensionOrigin = extensionBaseURL.endsWith("/")
+                    ? extensionBaseURL.slice(0, -1)
+                    : extensionBaseURL;
                 const fallbackResourceURL = (path = "") => new URL(
                     String(path),
                     extensionBaseURL
@@ -1116,7 +1119,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 sender: payload.sender ?? {
                                     id: extensionID,
                                     url: "",
-                                    origin: extensionBaseURL
+                                    origin: extensionOrigin
                                 },
                                 attemptedListeners: new Set(),
                                 isClaimed: false,
@@ -1244,7 +1247,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 url: typeof location === "undefined"
                                     ? ""
                                     : location.href,
-                                origin: extensionBaseURL
+                                origin: extensionOrigin
                             };
                             const request = {
                                 kind: "request",
@@ -1344,7 +1347,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                         sender: port.sender ?? {
                                             id: extensionID,
                                             url: "",
-                                            origin: extensionBaseURL
+                                            origin: extensionOrigin
                                         },
                                         attemptedListeners: new Set(),
                                         isClaimed: false,

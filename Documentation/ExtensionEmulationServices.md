@@ -104,8 +104,11 @@ background content.
   allowed to receive those requests and replay them to its registered
   `runtime.onMessage` listeners.
 - Requests preserve callback, Promise, `return true`, and first-response
-  behavior. External-extension messages continue through WebKit rather than
-  entering Crest's internal transport.
+  behavior. Sender objects preserve the verified runtime ID and page URL; for
+  extension pages, the synthesized `origin` matches `runtime.getURL("")` with
+  its root slash removed, as browser-origin checks expect. External-extension
+  messages continue through WebKit rather than entering Crest's internal
+  transport.
 - `chrome` and `browser` are bootstrapped independently. When WebKit exposes
   them as different native objects, their channels and reserved Ports remain
   separate so a receiver with no listener cannot claim traffic for the other

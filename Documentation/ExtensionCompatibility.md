@@ -151,8 +151,10 @@ registered `runtime.onMessage` listeners. Both callback and Promise replies are
 supported, external-extension messages still fall through to WebKit, and
 separate native `chrome` and `browser` namespace objects are bootstrapped and
 routed independently. If WebKit exposes both names as aliases for one object,
-they reuse one route. The transport is selected by execution context and
-capability, never by extension identity.
+they reuse one route. Synthetic extension-page senders carry the verified
+runtime ID, page URL, and extension origin in the same form returned by
+`runtime.getURL("")` with its root slash removed. The transport is selected by
+execution context and capability, never by extension identity.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
