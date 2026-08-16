@@ -88,7 +88,7 @@ a transport only in contexts where WebKit exposes the API but does not carry a
 reply reliably between an extension page or content script and an extension's
 background content.
 
-- Extension pages use a package-scoped `BroadcastChannel`. The generated
+- Extension pages use a package-and-namespace-scoped `BroadcastChannel`. The generated
   runtime is present in both the sending page and background document, so this
   path does not cross into website JavaScript. A sender first probes for a
   background receiver. If WebKit has evicted the nonpersistent background, a
@@ -98,16 +98,19 @@ background content.
   request from being lost or handled against partially initialized extension
   state while a Manifest V3 module is still starting, without exposing the
   transport signal to extension listeners.
-- Content scripts use a reserved native `runtime.connect` Port. The background
+- Content scripts use a reserved, namespace-scoped native `runtime.connect`
+  Port. The background
   marker installed before the compatibility runtime identifies the one context
   allowed to receive those requests and replay them to its registered
   `runtime.onMessage` listeners.
 - Requests preserve callback, Promise, `return true`, and first-response
   behavior. External-extension messages continue through WebKit rather than
   entering Crest's internal transport.
-- `chrome` and `browser` are bootstrapped independently. WebKit may expose them
-  as different native objects, so completing one namespace must not discard
-  listeners registered through the other.
+- `chrome` and `browser` are bootstrapped independently. When WebKit exposes
+  them as different native objects, their channels and reserved Ports remain
+  separate so a receiver with no listener cannot claim traffic for the other
+  namespace. When WebKit exposes one object through both names, both aliases
+  reuse the same route.
 
 The marker and reserved Port name are Crest protocol details, not extension
 identifiers. No extension source is inspected or patched, and the transport is

@@ -1155,7 +1155,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             );
             setTimeout(() => {
                 const background = new BroadcastChannel(
-                    "crest-webextension-messages:fixture-extension-id"
+                    "crest-webextension-messages:fixture-extension-id:browser"
                 );
                 background.addEventListener("message", ({ data }) => {
                     if (data.kind === "background-probe") {
@@ -1324,6 +1324,128 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             """
         ) as? Bool
         XCTAssertEqual(readyAfterBootstrap, true)
+    }
+
+    func testRuntimeMessageBridgeSeparatesChromeAndBrowserNamespaces()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path:
+                "crest-webextension-runtime-namespace-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Runtime Namespace Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(
+            ChromeWebStoreTestSchemeHandler(),
+            forURLScheme: "crest-extension"
+        )
+        let webView = WKWebView(
+            frame: .zero,
+            configuration: configuration
+        )
+        try await ChromeWebStoreNavigationWaiter(webView: webView).load(
+            URLRequest(
+                url: fixtureRuntimeIdentity.baseURL.appending(
+                    path: "background.html"
+                )
+            )
+        )
+
+        _ = try await webView.evaluateJavaScript(
+            """
+            class FakeBroadcastChannel {
+                static names = [];
+
+                constructor(name) {
+                    this.name = name;
+                    this.listeners = [];
+                    FakeBroadcastChannel.names.push(name);
+                }
+
+                addEventListener(type, listener) {
+                    if (type === "message") this.listeners.push(listener);
+                }
+
+                postMessage() {}
+            }
+            Object.defineProperty(globalThis, "BroadcastChannel", {
+                configurable: true,
+                value: FakeBroadcastChannel
+            });
+            const chromeOnMessage = {
+                addListener() {},
+                removeListener() {},
+                hasListener() { return false; }
+            };
+            const browserOnMessage = {
+                addListener() {},
+                removeListener() {},
+                hasListener() { return false; }
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        onMessage: chromeOnMessage,
+                        sendMessage() {},
+                        getManifest() { return { manifest_version: 3 }; }
+                    }
+                }
+            });
+            Object.defineProperty(globalThis, "browser", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        onMessage: browserOnMessage,
+                        sendMessage() {},
+                        getManifest() { return { manifest_version: 3 }; }
+                    }
+                }
+            });
+            globalThis.__crestIsWebExtensionBackground = true;
+            \(source)
+            """
+        )
+
+        let channelNames = try await webView.evaluateJavaScript(
+            "Array.from(new Set(FakeBroadcastChannel.names))"
+        ) as? [String]
+        XCTAssertEqual(channelNames?.count, 2)
     }
 
     func testContentScriptMessageBridgeUsesRuntimePortForCallbackResponses()
@@ -1541,7 +1663,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
 
             const portMessageListeners = [];
             const fakePort = {
-                name: "crest-webextension-runtime-messages-v1",
+                name: "crest-webextension-runtime-messages-v1:chrome",
                 sender: {
                     id: "\(fixtureRuntimeIdentity.uniqueIdentifier)",
                     url: "https://example.com/login",

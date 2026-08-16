@@ -807,6 +807,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return undefined;
                     }
 
+                    const runtimeNamespace = nativeRoot === nativeChrome
+                        ? "chrome"
+                        : nativeRoot === nativeBrowser
+                            ? "browser"
+                            : "extension";
+
                     const nativeAdd = nativeEvent.addListener.bind(nativeEvent);
                     const nativeRemove =
                         nativeEvent.removeListener.bind(nativeEvent);
@@ -1062,7 +1068,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         let channel;
                         try {
                             channel = new BroadcastChannel(
-                                `crest-webextension-messages:${extensionID}`
+                                `crest-webextension-messages:${extensionID}:${runtimeNamespace}`
                             );
                         } catch {
                             return undefined;
@@ -1293,7 +1299,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     })();
                     contentScriptMessaging = (() => {
                         const portName =
-                            "crest-webextension-runtime-messages-v1";
+                            `crest-webextension-runtime-messages-v1:${runtimeNamespace}`;
                         const responseTimeoutMilliseconds = 30_000;
                         const onConnect = nativeRuntime.onConnect;
                         const nativeConnect = nativeRuntime.connect;

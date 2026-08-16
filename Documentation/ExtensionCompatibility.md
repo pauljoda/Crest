@@ -149,9 +149,10 @@ generated background bootstrap. Content scripts use
 a reserved native Port whose background endpoint replays the request to
 registered `runtime.onMessage` listeners. Both callback and Promise replies are
 supported, external-extension messages still fall through to WebKit, and
-separate native `chrome` and `browser` namespace objects are bootstrapped
-independently. The transport is selected by execution context and capability,
-never by extension identity.
+separate native `chrome` and `browser` namespace objects are bootstrapped and
+routed independently. If WebKit exposes both names as aliases for one object,
+they reuse one route. The transport is selected by execution context and
+capability, never by extension identity.
 
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
@@ -405,9 +406,10 @@ It is not the compatibility transport for ordinary extension messages.
 
 The generated runtime now covers extension-page and content-script requests at
 the WebExtension API boundary. Packaged extension pages communicate with the
-marked background through a package-scoped `BroadcastChannel`; content scripts
-use a reserved native Port, which gives WebKit a standard background-liveness
-signal without keeping every extension permanently awake. The marked background
+marked background through a package-and-namespace-scoped `BroadcastChannel`;
+content scripts use a reserved namespace-scoped native Port, which gives WebKit
+a standard background-liveness signal without keeping every extension
+permanently awake. The marked background
 announces readiness only after the extension's background scripts have finished
 initializing, then replays each request to the namespace's registered
 `runtime.onMessage` listeners and returns the first callback, Promise, or
