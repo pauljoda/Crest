@@ -1,8 +1,27 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" standalone="yes"?>
+<!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+-->
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Crest</title>
+        <item>
+            <title>0.4.0</title>
+            <pubDate>Sun, 16 Aug 2026 00:04:53 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>development</sparkle:channel>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Crest development build
+
+Built automatically from [`ac5da0e`](https://github.com/pauljoda/Crest/commit/ac5da0e890aa0894d3f37119d2d2c6776bf59d9d).
+
+Development builds are signed and notarized, but may be less reliable than stable releases.
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.4.0-development-2026-08-15-ac5da0e-arm64.dmg" length="7895303" type="application/octet-stream" sparkle:edSignature="iWekiUZBEeBh5SjTl7YjcSdO+Ab/FiVBs81B+pRCzqF1EwDj1hjDRSpgwAQm7SWD07ob97y2RaLwADgkJvFwAw=="/>
+        </item>
         <item>
             <title>0.3.0</title>
             <pubDate>Sat, 15 Aug 2026 23:48:13 +0000</pubDate>
@@ -18,10 +37,11 @@ Built automatically from [`bc080f3`](https://github.com/pauljoda/Crest/commit/bc
 
 Development builds are signed and notarized, but may be less reliable than stable releases.
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.3.0-development-2026-08-15-bc080f3-arm64.dmg" length="7894792" type="application/octet-stream" sparkle:edSignature="RQv+APhg8NhJw9vohxhtrlQWChNFLBdfzusWRUNALkUj0nLmuGypwJzXBL3gNoZ0zNAUa9yQ5k/evaKNO123Ag=="></enclosure>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.3.0-development-2026-08-15-bc080f3-arm64.dmg" length="7894792" type="application/octet-stream" sparkle:edSignature="RQv+APhg8NhJw9vohxhtrlQWChNFLBdfzusWRUNALkUj0nLmuGypwJzXBL3gNoZ0zNAUa9yQ5k/evaKNO123Ag=="/>
         </item>
     </channel>
-</rss><!-- sparkle-signatures:
-edSignature: 5dLOuxPAc4Q+p4YZQjCWpGSgm7k1rnNOVkm67gPVa1AybZklVrk/0CjnAXUbcth4Qcsb6gCETCrdAyjQ5XStAA==
-length: 1582
+</rss>
+<!-- sparkle-signatures:
+edSignature: u28C1tu1qQC5hyklT2akTuIdhm9Pgdf3KLLVFCfIBUEfoghvUGpzC6YvdGDyyEHDLMNSp4prt0ZURYfrCjqgCA==
+length: 2719
 -->
