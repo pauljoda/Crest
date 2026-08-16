@@ -1191,6 +1191,141 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(wakeVersion, 1)
     }
 
+    func testBackgroundBridgeAnnouncesReadyOnlyAfterBootstrapCompletes()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path:
+                "crest-webextension-background-readiness-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Background Readiness Fixture",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: root.appending(
+                path: "crest-webextension-compatibility.js"
+            ),
+            encoding: .utf8
+        )
+        let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(
+            ChromeWebStoreTestSchemeHandler(),
+            forURLScheme: "crest-extension"
+        )
+        let webView = WKWebView(
+            frame: .zero,
+            configuration: configuration
+        )
+        try await ChromeWebStoreNavigationWaiter(webView: webView).load(
+            URLRequest(
+                url: fixtureRuntimeIdentity.baseURL.appending(
+                    path: "background.html"
+                )
+            )
+        )
+
+        _ = try await webView.evaluateJavaScript(
+            """
+            class FakeBroadcastChannel {
+                constructor(name) {
+                    this.name = name;
+                    this.listeners = [];
+                    this.posts = [];
+                    globalThis.fakeBackgroundChannel = this;
+                }
+
+                addEventListener(type, listener) {
+                    if (type === "message") this.listeners.push(listener);
+                }
+
+                postMessage(value) { this.posts.push(value); }
+
+                emit(value) {
+                    for (const listener of this.listeners) {
+                        listener({ data: value });
+                    }
+                }
+            }
+            Object.defineProperty(globalThis, "BroadcastChannel", {
+                configurable: true,
+                value: FakeBroadcastChannel
+            });
+            const nativeOnMessage = {
+                addListener() {},
+                removeListener() {},
+                hasListener() { return false; }
+            };
+            Object.defineProperty(globalThis, "browser", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        onMessage: nativeOnMessage,
+                        sendMessage() {},
+                        getManifest() { return { manifest_version: 3 }; }
+                    }
+                }
+            });
+            globalThis.__crestIsWebExtensionBackground = true;
+            \(source)
+            globalThis.fakeBackgroundChannel.emit({
+                kind: "background-probe",
+                requestID: "probe-1",
+                senderToken: "popup-page"
+            });
+            """
+        )
+
+        let readyBeforeBootstrap = try await webView.evaluateJavaScript(
+            """
+            globalThis.fakeBackgroundChannel.posts.some(
+                (entry) => entry.kind === "background-ready"
+            )
+            """
+        ) as? Bool
+        XCTAssertEqual(readyBeforeBootstrap, false)
+
+        _ = try await webView.evaluateJavaScript(
+            "globalThis.__crestCompleteWebExtensionBackgroundBootstrap?.()"
+        )
+        try await Task.sleep(for: .milliseconds(25))
+
+        let readyAfterBootstrap = try await webView.evaluateJavaScript(
+            """
+            globalThis.fakeBackgroundChannel.posts.some(
+                (entry) => entry.kind === "background-ready"
+            )
+            """
+        ) as? Bool
+        XCTAssertEqual(readyAfterBootstrap, true)
+    }
+
     func testContentScriptMessageBridgeUsesRuntimePortForCallbackResponses()
         async throws
     {

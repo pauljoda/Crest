@@ -93,10 +93,11 @@ background content.
   path does not cross into website JavaScript. A sender first probes for a
   background receiver. If WebKit has evicted the nonpersistent background, a
   private no-payload native message wakes it; the actual extension message is
-  sent only after the receiver answers and is targeted to that context. This
-  prevents a popup's first request from being lost while a Manifest V3 module
-  is still starting, without exposing the transport signal to extension
-  listeners.
+  sent only after the receiver finishes its generated background bootstrap,
+  answers, and is targeted to that context. This prevents a popup's first
+  request from being lost or handled against partially initialized extension
+  state while a Manifest V3 module is still starting, without exposing the
+  transport signal to extension listeners.
 - Content scripts use a reserved native `runtime.connect` Port. The background
   marker installed before the compatibility runtime identifies the one context
   allowed to receive those requests and replay them to its registered

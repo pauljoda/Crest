@@ -144,7 +144,8 @@ Where WebKit exposes messaging but cannot reliably return a background reply,
 the runtime provides one generic transport. Extension pages use a package-local
 `BroadcastChannel`. Before sending, a page discovers a ready background
 receiver and asks WebKit to wake an evicted background when necessary; the real
-extension payload is delivered only after that handshake. Content scripts use
+extension payload is delivered only after that receiver has completed its
+generated background bootstrap. Content scripts use
 a reserved native Port whose background endpoint replays the request to
 registered `runtime.onMessage` listeners. Both callback and Promise replies are
 supported, external-extension messages still fall through to WebKit, and
@@ -407,8 +408,10 @@ the WebExtension API boundary. Packaged extension pages communicate with the
 marked background through a package-scoped `BroadcastChannel`; content scripts
 use a reserved native Port, which gives WebKit a standard background-liveness
 signal without keeping every extension permanently awake. The marked background
-replays each request to the namespace's registered `runtime.onMessage`
-listeners and returns the first callback, Promise, or `return true` response.
+announces readiness only after the extension's background scripts have finished
+initializing, then replays each request to the namespace's registered
+`runtime.onMessage` listeners and returns the first callback, Promise, or
+`return true` response.
 
 This is still capability mapping rather than a patch to Dark Reader, 1Password,
 or any other extension. The `chrome` and `browser` roots are initialized

@@ -1165,11 +1165,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         const receiveBackgroundProbe = (payload) => {
                             if (!isBackgroundContext) return;
 
-                            channel.postMessage({
-                                kind: "background-ready",
-                                requestID: payload.requestID,
-                                recipientToken: payload.senderToken,
-                                senderToken: contextToken
+                            initialization.then(() => {
+                                channel.postMessage({
+                                    kind: "background-ready",
+                                    requestID: payload.requestID,
+                                    recipientToken: payload.senderToken,
+                                    senderToken: contextToken
+                                });
                             });
                         };
                         const receiveBackgroundReady = (payload) => {
