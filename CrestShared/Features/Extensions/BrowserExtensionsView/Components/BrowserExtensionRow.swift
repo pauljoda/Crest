@@ -7,6 +7,16 @@ struct BrowserExtensionRow: View {
     let platformActions: BrowserExtensionPlatformActions
     let isBusy: Bool
     let setEnabled: @MainActor @Sendable (Bool) -> Void
+    let setPermissionDecision:
+        @MainActor @Sendable (
+            String,
+            BrowserExtensionAccessDecision
+        ) -> Void
+    let setHostDecision:
+        @MainActor @Sendable (
+            String,
+            BrowserExtensionAccessDecision
+        ) -> Void
     let requestRemoval: @MainActor @Sendable () -> Void
 
     var body: some View {
@@ -24,12 +34,7 @@ struct BrowserExtensionRow: View {
                             )
                         },
                         setDecision: {
-                            extensionControllerPool.setPermissionDecision(
-                                $1,
-                                for: $0,
-                                extensionID: summary.id,
-                                in: spaceID
-                            )
+                            setPermissionDecision($0, $1)
                         }
                     )
                 }
@@ -46,12 +51,7 @@ struct BrowserExtensionRow: View {
                             )
                         },
                         setDecision: {
-                            extensionControllerPool.setHostDecision(
-                                $1,
-                                for: $0,
-                                extensionID: summary.id,
-                                in: spaceID
-                            )
+                            setHostDecision($0, $1)
                         }
                     )
                 }
@@ -168,6 +168,8 @@ struct BrowserExtensionRow: View {
             platformActions: .none,
             isBusy: false,
             setEnabled: { _ in },
+            setPermissionDecision: { _, _ in },
+            setHostDecision: { _, _ in },
             requestRemoval: {}
         )
     }

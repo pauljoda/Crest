@@ -51,18 +51,42 @@ final class BrowserExtensionsModel {
         _ enabled: Bool,
         extensionSummary: BrowserExtensionSummary
     ) async {
-        guard operationExtensionID == nil else { return }
-        operationExtensionID = extensionSummary.id
-        defer { operationExtensionID = nil }
-
-        do {
+        await performOperation(for: extensionSummary.id) {
             try await extensionControllerPool.setExtensionEnabled(
                 enabled,
                 extensionID: extensionSummary.id,
                 in: space
             )
-        } catch {
-            publishFailure(error)
+        }
+    }
+
+    func setPermissionDecision(
+        _ decision: BrowserExtensionAccessDecision,
+        for permission: String,
+        extensionSummary: BrowserExtensionSummary
+    ) async {
+        await performOperation(for: extensionSummary.id) {
+            try await extensionControllerPool.setPermissionDecision(
+                decision,
+                for: permission,
+                extensionID: extensionSummary.id,
+                in: space
+            )
+        }
+    }
+
+    func setHostDecision(
+        _ decision: BrowserExtensionAccessDecision,
+        for hostPattern: String,
+        extensionSummary: BrowserExtensionSummary
+    ) async {
+        await performOperation(for: extensionSummary.id) {
+            try await extensionControllerPool.setHostDecision(
+                decision,
+                for: hostPattern,
+                extensionID: extensionSummary.id,
+                in: space
+            )
         }
     }
 
@@ -92,6 +116,21 @@ final class BrowserExtensionsModel {
 
     func clearOperationFailure() {
         operationFailure = nil
+    }
+
+    private func performOperation(
+        for extensionID: String,
+        _ operation: @MainActor () async throws -> Void
+    ) async {
+        guard operationExtensionID == nil else { return }
+        operationExtensionID = extensionID
+        defer { operationExtensionID = nil }
+
+        do {
+            try await operation()
+        } catch {
+            publishFailure(error)
+        }
     }
 
     private func publishFailure(_ error: any Error) {

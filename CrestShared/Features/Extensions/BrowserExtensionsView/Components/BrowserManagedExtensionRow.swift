@@ -20,6 +20,24 @@ struct BrowserManagedExtensionRow: View {
                     )
                 }
             },
+            setPermissionDecision: { permission, decision in
+                Task {
+                    await model.setPermissionDecision(
+                        decision,
+                        for: permission,
+                        extensionSummary: summary
+                    )
+                }
+            },
+            setHostDecision: { hostPattern, decision in
+                Task {
+                    await model.setHostDecision(
+                        decision,
+                        for: hostPattern,
+                        extensionSummary: summary
+                    )
+                }
+            },
             requestRemoval: {
                 model.requestRemoval(of: summary)
             }

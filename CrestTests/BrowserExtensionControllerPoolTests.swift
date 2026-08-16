@@ -1759,6 +1759,123 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(metadata["frameID"] as? Int, 0)
     }
 
+    func testGrantingRuntimeGatedAccessRestartsLoadedExtension()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-runtime-permission-probe-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let packageRoot = fileManager.temporaryDirectory.appending(
+            path: "crest-runtime-permission-packages-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? fileManager.removeItem(at: extensionURL)
+            try? fileManager.removeItem(at: packageRoot)
+        }
+
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Runtime Permission Probe",
+            "description": "Checks permission-gated extension namespaces.",
+            "version": "1.0",
+            "permissions": ["webRequest"],
+            "host_permissions": ["<all_urls>"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: extensionURL.appending(path: "manifest.json")
+        )
+        try Data(
+            """
+            if (!chrome.webRequest?.onBeforeRedirect) {
+                console.error("CREST_RUNTIME_PERMISSION_MISSING");
+            } else {
+                console.error("CREST_RUNTIME_PERMISSION_READY");
+            }
+            """.utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+
+        let space = BrowserSession.preview.spaces[0]
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                fileManager: fileManager,
+                rootURL: packageRoot,
+                removesRootOnDeinit: false
+            ),
+            registry: BrowserExtensionRegistry(
+                persistence: InMemoryBrowserExtensionRegistryPersistence()
+            )
+        )
+        let installed = try await pool.loadUnpackedExtension(
+            from: extensionURL,
+            in: space
+        )
+        let originalContext = try XCTUnwrap(
+            pool.loadedContext(extensionID: installed.id, in: space.id)
+        )
+        for _ in 0..<400
+        where !originalContext.errors.contains(where: {
+            $0.localizedDescription.contains(
+                "CREST_RUNTIME_PERMISSION_MISSING"
+            )
+        }) {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertTrue(
+            originalContext.errors.contains(where: {
+                $0.localizedDescription.contains(
+                    "CREST_RUNTIME_PERMISSION_MISSING"
+                )
+            })
+        )
+
+        try await pool.setPermissionDecision(
+            .allow,
+            for: "webRequest",
+            extensionID: installed.id,
+            in: space
+        )
+        try await pool.setHostDecision(
+            .allow,
+            for: try XCTUnwrap(installed.requestedHosts.first),
+            extensionID: installed.id,
+            in: space
+        )
+
+        let restartedContext = try XCTUnwrap(
+            pool.loadedContext(extensionID: installed.id, in: space.id)
+        )
+        XCTAssertFalse(restartedContext === originalContext)
+        for _ in 0..<400
+        where !restartedContext.errors.contains(where: {
+            $0.localizedDescription.contains("CREST_RUNTIME_PERMISSION_READY")
+        }) {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertTrue(
+            restartedContext.errors.contains(where: {
+                $0.localizedDescription.contains(
+                    "CREST_RUNTIME_PERMISSION_READY"
+                )
+            })
+        )
+        XCTAssertFalse(
+            restartedContext.errors.contains(where: {
+                $0.localizedDescription.contains(
+                    "CREST_RUNTIME_PERMISSION_MISSING"
+                )
+            }),
+            "A permission-granted restart still hid chrome.webRequest."
+        )
+    }
+
     private var extensionID: String {
         "com.pauldavis.crest.space-probe"
     }
