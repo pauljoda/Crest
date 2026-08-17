@@ -479,6 +479,65 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// A phone sidebar can place an ordinary tab before and after a much taller
+    /// split-group row. Moving the group past the trailing tab must close the
+    /// group's whole 120-point slot; deriving one stride from the smallest
+    /// neighbouring pitch only closes a 44-point tab slot and leaves the row
+    /// progressively farther from where it belongs as the drag crosses back
+    /// and forth.
+    func testMobileSplitGroupLiftClosesItsWholeMixedHeightSlot() {
+        let context = makeSplitContext()
+        let state = context.browser.sidebarReorderState
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let leading = BrowserSidebarReorderItemID.tab(Self.tabID(75))
+        let trailing = BrowserSidebarReorderItemID.tab(context.outsider.id)
+        let groupFrame = CGRect(x: 8, y: 154, width: 374, height: 120)
+
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: leading,
+                section: section,
+                frame: CGRect(x: 8, y: 110, width: 374, height: 44)
+            ),
+            owner: UUID()
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .splitGroup(context.groupID),
+                section: section,
+                frame: groupFrame
+            ),
+            owner: UUID()
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: trailing,
+                section: section,
+                frame: CGRect(x: 8, y: 274, width: 374, height: 44)
+            ),
+            owner: UUID()
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(section),
+                frame: CGRect(x: 0, y: 100, width: 390, height: 300)
+            ),
+            for: UUID()
+        )
+
+        state.stage(item: .splitGroup(context.item), section: section)
+        state.update(pointer: CGPoint(x: 195, y: 300))
+
+        XCTAssertEqual(
+            state.displacement(for: trailing),
+            CGSize(width: 0, height: -groupFrame.height),
+            "The plain tab must close the complete tall slot the group vacated."
+        )
+    }
+
     /// The `.onDrag` provider hands the session a JSON payload. It never leaves
     /// Crest, but it does have to survive the round trip the provider encodes.
     func testTheSplitGroupDragPayloadRoundTripsAsJSON() throws {

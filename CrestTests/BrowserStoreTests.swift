@@ -125,6 +125,61 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(store.selectedTab?.id, first.id)
     }
 
+    func testNewTabsOpenAfterTheFocusedSplitGroup() throws {
+        let groupID = SplitGroupID()
+        let head = BrowserTab(
+            title: "Head",
+            url: URL(string: "https://head.example"),
+            placement: .current,
+            splitGroupID: groupID
+        )
+        let tail = BrowserTab(
+            title: "Tail",
+            url: URL(string: "https://tail.example"),
+            placement: .current,
+            splitGroupID: groupID
+        )
+        let trailing = BrowserTab(
+            title: "Trailing",
+            url: URL(string: "https://trailing.example"),
+            placement: .current
+        )
+        let space = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Work",
+            symbol: "briefcase.fill",
+            accent: .indigo,
+            folders: [],
+            tabs: [head, tail, trailing],
+            selectedTabID: head.id
+        )
+
+        let startPageStore = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let startPageID = try XCTUnwrap(startPageStore.openNewTab())
+        XCTAssertEqual(
+            try XCTUnwrap(startPageStore.selectedSpace).currentTabs.map(\.id),
+            [head.id, tail.id, startPageID, trailing.id]
+        )
+
+        let navigatedStore = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let navigatedID = try XCTUnwrap(
+            navigatedStore.openNewTab(
+                url: try XCTUnwrap(URL(string: "https://new.example"))
+            )
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(navigatedStore.selectedSpace).currentTabs.map(\.id),
+            [head.id, tail.id, navigatedID, trailing.id]
+        )
+    }
+
     func testSessionRevisionAdvancesWhenTheStoreMutatesSessionState() {
         let store = BrowserStore(
             session: .preview,

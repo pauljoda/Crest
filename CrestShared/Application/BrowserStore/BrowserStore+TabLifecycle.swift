@@ -5,8 +5,8 @@ import Foundation
 extension BrowserStore {
     @discardableResult
     func openNewTab() -> TabID? {
-        guard selectedSpace != nil else { return nil }
-        if let draft = selectedSpace?.currentTabs.first(where: \.isStartPage) {
+        guard let space = selectedSpace else { return nil }
+        if let draft = space.currentTabs.first(where: \.isStartPage) {
             session.selectTab(draft.id)
             persist(syncUrgency: .coalesced, scope: .core)
             return draft.id
@@ -14,7 +14,12 @@ extension BrowserStore {
         let tabID = session.openTab(
             title: BrowserTab.startPageTitle,
             url: nil,
-            symbol: BrowserTab.startPageSymbol
+            symbol: BrowserTab.startPageSymbol,
+            in: space.id,
+            requestedIndex: BrowserTabInsertionPolicy.requestedIndex(
+                after: space.selectedTabID,
+                in: space
+            )
         )
         persist(scope: .core)
         return tabID

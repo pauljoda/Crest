@@ -16,11 +16,7 @@ struct BrowserDetailContent: View {
     var body: some View {
         switch pagePresentation {
         case .noSelection:
-            ContentUnavailableView(
-                "No Tab Selected",
-                systemImage: "rectangle.on.rectangle.slash",
-                description: Text("Create a tab or choose one from the sidebar.")
-            )
+            Color.clear
         case .startPage:
             BrowserStartPageContent(
                 tab: tab,

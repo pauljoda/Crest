@@ -309,7 +309,10 @@ enum BrowserSidebarReorderPolicy {
     ) -> SlotLayout {
         let usesGrid = orderedRows.first?.usesGridOrdering ?? false
         guard usesGrid else {
-            return .list(stride: stride(ofPitches: verticalPitches(orderedRows), fallback: fallbackStride))
+            // Every row crossing the gap fills the slot left by the lifted row.
+            // A list may mix ordinary tabs with taller Split View groups, so a
+            // neighbouring row's pitch is not the size of that vacant slot.
+            return .list(stride: fallbackStride)
         }
 
         guard let firstRow = orderedRows.first else {
