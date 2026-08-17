@@ -177,6 +177,44 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(state.keptTabID)
     }
 
+    func testSelectingTabInsideAlreadyCollapsedFolderKeepsItVisible() {
+        let folderTabID = TabID()
+        let otherTabID = TabID()
+        var state = BrowserCollapsedFolderTabVisibilityState()
+
+        state.expansionDidChange(
+            isExpanded: false,
+            selectedTabID: otherTabID,
+            folderTabIDs: [folderTabID]
+        )
+        state.selectionDidChange(
+            isExpanded: false,
+            selectedTabID: folderTabID,
+            folderTabIDs: [folderTabID]
+        )
+
+        XCTAssertEqual(state.keptTabID, folderTabID)
+    }
+
+    func testSelectingOutsideCollapsedFolderDoesNotHideItsLoadedTab() {
+        let folderTabID = TabID()
+        let otherTabID = TabID()
+        var state = BrowserCollapsedFolderTabVisibilityState()
+
+        state.expansionDidChange(
+            isExpanded: false,
+            selectedTabID: folderTabID,
+            folderTabIDs: [folderTabID]
+        )
+        state.selectionDidChange(
+            isExpanded: false,
+            selectedTabID: otherTabID,
+            folderTabIDs: [folderTabID]
+        )
+
+        XCTAssertEqual(state.keptTabID, folderTabID)
+    }
+
     func testUnloadingKeptCollapsedFolderTabHidesIt() {
         let folderTabID = TabID()
         var state = BrowserCollapsedFolderTabVisibilityState()

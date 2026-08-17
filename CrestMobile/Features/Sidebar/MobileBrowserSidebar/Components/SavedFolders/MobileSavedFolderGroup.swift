@@ -228,6 +228,13 @@ struct MobileSavedFolderGroup: View {
                 folderTabIDs: tabs.map(\.id)
             )
         }
+        .onChange(of: selectedTabID) { _, selectedTabID in
+            collapsedTabVisibility.selectionDidChange(
+                isExpanded: isExpanded,
+                selectedTabID: selectedTabID,
+                folderTabIDs: tabs.map(\.id)
+            )
+        }
         .browserSidebarReorderZone(
             .section(.tabs(placement: .saved, folderID: folder.id)),
             state: browser.sidebarReorderState

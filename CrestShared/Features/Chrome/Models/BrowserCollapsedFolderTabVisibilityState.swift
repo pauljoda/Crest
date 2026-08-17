@@ -15,6 +15,18 @@ struct BrowserCollapsedFolderTabVisibilityState: Equatable {
         }
     }
 
+    mutating func selectionDidChange(
+        isExpanded: Bool,
+        selectedTabID: TabID?,
+        folderTabIDs: [TabID]
+    ) {
+        guard !isExpanded,
+            let selectedTabID,
+            folderTabIDs.contains(selectedTabID)
+        else { return }
+        keptTabID = selectedTabID
+    }
+
     mutating func tabDidUnload(_ tabID: TabID) {
         guard keptTabID == tabID else { return }
         keptTabID = nil
