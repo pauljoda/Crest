@@ -6,11 +6,27 @@ import SwiftUI
 final class BrowserUtilityPresentationState {
     private(set) var surface: BrowserUtilitySurface?
     private(set) var isSwitcherExpanded = false
+    private(set) var isSiteControlPresented = false
+    private(set) var isSiteControlContextMenuPresented = false
     private(set) var triggerFrameInGlobal: CGRect?
+
+    var isSiteControlInteractionActive: Bool {
+        isSiteControlPresented || isSiteControlContextMenuPresented
+    }
 
     func recordTriggerFrame(_ frame: CGRect) {
         guard frame != triggerFrameInGlobal else { return }
         triggerFrameInGlobal = frame
+    }
+
+    func setSiteControlPresented(_ isPresented: Bool) {
+        guard isPresented != isSiteControlPresented else { return }
+        isSiteControlPresented = isPresented
+    }
+
+    func setSiteControlContextMenuPresented(_ isPresented: Bool) {
+        guard isPresented != isSiteControlContextMenuPresented else { return }
+        isSiteControlContextMenuPresented = isPresented
     }
 
     func present(_ surface: BrowserUtilitySurface) {

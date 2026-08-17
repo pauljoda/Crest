@@ -18,6 +18,7 @@ final class BrowserRootModel {
     var isURLCopiedFeedbackVisible = false
     var visiblePageZoomFeedbackLabel: String?
     var isFloatingSidebarPresented = false
+    private(set) var isFloatingSidebarHovered = false
     var isWindowFocused = true
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Pointer-rate column widths for the presented split, seeded from this
@@ -348,7 +349,18 @@ extension BrowserRootModel {
         _ isHovering: Bool,
         reduceMotion: Bool
     ) {
-        guard !isHovering else { return }
+        isFloatingSidebarHovered = isHovering
+        guard !isHovering,
+            !chrome.utilityPresentation.isSiteControlInteractionActive
+        else { return }
+        dismissFloatingSidebar(reduceMotion: reduceMotion)
+    }
+
+    func siteControlInteractionChanged(
+        _ isActive: Bool,
+        reduceMotion: Bool
+    ) {
+        guard !isActive, !isFloatingSidebarHovered else { return }
         dismissFloatingSidebar(reduceMotion: reduceMotion)
     }
 

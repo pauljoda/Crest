@@ -18,6 +18,8 @@ struct SpaceSidebarBrowsingContent: View {
     let beginCreatingFolder: () -> Void
     let showHistory: () -> Void
     let showExtensions: () -> Void
+    let siteControlPresentationChanged: (Bool) -> Void
+    let siteControlContextMenuPresentationChanged: (Bool) -> Void
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
@@ -140,7 +142,10 @@ struct SpaceSidebarBrowsingContent: View {
             selectedTabID: space.selectedTabID,
             extensionControllerPool: pages.extensionControllerPool,
             permissionCenter: pages.permissionCenter,
-            manageExtensions: showExtensions
+            manageExtensions: showExtensions,
+            presentationChanged: siteControlPresentationChanged,
+            contextMenuPresentationChanged:
+                siteControlContextMenuPresentationChanged
         )
     }
 }

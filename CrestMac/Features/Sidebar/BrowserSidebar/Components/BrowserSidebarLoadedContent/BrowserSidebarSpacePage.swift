@@ -41,6 +41,12 @@ struct BrowserSidebarSpacePage: View {
             openNewTab: openNewTab,
             showHistory: { utilityPresentation.present(.history) },
             showExtensions: { actions.presentExtensions(space) },
+            siteControlPresentationChanged: {
+                utilityPresentation.setSiteControlPresented($0)
+            },
+            siteControlContextMenuPresentationChanged: {
+                utilityPresentation.setSiteControlContextMenuPresented($0)
+            },
             sidebarToggleAction: sidebarToggleAction,
             toggleSidebar: toggleSidebar,
             commandSurfaceNamespace: commandSurfaceNamespace,

@@ -750,6 +750,43 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(presentation.showsSidebar)
         XCTAssertTrue(presentation.showsWindowControls)
         XCTAssertFalse(presentation.reservesSidebarWidth)
+        XCTAssertEqual(
+            BrowserSidebarPresentationPolicy.floatingHoverRegionWidth(
+                sidebarWidth: 280
+            ),
+            294,
+            "The hover region must reach the window's leading edge and continue past the floating card."
+        )
+    }
+
+    @MainActor
+    func testFloatingSidebarWaitsForEverySiteControlSurfaceBeforeDismissing() {
+        let model = BrowserRootPreviewFixture.makeModel(state: .collapsed)
+        let utilityPresentation = model.chrome.utilityPresentation
+
+        model.presentFloatingSidebar(reduceMotion: true)
+        model.floatingSidebarHoverChanged(true, reduceMotion: true)
+        utilityPresentation.setSiteControlPresented(true)
+        model.floatingSidebarHoverChanged(false, reduceMotion: true)
+
+        XCTAssertTrue(model.isFloatingSidebarPresented)
+
+        utilityPresentation.setSiteControlContextMenuPresented(true)
+        utilityPresentation.setSiteControlPresented(false)
+        model.siteControlInteractionChanged(
+            utilityPresentation.isSiteControlInteractionActive,
+            reduceMotion: true
+        )
+
+        XCTAssertTrue(model.isFloatingSidebarPresented)
+
+        utilityPresentation.setSiteControlContextMenuPresented(false)
+        model.siteControlInteractionChanged(
+            utilityPresentation.isSiteControlInteractionActive,
+            reduceMotion: true
+        )
+
+        XCTAssertFalse(model.isFloatingSidebarPresented)
     }
 
     func testFloatingSidebarUsesTheFullSpaceThemeAndItsSidebarButtonDocks() {

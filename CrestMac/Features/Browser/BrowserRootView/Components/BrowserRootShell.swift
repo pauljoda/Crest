@@ -143,6 +143,14 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             chromeAnimation(CrestMotion.pane),
             value: model.chrome.isCommandPalettePresented
         )
+        .onChange(
+            of: model.chrome.utilityPresentation.isSiteControlInteractionActive
+        ) { _, isActive in
+            model.siteControlInteractionChanged(
+                isActive,
+                reduceMotion: reduceMotion
+            )
+        }
         .transaction { transaction in
             if reduceMotion {
                 transaction.disablesAnimations = true

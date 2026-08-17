@@ -3,18 +3,15 @@ import SwiftUI
 struct BrowserPeekInputLifecycleModifier: ViewModifier {
     let model: BrowserPeekModel
     let dismiss: () -> Void
-    let promote: () -> Void
     let installsKeyboardMonitor: Bool
 
     init(
         model: BrowserPeekModel,
         dismiss: @escaping () -> Void,
-        promote: @escaping () -> Void,
         installsKeyboardMonitor: Bool = true
     ) {
         self.model = model
         self.dismiss = dismiss
-        self.promote = promote
         self.installsKeyboardMonitor = installsKeyboardMonitor
     }
 
@@ -30,14 +27,9 @@ struct BrowserPeekInputLifecycleModifier: ViewModifier {
                 dismiss()
                 return .handled
             }
-            .onKeyPress(.return) {
-                promote()
-                return .handled
-            }
             .background {
                 BrowserPeekKeyboardMonitor(
                     dismiss: dismiss,
-                    promote: promote,
                     installsMonitor: installsKeyboardMonitor
                 )
                 .frame(width: 0, height: 0)

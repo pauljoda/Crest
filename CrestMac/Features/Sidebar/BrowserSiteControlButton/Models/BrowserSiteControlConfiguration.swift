@@ -5,4 +5,6 @@ struct BrowserSiteControlConfiguration {
     let extensionControllerPool: BrowserExtensionControllerPool
     let permissionCenter: BrowserSitePermissionCenter
     let manageExtensions: () -> Void
+    let presentationChanged: (Bool) -> Void
+    let contextMenuPresentationChanged: (Bool) -> Void
 }

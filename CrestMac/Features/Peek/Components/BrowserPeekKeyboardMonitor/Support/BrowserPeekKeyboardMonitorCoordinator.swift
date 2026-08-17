@@ -3,18 +3,15 @@
 @MainActor
 final class BrowserPeekKeyboardMonitorCoordinator: NSObject {
     var dismiss: () -> Void
-    var promote: () -> Void
     var windowNumber: Int?
     private let installsMonitor: Bool
     private var monitor: Any?
 
     init(
         dismiss: @escaping () -> Void,
-        promote: @escaping () -> Void,
         installsMonitor: Bool
     ) {
         self.dismiss = dismiss
-        self.promote = promote
         self.installsMonitor = installsMonitor
     }
 
@@ -35,8 +32,6 @@ final class BrowserPeekKeyboardMonitorCoordinator: NSObject {
             switch action {
             case .dismiss:
                 self.dismiss()
-            case .promote:
-                self.promote()
             }
             return nil
         }

@@ -66,8 +66,14 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
                     y: BrowserRootMetrics.floatingSidebarShadowOffset
                 )
                 .contentShape(.interaction, shape)
-                .onHover(perform: hoverChanged)
                 .padding(BrowserSidebarPresentationPolicy.floatingCardInset)
+                .frame(
+                    width: BrowserSidebarPresentationPolicy
+                        .floatingHoverRegionWidth(sidebarWidth: width)
+                )
+                .frame(maxHeight: .infinity)
+                .contentShape(.interaction, .rect)
+                .onHover(perform: hoverChanged)
                 .transition(
                     reduceMotion
                         ? .opacity

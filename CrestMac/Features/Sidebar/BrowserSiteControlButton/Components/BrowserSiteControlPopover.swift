@@ -82,9 +82,13 @@ struct BrowserSiteControlPopover: View {
         // The popover owns the click that opened this menu, so it has to go
         // before the menu takes over event tracking. Re-anchor to the browser
         // window, which is still there once the popover is gone.
+        configuration.contextMenuPresentationChanged(true)
         dismiss()
         Task { @MainActor in
             await Task.yield()
+            defer {
+                configuration.contextMenuPresentationChanged(false)
+            }
             BrowserExtensionContextMenu.present(
                 for: action,
                 pool: configuration.extensionControllerPool,

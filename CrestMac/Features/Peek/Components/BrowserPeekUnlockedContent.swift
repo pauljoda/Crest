@@ -37,7 +37,6 @@ struct BrowserPeekUnlockedContent: View {
             BrowserPeekInputLifecycleModifier(
                 model: model,
                 dismiss: dismiss,
-                promote: { promote(model.request.assignment) },
                 installsKeyboardMonitor: installsKeyboardMonitor
             )
         )

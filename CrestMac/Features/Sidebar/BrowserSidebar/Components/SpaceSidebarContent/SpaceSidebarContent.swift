@@ -14,6 +14,8 @@ struct SpaceSidebarContent: View {
     let openNewTab: () -> Void
     let showHistory: () -> Void
     let showExtensions: () -> Void
+    let siteControlPresentationChanged: (Bool) -> Void
+    let siteControlContextMenuPresentationChanged: (Bool) -> Void
     let sidebarToggleAction: BrowserSidebarToggleAction
     let toggleSidebar: () -> Void
     let commandSurfaceNamespace: Namespace.ID
@@ -78,6 +80,10 @@ struct SpaceSidebarContent: View {
                         beginCreatingFolder: beginCreatingFolder,
                         showHistory: showHistory,
                         showExtensions: showExtensions,
+                        siteControlPresentationChanged:
+                            siteControlPresentationChanged,
+                        siteControlContextMenuPresentationChanged:
+                            siteControlContextMenuPresentationChanged,
                         editingFolderRequest: $editingFolderRequest,
                         tabPromotionNamespace: tabPromotionNamespace,
                         editSpace: editSpace,
