@@ -45,11 +45,10 @@ struct BrowserUtilityFanControl: View {
                         isRevealed ? 1 : BrowserUtilitySwitcherLayout.collapsedScale
                     )
                     .opacity(isRevealed ? 1 : 0)
-                    .position(destinationPosition)
-                    .offset(
-                        x: isRevealed ? 0 : origin.x - destinationPosition.x,
-                        y: isRevealed ? 0 : origin.y - destinationPosition.y
-                    )
+                    // Keep the system glass and its SF Symbol on one layout
+                    // path. A final `position` plus a render-only `offset`
+                    // gives those layers different animation origins.
+                    .position(isRevealed ? destinationPosition : origin)
                     .allowsHitTesting(isExpanded && isRevealed)
                     .accessibilityHidden(!isExpanded || !isRevealed)
                 }
