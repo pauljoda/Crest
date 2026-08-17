@@ -345,11 +345,11 @@ extension BrowserExtensionControllerPool {
         )
     }
 
-    func webViewConfiguration(
+    func extensionPageConfiguration(
         for extensionURL: URL,
         in spaceID: SpaceID
-    ) -> WKWebViewConfiguration? {
-        runtimeContextController.webViewConfiguration(
+    ) -> BrowserExtensionPageConfiguration? {
+        runtimeContextController.extensionPageConfiguration(
             for: extensionURL,
             in: spaceID
         )

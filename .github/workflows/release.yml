@@ -55,6 +55,24 @@ jobs:
         run: |
           set -euo pipefail
 
+          retry_github() {
+            local attempt delay exit_code
+            delay=2
+            for attempt in 1 2 3 4 5 6; do
+              if "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+              if [[ "$attempt" == 6 ]]; then
+                return "$exit_code"
+              fi
+              printf 'GitHub request failed; retrying in %s seconds.\n' "$delay" >&2
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
           marketing_version="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' Config/Version.xcconfig)"
           # Preserve Sparkle ordering across the move to the public repository,
           # whose Actions run counter restarted below already-installed builds.
@@ -92,33 +110,61 @@ jobs:
             asset_base="Crest-${marketing_version}-development-${release_date}-${short_sha}-arm64"
           fi
 
+          previous_commit=""
+          previous_tag=""
           if [[ "$channel" == "stable" ]]; then
-            releases="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+            releases="$(
+              retry_github gh api \
+                "repos/${GITHUB_REPOSITORY}/releases?per_page=100"
+            )"
             previous_tag="$(
               jq -r '[.[] | select(.draft == false and .prerelease == false)][0].tag_name // empty' \
                 <<< "$releases"
             )"
-          elif [[ "$channel" == "nightly" ]]; then
-            if gh release view nightly --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              previous_tag=nightly
-            else
-              releases="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
-              previous_tag="$(
-                jq -r '[.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$")))][0].tag_name // empty' \
-                  <<< "$releases"
-              )"
-            fi
           else
-            if gh release view development --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              previous_tag=development
+            if [[ "$channel" == "development" ]]; then
+              appcast_filename="appcast-development.xml"
             else
-              previous_tag=""
+              appcast_filename="appcast.xml"
+            fi
+            previous_appcast="$RUNNER_TEMP/crest-previous-${appcast_filename}"
+            retry_github git fetch origin updates
+            if git cat-file -e "FETCH_HEAD:${appcast_filename}" 2>/dev/null; then
+              git show "FETCH_HEAD:${appcast_filename}" > "$previous_appcast"
+              published_commit_prefix="$(
+                python3 Scripts/resolve-published-release.py \
+                  --appcast "$previous_appcast" \
+                  --channel "$channel"
+              )"
+              if [[ -n "$published_commit_prefix" ]]; then
+                previous_commit="$(
+                  git rev-parse "${published_commit_prefix}^{commit}"
+                )"
+              fi
+            fi
+
+            if [[ -z "$previous_commit" && "$channel" == "nightly" ]]; then
+              if gh release view nightly --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                previous_tag=nightly
+              else
+                releases="$(
+                  retry_github gh api \
+                    "repos/${GITHUB_REPOSITORY}/releases?per_page=100"
+                )"
+                previous_tag="$(
+                  jq -r '[.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$")))][0].tag_name // empty' \
+                    <<< "$releases"
+                )"
+              fi
+            elif [[ -z "$previous_commit" ]] \
+                && gh release view development \
+                  --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              previous_tag=development
             fi
           fi
 
-          previous_commit=""
-          if [[ -n "$previous_tag" ]]; then
-            git fetch --force origin \
+          if [[ -z "$previous_commit" && -n "$previous_tag" ]]; then
+            retry_github git fetch --force origin \
               "refs/tags/${previous_tag}:refs/tags/${previous_tag}"
             previous_commit="$(git rev-parse "${previous_tag}^{commit}")"
           fi
@@ -127,7 +173,7 @@ jobs:
           if [[ "$channel" == "nightly" && "$previous_commit" == "$GITHUB_SHA" ]]; then
             should_publish=false
             printf 'Nightly %s already publishes %s; skipping an unchanged build.\n' \
-              "$previous_tag" "$short_sha" >> "$GITHUB_STEP_SUMMARY"
+              "$release_tag" "$short_sha" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           {
@@ -332,6 +378,54 @@ jobs:
           RELEASE_TITLE: ${{ needs.preflight.outputs.release_title }}
         run: |
           set -euo pipefail
+
+          retry_github() {
+            local attempt delay exit_code
+            delay=2
+            for attempt in 1 2 3 4 5 6; do
+              if "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+              if [[ "$attempt" == 6 ]]; then
+                return "$exit_code"
+              fi
+              print -u2 "GitHub request failed; retrying in ${delay} seconds."
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
+          ensure_rolling_release() {
+            local attempt delay
+            delay=2
+            for attempt in 1 2 3 4 5 6; do
+              if gh release view \
+                  "$RELEASE_TAG" \
+                  --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                return 0
+              fi
+              if gh release create \
+                  "$RELEASE_TAG" \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --target "$GITHUB_SHA" \
+                  --title "$RELEASE_TITLE" \
+                  --notes-file "$release_notes" \
+                  --prerelease \
+                  --latest=false; then
+                return 0
+              fi
+              if [[ "$attempt" == 6 ]]; then
+                return 1
+              fi
+              print -u2 \
+                "Unable to confirm the rolling release; retrying in ${delay} seconds."
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
           publish_path="$RUNNER_TEMP/crest-release/publish"
           release_notes="$RUNNER_TEMP/crest-release/release-notes.md"
           installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"
@@ -357,39 +451,38 @@ jobs:
           checksum_asset="$publish_path/$checksum_name"
           symbols_asset="$publish_path/$symbols_name"
 
-          release_arguments=(
-            "$RELEASE_TAG"
-            "$installer_asset"
-            "$checksum_asset"
-            "$symbols_asset"
-            --title "$RELEASE_TITLE"
-            --notes-file "$release_notes"
-          )
-          if [[ "$RELEASE_CHANNEL" != "stable" ]] \
-              && gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload \
-              "$RELEASE_TAG" \
-              "$installer_asset" \
-              "$checksum_asset" \
-              "$symbols_asset" \
-              --clobber
-            gh api \
+          if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
+            ensure_rolling_release
+            python3 Scripts/reconcile-release-assets.py \
+              --repository "$GITHUB_REPOSITORY" \
+              --release-tag "$RELEASE_TAG" \
+              --asset "$installer_asset" \
+              --asset "$checksum_asset" \
+              --asset "$symbols_asset"
+            retry_github gh api \
               --method PATCH \
               "repos/${GITHUB_REPOSITORY}/git/refs/tags/${RELEASE_TAG}" \
               -f sha="$GITHUB_SHA" \
               -F force=true \
               >/dev/null
-            gh release edit \
+            retry_github gh release edit \
               "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
               --title "$RELEASE_TITLE" \
               --notes-file "$release_notes" \
               --prerelease \
               --latest=false
-          elif [[ "$RELEASE_CHANNEL" == "stable" ]]; then
-            release_arguments+=(--verify-tag --latest)
-            gh release create "${release_arguments[@]}"
           else
-            release_arguments+=(--target "$GITHUB_SHA" --prerelease)
+            release_arguments=(
+              "$RELEASE_TAG"
+              "$installer_asset"
+              "$checksum_asset"
+              "$symbols_asset"
+              --title "$RELEASE_TITLE"
+              --notes-file "$release_notes"
+              --verify-tag
+              --latest
+            )
             gh release create "${release_arguments[@]}"
           fi
 
@@ -404,6 +497,25 @@ jobs:
           SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
         run: |
           set -euo pipefail
+
+          retry_github() {
+            local attempt delay exit_code
+            delay=2
+            for attempt in 1 2 3 4 5 6; do
+              if "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+              if [[ "$attempt" == 6 ]]; then
+                return "$exit_code"
+              fi
+              print -u2 "GitHub request failed; retrying in ${delay} seconds."
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
           sparkle_version=2.9.5
           sparkle_archive_sha256=015336b601493e05c237964954bff6191370003d94edefe663724c88840d73cc
           sparkle_root="$RUNNER_TEMP/Sparkle-${sparkle_version}"
@@ -411,6 +523,8 @@ jobs:
           updates_checkout="$RUNNER_TEMP/crest-updates-branch"
           release_root="$RUNNER_TEMP/crest-release"
           installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"
+          checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"
+          symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"
           release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"
           mkdir -p "$sparkle_root" "$feed_source" "$updates_checkout"
           if [[ "$RELEASE_CHANNEL" == "development" ]]; then
@@ -424,7 +538,7 @@ jobs:
             maximum_versions=1
           fi
 
-          gh release download "$sparkle_version" \
+          retry_github gh release download "$sparkle_version" \
             --repo sparkle-project/Sparkle \
             --pattern "Sparkle-${sparkle_version}.tar.xz" \
             --dir "$sparkle_root"
@@ -432,11 +546,10 @@ jobs:
             | shasum -a 256 -c -
           tar -xf "$sparkle_root/Sparkle-${sparkle_version}.tar.xz" -C "$sparkle_root"
 
-          if git fetch origin updates; then
-            if git cat-file -e "FETCH_HEAD:${appcast_filename}" 2>/dev/null; then
-              git show "FETCH_HEAD:${appcast_filename}" \
-                > "$feed_source/${appcast_filename}"
-            fi
+          retry_github git fetch origin updates
+          if git cat-file -e "FETCH_HEAD:${appcast_filename}" 2>/dev/null; then
+            git show "FETCH_HEAD:${appcast_filename}" \
+              > "$feed_source/${appcast_filename}"
           fi
           cp \
             "$release_root/publish/$installer_name" \
@@ -476,9 +589,8 @@ jobs:
           git -C "$updates_checkout" config \
             "http.${GITHUB_SERVER_URL}/.extraheader" "$authorization_header"
           unset authorization_header
-          if git -C "$updates_checkout" fetch --depth=1 origin updates; then
-            git -C "$updates_checkout" checkout -B updates FETCH_HEAD
-          fi
+          retry_github git -C "$updates_checkout" fetch --depth=1 origin updates
+          git -C "$updates_checkout" checkout -B updates FETCH_HEAD
           cp \
             "$feed_source/${appcast_filename}" \
             "$updates_checkout/${appcast_filename}"
@@ -493,29 +605,27 @@ jobs:
             "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$updates_checkout" commit \
             -m "chore(updates): publish ${RELEASE_TAG}"
-          git -C "$updates_checkout" push origin HEAD:updates
+          retry_github git -C "$updates_checkout" push origin HEAD:updates
 
           if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
-            gh api \
-              "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
-              --jq '.assets | map(. + {build: (.name | sub("^(Installer|Checksum|Debug-Symbols)-"; "") | sub("\\.dmg(\\.sha256)?$"; "") | sub("\\.dSYM\\.zip$"; ""))}) | group_by(.build) | sort_by(map(.created_at) | max) | reverse | .[1:] | .[][] | .name' \
-              | while IFS= read -r stale_asset; do
-                  [[ -n "$stale_asset" ]] || continue
-                  gh release delete-asset \
-                    "$RELEASE_TAG" \
-                    "$stale_asset" \
-                    --yes
-                done
+            python3 Scripts/reconcile-release-assets.py \
+              --repository "$GITHUB_REPOSITORY" \
+              --release-tag "$RELEASE_TAG" \
+              --asset "$release_root/publish/$installer_name" \
+              --asset "$release_root/publish/$checksum_name" \
+              --asset "$release_root/publish/$symbols_name" \
+              --prune-other-assets
           fi
 
           if [[ "$RELEASE_CHANNEL" == "nightly" ]]; then
-            gh api --paginate \
+            retry_github gh api --paginate \
               "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
               --jq '.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$"))) | .tag_name' \
               | while IFS= read -r legacy_nightly; do
                   [[ -n "$legacy_nightly" ]] || continue
-                  gh release delete \
+                  retry_github gh release delete \
                     "$legacy_nightly" \
+                    --repo "$GITHUB_REPOSITORY" \
                     --cleanup-tag \
                     --yes
                 done

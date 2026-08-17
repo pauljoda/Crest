@@ -1,6 +1,11 @@
 import Foundation
 import WebKit
 
+struct BrowserExtensionPageConfiguration {
+    let baseURL: URL
+    let webViewConfiguration: WKWebViewConfiguration
+}
+
 @MainActor
 final class BrowserExtensionRuntimeContextController {
     private static let customURLSchemeRegistration: Void = {
@@ -102,10 +107,10 @@ final class BrowserExtensionRuntimeContextController {
         contextsBySpace[spaceID] ?? [:]
     }
 
-    func webViewConfiguration(
+    func extensionPageConfiguration(
         for extensionURL: URL,
         in spaceID: SpaceID
-    ) -> WKWebViewConfiguration? {
+    ) -> BrowserExtensionPageConfiguration? {
         contextsBySpace[spaceID]?.values.first(where: { context in
             extensionURL.scheme?.caseInsensitiveCompare(
                 context.baseURL.scheme ?? ""
@@ -113,7 +118,14 @@ final class BrowserExtensionRuntimeContextController {
                 && extensionURL.host?.caseInsensitiveCompare(
                     context.baseURL.host ?? ""
                 ) == .orderedSame
-        })?.webViewConfiguration
+        }).flatMap { context in
+            context.webViewConfiguration.map {
+                BrowserExtensionPageConfiguration(
+                    baseURL: context.baseURL,
+                    webViewConfiguration: $0
+                )
+            }
+        }
     }
 
     func loadExtension(

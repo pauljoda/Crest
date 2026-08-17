@@ -40,6 +40,20 @@ class DirectDistributionContractTests(unittest.TestCase):
         self.assertIn('release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"', workflow)
         self.assertIn("generate-release-notes.py", workflow)
 
+    def test_interrupted_rolling_release_uses_the_last_published_appcast(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text()
+
+        self.assertIn("resolve-published-release.py", workflow)
+        self.assertIn('appcast_filename="appcast-development.xml"', workflow)
+        self.assertIn('appcast_filename="appcast.xml"', workflow)
+        self.assertIn('git show "FETCH_HEAD:${appcast_filename}"', workflow)
+        self.assertIn("reconcile-release-assets.py", workflow)
+        self.assertIn("--prune-other-assets", workflow)
+        self.assertNotIn("gh release delete-asset", workflow)
+        self.assertNotIn("--clobber", workflow)
+        self.assertIn("local attempt delay exit_code", workflow)
+        self.assertNotIn("local attempt delay status", workflow)
+
     def test_release_build_number_survives_the_public_repository_epoch(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
 

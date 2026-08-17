@@ -81,6 +81,9 @@ final class BrowserPage: NSObject {
     @ObservationIgnored let spaceID: SpaceID
     @ObservationIgnored let profileID: UUID
     @ObservationIgnored let spaceName: String
+    /// The extension origin whose context supplied this page's WebKit
+    /// configuration. Nil identifies an ordinary browsing page.
+    @ObservationIgnored let extensionBaseURL: URL?
     @ObservationIgnored let navigationDecider: BrowserNavigationDecider
     @ObservationIgnored let popupCoordinator: BrowserPopupCoordinator
     @ObservationIgnored let externalSchemeCoordinator: BrowserExternalSchemeCoordinator
@@ -124,6 +127,25 @@ final class BrowserPage: NSObject {
         navigationFailure?.failingURL ?? pendingNavigationURL ?? url
     }
 
+    func matches(
+        _ extensionConfiguration: BrowserExtensionPageConfiguration?
+    ) -> Bool {
+        switch (extensionBaseURL, extensionConfiguration?.baseURL) {
+        case (nil, nil):
+            true
+        case (let currentBaseURL?, let requestedBaseURL?):
+            currentBaseURL.scheme?.caseInsensitiveCompare(
+                requestedBaseURL.scheme ?? ""
+            ) == .orderedSame
+                && currentBaseURL.host?.caseInsensitiveCompare(
+                    requestedBaseURL.host ?? ""
+                ) == .orderedSame
+                && currentBaseURL.port == requestedBaseURL.port
+        default:
+            false
+        }
+    }
+
     var isDeveloperModeEnabled: Bool {
         BrowserDeveloperModePolicy.isAutomatic(for: displayURL)
     }
@@ -145,6 +167,7 @@ final class BrowserPage: NSObject {
         spaceID: SpaceID,
         profileID: UUID,
         spaceName: String,
+        extensionBaseURL: URL? = nil,
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
         ownsUserContentController: Bool = true,
@@ -196,6 +219,7 @@ final class BrowserPage: NSObject {
         self.spaceID = spaceID
         self.profileID = profileID
         self.spaceName = spaceName
+        self.extensionBaseURL = extensionBaseURL
         self.ownsUserContentController = ownsUserContentController
         supportsCredentialAccess = allowsCredentialAccess
         self.isCredentialAccessEnabled =

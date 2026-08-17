@@ -52,6 +52,11 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     let serverTrustOverrides = BrowserServerTrustOverrideStore()
 
     @ObservationIgnored private var pages: [TabID: BrowserPage] = [:]
+    /// Alternate WebKit runtimes retained while a tab crosses between ordinary
+    /// web content and extension origins. A configuration cannot be changed
+    /// after a `WKWebView` is created, and keeping the prior page alive avoids
+    /// discarding forms, media, and other in-page state during the swap.
+    @ObservationIgnored private var suspendedPagesByTabID: [TabID: [BrowserPage]] = [:]
     @ObservationIgnored private var inactiveSinceByTabID: [TabID: Date] = [:]
     @ObservationIgnored private var ephemeralDataStores: [UUID: WKWebsiteDataStore] = [:]
     @ObservationIgnored private let residencyDecisionProvider: ResidencyDecisionProvider
@@ -242,6 +247,22 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         in spaceID: SpaceID
     ) -> WKWebView? {
         extensionPage(for: tabID, in: spaceID)?.webView
+    }
+
+    func loadExtensionURL(
+        _ url: URL,
+        for tabID: TabID,
+        in spaceID: SpaceID,
+        session: BrowserSession
+    ) {
+        // An unloaded background tab keeps the URL in the session and receives
+        // the right configuration when it is next presented. Only a resident
+        // tab has a live WebKit runtime to navigate now.
+        guard pages[tabID] != nil,
+            let space = session.space(id: spaceID),
+            let tab = space.tabs.first(where: { $0.id == tabID })
+        else { return }
+        page(for: tab, space: space).load(url)
     }
 
     func extensionReaderModeState(
@@ -525,6 +546,13 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
                     : .onNextNavigation
             )
         }
+        for page in suspendedPagesByTabID.values.flatMap({ $0 }) {
+            page.applyContentBlocking(
+                policy: policiesBySpaceID[page.spaceID] ?? .off,
+                balancedRuleLists: balancedContentRuleLists ?? [],
+                activation: .onNextNavigation
+            )
+        }
         pruneTransientLeases()
         // A Peek is never a presented card, so its rules change under the same
         // next-navigation rule every background page follows.
@@ -637,6 +665,11 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             downloadCenter.setCredentialAccessEnabled(isEnabled, in: spaceID)
         }
         for page in pages.values {
+            page.setCredentialAccessEnabled(
+                enabledBySpaceID[page.spaceID] ?? false
+            )
+        }
+        for page in suspendedPagesByTabID.values.flatMap({ $0 }) {
             page.setCredentialAccessEnabled(
                 enabledBySpaceID[page.spaceID] ?? false
             )
@@ -1046,6 +1079,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         archiveTabState(for: tabID)
         guard let page = pages.removeValue(forKey: tabID) else { return }
         page.prepareForSpaceDeletion()
+        releaseSuspendedPages(for: tabID)
         inactiveSinceByTabID[tabID] = nil
         if activeTabID == tabID { activeTabID = nil }
         presentedTabIDs.removeAll { $0 == tabID }
@@ -1242,19 +1276,31 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     }
 
     private func page(for tab: BrowserTab, space: BrowserSpace) -> BrowserPage {
+        let extensionConfiguration = tab.url.flatMap {
+            extensionControllerPool.extensionPageConfiguration(
+                for: $0,
+                in: space.id
+            )
+        }
         if let existingPage = pages[tab.id] {
             if existingPage.spaceID == space.id,
                 existingPage.profileID == space.profile.id
             {
-                existingPage.setCredentialAccessEnabled(
+                let page = page(
+                    matching: extensionConfiguration,
+                    for: tab.id,
+                    replacing: existingPage,
+                    in: space
+                )
+                page.setCredentialAccessEnabled(
                     space.credentialPreferences.isEnabled
                 )
-                existingPage.updateNavigationContext(
+                page.updateNavigationContext(
                     tab: tab,
                     automaticallyOpensPeek: BrowserLinkPreferenceStore.shared
                         .preferences.automaticallyOpensPeek
                 )
-                return existingPage
+                return page
             }
             // The tab moved to another Space, so the state archived under its old
             // profile describes a runtime it no longer belongs to.
@@ -1264,16 +1310,12 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             )
             existingPage.prepareForSpaceDeletion()
             pages.removeValue(forKey: tab.id)
+            releaseSuspendedPages(for: tab.id)
             inactiveSinceByTabID[tab.id] = nil
         }
         let page = makePage(
             space: space,
-            extensionConfiguration: tab.url.flatMap {
-                extensionControllerPool.webViewConfiguration(
-                    for: $0,
-                    in: space.id
-                )
-            }
+            extensionConfiguration: extensionConfiguration
         )
         page.updateNavigationContext(
             tab: tab,
@@ -1285,12 +1327,41 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         return page
     }
 
+    private func page(
+        matching extensionConfiguration: BrowserExtensionPageConfiguration?,
+        for tabID: TabID,
+        replacing currentPage: BrowserPage,
+        in space: BrowserSpace
+    ) -> BrowserPage {
+        guard !currentPage.matches(extensionConfiguration) else {
+            return currentPage
+        }
+
+        var suspendedPages = suspendedPagesByTabID[tabID] ?? []
+        let replacement: BrowserPage
+        if let index = suspendedPages.firstIndex(where: {
+            $0.matches(extensionConfiguration)
+        }) {
+            replacement = suspendedPages.remove(at: index)
+        } else {
+            replacement = makePage(
+                space: space,
+                extensionConfiguration: extensionConfiguration
+            )
+        }
+        suspendedPages.append(currentPage)
+        suspendedPagesByTabID[tabID] = suspendedPages
+        pages[tabID] = replacement
+        residencyRevision &+= 1
+        return replacement
+    }
+
     /// Builds a page for `space`. Popup and extension-page configurations are
     /// both supplied by WebKit and must be used exactly as handed over.
     private func makePage(
         space: BrowserSpace,
         adoptedConfiguration: WKWebViewConfiguration? = nil,
-        extensionConfiguration: WKWebViewConfiguration? = nil
+        extensionConfiguration: BrowserExtensionPageConfiguration? = nil
     ) -> BrowserPage {
         let interval = Self.lifecycleSignposter.beginInterval("Create Browser Page")
         defer {
@@ -1300,7 +1371,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         let contentRuleLists = contentRuleLists(for: space)
         let page = BrowserPage(
             configuration: adoptedConfiguration
-                ?? extensionConfiguration
+                ?? extensionConfiguration?.webViewConfiguration
                 ?? BrowserPageConfiguration.make(
                     for: space.profile,
                     websiteDataStore: websiteDataStore(for: space.profile),
@@ -1316,6 +1387,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             spaceID: space.id,
             profileID: space.profile.id,
             spaceName: space.name,
+            extensionBaseURL: extensionConfiguration?.baseURL,
             contentRuleLists: contentRuleLists,
             ownsUserContentController: adoptedConfiguration == nil
                 && extensionConfiguration == nil,
@@ -1359,6 +1431,12 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
 
     private func tabID(for page: BrowserPage) -> TabID? {
         pages.first { $0.value === page }?.key
+    }
+
+    private func releaseSuspendedPages(for tabID: TabID) {
+        for page in suspendedPagesByTabID.removeValue(forKey: tabID) ?? [] {
+            page.prepareForSpaceDeletion()
+        }
     }
 
     private func contentRuleLists(for space: BrowserSpace) -> [WKContentRuleList] {
@@ -1476,6 +1554,15 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
                 page.prepareForSpaceDeletion()
                 releasedAnyPage = true
             }
+            if let suspendedPages = suspendedPagesByTabID.removeValue(
+                forKey: tabID
+            ) {
+                for page in suspendedPages {
+                    probes.append(BrowserSpaceDataReleaseProbe(page))
+                    page.prepareForSpaceDeletion()
+                }
+                releasedAnyPage = true
+            }
         }
         if releasedAnyPage { residencyRevision &+= 1 }
         inactiveSinceByTabID = inactiveSinceByTabID.filter {
@@ -1515,12 +1602,22 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             // presented" — a card of the split on screen, focused or not.
             // Every candidate here is off screen, so it is answered `false`.
             // The name stays until the decision type is revisited.
-            let decision = await residencyDecisionProvider(candidate.page, false)
+            let runtimePages =
+                [candidate.page]
+                + (suspendedPagesByTabID[candidate.tabID] ?? [])
+            var allRuntimesAllowAutomaticUnload = true
+            for page in runtimePages {
+                let decision = await residencyDecisionProvider(page, false)
+                if !decision.allowsAutomaticUnload {
+                    allRuntimesAllowAutomaticUnload = false
+                    break
+                }
+            }
             // Re-checked after the await: a page can be selected back onto the
             // screen while WebKit is answering for it.
             guard pages[candidate.tabID] === candidate.page,
                 !presentedTabIDs.contains(candidate.tabID),
-                decision.allowsAutomaticUnload
+                allRuntimesAllowAutomaticUnload
             else { continue }
             eligibleTabIDs.append(candidate.tabID)
         }
@@ -1540,6 +1637,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         }
         guard let page = pages.removeValue(forKey: tabID) else { return }
         page.prepareForSpaceDeletion()
+        releaseSuspendedPages(for: tabID)
         residencyRevision &+= 1
         inactiveSinceByTabID[tabID] = nil
     }

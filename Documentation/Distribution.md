@@ -44,11 +44,12 @@ overwritten binary. GitHub Packages is not part of the desktop distribution
 path.
 
 Before allocating the macOS signing runner, a nightly preflight compares the
-current source commit with the last published nightly. An unchanged scheduled
-or manually dispatched nightly succeeds without building, notarizing, creating
-a release, or advancing an appcast. After the first successful rolling nightly
-publication, the workflow removes the superseded date-stamped nightly releases
-and tags.
+current source commit with the last nightly in the signed appcast. The appcast,
+rather than the mutable rolling tag, is the completed-publication boundary. An
+unchanged scheduled or manually dispatched nightly succeeds without building,
+notarizing, creating a release, or advancing an appcast. After the first
+successful rolling nightly publication, the workflow removes the superseded
+date-stamped nightly releases and tags.
 
 Release notes come directly from Git history. Each channel lists every commit
 since that channel's previous publication in chronological order, including
@@ -67,11 +68,20 @@ The production workflow intentionally publishes from the inside out:
 4. verify the app's signature, bundle identifier, and architecture;
 5. notarize and staple the app;
 6. create, sign, notarize, staple, and Gatekeeper-check the disk image;
-7. publish the disk image, checksum, dSYM, and build-provenance attestation;
+7. publish the build-provenance attestation, then reconcile and digest-verify
+   the disk image, checksum, and dSYM;
 8. sign and publish the Sparkle appcast after the release assets exist.
 
 If any signing or notarization step fails, no appcast is advanced. An update
 therefore never points at an absent or unverified disk image.
+
+Rolling publication is safe to repeat after an interrupted GitHub request. The
+workflow reuses matching uploaded assets, removes only incomplete or mismatched
+assets for the target build, and retries each replacement with state
+verification. The prior complete build remains downloadable until the new
+signed appcast has been pushed. Only then does the workflow prune superseded
+assets. If a failure advances the rolling tag but not the appcast, the next run
+still builds release notes from the last completed appcast entry.
 
 ## GitHub production environment
 

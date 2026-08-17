@@ -1343,6 +1343,70 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(page.webView.url?.path, optionsURL.path)
     }
 
+    func testAdapterLoadSwapsBetweenStandardAndExtensionPageConfigurations()
+        async throws
+    {
+        let browser = BrowserStore.preview()
+        let pool = BrowserExtensionControllerPool()
+        let pages = BrowserPagePool(
+            monitorsMemoryPressure: false,
+            extensionControllerPool: pool
+        )
+        pool.connect(browser: browser, pageProvider: pages)
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let context = try await pool.loadExtension(
+            at: fixtureURL,
+            extensionID: extensionID,
+            in: space
+        )
+        pages.select(session: browser.session)
+        let tab = try XCTUnwrap(browser.session.selectedTab)
+        let standardPage = try XCTUnwrap(pages.activePage)
+        let adapter = try XCTUnwrap(pool.extensionTab(tab.id, in: space.id))
+        let extensionURL = try XCTUnwrap(context.optionsPageURL)
+        var extensionLoadError: Error?
+
+        adapter.loadURL(extensionURL, for: context) {
+            extensionLoadError = $0
+        }
+
+        XCTAssertNil(extensionLoadError)
+        XCTAssertEqual(browser.session.selectedTab?.url, extensionURL)
+        let extensionPage = try XCTUnwrap(pages.activePage)
+        XCTAssertFalse(extensionPage === standardPage)
+        XCTAssertEqual(extensionPage.pendingNavigationURL, extensionURL)
+        for _ in 0..<200 {
+            let runtimeReady =
+                try? await extensionPage.webView.evaluateJavaScript(
+                    "document.documentElement.dataset.runtimeReady"
+                ) as? String
+            if runtimeReady == "true" {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        let runtimeReady =
+            try await extensionPage.webView.evaluateJavaScript(
+                "document.documentElement.dataset.runtimeReady"
+            ) as? String
+        XCTAssertEqual(runtimeReady, "true")
+        XCTAssertNil(extensionPage.navigationFailure)
+
+        let webURL = try XCTUnwrap(
+            URL(string: "https://example.com/restored-standard-page")
+        )
+        var webLoadError: Error?
+
+        adapter.loadURL(webURL, for: context) {
+            webLoadError = $0
+        }
+
+        XCTAssertNil(webLoadError)
+        XCTAssertEqual(browser.session.selectedTab?.url, webURL)
+        XCTAssertTrue(pages.activePage === standardPage)
+        XCTAssertEqual(standardPage.pendingNavigationURL, webURL)
+    }
+
     func testExtensionPageRoutesExternalNavigationIntoStandardBrowserTab()
         async throws
     {

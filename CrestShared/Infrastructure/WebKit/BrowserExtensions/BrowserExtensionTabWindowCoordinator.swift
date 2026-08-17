@@ -522,9 +522,14 @@ extension BrowserExtensionTabWindowCoordinator {
             completionHandler(adapterError(.tabUnavailable))
             return
         }
-        pageProvider?.extensionWebView(for: tabID, in: spaceID)?
-            .load(URLRequest(url: url))
-        reconcile(session: browser.session)
+        let session = browser.session
+        pageProvider?.loadExtensionURL(
+            url,
+            for: tabID,
+            in: spaceID,
+            session: session
+        )
+        reconcile(session: session)
         completionHandler(nil)
     }
 
