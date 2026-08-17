@@ -290,6 +290,7 @@ class ProductSiteTests(unittest.TestCase):
                 self.assertIn(crest_name, matrix.group(0))
         self.assertIn("Carried forward, then taken further", self.homepage)
         self.assertIn("full browser model now belongs on every Apple device", self.homepage)
+        self.assertNotIn("parity-featured", self.homepage)
         self.assertNotIn("What Arc got right", self.homepage)
         self.assertNotIn("What Crest changes", self.homepage)
 
@@ -349,14 +350,14 @@ class ProductSiteTests(unittest.TestCase):
             "crest-spaces-mac-2026.png": (900, 660),
             "crest-spaces-ipad-2026.png": (2420, 1668),
             "crest-spaces-iphone-2026.png": (1206, 2622),
-            "crest-localhost-mac-2026.png": (1329, 768),
+            "crest-localhost-mac-2026.png": (1228, 650),
             "crest-personal-mac-clean.png": (1440, 900),
             "crest-traditional-gradient-mac-clean.png": (1440, 900),
             "crest-import-browser-selection-mac-2026.png": (2340, 1622),
             "crest-import-space-review-mac-2026.png": (2350, 1632),
             "crest-quick-window-mac-2026.png": (720, 460),
-            "crest-peek-mac-2026.png": (1329, 768),
-            "crest-split-view-mac-2026.png": (1329, 768),
+            "crest-peek-mac-2026.png": (1140, 768),
+            "crest-split-view-mac-2026.png": (1228, 650),
         }
         for filename, size in expected_sizes.items():
             with self.subTest(filename=filename):

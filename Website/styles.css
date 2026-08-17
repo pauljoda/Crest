@@ -204,8 +204,6 @@ nav a:not(.nav-cta):hover::after { right: 0; }
 .parity-row > span:last-child { display: grid; gap: .35rem; }
 .parity-row b { font: 600 .82rem/1.35 var(--sans); }
 .parity-row small { color: rgba(16,24,39,.62); font-size: .72rem; line-height: 1.55; }
-.parity-featured { background: rgba(210,173,88,.22); box-shadow: inset .3rem 0 var(--gold); }
-.parity-featured > strong { color: #7c331f; }
 .parity-note { max-width: 780px; margin: 2rem 0 0 auto; color: rgba(16,24,39,.56); font-size: .68rem; line-height: 1.65; }
 
 .platform-story { padding: clamp(6.5rem, 11vw, 10rem) max(1.5rem, calc((100vw - 1280px) / 2)); color: var(--paper); background: #49365f; }
@@ -692,7 +690,6 @@ section:target .reveal { opacity: 1; transform: none; }
   .parity-row > span:first-child::before { content: "The job"; }
   .parity-row > strong::before { content: "Arc called it"; }
   .parity-row > span:last-child::before { content: "Crest"; }
-  .parity-featured { box-shadow: inset .28rem 0 var(--gold); }
   .split-product-shot figcaption, .split-guide-link { align-items: flex-start; flex-direction: column; }
   .split-capabilities { grid-template-columns: 1fr; }
   .platform-copy, .forge-copy, .feature-copy { padding: 1.6rem; }
