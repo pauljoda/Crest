@@ -125,6 +125,10 @@ struct MobileSavedTabsDropSection: View {
             .section(.folders(parentID: nil)),
             state: browser.sidebarReorderState
         )
+        .browserSidebarReorderSectionReservation(
+            .tabs(placement: .saved, folderID: nil),
+            state: browser.sidebarReorderState
+        )
     }
 
     private func moveFolder(

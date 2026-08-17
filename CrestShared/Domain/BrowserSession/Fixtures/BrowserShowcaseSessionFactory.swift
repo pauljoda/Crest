@@ -9,6 +9,7 @@ enum BrowserShowcaseSessionFactory {
 
     private static func makeWorkSpace() -> BrowserSpace {
         let folder = SavedFolder(title: "Launch Atlas", symbol: "folder.fill")
+        let splitGroupID = SplitGroupID()
         let tabs = [
             tab("Brief", page(.work, title: "Brief", activeCard: 0), "🧭", .pinned),
             tab("Projects", page(.work, title: "Projects", activeCard: 1), "📐", .pinned),
@@ -17,7 +18,20 @@ enum BrowserShowcaseSessionFactory {
             tab("Audience research", page(.work, title: "Audience research", activeCard: 1), "🔬", .saved, folder.id),
             tab("Launch plan", page(.work, title: "Launch plan", activeCard: 2), "🚩", .saved, folder.id),
             tab("Design review", page(.work, title: "Design review", activeCard: 3), "🎨", .saved, folder.id),
-            tab("Monday overview", page(.work, title: "Monday overview", activeCard: 0), "✨", .current),
+            tab(
+                "Monday overview",
+                page(.work, title: "Monday overview", activeCard: 0),
+                "✨",
+                .current,
+                splitGroupID: splitGroupID
+            ),
+            tab(
+                "Launch notes",
+                page(.work, title: "Launch notes", activeCard: 3),
+                "🗒️",
+                .current,
+                splitGroupID: splitGroupID
+            ),
         ]
         return BrowserSpace(
             id: SpaceID(),
@@ -133,7 +147,8 @@ enum BrowserShowcaseSessionFactory {
         _ url: URL,
         _ symbol: String,
         _ placement: TabPlacement,
-        _ folderID: FolderID? = nil
+        _ folderID: FolderID? = nil,
+        splitGroupID: SplitGroupID? = nil
     ) -> BrowserTab {
         BrowserTab(
             title: title,
@@ -142,6 +157,7 @@ enum BrowserShowcaseSessionFactory {
             iconMode: .emoji,
             placement: placement,
             folderID: folderID,
+            splitGroupID: splitGroupID,
             lastActivatedAt: .now
         )
     }

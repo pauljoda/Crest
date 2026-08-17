@@ -100,6 +100,10 @@ struct MobileCurrentTabsDropSection: View {
             .section(.tabs(placement: .current, folderID: nil)),
             state: browser.sidebarReorderState
         )
+        .browserSidebarReorderSectionReservation(
+            .tabs(placement: .current, folderID: nil),
+            state: browser.sidebarReorderState
+        )
     }
 
     private func move(_ item: BrowserTabDragItem, before tabID: TabID?) -> Bool {

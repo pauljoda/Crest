@@ -256,6 +256,10 @@ struct MobileSavedFolderGroup: View {
             state: browser.sidebarReorderState,
             isActive: !isExpanded
         )
+        .browserSidebarReorderSectionReservation(
+            .tabs(placement: .saved, folderID: folder.id),
+            state: browser.sidebarReorderState
+        )
         .onChange(of: folderRuntimeAssignment) { _, _ in
             clearUnavailableDeferredActions()
         }

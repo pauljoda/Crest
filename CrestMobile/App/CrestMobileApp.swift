@@ -116,9 +116,11 @@ struct CrestMobileApp: App {
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
         startupBehavior =
-            usesIsolatedLaunch
-            ? .lastActiveTab
-            : BrowserStartupPreference.behavior()
+            launchEnvironment.presentsShowcaseSession
+            ? .waitForTabSelection
+            : usesIsolatedLaunch
+                ? .lastActiveTab
+                : BrowserStartupPreference.behavior()
         monitorsMemoryPressure = !usesIsolatedLaunch
         usesEphemeralWebsiteDataStores = usesIsolatedLaunch
     }

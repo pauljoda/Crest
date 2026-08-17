@@ -268,6 +268,20 @@ final class BrowserSidebarReorderState {
         )
     }
 
+    /// Real layout height the destination list must add while an item arrives
+    /// from another section. Row displacement alone is a presentation transform
+    /// and cannot enlarge the section's measured frame.
+    func incomingLiftReservationHeight(
+        for section: BrowserSidebarReorderSection
+    ) -> CGFloat {
+        guard let lift,
+            lift.section != section,
+            resolvedTarget?.section == section,
+            !section.flowsHorizontally
+        else { return 0 }
+        return max(0, lift.rowSize.height)
+    }
+
     // MARK: - Drop indicator
 
     /// The insertion line for the current target, if it anchors on `id`.

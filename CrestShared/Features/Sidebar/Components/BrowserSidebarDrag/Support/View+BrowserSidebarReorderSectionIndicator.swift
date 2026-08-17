@@ -13,4 +13,18 @@ extension View {
             )
         )
     }
+
+    /// Expands a vertical destination run by the incoming row's measured
+    /// height, complementing the presentation offsets that open its gap.
+    func browserSidebarReorderSectionReservation(
+        _ section: BrowserSidebarReorderSection,
+        state: BrowserSidebarReorderState
+    ) -> some View {
+        modifier(
+            BrowserSidebarReorderSectionReservationModifier(
+                section: section,
+                state: state
+            )
+        )
+    }
 }

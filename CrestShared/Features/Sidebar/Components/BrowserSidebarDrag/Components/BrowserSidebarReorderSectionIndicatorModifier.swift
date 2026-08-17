@@ -45,3 +45,30 @@ struct BrowserSidebarReorderSectionIndicatorModifier: ViewModifier {
         section.flowsHorizontally ? .leading : .top
     }
 }
+
+/// Gives a vertical destination section real layout capacity for a row arriving
+/// from another section. Its candidate rows still use presentation offsets to
+/// open the insertion gap; this padding is what keeps those offset rows inside
+/// the section's measured frame instead of painting over the section below it.
+struct BrowserSidebarReorderSectionReservationModifier: ViewModifier {
+    let section: BrowserSidebarReorderSection
+    let state: BrowserSidebarReorderState
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var height: CGFloat {
+        state.incomingLiftReservationHeight(for: section)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.bottom, height)
+            .animation(
+                BrowserVisualAccessibilityPolicy.animation(
+                    CrestMotion.dragSource,
+                    reduceMotion: reduceMotion
+                ),
+                value: height
+            )
+    }
+}
