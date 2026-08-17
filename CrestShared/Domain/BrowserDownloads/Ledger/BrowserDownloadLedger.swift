@@ -140,3 +140,42 @@ struct BrowserDownloadLedger {
         }
     }
 }
+
+extension BrowserDownloadLedger {
+    static func showcase(profileID: UUID) -> Self {
+        var ledger = Self()
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Crest Showcase Downloads", isDirectory: true)
+        try? FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+
+        let finishedID = ledger.begin(
+            profileID: profileID,
+            filename: "Crest Verification Notes.txt",
+            createdAt: .now.addingTimeInterval(-90)
+        )
+        let finishedURL = directory.appendingPathComponent(
+            "Crest Verification Notes.txt"
+        )
+        try? Data("Crest download verification fixture\n".utf8).write(
+            to: finishedURL,
+            options: .atomic
+        )
+        ledger.setDestination(finishedURL, for: finishedID)
+        ledger.finish(finishedID)
+
+        let activeID = ledger.begin(
+            profileID: profileID,
+            filename: "Crest Design Review.pdf",
+            createdAt: .now
+        )
+        ledger.setDestination(
+            directory.appendingPathComponent("Crest Design Review.pdf"),
+            for: activeID
+        )
+        ledger.setProgress(0.64, for: activeID)
+        return ledger
+    }
+}

@@ -16,15 +16,20 @@ struct MobileSpaceDownloadsButton: View {
         .symbolEffect(.bounce, value: reduceMotion ? nil : newDownloads.first?.id)
         .overlay(alignment: .topTrailing) {
             if !newDownloads.isEmpty {
-                Text("\(min(newDownloads.count, 99))")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .browserReadableForeground(over: badgeColor)
-                    .padding(.horizontal, 4)
-                    .frame(minWidth: 15, minHeight: 15)
-                    .background(badgeColor, in: .capsule)
-                    .accessibilityHidden(true)
+                BrowserUtilityNotificationBadge(
+                    count: newDownloads.count,
+                    tint: badgeColor,
+                    progress: BrowserDownloadNotificationPolicy.progress(
+                        in: downloads
+                    )
+                )
+                .offset(
+                    x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
+                    y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
+                )
             }
         }
+        .zIndex(newDownloads.isEmpty ? 0 : 1)
         .accessibilityLabel("Downloads")
         .accessibilityValue(
             BrowserChromeAccessibility.countValue(

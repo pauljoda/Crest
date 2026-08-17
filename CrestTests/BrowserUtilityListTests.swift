@@ -432,9 +432,19 @@ final class BrowserUtilityListTests: XCTestCase {
                 "المنظفة تلقائيًا"
             ),
             (
+                BrowserUtilityListFilter.archivedSynced.title,
+                "Synced from Another Device",
+                "متزامنة من جهاز آخر"
+            ),
+            (
                 BrowserUtilityListFilter.downloadsNeedsAttention.title,
                 "Needs Attention",
                 "تحتاج إلى انتباه"
+            ),
+            (
+                BrowserUtilityDownloadDestination.open.title,
+                "Open",
+                "فتح"
             ),
             (
                 BrowserUtilityDownloadDestination.revealInFinder.title,
@@ -668,6 +678,150 @@ final class BrowserUtilityListTests: XCTestCase {
 
         XCTAssertTrue(presentation.isSwitcherExpanded)
         XCTAssertEqual(presentation.surface, .archive)
+    }
+
+    @MainActor
+    func testCommonListTriggerCanRouteANewDownloadNotificationToDownloads() {
+        let presentation = BrowserUtilityPresentationState()
+
+        presentation.toggleSwitcher(preferredSurface: .downloads)
+
+        XCTAssertTrue(presentation.isSwitcherExpanded)
+        XCTAssertEqual(presentation.surface, .downloads)
+    }
+
+    func testDownloadNotificationUsesTheNewestActiveTransferProgress() throws {
+        let profileID = identifier(0x70)
+        let older = BrowserDownloadItem(
+            id: identifier(0x71),
+            profileID: profileID,
+            createdAt: Date(timeIntervalSinceReferenceDate: 100),
+            filename: "older.zip",
+            destinationURL: nil,
+            progress: 0.8,
+            state: .downloading,
+            riskAssessment: nil
+        )
+        let newest = BrowserDownloadItem(
+            id: identifier(0x72),
+            profileID: profileID,
+            createdAt: Date(timeIntervalSinceReferenceDate: 200),
+            filename: "newest.pdf",
+            destinationURL: nil,
+            progress: 0.35,
+            state: .downloading,
+            riskAssessment: nil
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(
+                BrowserDownloadNotificationPolicy.progress(in: [older, newest])
+            ),
+            0.35,
+            accuracy: 0.001
+        )
+    }
+
+    func testDownloadFileIconsReflectCommonFileKinds() {
+        let expectations = [
+            ("Crest.pdf", "doc.richtext.fill"),
+            ("Screenshot.png", "photo.fill"),
+            ("Archive.zip", "archivebox.fill"),
+            ("Theme.mp3", "waveform"),
+            ("Demo.mov", "film.fill"),
+            ("Notes.txt", "doc.text.fill"),
+            ("Unknown.crest", "doc.fill"),
+        ]
+
+        for (filename, expectedSymbol) in expectations {
+            XCTAssertEqual(
+                BrowserDownloadFileIconPolicy.systemImage(for: filename),
+                expectedSymbol
+            )
+        }
+    }
+
+    func testFinishedDownloadRowRevealsTheFileInFinder() {
+        XCTAssertEqual(
+            BrowserUtilityDownloadPrimaryActionPolicy.destination(
+                for: .finished,
+                availableDestinations: [.open, .revealInFinder]
+            ),
+            .revealInFinder
+        )
+        XCTAssertNil(
+            BrowserUtilityDownloadPrimaryActionPolicy.destination(
+                for: .downloading,
+                availableDestinations: [.open, .revealInFinder]
+            )
+        )
+    }
+
+    func testArchiveFiltersIncludeEveryRemovalCauseWithASymbol() {
+        XCTAssertEqual(
+            BrowserUtilityListFilter.options(for: .archive),
+            [
+                .all,
+                .archivedClosed,
+                .archivedAutomatically,
+                .archivedSynced,
+                .archivedQuickWindow,
+            ]
+        )
+        for filter in BrowserUtilityListFilter.options(for: .archive) {
+            XCTAssertFalse(filter.systemImage.isEmpty)
+        }
+    }
+
+    func testArchivePreparationSortsByTheTimeTheTabWasClosed() throws {
+        let now = Date(timeIntervalSinceReferenceDate: 900)
+        let older = ArchivedTab(
+            tab: BrowserTab(
+                id: TabID(rawValue: identifier(0x73)),
+                title: "Older",
+                url: URL(string: "https://example.com/older"),
+                symbol: "globe",
+                placement: .current,
+                lastActivatedAt: Date(timeIntervalSinceReferenceDate: 800)
+            ),
+            archivedAt: Date(timeIntervalSinceReferenceDate: 850),
+            reason: .closed
+        )
+        let newer = ArchivedTab(
+            tab: BrowserTab(
+                id: TabID(rawValue: identifier(0x74)),
+                title: "Newer",
+                url: URL(string: "https://example.com/newer"),
+                symbol: "globe",
+                placement: .current,
+                lastActivatedAt: Date(timeIntervalSinceReferenceDate: 100)
+            ),
+            archivedAt: now,
+            reason: .autoCleanup
+        )
+        let request = BrowserUtilityListRequest(
+            surface: .archive,
+            assignment: utilityDownloadContext().assignment,
+            archivedTabs: [older, newer],
+            history: [],
+            downloads: [],
+            searchText: "",
+            filter: .all
+        )
+
+        let sections = BrowserUtilityListPreparation.sections(
+            for: request,
+            now: now,
+            calendar: .current
+        )
+
+        XCTAssertEqual(
+            sections.flatMap(\.items).compactMap { item -> TabID? in
+                guard case .archive(let archived) = item else { return nil }
+                return archived.id
+            },
+            [newer.id, older.id]
+        )
     }
 
     @MainActor

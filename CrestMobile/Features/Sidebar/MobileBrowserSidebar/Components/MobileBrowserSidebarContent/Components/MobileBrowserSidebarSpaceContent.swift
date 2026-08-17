@@ -25,7 +25,6 @@ struct MobileBrowserSidebarSpaceContent: View {
                         )
                     }
                 )
-                .transition(.opacity)
             } else {
                 Color.clear
             }

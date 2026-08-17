@@ -15,6 +15,9 @@ struct SpaceSwitcherContent: View {
                 Spacer()
                 SpaceSwitcherCommonListsButton(
                     isExpanded: commonListsAreExpanded,
+                    downloads: selectedDownloads,
+                    newDownloads: newDownloads,
+                    badgeColor: selectedAccentColor,
                     action: toggleCommonLists,
                     recordFrame: recordCommonListsTriggerFrame
                 )
@@ -28,5 +31,19 @@ struct SpaceSwitcherContent: View {
                 selectSpace: selectSpace
             )
         }
+    }
+
+    private var selectedDownloads: [BrowserDownloadItem] {
+        guard let profileID = browser.selectedSpace?.profile.id else { return [] }
+        return pages.downloadCenter.items(for: profileID)
+    }
+
+    private var newDownloads: [BrowserDownloadItem] {
+        guard let profileID = browser.selectedSpace?.profile.id else { return [] }
+        return pages.downloadCenter.unacknowledgedItems(for: profileID)
+    }
+
+    private var selectedAccentColor: Color {
+        browser.selectedSpace?.branding.colors.first?.color ?? .accentColor
     }
 }

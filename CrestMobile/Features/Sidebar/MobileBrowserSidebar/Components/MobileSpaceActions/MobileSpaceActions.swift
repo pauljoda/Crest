@@ -17,6 +17,9 @@ struct MobileSpaceActions: View {
                 mode: mode,
                 archivedTabCount: browser.selectedSpace?.archivedTabs.count ?? 0,
                 commonListsAreExpanded: configuration.commonListsAreExpanded,
+                downloads: downloads,
+                newDownloads: newDownloads,
+                badgeColor: downloadBadgeColor,
                 showArchive: configuration.showArchive,
                 toggleCommonLists: configuration.toggleCommonLists,
                 recordCommonListsTriggerFrame: configuration.recordCommonListsTriggerFrame

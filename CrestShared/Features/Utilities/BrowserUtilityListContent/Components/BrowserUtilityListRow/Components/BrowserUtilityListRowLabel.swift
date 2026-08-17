@@ -3,7 +3,7 @@ import SwiftUI
 struct BrowserUtilityListRowLabel<Icon: View, Trailing: View>: View {
     let title: String
     let subtitle: Text
-    let subtitleIsFailure: Bool
+    let subtitleStyle: AnyShapeStyle
     let icon: Icon
     let trailing: Trailing
 
@@ -11,12 +11,17 @@ struct BrowserUtilityListRowLabel<Icon: View, Trailing: View>: View {
         title: String,
         subtitle: Text,
         subtitleIsFailure: Bool = false,
+        subtitleStyle: AnyShapeStyle? = nil,
         @ViewBuilder icon: () -> Icon,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.subtitleIsFailure = subtitleIsFailure
+        self.subtitleStyle =
+            subtitleStyle
+            ?? (subtitleIsFailure
+                ? AnyShapeStyle(.red)
+                : AnyShapeStyle(.secondary))
         self.icon = icon()
         self.trailing = trailing()
     }
@@ -33,18 +38,34 @@ struct BrowserUtilityListRowLabel<Icon: View, Trailing: View>: View {
                     .lineLimit(1)
                 subtitle
                     .font(.caption)
-                    .foregroundStyle(
-                        subtitleIsFailure
-                            ? AnyShapeStyle(.red)
-                            : AnyShapeStyle(.secondary)
-                    )
+                    .foregroundStyle(subtitleStyle)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             trailing
         }
-        .padding(.vertical, 5)
+        .padding(.horizontal, CrestSpacing.extraSmall)
+        .padding(.vertical, CrestSpacing.small)
         .contentShape(.rect)
+    }
+}
+
+extension BrowserUtilityListRowLabel where Trailing == EmptyView {
+    init(
+        title: String,
+        subtitle: Text,
+        subtitleIsFailure: Bool = false,
+        subtitleStyle: AnyShapeStyle? = nil,
+        @ViewBuilder icon: () -> Icon
+    ) {
+        self.init(
+            title: title,
+            subtitle: subtitle,
+            subtitleIsFailure: subtitleIsFailure,
+            subtitleStyle: subtitleStyle,
+            icon: icon,
+            trailing: EmptyView.init
+        )
     }
 }

@@ -171,7 +171,7 @@ enum BrowserSyncProjection {
                                     keepsPageLoaded: archive.tab.keepsPageLoaded
                                 ),
                                 archivedAt: archive.archivedAt,
-                                reason: archive.reason
+                                reason: archive.reason.syncProjectionReason
                             )))
                 }
             }

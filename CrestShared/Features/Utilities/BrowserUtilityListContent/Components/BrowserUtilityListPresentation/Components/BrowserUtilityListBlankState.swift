@@ -4,12 +4,17 @@ struct BrowserUtilityListBlankState: View {
     let dismiss: (() -> Void)?
 
     var body: some View {
-        Color.clear
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(.rect)
-            .onTapGesture {
-                dismiss?()
-            }
-            .accessibilityHidden(true)
+        ZStack {
+            Color.clear
+                .contentShape(.rect)
+                .onTapGesture {
+                    dismiss?()
+                }
+                .accessibilityHidden(true)
+
+            ProgressView("Loading…")
+                .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

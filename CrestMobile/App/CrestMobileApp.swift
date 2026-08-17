@@ -62,6 +62,10 @@ struct CrestMobileApp: App {
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             permissionCenter: permissionCenter,
+            downloadLedger: Self.showcaseDownloadLedger(
+                launchEnvironment: launchEnvironment,
+                browser: browser
+            ),
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,
@@ -123,6 +127,16 @@ struct CrestMobileApp: App {
                 : BrowserStartupPreference.behavior()
         monitorsMemoryPressure = !usesIsolatedLaunch
         usesEphemeralWebsiteDataStores = usesIsolatedLaunch
+    }
+
+    private static func showcaseDownloadLedger(
+        launchEnvironment: BrowserLaunchEnvironment,
+        browser: BrowserStore
+    ) -> BrowserDownloadLedger {
+        guard launchEnvironment.presentsShowcaseSession,
+            let profileID = browser.selectedSpace?.profile.id
+        else { return BrowserDownloadLedger() }
+        return .showcase(profileID: profileID)
     }
 
     var body: some Scene {

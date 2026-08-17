@@ -1319,6 +1319,66 @@ final class BrowserSyncTests: XCTestCase {
         )
     }
 
+    func testArchiveArrivingFromSyncGetsALocalSyncedCauseWithoutEchoingIt() throws {
+        var remoteSession = oneSpaceSession()
+        let space = try XCTUnwrap(remoteSession.selectedSpace)
+        let tab = try XCTUnwrap(space.tabs.first)
+        remoteSession.spaces[0].tabs.removeAll { $0.id == tab.id }
+        remoteSession.spaces[0].archivedTabs = [
+            ArchivedTab(
+                tab: tab,
+                archivedAt: fixedDate(500),
+                reason: .closed
+            )
+        ]
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(1_180))
+        try journal.stage(session: remoteSession, at: fixedDate(600))
+        journal.markUploaded(journal.pendingRecordIDs)
+
+        let materialized = try journal.materializedSession(
+            applyingTo: oneSpaceSession()
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(materialized.selectedSpace).archivedTabs.first?.reason,
+            .synced
+        )
+
+        try journal.stage(session: materialized, at: fixedDate(700))
+        XCTAssertTrue(
+            journal.activeRecords.compactMap { record -> TabArchiveReason? in
+                guard case .archive(let archive)? = record.payload else {
+                    return nil
+                }
+                return archive.reason
+            }.allSatisfy { $0 != .synced }
+        )
+    }
+
+    func testSyncMaterializationPreservesAnExistingLocalArchiveCause() throws {
+        var localSession = oneSpaceSession()
+        let tab = try XCTUnwrap(localSession.selectedSpace?.tabs.first)
+        localSession.spaces[0].tabs.removeAll { $0.id == tab.id }
+        localSession.spaces[0].archivedTabs = [
+            ArchivedTab(
+                tab: tab,
+                archivedAt: fixedDate(500),
+                reason: .autoCleanup
+            )
+        ]
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(1_181))
+        try journal.stage(session: localSession, at: fixedDate(600))
+
+        let materialized = try journal.materializedSession(
+            applyingTo: localSession
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(materialized.selectedSpace).archivedTabs.first?.reason,
+            .autoCleanup
+        )
+    }
+
     func testHistoryMergeRetainsTheFullObservedVisitRange() throws {
         let session = oneSpaceSession()
         let spaceID = try XCTUnwrap(session.selectedSpace?.id)

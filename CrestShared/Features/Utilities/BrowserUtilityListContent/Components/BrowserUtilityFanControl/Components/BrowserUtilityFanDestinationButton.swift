@@ -9,12 +9,19 @@ struct BrowserUtilityFanDestinationButton: View {
     let glassNamespace: Namespace.ID
     let select: (BrowserUtilitySurface) -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Button {
             select(surface)
         } label: {
             Image(systemName: symbol)
                 .foregroundStyle(.primary)
+                .symbolVariant(selectedSurface == surface ? .fill : .none)
+                .symbolEffect(
+                    .bounce,
+                    value: reduceMotion ? 0 : newDownloadCount
+                )
                 .frame(
                     width: BrowserUtilitySwitcherLayout.buttonSize,
                     height: BrowserUtilitySwitcherLayout.buttonSize
@@ -33,15 +40,20 @@ struct BrowserUtilityFanDestinationButton: View {
         .glassEffectUnion(id: surface, namespace: glassNamespace)
         .overlay(alignment: .topTrailing) {
             if surface == .downloads, newDownloadCount > 0 {
-                Text("\(min(newDownloadCount, 99))")
-                    .font(.system(size: 8, weight: .bold, design: .rounded))
-                    .browserReadableForeground(over: downloadBadgeColor)
-                    .padding(.horizontal, 3)
-                    .frame(minWidth: 13, minHeight: 13)
-                    .background(downloadBadgeColor, in: .capsule)
-                    .accessibilityHidden(true)
+                BrowserUtilityNotificationBadge(
+                    count: newDownloadCount,
+                    tint: downloadBadgeColor,
+                    progress: BrowserDownloadNotificationPolicy.progress(
+                        in: downloads
+                    )
+                )
+                .offset(
+                    x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
+                    y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
+                )
             }
         }
+        .zIndex(surface == .downloads ? 1 : 0)
         .help(Text(surface.title))
         .accessibilityLabel(Text(surface.title))
         .accessibilityValue(Text(accessibilityValue))
@@ -72,5 +84,48 @@ struct BrowserUtilityFanDestinationButton: View {
 
     private var downloadBadgeColor: Color {
         downloads.contains(where: { $0.state.needsAttention }) ? .red : badgeColor
+    }
+}
+
+struct BrowserUtilityNotificationBadge: View {
+    let count: Int
+    let tint: Color
+    let progress: Double?
+
+    var body: some View {
+        Text("\(min(count, 99))")
+            .font(.caption2.weight(.bold))
+            .monospacedDigit()
+            .browserReadableForeground(over: tint)
+            .padding(
+                .horizontal,
+                BrowserUtilitySwitcherLayout.notificationBadgeHorizontalPadding
+            )
+            .frame(
+                minWidth: BrowserUtilitySwitcherLayout.notificationBadgeMinimumSize,
+                minHeight: BrowserUtilitySwitcherLayout.notificationBadgeMinimumSize
+            )
+            .background(tint, in: .capsule)
+            .overlay {
+                if let progress {
+                    Capsule()
+                        .trim(
+                            from: 0,
+                            to: max(
+                                BrowserDownloadProgressPolicy.normalized(progress),
+                                0.04
+                            )
+                        )
+                        .stroke(
+                            .primary.opacity(0.72),
+                            style: StrokeStyle(
+                                lineWidth: 1.5,
+                                lineCap: .round
+                            )
+                        )
+                        .rotationEffect(.degrees(-90))
+                }
+            }
+            .accessibilityHidden(true)
     }
 }

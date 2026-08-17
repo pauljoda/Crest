@@ -16,6 +16,14 @@ struct BrowserUtilityListSectionList: View {
                             assignment: assignment,
                             actions: actions
                         )
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: CrestSpacing.extraExtraSmall,
+                                leading: CrestSpacing.small,
+                                bottom: CrestSpacing.extraExtraSmall,
+                                trailing: CrestSpacing.small
+                            )
+                        )
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                     }

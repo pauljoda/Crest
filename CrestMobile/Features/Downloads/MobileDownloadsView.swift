@@ -43,7 +43,7 @@ struct MobileDownloadsView: View {
                 pages.exportDownload(itemID, to: .share)
             case .files:
                 pages.exportDownload(itemID, to: .files)
-            case .revealInFinder:
+            case .open, .revealInFinder:
                 break
             }
         case .retry(let itemID):

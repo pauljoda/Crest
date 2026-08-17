@@ -16,7 +16,8 @@ enum BrowserDownloadDestination {
         var candidate = directory.appendingPathComponent(filename, isDirectory: false)
         var suffix = 1
         while fileExists(candidate) {
-            let suffixedName = pathExtension.isEmpty
+            let suffixedName =
+                pathExtension.isEmpty
                 ? "\(stem) \(suffix)"
                 : "\(stem) \(suffix).\(pathExtension)"
             candidate = directory.appendingPathComponent(suffixedName, isDirectory: false)
@@ -27,7 +28,8 @@ enum BrowserDownloadDestination {
 
     static func safeFilename(from suggestedFilename: String) -> String {
         let slashNormalized = suggestedFilename.replacingOccurrences(of: "\\", with: "/")
-        let lastComponent = slashNormalized.split(separator: "/", omittingEmptySubsequences: true).last
+        let lastComponent =
+            slashNormalized.split(separator: "/", omittingEmptySubsequences: true).last
             .map(String.init) ?? ""
         let normalized = lastComponent.precomposedStringWithCanonicalMapping
         let filteredScalars = normalized.unicodeScalars.compactMap { scalar -> UnicodeScalar? in
@@ -84,4 +86,10 @@ enum BrowserDownloadDestination {
         let trimmedStem = result.trimmingCharacters(in: .whitespacesAndNewlines)
         return (trimmedStem.isEmpty ? "download" : trimmedStem) + safeExtension
     }
+}
+
+enum BrowserPlatformDownloadResolution {
+    case destination(URL, securityScopedURL: URL?)
+    case cancelled
+    case unavailable
 }

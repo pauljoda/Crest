@@ -12,6 +12,10 @@ struct BrowserSpaceEditorView: View {
     @State private var synchronizing = false
     @State private var synchronizationError: String?
     @State private var updatingAccessPolicy = false
+    @State private var asksWhereToSaveDownloads = false
+    @State private var downloadDirectoryName = "Downloads"
+    @State private var usesCustomDownloadDirectory = false
+    @State private var downloadPreferenceError: String?
 
     var body: some View {
         Group {
@@ -143,6 +147,44 @@ struct BrowserSpaceEditorView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Downloads") {
+                Toggle(
+                    "Ask where to save each download",
+                    isOn: askWhereToSaveDownloads
+                )
+                .accessibilityIdentifier("space-download-save-panel")
+
+                LabeledContent("Download location") {
+                    Text(downloadDirectoryName)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Button("Choose Folder…", systemImage: "folder") {
+                        chooseDownloadDirectory()
+                    }
+                    Button("Use Downloads", systemImage: "arrow.uturn.backward") {
+                        resetDownloadDirectory()
+                    }
+                    .disabled(!usesCustomDownloadDirectory)
+                }
+
+                if let downloadPreferenceError {
+                    Label(
+                        downloadPreferenceError,
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                }
+
+                Text(
+                    "This location belongs only to \(currentSpace.name) on this Mac. Opening a finished download opens the file directly; its menu also includes Show in Finder."
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
+
             Section("Private Space") {
                 Toggle(
                     "Require device authentication to view this Space",
@@ -219,6 +261,9 @@ struct BrowserSpaceEditorView: View {
         }
         .crestSettingsForm(maxWidth: .infinity)
         .padding(.horizontal, CrestSpacing.section)
+        .task(id: space.id) {
+            refreshDownloadPreferences()
+        }
     }
 
     private var name: Binding<String> {
@@ -276,6 +321,65 @@ struct BrowserSpaceEditorView: View {
                     synchronizationError = "Crest couldn’t update iCloud synchronization."
                 }
             }
+        }
+    }
+
+    private var askWhereToSaveDownloads: Binding<Bool> {
+        Binding {
+            asksWhereToSaveDownloads
+        } set: { enabled in
+            asksWhereToSaveDownloads = enabled
+            BrowserPlatformDownloadPreferences.shared.setAsksWhereToSave(
+                enabled,
+                for: space.id
+            )
+        }
+    }
+
+    private func chooseDownloadDirectory() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Download Folder for \(currentSpace.name)"
+        panel.prompt = "Choose"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.resolvesAliases = true
+
+        Task { @MainActor in
+            let response = await withCheckedContinuation { continuation in
+                panel.begin { continuation.resume(returning: $0) }
+            }
+            guard response == .OK, let directory = panel.url else { return }
+            do {
+                try BrowserPlatformDownloadPreferences.shared.rememberDirectory(
+                    directory,
+                    for: space.id
+                )
+                downloadPreferenceError = nil
+                refreshDownloadPreferences()
+            } catch {
+                downloadPreferenceError =
+                    "Crest couldn’t retain access to this folder."
+            }
+        }
+    }
+
+    private func resetDownloadDirectory() {
+        BrowserPlatformDownloadPreferences.shared.clearDirectory(for: space.id)
+        downloadPreferenceError = nil
+        refreshDownloadPreferences()
+    }
+
+    private func refreshDownloadPreferences() {
+        let preferences = BrowserPlatformDownloadPreferences.shared
+        asksWhereToSaveDownloads = preferences.asksWhereToSave(for: space.id)
+        if let customName = preferences.directoryDisplayName(for: space.id) {
+            downloadDirectoryName = customName
+            usesCustomDownloadDirectory = true
+        } else {
+            downloadDirectoryName = "Downloads"
+            usesCustomDownloadDirectory = false
         }
     }
 

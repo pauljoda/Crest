@@ -189,7 +189,16 @@ struct MobileBrowserSidebar: View {
 
     private func toggleUtilitySwitcher() {
         guard mode == .regularSidebar else { return }
-        utilityPresentation.toggleSwitcher()
+        utilityPresentation.toggleSwitcher(
+            preferredSurface: selectedNewDownloads.isEmpty
+                ? .archive
+                : .downloads
+        )
+    }
+
+    private var selectedNewDownloads: [BrowserDownloadItem] {
+        guard let profileID = browser.selectedSpace?.profile.id else { return [] }
+        return pages.downloadCenter.unacknowledgedItems(for: profileID)
     }
 
     private func selectUtility(_ surface: BrowserUtilitySurface) {

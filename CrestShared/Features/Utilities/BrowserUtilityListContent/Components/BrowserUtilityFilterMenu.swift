@@ -9,7 +9,8 @@ struct BrowserUtilityFilterMenu: View {
         Menu {
             Picker("Filter", selection: $filter) {
                 ForEach(BrowserUtilityListFilter.options(for: surface)) { option in
-                    Text(option.title).tag(option)
+                    Label(option.title, systemImage: option.systemImage)
+                        .tag(option)
                 }
             }
 

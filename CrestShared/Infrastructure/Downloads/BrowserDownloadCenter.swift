@@ -45,6 +45,7 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var progressObservations: [ObjectIdentifier: AnyCancellable] = [:]
     @ObservationIgnored private var stagingURLs: [ObjectIdentifier: URL] = [:]
     @ObservationIgnored private var destinationURLs: [ObjectIdentifier: URL] = [:]
+    @ObservationIgnored private var securityScopedResources: [ObjectIdentifier: URL] = [:]
     @ObservationIgnored private var spaceNames: [ObjectIdentifier: String] = [:]
     @ObservationIgnored private var spaceIDs: [ObjectIdentifier: SpaceID] = [:]
     @ObservationIgnored private var sourceOrigins: [ObjectIdentifier: BrowserSiteOrigin] = [:]
@@ -385,16 +386,6 @@ final class BrowserDownloadCenter: NSObject {
             return nil
         }
 
-        guard
-            let downloadsDirectory = BrowserPlatformDownloadDirectory.url(
-                fileManager: fileManager
-            )
-        else {
-            fail(download, message: "The Downloads folder is unavailable.")
-            release(download)
-            return nil
-        }
-
         let key = ObjectIdentifier(download)
         let assessment = BrowserDownloadRiskAssessment.assess(
             suggestedFilename: suggestedFilename,
@@ -455,11 +446,39 @@ final class BrowserDownloadCenter: NSObject {
             }
         }
 
-        let destination = BrowserDownloadDestination.availableURL(
+        guard let spaceID = spaceIDs[key] else {
+            fail(download, message: "The download no longer belongs to a Space.")
+            release(download)
+            return nil
+        }
+        let resolution = await BrowserPlatformDownloadDirectory.resolve(
             suggestedFilename: assessment.sanitizedFilename,
-            directory: downloadsDirectory,
-            fileExists: { fileManager.fileExists(atPath: $0.path) }
+            spaceID: spaceID,
+            fileManager: fileManager
         )
+        let destination: URL
+        let securityScopedURL: URL?
+        switch resolution {
+        case .destination(let url, let resourceURL):
+            destination = url
+            securityScopedURL = resourceURL
+        case .cancelled:
+            update(download) { ledger, itemID in
+                ledger.cancel(itemID, message: "Canceled.")
+            }
+            release(download)
+            return nil
+        case .unavailable:
+            fail(download, message: "The Downloads folder is unavailable.")
+            release(download)
+            return nil
+        }
+        if let securityScopedURL,
+            securityScopedURL.startAccessingSecurityScopedResource()
+        {
+            securityScopedResources[key] = securityScopedURL
+        }
+        let downloadsDirectory = destination.deletingLastPathComponent()
         let stagingDirectory =
             applicationSupportDirectory
             .appendingPathComponent(ProductIdentity.storageDirectoryName, isDirectory: true)
@@ -646,6 +665,8 @@ final class BrowserDownloadCenter: NSObject {
         progressObservations.removeValue(forKey: key)
         stagingURLs.removeValue(forKey: key)
         destinationURLs.removeValue(forKey: key)
+        securityScopedResources.removeValue(forKey: key)?
+            .stopAccessingSecurityScopedResource()
         spaceNames.removeValue(forKey: key)
         spaceIDs.removeValue(forKey: key)
         sourceOrigins.removeValue(forKey: key)

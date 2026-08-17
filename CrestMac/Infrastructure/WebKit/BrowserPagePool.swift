@@ -100,6 +100,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         mozillaAddonsProvider: BrowserMozillaAddonsProvider =
             BrowserMozillaAddonsProvider(),
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
+        downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
@@ -144,6 +145,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         self.openPeek = openPeek
         self.splitLinkHost = splitLinkHost
         downloadCenter = BrowserDownloadCenter(
+            ledger: downloadLedger,
             promptForCredentials: { prompt, spaceName in
                 await dialogPresenter.presentHTTPAuthentication(
                     prompt: prompt,

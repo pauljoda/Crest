@@ -48,6 +48,29 @@ enum BrowserShowcaseSessionFactory {
                 splitGroupID: secondSplitGroupID
             ),
         ]
+        let archivedTabs = [
+            archivedTab(
+                "Remote launch brief",
+                page(.work, title: "Remote launch brief", activeCard: 0),
+                "☁️",
+                reason: .synced,
+                secondsAgo: 90
+            ),
+            archivedTab(
+                "Completed design review",
+                page(.work, title: "Completed design review", activeCard: 3),
+                "🎨",
+                reason: .closed,
+                secondsAgo: 240
+            ),
+            archivedTab(
+                "Idle research notes",
+                page(.work, title: "Idle research notes", activeCard: 1),
+                "📦",
+                reason: .autoCleanup,
+                secondsAgo: 540
+            ),
+        ]
         return BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
@@ -79,6 +102,7 @@ enum BrowserShowcaseSessionFactory {
             ),
             folders: [folder],
             tabs: tabs,
+            archivedTabs: archivedTabs,
             selectedTabID: tabs.last?.id
         )
     }
@@ -174,6 +198,20 @@ enum BrowserShowcaseSessionFactory {
             folderID: folderID,
             splitGroupID: splitGroupID,
             lastActivatedAt: .now
+        )
+    }
+
+    private static func archivedTab(
+        _ title: String,
+        _ url: URL,
+        _ symbol: String,
+        reason: TabArchiveReason,
+        secondsAgo: TimeInterval
+    ) -> ArchivedTab {
+        ArchivedTab(
+            tab: tab(title, url, symbol, .current),
+            archivedAt: .now.addingTimeInterval(-secondsAgo),
+            reason: reason
         )
     }
 }

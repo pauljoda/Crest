@@ -18,19 +18,38 @@ struct BrowserDownloadFinishedAction: View {
                 height: BrowserUtilitySwitcherLayout.buttonSize
             )
         } else if !destinations.isEmpty {
-            Menu("Export Download", systemImage: "square.and.arrow.up") {
-                ForEach(destinations) { destination in
-                    Button(destination.title, systemImage: destination.systemImage) {
-                        perform(.open(itemID, destination))
+            ZStack {
+                Image(systemName: "square.and.arrow.up")
+                    .accessibilityHidden(true)
+
+                Menu {
+                    ForEach(destinations) { destination in
+                        Button(destination.title, systemImage: destination.systemImage) {
+                            perform(.open(itemID, destination))
+                        }
                     }
+                } label: {
+                    Color.clear
+                        .frame(
+                            width: BrowserUtilitySwitcherLayout.buttonSize,
+                            height: BrowserUtilitySwitcherLayout.buttonSize
+                        )
+                        .contentShape(.rect)
                 }
+                .menuIndicator(.hidden)
+                .modifier(BrowserPlatformUtilityFilterMenuStyle())
+                .frame(
+                    width: BrowserUtilitySwitcherLayout.buttonSize,
+                    height: BrowserUtilitySwitcherLayout.buttonSize
+                )
+                .clipped()
+                .accessibilityLabel("Download Actions")
             }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
             .frame(
                 width: BrowserUtilitySwitcherLayout.buttonSize,
                 height: BrowserUtilitySwitcherLayout.buttonSize
             )
+            .help("Download Actions")
         }
     }
 }

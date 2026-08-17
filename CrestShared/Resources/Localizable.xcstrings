@@ -12327,6 +12327,26 @@
         }
       }
     },
+    "Synced from Another Device" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "متزامنة من جهاز آخر"
+          }
+        }
+      }
+    },
+    "Synced from another device" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "متزامنة من جهاز آخر"
+          }
+        }
+      }
+    },
     "Synchronization" : {
       "extractionState" : "stale",
       "localizations" : {

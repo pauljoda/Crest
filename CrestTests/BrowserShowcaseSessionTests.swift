@@ -23,6 +23,10 @@ final class BrowserShowcaseSessionTests: XCTestCase {
 
         let work = try XCTUnwrap(session.spaces.first)
         let personal = try XCTUnwrap(session.spaces.last)
+        XCTAssertEqual(
+            Set(work.archivedTabs.map(\.reason)),
+            [.synced, .closed, .autoCleanup]
+        )
         XCTAssertNotEqual(work.branding.bannerPattern, personal.branding.bannerPattern)
         XCTAssertNotEqual(work.branding.crest.symbol, personal.branding.crest.symbol)
         XCTAssertTrue(
@@ -30,6 +34,23 @@ final class BrowserShowcaseSessionTests: XCTestCase {
                 .flatMap(\.tabs)
                 .compactMap(\.url)
                 .allSatisfy { $0.scheme == "data" }
+        )
+    }
+
+    func testShowcaseDownloadLedgerIncludesFinishedAndActiveNotifications() throws {
+        let profileID = UUID()
+        let ledger = BrowserDownloadLedger.showcase(profileID: profileID)
+        let items = ledger.items(for: profileID)
+        let finishedItem = try XCTUnwrap(items.first { $0.state == .finished })
+        let activeItem = try XCTUnwrap(items.first { $0.state == .downloading })
+
+        XCTAssertEqual(items.count, 2)
+        XCTAssertEqual(ledger.unacknowledgedItems(for: profileID).count, 2)
+        XCTAssertEqual(activeItem.progress, 0.64, accuracy: 0.001)
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: try XCTUnwrap(finishedItem.destinationURL).path
+            )
         )
     }
 

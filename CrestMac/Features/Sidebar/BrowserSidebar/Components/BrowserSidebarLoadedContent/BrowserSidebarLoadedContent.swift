@@ -62,7 +62,13 @@ struct BrowserSidebarLoadedContent: View {
                 spaceAccess: spaceAccess,
                 selectSpace: actions.selectSpace,
                 commonListsAreExpanded: utilityPresentation.isSwitcherExpanded,
-                toggleCommonLists: utilityPresentation.toggleSwitcher,
+                toggleCommonLists: {
+                    utilityPresentation.toggleSwitcher(
+                        preferredSurface: newUtilityDownloads.isEmpty
+                            ? .archive
+                            : .downloads
+                    )
+                },
                 recordCommonListsTriggerFrame:
                     utilityPresentation.recordTriggerFrame
             )
@@ -75,5 +81,10 @@ struct BrowserSidebarLoadedContent: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(browser.selectedSpace?.name ?? "Browser") Space")
+    }
+
+    private var newUtilityDownloads: [BrowserDownloadItem] {
+        guard let profileID = browser.selectedSpace?.profile.id else { return [] }
+        return pages.downloadCenter.unacknowledgedItems(for: profileID)
     }
 }

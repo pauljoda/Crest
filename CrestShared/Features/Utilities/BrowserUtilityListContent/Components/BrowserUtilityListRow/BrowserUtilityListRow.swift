@@ -14,7 +14,10 @@ struct BrowserUtilityListRow: View {
                 } label: {
                     BrowserUtilityListRowLabel(
                         title: archived.tab.displayTitle,
-                        subtitle: archiveSubtitle(archived)
+                        subtitle: archiveSubtitle(archived),
+                        subtitleStyle: AnyShapeStyle(
+                            archived.reason.utilityTint
+                        )
                     ) {
                         TabFaviconView(
                             tab: archived.tab,
@@ -52,24 +55,10 @@ struct BrowserUtilityListRow: View {
                 )
 
             case .download(let download):
-                BrowserUtilityListRowLabel(
-                    title: download.filename,
-                    subtitle: download.state.utilityStatusText.view,
-                    subtitleIsFailure: download.state.needsAttention
-                ) {
-                    BrowserDownloadStatusIcon(item: download)
-                } trailing: {
-                    BrowserDownloadRowAction(
-                        item: download,
-                        destinations: actions.downloadDestinations,
-                        perform: {
-                            actions.performDownloadAction($0, assignment)
-                        }
-                    )
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier(
-                    BrowserUtilityAccessibilityID.downloadRow(download.id)
+                BrowserUtilityDownloadRow(
+                    download: download,
+                    assignment: assignment,
+                    actions: actions
                 )
             }
         }
@@ -79,10 +68,12 @@ struct BrowserUtilityListRow: View {
     }
 
     private func archiveSubtitle(_ archived: ArchivedTab) -> Text {
-        guard let host = archived.tab.url?.host() else {
-            return Text(archived.reason.utilityTitle)
+        let icon = Image(systemName: archived.reason.utilitySystemImage)
+        let status = Text(archived.reason.utilityTitle)
+        if let host = archived.tab.url?.host() {
+            return Text("\(icon) \(status) · \(host)")
         }
-        return Text(host)
+        return Text("\(icon) \(status)")
     }
 
     private func historySubtitle(_ entry: BrowserHistoryEntry) -> Text {
@@ -96,4 +87,59 @@ struct BrowserUtilityListRow: View {
         )
     }
 
+}
+
+private struct BrowserUtilityDownloadRow: View {
+    let download: BrowserDownloadItem
+    let assignment: BrowserSpaceRuntimeAssignment
+    let actions: BrowserUtilityListActions
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if let primaryDestination {
+                Button {
+                    perform(.open(download.id, primaryDestination))
+                } label: {
+                    label
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(Text(primaryDestination.title))
+                .accessibilityValue(download.filename)
+            } else {
+                label
+            }
+
+            BrowserDownloadRowAction(
+                item: download,
+                destinations: actions.downloadDestinations,
+                perform: perform
+            )
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(
+            BrowserUtilityAccessibilityID.downloadRow(download.id)
+        )
+    }
+
+    private var label: some View {
+        BrowserUtilityListRowLabel(
+            title: download.filename,
+            subtitle: download.state.utilityStatusText.view,
+            subtitleIsFailure: download.state.needsAttention
+        ) {
+            BrowserDownloadStatusIcon(item: download)
+        }
+    }
+
+    private var primaryDestination: BrowserUtilityDownloadDestination? {
+        BrowserUtilityDownloadPrimaryActionPolicy.destination(
+            for: download.state,
+            availableDestinations: actions.downloadDestinations
+        )
+    }
+
+    private func perform(_ action: BrowserUtilityDownloadAction) {
+        actions.performDownloadAction(action, assignment)
+    }
 }

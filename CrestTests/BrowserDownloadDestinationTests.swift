@@ -63,4 +63,26 @@ final class BrowserDownloadDestinationTests: XCTestCase {
         XCTAssertEqual(BrowserDownloadDestination.safeFilename(from: deceptive), "invoice.pdfppa")
         XCTAssertTrue(BrowserDownloadDestination.containsDeceptiveUnicode(deceptive))
     }
+
+    @MainActor
+    func testDownloadPreferencesStayLocalToTheirSpace() throws {
+        let suiteName = "BrowserDownloadDestinationTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let preferences = BrowserPlatformDownloadPreferences(defaults: defaults)
+        let work = SpaceID(rawValue: UUID())
+        let personal = SpaceID(rawValue: UUID())
+
+        preferences.setAsksWhereToSave(true, for: work)
+        preferences.setDirectoryMetadata(
+            bookmark: Data([0x43, 0x52, 0x45, 0x53, 0x54]),
+            displayName: "Work Downloads",
+            for: work
+        )
+
+        XCTAssertTrue(preferences.asksWhereToSave(for: work))
+        XCTAssertEqual(preferences.directoryDisplayName(for: work), "Work Downloads")
+        XCTAssertFalse(preferences.asksWhereToSave(for: personal))
+        XCTAssertNil(preferences.directoryDisplayName(for: personal))
+    }
 }

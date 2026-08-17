@@ -30,7 +30,6 @@ struct SpaceSidebarContent: View {
     let dismissUtilityOnBlankSpace: () -> Void
     let clearHistory: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
 
     var body: some View {
@@ -91,13 +90,6 @@ struct SpaceSidebarContent: View {
                     )
                 }
             }
-            .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.floatingPane,
-                    reduceMotion: reduceMotion
-                ),
-                value: utilitySurface
-            )
         }
     }
 

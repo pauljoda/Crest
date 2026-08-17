@@ -45,11 +45,11 @@ final class BrowserUtilityPresentationState {
         isSwitcherExpanded = false
     }
 
-    func toggleSwitcher() {
+    func toggleSwitcher(preferredSurface: BrowserUtilitySurface = .archive) {
         if isSwitcherExpanded {
             dismiss()
         } else {
-            present(.archive)
+            present(preferredSurface)
         }
     }
 

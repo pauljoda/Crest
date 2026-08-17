@@ -321,7 +321,7 @@ enum BrowserSyncMaterializer {
         guard preferences.historyAndArchive else { return local?.archivedTabs ?? [] }
         let activeTabIDs = Set(activeTabs.map(\.id))
         let localArchiveByID = Dictionary(
-            uniqueKeysWithValues: (local?.archivedTabs ?? []).map { ($0.id, $0.tab) }
+            uniqueKeysWithValues: (local?.archivedTabs ?? []).map { ($0.id, $0) }
         )
         return records.compactMap { record -> BrowserSyncArchive? in
             guard case .archive(let archive)? = record.payload,
@@ -338,10 +338,10 @@ enum BrowserSyncMaterializer {
                     title: archive.tab.title,
                     url: archive.tab.url,
                     symbol: archive.tab.symbol,
-                    faviconData: localArchiveByID[archive.tab.id]?.faviconData,
-                    faviconURL: localArchiveByID[archive.tab.id]?.faviconURL,
-                    iconAccent: localArchiveByID[archive.tab.id]?.iconAccent,
-                    iconMode: localArchiveByID[archive.tab.id]?.iconMode,
+                    faviconData: localArchiveByID[archive.tab.id]?.tab.faviconData,
+                    faviconURL: localArchiveByID[archive.tab.id]?.tab.faviconURL,
+                    iconAccent: localArchiveByID[archive.tab.id]?.tab.iconAccent,
+                    iconMode: localArchiveByID[archive.tab.id]?.tab.iconMode,
                     placement: .current,
                     folderID: nil,
                     // No `splitGroupID`: an archived tab has left its split, and
@@ -353,7 +353,7 @@ enum BrowserSyncMaterializer {
                     keepsPageLoaded: archive.tab.keepsPageLoaded
                 ),
                 archivedAt: archive.archivedAt,
-                reason: archive.reason
+                reason: localArchiveByID[archive.tab.id]?.reason ?? .synced
             )
         }
     }

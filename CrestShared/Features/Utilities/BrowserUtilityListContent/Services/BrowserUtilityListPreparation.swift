@@ -139,6 +139,8 @@ enum BrowserUtilityListPreparation {
             item.reason == .closed
         case (.archivedAutomatically, let .archive(item)):
             item.reason == .autoCleanup
+        case (.archivedSynced, let .archive(item)):
+            item.reason == .synced
         case (.archivedQuickWindow, let .archive(item)):
             item.reason == .quickWindow
         case (.historyToday, let .history(item)):

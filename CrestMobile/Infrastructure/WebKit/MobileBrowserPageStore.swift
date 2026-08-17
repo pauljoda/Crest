@@ -97,6 +97,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchIsolationPolicy.requiresIsolation(.current),
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
+        downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
         saveHTTPAuthenticationCredential:
@@ -142,6 +143,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         let downloadRiskConfirmation = MobileDownloadRiskConfirmationCoordinator()
         self.downloadRiskConfirmation = downloadRiskConfirmation
         downloadCenter = BrowserDownloadCenter(
+            ledger: downloadLedger,
             promptForCredentials: { prompt, spaceName in
                 await MobileBrowserDialogPresenter.presentHTTPAuthentication(
                     prompt: prompt,

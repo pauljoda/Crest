@@ -107,28 +107,15 @@ struct BrowserUtilityFanControl: View {
                 }
             }
         } else {
-            for (index, surface) in BrowserUtilitySwitcherLayout.destinations
-                .reversed()
-                .enumerated()
-            {
-                if index > 0 {
-                    try? await Task.sleep(
-                        for: .seconds(BrowserUtilitySwitcherLayout.staggerInterval * 0.55)
-                    )
-                }
-                guard !Task.isCancelled else { return }
-                _ = withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.utilityFanDismiss,
-                        reduceMotion: shouldReduceMotion
-                    )
-                ) {
-                    revealedSurfaces.remove(surface)
-                }
+            withAnimation(
+                BrowserVisualAccessibilityPolicy.animation(
+                    CrestMotion.dismissal,
+                    reduceMotion: shouldReduceMotion
+                )
+            ) {
+                revealedSurfaces.removeAll()
+                isContainerVisible = false
             }
-            try? await Task.sleep(for: CrestMotion.utilityFanDismissCompletionDelay)
-            guard !Task.isCancelled else { return }
-            isContainerVisible = false
         }
     }
 

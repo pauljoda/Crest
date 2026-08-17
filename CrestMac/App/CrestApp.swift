@@ -124,6 +124,10 @@ struct CrestApp: App {
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             extensionControllerPool: extensionControllerPool,
             permissionCenter: permissionCenter,
+            downloadLedger: Self.showcaseDownloadLedger(
+                launchEnvironment: launchEnvironment,
+                browser: browser
+            ),
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,
@@ -240,6 +244,16 @@ struct CrestApp: App {
         )
         pagePoolRegistry = BrowserPagePoolRegistry(primary: pages)
         self.startupBehavior = startupBehavior
+    }
+
+    private static func showcaseDownloadLedger(
+        launchEnvironment: BrowserLaunchEnvironment,
+        browser: BrowserStore
+    ) -> BrowserDownloadLedger {
+        guard launchEnvironment.presentsShowcaseSession,
+            let profileID = browser.selectedSpace?.profile.id
+        else { return BrowserDownloadLedger() }
+        return .showcase(profileID: profileID)
     }
 
     var body: some Scene {

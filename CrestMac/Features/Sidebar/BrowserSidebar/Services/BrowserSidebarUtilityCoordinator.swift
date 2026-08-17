@@ -21,7 +21,7 @@ struct BrowserSidebarUtilityCoordinator {
         BrowserUtilityListActions(
             restoreArchivedTab: restoreArchivedTab,
             openHistoryEntry: openHistoryEntry,
-            downloadDestinations: [.revealInFinder],
+            downloadDestinations: [.open, .revealInFinder],
             performDownloadAction: performDownloadAction
         )
     }
@@ -78,8 +78,8 @@ struct BrowserSidebarUtilityCoordinator {
             return
         }
         switch action {
-        case .open(_, .revealInFinder):
-            revealFinishedDownload(item)
+        case .open(_, let destination):
+            openFinishedDownload(item, destination: destination)
         case .retry(let itemID):
             Task {
                 guard downloadItem(for: action, matching: assignment) != nil else {
@@ -100,8 +100,6 @@ struct BrowserSidebarUtilityCoordinator {
             pages.downloadCenter.cancel(itemID)
         case .clear(let itemID):
             pages.downloadCenter.clear(itemID)
-        case .open:
-            break
         }
     }
 
@@ -118,10 +116,20 @@ struct BrowserSidebarUtilityCoordinator {
         )
     }
 
-    private func revealFinishedDownload(_ item: BrowserDownloadItem) {
+    private func openFinishedDownload(
+        _ item: BrowserDownloadItem,
+        destination: BrowserUtilityDownloadDestination
+    ) {
         guard item.state == .finished,
             let destinationURL = item.destinationURL
         else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([destinationURL])
+        switch destination {
+        case .open:
+            NSWorkspace.shared.open(destinationURL)
+        case .revealInFinder:
+            NSWorkspace.shared.activateFileViewerSelecting([destinationURL])
+        case .share, .files:
+            break
+        }
     }
 }
