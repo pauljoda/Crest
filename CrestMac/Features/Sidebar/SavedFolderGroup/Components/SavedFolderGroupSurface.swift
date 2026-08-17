@@ -71,6 +71,14 @@ struct SavedFolderGroupSurface: View {
                 folderTabIDs: configuration.tabs.map(\.id)
             )
         }
+        .onChange(of: configuration.pages.residencyRevision, initial: true) {
+            _, _ in
+            interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
+                isExpanded: interaction.isExpanded.wrappedValue,
+                selectedTabID: configuration.selectedTabID,
+                residentFolderTabIDs: configuration.residentFolderTabIDs
+            )
+        }
         .onChange(of: interaction.editingFolderRequest.wrappedValue) { _, _ in
             interaction.beginTitleEditingIfNeeded()
         }

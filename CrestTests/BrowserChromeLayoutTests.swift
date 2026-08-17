@@ -215,6 +215,44 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(state.keptTabID, folderTabID)
     }
 
+    func testReloadingSelectedTabInsideCollapsedFolderKeepsItVisible() {
+        let folderTabID = TabID()
+        var state = BrowserCollapsedFolderTabVisibilityState()
+
+        state.expansionDidChange(
+            isExpanded: false,
+            selectedTabID: folderTabID,
+            folderTabIDs: [folderTabID]
+        )
+        state.tabDidUnload(folderTabID)
+
+        state.residencyDidChange(
+            isExpanded: false,
+            selectedTabID: folderTabID,
+            residentFolderTabIDs: [folderTabID]
+        )
+
+        XCTAssertEqual(state.keptTabID, folderTabID)
+    }
+
+    func testResidencyChangeClearsKeptCollapsedTabAfterExternalUnload() {
+        let folderTabID = TabID()
+        var state = BrowserCollapsedFolderTabVisibilityState()
+
+        state.expansionDidChange(
+            isExpanded: false,
+            selectedTabID: folderTabID,
+            folderTabIDs: [folderTabID]
+        )
+        state.residencyDidChange(
+            isExpanded: false,
+            selectedTabID: folderTabID,
+            residentFolderTabIDs: []
+        )
+
+        XCTAssertNil(state.keptTabID)
+    }
+
     func testUnloadingKeptCollapsedFolderTabHidesIt() {
         let folderTabID = TabID()
         var state = BrowserCollapsedFolderTabVisibilityState()

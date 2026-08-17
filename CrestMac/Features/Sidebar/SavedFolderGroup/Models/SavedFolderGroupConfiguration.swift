@@ -88,4 +88,10 @@ struct SavedFolderGroupConfiguration {
         }
         return tabs.first { $0.id == keptTabID }
     }
+
+    var residentFolderTabIDs: [TabID] {
+        tabs.compactMap { tab in
+            pages.containsResidentPage(for: tab.id) ? tab.id : nil
+        }
+    }
 }

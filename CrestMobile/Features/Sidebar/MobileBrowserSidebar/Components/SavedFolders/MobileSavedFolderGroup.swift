@@ -235,6 +235,13 @@ struct MobileSavedFolderGroup: View {
                 folderTabIDs: tabs.map(\.id)
             )
         }
+        .onChange(of: pages.residencyRevision, initial: true) { _, _ in
+            collapsedTabVisibility.residencyDidChange(
+                isExpanded: isExpanded,
+                selectedTabID: selectedTabID,
+                residentFolderTabIDs: residentFolderTabIDs
+            )
+        }
         .browserSidebarReorderZone(
             .section(.tabs(placement: .saved, folderID: folder.id)),
             state: browser.sidebarReorderState
@@ -287,6 +294,12 @@ struct MobileSavedFolderGroup: View {
             return nil
         }
         return tabs.first { $0.id == keptTabID }
+    }
+
+    private var residentFolderTabIDs: [TabID] {
+        tabs.compactMap { tab in
+            pages.containsResidentPage(for: tab.id) ? tab.id : nil
+        }
     }
 
     private func unloadKeptCollapsedTab(_ tabID: TabID) {
