@@ -580,15 +580,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
                 isAddressEditing: false,
                 hasActiveSite: false,
-                hasAddress: true,
-                hasResidentPage: false
-            )
-        )
-        XCTAssertTrue(
-            BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
-                isAddressEditing: false,
-                hasActiveSite: false,
-                hasAddress: false,
                 hasResidentPage: false
             )
         )
@@ -596,8 +587,14 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
                 isAddressEditing: true,
                 hasActiveSite: false,
-                hasAddress: true,
                 hasResidentPage: false
+            )
+        )
+        XCTAssertTrue(
+            BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
+                isAddressEditing: false,
+                hasActiveSite: false,
+                hasResidentPage: true
             )
         )
     }
