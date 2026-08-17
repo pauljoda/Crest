@@ -840,7 +840,8 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     func makeTransientPageLease(
         url: URL,
         in space: BrowserSpace,
-        onUserActivity: @escaping () -> Void = {}
+        onUserActivity: @escaping () -> Void = {},
+        onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> BrowserTransientPageLease? {
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard canHostTransientPage(matching: assignment) else { return nil }
@@ -871,6 +872,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
                 return makePage(space: space)
             },
             userActivity: onUserActivity,
+            onDownloadOnlyNavigation: onDownloadOnlyNavigation,
             extensionPageDidChange: { [weak self] page in
                 guard let self else { return }
                 if let page {
@@ -1006,6 +1008,17 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         Task { @MainActor [weak self] in
             self?.unloadPage(for: tabID)
         }
+    }
+
+    func discardDownloadOnlyPage(_ page: BrowserPage) {
+        if let entry = transientLeases.first(where: { $0.value.value?.page === page }),
+            let lease = entry.value.value,
+            lease.discardForDownloadOnlyNavigation()
+        {
+            transientLeases.removeValue(forKey: entry.key)
+            return
+        }
+        closeWebContentInitiatedPage(page)
     }
 
     func goBack() {

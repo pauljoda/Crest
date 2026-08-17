@@ -107,7 +107,10 @@ final class MobileBrowserTransientOverlayModel {
         pageLease = pages.makeTransientPageLease(
             url: releasedPageSnapshot?.url ?? request.url,
             in: space,
-            onUserActivity: recordUserActivity
+            onUserActivity: recordUserActivity,
+            onDownloadOnlyNavigation: { [weak self] in
+                self?.dismissDownloadOnlyNavigation()
+            }
         )
         guard let pageLease else {
             dismissUnavailableRequest()
@@ -301,6 +304,17 @@ final class MobileBrowserTransientOverlayModel {
             coordinator.dismissPeek(peekRequest)
         case .quickWindow(let quickWindowRequest):
             archiveQuickWindowIfNeeded()
+            coordinator.dismissQuickWindow(quickWindowRequest)
+        }
+    }
+
+    private func dismissDownloadOnlyNavigation() {
+        guard isCurrentRequest else { return }
+        releasedPageSnapshot = nil
+        switch request {
+        case .peek(let peekRequest):
+            coordinator.dismissPeek(peekRequest)
+        case .quickWindow(let quickWindowRequest):
             coordinator.dismissQuickWindow(quickWindowRequest)
         }
     }

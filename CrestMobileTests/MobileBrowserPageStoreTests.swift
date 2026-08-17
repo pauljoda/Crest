@@ -142,6 +142,49 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(lease.page).isCredentialAccessEnabled)
     }
 
+    func testDownloadOnlyTransientPageDismissesInsteadOfRemainingEmpty() async throws {
+        let session = makeSession(index: 51)
+        let space = try XCTUnwrap(session.selectedSpace)
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        var dismissalCount = 0
+        let lease = try XCTUnwrap(
+            pages.makeTransientPageLease(
+                url: try XCTUnwrap(URL(string: "about:blank")),
+                in: space,
+                onDownloadOnlyNavigation: { dismissalCount += 1 }
+            )
+        )
+        let page = try XCTUnwrap(lease.page)
+
+        page.discardDownloadOnlySurfaceIfNeeded()
+        await Task.yield()
+
+        XCTAssertEqual(dismissalCount, 1)
+        XCTAssertNil(lease.page)
+    }
+
+    func testDownloadFromLoadedTransientPageKeepsItsExistingContent() async throws {
+        let session = makeSession(index: 52)
+        let space = try XCTUnwrap(session.selectedSpace)
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        var dismissalCount = 0
+        let lease = try XCTUnwrap(
+            pages.makeTransientPageLease(
+                url: try XCTUnwrap(URL(string: "about:blank")),
+                in: space,
+                onDownloadOnlyNavigation: { dismissalCount += 1 }
+            )
+        )
+        let page = try XCTUnwrap(lease.page)
+        page.webView(page.webView, didCommit: nil)
+
+        page.discardDownloadOnlySurfaceIfNeeded()
+        await Task.yield()
+
+        XCTAssertEqual(dismissalCount, 0)
+        XCTAssertNotNil(lease.page)
+    }
+
     func testPrivateBrowsingKeepsCredentialAccessOffEvenWhenTheSpaceAllowsSaving() throws {
         let session = makeSession(index: 6)
         let pages = MobileBrowserPageStore(

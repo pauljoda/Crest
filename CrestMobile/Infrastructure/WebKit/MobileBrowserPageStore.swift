@@ -703,7 +703,8 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
     func makeTransientPageLease(
         url: URL,
         in space: BrowserSpace,
-        onUserActivity: @escaping () -> Void = {}
+        onUserActivity: @escaping () -> Void = {},
+        onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> MobileBrowserTransientPageLease? {
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard canHostTransientPage(matching: assignment) else { return nil }
@@ -729,7 +730,8 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
                 space.browsingPreferences.contentBlockingPolicy,
             balancedContentRuleLists: balancedContentRuleLists ?? [],
             rebuild: rebuild,
-            userActivity: onUserActivity
+            userActivity: onUserActivity,
+            onDownloadOnlyNavigation: onDownloadOnlyNavigation
         )
         transientLeases[lease.id] = WeakMobileBrowserTransientPageLease(lease)
         return lease
@@ -846,6 +848,17 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         Task { @MainActor [weak self] in
             self?.unloadPage(for: tabID)
         }
+    }
+
+    func discardDownloadOnlyPage(_ page: MobileBrowserPage) {
+        if let entry = transientLeases.first(where: { $0.value.value?.page === page }),
+            let lease = entry.value.value,
+            lease.discardForDownloadOnlyNavigation()
+        {
+            transientLeases.removeValue(forKey: entry.key)
+            return
+        }
+        closeWebContentInitiatedPage(page)
     }
 
     func goBack() {

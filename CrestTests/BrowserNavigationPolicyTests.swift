@@ -623,6 +623,46 @@ final class BrowserExternalSchemeCoordinatorTests: XCTestCase {
 }
 
 @MainActor
+final class BrowserDownloadNavigationLifecycleTests: XCTestCase {
+    func testKnownDownloadBypassesPeekBeforeNavigationStarts() throws {
+        let sourceURL = try XCTUnwrap(URL(string: "https://saved.example/home"))
+        let downloadURL = try XCTUnwrap(URL(string: "https://files.example/report.pdf"))
+        let tab = BrowserTab(
+            title: "Saved",
+            url: sourceURL,
+            savedURL: sourceURL,
+            placement: .pinned
+        )
+        let space = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Test",
+            symbol: "circle",
+            accent: .indigo,
+            folders: [],
+            tabs: [tab],
+            selectedTabID: tab.id
+        )
+        var peekRequest: BrowserPeekRequest?
+        let pool = BrowserPagePool(openPeek: { peekRequest = $0 })
+        pool.select(tab: tab, space: space)
+        let page = try XCTUnwrap(pool.activePage)
+        let recorder = DownloadPolicyRecorder()
+
+        page.webView(
+            page.webView,
+            decidePolicyFor: StubKnownDownloadNavigationAction(url: downloadURL)
+        ) { recorder.policy = $0 }
+
+        XCTAssertEqual(recorder.policy, .download)
+        XCTAssertNil(
+            peekRequest,
+            "A download WebKit identifies before loading must never create a Peek."
+        )
+    }
+}
+
+@MainActor
 final class BrowserPopupSchemeRoutingTests: XCTestCase {
     func testAPopupDestinationAnotherApplicationOwnsIsRoutedNotOpened() throws {
         let mailURL = try XCTUnwrap(URL(string: "mailto:person@example.com"))
@@ -820,4 +860,26 @@ private final class StubNewWindowNavigationAction: WKNavigationAction,
     override var navigationType: WKNavigationType { stubNavigationType }
     override var targetFrame: WKFrameInfo? { nil }
     var browserSourceOrigin: BrowserSiteOrigin? { nil }
+}
+
+private final class StubKnownDownloadNavigationAction: WKNavigationAction,
+    BrowserNavigationActionSourceOriginProviding
+{
+    private let stubRequest: URLRequest
+
+    init(url: URL) {
+        stubRequest = URLRequest(url: url)
+        super.init()
+    }
+
+    override var request: URLRequest { stubRequest }
+    override var navigationType: WKNavigationType { .linkActivated }
+    override var targetFrame: WKFrameInfo? { nil }
+    override var shouldPerformDownload: Bool { true }
+    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+}
+
+@MainActor
+private final class DownloadPolicyRecorder {
+    var policy: WKNavigationActionPolicy?
 }

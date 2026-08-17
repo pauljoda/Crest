@@ -57,6 +57,31 @@ extension BrowserPage: WKNavigationDelegate {
             mozillaAddonsInstall.begin(for: item)
             return
         }
+        let appInitiated = isAppInitiated(navigationAction)
+        switch navigationDecider.decision(
+            for: navigationAction,
+            isAppInitiated: appInitiated
+        ) {
+        case .policy(.allow):
+            break
+        case .policy(let policy):
+            decisionHandler(policy)
+            return
+        case .handOffToSystem(let url):
+            // Cancelling before `prepareForNavigation` is what keeps the
+            // hand-off out of the error page: nothing is pending to fail, and
+            // WebKit's own cancellation error is an expected interruption.
+            externalSchemeCoordinator.handOff(
+                destinationURL: url,
+                trigger: BrowserPopupTrigger.classify(navigationAction.navigationType),
+                origin: externalSchemeCoordinator.sourceOrigin(
+                    for: navigationAction,
+                    currentURL: displayURL
+                )
+            )
+            decisionHandler(.cancel)
+            return
+        }
         let isCommandModified = navigationAction.modifierFlags.contains(.command)
         let isOptionModified = navigationAction.modifierFlags.contains(.option)
         let isShiftModified = navigationAction.modifierFlags.contains(.shift)
@@ -106,7 +131,6 @@ extension BrowserPage: WKNavigationDelegate {
             decisionHandler(.cancel)
             return
         }
-        let appInitiated = isAppInitiated(navigationAction)
         if BrowserExtensionExternalNavigationPolicy
             .shouldOpenInBrowserTab(
                 currentURL: webView.url,
@@ -119,29 +143,10 @@ extension BrowserPage: WKNavigationDelegate {
             openModifiedLink(destinationURL, spaceID, true)
             return
         }
-        switch navigationDecider.decision(
-            for: navigationAction,
-            isAppInitiated: appInitiated
-        ) {
-        case .policy(let policy):
-            if policy == .allow, navigationAction.targetFrame?.isMainFrame == true {
-                prepareForNavigation(to: navigationAction.request.url)
-            }
-            decisionHandler(policy)
-        case .handOffToSystem(let url):
-            // Cancelling before `prepareForNavigation` is what keeps the
-            // hand-off out of the error page: nothing is pending to fail, and
-            // WebKit's own cancellation error is an expected interruption.
-            externalSchemeCoordinator.handOff(
-                destinationURL: url,
-                trigger: BrowserPopupTrigger.classify(navigationAction.navigationType),
-                origin: externalSchemeCoordinator.sourceOrigin(
-                    for: navigationAction,
-                    currentURL: displayURL
-                )
-            )
-            decisionHandler(.cancel)
+        if navigationAction.targetFrame?.isMainFrame == true {
+            prepareForNavigation(to: navigationAction.request.url)
         }
+        decisionHandler(.allow)
     }
 
     private func peekSourcePresentation(
@@ -186,6 +191,7 @@ extension BrowserPage: WKNavigationDelegate {
             spaceID: spaceID,
             spaceName: spaceName
         )
+        discardDownloadOnlySurfaceIfNeeded()
     }
 
     func webView(
@@ -200,6 +206,15 @@ extension BrowserPage: WKNavigationDelegate {
             spaceID: spaceID,
             spaceName: spaceName
         )
+        discardDownloadOnlySurfaceIfNeeded()
+    }
+
+    func discardDownloadOnlySurfaceIfNeeded() {
+        guard committedNavigationCount == 0 else { return }
+        Task { @MainActor [weak self] in
+            guard let self, committedNavigationCount == 0 else { return }
+            host?.discardDownloadOnlyPage(self)
+        }
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

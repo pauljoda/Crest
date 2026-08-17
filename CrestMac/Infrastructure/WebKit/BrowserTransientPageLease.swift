@@ -28,6 +28,7 @@ final class BrowserTransientPageLease {
     @ObservationIgnored private var reloadURL: URL
     @ObservationIgnored private let rebuild: () -> BrowserPage?
     @ObservationIgnored private let userActivity: () -> Void
+    @ObservationIgnored private let onDownloadOnlyNavigation: (() -> Void)?
     /// Reports the page now standing behind `extensionTabID`, or its absence.
     ///
     /// Called before a rebuilt page is navigated, because the announcement has
@@ -45,6 +46,7 @@ final class BrowserTransientPageLease {
         balancedContentRuleLists: [WKContentRuleList],
         rebuild: @escaping () -> BrowserPage?,
         userActivity: @escaping () -> Void,
+        onDownloadOnlyNavigation: (() -> Void)? = nil,
         extensionPageDidChange: @escaping (BrowserPage?) -> Void = { _ in }
     ) {
         self.extensionTabID = extensionTabID
@@ -56,6 +58,7 @@ final class BrowserTransientPageLease {
         self.balancedContentRuleLists = balancedContentRuleLists
         self.rebuild = rebuild
         self.userActivity = userActivity
+        self.onDownloadOnlyNavigation = onDownloadOnlyNavigation
         self.extensionPageDidChange = extensionPageDidChange
         page.monitorUserActivity(userActivity)
         // The page is announced before this point, by whoever built it: this
@@ -95,6 +98,14 @@ final class BrowserTransientPageLease {
         page?.prepareForSpaceDeletion()
         page = nil
         extensionPageDidChange(nil)
+    }
+
+    @discardableResult
+    func discardForDownloadOnlyNavigation() -> Bool {
+        guard !isInvalidated, let onDownloadOnlyNavigation else { return false }
+        release()
+        onDownloadOnlyNavigation()
+        return true
     }
 
     func applyContentBlocking(

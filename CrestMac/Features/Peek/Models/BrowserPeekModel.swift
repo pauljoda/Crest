@@ -78,7 +78,13 @@ final class BrowserPeekModel {
         }
         pageLease?.release()
         guard let pages else { return true }
-        pageLease = pages.makeTransientPageLease(url: request.url, in: space)
+        pageLease = pages.makeTransientPageLease(
+            url: request.url,
+            in: space,
+            onDownloadOnlyNavigation: { [weak coordinator, request = self.request] in
+                coordinator?.dismissPeek(request)
+            }
+        )
         guard let pageLease else {
             dismissUnavailableRequest()
             return false

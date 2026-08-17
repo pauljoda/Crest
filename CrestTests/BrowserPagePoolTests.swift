@@ -222,6 +222,57 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertTrue(lease.wasReleasedForMemoryPressure)
     }
 
+    func testDownloadOnlyTransientPageDismissesInsteadOfRemainingEmpty() async throws {
+        let url = try XCTUnwrap(URL(string: "https://files.example/report.pdf"))
+        let tab = BrowserTab(title: "Source", url: nil, placement: .current)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let pool = BrowserPagePool()
+        var dismissalCount = 0
+        let lease = try XCTUnwrap(
+            pool.makeTransientPageLease(
+                url: url,
+                in: space,
+                onDownloadOnlyNavigation: { dismissalCount += 1 }
+            )
+        )
+        let page = try XCTUnwrap(lease.page)
+
+        page.discardDownloadOnlySurfaceIfNeeded()
+        await Task.yield()
+
+        XCTAssertEqual(dismissalCount, 1)
+        XCTAssertNil(
+            lease.page,
+            "A transient page with no displayable response must not remain as an empty Peek."
+        )
+    }
+
+    func testDownloadFromLoadedTransientPageKeepsItsExistingContent() async throws {
+        let url = try XCTUnwrap(URL(string: "https://files.example/report.pdf"))
+        let tab = BrowserTab(title: "Source", url: nil, placement: .current)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let pool = BrowserPagePool()
+        var dismissalCount = 0
+        let lease = try XCTUnwrap(
+            pool.makeTransientPageLease(
+                url: url,
+                in: space,
+                onDownloadOnlyNavigation: { dismissalCount += 1 }
+            )
+        )
+        let page = try XCTUnwrap(lease.page)
+        page.webView(page.webView, didCommit: nil)
+
+        page.discardDownloadOnlySurfaceIfNeeded()
+        await Task.yield()
+
+        XCTAssertEqual(dismissalCount, 0)
+        XCTAssertNotNil(
+            lease.page,
+            "A download started from visible Peek content must leave that content in place."
+        )
+    }
+
     func testSpaceSwitchingKeepsPagesResidentUntilTheProtectedSpaceRelocks() throws {
         let firstTab = BrowserTab(title: "First", url: nil, placement: .current)
         let secondTab = BrowserTab(title: "Second", url: nil, placement: .current)

@@ -38,6 +38,7 @@ final class MobileBrowserPage: NSObject {
     private(set) var themeColor: UIColor?
     private(set) var canGoBack = false
     private(set) var canGoForward = false
+    var committedNavigationCount = 0
     private(set) var completedNavigationCount = 0
     private(set) var navigationFailure: BrowserNavigationFailure?
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?

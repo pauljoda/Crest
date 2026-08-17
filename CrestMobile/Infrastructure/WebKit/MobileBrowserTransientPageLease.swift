@@ -24,6 +24,7 @@ final class MobileBrowserTransientPageLease {
     @ObservationIgnored private var reloadURL: URL
     @ObservationIgnored private let rebuild: () -> MobileBrowserPage?
     @ObservationIgnored private let userActivity: () -> Void
+    @ObservationIgnored private let onDownloadOnlyNavigation: (() -> Void)?
     @ObservationIgnored private var contentBlockingPolicy: BrowserContentBlockingPolicy
     @ObservationIgnored private var balancedContentRuleLists: [WKContentRuleList]
     @ObservationIgnored private var isInvalidated = false
@@ -34,7 +35,8 @@ final class MobileBrowserTransientPageLease {
         contentBlockingPolicy: BrowserContentBlockingPolicy,
         balancedContentRuleLists: [WKContentRuleList],
         rebuild: @escaping () -> MobileBrowserPage?,
-        userActivity: @escaping () -> Void
+        userActivity: @escaping () -> Void,
+        onDownloadOnlyNavigation: (() -> Void)? = nil
     ) {
         self.page = page
         spaceID = page.spaceID
@@ -44,6 +46,7 @@ final class MobileBrowserTransientPageLease {
         self.balancedContentRuleLists = balancedContentRuleLists
         self.rebuild = rebuild
         self.userActivity = userActivity
+        self.onDownloadOnlyNavigation = onDownloadOnlyNavigation
         page.monitorUserActivity(userActivity)
         page.load(url)
     }
@@ -76,6 +79,14 @@ final class MobileBrowserTransientPageLease {
         isInvalidated = true
         page?.prepareForSpaceDeletion()
         page = nil
+    }
+
+    @discardableResult
+    func discardForDownloadOnlyNavigation() -> Bool {
+        guard !isInvalidated, let onDownloadOnlyNavigation else { return false }
+        release()
+        onDownloadOnlyNavigation()
+        return true
     }
 
     func applyContentBlocking(
