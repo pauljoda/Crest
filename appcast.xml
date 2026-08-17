@@ -7,6 +7,19 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.4.0</title>
+            <pubDate>Mon, 17 Aug 2026 09:06:19 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1027</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[**Full Changelog**: https://github.com/pauljoda/Crest/compare/nightly-2026-08-16-5d65272...nightly-2026-08-17-3ad8f6f
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-2026-08-17-3ad8f6f/Crest-0.4.0-nightly-2026-08-17-3ad8f6f-arm64.dmg" length="7385856" type="application/octet-stream" sparkle:edSignature="dYhRDl/HIpE5xRgzyOc3MUsnBjvfWyrOdIDG73JfrK0c7/QDzRO+K0PRdK2JVR13q2sc5G/62unskZY9qjZJAA=="/>
+        </item>
+        <item>
+            <title>0.4.0</title>
             <pubDate>Sun, 16 Aug 2026 08:55:39 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
@@ -34,6 +47,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 2vqroysq/cqUTrKJIBDX7BFA4mGxsEGePBtOMKqNiULCR6XzKCDBeL59/IhpOgeH01HBvvftoeYc5UZPkuU9Dg==
-length: 2473
+edSignature: 3IHCkyeSXTj/wby9a4wWhI7GXTPfW2KDV+DAEdJb4zB8/5j03a4igdp1CAZJ8ikKUcqnceyLIjSH6bIlCFpCDA==
+length: 3505
 -->
