@@ -29,20 +29,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Sign, notarize, and publish
-    runs-on: xcode-27
-    timeout-minutes: 90
-    environment: production
+  preflight:
+    name: Resolve publication
+    runs-on: ubuntu-latest
+    outputs:
+      asset_base: ${{ steps.release.outputs.asset_base }}
+      build_number: ${{ steps.release.outputs.build_number }}
+      channel: ${{ steps.release.outputs.channel }}
+      marketing_version: ${{ steps.release.outputs.marketing_version }}
+      previous_commit: ${{ steps.release.outputs.previous_commit }}
+      release_tag: ${{ steps.release.outputs.release_tag }}
+      release_title: ${{ steps.release.outputs.release_title }}
+      should_publish: ${{ steps.release.outputs.should_publish }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: Resolve release identity
+      - name: Resolve release identity and previous publication
         id: release
-        shell: zsh {0}
+        shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           REQUESTED_CHANNEL: ${{ inputs.channel }}
         run: |
           set -euo pipefail
@@ -68,30 +76,82 @@ jobs:
           if [[ "$channel" == "stable" ]]; then
             expected_tag="v${marketing_version}"
             if [[ "$GITHUB_REF_TYPE" != "tag" || "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
-              print -u2 "Stable releases must run from the ${expected_tag} tag."
+              printf 'Stable releases must run from the %s tag.\n' "$expected_tag" >&2
               exit 1
             fi
             release_tag="$expected_tag"
             release_title="Crest ${marketing_version}"
             asset_base="Crest-${marketing_version}-arm64"
           elif [[ "$channel" == "nightly" ]]; then
-            release_tag="nightly-${release_date}-${short_sha}"
+            release_tag="nightly"
             release_title="Crest ${marketing_version} Nightly ${release_date} (${short_sha})"
             asset_base="Crest-${marketing_version}-nightly-${release_date}-${short_sha}-arm64"
           else
-            release_tag=development
+            release_tag="development"
             release_title="Crest ${marketing_version} Development ${release_date} (${short_sha})"
             asset_base="Crest-${marketing_version}-development-${release_date}-${short_sha}-arm64"
           fi
 
+          if [[ "$channel" == "stable" ]]; then
+            releases="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+            previous_tag="$(
+              jq -r '[.[] | select(.draft == false and .prerelease == false)][0].tag_name // empty' \
+                <<< "$releases"
+            )"
+          elif [[ "$channel" == "nightly" ]]; then
+            if gh release view nightly --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              previous_tag=nightly
+            else
+              releases="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+              previous_tag="$(
+                jq -r '[.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$")))][0].tag_name // empty' \
+                  <<< "$releases"
+              )"
+            fi
+          else
+            if gh release view development --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              previous_tag=development
+            else
+              previous_tag=""
+            fi
+          fi
+
+          previous_commit=""
+          if [[ -n "$previous_tag" ]]; then
+            git fetch --force origin \
+              "refs/tags/${previous_tag}:refs/tags/${previous_tag}"
+            previous_commit="$(git rev-parse "${previous_tag}^{commit}")"
+          fi
+
+          should_publish=true
+          if [[ "$channel" == "nightly" && "$previous_commit" == "$GITHUB_SHA" ]]; then
+            should_publish=false
+            printf 'Nightly %s already publishes %s; skipping an unchanged build.\n' \
+              "$previous_tag" "$short_sha" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           {
-            print "channel=$channel"
-            print "marketing_version=$marketing_version"
-            print "build_number=$build_number"
-            print "release_tag=$release_tag"
-            print "release_title=$release_title"
-            print "asset_base=$asset_base"
+            printf 'asset_base=%s\n' "$asset_base"
+            printf 'build_number=%s\n' "$build_number"
+            printf 'channel=%s\n' "$channel"
+            printf 'marketing_version=%s\n' "$marketing_version"
+            printf 'previous_commit=%s\n' "$previous_commit"
+            printf 'release_tag=%s\n' "$release_tag"
+            printf 'release_title=%s\n' "$release_title"
+            printf 'should_publish=%s\n' "$should_publish"
           } >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Sign, notarize, and publish
+    needs: preflight
+    if: needs.preflight.outputs.should_publish == 'true'
+    runs-on: xcode-27
+    timeout-minutes: 90
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Ensure build tools are available
         run: |
@@ -110,9 +170,9 @@ jobs:
           DEVELOPER_ID_APPLICATION_P12_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_BASE64 }}
           DEVELOPER_ID_APPLICATION_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_APPLICATION_P12_PASSWORD }}
           DEVELOPER_ID_PROVISIONING_PROFILE_BASE64: ${{ secrets.DEVELOPER_ID_PROVISIONING_PROFILE_BASE64 }}
-          RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
-          RELEASE_BUILD_NUMBER: ${{ steps.release.outputs.build_number }}
-          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
+          RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
+          RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
         run: |
           set -euo pipefail
 
@@ -121,6 +181,9 @@ jobs:
           export_path="$release_root/export"
           publish_path="$release_root/publish"
           staging_path="$release_root/dmg-root"
+          installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"
+          checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"
+          symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"
           keychain_path="$RUNNER_TEMP/crest-signing.keychain-db"
           api_key_path="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
           p12_path="$RUNNER_TEMP/developer-id-application.p12"
@@ -229,7 +292,7 @@ jobs:
 
           ditto "$app_path" "$staging_path/Crest.app"
           ln -s /Applications "$staging_path/Applications"
-          dmg_path="$publish_path/${RELEASE_ASSET_BASE}.dmg"
+          dmg_path="$publish_path/$installer_name"
           diskutil image create from \
             --volumeName Crest \
             --format ULFO \
@@ -247,64 +310,68 @@ jobs:
 
           ditto -c -k --keepParent \
             "$archive_path/dSYMs/Crest.app.dSYM" \
-            "$publish_path/${RELEASE_ASSET_BASE}.dSYM.zip"
+            "$publish_path/$symbols_name"
           (
             cd "$publish_path"
-            shasum -a 256 "${RELEASE_ASSET_BASE}.dmg" \
-              > "${RELEASE_ASSET_BASE}.dmg.sha256"
+            shasum -a 256 "$installer_name" > "$checksum_name"
           )
 
       - name: Attest release disk image
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          subject-path: ${{ runner.temp }}/crest-release/publish/${{ steps.release.outputs.asset_base }}.dmg
+          subject-path: ${{ runner.temp }}/crest-release/publish/Installer-${{ needs.preflight.outputs.asset_base }}.dmg
 
       - name: Create GitHub Release
         shell: zsh {0}
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
-          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
-          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
-          RELEASE_TITLE: ${{ steps.release.outputs.release_title }}
+          PREVIOUS_COMMIT: ${{ needs.preflight.outputs.previous_commit }}
+          RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
+          RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+          RELEASE_TITLE: ${{ needs.preflight.outputs.release_title }}
         run: |
           set -euo pipefail
           publish_path="$RUNNER_TEMP/crest-release/publish"
           release_notes="$RUNNER_TEMP/crest-release/release-notes.md"
+          installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"
+          checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"
+          symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"
 
-          if [[ "$RELEASE_CHANNEL" == "development" ]]; then
-            short_sha="$(git rev-parse --short=7 "$GITHUB_SHA")"
-            printf '%s\n' \
-              '# Crest development build' \
-              '' \
-              "Built automatically from [\`${short_sha}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})." \
-              '' \
-              'Development builds are signed and notarized, but may be less reliable than stable releases.' \
-              > "$release_notes"
-          else
-            gh api \
-              --method POST \
-              "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
-              -f tag_name="$RELEASE_TAG" \
-              -f target_commitish="$GITHUB_SHA" \
-              --jq .body > "$release_notes"
+          release_note_arguments=(
+            --repository "$GITHUB_REPOSITORY"
+            --server-url "$GITHUB_SERVER_URL"
+            --channel "$RELEASE_CHANNEL"
+            --release-tag "$RELEASE_TAG"
+            --current-ref "$GITHUB_SHA"
+            --asset-name "$installer_name"
+          )
+          if [[ -n "$PREVIOUS_COMMIT" ]]; then
+            release_note_arguments+=(--previous-ref "$PREVIOUS_COMMIT")
           fi
+          python3 Scripts/generate-release-notes.py \
+            "${release_note_arguments[@]}" \
+            > "$release_notes"
+
+          installer_asset="$publish_path/$installer_name"
+          checksum_asset="$publish_path/$checksum_name"
+          symbols_asset="$publish_path/$symbols_name"
 
           release_arguments=(
             "$RELEASE_TAG"
-            "$publish_path/${RELEASE_ASSET_BASE}.dmg"
-            "$publish_path/${RELEASE_ASSET_BASE}.dmg.sha256"
-            "$publish_path/${RELEASE_ASSET_BASE}.dSYM.zip"
+            "$installer_asset"
+            "$checksum_asset"
+            "$symbols_asset"
             --title "$RELEASE_TITLE"
             --notes-file "$release_notes"
           )
-          if [[ "$RELEASE_CHANNEL" == "development" ]] \
+          if [[ "$RELEASE_CHANNEL" != "stable" ]] \
               && gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload \
               "$RELEASE_TAG" \
-              "$publish_path/${RELEASE_ASSET_BASE}.dmg" \
-              "$publish_path/${RELEASE_ASSET_BASE}.dmg.sha256" \
-              "$publish_path/${RELEASE_ASSET_BASE}.dSYM.zip" \
+              "$installer_asset" \
+              "$checksum_asset" \
+              "$symbols_asset" \
               --clobber
             gh api \
               --method PATCH \
@@ -330,10 +397,10 @@ jobs:
         shell: zsh {0}
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_ASSET_BASE: ${{ steps.release.outputs.asset_base }}
-          RELEASE_BUILD_NUMBER: ${{ steps.release.outputs.build_number }}
-          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
-          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
+          RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
+          RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
           SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
         run: |
           set -euo pipefail
@@ -343,13 +410,18 @@ jobs:
           feed_source="$RUNNER_TEMP/crest-appcast-source"
           updates_checkout="$RUNNER_TEMP/crest-updates-branch"
           release_root="$RUNNER_TEMP/crest-release"
+          installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"
+          release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"
           mkdir -p "$sparkle_root" "$feed_source" "$updates_checkout"
           if [[ "$RELEASE_CHANNEL" == "development" ]]; then
             appcast_filename=appcast-development.xml
-            maximum_versions=3
           else
             appcast_filename=appcast.xml
+          fi
+          if [[ "$RELEASE_CHANNEL" == "stable" ]]; then
             maximum_versions=0
+          else
+            maximum_versions=1
           fi
 
           gh release download "$sparkle_version" \
@@ -367,11 +439,11 @@ jobs:
             fi
           fi
           cp \
-            "$release_root/publish/${RELEASE_ASSET_BASE}.dmg" \
-            "$feed_source/${RELEASE_ASSET_BASE}.dmg"
+            "$release_root/publish/$installer_name" \
+            "$feed_source/$installer_name"
           cp \
             "$release_root/release-notes.md" \
-            "$feed_source/${RELEASE_ASSET_BASE}.md"
+            "$feed_source/$release_notes_name"
 
           appcast_arguments=(
             --ed-key-file -
@@ -389,7 +461,7 @@ jobs:
             | "$sparkle_root/bin/generate_appcast" \
                 "${appcast_arguments[@]}" \
                 "$feed_source"
-          expected_enclosure_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${RELEASE_ASSET_BASE}.dmg"
+          expected_enclosure_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${installer_name}"
           if ! rg --fixed-strings \
             "url=\"${expected_enclosure_url}\"" \
             "$feed_source/${appcast_filename}"; then
@@ -423,15 +495,28 @@ jobs:
             -m "chore(updates): publish ${RELEASE_TAG}"
           git -C "$updates_checkout" push origin HEAD:updates
 
-          if [[ "$RELEASE_CHANNEL" == "development" ]]; then
+          if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
             gh api \
               "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
-              --jq '.assets | map(. + {build: (.name | sub("\\.dmg(\\.sha256)?$"; "") | sub("\\.dSYM\\.zip$"; ""))}) | group_by(.build) | sort_by(map(.created_at) | max) | reverse | .[3:] | .[][] | .name' \
+              --jq '.assets | map(. + {build: (.name | sub("^(Installer|Checksum|Debug-Symbols)-"; "") | sub("\\.dmg(\\.sha256)?$"; "") | sub("\\.dSYM\\.zip$"; ""))}) | group_by(.build) | sort_by(map(.created_at) | max) | reverse | .[1:] | .[][] | .name' \
               | while IFS= read -r stale_asset; do
                   [[ -n "$stale_asset" ]] || continue
                   gh release delete-asset \
                     "$RELEASE_TAG" \
                     "$stale_asset" \
+                    --yes
+                done
+          fi
+
+          if [[ "$RELEASE_CHANNEL" == "nightly" ]]; then
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq '.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$"))) | .tag_name' \
+              | while IFS= read -r legacy_nightly; do
+                  [[ -n "$legacy_nightly" ]] || continue
+                  gh release delete \
+                    "$legacy_nightly" \
+                    --cleanup-tag \
                     --yes
                 done
           fi

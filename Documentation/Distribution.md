@@ -15,7 +15,7 @@ build supports native extension companions.
 | Channel | Trigger | GitHub Release | Sparkle channel |
 | --- | --- | --- | --- |
 | Stable | Push an exact `v<marketing-version>` tag | Latest, non-prerelease | Default |
-| Nightly | Daily schedule or manual workflow dispatch | Prerelease | `nightly` |
+| Nightly | Daily schedule or manual workflow dispatch | Rolling prerelease | `nightly` |
 | Development | Manual workflow dispatch after local validation | Rolling prerelease | `development` |
 
 The marketing version comes from `Config/Version.xcconfig`. Stable tags must
@@ -34,10 +34,26 @@ stable or nightly entries:
 `https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml`
 
 The `updates` branch is workflow-owned. It contains only the appcasts and a
-short README. Stable and nightly binaries remain immutable GitHub Release
-assets. Development assets are named with their UTC date and source commit and
-the latest three are retained on one rolling `development` prerelease. GitHub
-Packages is not part of the desktop distribution path.
+short README. Stable binaries remain immutable GitHub Release assets. Nightly
+and development builds each reuse one rolling prerelease, retain only the
+current build's assets, and prefix the filenames with `Installer-`, `Checksum-`,
+or `Debug-Symbols-` so their purpose is visible before GitHub truncates the
+remaining name. Every filename still carries the version and, for rolling
+builds, the UTC date and source commit, so Sparkle never advances to an
+overwritten binary. GitHub Packages is not part of the desktop distribution
+path.
+
+Before allocating the macOS signing runner, a nightly preflight compares the
+current source commit with the last published nightly. An unchanged scheduled
+or manually dispatched nightly succeeds without building, notarizing, creating
+a release, or advancing an appcast. After the first successful rolling nightly
+publication, the workflow removes the superseded date-stamped nightly releases
+and tags.
+
+Release notes come directly from Git history. Each channel lists every commit
+since that channel's previous publication in chronological order, including
+the commit subject, full commit body when one exists, and a link to the commit.
+The same notes appear on GitHub and in Sparkle's update interface.
 
 ## Publication order
 
@@ -90,10 +106,11 @@ Before publishing a stable tag:
    a manual update check and the normal relaunch path.
 
 Nightly and development builds use the same signing, notarization, and
-verification gates as a stable build. Development publication keeps only the
-latest queued public commit when pushes arrive faster than Apple notarization.
-Every distributed build defaults to its own channel, while an existing user
-choice remains authoritative.
+verification gates as a stable build. Both rolling prereleases keep only their
+current asset set after the signed appcast has advanced. Development
+publication keeps only the latest queued public commit when dispatches arrive
+faster than Apple notarization. Every distributed build defaults to its own
+channel, while an existing user choice remains authoritative.
 
 ## Local macOS iteration
 
@@ -123,7 +140,7 @@ After mounting a published disk image, users and maintainers can inspect it
 with standard macOS tools:
 
 ```bash
-shasum -a 256 -c Crest-*.dmg.sha256
+shasum -a 256 -c Checksum-Crest-*.dmg.sha256
 codesign --verify --deep --strict --verbose=2 /Volumes/Crest/Crest.app
 spctl --assess --type execute --verbose=4 /Volumes/Crest/Crest.app
 xcrun stapler validate /Volumes/Crest/Crest.app

@@ -14,6 +14,32 @@ RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 
 
 class DirectDistributionContractTests(unittest.TestCase):
+    def test_unchanged_nightly_stops_before_the_release_job(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text()
+
+        self.assertIn("preflight:", workflow)
+        self.assertIn('release_tag="nightly"', workflow)
+        self.assertIn(
+            'if [[ "$channel" == "nightly" && "$previous_commit" == "$GITHUB_SHA" ]]',
+            workflow,
+        )
+        self.assertIn("should_publish=false", workflow)
+        self.assertIn(
+            "if: needs.preflight.outputs.should_publish == 'true'",
+            workflow,
+        )
+
+    def test_rolling_channels_publish_one_clearly_named_asset_set(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text()
+
+        self.assertIn('release_tag="nightly"', workflow)
+        self.assertIn("maximum_versions=1", workflow)
+        self.assertIn('installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"', workflow)
+        self.assertIn('checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"', workflow)
+        self.assertIn('symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"', workflow)
+        self.assertIn('release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"', workflow)
+        self.assertIn("generate-release-notes.py", workflow)
+
     def test_release_build_number_survives_the_public_repository_epoch(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
 
