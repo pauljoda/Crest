@@ -45,6 +45,10 @@ enum MobileSidebarSplitGroupRowMetrics {
     /// so groups and tabs line up in the same column.
     static let rowHorizontalInset: CGFloat = 8
 
+    /// Half the visible gutter between neighboring grouped surfaces. Keeping
+    /// this on the row makes drag geometry include the resting separation.
+    static let rowVerticalInset: CGFloat = CrestSpacing.extraExtraSmall
+
     static let closeControlSize = CGSize(width: 44, height: 44)
 
     static let closeGlyphSize: CGFloat = 14

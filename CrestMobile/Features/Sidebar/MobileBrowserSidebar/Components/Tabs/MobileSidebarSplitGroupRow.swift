@@ -56,6 +56,10 @@ struct MobileSidebarSplitGroupRow: View {
             .horizontal,
             MobileSidebarSplitGroupRowMetrics.rowHorizontalInset
         )
+        .padding(
+            .vertical,
+            MobileSidebarSplitGroupRowMetrics.rowVerticalInset
+        )
         .contentShape(.rect)
         // Registers the whole group as one reorder row and arms its lift. The
         // registration is also what makes a tab dragged past the group step over

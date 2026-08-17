@@ -10,6 +10,7 @@ enum BrowserShowcaseSessionFactory {
     private static func makeWorkSpace() -> BrowserSpace {
         let folder = SavedFolder(title: "Launch Atlas", symbol: "folder.fill")
         let splitGroupID = SplitGroupID()
+        let secondSplitGroupID = SplitGroupID()
         let tabs = [
             tab("Brief", page(.work, title: "Brief", activeCard: 0), "🧭", .pinned),
             tab("Projects", page(.work, title: "Projects", activeCard: 1), "📐", .pinned),
@@ -31,6 +32,20 @@ enum BrowserShowcaseSessionFactory {
                 "🗒️",
                 .current,
                 splitGroupID: splitGroupID
+            ),
+            tab(
+                "Decision log",
+                page(.work, title: "Decision log", activeCard: 1),
+                "🧠",
+                .current,
+                splitGroupID: secondSplitGroupID
+            ),
+            tab(
+                "Launch checklist",
+                page(.work, title: "Launch checklist", activeCard: 2),
+                "✅",
+                .current,
+                splitGroupID: secondSplitGroupID
             ),
         ]
         return BrowserSpace(
