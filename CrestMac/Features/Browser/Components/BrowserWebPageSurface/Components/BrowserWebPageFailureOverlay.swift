@@ -36,14 +36,3 @@ struct BrowserWebPageFailureOverlay: View {
         }
     }
 }
-
-#Preview("Browser Web Page Process Failure") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserWebPageFailureOverlay(
-        page: preview.page,
-        branding: preview.browser.selectedSpace?.branding,
-        pagePresentation: .processFailure
-    )
-    .frame(width: 720, height: 480)
-}

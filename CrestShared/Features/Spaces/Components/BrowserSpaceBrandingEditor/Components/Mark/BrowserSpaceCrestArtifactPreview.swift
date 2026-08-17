@@ -52,12 +52,3 @@ struct BrowserSpaceCrestArtifactPreview: View {
         .accessibilityIdentifier("space-branding-crest-preview")
     }
 }
-
-#Preview("Crest Artifact") {
-    BrowserSpaceCrestArtifactPreview(
-        branding: BrowserSpaceBrandingPreviewFixture.crestBranding,
-        compact: false
-    )
-    .frame(width: BrowserSpaceForgeMetrics.previewMaximumWidth)
-    .padding(CrestSpacing.large)
-}

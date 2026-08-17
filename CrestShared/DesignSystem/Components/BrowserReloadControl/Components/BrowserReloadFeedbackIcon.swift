@@ -69,14 +69,3 @@ struct BrowserReloadFeedbackIcon: View {
         }
     }
 }
-
-#Preview("Reload Feedback Icon") {
-    BrowserReloadFeedbackIcon(
-        systemName: "arrow.clockwise",
-        pulse: 0,
-        animates: false,
-        pointSize: BrowserReloadFeedbackPolicy.symbolPointSize,
-        feedbackDidComplete: { _ in }
-    )
-    .padding()
-}

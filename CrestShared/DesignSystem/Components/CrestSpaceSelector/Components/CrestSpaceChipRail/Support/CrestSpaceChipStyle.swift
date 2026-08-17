@@ -15,26 +15,3 @@ struct CrestSpaceChipStyle: ButtonStyle {
         )
     }
 }
-
-#Preview("Space Chip Style", traits: .sizeThatFitsLayout) {
-    HStack {
-        Button("Work", systemImage: "briefcase.fill") {}
-            .buttonStyle(
-                CrestSpaceChipStyle(
-                    tint: CrestSpaceSelectorPreviewFixture.workSpace.accent.color,
-                    isSelected: true
-                )
-            )
-
-        Button("Private", systemImage: "lock.fill") {}
-            .buttonStyle(
-                CrestSpaceChipStyle(
-                    tint: CrestSpaceSelectorPreviewFixture.privateSpace.accent.color,
-                    isSelected: false
-                )
-            )
-    }
-    .padding()
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.light)
-}

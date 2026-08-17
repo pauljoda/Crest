@@ -19,3 +19,8 @@ struct BrowserExtensionIconRenderState<Icon> {
         renderedIcon = nil
     }
 }
+
+private struct BrowserExtensionRenderedIcon<Icon> {
+    let identity: BrowserExtensionIconRequestIdentity
+    let icon: Icon
+}

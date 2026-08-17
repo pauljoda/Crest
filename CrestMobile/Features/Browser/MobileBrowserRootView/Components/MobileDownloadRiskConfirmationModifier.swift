@@ -21,12 +21,3 @@ struct MobileDownloadRiskConfirmationModifier: ViewModifier {
         }
     }
 }
-
-#Preview("Download Risk Confirmation") {
-    Text("Downloads")
-        .modifier(
-            MobileDownloadRiskConfirmationModifier(
-                confirmation: MobileDownloadRiskConfirmationCoordinator()
-            )
-        )
-}

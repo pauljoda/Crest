@@ -9,10 +9,3 @@ struct MobilePasswordSystemPasskeysSection: View {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    Form {
-        MobilePasswordSystemPasskeysSection(access: fixture.passkeyAccess)
-    }
-}

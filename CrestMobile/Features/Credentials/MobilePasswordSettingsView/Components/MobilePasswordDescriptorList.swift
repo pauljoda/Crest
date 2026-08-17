@@ -39,14 +39,3 @@ struct MobilePasswordDescriptorList: View {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobilePasswordSettingsModel(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-    Form {
-        MobilePasswordDescriptorList(model: model)
-    }
-}

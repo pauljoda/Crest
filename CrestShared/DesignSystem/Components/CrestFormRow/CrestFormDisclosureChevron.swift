@@ -9,8 +9,3 @@ struct CrestFormDisclosureChevron: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Disclosure Chevron") {
-    CrestFormDisclosureChevron()
-        .padding()
-}

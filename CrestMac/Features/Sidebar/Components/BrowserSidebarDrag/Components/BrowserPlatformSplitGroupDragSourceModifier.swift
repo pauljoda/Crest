@@ -24,30 +24,3 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
             )
     }
 }
-
-#Preview("Mac Split Group Drag Source", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    Label("Split View with 2 tabs", systemImage: "rectangle.split.2x1")
-        .frame(width: 220, alignment: .leading)
-        .padding(CrestSpacing.medium)
-        .background(CrestColor.selectedSurface, in: .rect(cornerRadius: 10))
-        .modifier(
-            BrowserPlatformSplitGroupDragSourceModifier(
-                item: BrowserSplitGroupDragItem(
-                    groupID: SplitGroupID(),
-                    spaceID: fixture.space.id,
-                    profileID: fixture.space.profile.id,
-                    memberTabIDs: [fixture.currentTab.id, fixture.savedTab.id]
-                ),
-                members: [fixture.currentTab, fixture.savedTab],
-                placement: .current,
-                folderID: nil,
-                reorder: BrowserSidebarReorderContext(
-                    browser: fixture.browser,
-                    spaceAccess: fixture.spaceAccess
-                )
-            )
-        )
-        .padding()
-}

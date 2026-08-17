@@ -35,12 +35,3 @@ struct SidebarSplitGroupContextMenu: View {
         }
     }
 }
-
-#Preview("Split Group Menu", traits: .sizeThatFitsLayout) {
-    Menu("Open Split Actions", systemImage: "ellipsis.circle") {
-        SidebarSplitGroupContextMenu(
-            configuration: SidebarSplitGroupRowPreviewFixture.configuration()
-        )
-    }
-    .padding()
-}

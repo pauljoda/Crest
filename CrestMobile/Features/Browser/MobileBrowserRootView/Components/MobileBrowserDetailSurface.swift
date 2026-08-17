@@ -43,32 +43,3 @@ struct MobileBrowserDetailSurface: View {
         )
     }
 }
-
-#Preview("Mobile Browser Detail Surface") {
-    @Previewable @State var address = ""
-    @Previewable @State var isAddressEditing = false
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileBrowserDetailSurface(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: BrowserSpaceAccessController(
-            authenticator: MobileBrowserPreviewAuthenticator()
-        ),
-        address: $address,
-        isAddressEditing: $isAddressEditing,
-        addressFocusRequest: 0,
-        isCommandPalettePresented: false,
-        isCompact: true,
-        showsCompactToolbar: true,
-        compactToolbarIsHidden: false,
-        submitAddress: {},
-        beginNewTab: {},
-        showTabViewer: {},
-        hideCompactToolbar: {},
-        showCompactToolbar: {},
-        handleToolbarSwipe: { _ in },
-        selectSplitCard: { _ in },
-        compactTransitionEnded: { _ in }
-    )
-}

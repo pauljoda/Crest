@@ -68,24 +68,3 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
         }
     }
 }
-
-#Preview("Mobile Compact Page Surface") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileCompactPageSurface(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        spaceAccess: fixture.spaceAccess,
-        selectedTab: nil,
-        isURLCopiedFeedbackVisible: false,
-        pageZoomFeedbackLabel: nil,
-        reduceMotion: false,
-        didPromoteTransientPage: {},
-        tabPromotionNamespace: tabPromotionNamespace,
-        completePagePresentation: {},
-        backdrop: Color.indigo.opacity(0.1),
-        detail: ContentUnavailableView("Preview Page", systemImage: "globe")
-    )
-}

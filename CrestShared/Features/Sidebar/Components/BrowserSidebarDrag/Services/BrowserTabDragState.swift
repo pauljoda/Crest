@@ -12,14 +12,12 @@ final class BrowserTabDragState {
     @ObservationIgnored private var expirationTask: Task<Void, Never>?
     @ObservationIgnored private var deferredLeaveTask: Task<Void, Never>?
     @ObservationIgnored private var releaseCleanupTask: Task<Void, Never>?
-    @ObservationIgnored private var previewUpdater: (any BrowserTabDragPreviewUpdating)?
     @ObservationIgnored private var nextSessionGeneration: UInt64 = 0
 
     @discardableResult
     func begin(
         item: BrowserTabDragItem,
-        placement: TabPlacement,
-        previewUpdater: (any BrowserTabDragPreviewUpdating)? = nil
+        placement: TabPlacement
     ) -> BrowserDragSessionToken {
         expirationTask?.cancel()
         deferredLeaveTask?.cancel()
@@ -34,7 +32,6 @@ final class BrowserTabDragState {
         currentPlacement = placement
         dropLocation = nil
         liveMoveCount = 0
-        self.previewUpdater = previewUpdater
         expirationTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(30))
             guard !Task.isCancelled else { return }
@@ -58,7 +55,6 @@ final class BrowserTabDragState {
         guard item != nil, dropLocation != location else { return false }
         dropLocation = location
         currentPlacement = location.placement
-        previewUpdater?.updatePreview(for: location.placement)
         return true
     }
 
@@ -77,7 +73,6 @@ final class BrowserTabDragState {
             for: sourcePlacement
         )
         currentPlacement = placement
-        previewUpdater?.updatePreview(for: placement)
     }
 
     func leavePinnedZone() {
@@ -87,7 +82,6 @@ final class BrowserTabDragState {
             for: sourcePlacement
         )
         currentPlacement = placement
-        previewUpdater?.updatePreview(for: placement)
     }
 
     func deferLeave(
@@ -138,8 +132,6 @@ final class BrowserTabDragState {
         sourcePlacement = nil
         currentPlacement = nil
         dropLocation = nil
-        previewUpdater?.dragStateDidEnd()
-        previewUpdater = nil
     }
 
     func end(session token: BrowserDragSessionToken) {

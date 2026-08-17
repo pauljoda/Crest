@@ -508,9 +508,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             )
         let requestBinding = QuickWindowRequestBinding(request: request)
         let spaceAccess = BrowserSpaceAccessController(
-            authenticator: BrowserQuickWindowPreviewAuthenticator(
-                authenticates: true
-            )
+            authenticator: BrowserPreviewAuthenticator(result: true)
         )
         let model = BrowserQuickWindowModel(
             request: request,

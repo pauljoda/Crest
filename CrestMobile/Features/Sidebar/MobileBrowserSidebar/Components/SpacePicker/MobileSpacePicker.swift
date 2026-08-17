@@ -135,16 +135,3 @@ struct MobileSpacePicker: View {
         BrowserSidebarAccessPolicy.availableSpaces(in: browser)
     }
 }
-
-#Preview("Mobile Space Picker", traits: .sizeThatFitsLayout) {
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileSpacePicker(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        selectSpace: { _ in }
-    )
-    .frame(width: 390)
-    .padding()
-}

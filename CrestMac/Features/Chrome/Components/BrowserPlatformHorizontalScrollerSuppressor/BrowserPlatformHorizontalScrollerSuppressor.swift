@@ -14,8 +14,3 @@ struct BrowserPlatformHorizontalScrollerSuppressor: NSViewRepresentable {
         nsView.scheduleHorizontalScrollerSuppression()
     }
 }
-
-#Preview("Horizontal Scroller Suppressor") {
-    BrowserPlatformHorizontalScrollerSuppressor()
-        .frame(width: 320, height: 120)
-}

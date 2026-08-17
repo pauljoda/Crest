@@ -97,12 +97,3 @@ struct BrowserExtensionDiscoverySection: View {
         }
     }
 }
-
-#Preview("Extension Discovery") {
-    Form {
-        BrowserExtensionDiscoverySection(
-            model: BrowserExtensionDiscoveryPreviewFixture.model
-        )
-    }
-    .frame(width: 620, height: 340)
-}

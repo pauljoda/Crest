@@ -38,12 +38,3 @@ struct BrowserManualSetupSidebarPreview: View {
         }
     }
 }
-
-#Preview("Manual Setup Sidebar Preview") {
-    BrowserManualSetupSidebarPreview(
-        draft: BrowserManualSetupPreviewFixture.draft,
-        previewSession: BrowserManualSetupPreviewFixture.previewSession,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 330, height: 500)
-}

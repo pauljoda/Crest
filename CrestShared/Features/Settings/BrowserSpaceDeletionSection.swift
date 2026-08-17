@@ -85,14 +85,3 @@ struct BrowserSpaceDeletionSection: View {
         }
     }
 }
-
-#Preview("Space Deletion") {
-    let browser = BrowserStore.preview()
-    Form {
-        BrowserSpaceDeletionSection(
-            browser: browser,
-            spaceID: browser.session.spaces[0].id,
-            dataDeleter: BrowserSettingsPreviewDataDeleter()
-        )
-    }
-}

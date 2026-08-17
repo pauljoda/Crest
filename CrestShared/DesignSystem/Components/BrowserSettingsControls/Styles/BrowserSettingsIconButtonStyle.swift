@@ -43,10 +43,3 @@ struct BrowserSettingsIconButtonStyle: ButtonStyle {
             )
     }
 }
-
-#Preview("Settings Icon Button") {
-    Button("Add", systemImage: "plus") {}
-        .labelStyle(.iconOnly)
-        .buttonStyle(BrowserSettingsIconButtonStyle())
-        .padding()
-}

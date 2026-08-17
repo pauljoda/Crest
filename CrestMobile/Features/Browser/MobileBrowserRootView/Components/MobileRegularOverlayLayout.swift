@@ -61,17 +61,3 @@ struct MobileRegularOverlayLayout<Sidebar: View, Detail: View>: View {
         }
     }
 }
-
-#Preview("Mobile Regular Overlay") {
-    MobileRegularOverlayLayout(
-        sidebarWidth: 320,
-        sidebarIsPresented: true,
-        reduceMotion: false,
-        reduceTransparency: false,
-        layoutDirection: .leftToRight,
-        showSidebar: {},
-        hideSidebar: {},
-        sidebar: Color.indigo.opacity(0.2),
-        detail: Color(uiColor: .systemBackground)
-    )
-}

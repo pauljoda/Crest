@@ -51,25 +51,3 @@ struct SidebarAddressField: View {
         )
     }
 }
-
-#Preview {
-    @Previewable @State var text = "https://example.com"
-    @Previewable @State var isEditing = false
-    @Previewable @Namespace var namespace
-
-    SidebarAddressField(
-        text: $text,
-        isEditing: $isEditing,
-        focusRequest: 0,
-        isSecure: true,
-        progress: 0.72,
-        isLoading: true,
-        activate: {},
-        submit: {},
-        morphNamespace: namespace,
-        morphID: "preview-address",
-        siteControl: SidebarAddressFieldPreviewFixture.makeSiteControl()
-    )
-    .frame(width: 420)
-    .padding()
-}

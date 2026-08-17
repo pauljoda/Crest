@@ -38,12 +38,3 @@ struct MobileOnboardingLayeredSpacePreview: View {
         .frame(maxWidth: .infinity)
     }
 }
-
-#Preview("Onboarding Layered Spaces") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingLayeredSpacePreview(
-        previewWidth: MobileOnboardingLayout.compactPreviewWidth,
-        personalSpace: fixture.alternateSpace,
-        workSpace: fixture.space
-    )
-}

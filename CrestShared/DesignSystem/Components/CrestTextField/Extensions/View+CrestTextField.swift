@@ -13,12 +13,3 @@ extension View {
         modifier(CrestFieldSurface())
     }
 }
-
-#Preview("Crest Text Field") {
-    @Previewable @State var address = "example.com"
-
-    TextField("Address", text: $address)
-        .crestTextField()
-        .padding()
-        .frame(width: 360)
-}

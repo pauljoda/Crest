@@ -45,18 +45,3 @@ struct MobileRegularSideBySideLayout<Sidebar: View, Detail: View>: View {
         }
     }
 }
-
-#Preview("Mobile Regular Side by Side") {
-    @Previewable @State var sidebarWidth: CGFloat = 320
-    MobileRegularSideBySideLayout(
-        sidebarWidth: 320,
-        sidebarIsPresented: true,
-        preferredSidebarWidth: $sidebarWidth,
-        reduceMotion: false,
-        layoutDirection: .leftToRight,
-        showSidebar: {},
-        commitSidebarWidth: { _ in },
-        sidebar: Color.indigo.opacity(0.2),
-        detail: Color(uiColor: .systemBackground)
-    )
-}

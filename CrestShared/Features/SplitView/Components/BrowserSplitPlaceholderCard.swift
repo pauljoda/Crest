@@ -25,15 +25,3 @@ struct BrowserSplitPlaceholderCard: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Split Placeholder Card", traits: .fixedLayout(width: 320, height: 420)) {
-    BrowserRootContentSurface(
-        cornerRadius: BrowserChromeLayout.pageCornerRadius,
-        seamWidth: BrowserChromeLayout.pageBrandSeamWidth,
-        frameInsets: EdgeInsets(),
-        usesTransparentInnerSurface: false
-    ) {
-        BrowserSplitPlaceholderCard()
-    }
-    .padding(CrestSpacing.small)
-}

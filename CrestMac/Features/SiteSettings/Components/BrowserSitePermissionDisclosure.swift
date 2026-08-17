@@ -46,16 +46,3 @@ struct BrowserSitePermissionDisclosure: View {
         }
     }
 }
-
-#Preview("Site Permissions") {
-    @Previewable @State var isExpanded = true
-    let preview = BrowserSiteSettingsPreviewFixture.makePage()
-    BrowserSitePermissionDisclosure(
-        origin: BrowserSiteSettingsPreviewFixture.origin,
-        spaceID: BrowserSiteSettingsPreviewFixture.spaceID,
-        permissionCenter: preview.permissionCenter,
-        isExpanded: $isExpanded
-    )
-    .padding()
-    .frame(width: 300)
-}

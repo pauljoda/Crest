@@ -270,3 +270,8 @@ final class BrowserCredentialPageState<FillTarget> {
         pendingUsernameHint = nil
     }
 }
+
+enum BrowserCredentialFillError: Error, Equatable {
+    case staleOrMismatchedRequest
+    case formChanged
+}

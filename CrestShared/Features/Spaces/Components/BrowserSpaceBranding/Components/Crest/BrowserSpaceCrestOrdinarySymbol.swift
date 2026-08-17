@@ -15,15 +15,3 @@ struct BrowserSpaceCrestOrdinarySymbol: View {
         }
     }
 }
-
-#Preview("Crest Ordinary Symbol") {
-    BrowserSpaceCrestOrdinarySymbol(
-        ordinary: .chevron,
-        color: BrowserSpaceBrandColor.winterIce.color,
-        size: 112
-    )
-    .frame(width: 112, height: 112)
-    .background(BrowserSpaceBrandColor.winterSlate.color)
-    .clipShape(.rect(cornerRadius: CrestRadius.card))
-    .padding()
-}

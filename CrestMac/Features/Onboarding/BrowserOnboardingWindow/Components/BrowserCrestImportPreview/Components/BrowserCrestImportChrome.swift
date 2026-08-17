@@ -36,9 +36,3 @@ struct BrowserCrestImportChrome: View {
         }
     }
 }
-
-#Preview("Crest Import Chrome") {
-    BrowserCrestImportChrome(space: BrowserImportPreviewFixture.sourceSpace)
-        .frame(width: 340)
-        .padding()
-}

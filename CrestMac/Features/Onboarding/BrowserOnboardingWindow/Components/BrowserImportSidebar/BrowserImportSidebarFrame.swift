@@ -27,24 +27,3 @@ struct BrowserImportSidebarFrame<Content: View>: View {
             )
     }
 }
-
-#Preview("Import Sidebar Frame") {
-    BrowserImportSidebarFrame(
-        branding: BrowserImportPreviewFixture.sourceSpace.branding
-    ) {
-        VStack(spacing: 0) {
-            BrowserImportSidebarFolderRow(
-                folder: BrowserImportPreviewFixture.folder
-            )
-            BrowserImportSidebarResultTabRow(
-                tab: BrowserImportPreviewFixture.savedTab,
-                profileID: BrowserImportPreviewFixture.sourceSpace.profile.id,
-                isSelected: false,
-                isMatched: true
-            )
-            Spacer()
-        }
-    }
-    .frame(width: 340, height: 420)
-    .padding()
-}

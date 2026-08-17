@@ -18,10 +18,3 @@ struct BrowserExtensionInstallErrorContent: View {
         }
     }
 }
-
-#Preview("Extension Install — Error", traits: .sizeThatFitsLayout) {
-    BrowserExtensionInstallErrorContent(
-        error: "The package could not be verified."
-    )
-    .padding()
-}

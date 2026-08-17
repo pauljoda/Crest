@@ -29,17 +29,3 @@ struct MobilePasswordSettingsContent: View {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobilePasswordSettingsModel(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-    NavigationStack {
-        MobilePasswordSettingsContent(
-            model: model,
-            passkeyAccess: fixture.passkeyAccess
-        )
-    }
-}

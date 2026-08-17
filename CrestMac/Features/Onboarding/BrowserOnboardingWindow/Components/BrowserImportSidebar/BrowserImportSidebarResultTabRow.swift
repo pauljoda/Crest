@@ -46,14 +46,3 @@ struct BrowserImportSidebarResultTabRow: View {
         .accessibilityValue(isMatched ? "Matched in source browser" : "In Crest")
     }
 }
-
-#Preview("Import Sidebar Result Tab") {
-    BrowserImportSidebarResultTabRow(
-        tab: BrowserImportPreviewFixture.savedTab,
-        profileID: BrowserImportPreviewFixture.sourceSpace.profile.id,
-        isSelected: false,
-        isMatched: true
-    )
-    .frame(width: 340)
-    .padding()
-}

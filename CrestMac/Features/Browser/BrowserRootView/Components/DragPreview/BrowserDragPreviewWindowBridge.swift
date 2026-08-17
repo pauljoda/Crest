@@ -31,8 +31,3 @@ struct BrowserDragPreviewWindowBridge: NSViewRepresentable {
         nsView.teardown()
     }
 }
-
-#Preview("Drag Preview Window Bridge") {
-    BrowserDragPreviewWindowBridge(content: nil)
-        .frame(width: 1, height: 1)
-}

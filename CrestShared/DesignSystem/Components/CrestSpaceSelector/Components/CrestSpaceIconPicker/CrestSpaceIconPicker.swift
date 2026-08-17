@@ -103,21 +103,3 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
         }
     }
 }
-
-#Preview("Space Icon Picker", traits: .sizeThatFitsLayout) {
-    @Previewable @State var selection =
-        CrestSpaceSelectorPreviewFixture.selectedSpaceID(for: .icons)
-
-    CrestSpaceIconPicker(
-        spaces: CrestSpaceSelectorPreviewFixture.spaces,
-        selectedSpaceID: selection,
-        selectSpace: { selection = $0 },
-        accessibilityIdentifier: "preview-space-icons"
-    ) { space in
-        BrowserSpaceSymbolArtwork(space: space, size: 18, lockSize: 5)
-    }
-    .padding()
-    .frame(width: 240)
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.light)
-}

@@ -48,30 +48,3 @@ struct SavedFolderHeaderControl: View {
         }
     }
 }
-
-#Preview("Saved Folder Rename Control") {
-    @Previewable @State var isExpanded = true
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? =
-        BrowserFolderRuntimeAssignment(
-            folderID: SavedFolderGroupPreviewFixture.folderID,
-            spaceID: SavedFolderGroupPreviewFixture.spaceID,
-            profileID: SavedFolderGroupPreviewFixture.profileID
-        )
-    @Previewable @State var draftTitle = "Research"
-    @Previewable @State var visibility =
-        BrowserCollapsedFolderTabVisibilityState()
-    @Previewable @FocusState var isTitleFocused: Bool
-
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderHeaderControl(
-        configuration: configuration,
-        interaction: SavedFolderGroupPreviewFixture.interaction(
-            isExpanded: $isExpanded,
-            editingFolderRequest: $editingFolderRequest,
-            draftTitle: $draftTitle,
-            collapsedTabVisibility: $visibility,
-            isTitleFocused: $isTitleFocused
-        )
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

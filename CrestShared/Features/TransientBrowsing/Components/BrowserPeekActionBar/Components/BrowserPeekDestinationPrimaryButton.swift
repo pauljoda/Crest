@@ -30,12 +30,3 @@ struct BrowserPeekDestinationPrimaryButton: View {
         .help("Open in \(selectedSpace?.name ?? "Space") (⌘O)")
     }
 }
-
-#Preview {
-    BrowserPeekDestinationPrimaryButton(
-        selectedSpace: BrowserPeekActionBarPreviewFixture.selectedSpace,
-        openInSelectedSpace: {}
-    )
-    .frame(width: BrowserPeekChromePolicy.openControlWidth)
-    .padding()
-}

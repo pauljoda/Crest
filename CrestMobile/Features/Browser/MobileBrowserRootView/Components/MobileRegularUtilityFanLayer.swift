@@ -54,18 +54,3 @@ struct MobileRegularUtilityFanLayer: View {
         }
     }
 }
-
-#Preview("Mobile Regular Utility Fan Layer") {
-    MobileRegularUtilityFanLayer(
-        layout: .sideBySide(sidebarWidth: 320),
-        layoutDirection: .leftToRight,
-        triggerFrameInGlobal: nil,
-        sidebarIsPresented: true,
-        isExpanded: false,
-        selectedSurface: nil,
-        badgeColor: .indigo,
-        downloads: [],
-        newDownloadCount: 0,
-        select: { _ in }
-    )
-}

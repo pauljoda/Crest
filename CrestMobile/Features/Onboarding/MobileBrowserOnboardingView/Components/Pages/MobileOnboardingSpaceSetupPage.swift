@@ -65,23 +65,3 @@ struct MobileOnboardingSpaceSetupPage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Setup") {
-    @Previewable @State var plan = MobileOnboardingPreviewFixtures.manualPlan
-    @Previewable @State var selectedSpaceID =
-        MobileOnboardingPreviewFixtures.manualPlan.spaces.first?.id
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingSpaceSetupPage(
-        plan: $plan,
-        selectedSpaceID: $selectedSpaceID,
-        existingSession: fixture.browser.session,
-        horizontalSizeClass: .compact,
-        errorMessage: nil,
-        secondaryTitle: "Back",
-        secondaryAction: {},
-        finish: {},
-        addSpace: {},
-        customize: { _ in },
-        remove: { _ in }
-    )
-}

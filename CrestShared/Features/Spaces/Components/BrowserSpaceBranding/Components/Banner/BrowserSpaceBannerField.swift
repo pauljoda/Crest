@@ -54,17 +54,3 @@ struct BrowserSpaceBannerField: View {
         }
     }
 }
-
-#Preview("Banner Field — Diagonal") {
-    let branding = BrowserSpaceBrandingPreviewFixture.bannerBranding
-    let size = CGSize(width: 320, height: 180)
-
-    BrowserSpaceBannerField(
-        pattern: branding.bannerPattern,
-        colors: branding.colors.map(\.color),
-        size: size
-    )
-    .frame(width: size.width, height: size.height)
-    .clipShape(.rect(cornerRadius: CrestRadius.card))
-    .padding(CrestSpacing.large)
-}

@@ -50,23 +50,3 @@ struct SavedFolderTabRows: View {
         }
     }
 }
-
-#Preview("Saved Folder Tabs") {
-    @Previewable @State var isExpanded = true
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    @Previewable @State var visibility =
-        BrowserCollapsedFolderTabVisibilityState()
-    @Previewable @FocusState var isTitleFocused: Bool
-
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderTabRows(
-        configuration: configuration,
-        interaction: SavedFolderGroupPreviewFixture.interaction(
-            isExpanded: $isExpanded,
-            editingFolderRequest: $editingFolderRequest,
-            collapsedTabVisibility: $visibility,
-            isTitleFocused: $isTitleFocused
-        )
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

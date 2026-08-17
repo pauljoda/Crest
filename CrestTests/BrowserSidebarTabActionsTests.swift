@@ -99,7 +99,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
             browser: browser,
             pages: pages,
             spaceAccess: BrowserSpaceAccessController(
-                authenticator: BrowserSidebarPreviewAuthenticator()
+                authenticator: BrowserPreviewAuthenticator(result: true)
             )
         )
 

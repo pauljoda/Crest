@@ -39,14 +39,3 @@ struct BrowserRootShellControls: View {
         storedSidebarWidth = Double(committedWidth)
     }
 }
-
-#Preview("Browser Root Shell Controls") {
-    @Previewable @State var sidebarWidth = Double(
-        BrowserChromeLayout.sidebarIdealWidth
-    )
-    BrowserRootShellControls(
-        model: BrowserRootPreviewFixture.makeModel(),
-        storedSidebarWidth: $sidebarWidth
-    )
-    .frame(width: 600, height: 400)
-}

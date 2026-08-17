@@ -42,17 +42,3 @@ struct BrowserManualSetupContent: View {
         }
     }
 }
-
-#Preview("Manual Setup Content") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-    @Previewable @State var selectedSpaceID =
-        BrowserManualSetupPreviewFixture.selectedSpaceID
-
-    BrowserManualSetupContent(
-        plan: $plan,
-        selectedSpaceID: $selectedSpaceID,
-        existingSession: BrowserManualSetupPreviewFixture.existingSession,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 1_080, height: 720)
-}

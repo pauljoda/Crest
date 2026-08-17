@@ -5,10 +5,3 @@ struct BrowserPlatformAddressInputModifier: ViewModifier {
         content
     }
 }
-
-#Preview("Address input") {
-    TextField("Search or enter address", text: .constant("crestbrowser.com"))
-        .modifier(BrowserPlatformAddressInputModifier())
-        .frame(width: 360)
-        .padding()
-}

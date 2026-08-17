@@ -50,20 +50,3 @@ struct MobileBrowserStartPageStack: View {
         )
     }
 }
-
-#Preview("Mobile Browser Start Page Stack") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserStartPageStack(
-        space: fixture.space,
-        isPrivateBrowsing: true,
-        focusRequest: 0,
-        isSourceAvailable: { _ in true },
-        selectTab: { _, _ in true },
-        openURL: { _, _ in true },
-        isCommandPaletteObscured: false,
-        spacing: MobileBrowserChromeLayout.compactStartPageSpacing,
-        padding: MobileBrowserChromeLayout.compactStartPagePadding,
-        maximumWidth: MobileBrowserChromeLayout.compactStartPageMaximumWidth,
-        headerColorScheme: .dark
-    )
-}

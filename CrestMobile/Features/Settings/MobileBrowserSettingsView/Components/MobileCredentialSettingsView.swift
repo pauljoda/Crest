@@ -23,11 +23,3 @@ struct MobileCredentialSettingsView: View {
         }
     }
 }
-
-#Preview("Mobile Credential Settings") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileCredentialSettingsView(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-}

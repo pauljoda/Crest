@@ -31,29 +31,3 @@ struct BrowserSpaceMarkStep: View {
         }
     }
 }
-
-#Preview("Mark Step — Layered Crest") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-    @Previewable @State var symbol = BrowserSpaceSimpleSymbol.work.rawValue
-
-    BrowserSpaceMarkStep(
-        branding: $branding,
-        symbol: $symbol,
-        compact: false
-    )
-    .frame(width: BrowserSpaceForgeMetrics.previewMaximumWidth)
-    .padding(CrestSpacing.large)
-}
-
-#Preview("Mark Step — Simple Symbol") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.bannerBranding
-    @Previewable @State var symbol = BrowserSpaceSimpleSymbol.creative.rawValue
-
-    BrowserSpaceMarkStep(
-        branding: $branding,
-        symbol: $symbol,
-        compact: true
-    )
-    .frame(width: BrowserSpaceForgeMetrics.previewMaximumWidth)
-    .padding(CrestSpacing.large)
-}

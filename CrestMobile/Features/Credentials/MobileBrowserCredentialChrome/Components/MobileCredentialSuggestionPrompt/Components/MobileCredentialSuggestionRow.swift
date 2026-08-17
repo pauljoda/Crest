@@ -25,14 +25,3 @@ struct MobileCredentialSuggestionRow: View {
         .buttonStyle(.plain)
     }
 }
-
-#Preview("Credential Suggestion Row") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileCredentialSuggestionRow(
-        suggestion: fixture.suggestion,
-        fill: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

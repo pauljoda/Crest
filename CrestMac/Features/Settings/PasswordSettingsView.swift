@@ -20,12 +20,3 @@ struct PasswordSettingsView: View {
         )
     }
 }
-
-#Preview("Password Settings") {
-    @Previewable @State var searchText = ""
-    PasswordSettingsView(
-        browser: BrowserStore.preview(),
-        spaceAccess: BrowserSpaceAccessController(),
-        searchText: $searchText
-    )
-}

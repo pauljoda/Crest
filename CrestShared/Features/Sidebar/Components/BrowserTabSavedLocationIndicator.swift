@@ -19,8 +19,3 @@ struct BrowserTabSavedLocationIndicator: View {
     }
 
 }
-
-#Preview("Saved Location Indicator", traits: .sizeThatFitsLayout) {
-    BrowserTabSavedLocationIndicator(restore: {})
-        .padding()
-}

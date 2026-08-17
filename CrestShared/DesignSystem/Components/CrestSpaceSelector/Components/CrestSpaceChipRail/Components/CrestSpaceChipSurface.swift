@@ -66,24 +66,3 @@ struct CrestSpaceChipSurface<LabelContent: View>: View {
         return CrestBrandTheme.canvas
     }
 }
-
-#Preview("Space Chip Surface", traits: .sizeThatFitsLayout) {
-    HStack {
-        CrestSpaceChipSurface(
-            tint: CrestSpaceSelectorPreviewFixture.workSpace.accent.color,
-            isSelected: true,
-            isPressed: false,
-            label: Label("Work", systemImage: "briefcase.fill")
-        )
-
-        CrestSpaceChipSurface(
-            tint: CrestSpaceSelectorPreviewFixture.privateSpace.accent.color,
-            isSelected: false,
-            isPressed: true,
-            label: Label("Private", systemImage: "lock.fill")
-        )
-    }
-    .padding()
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.light)
-}

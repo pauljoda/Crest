@@ -121,10 +121,3 @@ struct BrowserSpaceSidebarPreview: View {
         return "\(mode), \(colors), \(space.branding.iconStyle.title)"
     }
 }
-
-#Preview("Space Sidebar Preview") {
-    BrowserSpaceSidebarPreview(
-        space: BrowserManualSetupPreviewFixture.space
-    )
-    .frame(width: 330, height: 500)
-}

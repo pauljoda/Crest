@@ -41,16 +41,3 @@ struct MobileOnboardingSpaceCard: View {
         .accessibilityElement(children: .contain)
     }
 }
-
-#Preview("Onboarding Space Card", traits: .fixedLayout(width: 340, height: 500)) {
-    @Previewable @State var name = "Work"
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingSpaceCard(
-        previewSpace: fixture.space,
-        name: $name,
-        canRemove: true,
-        customize: {},
-        remove: {}
-    )
-    .padding()
-}

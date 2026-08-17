@@ -119,19 +119,3 @@ struct BrowserSplitCardLiftFloatingPreview: View {
         )
     }
 }
-
-#Preview("Split Card Lift Floating Preview", traits: .fixedLayout(width: 620, height: 460)) {
-    BrowserSplitCardLiftFloatingPreview(
-        content: BrowserSplitCardLiftPreviewContent(
-            tab: BrowserSplitViewPreviewFixture.members[1],
-            profileID: BrowserSplitViewPreviewFixture.profileID,
-            snapshot: nil,
-            origin: CGPoint(x: 60, y: 40),
-            size: CGSize(width: 420, height: 340),
-            grabFraction: CGPoint(x: 0.3, y: 0.2),
-            isSettling: false,
-            reduceMotion: false
-        )
-    )
-    .background(CrestBrandTheme.canvas)
-}

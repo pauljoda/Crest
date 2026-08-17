@@ -32,12 +32,3 @@ struct BrowserDataPortabilityExternalImportControls: View {
         .accessibilityIdentifier("import-open-tabs")
     }
 }
-
-#Preview("External Import Controls") {
-    Form {
-        BrowserDataPortabilityExternalImportControls(
-            model: BrowserDataPortabilityPreviewFixture.makeModel()
-        )
-    }
-    .frame(width: 620)
-}

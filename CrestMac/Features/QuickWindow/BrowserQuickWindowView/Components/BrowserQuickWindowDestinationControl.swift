@@ -54,11 +54,3 @@ struct BrowserQuickWindowDestinationControl: View {
         promote(space)
     }
 }
-
-#Preview("Quick Window Destination") {
-    BrowserQuickWindowDestinationControl(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        promote: { _ in }
-    )
-    .padding()
-}

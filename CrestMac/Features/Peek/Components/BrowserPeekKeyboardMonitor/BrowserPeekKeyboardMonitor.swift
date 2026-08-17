@@ -49,12 +49,3 @@ struct BrowserPeekKeyboardMonitor: NSViewRepresentable {
         coordinator.stop()
     }
 }
-
-#Preview {
-    BrowserPeekKeyboardMonitor(
-        dismiss: {},
-        promote: {},
-        installsMonitor: false
-    )
-    .frame(width: 1, height: 1)
-}

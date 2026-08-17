@@ -4,6 +4,53 @@ const sidebars = {
     'index',
     {
       type: 'category',
+      label: 'Get started',
+      collapsed: false,
+      items: [
+        'getting-started/install-and-update-mac',
+        'getting-started/move-to-crest',
+        'getting-started/settings-reference',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Spaces & organization',
+      collapsed: false,
+      items: [
+        'spaces/spaces-and-isolation',
+        'spaces/customize-spaces',
+        'tabs/organize-tabs-and-folders',
+        'tabs/split-view',
+        'spaces/private-spaces',
+        'spaces/sync-across-devices',
+        'spaces/crest-passwords',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Browse faster',
+      collapsed: false,
+      items: [
+        'browsing/command-palette',
+        'browsing/keyboard-shortcuts',
+        'browsing/gestures-and-pointer',
+        'browsing/peek-and-quick-window',
+        'browsing/link-routing',
+        'browsing/page-tools',
+        'browsing/localhost-developer-tools',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Privacy, data & recovery',
+      collapsed: false,
+      items: [
+        'privacy/content-blocking-and-site-permissions',
+        'privacy/history-archive-and-downloads',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Install extensions',
       collapsed: false,
       items: [
@@ -14,13 +61,12 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Manage a Space',
+      label: 'Use extensions',
       collapsed: false,
       items: [
         'extensions/manage-permissions-site-access',
         'extensions/pin-and-use-popups',
         'extensions/keyboard-shortcuts',
-        'spaces/crest-passwords',
       ],
     },
     {

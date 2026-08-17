@@ -62,11 +62,3 @@ struct BrowserSettingsPage<Content: View>: View {
         .controlSize(.regular)
     }
 }
-
-#Preview("Settings Page") {
-    BrowserSettingsPage(destination: .general) {
-        Text("Settings content")
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .frame(width: 720, height: 520)
-}

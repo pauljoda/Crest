@@ -98,22 +98,3 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
         #endif
     }
 }
-
-#Preview("Mobile Folder Drag Source", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let dragState = fixture.makeFolderDragState()
-
-    Label(fixture.folder.title, systemImage: fixture.folder.symbol)
-        .frame(width: 220, alignment: .leading)
-        .padding(CrestSpacing.medium)
-        .background(CrestColor.selectedSurface, in: .rect(cornerRadius: 10))
-        .modifier(
-            BrowserPlatformFolderDragSourceModifier(
-                folder: fixture.folder,
-                profileID: fixture.space.profile.id,
-                spaceID: fixture.space.id,
-                dragState: dragState
-            )
-        )
-        .padding()
-}

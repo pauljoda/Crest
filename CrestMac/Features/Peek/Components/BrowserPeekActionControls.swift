@@ -17,12 +17,3 @@ struct BrowserPeekActionControls: View {
         .frame(width: BrowserPeekChromePolicy.controlBarWidth)
     }
 }
-
-#Preview {
-    BrowserPeekActionControls(
-        model: BrowserPeekPreviewFixture.makeModel(),
-        dismiss: {},
-        promote: { _ in }
-    )
-    .padding()
-}

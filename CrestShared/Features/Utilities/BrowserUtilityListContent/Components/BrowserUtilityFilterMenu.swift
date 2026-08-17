@@ -36,13 +36,3 @@ struct BrowserUtilityFilterMenu: View {
         .accessibilityIdentifier("utility-filter-button")
     }
 }
-
-#Preview("Download Filter Menu", traits: .fixedLayout(width: 80, height: 64)) {
-    @Previewable @State var filter = BrowserUtilityListFilter.downloadsInProgress
-
-    BrowserUtilityFilterMenu(
-        surface: .downloads,
-        filter: $filter
-    )
-    .padding()
-}

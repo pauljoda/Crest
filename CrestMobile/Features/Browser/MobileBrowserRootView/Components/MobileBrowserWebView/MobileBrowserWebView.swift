@@ -57,7 +57,3 @@ struct MobileBrowserWebView: UIViewRepresentable {
         host.detach(stopsLoading: false)
     }
 }
-
-#Preview("Mobile Browser Web View") {
-    MobileBrowserWebView(page: MobileBrowserPagePreviewFixture.makePage())
-}

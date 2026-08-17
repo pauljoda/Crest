@@ -20,9 +20,3 @@ struct NewTabRow: View {
         .help("New Tab (⌘T)")
     }
 }
-
-#Preview("New Tab hover row") {
-    NewTabRow(action: {})
-        .frame(width: 280)
-        .padding(.vertical, CrestSpacing.small)
-}

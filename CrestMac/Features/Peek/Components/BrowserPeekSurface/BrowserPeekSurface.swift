@@ -38,22 +38,3 @@ struct BrowserPeekSurface: View {
         )
     }
 }
-
-#Preview {
-    BrowserPeekSurface(
-        model: BrowserPeekPreviewFixture.makeModel(),
-        state: BrowserPeekSurfaceState(
-            reservedLeadingWidth: 0,
-            layoutDirection: .leftToRight,
-            isCardVisible: true,
-            isCardExpanded: true,
-            isInitialWebContentRevealed: false,
-            reduceMotion: false,
-            reduceTransparency: false,
-            sourcePresentation: .resolved(nil)
-        ),
-        dismiss: {},
-        promote: { _ in }
-    )
-    .frame(width: 900, height: 620)
-}

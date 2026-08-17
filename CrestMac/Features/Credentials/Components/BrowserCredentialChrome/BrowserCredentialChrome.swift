@@ -33,17 +33,3 @@ struct BrowserCredentialChrome: View {
         }
     }
 }
-
-#Preview("Credential Chrome — Strong Password") {
-    let preview = BrowserCredentialChromePreviewFixture.makeWebContent()
-
-    BrowserCredentialChrome(
-        presentation: .strongPassword(
-            BrowserCredentialChromePreviewFixture.newCredentialRequest
-        ),
-        page: preview.page,
-        browser: preview.browser
-    )
-    .padding()
-    .frame(width: 460, height: 360, alignment: .top)
-}

@@ -40,17 +40,3 @@ struct MobileBrowserSettingsContent: View {
         .presentationSizing(.fitted)
     }
 }
-
-#Preview("Mobile Settings Content") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserSettingsContent(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        dataDeleter: fixture.pages,
-        selection: .constant(.general),
-        searchText: .constant("")
-    )
-    .environment(fixture.cloudSync)
-    .environment(fixture.onboardingCoordinator)
-}

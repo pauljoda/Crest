@@ -131,27 +131,3 @@ struct BrowserSettingsDestinationView: View {
         BrowserOnboardingWindowActivation.bringForward()
     }
 }
-
-#Preview("General Settings Destination") {
-    @Previewable @State var searchText = ""
-    let browser = BrowserStore.preview()
-    let pages = BrowserPagePool()
-
-    BrowserSettingsDestinationView(
-        destination: .general,
-        browser: browser,
-        pages: pages,
-        cloudSync: BrowserCloudSyncController.isolated(browser: browser),
-        spaceAccess: BrowserSpaceAccessController(),
-        dataDeleter: BrowserSettingsPreviewDataDeleter(),
-        shortcuts: .inMemory(),
-        onboardingCoordinator: BrowserOnboardingCoordinator(),
-        spaceSettingsPresentation: BrowserSpaceSettingsPresentationState(),
-        searchText: $searchText
-    )
-    // The General pane carries the macOS-only window and Split View sections,
-    // which read their stores from the environment.
-    .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-    .environment(BrowserSplitFocusPreviewFixture.makeStore())
-    .frame(width: 720, height: 520)
-}

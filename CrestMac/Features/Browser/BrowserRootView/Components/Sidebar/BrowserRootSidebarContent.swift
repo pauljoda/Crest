@@ -30,15 +30,3 @@ struct BrowserRootSidebarContent: View {
         )
     }
 }
-
-#Preview("Browser Root Sidebar Content") {
-    @Previewable @Namespace var commandSurfaceNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    BrowserRootSidebarContent(
-        model: BrowserRootPreviewFixture.makeModel(),
-        spaceSettingsPresentation: BrowserSpaceSettingsPresentationState(),
-        commandSurfaceNamespace: commandSurfaceNamespace,
-        tabPromotionNamespace: tabPromotionNamespace
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 620)
-}

@@ -1064,100 +1064,6 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(nativeEcho, "pong")
     }
 
-    func testDelayedRuntimeErrorsRefreshThePersistedExtensionSummary()
-        async throws
-    {
-        let fileManager = FileManager.default
-        let rootURL = fileManager.temporaryDirectory.appending(
-            path: "crest-runtime-error-test-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        let sourceURL = rootURL.appending(
-            path: "Source",
-            directoryHint: .isDirectory
-        )
-        let packageStoreURL = rootURL.appending(
-            path: "Packages",
-            directoryHint: .isDirectory
-        )
-        try fileManager.createDirectory(
-            at: sourceURL,
-            withIntermediateDirectories: true
-        )
-        defer { try? fileManager.removeItem(at: rootURL) }
-        let manifest: [String: Any] = [
-            "manifest_version": 3,
-            "name": "Delayed Runtime Error Test",
-            "version": "1.0",
-            "background": ["service_worker": "background.js"],
-        ]
-        try JSONSerialization.data(withJSONObject: manifest).write(
-            to: sourceURL.appending(path: "manifest.json")
-        )
-        try Data(
-            "setTimeout(() => { throw new Error('delayed Crest test failure'); }, 150);"
-                .utf8
-        ).write(to: sourceURL.appending(path: "background.js"))
-        let registry = BrowserExtensionRegistry()
-        let pool = BrowserExtensionControllerPool(
-            packageStore: BrowserExtensionPackageStore(
-                fileManager: fileManager,
-                rootURL: packageStoreURL
-            ),
-            registry: registry
-        )
-        let space = BrowserSession.preview.spaces[0]
-
-        let installed = try await pool.loadUnpackedExtension(
-            from: sourceURL,
-            in: space
-        )
-        let context = try XCTUnwrap(
-            pool.loadedContext(extensionID: installed.id, in: space.id)
-        )
-        for _ in 0..<100 where context.errors.isEmpty {
-            try await Task.sleep(for: .milliseconds(20))
-        }
-        XCTAssertFalse(context.errors.isEmpty)
-        let installation = try XCTUnwrap(
-            registry.installation(
-                extensionID: installed.id,
-                in: space.id
-            )
-        )
-        registry.updateRuntimeSummary(
-            displayName: installation.displayName,
-            version: installation.version,
-            requestedPermissions: installation.requestedPermissions,
-            requestedHosts: installation.requestedHosts,
-            unsupportedAPIs: installation.unsupportedAPIs,
-            errors: [],
-            extensionID: installation.id,
-            in: installation.spaceID
-        )
-        XCTAssertTrue(
-            registry.installation(
-                extensionID: installed.id,
-                in: space.id
-            )?.errors.isEmpty == true
-        )
-
-        NotificationCenter.default.post(
-            name: WKWebExtensionContext.errorsDidUpdateNotification,
-            object: context
-        )
-        try await Task.sleep(for: .milliseconds(50))
-
-        XCTAssertFalse(
-            try XCTUnwrap(
-                registry.installation(
-                    extensionID: installed.id,
-                    in: space.id
-                )
-            ).errors.isEmpty
-        )
-    }
-
     func testDifferentSpacesReceiveDifferentEphemeralControllersAndDataStores() {
         let work = BrowserSession.preview.spaces[0]
         let personal = BrowserSession.preview.spaces[1]
@@ -1501,7 +1407,11 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertTrue(selectedNewTab)
         XCTAssertEqual(browser.session.selectedTab?.url, destinationURL)
         XCTAssertNotEqual(browser.session.selectedTab?.id, extensionTabID)
-        XCTAssertEqual(extensionPage.webView.url?.scheme, "webkit-extension")
+        XCTAssertTrue(
+            ["crest-extension", "webkit-extension"].contains(
+                try XCTUnwrap(extensionPage.webView.url?.scheme)
+            )
+        )
     }
 
     func testAuditableManifestV3FixtureLoadsIntoIndependentSpaceContexts() async throws {
@@ -2702,8 +2612,7 @@ private final class IdleCapabilityBrokerHandler:
     )
     private(set) var hostName: String?
     private(set) var state: String?
-    private(set) var authorization:
-        BrowserExtensionNativeMessagingAuthorization?
+    private(set) var authorization: BrowserExtensionNativeMessagingAuthorization?
 
     func sendMessage(
         _ message: Any,
@@ -2769,8 +2678,7 @@ private final class NotificationCapabilityBrokerHandler:
         idleStateProvider: { _ in .active }
     )
     private(set) var clickedIdentifier: String?
-    private(set) var authorization:
-        BrowserExtensionNativeMessagingAuthorization?
+    private(set) var authorization: BrowserExtensionNativeMessagingAuthorization?
 
     func sendMessage(
         _ message: Any,

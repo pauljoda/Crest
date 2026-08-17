@@ -14,13 +14,3 @@ struct BrowserPlatformExtensionAddSection: View {
         EmptyView()
     }
 }
-
-/// Renders nothing by design. The preview exists to show that the mobile shell
-/// contributes no install control, not to demonstrate one.
-#Preview("Mobile Extension Add Section (Intentionally Empty)") {
-    Form {
-        BrowserPlatformExtensionAddSection(
-            model: BrowserExtensionsPreviewFixture.model
-        )
-    }
-}

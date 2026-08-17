@@ -36,13 +36,3 @@ struct BrowserExtensionAccessSection: View {
         }
     }
 }
-
-#Preview("Extension Access", traits: .sizeThatFitsLayout) {
-    BrowserExtensionAccessSection(
-        title: "Website Access",
-        values: ["https://developer.apple.com/*", "https://swift.org/*"],
-        decision: { _ in .ask },
-        setDecision: { _, _ in }
-    )
-    .padding()
-}

@@ -13,8 +13,3 @@ struct BrowserUtilityListBlankState: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Utility List Blank State", traits: .fixedLayout(width: 360, height: 420)) {
-    BrowserUtilityListBlankState(dismiss: {})
-        .background(CrestColor.chromeSurface)
-}

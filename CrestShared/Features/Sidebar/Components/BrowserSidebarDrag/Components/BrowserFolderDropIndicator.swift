@@ -16,17 +16,3 @@ struct BrowserFolderDropIndicator: View {
         }
     }
 }
-
-#Preview("Folder Drop Indicator", traits: .fixedLayout(width: 300, height: 60)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let dragState = fixture.makeFolderDragState(
-        dropLocation: fixture.folderDropLocation
-    )
-
-    BrowserFolderDropIndicator(
-        location: fixture.folderDropLocation,
-        dragState: dragState,
-        isTargeted: true
-    )
-    .padding()
-}

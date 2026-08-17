@@ -26,19 +26,3 @@ struct BrowserSpaceForgeFoundationSteps: View {
         }
     }
 }
-
-#Preview("Branding Editor — Foundation Steps") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.gradientBranding
-    @Previewable @State var symbol = BrowserSpaceSimpleSymbol.creative.rawValue
-
-    ScrollView {
-        BrowserSpaceForgeFoundationSteps(
-            branding: $branding,
-            symbol: $symbol,
-            compact: true,
-            showsPreview: true
-        )
-        .padding(CrestSpacing.medium)
-    }
-    .frame(width: 390, height: 760)
-}

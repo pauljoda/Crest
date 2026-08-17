@@ -45,14 +45,3 @@ struct MobileOnboardingSpaceCardActions: View {
         }
     }
 }
-
-#Preview("Onboarding Space Card Actions") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingSpaceCardActions(
-        spaceID: fixture.space.id,
-        canRemove: true,
-        customize: {},
-        remove: {}
-    )
-    .padding()
-}

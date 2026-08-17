@@ -20,11 +20,3 @@ struct BrowserQuickWindowReleasedPageView: View {
         }
     }
 }
-
-#Preview("Released Quick Window Page") {
-    BrowserQuickWindowReleasedPageView(
-        reduceTransparency: false,
-        restore: {}
-    )
-    .frame(width: 480, height: 320)
-}

@@ -24,18 +24,3 @@ struct BrowserSpacePresetCard: View {
         )
     }
 }
-
-#Preview("Branding Editor — Preset Card") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.bannerBranding
-    let preset = BrowserSpaceBrandingPreset(
-        title: "Winter",
-        colors: BrowserSpaceBrandingPreviewFixture.bannerBranding.colors
-    )
-
-    BrowserSpacePresetCard(
-        preset: preset,
-        branding: $branding
-    )
-    .frame(width: 180)
-    .padding(CrestSpacing.large)
-}

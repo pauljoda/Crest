@@ -36,7 +36,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/apple-touch-icon.png">
   <link rel="mask-icon" href="../assets/crest-logo.svg" color="#101827">
   <link rel="manifest" href="../site.webmanifest">
-  <link rel="stylesheet" href="../styles.css?v=20260810-extension-gates">
+  <link rel="stylesheet" href="../styles.css?v=20260816-direct-split-parity">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -72,7 +72,7 @@
   <a class="skip-link" href="#docs-content">Skip to documentation</a>
   <header class="site-header scrolled">
     <a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a>
-    <nav aria-label="Primary navigation"><a href="../guides/">Help &amp; guides</a><a href="../#spaces">Spaces</a><a href="../#features">Features</a><a class="nav-cta" href="../">Product site</a></nav>
+    <nav aria-label="Primary navigation"><a href="../guides/">Help &amp; guides</a><a href="../#split-view">Split View</a><a href="../#features">Features</a><a class="nav-cta" href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Download for Mac</a></nav>
   </header>
   <main class="docs-shell">
     <aside class="docs-nav" aria-label="Field guide sections">
@@ -80,12 +80,15 @@
       <a href="#overview">Overview</a>
       <a href="#spaces">Spaces</a>
       <a href="#tabs">Tabs &amp; archive</a>
+      <a href="#split-view">Split View</a>
       <a href="#quick-and-peek">Quick Window &amp; Peek</a>
+      <a href="#routing">Link Routing</a>
       <a href="#migration">Moving to Crest</a>
       <a href="#extensions">Extensions</a>
       <a href="#passwords">Passwords &amp; privacy</a>
       <a href="#data">Data &amp; sync</a>
       <a href="#tools">Tools &amp; settings</a>
+      <a href="#shortcuts">Shortcuts &amp; gestures</a>
       <a href="#platforms">Mac, iPad &amp; iPhone</a>
     </aside>
     <article class="docs-content" id="docs-content">
@@ -124,11 +127,20 @@
       <h3>Tab identity</h3>
       <p>Tab icons normally follow the current website. You can pull and keep an icon, choose an emoji, or use <strong>Clear Icon</strong> to return the tab to automatic website icons.</p>
 
+      <h2 id="split-view">Split View</h2>
+      <p>Combine two to four live tabs into one durable sidebar group. Drag a sidebar tab onto the page, use a tab or link context menu, or run <strong>Split With Next Tab</strong>. The focused card owns the address and page controls while the other pages stay live.</p>
+      <p>Mac and iPad show resizable columns. Move focus with <strong>Control-Command-Left/Right</strong>, reorder cards with <strong>Shift-Command-Left/Right</strong>, or use <strong>Option-Command-U</strong> to separate the group. iPhone retains the same group as a focused pager; swipe horizontally on the compact toolbar to move between its cards.</p>
+      <p><a href="../guides/split-view/">Read the complete Split View guide.</a></p>
+
       <h2 id="quick-and-peek">Quick Window and Peek</h2>
       <h3>Quick Window</h3>
       <p>Quick Window carries forward the idea behind Arc's Tiny Arc. On Mac, links opened from other apps can arrive in a lightweight browser instead of immediately joining your durable tabs. Choose the right Space and it uses that Space's signed-in session and Crest Passwords; close it when you are done, or keep it by opening it as a full tab.</p>
       <h3>Peek</h3>
       <p>Peek opens a link above the page you are reading. Close it to return immediately, or open it in the current or another Space when it earns a permanent place.</p>
+
+      <h2 id="routing">Link Routing</h2>
+      <p>Crest carries Arc&rsquo;s Air Traffic Control idea forward as Link Routing. Add exact or contains rules in <strong>Settings → Quick Window and Peek</strong>, choose a destination Space, and order narrow rules before broad ones. Matching external links route before Crest applies the normal Quick Window, Most Recent Space, or Chosen Space default.</p>
+      <p><a href="../guides/link-routing/">Build and test a Link Routing rule.</a></p>
 
       <h2 id="migration">Moving to Crest</h2>
       <p>On Mac, Crest can discover Arc, Zen, Chrome, Safari, and Firefox and turn their browsing data into a visual import review. Choose one or more sources, then work through every Space or profile before anything is committed.</p>
@@ -165,7 +177,7 @@
       <div class="docs-callout"><strong>Verified native companions:</strong> Crest for Mac implements Chrome native messaging only for verified Chrome Web Store installations whose exact <code>allowed_origins</code> identity matches a registered host. Firefox Add-ons, unpacked extensions, and Safari-app native handlers are not eligible.</div>
       <h3>Direct 1Password for Safari result</h3>
       <p>Crest can load the UI and ordinary WebExtension resources from 1Password for Safari 8.12.29.1, but its background call to <code>browser.runtime.sendNativeMessage</code> for <code>request-os-version</code> is rejected by WebKit. That Safari route is not functional in Crest; signing in, unlocking, and filling cannot be promised through it.</p>
-      <div class="docs-callout"><strong>1Password measured path:</strong> 1Password 8.12.30.21 completed setup, sign-in navigation, persistent native messaging, <code>1Password-BrowserSupport</code> launch, and the additional-browser authorization UI. Its helper then rejected the Apple Development build as <code>BrowserSignatureInvalid</code>. The next gate is Developer ID signing and notarization; unlock and autofill are not yet certified.</div>
+      <div class="docs-callout"><strong>1Password measured path:</strong> 1Password 8.12.30.21 completed setup, sign-in navigation, persistent native messaging, <code>1Password-BrowserSupport</code> launch, and the additional-browser authorization UI. Its helper rejected the measured Apple Development build as <code>BrowserSignatureInvalid</code>. The official Developer ID release must now be validated end to end; unlock and autofill are not yet certified.</div>
       <div class="docs-callout"><strong>iCloud Passwords measured path:</strong> exact-package WebKit shims let version 3.3.0 reach clean worker startup, but Apple&rsquo;s protected password helper will not pair without the managed <code>com.apple.developer.web-browser.public-key-credential</code> capability. The request is submitted. Direct distribution alone does not bypass the Apple gate, and pairing and autofill remain unavailable.</div>
       <div class="docs-callout"><strong>Direct Mac distribution:</strong> official arm64 builds are published through GitHub Releases after Developer ID signing, notarization, Gatekeeper validation, and Sparkle appcast signing.</div>
       <p>Safari content blockers and legacy Safari App Extensions are not WebExtensions and are not supported. wBlock&rsquo;s toolbar/userscript component is a Safari Web Extension, but its primary blocking engine depends on five Safari-only content-blocker extensions; installing the component cannot reproduce full wBlock behavior.</p>
@@ -192,18 +204,23 @@
       <h3>Permissions and site controls</h3>
       <p>Site permissions can be reviewed or cleared from Settings. Reader mode, content blocking, downloads, and page tools stay attached to the Space where you use them.</p>
 
+      <h2 id="shortcuts">Shortcuts and gestures</h2>
+      <p>Press <strong>Command-L</strong> for the command palette, <strong>Control-Tab</strong> for the most recent tab, <strong>Option-Command-Left/Right</strong> for Spaces, and <strong>Command-1…9</strong> or <strong>Control-1…9</strong> for numbered tabs and Spaces. The full Mac command map is searchable and rebindable in <strong>Settings → Shortcuts</strong>.</p>
+      <p>On iPhone, swipe vertically on the address capsule between page and tab viewer, swipe from the leading edge for the sidebar, and swipe horizontally on the compact toolbar to page a Split View. On Mac, right-click for contextual actions and middle-click a current tab to close it or a saved item to unload it.</p>
+      <p>See the complete <a href="../guides/keyboard-shortcuts/">keyboard shortcut reference</a> and <a href="../guides/gestures-and-pointer/">gesture and pointer guide</a>.</p>
+
       <h2 id="platforms">Mac, iPad, and iPhone</h2>
       <p>The same Spaces and browsing model carry across all three platforms, while the controls adapt to the screen around them.</p>
       <table class="docs-table">
         <thead><tr><th>Platform</th><th>How Crest fits</th></tr></thead>
         <tbody>
-          <tr><td>Mac</td><td>A spacious sidebar, keyboard-first commands, Quick Window, Peek, and multi-window browsing.</td></tr>
-          <tr><td>iPad</td><td>The full Space structure in an adaptive layout with touch navigation and Peek.</td></tr>
-          <tr><td>iPhone</td><td>The web page stays primary while the full sidebar opens as a dedicated view and slips away after you choose a tab.</td></tr>
+          <tr><td>Mac</td><td>A spacious sidebar, two-to-four-card Split View, keyboard-first commands, direct releases, Quick Window, Peek, extensions, and multi-window browsing.</td></tr>
+          <tr><td>iPad</td><td>The full Space structure, resizable Split View columns, touch navigation, hardware-keyboard commands, and Peek.</td></tr>
+          <tr><td>iPhone</td><td>The web page stays primary while the full sidebar becomes a dedicated view and Split View becomes a focused card pager.</td></tr>
         </tbody>
       </table>
     </article>
   </main>
-  <footer><a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a><p>A native browser for Mac, iPad, and iPhone.</p><div><a href="../#spaces">Spaces</a><a href="../#features">Features</a><a href="../support/">Support</a><a href="../privacy/">Privacy</a><a href="../">Product site</a></div></footer>
+  <footer><a class="wordmark" href="../"><img class="brand-mark" src="../assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a><p>A native browser for Mac, iPad, and iPhone.</p><div><a href="../#spaces">Spaces</a><a href="../#split-view">Split View</a><a href="../#features">Features</a><a href="../guides/">Help</a><a href="../support/">Support</a><a href="../privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Download for Mac</a><a href="../">Product site</a></div></footer>
 </body>
 </html>

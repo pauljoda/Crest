@@ -29,17 +29,3 @@ struct BrowserRootSelectionObserver: ViewModifier {
         )
     }
 }
-
-#Preview("Browser Root Selection Observer") {
-    Text("Browser")
-        .modifier(
-            BrowserRootSelectionObserver(
-                selectedTabID: BrowserRootPreviewFixture.startTabID,
-                selectedSpaceID: BrowserRootPreviewFixture.spaceID,
-                selectedSpaceIsLocked: false,
-                tabSelectionChanged: {},
-                spaceSelectionChanged: {},
-                lockChanged: {}
-            )
-        )
-}

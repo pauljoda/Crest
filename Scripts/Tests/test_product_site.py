@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import pathlib
 import re
@@ -217,22 +216,11 @@ class ProductSiteTests(unittest.TestCase):
         self.assertNotIn("tell me", self.homepage)
         self.assertIn("real separation between contexts", self.homepage)
         self.assertIn("Mac, iPad, and iPhone", self.homepage)
-        self.assertIn(
-            'class="hero-testflight-button" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer"',
-            self.homepage,
-        )
-        self.assertIn('<link rel="stylesheet" href="styles.css?v=20260812-homepage-responsive">', self.homepage)
+        self.assertIn("https://github.com/pauljoda/Crest/releases", self.homepage)
+        self.assertIn("Download the latest release", self.homepage)
+        self.assertIn("https://testflight.apple.com/join/vV1CM49Q", self.homepage)
         self.assertIn('src="assets/testflight-icon.webp" alt="" width="32" height="32"', self.homepage)
-        self.assertIn("Join the beta", self.homepage)
-        self.assertIn(".hero .hero-copy.reveal", self.styles)
-        self.assertNotIn("See what carries forward", self.homepage)
-        self.assertEqual(
-            hashlib.sha256((WEBSITE_ROOT / "assets/testflight-icon.webp").read_bytes()).hexdigest(),
-            "5d12bafc9a9e2166a1adf4ca60daa6d5ad083fe5c937bba87c13329f47b9403d",
-        )
         self.assertNotIn("banner-glyph", self.homepage + self.styles)
-        self.assertNotIn("Made for Apple silicon", self.homepage)
-        self.assertNotIn("Built for Apple.", self.homepage)
 
         work_crest = (WEBSITE_ROOT / "assets/space-crest-work.svg").read_text()
         personal_crest = (WEBSITE_ROOT / "assets/space-crest-personal.svg").read_text()
@@ -245,6 +233,7 @@ class ProductSiteTests(unittest.TestCase):
         for section_id in (
             'id="story"',
             'id="platforms"',
+            'id="split-view"',
             'id="spaces"',
             'id="customization"',
             'id="migration"',
@@ -255,33 +244,18 @@ class ProductSiteTests(unittest.TestCase):
             with self.subTest(section_id=section_id):
                 self.assertIn(section_id, self.homepage)
 
-        for story in (
-            "Why Crest exists",
-            "What Arc got right",
-            "What Crest changes",
-            "Every Space is its own browser",
-            "Make each Space easy to recognize",
-            "Bring over the browser you already have",
-            "Bring the extensions you use into the right Space",
-            "Small conveniences that stay out of the way",
-        ):
-            with self.subTest(story=story):
-                self.assertIn(story, self.homepage)
-
         self.assertGreaterEqual(self.homepage.count("<article"), 30)
         self.assertNotIn("<video", self.homepage)
         self.assertNotIn("<audio", self.homepage)
         self.assertFalse((REPOSITORY_ROOT / "videos/crest-product-overview").exists())
 
     def test_early_access_and_community_links_are_branded_and_safe(self) -> None:
-        self.assertIn(
-            'class="brand-action" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer"',
-            self.homepage,
-        )
-        self.assertIn(
-            'class="brand-action" href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer"',
-            self.homepage,
-        )
+        self.assertIn("https://github.com/pauljoda/Crest/releases", self.homepage)
+        self.assertIn("Direct on Mac. TestFlight on iPhone and iPad.", self.homepage)
+        self.assertIn("Direct · signed · notarized · automatic updates", self.homepage)
+        self.assertIn("https://testflight.apple.com/join/vV1CM49Q", self.homepage)
+        self.assertIn("https://www.reddit.com/r/CrestBrowser", self.homepage)
+        self.assertIn('rel="noopener noreferrer"', self.homepage)
         self.assertIn('src="assets/testflight-official.png" alt="TestFlight"', self.homepage)
         self.assertIn('src="assets/reddit-official.png" alt="Reddit"', self.homepage)
         self.assertEqual(
@@ -292,24 +266,41 @@ class ProductSiteTests(unittest.TestCase):
             self.png_size(WEBSITE_ROOT / "assets/reddit-official.png"),
             (400, 400),
         )
-        self.assertEqual(
-            hashlib.sha256((WEBSITE_ROOT / "assets/testflight-official.png").read_bytes()).hexdigest(),
-            "e38bafb2becc325273e439e508766d1ba38186eef0acec0d8b26fa4da9f65f51",
-        )
-        self.assertEqual(
-            hashlib.sha256((WEBSITE_ROOT / "assets/reddit-official.png").read_bytes()).hexdigest(),
-            "5f1d20624382019ea8655d5716c0cb53bfc95981dfdac1e95d10892fd569f17c",
-        )
         self.assertIn("View in TestFlight", self.homepage)
         self.assertIn("Visit Reddit", self.homepage)
-        self.assertIn("Feedback · updates · community", self.homepage)
-        self.assertEqual(self.homepage.count('class="service-button"'), 2)
-        self.assertIn("border: 1px solid var(--gold)", self.styles)
-        self.assertNotIn(".service-button-testflight", self.styles)
-        self.assertNotIn(".service-button-reddit", self.styles)
-        self.assertIn("section:target .reveal", self.styles)
-        self.assertNotIn("#ff4500", self.styles.lower())
-        self.assertNotIn('<svg class="brand-action-icon"', self.homepage)
+
+    def test_arc_parity_matrix_and_carried_forward_story_are_explicit(self) -> None:
+        matrix = re.search(
+            r'<div class="parity-matrix.*?</div>\s*<p class="parity-note',
+            self.homepage,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(matrix)
+        self.assertGreaterEqual(matrix.group(0).count('class="parity-row'), 20)
+        for arc_name, crest_name in (
+            ("Spaces + Profiles", "Spaces with isolated profiles"),
+            ("Air Traffic Control", "Link Routing"),
+            ("Split View", "Split View"),
+            ("Little Arc", "Quick Window"),
+            ("Auto Archive", "Space cleanup + Archive"),
+            ("Developer Mode", "Localhost mode"),
+        ):
+            with self.subTest(arc_name=arc_name):
+                self.assertIn(arc_name, matrix.group(0))
+                self.assertIn(crest_name, matrix.group(0))
+        self.assertIn("Carried forward, then taken further", self.homepage)
+        self.assertIn("full browser model now belongs on every Apple device", self.homepage)
+        self.assertNotIn("What Arc got right", self.homepage)
+        self.assertNotIn("What Crest changes", self.homepage)
+
+    def test_split_view_has_a_real_feature_story_and_help_path(self) -> None:
+        self.assertIn('class="split-story" id="split-view"', self.homepage)
+        self.assertIn("two to four live tabs", self.homepage)
+        self.assertIn("Control-Command-Left", self.homepage)
+        self.assertIn("Mac and iPad use resizable columns", self.homepage)
+        self.assertIn('href="guides/split-view/"', self.homepage)
+        self.assertIn('id="split-view"', self.documentation)
+        self.assertIn("Option-Command-U", self.documentation)
 
     def test_spaces_use_an_interactive_cross_platform_showcase(self) -> None:
         self.assertIn("data-space-browser", self.homepage)
@@ -365,6 +356,7 @@ class ProductSiteTests(unittest.TestCase):
             "crest-import-space-review-mac-2026.png": (2350, 1632),
             "crest-quick-window-mac-2026.png": (720, 460),
             "crest-peek-mac-2026.png": (1329, 768),
+            "crest-split-view-mac-2026.png": (1329, 768),
         }
         for filename, size in expected_sizes.items():
             with self.subTest(filename=filename):
@@ -387,7 +379,6 @@ class ProductSiteTests(unittest.TestCase):
                 self.assertNotIn(stale_capture, published_pages)
 
     def test_platform_story_portrays_each_device_directly(self) -> None:
-        self.assertIn("Made for Apple devices", self.homepage)
         for platform, class_name in (
             ("Crest for Mac", "platform-mac"),
             ("Crest for iPad", "platform-ipad"),
@@ -397,21 +388,6 @@ class ProductSiteTests(unittest.TestCase):
                 self.assertIn(platform, self.homepage)
                 self.assertIn(class_name, self.homepage)
         self.assertIn("object-fit: contain", self.styles)
-        self.assertIn('class="platform-field"', self.homepage)
-        self.assertIn("The whole Space", self.homepage)
-        compact_styles = "".join(self.styles.split())
-        self.assertIn(".platform-ipad{display:flex;flex-direction:column;}", compact_styles)
-        self.assertIn(".platform-iphone{display:flex;flex-direction:column;", compact_styles)
-        self.assertIn(".platform-shot-phoneimg{width:auto;height:auto;max-width:100%;max-height:540px;}", compact_styles)
-        self.assertIn(".platform-field{position:relative;min-height:", compact_styles)
-        self.assertIn("flex:1;", compact_styles)
-        self.assertIn("Beside the page on larger screens", self.homepage)
-        self.assertIn("ready when you need it on iPhone", self.homepage)
-        self.assertIn("sidebar-mobile-sequence", self.homepage + self.styles)
-        self.assertIn(".sidebar-wide-pair {", self.styles)
-        self.assertIn("gap: .8rem; align-items: start", self.styles)
-        self.assertIn(".sidebar-wide-pair img { width: 100%; height: auto; object-fit: contain", self.styles)
-        self.assertIn("full sidebar opens as a dedicated view", self.documentation)
 
     def test_feature_callouts_focus_on_visible_product_behavior(self) -> None:
         for feature in (
@@ -523,6 +499,24 @@ class ProductSiteTests(unittest.TestCase):
         self.assertTrue((HELP_CENTER_ROOT / "static/img/guides/README.md").is_file())
 
         expected_guides = {
+            "getting-started/install-and-update-mac.md": "/install-and-update-mac",
+            "getting-started/move-to-crest.md": "/move-to-crest",
+            "getting-started/settings-reference.md": "/settings-reference",
+            "spaces/spaces-and-isolation.md": "/spaces-and-isolation",
+            "spaces/customize-spaces.md": "/customize-spaces",
+            "tabs/organize-tabs-and-folders.md": "/organize-tabs-and-folders",
+            "tabs/split-view.md": "/split-view",
+            "spaces/private-spaces.md": "/private-spaces",
+            "spaces/sync-across-devices.md": "/sync-across-devices",
+            "browsing/command-palette.md": "/command-palette",
+            "browsing/keyboard-shortcuts.md": "/keyboard-shortcuts",
+            "browsing/gestures-and-pointer.md": "/gestures-and-pointer",
+            "browsing/peek-and-quick-window.md": "/peek-and-quick-window",
+            "browsing/link-routing.md": "/link-routing",
+            "browsing/page-tools.md": "/page-tools",
+            "browsing/localhost-developer-tools.md": "/localhost-developer-tools",
+            "privacy/content-blocking-and-site-permissions.md": "/content-blocking-and-site-permissions",
+            "privacy/history-archive-and-downloads.md": "/history-archive-and-downloads",
             "extensions/install-chrome-web-store.md": "/install-chrome-web-store",
             "extensions/install-firefox-add-ons.md": "/install-firefox-add-ons",
             "extensions/scan-safari-web-extensions.md": "/scan-safari-web-extensions",
@@ -559,6 +553,28 @@ class ProductSiteTests(unittest.TestCase):
             "Sitemap: https://crestbrowser.com/guides/sitemap.xml",
             (WEBSITE_ROOT / "robots.txt").read_text(),
         )
+
+    def test_help_center_covers_the_complete_browser_and_hidden_interactions(self) -> None:
+        guide_sources = "\n".join(
+            path.read_text()
+            for path in sorted((HELP_CENTER_ROOT / "docs").rglob("*.md*"))
+        )
+        for detail in (
+            "Download Crest directly",
+            "Spaces and profile isolation",
+            "two to four live tabs",
+            "Air Traffic Control",
+            "Option-Command-Left/Right",
+            "Control-Command-Left Arrow",
+            "Swipe vertically on the address capsule",
+            "Middle-click a pinned or saved item",
+            "Copy Page Link as Markdown",
+            "every 15 minutes while active",
+            "Password values never enter CloudKit",
+            "Capture in Portrait Mode",
+        ):
+            with self.subTest(detail=detail):
+                self.assertIn(detail, guide_sources)
 
     def test_published_help_center_contains_no_build_machine_paths(self) -> None:
         machine_path_patterns = (
@@ -677,7 +693,6 @@ class ProductSiteTests(unittest.TestCase):
 
     def test_public_site_stays_product_facing(self) -> None:
         public_pages = self.homepage + self.documentation
-        self.assertNotIn("github.com", public_pages)
         self.assertNotIn("Site source", public_pages)
 
         for developer_content in (
@@ -693,12 +708,15 @@ class ProductSiteTests(unittest.TestCase):
         for user_section in (
             'id="spaces"',
             'id="tabs"',
+            'id="split-view"',
             'id="quick-and-peek"',
+            'id="routing"',
             'id="migration"',
             'id="extensions"',
             'id="passwords"',
             'id="data"',
             'id="tools"',
+            'id="shortcuts"',
             'id="platforms"',
         ):
             with self.subTest(user_section=user_section):

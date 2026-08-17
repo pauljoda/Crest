@@ -25,9 +25,3 @@ struct BrowserSiteExtensionsHeader: View {
         }
     }
 }
-
-#Preview("Site Extensions Header") {
-    BrowserSiteExtensionsHeader(manageExtensions: {})
-        .padding()
-        .frame(width: BrowserSiteControlLayoutPolicy.width)
-}

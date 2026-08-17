@@ -36,9 +36,3 @@ struct MobileSidebarSplitGroupHeader: View {
         .accessibilityLabel("Split View with \(memberCount) tabs")
     }
 }
-
-#Preview("Mobile Split Group Header", traits: .sizeThatFitsLayout) {
-    MobileSidebarSplitGroupHeader(memberCount: 3)
-        .frame(width: 320)
-        .padding()
-}

@@ -35,12 +35,3 @@ struct BrowserDataPortabilityFootnotes: View {
         }
     }
 }
-
-#Preview("Import and Export Notes") {
-    Form {
-        BrowserDataPortabilityFootnotes(
-            showsExternalBrowserImportControls: true
-        )
-    }
-    .frame(width: 620)
-}

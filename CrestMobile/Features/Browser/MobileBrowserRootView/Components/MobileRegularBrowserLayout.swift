@@ -30,13 +30,3 @@ struct MobileRegularBrowserLayout<SideBySide: View, Overlay: View>: View,
         )
     }
 }
-
-#Preview("Mobile Regular Browser Layout") {
-    MobileRegularBrowserLayout(
-        layout: .sideBySide(sidebarWidth: 320),
-        sidebarIsPresented: true,
-        isCommandPalettePresented: false,
-        sideBySide: { _ in Color.indigo.opacity(0.2) },
-        overlay: { _ in Color.orange.opacity(0.2) }
-    )
-}

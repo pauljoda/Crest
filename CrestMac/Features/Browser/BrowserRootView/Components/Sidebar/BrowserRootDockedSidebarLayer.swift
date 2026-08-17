@@ -31,14 +31,3 @@ struct BrowserRootDockedSidebarLayer<Content: View>: View {
         }
     }
 }
-
-#Preview("Browser Root Docked Sidebar") {
-    BrowserRootDockedSidebarLayer(
-        presentation: .docked,
-        width: BrowserChromeLayout.sidebarIdealWidth,
-        reduceMotion: false
-    ) {
-        Text("Sidebar")
-    }
-    .frame(height: 500)
-}

@@ -41,14 +41,3 @@ struct MobileBrowserTransientSurface: View {
         UIDevice.current.userInterfaceIdiom == .phone
     }
 }
-
-#Preview {
-    @Previewable @State var offset: CGFloat = 0
-    MobileBrowserTransientSurface(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        state: MobileBrowserTransientPreviewFixture.presentationState,
-        dismissalOffset: $offset,
-        dismiss: {},
-        promote: { _ in }
-    )
-}

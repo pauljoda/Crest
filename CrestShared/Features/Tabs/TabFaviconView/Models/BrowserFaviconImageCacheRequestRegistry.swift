@@ -1,5 +1,20 @@
 import CoreGraphics
 
+struct BrowserFaviconImageCacheKey: Hashable, Sendable {
+    let payload: BrowserFaviconPayloadIdentity
+    let maximumPixelSize: Int
+}
+
+struct BrowserFaviconImageCacheRequestLease: Sendable {
+    let token: BrowserFaviconImageCacheRequestToken
+    let task: Task<CGImage?, Never>
+}
+
+struct BrowserFaviconImageCacheRequestToken: Equatable, Sendable {
+    let generation: UInt64
+    let requestID: UInt64
+}
+
 struct BrowserFaviconImageCacheRequestRegistry {
     private var generation: UInt64 = 0
     private var nextRequestID: UInt64 = 0
@@ -45,5 +60,4 @@ struct BrowserFaviconImageCacheRequestRegistry {
         inFlight.removeAll(keepingCapacity: true)
         return pending
     }
-
 }

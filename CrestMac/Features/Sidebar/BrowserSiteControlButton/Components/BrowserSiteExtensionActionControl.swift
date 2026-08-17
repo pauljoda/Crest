@@ -25,13 +25,3 @@ struct BrowserSiteExtensionActionControl: View {
         .help(action.displayName)
     }
 }
-
-#Preview("Site Extension Action Control") {
-    BrowserSiteExtensionActionControl(
-        action: BrowserSidebarExtensionPreviewFixture.actions[0],
-        perform: {},
-        togglePinned: {}
-    )
-    .padding()
-    .frame(width: 72)
-}

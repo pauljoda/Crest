@@ -24,17 +24,3 @@ struct MobileBrowserRootSelectionObserver: ViewModifier {
             }
     }
 }
-
-#Preview("Mobile Browser Root Selection Observer") {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobileBrowserRootPreviewFixture.makeModel(fixture: fixture)
-    Text("Browser")
-        .modifier(
-            MobileBrowserRootSelectionObserver(
-                selection: model.selectionSnapshot,
-                lock: model.lockSnapshot(presentation: .compact),
-                selectionChanged: { _, _ in },
-                lockChanged: { _, _ in }
-            )
-        )
-}

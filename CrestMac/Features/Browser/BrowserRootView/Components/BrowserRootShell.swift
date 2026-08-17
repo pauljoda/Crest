@@ -158,23 +158,3 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     }
 
 }
-
-#Preview("Browser Root Shell") {
-    @Previewable @State var sidebarWidth = Double(
-        BrowserChromeLayout.sidebarIdealWidth
-    )
-    @Previewable @Namespace var commandSurfaceNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    BrowserRootShell(
-        model: BrowserRootPreviewFixture.makeModel(),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        spaceSettingsPresentation: BrowserSpaceSettingsPresentationState(),
-        shortcuts: nil,
-        storedSidebarWidth: $sidebarWidth,
-        windowTransparencyIsEnabled: true,
-        windowTransparencyStrength: 0.5,
-        commandSurfaceNamespace: commandSurfaceNamespace,
-        tabPromotionNamespace: tabPromotionNamespace
-    )
-    .frame(width: 1_120, height: 720)
-}

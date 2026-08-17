@@ -21,9 +21,3 @@ struct BrowserImportSidebarFolderRow: View {
         .frame(height: 40)
     }
 }
-
-#Preview("Import Sidebar Folder") {
-    BrowserImportSidebarFolderRow(folder: BrowserImportPreviewFixture.folder)
-        .frame(width: 340)
-        .padding()
-}

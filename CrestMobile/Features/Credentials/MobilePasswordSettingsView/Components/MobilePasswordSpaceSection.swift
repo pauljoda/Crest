@@ -13,14 +13,3 @@ struct MobilePasswordSpaceSection: View {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobilePasswordSettingsModel(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-    Form {
-        MobilePasswordSpaceSection(model: model)
-    }
-}

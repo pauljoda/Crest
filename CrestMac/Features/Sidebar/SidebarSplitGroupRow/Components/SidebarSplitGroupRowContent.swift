@@ -38,11 +38,3 @@ struct SidebarSplitGroupRowContent: View {
         .padding(SidebarSplitGroupRowMetrics.containerPadding)
     }
 }
-
-#Preview("Split Group Row Content") {
-    SidebarSplitGroupRowContent(
-        configuration: SidebarSplitGroupRowPreviewFixture.configuration()
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-    .padding()
-}

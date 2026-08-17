@@ -28,13 +28,3 @@ struct BrowserNavigationFailureSuggestions: View {
         )
     }
 }
-
-#Preview("Navigation Failure Suggestions") {
-    BrowserNavigationFailureSuggestions(
-        presentation: BrowserNavigationFailurePresentation(
-            failure: BrowserNavigationFailurePreviewFixture.offline
-        ),
-        accent: .blue
-    )
-    .padding()
-}

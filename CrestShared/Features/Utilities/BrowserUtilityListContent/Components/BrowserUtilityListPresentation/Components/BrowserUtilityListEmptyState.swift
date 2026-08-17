@@ -27,12 +27,3 @@ struct BrowserUtilityListEmptyState: View {
         )
     }
 }
-
-#Preview("Filtered Downloads Empty State", traits: .fixedLayout(width: 360, height: 420)) {
-    BrowserUtilityListEmptyState(
-        surface: .downloads,
-        searchText: "",
-        filter: .downloadsNeedsAttention,
-        dismiss: {}
-    )
-}

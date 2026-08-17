@@ -36,6 +36,9 @@ class VersionContractTests(unittest.TestCase):
         self.environment = os.environ | {
             "CREST_VERSION_REPOSITORY_ROOT": str(self.fixture_root),
         }
+        self.current_version = self.current_marketing_version()
+        major, minor, _ = (int(part) for part in self.current_version.split("."))
+        self.next_version = f"{major}.{minor + 1}.0"
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
@@ -59,6 +62,12 @@ class VersionContractTests(unittest.TestCase):
             text=True,
             check=False,
         )
+
+    def current_marketing_version(self) -> str:
+        contents = (
+            self.fixture_root / "Config" / "Version.xcconfig"
+        ).read_text()
+        return contents.split("=", maxsplit=1)[1].strip()
 
     def install_fake_xcodebuild(self, marketing_version: str | None = None) -> None:
         fake_bin = self.fixture_root / "fake-bin"
@@ -94,7 +103,7 @@ class VersionContractTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("0.3.0", result.stdout)
+        self.assertIn(self.current_version, result.stdout)
 
     def test_static_check_rejects_malformed_semver(self) -> None:
         version_file = self.fixture_root / "Config" / "Version.xcconfig"
@@ -140,7 +149,8 @@ class VersionContractTests(unittest.TestCase):
     def test_static_check_rejects_build_number_in_marketing_version_file(self) -> None:
         version_file = self.fixture_root / "Config" / "Version.xcconfig"
         version_file.write_text(
-            "MARKETING_VERSION = 0.3.0\nCURRENT_PROJECT_VERSION = 2\n"
+            f"MARKETING_VERSION = {self.current_version}\n"
+            "CURRENT_PROJECT_VERSION = 2\n"
         )
 
         result = self.run_check("--static")
@@ -149,14 +159,20 @@ class VersionContractTests(unittest.TestCase):
         self.assertIn("must contain only MARKETING_VERSION", result.stderr)
 
     def test_set_version_rejects_non_increasing_and_shorthand_versions(self) -> None:
-        for requested in ("0.2.9", "0.3.0", "0.3", "0.3.1-beta"):
+        major, minor, _ = self.current_version.split(".")
+        for requested in (
+            "0.0.0",
+            self.current_version,
+            f"{major}.{minor}",
+            f"{self.current_version}-beta",
+        ):
             with self.subTest(version=requested):
                 result = self.run_set(requested)
                 self.assertNotEqual(result.returncode, 0)
 
         self.assertEqual(
             (self.fixture_root / "Config" / "Version.xcconfig").read_text(),
-            "MARKETING_VERSION = 0.3.0\n",
+            f"MARKETING_VERSION = {self.current_version}\n",
         )
 
     def test_set_version_updates_only_the_marketing_version_source(self) -> None:
@@ -170,12 +186,12 @@ class VersionContractTests(unittest.TestCase):
             )
         }
 
-        result = self.run_set("0.4.0")
+        result = self.run_set(self.next_version)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
             (self.fixture_root / "Config" / "Version.xcconfig").read_text(),
-            "MARKETING_VERSION = 0.4.0\n",
+            f"MARKETING_VERSION = {self.next_version}\n",
         )
         for path, contents in before.items():
             self.assertEqual((self.fixture_root / path).read_bytes(), contents)
@@ -183,13 +199,13 @@ class VersionContractTests(unittest.TestCase):
     def test_set_version_restores_the_previous_value_when_resolution_drifts(self) -> None:
         self.install_fake_xcodebuild(marketing_version="9.9.9")
 
-        result = self.run_set("0.4.0")
+        result = self.run_set(self.next_version)
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("restored 0.3.0", result.stderr)
+        self.assertIn(f"restored {self.current_version}", result.stderr)
         self.assertEqual(
             (self.fixture_root / "Config" / "Version.xcconfig").read_text(),
-            "MARKETING_VERSION = 0.3.0\n",
+            f"MARKETING_VERSION = {self.current_version}\n",
         )
 
 

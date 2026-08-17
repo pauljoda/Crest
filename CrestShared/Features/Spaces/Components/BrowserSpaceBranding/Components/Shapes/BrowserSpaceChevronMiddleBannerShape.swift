@@ -15,10 +15,3 @@ struct BrowserSpaceChevronMiddleBannerShape: Shape {
         }
     }
 }
-
-#Preview("Chevron Middle Banner Shape") {
-    BrowserSpaceChevronMiddleBannerShape(size: CGSize(width: 240, height: 120))
-        .fill(BrowserSpaceBrandColor.ocean.color)
-        .frame(width: 240, height: 120)
-        .padding()
-}

@@ -20,8 +20,3 @@ struct BrowserExtensionPinButton: View {
         .help(isPinned ? "Unpin Extension" : "Pin Extension")
     }
 }
-
-#Preview("Extension Pin Button") {
-    BrowserExtensionPinButton(isPinned: true, action: {})
-        .padding()
-}

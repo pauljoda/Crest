@@ -32,16 +32,3 @@ struct MobileSplitCardPage: View {
         }
     }
 }
-
-#Preview("Split Card Page", traits: .fixedLayout(width: 320, height: 560)) {
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSplitCardPage(
-        member: BrowserSplitViewPreviewFixture.members[1],
-        space: fixture.space,
-        pages: fixture.pages,
-        viewport: .inline,
-        prepareMember: { _ in }
-    )
-    .background(.quaternary)
-}

@@ -19,18 +19,3 @@ struct BrowserSettingsDestinationRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
-
-#Preview("Settings destination rows") {
-    VStack(alignment: .leading) {
-        BrowserSettingsDestinationRow(
-            destination: .general,
-            isSelected: false
-        )
-        BrowserSettingsDestinationRow(
-            destination: .spaces,
-            isSelected: true
-        )
-    }
-    .frame(width: BrowserSettingsVisualPolicy.sidebarIdealWidth)
-    .padding()
-}

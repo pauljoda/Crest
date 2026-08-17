@@ -57,18 +57,3 @@ struct MobileBrowserStartPageContent: View {
         )
     }
 }
-
-#Preview("Mobile Browser Start Page Content") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserStartPageContent(
-        space: fixture.space,
-        isPrivateBrowsing: false,
-        focusRequest: 0,
-        usesCommandPalette: false,
-        isSourceAvailable: { _ in true },
-        selectTab: { _, _ in true },
-        openURL: { _, _ in true },
-        isCommandPaletteObscured: false,
-        headerColorScheme: .light
-    )
-}

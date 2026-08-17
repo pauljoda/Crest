@@ -26,11 +26,3 @@ struct BrowserSettingsPane<Content: View>: View {
         }
     }
 }
-
-#Preview("Settings Pane") {
-    BrowserSettingsPane(.general) {
-        Section("Example") {
-            Text("Setting")
-        }
-    }
-}

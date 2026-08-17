@@ -81,12 +81,3 @@ struct MobileSpaceSettingsView: View {
         }
     }
 }
-
-#Preview("Mobile Space Settings") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileSpaceSettingsView(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess,
-        dataDeleter: fixture.pages
-    )
-}

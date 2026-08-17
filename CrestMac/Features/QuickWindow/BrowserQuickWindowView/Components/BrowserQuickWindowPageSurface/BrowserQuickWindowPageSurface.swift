@@ -22,10 +22,3 @@ struct BrowserQuickWindowPageSurface: View {
         .padding(.top, BrowserQuickWindowLayout.pageTopClearance)
     }
 }
-
-#Preview("Quick Window Page Surface") {
-    BrowserQuickWindowPageSurface(
-        model: BrowserQuickWindowPreviewFixture.makeModel()
-    )
-    .frame(width: 480, height: 320)
-}

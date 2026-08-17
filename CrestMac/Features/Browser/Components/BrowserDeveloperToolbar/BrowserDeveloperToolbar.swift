@@ -63,11 +63,13 @@ struct BrowserDeveloperToolbar: View {
     }
 
     private func navigate() {
-        guard let url = AddressResolver.resolve(
-            address,
-            searchProvider: browser.selectedSpace?.browsingPreferences
-                .searchProvider ?? .google
-        ) else { return }
+        guard
+            let url = AddressResolver.resolve(
+                address,
+                searchProvider: browser.selectedSpace?.browsingPreferences
+                    .searchProvider ?? .google
+            )
+        else { return }
         if BrowserDeveloperNavigationPolicy.updatesSelectedTab(
             isActivePage: pages.activePage === page
         ) {
@@ -78,15 +80,4 @@ struct BrowserDeveloperToolbar: View {
         }
         address = url.absoluteString
     }
-}
-
-#Preview("Developer Toolbar") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-    BrowserDeveloperToolbar(
-        page: preview.page,
-        browser: preview.browser,
-        pages: preview.pages,
-        permissionCenter: BrowserSitePermissionCenter()
-    )
-    .frame(width: 700)
 }

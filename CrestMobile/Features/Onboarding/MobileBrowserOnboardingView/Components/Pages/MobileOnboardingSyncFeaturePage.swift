@@ -64,11 +64,3 @@ struct MobileOnboardingSyncFeaturePage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Sync") {
-    MobileOnboardingSyncFeaturePage(
-        secondaryTitle: nil,
-        secondaryAction: nil,
-        primaryAction: {}
-    )
-}

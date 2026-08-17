@@ -30,14 +30,3 @@ struct SavedFolderTabRow: View {
         .padding(.leading, configuration.rowLeadingInset)
     }
 }
-
-#Preview("Saved Folder Tab") {
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderTabRow(
-        configuration: configuration,
-        tab: configuration.tabs[0],
-        isLoaded: true,
-        unload: { _ in }
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

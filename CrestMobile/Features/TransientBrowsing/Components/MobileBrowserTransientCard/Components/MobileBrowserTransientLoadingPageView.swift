@@ -11,7 +11,3 @@ struct MobileBrowserTransientLoadingPageView: View {
         .background(Color(uiColor: .systemBackground))
     }
 }
-
-#Preview {
-    MobileBrowserTransientLoadingPageView(isQuickWindow: false)
-}

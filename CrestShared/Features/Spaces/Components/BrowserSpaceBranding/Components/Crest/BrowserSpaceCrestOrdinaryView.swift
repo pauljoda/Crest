@@ -28,17 +28,3 @@ struct BrowserSpaceCrestOrdinaryView: View {
         }
     }
 }
-
-#Preview("Crest Ordinary", traits: .sizeThatFitsLayout) {
-    let branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    BrowserSpaceCrestOrdinaryView(
-        ordinary: branding.crest.ordinary,
-        backplateSymbol: branding.crest.backplate.systemImage ?? "shield.fill",
-        outlineSystemImage: branding.crest.backplate.outlineSystemImage,
-        color: branding.secondaryColor.color,
-        size: 112
-    )
-    .frame(width: 112, height: 112)
-    .padding()
-}

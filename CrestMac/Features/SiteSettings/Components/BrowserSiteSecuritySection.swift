@@ -62,13 +62,3 @@ struct BrowserSiteSecuritySection: View {
         )
     }
 }
-
-#Preview("Site Security") {
-    let preview = BrowserSiteSettingsPreviewFixture.makePage()
-    BrowserSiteSecuritySection(
-        page: preview.page,
-        origin: BrowserSiteSettingsPreviewFixture.origin
-    )
-    .padding()
-    .frame(width: 300)
-}

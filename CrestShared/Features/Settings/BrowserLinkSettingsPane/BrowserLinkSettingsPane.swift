@@ -27,12 +27,3 @@ struct BrowserLinkSettingsPane: View {
         }
     }
 }
-
-#Preview("Link Settings") {
-    let fixture = BrowserLinkSettingsPreviewFixture()
-    BrowserLinkSettingsPane(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess,
-        links: fixture.links
-    )
-}

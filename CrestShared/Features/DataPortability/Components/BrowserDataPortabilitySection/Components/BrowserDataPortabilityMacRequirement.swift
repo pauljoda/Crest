@@ -23,10 +23,3 @@ struct BrowserDataPortabilityMacRequirement: View {
         .padding(.vertical, CrestSpacing.extraSmall)
     }
 }
-
-#Preview("macOS Import Requirement") {
-    Form {
-        BrowserDataPortabilityMacRequirement()
-    }
-    .frame(width: 620)
-}

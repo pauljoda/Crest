@@ -39,8 +39,3 @@ struct BrowserMacOnboardingTabsPreview: View {
         )
     }
 }
-
-#Preview("Tabs Artwork") {
-    BrowserMacOnboardingTabsPreview()
-        .frame(width: 540, height: 480)
-}

@@ -25,13 +25,3 @@ struct MobileStrongPasswordActionButton: View {
         .disabled(isWorking)
     }
 }
-
-#Preview("Strong Password Action") {
-    MobileStrongPasswordActionButton(
-        isWorking: false,
-        tint: .indigo,
-        action: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

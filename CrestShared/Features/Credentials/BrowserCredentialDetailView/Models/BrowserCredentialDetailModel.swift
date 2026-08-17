@@ -2,6 +2,23 @@ import Foundation
 import LocalAuthentication
 import Observation
 
+typealias BrowserCredentialClipboardWriter =
+    @MainActor (
+        BrowserCredentialSecretLease
+    ) -> Bool
+
+typealias BrowserCredentialRevealer =
+    @MainActor (
+        CredentialID,
+        BrowserSpaceRuntimeAssignment,
+        String
+    ) async throws -> BrowserCredential
+
+struct BrowserCredentialDetailOperationToken: Equatable, Sendable {
+    let assignment: BrowserSpaceRuntimeAssignment
+    let sequence: UInt64
+}
+
 @Observable
 @MainActor
 final class BrowserCredentialDetailModel {

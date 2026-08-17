@@ -13,11 +13,3 @@ struct CrestSelectableCardStyle: ButtonStyle {
         )
     }
 }
-
-#Preview("Selectable Card Style") {
-    Button("Selected") {}
-        .buttonStyle(
-            CrestSelectableCardStyle(isSelected: true, tint: nil)
-        )
-        .padding()
-}

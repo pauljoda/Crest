@@ -24,20 +24,3 @@ struct BrowserSpaceIdentityLabel: View {
         }
     }
 }
-
-#Preview("Identity Labels") {
-    VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-        BrowserSpaceIdentityLabel(
-            space: BrowserSpaceBrandingPreviewFixture.simpleSpace,
-            iconSize: 24
-        )
-        BrowserSpaceIdentityLabel(
-            space: BrowserSpaceBrandingPreviewFixture.crestSpace,
-            iconSize: 24
-        )
-    }
-    .padding(CrestSpacing.large)
-    .frame(width: 240, alignment: .leading)
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.dark)
-}

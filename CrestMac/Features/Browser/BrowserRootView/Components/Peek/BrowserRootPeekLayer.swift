@@ -26,11 +26,3 @@ struct BrowserRootPeekLayer: View {
         }
     }
 }
-
-#Preview("Browser Root Peek Layer") {
-    BrowserRootPeekLayer(
-        model: BrowserRootPreviewFixture.makeModel(),
-        transientBrowsing: BrowserTransientBrowsingCoordinator()
-    )
-    .frame(width: 800, height: 600)
-}

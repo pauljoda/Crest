@@ -16,10 +16,3 @@ struct BrowserPlatformLinkSettingsGuidance: View {
         }
     }
 }
-
-#Preview("Link Settings Guidance") {
-    Form {
-        BrowserPlatformLinkSettingsGuidance(kind: .externalDestination)
-    }
-    .formStyle(.grouped)
-}

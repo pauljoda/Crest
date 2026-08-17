@@ -9,9 +9,3 @@ struct BrowserPlatformAddressInputModifier: ViewModifier {
             .submitLabel(.go)
     }
 }
-
-#Preview("Address input") {
-    TextField("Search or enter address", text: .constant("crestbrowser.com"))
-        .modifier(BrowserPlatformAddressInputModifier())
-        .padding()
-}

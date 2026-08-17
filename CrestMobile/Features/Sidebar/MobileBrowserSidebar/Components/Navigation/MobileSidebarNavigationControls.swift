@@ -89,14 +89,3 @@ struct MobileSidebarNavigationControls: View {
         .frame(minHeight: 48)
     }
 }
-
-#Preview("Sidebar Navigation Controls") {
-    let fixture = MobilePageActionsPreviewFixture()
-
-    MobileSidebarNavigationControls(
-        browser: fixture.browser,
-        pageActions: fixture.actions,
-        hideSidebar: {}
-    )
-    .frame(width: 390)
-}

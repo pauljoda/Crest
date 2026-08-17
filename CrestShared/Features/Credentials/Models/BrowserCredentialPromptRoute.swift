@@ -1,5 +1,51 @@
 import Foundation
 
+enum BrowserCredentialPromptBusyActivity: Equatable, Sendable {
+    case checkingSavedPasswords
+    case savingPassword
+    case openingSystemPasswords
+}
+
+enum BrowserCredentialPromptCrossOriginSubject: Equatable, Sendable {
+    case definiteCredential
+    case currentCredential
+}
+
+struct BrowserCredentialPromptDestinationMetadata: Sendable {
+    let detail: LocalizedStringResource
+    let syncStatus: LocalizedStringResource?
+}
+
+enum BrowserCredentialPromptDestinationPresentation: Equatable, Sendable {
+    case combinedStatus
+    case separateSyncStatus
+}
+
+enum BrowserCredentialPromptDismissAction: Equatable, Sendable {
+    case notNow
+    case done
+}
+
+enum BrowserCredentialPromptPrimaryAction: Equatable, Sendable {
+    case commit(BrowserCredentialSavePromptAction)
+    case retryCredentialPreparation
+    case retrySystemPasswords
+}
+
+enum BrowserCredentialPromptState: Equatable, Sendable {
+    case preparing
+    case create
+    case update
+    case alreadyStored
+    case saving(BrowserCredentialSavePromptAction)
+    case saved(BrowserCredentialSaveDisposition)
+    case failedPreparation
+    case failedCommit(BrowserCredentialSavePromptAction)
+    case offeringToSystemPasswords
+    case completedSystemPasswords
+    case failedSystemPasswords
+}
+
 /// Exhaustively maps the credential workflow into platform-neutral prompt presentation.
 struct BrowserCredentialPromptRoute: Equatable, Sendable {
 

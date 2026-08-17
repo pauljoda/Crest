@@ -405,7 +405,7 @@ final class BrowserPeekModelTests: XCTestCase {
         let coordinator = BrowserTransientBrowsingCoordinator()
         coordinator.presentPeek(request)
         let spaceAccess = BrowserSpaceAccessController(
-            authenticator: BrowserPeekPreviewAuthenticator(authenticates: true)
+            authenticator: BrowserPreviewAuthenticator(result: true)
         )
         return PeekTestContext(
             source: source,

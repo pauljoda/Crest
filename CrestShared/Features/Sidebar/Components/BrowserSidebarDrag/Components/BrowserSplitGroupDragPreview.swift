@@ -71,13 +71,3 @@ struct BrowserSplitGroupDragPreview: View {
         .allowsHitTesting(false)
     }
 }
-
-#Preview("Split Group Drag Preview", traits: .fixedLayout(width: 300, height: 220)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    BrowserSplitGroupDragPreview(
-        members: [fixture.currentTab, fixture.savedTab],
-        profileID: fixture.space.profile.id
-    )
-    .padding()
-}

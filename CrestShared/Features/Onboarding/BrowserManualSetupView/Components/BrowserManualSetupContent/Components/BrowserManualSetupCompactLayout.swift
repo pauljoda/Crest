@@ -49,18 +49,3 @@ struct BrowserManualSetupCompactLayout: View {
         }
     }
 }
-
-#Preview("Manual Setup — Compact") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-    @Previewable @State var selectedSpaceID =
-        BrowserManualSetupPreviewFixture.selectedSpaceID
-
-    BrowserManualSetupCompactLayout(
-        plan: $plan,
-        selectedSpaceID: $selectedSpaceID,
-        existingSession: BrowserManualSetupPreviewFixture.existingSession,
-        previewSession: BrowserManualSetupPreviewFixture.previewSession,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 600, height: 760)
-}

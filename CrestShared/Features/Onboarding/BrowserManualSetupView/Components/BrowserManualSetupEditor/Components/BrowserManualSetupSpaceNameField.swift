@@ -24,15 +24,3 @@ struct BrowserManualSetupSpaceNameField: View {
         }
     }
 }
-
-#Preview("Manual Setup Space Name") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-
-    BrowserManualSetupSpaceNameField(
-        plan: $plan,
-        spaceID: BrowserManualSetupPreviewFixture.spaceID,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 420)
-    .padding()
-}

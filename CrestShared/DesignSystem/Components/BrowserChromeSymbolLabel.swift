@@ -12,8 +12,3 @@ struct BrowserChromeSymbolLabel: View {
             .font(.system(size: pointSize, weight: .regular))
     }
 }
-
-#Preview("Chrome Symbol") {
-    BrowserChromeSymbolLabel(systemName: "arrow.clockwise")
-        .padding()
-}

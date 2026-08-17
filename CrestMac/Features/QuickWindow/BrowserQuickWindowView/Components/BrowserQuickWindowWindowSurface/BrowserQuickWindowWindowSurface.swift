@@ -40,14 +40,3 @@ struct BrowserQuickWindowWindowSurface: View {
         return spaceAccess.isLocked(space)
     }
 }
-
-#Preview("Quick Window Surface") {
-    BrowserQuickWindowWindowSurface(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(),
-        pagePoolRegistry: nil,
-        dismiss: {},
-        openBrowserWindow: {}
-    )
-    .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-}

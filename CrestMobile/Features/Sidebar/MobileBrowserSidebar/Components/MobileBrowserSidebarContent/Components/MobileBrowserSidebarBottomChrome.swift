@@ -39,25 +39,3 @@ struct MobileBrowserSidebarBottomChrome: View {
             || configuration.showsBottomSpaceSwitcher
     }
 }
-
-#Preview("Mobile Sidebar Bottom Chrome", traits: .sizeThatFitsLayout) {
-    @Previewable @Namespace var compactChromeNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    @Previewable @State var address = ""
-    @Previewable @State var isAddressEditing = false
-    @Previewable @State var utilitySearchText = ""
-    @Previewable @State var utilityFilter = BrowserUtilityListFilter.all
-    let fixture = MobileBrowserSidebarContentPreviewFixture()
-
-    MobileBrowserSidebarBottomChrome(
-        configuration: fixture.configuration(
-            compactChromeNamespace: compactChromeNamespace,
-            tabPromotionNamespace: tabPromotionNamespace,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
-            utilitySearchText: $utilitySearchText,
-            utilityFilter: $utilityFilter,
-            mode: .compactTabViewer
-        )
-    )
-}

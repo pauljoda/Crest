@@ -25,14 +25,3 @@ struct MobileCompactPageBackdrop: View {
         }
     }
 }
-
-#Preview("Mobile Compact Page Backdrop") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileCompactPageBackdrop(
-        isStartPage: false,
-        hasSelectedPage: true,
-        pageThemeColor: .systemIndigo,
-        underPageBackgroundColor: .systemBackground,
-        space: fixture.space
-    )
-}

@@ -20,12 +20,3 @@ struct BrowserNavigationHistoryMenu: View {
         }
     }
 }
-
-#Preview("Browser Navigation History Menu") {
-    BrowserNavigationHistoryMenu(
-        items: [],
-        emptyTitle: "No Earlier Pages",
-        action: { _ in }
-    )
-    .padding()
-}

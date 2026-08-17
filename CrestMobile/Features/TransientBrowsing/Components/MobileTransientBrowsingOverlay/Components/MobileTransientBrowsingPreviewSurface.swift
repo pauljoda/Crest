@@ -26,9 +26,3 @@ struct MobileTransientBrowsingPreviewSurface: View {
         request.isQuickWindow ? "sparkle.magnifyingglass" : "eye"
     }
 }
-
-#Preview {
-    MobileTransientBrowsingPreviewSurface(
-        request: .peek(MobileBrowserTransientPreviewFixture.request)
-    )
-}

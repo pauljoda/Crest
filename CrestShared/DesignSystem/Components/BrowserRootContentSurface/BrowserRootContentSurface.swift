@@ -73,24 +73,3 @@ struct BrowserRootContentSurface<Content: View>: View {
             .padding(frameInsets)
     }
 }
-
-#Preview("Root Content Surface") {
-    ZStack {
-        CrestBrandTheme.canvas
-        BrowserRootContentSurface(
-            cornerRadius: CrestRadius.card,
-            seamWidth: CrestLayout.hairline,
-            frameInsets: EdgeInsets(
-                top: CrestSpacing.large,
-                leading: CrestSpacing.large,
-                bottom: CrestSpacing.large,
-                trailing: CrestSpacing.large
-            ),
-            usesTransparentInnerSurface: false
-        ) {
-            Label("Loaded Page", systemImage: "globe")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-    .frame(width: 420, height: 280)
-}

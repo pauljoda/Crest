@@ -46,15 +46,3 @@ struct MobileOnboardingSpacesFeaturePage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Spaces") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingSpacesFeaturePage(
-        previewWidth: MobileOnboardingLayout.compactPreviewWidth,
-        personalSpace: fixture.alternateSpace,
-        workSpace: fixture.space,
-        secondaryTitle: nil,
-        secondaryAction: nil,
-        primaryAction: {}
-    )
-}

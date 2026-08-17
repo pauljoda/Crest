@@ -18,11 +18,3 @@ struct BrowserSplitFocusSettingsSection: View {
         }
     }
 }
-
-#Preview("Split View focus settings") {
-    Form {
-        BrowserSplitFocusSettingsSection()
-    }
-    .environment(BrowserSplitFocusPreviewFixture.makeStore())
-    .frame(width: BrowserSettingsVisualPolicy.maximumReadableContentWidth)
-}

@@ -22,18 +22,3 @@ struct BrowserSpaceIdentityIcon: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Identity Icons") {
-    HStack(spacing: CrestSpacing.large) {
-        BrowserSpaceIdentityIcon(
-            space: BrowserSpaceBrandingPreviewFixture.simpleSpace,
-            size: 52
-        )
-        BrowserSpaceIdentityIcon(
-            space: BrowserSpaceBrandingPreviewFixture.crestSpace,
-            size: 52
-        )
-    }
-    .padding(CrestSpacing.large)
-    .frame(width: 180, height: 96)
-}

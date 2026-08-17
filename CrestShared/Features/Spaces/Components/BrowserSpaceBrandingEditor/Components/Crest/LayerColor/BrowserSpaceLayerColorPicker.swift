@@ -33,16 +33,3 @@ struct BrowserSpaceLayerColorPicker: View {
         .accessibilityElement(children: .contain)
     }
 }
-
-#Preview("Branding Editor — Layer Color Picker") {
-    @Previewable @State var selection =
-        BrowserSpaceBrandingPreviewFixture.crestBranding.crest.symbolColorIndex
-
-    BrowserSpaceLayerColorPicker(
-        title: "Charge color",
-        branding: BrowserSpaceBrandingPreviewFixture.crestBranding,
-        selection: $selection
-    )
-    .frame(width: 420)
-    .padding(CrestSpacing.large)
-}

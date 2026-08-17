@@ -73,26 +73,3 @@ struct BrowserSidebarLiftFloatingPreview: View {
         }
     }
 }
-
-#Preview("Sidebar Lift Floating Preview", traits: .fixedLayout(width: 620, height: 420)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    BrowserSidebarLiftFloatingPreview(
-        subject: .tab(fixture.currentTab),
-        lift: BrowserSidebarFloatingLift(
-            item: .tab(
-                BrowserTabDragItem(
-                    tabID: fixture.currentTab.id,
-                    spaceID: fixture.space.id,
-                    profileID: fixture.space.profile.id
-                )
-            ),
-            shape: .webpageCard,
-            progress: 1,
-            pointer: CGPoint(x: 310, y: 210),
-            grabOffset: CGSize(width: 40, height: 20),
-            rowWidth: BrowserTabDragPreviewLayout.rowSize.width
-        )
-    )
-    .background(CrestBrandTheme.canvas)
-}

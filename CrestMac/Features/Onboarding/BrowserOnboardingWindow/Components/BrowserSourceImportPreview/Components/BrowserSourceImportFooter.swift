@@ -24,9 +24,3 @@ struct BrowserSourceImportFooter: View {
         .background(.ultraThinMaterial)
     }
 }
-
-#Preview("Source Import Footer") {
-    BrowserSourceImportFooter()
-        .frame(width: 340)
-        .padding()
-}

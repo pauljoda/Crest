@@ -95,16 +95,3 @@ struct BrowserChromeWebStoreReviewContent: View {
         }
     }
 }
-
-#Preview("Chrome Web Store Install — Access Review") {
-    @Previewable @State var isAccessExpanded = true
-
-    BrowserChromeWebStoreReviewContent(
-        candidate: BrowserChromeWebStoreInstallPreviewFixture.candidate,
-        spaceName: BrowserChromeWebStoreInstallPreviewFixture.spaceName,
-        errorDescription: nil,
-        isAccessExpanded: $isAccessExpanded
-    )
-    .padding()
-    .frame(width: BrowserExtensionInstallMetrics.width)
-}

@@ -29,12 +29,3 @@ struct BrowserDataPortabilityProgressStatus: View {
         }
     }
 }
-
-#Preview("Operation Status") {
-    let model = BrowserDataPortabilityPreviewFixture.makeModel()
-    model.status = BrowserDataPortabilityOperationStatus("Browser data exported.")
-    return Form {
-        BrowserDataPortabilityProgressStatus(model: model)
-    }
-    .frame(width: 620)
-}

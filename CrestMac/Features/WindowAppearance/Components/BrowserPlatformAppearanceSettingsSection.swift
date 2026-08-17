@@ -18,12 +18,3 @@ struct BrowserPlatformAppearanceSettingsSection: View {
         BrowserSplitFocusSettingsSection()
     }
 }
-
-#Preview("Appearance settings") {
-    Form {
-        BrowserPlatformAppearanceSettingsSection()
-    }
-    .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-    .environment(BrowserSplitFocusPreviewFixture.makeStore())
-    .frame(width: BrowserSettingsVisualPolicy.maximumReadableContentWidth)
-}

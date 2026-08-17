@@ -348,11 +348,3 @@ struct BrowserPasswordSettingsPane: View {
         credentials.clearSensitiveData()
     }
 }
-
-#Preview("Password Settings Pane") {
-    BrowserPasswordSettingsPane(
-        browser: BrowserStore.preview(),
-        spaceAccess: BrowserSpaceAccessController(),
-        layout: .macOSPage
-    )
-}

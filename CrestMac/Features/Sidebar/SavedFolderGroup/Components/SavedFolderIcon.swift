@@ -15,11 +15,3 @@ struct SavedFolderIcon: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Saved Folder Icon") {
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderIcon(
-        folder: configuration.folder,
-        isExpanded: true
-    )
-}

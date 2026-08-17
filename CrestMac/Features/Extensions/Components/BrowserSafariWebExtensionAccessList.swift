@@ -16,11 +16,3 @@ struct BrowserSafariWebExtensionAccessList: View {
         }
     }
 }
-
-#Preview("Safari Extension Access", traits: .sizeThatFitsLayout) {
-    BrowserSafariWebExtensionAccessList(
-        title: "Website Access",
-        values: ["https://developer.apple.com/*", "https://swift.org/*"]
-    )
-    .padding()
-}

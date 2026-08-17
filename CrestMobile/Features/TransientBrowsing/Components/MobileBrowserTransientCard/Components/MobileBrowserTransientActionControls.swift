@@ -28,11 +28,3 @@ struct MobileBrowserTransientActionControls: View {
             : "Close Peek (Esc or ⌘W)"
     }
 }
-
-#Preview {
-    MobileBrowserTransientActionControls(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        dismiss: {},
-        promote: { _ in }
-    )
-}

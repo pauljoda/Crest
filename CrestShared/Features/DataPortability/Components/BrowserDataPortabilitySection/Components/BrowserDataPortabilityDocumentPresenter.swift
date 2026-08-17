@@ -64,13 +64,3 @@ struct BrowserDataPortabilityDocumentPresenter<Content: View>: View {
         }
     }
 }
-
-#Preview("Document Presentation Shell") {
-    BrowserDataPortabilityDocumentPresenter(
-        model: BrowserDataPortabilityPreviewFixture.makeModel(),
-        presentsSystemPanels: false
-    ) {
-        Text("Import & Export")
-            .padding()
-    }
-}

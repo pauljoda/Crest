@@ -44,15 +44,3 @@ struct BrowserPeekInputLifecycleModifier: ViewModifier {
             }
     }
 }
-
-#Preview {
-    Text("Peek input")
-        .modifier(
-            BrowserPeekInputLifecycleModifier(
-                model: BrowserPeekPreviewFixture.makeModel(),
-                dismiss: {},
-                promote: {},
-                installsKeyboardMonitor: false
-            )
-        )
-}

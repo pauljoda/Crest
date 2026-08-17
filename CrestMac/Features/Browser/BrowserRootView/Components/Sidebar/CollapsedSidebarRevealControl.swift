@@ -19,8 +19,3 @@ struct CollapsedSidebarRevealControl: View {
         .frame(maxHeight: .infinity)
     }
 }
-
-#Preview("Collapsed Sidebar Reveal") {
-    CollapsedSidebarRevealControl(showSidebar: {})
-        .frame(height: 320)
-}

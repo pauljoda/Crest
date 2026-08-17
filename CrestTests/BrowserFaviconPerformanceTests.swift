@@ -163,12 +163,4 @@ final class BrowserFaviconPerformanceTests: XCTestCase {
         XCTAssertEqual(cachedImageCount, 1)
     }
 
-    func testPreviewFixtureUsesInlineBytesThatDecodeThroughImageIO() {
-        XCTAssertNotNil(
-            BrowserFaviconImageDecoder.decodeSynchronously(
-                TabFaviconPreviewFixture.imageData,
-                maximumPixelSize: 64
-            )
-        )
-    }
 }

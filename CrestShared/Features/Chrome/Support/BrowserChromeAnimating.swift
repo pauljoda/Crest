@@ -8,3 +8,12 @@ import SwiftUI
 protocol BrowserChromeAnimating {
     var reduceMotion: Bool { get }
 }
+
+extension BrowserChromeAnimating {
+    func chromeAnimation(_ animation: Animation) -> Animation? {
+        BrowserVisualAccessibilityPolicy.animation(
+            animation,
+            reduceMotion: reduceMotion
+        )
+    }
+}

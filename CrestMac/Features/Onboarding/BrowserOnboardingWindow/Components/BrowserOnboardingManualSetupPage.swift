@@ -113,19 +113,3 @@ struct BrowserOnboardingManualSetupPage: View {
         )
     }
 }
-
-#Preview("Manual Setup Page") {
-    @Previewable @State var selectedSpaceID: SpaceID? =
-        BrowserOnboardingWindowPreviewFixture.session.spaces.first?.id
-    let fixture = BrowserOnboardingWindowPreviewFixture(
-        entryPoint: .manualSetup
-    )
-
-    BrowserOnboardingManualSetupPage(
-        flow: fixture.flow,
-        browserSession: fixture.browser.session,
-        selectedSpaceID: $selectedSpaceID,
-        back: {}
-    )
-    .frame(width: 980, height: 604)
-}

@@ -31,12 +31,3 @@ struct BrowserCredentialPasswordSection: View {
         }
     }
 }
-
-#Preview("Credential Password Section", traits: .sizeThatFitsLayout) {
-    Form {
-        BrowserCredentialPasswordSection(
-            model: BrowserCredentialDetailPreviewFixture.makeModel()
-        )
-    }
-    .frame(width: 440)
-}

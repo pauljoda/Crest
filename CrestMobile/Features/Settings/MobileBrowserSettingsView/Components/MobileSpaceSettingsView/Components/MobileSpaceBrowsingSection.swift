@@ -44,13 +44,3 @@ struct MobileSpaceBrowsingSection: View {
         }
     }
 }
-
-#Preview("Mobile Space Browsing") {
-    let fixture = MobileBrowserPreviewFixture()
-    Form {
-        MobileSpaceBrowsingSection(
-            browser: fixture.browser,
-            space: fixture.space
-        )
-    }
-}

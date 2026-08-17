@@ -32,12 +32,3 @@ struct MobileOnboardingFeatureRow: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview("Onboarding Feature Row", traits: .fixedLayout(width: 390, height: 100)) {
-    MobileOnboardingFeatureRow(
-        symbol: "lock.shield.fill",
-        title: "Private by design",
-        detail: "History, passwords, and site data remain isolated."
-    )
-    .padding(.horizontal)
-}

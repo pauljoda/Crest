@@ -38,19 +38,3 @@ struct BrowserSiteControlContent: View {
         .padding(CrestSpacing.medium)
     }
 }
-
-#Preview("Site Control Content") {
-    @Previewable @State var permissionsExpansion = true
-    let preview = BrowserSidebarExtensionPreviewFixture.makeContext()
-    BrowserSiteControlContent(
-        configuration: preview.configuration,
-        actions: BrowserSidebarExtensionPreviewFixture.actions,
-        permissionsExpansion: $permissionsExpansion,
-        dismiss: {},
-        manageExtensions: {},
-        performExtensionAction: { _, _ in },
-        togglePinned: { _ in },
-        reviewCertificate: {}
-    )
-    .frame(width: BrowserSiteControlLayoutPolicy.width)
-}

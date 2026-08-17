@@ -34,12 +34,3 @@ struct BrowserPlatformExtensionAddSection: View {
             }
     }
 }
-
-#Preview("Add Mac Extension") {
-    Form {
-        BrowserPlatformExtensionAddSection(
-            model: BrowserExtensionsPreviewFixture.model
-        )
-    }
-    .frame(width: 620, height: 340)
-}

@@ -53,14 +53,3 @@ struct MobileCredentialSuggestionPrompt: View {
         }
     }
 }
-
-#Preview("Credential Suggestions Prompt") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileCredentialSuggestionPrompt(
-        request: fixture.currentPasswordRequest,
-        page: fixture.page,
-        browser: fixture.browser
-    )
-    .frame(width: 390)
-}

@@ -32,11 +32,3 @@ struct BrowserManualSetupPlacementMenuLabel: View {
         }
     }
 }
-
-#Preview("Manual Setup Placement Label") {
-    BrowserManualSetupPlacementMenuLabel(
-        placement: .saved,
-        symbol: "bookmark.fill"
-    )
-    .padding()
-}

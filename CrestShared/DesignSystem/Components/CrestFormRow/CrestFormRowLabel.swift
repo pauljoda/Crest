@@ -32,12 +32,3 @@ struct CrestFormRowLabel: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview("Form Row Label") {
-    CrestFormRowLabel(
-        title: "Privacy",
-        subtitle: "Site access and data",
-        systemImage: "hand.raised.fill"
-    )
-    .padding()
-}

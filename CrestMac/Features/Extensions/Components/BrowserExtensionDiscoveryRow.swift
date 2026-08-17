@@ -99,15 +99,3 @@ struct BrowserExtensionDiscoveryRow: View {
         .padding(.vertical, CrestSpacing.small)
     }
 }
-
-#Preview("Extension Discovery Row") {
-    BrowserExtensionDiscoveryRow(
-        item: BrowserExtensionDiscoveryPreviewFixture.item,
-        space: BrowserExtensionsPreviewFixture.space,
-        isInstalling: false,
-        isDisabled: false,
-        install: {}
-    )
-    .frame(width: 620)
-    .padding()
-}

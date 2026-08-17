@@ -17,11 +17,3 @@ struct MobileCredentialSuggestionFeedback: View {
         }
     }
 }
-
-#Preview("Credential Suggestion Feedback") {
-    MobileCredentialSuggestionFeedback(
-        hasLoadFailed: false,
-        fillErrorMessage: "The form changed before Crest could fill it."
-    )
-    .padding()
-}

@@ -37,13 +37,3 @@ struct SavedFolderSplitGroupRow: View {
         .padding(.leading, configuration.rowLeadingInset)
     }
 }
-
-#Preview("Saved Folder Split Group") {
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderSplitGroupRow(
-        configuration: configuration,
-        groupID: SidebarSplitGroupRowPreviewFixture.groupID,
-        members: SidebarSplitGroupRowPreviewFixture.members(placement: .saved)
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

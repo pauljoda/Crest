@@ -31,24 +31,3 @@ struct BrowserSplitCardFocusIndicator: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Split Card Focus Indicator", traits: .fixedLayout(width: 520, height: 300)) {
-    HStack(spacing: BrowserSplitLayoutMetrics.interCardGap) {
-        ForEach([true, false], id: \.self) { isFocused in
-            Color.gray.opacity(0.2)
-                .clipShape(
-                    .rect(
-                        cornerRadius: BrowserChromeLayout.pageCornerRadius,
-                        style: .continuous
-                    )
-                )
-                .overlay {
-                    BrowserSplitCardFocusIndicator(
-                        isFocused: isFocused,
-                        accent: .indigo
-                    )
-                }
-        }
-    }
-    .padding(BrowserChromeLayout.pageFrameInset)
-}

@@ -446,27 +446,3 @@ struct MobileSavedFolderGroup: View {
         ) != nil
     }
 }
-
-#Preview("Mobile Saved Folder Group") {
-    @Previewable @Namespace var promotionNamespace
-    @Previewable @State var isExpanded = true
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileSavedFolderGroup(
-        node: fixture.folderNode,
-        tabs: [fixture.savedTab],
-        spaceID: fixture.space.id,
-        profileID: fixture.space.profile.id,
-        selectedTabID: fixture.space.selectedTabID,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        selectTab: { _ in },
-        promotionNamespace: promotionNamespace,
-        usesNativeNavigationTransition: false,
-        isExpanded: $isExpanded,
-        editingFolderRequest: $editingFolderRequest
-    )
-    .frame(width: 360)
-}

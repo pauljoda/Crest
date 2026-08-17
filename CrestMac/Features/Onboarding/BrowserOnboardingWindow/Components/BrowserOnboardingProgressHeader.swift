@@ -56,8 +56,3 @@ struct BrowserOnboardingProgressHeader: View {
         )
     }
 }
-
-#Preview("Review Progress") {
-    BrowserOnboardingProgressHeader(step: .review)
-        .frame(width: 980)
-}

@@ -1,5 +1,17 @@
 import Foundation
 
+enum BrowserLinkRoutingDecision: Equatable, Sendable {
+    case quickWindow(spaceID: SpaceID)
+    case space(SpaceID)
+
+    var spaceID: SpaceID {
+        switch self {
+        case .quickWindow(let spaceID), .space(let spaceID):
+            spaceID
+        }
+    }
+}
+
 enum BrowserLinkRoutingPolicy {
     static func decision(
         for url: URL,

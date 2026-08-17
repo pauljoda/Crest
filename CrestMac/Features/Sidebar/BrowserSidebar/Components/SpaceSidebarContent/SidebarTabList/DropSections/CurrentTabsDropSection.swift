@@ -115,18 +115,3 @@ struct CurrentTabsDropSection: View {
         ) != nil
     }
 }
-
-#Preview("Current Tabs Drop Section") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    CurrentTabsDropSection(
-        space: BrowserSidebarPreviewFixture.space,
-        tabs: BrowserSidebarPreviewFixture.space.tabSections.sidebarCurrentTabs,
-        browser: browser,
-        pages: BrowserSidebarPreviewFixture.makePages(),
-        spaceAccess: BrowserSidebarPreviewFixture.makeSpaceAccess(),
-        openNewTab: {},
-        tabPromotionNamespace: tabPromotionNamespace
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

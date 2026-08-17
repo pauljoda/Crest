@@ -48,11 +48,3 @@ struct MobileBrowserTransientOverlay: View {
         )
     }
 }
-
-#Preview {
-    MobileBrowserTransientOverlay(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        presentationPhase: .committed,
-        spaceAccess: MobileBrowserTransientPreviewFixture.makeAccessController()
-    )
-}

@@ -27,14 +27,3 @@ struct BrowserQuickWindowSpacePicker: View {
         .accessibilityLabel("Choose Destination Space")
     }
 }
-
-#Preview("Quick Window Space Picker") {
-    BrowserQuickWindowSpacePicker(
-        spaces: [
-            BrowserQuickWindowPreviewFixture.sourceSpace,
-            BrowserQuickWindowPreviewFixture.destinationSpace,
-        ],
-        selectedSpaceID: BrowserQuickWindowPreviewFixture.sourceSpace.id,
-        selectSpace: { _ in }
-    )
-}

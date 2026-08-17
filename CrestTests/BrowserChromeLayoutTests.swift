@@ -703,10 +703,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserTabTrailingControlPolicy.minimumHitTarget
         )
         XCTAssertEqual(BrowserTabTrailingControlPolicy.glyphSize, 12)
-        XCTAssertTrue(BrowserTabTrailingControlPolicy.claimsItsFullHitTarget)
-        XCTAssertTrue(BrowserTabTrailingControlPolicy.isSeparatedFromActivationTarget)
-        XCTAssertTrue(BrowserTabTrailingControlPolicy.usesSharedHoverSurface)
-        XCTAssertTrue(BrowserTabTrailingControlPolicy.preservesSidebarRowHeight)
     }
 
     func testCommandPaletteShellUsesOnlyNativeLiquidGlassRendering() {

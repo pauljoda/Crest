@@ -22,11 +22,3 @@ struct BrowserSoftwareUpdateReleaseNotes: View {
         }
     }
 }
-
-#Preview {
-    BrowserSoftwareUpdateReleaseNotes(
-        releaseNotes: "## What’s new\n\n- Native software updates\n- Security fixes"
-    )
-    .frame(width: 520)
-    .padding()
-}

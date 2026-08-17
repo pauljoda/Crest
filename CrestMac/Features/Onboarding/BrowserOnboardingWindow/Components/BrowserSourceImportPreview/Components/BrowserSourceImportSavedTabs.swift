@@ -49,21 +49,3 @@ struct BrowserSourceImportSavedTabs: View {
         )
     }
 }
-
-#Preview("Source Import Saved Tabs") {
-    BrowserSourceImportSavedTabs(
-        title: "SAVED",
-        review: BrowserImportPreviewFixture.review,
-        sections: BrowserSourceImportPreviewSections(
-            review: BrowserImportPreviewFixture.review
-        ),
-        overflowTabIDs: [],
-        duplicateTabIDs: [],
-        duplicateDestinationName: nil,
-        setIncluded: { _, _ in },
-        setSectionIncluded: { _, _ in },
-        setPlacement: { _, _ in }
-    )
-    .frame(width: 340)
-    .padding()
-}

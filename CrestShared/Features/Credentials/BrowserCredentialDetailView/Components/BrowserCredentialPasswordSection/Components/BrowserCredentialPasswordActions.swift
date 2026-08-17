@@ -47,11 +47,3 @@ struct BrowserCredentialPasswordActions: View {
         }
     }
 }
-
-#Preview("Credential Password Actions", traits: .sizeThatFitsLayout) {
-    BrowserCredentialPasswordActions(
-        model: BrowserCredentialDetailPreviewFixture.makeModel()
-    )
-    .frame(width: 420)
-    .padding()
-}

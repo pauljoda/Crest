@@ -28,16 +28,3 @@ struct BrowserQuickWindowToolbar: View {
         .frame(height: BrowserQuickWindowLayout.toolbarHeight)
     }
 }
-
-#Preview("Quick Window Toolbar") {
-    @Previewable @State var addressText = ""
-    @Previewable @State var isEditing = false
-    BrowserQuickWindowToolbar(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        addressText: $addressText,
-        isAddressEditing: $isEditing,
-        addressFocusRequest: 0,
-        promote: { _ in }
-    )
-    .frame(width: 640)
-}

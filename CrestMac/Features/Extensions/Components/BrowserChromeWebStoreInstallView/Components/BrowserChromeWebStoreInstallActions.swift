@@ -50,16 +50,3 @@ struct BrowserChromeWebStoreInstallActions: View {
         .disabled(page.isInstallingChromeWebStoreExtension)
     }
 }
-
-#Preview("Chrome Web Store Install Actions", traits: .fixedLayout(width: 480, height: 80)) {
-    let page = BrowserChromeWebStoreInstallPreviewFixture.makePage()
-
-    BrowserChromeWebStoreInstallActions(
-        page: page,
-        phase: .review(
-            BrowserChromeWebStoreInstallPreviewFixture.candidate,
-            errorDescription: nil
-        )
-    )
-    .padding()
-}

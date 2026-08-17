@@ -18,8 +18,3 @@ struct BrowserChromeWebStorePreparingContent: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview("Chrome Web Store Install — Preparing", traits: .sizeThatFitsLayout) {
-    BrowserChromeWebStorePreparingContent()
-        .padding()
-}

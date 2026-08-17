@@ -22,14 +22,3 @@ struct BrowserWindowTransparencyStrengthControl: View {
         .disabled(!isEnabled)
     }
 }
-
-#Preview("Transparency strength") {
-    @Previewable @State var strength = 0.18
-    Form {
-        BrowserWindowTransparencyStrengthControl(
-            strength: $strength,
-            isEnabled: true
-        )
-    }
-    .frame(width: 480)
-}

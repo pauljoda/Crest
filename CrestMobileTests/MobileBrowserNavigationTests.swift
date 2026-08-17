@@ -2055,7 +2055,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             pages: pages,
             navigation: MobileBrowserNavigationState(),
             spaceAccess: BrowserSpaceAccessController(
-                authenticator: MobileBrowserPreviewAuthenticator()
+                authenticator: BrowserPreviewAuthenticator(result: false)
             ),
             windowState: nil,
             startupBehavior: .waitForTabSelection,

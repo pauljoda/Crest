@@ -74,12 +74,3 @@ struct BrowserQuickWindowUnlockedContent: View {
         dismiss()
     }
 }
-
-#Preview("Unlocked Quick Window") {
-    BrowserQuickWindowUnlockedContent(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(),
-        dismiss: {},
-        openBrowserWindow: {}
-    )
-}

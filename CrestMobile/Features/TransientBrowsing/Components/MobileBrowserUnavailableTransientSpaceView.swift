@@ -12,10 +12,3 @@ struct MobileBrowserUnavailableTransientSpaceView: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview {
-    MobileBrowserUnavailableTransientSpaceView(
-        requestID: MobileBrowserTransientPreviewFixture.requestID,
-        dismiss: {}
-    )
-}

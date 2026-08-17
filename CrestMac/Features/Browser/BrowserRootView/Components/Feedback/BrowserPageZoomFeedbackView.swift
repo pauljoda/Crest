@@ -39,7 +39,3 @@ struct BrowserPageZoomFeedbackView: View {
             .zIndex(BrowserRootMetrics.feedbackZIndex)
     }
 }
-
-#Preview("Page Zoom Feedback", traits: .fixedLayout(width: 420, height: 120)) {
-    BrowserPageZoomFeedbackView(label: "125%")
-}

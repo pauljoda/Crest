@@ -1,6 +1,6 @@
 # Repository guardrails
 
-Crest keeps repository checks narrow enough to express real architecture contracts. They intentionally do not guess whether a number is a design token or whether a declaration reported by static analysis is safe to delete. Visual ownership is explicit: meaningful SwiftUI types require direct, deterministic previews under the vertical feature contract.
+Crest keeps repository checks narrow enough to express real architecture contracts. They intentionally do not guess whether a number is a design token, whether a declaration reported by static analysis is safe to delete, or how many declarations and folders a cohesive feature needs.
 
 ## Changed-file formatting
 
@@ -48,20 +48,18 @@ Run:
 Scripts/check-vertical-structure.py
 ```
 
-The guard applies Crest's vertical organization contract across `CrestShared`, `CrestMac`, and `CrestMobile`:
+The guard applies Crest's deliberately small organization contract across `CrestShared`, `CrestMac`, and `CrestMobile`:
 
-- Organize feature code under `Features/<Feature>`, with `Components`, `Models`, `Services`, and `Support` only where the feature needs them.
+- Organize code by user-visible feature or runtime capability. Folder names describe the behavior a developer is looking for; `Components`, `Models`, `Services`, and `Support` are available vocabulary, not mandatory layers.
+- A file holds one cohesive concept. Name it for either its primary owner or the role of a tightly related group; small single-use values, private helpers, related global declarations, and nested types should live with that concept. Multiple extensions may share a file when they extend that same owner. Use `// MARK:` sections named for the behavior they contain, rather than generic labels such as `Utilities` or `Animation`.
+- Split a type only at a boundary that improves comprehension: a meaningful subview, a distinct lifecycle, a protocol conformance with real platform value, a large independently testable policy, or a cross-target/framework constraint. File count and line count are evidence, not goals; roughly 100–400 lines is a comfortable range and larger cohesive owners are acceptable.
+- A protocol needs at least two production implementations or a genuine system boundary that cannot run in tests, previews, or the current process. Prefer a concrete store configured with disposable dependencies over paired production/in-memory protocols whose only second conformer is a test double.
+- Root screens compose meaningful, narrowly scoped `View` types. Large root `body` implementations and large computed view builders remain guarded, but small owner-scoped subviews and values may stay in the same file.
+- Add previews for meaningful screens and reusable visual states, not mechanically for every leaf. The curated hosts are the macOS and mobile browser roots, sidebars, representative tab rows, settings and onboarding roots, Quick Window, Site Settings, software updates, command palette, extensions, credential detail, navigation failure, manual setup, Space branding, and utility content. Leaf changes are viewed through those integration surfaces. Any preview that exists must remain deterministic and reject known live persistence, network, Keychain, filesystem, WebKit-store, default-web-view, asynchronous remote-image, and production-composition dependencies. Preview identities and dates are fixed, and previewed views do not own live `@AppStorage` state.
 
-- Feature roots contain screen entry views; direct `Components` files are visual, while direct `Models`, `Services`, and `Support` files are nonvisual.
-- Every Swift file contains exactly one file-scope declaration per Swift file. Each primary enum, struct, class, actor, protocol, or type alias has a matching filename, while an extension lives alone in a matching `Type+Concern.swift` file even when it extends that file's former primary owner. File-scope functions, operators, and stored values do not share a file with another declaration. Named conformance extensions use the declared protocol in the suffix and contain no unrelated globals.
-- A view file contains its single view declaration, with secondary views in dedicated component files.
-- Root screens compose real, narrowly scoped `View` types. Root-screen `body` implementations plus computed `some View` and `@ViewBuilder` sections over the focused line limit become real component boundaries.
-- Every meaningful SwiftUI visual type directly renders itself in a deterministic `#Preview` beside the component.
-- Previews reject known live persistence, network, Keychain, filesystem, WebKit-store, default-web-view, asynchronous remote-image, and production-composition dependencies across both the macro and rendered component implementation. Preview identity and dates are fixed. A previewed View cannot own `@AppStorage`; persisted preferences belong in an injected model or store so the preview consumes ordinary in-memory state.
+`Config/VerticalStructureDebt.json` remains the exact ledger for the few machine-enforced rules. It is currently empty. A new violation must be fixed or recorded with a focused reason; resolving one removes the stale entry in the same change.
 
-`Config/VerticalStructureDebt.json` is an exact, sorted ledger for the remaining 0.3.0 reorganization. It is deliberately not a broad path exclusion: every entry identifies one rule, source path, and subject. A new key fails the guard, and resolving an owner leaves a stale key that must be removed in that same focused commit. This makes the contract immediately enforceable while the existing feature-by-feature debt is reduced to zero.
-
-Substantial components may own nested component families plus their own `Components`, `Models`, `Services`, and `Support`. Direct files in a component family remain visual; nonvisual state and support move into the matching nested bucket. Named screen families use the same four buckets, while arbitrary peer folders are rejected.
+Tests lock behavior whose regression would break a user workflow, persistence or migration contract, security boundary, data transformation, platform integration, or other costly invariant. Do not add tests merely to pin localization copy, design-token values, accessibility identifier strings, previews, file paths, declaration placement, or a mechanical refactor. Repository scripts may keep a small focused suite for their durable failure modes.
 
 Share content, policies, and behavior across platforms while keeping macOS and mobile shells, framework delegates, and system adapters explicit in their platform roots.
 
@@ -93,9 +91,9 @@ local environment configuration, and Apple signing or provisioning material.
 Ignored local worktrees do not enter the public snapshot, while an accidental
 forced add fails CI.
 
-Feature-specific structural tests under `Scripts/Tests` document narrower
-ownership migrations. Run the relevant module when changing one of those
-features; they are not an aggregate repository-wide gate.
+Do not add feature-specific source-topology tests. The repository-wide guards
+own framework and dependency direction; feature behavior belongs in focused
+Swift tests or direct app validation.
 
 The supported guards follow the same dependency direction as production code. Framework-neutral default-browser and passkey values and policies stay in Domain, their observable workflow controllers stay in Application, and AuthenticationServices, AppKit, UIKit, and Security bridges stay in shared or platform Infrastructure. Launch flags are parsed by `BrowserLaunchEnvironment`, evaluated by the Application launch policy, and read from the process only by the Infrastructure adapter; BrowserStore composition consumes that typed value.
 

@@ -43,10 +43,3 @@ struct BrowserSettingsPaneHeaderIcon: View {
         layout.scalesIconWithDynamicType ? scaledSymbolSize : layout.symbolSize
     }
 }
-
-#Preview("Settings Pane Header Icon") {
-    BrowserSettingsPaneHeaderIcon(
-        destination: .privacy,
-        layout: .mobilePage
-    )
-}

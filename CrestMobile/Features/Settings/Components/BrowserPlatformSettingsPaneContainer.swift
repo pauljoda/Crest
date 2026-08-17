@@ -29,11 +29,3 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
         .accessibilityIdentifier("settings-form-\(destination.rawValue)")
     }
 }
-
-#Preview("Settings pane container") {
-    BrowserPlatformSettingsPaneContainer(destination: .general) {
-        Section("Example") {
-            Text("Setting")
-        }
-    }
-}

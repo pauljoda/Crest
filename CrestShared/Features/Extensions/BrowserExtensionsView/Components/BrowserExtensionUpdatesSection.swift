@@ -52,13 +52,3 @@ struct BrowserExtensionUpdatesSection: View {
         Task { await model.checkForUpdatesNow() }
     }
 }
-
-#Preview("Extension Updates") {
-    Form {
-        BrowserExtensionUpdatesSection(
-            model: BrowserExtensionsPreviewFixture.updateModel
-        )
-    }
-    .formStyle(.grouped)
-    .frame(width: 520, height: 280)
-}

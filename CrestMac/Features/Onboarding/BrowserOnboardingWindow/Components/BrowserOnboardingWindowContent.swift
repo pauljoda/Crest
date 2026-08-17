@@ -121,23 +121,3 @@ struct BrowserOnboardingWindowContent: View {
         )
     }
 }
-
-#Preview("Window Content") {
-    @Previewable @State var selectedSourceSpaceID: SpaceID? = nil
-    @Previewable @State var selectedManualSpaceID: SpaceID? = nil
-    @Previewable @State var customizationSpaceID: SpaceID? = nil
-    let fixture = BrowserOnboardingWindowPreviewFixture()
-
-    BrowserOnboardingWindowContent(
-        request: fixture.request,
-        cloudSync: fixture.cloudSync,
-        progress: fixture.progress,
-        flow: fixture.flow,
-        selectedSourceSpaceID: $selectedSourceSpaceID,
-        selectedManualSpaceID: $selectedManualSpaceID,
-        customizationSpaceID: $customizationSpaceID,
-        close: {},
-        openCrest: {}
-    )
-    .frame(width: 980, height: 660)
-}

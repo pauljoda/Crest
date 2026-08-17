@@ -27,16 +27,3 @@ struct BrowserSpaceOrdinaryStep: View {
         }
     }
 }
-
-#Preview("Branding Editor — Ordinary Step") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceOrdinaryStep(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 600)
-}

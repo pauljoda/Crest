@@ -28,19 +28,3 @@ struct BrowserSpaceEditorIdentityPreview: View {
         }
     }
 }
-
-#Preview("Editor Identity — Layered Crest") {
-    BrowserSpaceEditorIdentityPreview(
-        branding: BrowserSpaceBrandingPreviewFixture.crestBranding,
-        symbol: BrowserSpaceSimpleSymbol.work.rawValue
-    )
-    .padding(CrestSpacing.large)
-}
-
-#Preview("Editor Identity — Simple Symbol") {
-    BrowserSpaceEditorIdentityPreview(
-        branding: BrowserSpaceBrandingPreviewFixture.bannerBranding,
-        symbol: BrowserSpaceSimpleSymbol.creative.rawValue
-    )
-    .padding(CrestSpacing.large)
-}

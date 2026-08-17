@@ -12,8 +12,3 @@ struct CrestFormFootnote: View {
         Text(text).crestFormFootnote()
     }
 }
-
-#Preview("Form Footnote") {
-    CrestFormFootnote("Settings remain isolated to the selected Space.")
-        .padding()
-}

@@ -70,13 +70,3 @@ struct BrowserPeekOverlay: View {
         model.space != nil
     }
 }
-
-#Preview {
-    BrowserPeekOverlay(
-        model: BrowserPeekPreviewFixture.makeModel(),
-        reservedLeadingWidth: 0,
-        layoutDirection: .leftToRight,
-        spaceAccess: BrowserPeekPreviewFixture.makeAccessController()
-    )
-    .frame(width: 900, height: 620)
-}

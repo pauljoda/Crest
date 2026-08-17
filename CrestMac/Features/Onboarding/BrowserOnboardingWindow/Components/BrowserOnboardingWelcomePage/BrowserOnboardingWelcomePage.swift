@@ -103,15 +103,3 @@ struct BrowserOnboardingWelcomePage: View {
         }
     }
 }
-
-#Preview("Welcome Page") {
-    BrowserOnboardingWelcomePage(
-        progressIsChecking: false,
-        cloudPhase: .ready,
-        hasCompletedSetup: false,
-        hasDisposableSeedState: true,
-        continueSetup: {},
-        openCrest: {}
-    )
-    .frame(width: 980, height: 604)
-}

@@ -62,21 +62,3 @@ struct BrowserSpaceEditorPreview: View {
         .accessibilityIdentifier("space-branding-editor-preview")
     }
 }
-
-#Preview("Editor Preview — Layered Crest") {
-    BrowserSpaceEditorPreview(
-        branding: BrowserSpaceBrandingPreviewFixture.crestBranding,
-        symbol: BrowserSpaceSimpleSymbol.work.rawValue,
-        compact: false
-    )
-    .padding(CrestSpacing.large)
-}
-
-#Preview("Editor Preview — Compact Symbol") {
-    BrowserSpaceEditorPreview(
-        branding: BrowserSpaceBrandingPreviewFixture.gradientBranding,
-        symbol: BrowserSpaceSimpleSymbol.creative.rawValue,
-        compact: true
-    )
-    .padding(CrestSpacing.large)
-}

@@ -39,20 +39,3 @@ struct CurrentTabsDivider: View {
         showsClearAction && canClear
     }
 }
-
-#Preview("Current Tabs Divider") {
-    VStack(spacing: CrestSpacing.large) {
-        CurrentTabsDivider(
-            showsClearAction: false,
-            canClear: true,
-            clear: {}
-        )
-        CurrentTabsDivider(
-            showsClearAction: true,
-            canClear: true,
-            clear: {}
-        )
-    }
-    .frame(width: 280)
-    .padding()
-}

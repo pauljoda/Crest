@@ -21,11 +21,3 @@ struct BrowserNavigationFailureDetailsButton: View {
         .accessibilityIdentifier("navigation-failure-details")
     }
 }
-
-#Preview("Navigation Failure Details Button") {
-    BrowserNavigationFailureDetailsButton(
-        showsDetails: false,
-        action: {}
-    )
-    .padding()
-}

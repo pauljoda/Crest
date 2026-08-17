@@ -23,15 +23,3 @@ struct BrowserQuickWindowPageObservationModifier: ViewModifier {
             }
     }
 }
-
-#Preview("Quick Window Page Observation") {
-    @Previewable @State var addressText = ""
-    Color.clear
-        .modifier(
-            BrowserQuickWindowPageObservationModifier(
-                model: BrowserQuickWindowPreviewFixture.makeModel(),
-                addressText: $addressText
-            )
-        )
-        .frame(width: 480, height: 320)
-}

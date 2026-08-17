@@ -26,8 +26,3 @@ struct MobileArchiveContent: View {
         dismiss()
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileArchiveContent(space: fixture.space, restoreArchivedTab: { _ in })
-}

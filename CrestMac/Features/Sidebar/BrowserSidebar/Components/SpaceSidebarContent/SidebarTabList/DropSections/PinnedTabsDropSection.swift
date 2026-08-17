@@ -98,17 +98,3 @@ struct PinnedTabsDropSection: View {
         ) != nil
     }
 }
-
-#Preview("Pinned Tabs Empty Drop Section", traits: .sizeThatFitsLayout) {
-    let fixture = PinnedTabsDropSectionPreviewFixture()
-
-    PinnedTabsDropSection(
-        space: fixture.space,
-        tabSections: BrowserTabSections(tabs: fixture.space.tabs),
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-    .padding()
-}

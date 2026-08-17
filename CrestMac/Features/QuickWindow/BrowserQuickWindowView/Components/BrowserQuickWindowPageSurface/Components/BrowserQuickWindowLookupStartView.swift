@@ -11,10 +11,3 @@ struct BrowserQuickWindowLookupStartView: View {
             )
     }
 }
-
-#Preview("Empty Quick Window") {
-    BrowserQuickWindowLookupStartView(
-        space: BrowserQuickWindowPreviewFixture.sourceSpace
-    )
-    .frame(width: 480, height: 320)
-}

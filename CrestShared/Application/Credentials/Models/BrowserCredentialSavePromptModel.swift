@@ -135,3 +135,30 @@ final class BrowserCredentialSavePromptModel {
         }
     }
 }
+
+enum BrowserCredentialSavePromptAction: Equatable, Sendable {
+    case create
+    case update
+}
+
+enum BrowserCredentialSavePromptFailure: Equatable, Sendable {
+    case preparation
+    case commit(BrowserCredentialSavePromptAction)
+}
+
+enum BrowserCredentialSavePromptPhase: Equatable, Sendable {
+    case preparing
+    case create
+    case update
+    case alreadyStored
+    case saving(BrowserCredentialSavePromptAction)
+    case saved(BrowserCredentialSaveDisposition)
+    case failed(BrowserCredentialSavePromptFailure)
+}
+
+enum BrowserSystemPasswordOfferPhase: Equatable, Sendable {
+    case notRequested
+    case offering
+    case completed
+    case failed
+}

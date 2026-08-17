@@ -25,10 +25,3 @@ struct BrowserQuickWindowPageContent: View {
         }
     }
 }
-
-#Preview("Quick Window Page Content") {
-    BrowserQuickWindowPageContent(
-        model: BrowserQuickWindowPreviewFixture.makeModel()
-    )
-    .frame(width: 480, height: 320)
-}

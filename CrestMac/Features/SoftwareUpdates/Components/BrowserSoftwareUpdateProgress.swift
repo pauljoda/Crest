@@ -15,9 +15,3 @@ struct BrowserSoftwareUpdateProgress: View {
         .accessibilityLabel("Software update progress")
     }
 }
-
-#Preview {
-    BrowserSoftwareUpdateProgress(progress: 0.42)
-        .frame(width: 420)
-        .padding()
-}

@@ -31,13 +31,3 @@ struct MobileSpaceCustomizationControls: View {
         .accessibilityIdentifier("mobile-space-customization-controls")
     }
 }
-
-#Preview("Mobile Space Customization Controls", traits: .fixedLayout(width: 320, height: 560)) {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileSpaceCustomizationControls(
-        browser: fixture.browser,
-        space: fixture.space,
-        compact: true
-    )
-    .padding()
-}

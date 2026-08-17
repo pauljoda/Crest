@@ -74,24 +74,3 @@ struct MobileBrowserSidebarTopChrome: View {
         "crest-address-command-\(configuration.browser.session.selectedSpaceID)"
     }
 }
-
-#Preview("Mobile Browser Sidebar Top Chrome", traits: .sizeThatFitsLayout) {
-    @Previewable @Namespace var compactChromeNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    @Previewable @State var address = ""
-    @Previewable @State var isAddressEditing = false
-    @Previewable @State var utilitySearchText = ""
-    @Previewable @State var utilityFilter = BrowserUtilityListFilter.all
-    let fixture = MobileBrowserSidebarContentPreviewFixture()
-
-    MobileBrowserSidebarTopChrome(
-        configuration: fixture.configuration(
-            compactChromeNamespace: compactChromeNamespace,
-            tabPromotionNamespace: tabPromotionNamespace,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
-            utilitySearchText: $utilitySearchText,
-            utilityFilter: $utilityFilter
-        )
-    )
-}

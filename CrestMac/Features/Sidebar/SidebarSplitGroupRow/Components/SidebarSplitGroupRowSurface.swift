@@ -66,12 +66,3 @@ struct SidebarSplitGroupRowSurface: ViewModifier {
         )
     }
 }
-
-#Preview("Split Group Row Surface") {
-    let configuration = SidebarSplitGroupRowPreviewFixture.configuration()
-
-    SidebarSplitGroupRowContent(configuration: configuration)
-        .modifier(SidebarSplitGroupRowSurface(configuration: configuration))
-        .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-        .padding()
-}

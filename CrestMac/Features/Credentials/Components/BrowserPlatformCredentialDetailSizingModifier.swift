@@ -10,10 +10,3 @@ struct BrowserPlatformCredentialDetailSizingModifier: ViewModifier {
         )
     }
 }
-
-#Preview("Credential Detail Sizing") {
-    Form {
-        Text("Credential details")
-    }
-    .modifier(BrowserPlatformCredentialDetailSizingModifier())
-}

@@ -49,13 +49,3 @@ struct BrowserSitePermissionRecordRow: View {
         )
     }
 }
-
-#Preview("Site Permission Row") {
-    Form {
-        BrowserSitePermissionRecordRow(
-            record: BrowserPrivacySettingsPreviewFixture.record,
-            permissionCenter:
-                BrowserPrivacySettingsPreviewFixture.permissionCenter
-        )
-    }
-}

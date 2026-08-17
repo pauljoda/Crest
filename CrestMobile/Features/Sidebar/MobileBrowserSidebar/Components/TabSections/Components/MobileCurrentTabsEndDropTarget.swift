@@ -33,17 +33,3 @@ struct MobileCurrentTabsEndDropTarget: View {
         )
     }
 }
-
-#Preview("Current Tabs End Drop Target", traits: .sizeThatFitsLayout) {
-    @Previewable @State var isTargeted = false
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileCurrentTabsEndDropTarget(
-        tabs: [fixture.currentTab],
-        browser: fixture.browser,
-        isTargeted: $isTargeted,
-        move: { _, _ in false }
-    )
-    .frame(width: 320)
-    .background(.quaternary)
-}

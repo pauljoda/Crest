@@ -46,13 +46,3 @@ struct BrowserSiteExtensionActionButton: View {
         )
     }
 }
-
-#Preview("Site Extension Action") {
-    BrowserSiteExtensionActionButton(
-        action: BrowserSidebarExtensionPreviewFixture.actions[0],
-        perform: { _ in },
-        togglePinned: {}
-    )
-    .padding()
-    .frame(width: 72)
-}

@@ -53,18 +53,3 @@ struct MobileSidebarTabActivationButton: View {
         .accessibilityIdentifier(BrowserTabAccessibilityID.row(tab.id))
     }
 }
-
-#Preview("Mobile Sidebar Tab Activation", traits: .sizeThatFitsLayout) {
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileSidebarTabActivationButton(
-        tab: fixture.savedTab,
-        profileID: fixture.space.profile.id,
-        isSelected: true,
-        isLoaded: true,
-        restoreSavedLocation: {},
-        select: {}
-    )
-    .frame(width: 320)
-    .padding()
-}

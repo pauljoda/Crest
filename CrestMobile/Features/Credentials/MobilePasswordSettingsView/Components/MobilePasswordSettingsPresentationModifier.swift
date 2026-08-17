@@ -57,13 +57,3 @@ struct MobilePasswordSettingsPresentationModifier: ViewModifier {
             }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobilePasswordSettingsModel(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-    Text("Passwords")
-        .modifier(MobilePasswordSettingsPresentationModifier(model: model))
-}

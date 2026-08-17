@@ -44,29 +44,3 @@ struct BrowserDownloadRowAction: View {
             )
     }
 }
-
-#Preview("Download Row Actions", traits: .fixedLayout(width: 240, height: 64)) {
-    HStack(spacing: 16) {
-        BrowserDownloadRowAction(
-            item: BrowserUtilityListPreviewFixture.preparingDownload,
-            destinations: [],
-            perform: { _ in }
-        )
-        BrowserDownloadRowAction(
-            item: BrowserUtilityListPreviewFixture.activeDownload,
-            destinations: [],
-            perform: { _ in }
-        )
-        BrowserDownloadRowAction(
-            item: BrowserUtilityListPreviewFixture.finishedDownload,
-            destinations: [.revealInFinder, .files],
-            perform: { _ in }
-        )
-        BrowserDownloadRowAction(
-            item: BrowserUtilityListPreviewFixture.failedDownload,
-            destinations: [],
-            perform: { _ in }
-        )
-    }
-    .padding()
-}

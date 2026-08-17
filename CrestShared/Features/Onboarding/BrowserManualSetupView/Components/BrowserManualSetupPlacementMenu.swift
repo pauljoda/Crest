@@ -64,18 +64,3 @@ struct BrowserManualSetupPlacementMenu: View {
         model.removeTab(tab.id, from: spaceID, plan: $plan)
     }
 }
-
-#Preview("Manual Setup Placement Menu") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-
-    BrowserManualSetupPlacementMenu(
-        plan: $plan,
-        tab: BrowserManualSetupPreviewFixture.manualTab,
-        spaceID: BrowserManualSetupPreviewFixture.spaceID,
-        labelSymbol: "checkmark",
-        accessibilityLabel: Text("Tab placement for Example"),
-        accessibilityIdentifier: "manual-setup-placement-preview",
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .padding()
-}

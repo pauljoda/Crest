@@ -82,26 +82,3 @@ struct MobileBrowserSidebarSpaceSurface: View {
         configuration.selectSpace(assignment.spaceID)
     }
 }
-
-#Preview("Mobile Browser Sidebar Space Surface") {
-    @Previewable @Namespace var compactChromeNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    @Previewable @State var address = ""
-    @Previewable @State var isAddressEditing = false
-    @Previewable @State var utilitySearchText = ""
-    @Previewable @State var utilityFilter = BrowserUtilityListFilter.all
-    let fixture = MobileBrowserSidebarContentPreviewFixture()
-
-    MobileBrowserSidebarSpaceSurface(
-        configuration: fixture.configuration(
-            compactChromeNamespace: compactChromeNamespace,
-            tabPromotionNamespace: tabPromotionNamespace,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
-            utilitySearchText: $utilitySearchText,
-            utilityFilter: $utilityFilter
-        ),
-        space: fixture.browserFixture.space,
-        isSelected: true
-    )
-}

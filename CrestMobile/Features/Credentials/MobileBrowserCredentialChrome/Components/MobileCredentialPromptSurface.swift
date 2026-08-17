@@ -32,13 +32,3 @@ struct MobileCredentialPromptSurface<Content: View>: View {
             .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
-
-#Preview("Credential Prompt Surface") {
-    MobileCredentialPromptSurface(
-        accessibilityLabel: "Credential prompt",
-        accessibilityIdentifier: "credential-prompt-preview"
-    ) {
-        Text("Credential prompt content")
-    }
-    .frame(width: 390)
-}

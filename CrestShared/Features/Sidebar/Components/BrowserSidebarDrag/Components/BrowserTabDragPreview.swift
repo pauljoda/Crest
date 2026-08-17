@@ -81,29 +81,3 @@ struct BrowserTabDragPreview: View {
         .allowsHitTesting(false)
     }
 }
-
-#Preview("Tab Drag Preview", traits: .fixedLayout(width: 420, height: 320)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    HStack(alignment: .top, spacing: CrestSpacing.large) {
-        VStack(spacing: CrestSpacing.large) {
-            BrowserTabDragPreview(
-                tab: fixture.currentTab,
-                profileID: fixture.space.profile.id,
-                progress: 0
-            )
-            BrowserTabDragPreview(
-                tab: fixture.pinnedTab,
-                profileID: fixture.space.profile.id,
-                progress: 1
-            )
-        }
-        BrowserTabDragPreview(
-            tab: fixture.currentTab,
-            profileID: fixture.space.profile.id,
-            targetShape: .webpageCard,
-            progress: 1
-        )
-    }
-    .padding()
-}

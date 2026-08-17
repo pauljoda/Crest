@@ -36,17 +36,3 @@ struct MobileStrongPasswordPromptContent: View {
         }
     }
 }
-
-#Preview("Strong Password Prompt Content") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileStrongPasswordPromptContent(
-        request: fixture.newPasswordRequest,
-        space: fixture.space,
-        model: BrowserStrongPasswordOperationModel(),
-        dismiss: {},
-        generateAndFill: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

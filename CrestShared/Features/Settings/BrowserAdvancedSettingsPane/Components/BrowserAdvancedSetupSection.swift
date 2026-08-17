@@ -11,18 +11,3 @@ struct BrowserAdvancedSetupSection: View {
         }
     }
 }
-
-#Preview("Advanced Setup Section") {
-    Form {
-        BrowserAdvancedSetupSection(
-            setupActions: [
-                BrowserAdvancedSetupAction(
-                    id: "review-setup",
-                    title: "Review Crest Setup",
-                    symbol: "sparkles"
-                ) {}
-            ]
-        )
-    }
-    .formStyle(.grouped)
-}

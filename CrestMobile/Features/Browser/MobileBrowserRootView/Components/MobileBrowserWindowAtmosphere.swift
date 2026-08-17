@@ -13,8 +13,3 @@ struct MobileBrowserWindowAtmosphere: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Mobile Browser — Window Atmosphere", traits: .fixedLayout(width: 390, height: 220)) {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserWindowAtmosphere(space: fixture.space)
-}

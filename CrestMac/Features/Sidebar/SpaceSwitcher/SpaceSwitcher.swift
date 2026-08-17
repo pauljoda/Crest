@@ -25,17 +25,3 @@ struct SpaceSwitcher: View {
         .accessibilityLabel("Spaces")
     }
 }
-
-#Preview("Space Switcher") {
-    let preview = SpaceSwitcherPreviewFixture.makeContext()
-    SpaceSwitcher(
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: preview.spaceAccess,
-        selectSpace: { _ in },
-        commonListsAreExpanded: false,
-        toggleCommonLists: {},
-        recordCommonListsTriggerFrame: { _ in }
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

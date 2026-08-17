@@ -119,20 +119,3 @@ struct MobilePinnedTabsDropSection: View {
         ) != nil
     }
 }
-
-#Preview("Pinned Tabs Section") {
-    @Previewable @Namespace var promotionNamespace
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobilePinnedTabsDropSection(
-        space: fixture.space,
-        tabSections: fixture.space.tabSections,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        selectTab: { _ in },
-        tabPromotionNamespace: promotionNamespace,
-        usesNativeNavigationTransition: false
-    )
-    .frame(width: 360)
-}

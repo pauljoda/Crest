@@ -34,11 +34,3 @@ struct BrowserSourceImportTabPlacementMenu: View {
         }
     }
 }
-
-#Preview("Source Import Placement Menu") {
-    BrowserSourceImportTabPlacementMenu(
-        tab: BrowserImportPreviewFixture.savedTab,
-        setPlacement: { _, _ in }
-    )
-    .padding()
-}

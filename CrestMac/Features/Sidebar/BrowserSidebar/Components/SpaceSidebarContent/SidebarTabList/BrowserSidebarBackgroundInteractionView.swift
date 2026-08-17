@@ -31,8 +31,3 @@ struct BrowserSidebarBackgroundInteractionView: View {
         }
     }
 }
-
-#Preview("Browser Sidebar Background") {
-    BrowserSidebarBackgroundInteractionView(editSpace: {}, createSpace: {})
-        .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 120)
-}

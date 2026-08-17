@@ -43,16 +43,3 @@ struct BrowserSpaceChargeStep: View {
         }
     }
 }
-
-#Preview("Branding Editor — Charge Step") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceChargeStep(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 680)
-}

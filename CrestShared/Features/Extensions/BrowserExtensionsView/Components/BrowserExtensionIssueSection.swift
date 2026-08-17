@@ -105,11 +105,3 @@ struct BrowserExtensionDiagnosticSection: View {
         }
     }
 }
-
-#Preview("Extension Issue", traits: .sizeThatFitsLayout) {
-    BrowserExtensionIssueSection(
-        issue: BrowserExtensionsPreviewFixture.issue
-    )
-    .frame(width: 420)
-    .padding()
-}

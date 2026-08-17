@@ -5,6 +5,31 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionContextObserverTests: XCTestCase {
+    func testRuntimeSummaryNotificationIsForwardedWhileObserved() async throws {
+        let webExtension = try await WKWebExtension(
+            resourceBaseURL: fixtureURL
+        )
+        let context = WKWebExtensionContext(for: webExtension)
+        let observer = BrowserExtensionContextObserver()
+        let runtimeUpdate = expectation(
+            description: "runtime notification forwarded"
+        )
+        observer.observe(
+            context,
+            permissionsDidChange: {},
+            runtimeSummaryDidChange: {
+                runtimeUpdate.fulfill()
+            }
+        )
+
+        NotificationCenter.default.post(
+            name: WKWebExtensionContext.errorsDidUpdateNotification,
+            object: context
+        )
+
+        await fulfillment(of: [runtimeUpdate], timeout: 1)
+    }
+
     func testStoppingObservationReleasesEveryContextNotification() async throws {
         let webExtension = try await WKWebExtension(
             resourceBaseURL: fixtureURL

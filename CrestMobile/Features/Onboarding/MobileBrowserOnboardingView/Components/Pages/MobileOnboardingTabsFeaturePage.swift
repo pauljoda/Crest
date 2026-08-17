@@ -59,13 +59,3 @@ struct MobileOnboardingTabsFeaturePage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Tabs") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingTabsFeaturePage(
-        workSpace: fixture.space,
-        secondaryTitle: nil,
-        secondaryAction: nil,
-        primaryAction: {}
-    )
-}

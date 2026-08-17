@@ -23,21 +23,3 @@ struct BrowserPlatformLinkRouteEditor: View {
         )
     }
 }
-
-#Preview("Link Route Editor") {
-    @Previewable @State var route = BrowserLinkSettingsPreviewFixture().route
-    let fixture = BrowserLinkSettingsPreviewFixture()
-    Form {
-        BrowserPlatformLinkRouteEditor(
-            route: route,
-            spaces: fixture.browser.session.spaces,
-            canMoveUp: false,
-            canMoveDown: true,
-            update: { $0.apply(to: &route) },
-            delete: {},
-            moveUp: {},
-            moveDown: {}
-        )
-    }
-    .formStyle(.grouped)
-}

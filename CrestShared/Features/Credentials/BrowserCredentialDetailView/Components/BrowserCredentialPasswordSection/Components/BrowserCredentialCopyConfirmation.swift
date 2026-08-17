@@ -14,8 +14,3 @@ struct BrowserCredentialCopyConfirmation: View {
         }
     }
 }
-
-#Preview("Credential Copy Confirmation", traits: .sizeThatFitsLayout) {
-    BrowserCredentialCopyConfirmation(isPresented: true)
-        .padding()
-}

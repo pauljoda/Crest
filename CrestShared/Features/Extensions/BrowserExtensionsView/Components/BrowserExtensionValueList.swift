@@ -17,12 +17,3 @@ struct BrowserExtensionValueList: View {
         }
     }
 }
-
-#Preview("Extension Values", traits: .sizeThatFitsLayout) {
-    BrowserExtensionValueList(
-        title: "Unsupported APIs",
-        values: ["nativeMessaging", "sidePanel"],
-        symbol: "exclamationmark.circle"
-    )
-    .padding()
-}

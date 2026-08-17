@@ -180,14 +180,3 @@ struct BrowserCredentialSaveBanner: View {
         }
     }
 }
-
-#Preview("Save Password Banner") {
-    let preview = BrowserCredentialChromePreviewFixture.makeWebContent()
-    BrowserCredentialSaveBanner(
-        candidate: BrowserCredentialChromePreviewFixture.credentialSaveCandidate,
-        page: preview.page,
-        browser: preview.browser
-    )
-    .padding()
-    .frame(width: 460)
-}

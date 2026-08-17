@@ -44,19 +44,3 @@ struct BrowserUtilityListPresentation: View {
         )
     }
 }
-
-#Preview(
-    "Utility List Presentation",
-    traits: .fixedLayout(width: 360, height: 420)
-) {
-    BrowserUtilityListPresentation(
-        surface: .history,
-        searchText: "",
-        filter: .all,
-        presentationRequest: BrowserUtilityListPreviewFixture.historyRequest,
-        sections: [BrowserUtilityListPreviewFixture.historySection],
-        downloads: [],
-        actions: BrowserUtilityListActions(),
-        dismissOnBlankSpace: {}
-    )
-}

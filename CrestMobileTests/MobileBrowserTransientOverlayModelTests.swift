@@ -366,7 +366,9 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
             browser: browser,
             pages: pages,
             coordinator: coordinator,
-            spaceAccess: MobileBrowserTransientPreviewFixture.makeAccessController(),
+            spaceAccess: BrowserSpaceAccessController(
+                authenticator: BrowserPreviewAuthenticator(result: false)
+            ),
             preferences: BrowserTransientBrowsingPreferences(
                 archiveLifetime: nil,
                 rememberSpace: { spaceID, url in
@@ -807,9 +809,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let coordinator = BrowserTransientBrowsingCoordinator()
         coordinator.presentPeek(request)
         let spaceAccess = BrowserSpaceAccessController(
-            authenticator: MobileBrowserTransientPreviewAuthenticator(
-                authenticates: true
-            )
+            authenticator: BrowserPreviewAuthenticator(result: true)
         )
         return (
             source,
@@ -880,9 +880,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         let coordinator = BrowserTransientBrowsingCoordinator()
         coordinator.presentQuickWindow(request)
         let spaceAccess = BrowserSpaceAccessController(
-            authenticator: MobileBrowserTransientPreviewAuthenticator(
-                authenticates: true
-            )
+            authenticator: BrowserPreviewAuthenticator(result: true)
         )
         return (
             source,

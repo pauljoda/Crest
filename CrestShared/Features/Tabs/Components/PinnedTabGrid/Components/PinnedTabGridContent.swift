@@ -140,7 +140,7 @@ struct PinnedTabGridContent: View {
         }
         .crestCollectionMotion(ids: tabs.map(\.id))
         .overlay(alignment: .trailing) {
-            if let moveTab, let dragState, dragState.item != nil {
+            if moveTab != nil, let dragState, dragState.item != nil {
                 Color.clear
                     .frame(width: BrowserPinnedDropTargetPolicy.trailingTargetWidth)
                     .frame(maxHeight: .infinity)
@@ -244,36 +244,4 @@ struct PinnedTabGridContent: View {
             profileID: assignment.profileID
         )
     }
-}
-
-#Preview("Pinned Tab Grid Content", traits: .sizeThatFitsLayout) {
-    @Previewable @State var selectedIndex = 1
-    let fixture = PinnedTabGridPreviewFixture()
-
-    PinnedTabGridContent(
-        grid: PinnedTabGrid(
-            tabs: fixture.pinnedTabs,
-            assignment: fixture.assignment,
-            selectedTabID: fixture.pinnedTabs[selectedIndex].id,
-            select: { assignment in
-                selectedIndex =
-                    fixture.pinnedTabs.firstIndex {
-                        $0.id == assignment.tabID
-                    } ?? 0
-            },
-            browser: fixture.browser,
-            spaceAccess: fixture.spaceAccess,
-            isLoaded: { assignment in
-                assignment.tabID == fixture.pinnedTabs[selectedIndex].id
-            },
-            unload: { _ in },
-            pullNewIcon: { _ in },
-            restoreSavedLocation: { _ in },
-            siteThemeAccent: { _ in
-                BrowserTabIconAccent(red: 0.82, green: 0.35, blue: 0.48)
-            }
-        )
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-    .padding()
 }

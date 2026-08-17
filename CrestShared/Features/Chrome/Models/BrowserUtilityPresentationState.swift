@@ -46,3 +46,17 @@ final class BrowserUtilityPresentationState {
         }
     }
 }
+
+enum BrowserUtilityInteractionSurface: Equatable, Sendable {
+    case webContent
+    case sidebarBlankSpace
+    case control
+}
+
+enum BrowserUtilitySurface: CaseIterable, Equatable, Hashable, Identifiable, Sendable {
+    case archive
+    case history
+    case downloads
+
+    var id: Self { self }
+}

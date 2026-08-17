@@ -27,15 +27,3 @@ struct BrowserNavigationFailureHeadline: View {
         }
     }
 }
-
-#Preview("Navigation Failure Headline") {
-    let failure = BrowserNavigationFailurePreviewFixture.offline
-
-    BrowserNavigationFailureHeadline(
-        failure: failure,
-        presentation: BrowserNavigationFailurePresentation(failure: failure),
-        alignment: .leading,
-        textAlignment: .leading
-    )
-    .padding()
-}

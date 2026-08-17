@@ -19,9 +19,3 @@ struct BrowserPrivateBrowsingNotice: View {
         .accessibilityIdentifier("private-browsing-notice")
     }
 }
-
-#Preview("Private Browsing Notice") {
-    BrowserPrivateBrowsingNotice()
-        .padding()
-        .frame(width: 420)
-}

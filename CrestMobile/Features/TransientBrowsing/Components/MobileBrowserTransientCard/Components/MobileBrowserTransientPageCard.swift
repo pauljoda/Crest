@@ -38,12 +38,3 @@ struct MobileBrowserTransientPageCard: View {
         isPhone ? 24 : 15
     }
 }
-
-#Preview {
-    MobileBrowserTransientPageCard(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        isPhone: true,
-        reduceTransparency: false
-    )
-    .frame(width: 340, height: 520)
-}

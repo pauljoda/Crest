@@ -12,9 +12,3 @@ struct MobileStrongPasswordExplanation: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 }
-
-#Preview("Strong Password Explanation") {
-    MobileStrongPasswordExplanation(spaceName: "Work")
-        .padding()
-        .frame(width: 390)
-}

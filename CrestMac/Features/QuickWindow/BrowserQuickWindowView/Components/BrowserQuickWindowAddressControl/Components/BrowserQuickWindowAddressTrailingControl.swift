@@ -28,14 +28,3 @@ struct BrowserQuickWindowAddressTrailingControl: View {
         }
     }
 }
-
-#Preview("Quick Window Clear Address") {
-    @Previewable @State var addressText = "example.com"
-    BrowserQuickWindowAddressTrailingControl(
-        page: nil,
-        addressText: $addressText,
-        isAddressEditing: true,
-        reloadOrStop: {}
-    )
-    .padding()
-}

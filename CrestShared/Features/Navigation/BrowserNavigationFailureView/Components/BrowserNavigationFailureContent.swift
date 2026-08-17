@@ -59,23 +59,3 @@ struct BrowserNavigationFailureContent: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 }
-
-#Preview("Navigation Failure Content — Details") {
-    let failure = BrowserNavigationFailurePreviewFixture.certificate
-
-    BrowserNavigationFailureContent(
-        failure: failure,
-        presentation: BrowserNavigationFailurePresentation(failure: failure),
-        layout: .regular,
-        canGoBack: true,
-        canProceed: true,
-        showsDetails: true,
-        accent: .blue,
-        iconSize: BrowserNavigationFailureMetrics.iconSize,
-        retry: {},
-        goBack: {},
-        proceed: {},
-        toggleDetails: {}
-    )
-    .frame(width: 900, height: 700)
-}

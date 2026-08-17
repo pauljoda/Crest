@@ -27,16 +27,3 @@ struct MobileCredentialPromptHeader: View {
         }
     }
 }
-
-#Preview("Credential Prompt Header") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileCredentialPromptHeader(
-        kind: .suggestions,
-        request: fixture.currentPasswordRequest,
-        space: fixture.space,
-        dismiss: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

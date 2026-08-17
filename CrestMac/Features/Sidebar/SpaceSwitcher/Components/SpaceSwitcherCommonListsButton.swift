@@ -21,12 +21,3 @@ struct SpaceSwitcherCommonListsButton: View {
             }
     }
 }
-
-#Preview("Common Lists Button") {
-    SpaceSwitcherCommonListsButton(
-        isExpanded: false,
-        action: {},
-        recordFrame: { _ in }
-    )
-    .padding()
-}

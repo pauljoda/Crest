@@ -6,8 +6,3 @@ struct BrowserOnboardingBackdrop: View {
             .ignoresSafeArea()
     }
 }
-
-#Preview("Onboarding Backdrop") {
-    BrowserOnboardingBackdrop()
-        .frame(width: 520, height: 320)
-}

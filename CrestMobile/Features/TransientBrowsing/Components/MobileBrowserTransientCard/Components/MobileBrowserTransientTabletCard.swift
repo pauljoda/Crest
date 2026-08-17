@@ -39,15 +39,3 @@ struct MobileBrowserTransientTabletCard: View {
         )
     }
 }
-
-#Preview {
-    MobileBrowserTransientTabletCard(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        state: MobileBrowserTransientPreviewFixture.presentationState,
-        availableSize: CGSize(width: 1_024, height: 768),
-        safeAreaInsets: EdgeInsets(),
-        dismiss: {},
-        promote: { _ in }
-    )
-    .frame(width: 1_024, height: 768)
-}

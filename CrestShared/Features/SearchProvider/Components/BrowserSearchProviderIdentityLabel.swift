@@ -13,13 +13,3 @@ struct BrowserSearchProviderIdentityLabel: View {
         }
     }
 }
-
-#Preview("Search Provider Labels") {
-    VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-        ForEach(BrowserSearchProvider.allCases) { provider in
-            BrowserSearchProviderIdentityLabel(provider: provider)
-        }
-    }
-    .padding(CrestSpacing.large)
-    .frame(width: 240, alignment: .leading)
-}

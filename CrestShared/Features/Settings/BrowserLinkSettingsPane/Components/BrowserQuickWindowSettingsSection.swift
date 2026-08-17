@@ -21,15 +21,3 @@ struct BrowserQuickWindowSettingsSection: View {
         }
     }
 }
-
-#Preview("Quick Window Settings") {
-    @Previewable @State var archivePolicy = BrowserQuickWindowArchivePolicy.after1Hour
-    @Previewable @State var remembersSpace = true
-    Form {
-        BrowserQuickWindowSettingsSection(
-            archivePolicy: $archivePolicy,
-            remembersSpaceBySite: $remembersSpace
-        )
-    }
-    .formStyle(.grouped)
-}

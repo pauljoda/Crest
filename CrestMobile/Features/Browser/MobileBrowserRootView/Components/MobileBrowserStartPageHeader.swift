@@ -37,10 +37,3 @@ struct MobileBrowserStartPageHeader: View {
         .environment(\.colorScheme, colorScheme)
     }
 }
-
-#Preview("Mobile Browser Start Page Header", traits: .sizeThatFitsLayout) {
-    MobileBrowserStartPageHeader(
-        isPrivateBrowsing: true,
-        colorScheme: .dark
-    )
-}

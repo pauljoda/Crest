@@ -79,17 +79,3 @@ struct BrowserSourceImportTabRow: View {
         return included ? "Included" : "Not included"
     }
 }
-
-#Preview("Source Import Tab Row") {
-    BrowserSourceImportTabRow(
-        review: BrowserImportPreviewFixture.review,
-        tab: BrowserImportPreviewFixture.savedTab,
-        overflowTabIDs: [],
-        duplicateTabIDs: [],
-        duplicateDestinationName: nil,
-        setIncluded: { _, _ in },
-        setPlacement: { _, _ in }
-    )
-    .frame(width: 340)
-    .padding()
-}

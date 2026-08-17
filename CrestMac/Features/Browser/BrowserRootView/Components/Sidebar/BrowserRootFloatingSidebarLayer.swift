@@ -77,17 +77,3 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
         }
     }
 }
-
-#Preview("Browser Root Floating Sidebar") {
-    BrowserRootFloatingSidebarLayer(
-        presentation: .floating,
-        width: BrowserChromeLayout.sidebarIdealWidth,
-        space: BrowserRootPreviewFixture.space,
-        reduceMotion: false,
-        reduceTransparency: false,
-        hoverChanged: { _ in }
-    ) {
-        Text("Sidebar")
-    }
-    .frame(width: 600, height: 500)
-}

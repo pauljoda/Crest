@@ -36,7 +36,3 @@ struct BrowserURLCopyFeedbackView: View {
             .zIndex(BrowserRootMetrics.feedbackZIndex)
     }
 }
-
-#Preview("URL Copy Feedback", traits: .fixedLayout(width: 420, height: 120)) {
-    BrowserURLCopyFeedbackView()
-}

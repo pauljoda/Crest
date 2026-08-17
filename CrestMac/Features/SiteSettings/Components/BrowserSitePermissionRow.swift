@@ -38,15 +38,3 @@ struct BrowserSitePermissionRow: View {
         )
     }
 }
-
-#Preview("Permission Row") {
-    let preview = BrowserSiteSettingsPreviewFixture.makePage()
-    BrowserSitePermissionRow(
-        permission: .camera,
-        origin: BrowserSiteSettingsPreviewFixture.origin,
-        spaceID: BrowserSiteSettingsPreviewFixture.spaceID,
-        permissionCenter: preview.permissionCenter
-    )
-    .padding()
-    .frame(width: 300)
-}

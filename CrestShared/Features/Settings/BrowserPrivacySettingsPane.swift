@@ -98,14 +98,3 @@ struct BrowserPrivacySettingsPane: View {
         permissionCenter.reset(spaceID: selectedSpaceID)
     }
 }
-
-#Preview("Privacy Settings") {
-    BrowserPrivacySettingsPane(
-        browser: BrowserPrivacySettingsPreviewFixture.linkSettings.browser,
-        downloadCenter: BrowserDownloadCenter(),
-        spaceAccess:
-            BrowserPrivacySettingsPreviewFixture.linkSettings.spaceAccess,
-        permissionCenter: BrowserPrivacySettingsPreviewFixture.permissionCenter,
-        contentBlockingErrorDescription: nil
-    )
-}

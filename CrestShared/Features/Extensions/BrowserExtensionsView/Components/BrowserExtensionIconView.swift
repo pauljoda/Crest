@@ -73,13 +73,3 @@ struct BrowserExtensionIconView: View {
         renderState.store(icon, for: identity)
     }
 }
-
-#Preview("Extension Icon") {
-    BrowserExtensionIconView(
-        extensionID: BrowserExtensionsPreviewFixture.summary.id,
-        spaceID: BrowserExtensionsPreviewFixture.space.id,
-        payload: BrowserExtensionsPreviewFixture.iconPayload,
-        size: BrowserExtensionsMetrics.discoveryIconSize
-    )
-    .padding()
-}

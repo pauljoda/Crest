@@ -74,22 +74,3 @@ struct BrowserUtilityFanDestinationButton: View {
         downloads.contains(where: { $0.state.needsAttention }) ? .red : badgeColor
     }
 }
-
-#Preview("Utility Fan Destination", traits: .fixedLayout(width: 96, height: 96)) {
-    @Previewable @State var selectedSurface: BrowserUtilitySurface? = .downloads
-    @Previewable @Namespace var glassNamespace
-
-    BrowserUtilityFanDestinationButton(
-        surface: .downloads,
-        selectedSurface: selectedSurface,
-        badgeColor: .indigo,
-        downloads: [
-            BrowserUtilityListPreviewFixture.activeDownload,
-            BrowserUtilityListPreviewFixture.failedDownload,
-        ],
-        newDownloadCount: 2,
-        glassNamespace: glassNamespace,
-        select: { selectedSurface = $0 }
-    )
-    .padding()
-}

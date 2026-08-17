@@ -34,21 +34,3 @@ struct BrowserTabIconActions: View {
         }
     }
 }
-
-#Preview("Tab Icon Actions", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    Menu("Open Icon Actions", systemImage: "face.smiling") {
-        BrowserTabIconActions(
-            tab: fixture.savedTab,
-            isLoaded: true,
-            pullNewIcon: {},
-            performIfCurrent: { action in
-                action(fixture.savedTab)
-            },
-            clearIcon: { _ in },
-            setEmoji: { _, _ in }
-        )
-    }
-    .padding()
-}

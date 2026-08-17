@@ -112,18 +112,3 @@ struct BrowserSpaceGradientAngleDial: View {
         )
     }
 }
-
-#Preview("Gradient Angle Dial") {
-    @Previewable @State var angle =
-        BrowserSpaceBrandingPreviewFixture.gradientBranding.gradientAngle
-
-    BrowserSpaceGradientAngleDial(
-        angle: $angle,
-        color: BrowserSpaceBrandingPreviewFixture.gradientBranding.secondaryColor.color
-    )
-    .frame(
-        width: BrowserSpaceForgeMetrics.gradientDialSize,
-        height: BrowserSpaceForgeMetrics.gradientDialSize
-    )
-    .padding(CrestSpacing.large)
-}

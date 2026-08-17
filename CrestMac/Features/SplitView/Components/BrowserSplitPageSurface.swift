@@ -338,18 +338,3 @@ struct BrowserSplitPageSurface: View {
         )
     }
 }
-
-#Preview("Split Page Surface") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let model = BrowserRootPreviewFixture.makeModel()
-
-    BrowserSplitPageSurface(
-        model: model,
-        space: BrowserRootPreviewFixture.space,
-        members: BrowserRootPreviewFixture.splitMembers,
-        placeholderIndex: nil,
-        tabPromotionNamespace: tabPromotionNamespace
-    )
-    .environment(BrowserSplitFocusPreviewFixture.makeStore())
-    .frame(width: 1_080, height: 640)
-}

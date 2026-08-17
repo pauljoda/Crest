@@ -25,18 +25,3 @@ struct BrowserFolderNestDropHighlight: View {
         }
     }
 }
-
-#Preview("Folder Nest Drop Highlight", traits: .fixedLayout(width: 300, height: 60)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let location = BrowserFolderDropLocation(
-        parentID: fixture.folder.id,
-        beforeSiblingID: nil
-    )
-    let dragState = fixture.makeFolderDragState(dropLocation: location)
-
-    BrowserFolderNestDropHighlight(
-        location: location,
-        dragState: dragState,
-        isTargeted: true
-    )
-}

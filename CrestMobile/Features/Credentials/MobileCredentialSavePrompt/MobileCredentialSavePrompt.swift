@@ -243,14 +243,3 @@ struct MobileCredentialSavePrompt: View {
         }
     }
 }
-
-#Preview("Save Password") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-    MobileCredentialSavePrompt(
-        candidate: fixture.saveCandidate,
-        page: fixture.page,
-        browser: fixture.browser
-    )
-    .padding()
-    .frame(width: 390)
-}

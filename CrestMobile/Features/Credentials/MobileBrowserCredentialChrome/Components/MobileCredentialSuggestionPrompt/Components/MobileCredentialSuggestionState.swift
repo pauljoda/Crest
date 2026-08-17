@@ -24,15 +24,3 @@ struct MobileCredentialSuggestionState: View {
         }
     }
 }
-
-#Preview("Credential Suggestion State") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileCredentialSuggestionState(
-        isLoading: false,
-        suggestions: [fixture.suggestion],
-        fill: { _ in }
-    )
-    .padding()
-    .frame(width: 390)
-}

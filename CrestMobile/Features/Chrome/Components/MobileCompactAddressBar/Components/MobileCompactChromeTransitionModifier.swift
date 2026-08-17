@@ -30,14 +30,3 @@ struct MobileCompactChromeTransitionModifier: ViewModifier {
             }
     }
 }
-
-#Preview("Compact Chrome Transition") {
-    Text("Swipe between tabs and page")
-        .padding()
-        .modifier(
-            MobileCompactChromeTransitionModifier(
-                transition: .revealPage,
-                transitionEnded: { _ in }
-            )
-        )
-}

@@ -12,8 +12,3 @@ struct BrowserNavigationFailureProceedButton: View {
             )
     }
 }
-
-#Preview("Navigation Failure Proceed Button") {
-    BrowserNavigationFailureProceedButton(action: {})
-        .padding()
-}

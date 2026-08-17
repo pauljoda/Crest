@@ -253,23 +253,3 @@ struct SavedFolderGroup: View {
         }
     }
 }
-
-#Preview("Saved Folder Group") {
-    @Previewable @State var isExpanded = true
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderGroup(
-        node: configuration.node,
-        tabs: configuration.tabs,
-        spaceID: configuration.spaceID,
-        profileID: configuration.profileID,
-        selectedTabID: configuration.selectedTabID,
-        browser: configuration.browser,
-        pages: configuration.pages,
-        spaceAccess: configuration.spaceAccess,
-        isExpanded: $isExpanded,
-        editingFolderRequest: $editingFolderRequest
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

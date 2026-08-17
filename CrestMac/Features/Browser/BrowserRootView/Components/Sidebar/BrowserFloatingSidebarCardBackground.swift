@@ -34,9 +34,3 @@ struct BrowserFloatingSidebarCardBackground: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Floating Sidebar Background", traits: .fixedLayout(width: 300, height: 620)) {
-    BrowserFloatingSidebarCardBackground(
-        space: BrowserRootPreviewFixture.space
-    )
-}

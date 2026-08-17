@@ -47,7 +47,3 @@ struct MobileBrowserFindStatus: View {
             .accessibilityIdentifier("find-result")
     }
 }
-
-#Preview("Mobile Browser Find Status", traits: .sizeThatFitsLayout) {
-    MobileBrowserFindStatus(state: .found)
-}

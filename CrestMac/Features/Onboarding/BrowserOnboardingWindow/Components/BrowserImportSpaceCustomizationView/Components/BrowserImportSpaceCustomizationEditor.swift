@@ -37,17 +37,3 @@ struct BrowserImportSpaceCustomizationEditor: View {
         .background(BrowserOnboardingPalette.parchment)
     }
 }
-
-#Preview("Space Customization Editor") {
-    @Previewable @State var name = BrowserImportPreviewFixture.sourceSpace.name
-    @Previewable @State var symbol = BrowserImportPreviewFixture.sourceSpace.symbol
-    @Previewable @State var branding = BrowserImportPreviewFixture.sourceSpace.branding
-
-    BrowserImportSpaceCustomizationEditor(
-        previewSpace: BrowserImportPreviewFixture.sourceSpace,
-        name: $name,
-        symbol: $symbol,
-        branding: $branding
-    )
-    .frame(width: 1_080, height: 650)
-}

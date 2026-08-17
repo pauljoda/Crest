@@ -214,11 +214,3 @@ struct BrowserSyncSettingsView: View {
         }
     }
 }
-
-#Preview("Sync Settings") {
-    let browser = BrowserStore.preview()
-    BrowserSyncSettingsView(
-        browser: browser,
-        cloudSync: BrowserCloudSyncController.isolated(browser: browser)
-    )
-}

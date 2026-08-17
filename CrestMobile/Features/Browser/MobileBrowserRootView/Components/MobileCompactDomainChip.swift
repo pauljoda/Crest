@@ -27,11 +27,3 @@ struct MobileCompactDomainChip: View {
         url?.host() ?? url?.absoluteString ?? "Show Toolbar"
     }
 }
-
-#Preview("Mobile Browser — Collapsed Domain", traits: .fixedLayout(width: 390, height: 88)) {
-    MobileCompactDomainChip(
-        url: URL(string: "https://developer.apple.com"),
-        showToolbar: {}
-    )
-    .padding()
-}

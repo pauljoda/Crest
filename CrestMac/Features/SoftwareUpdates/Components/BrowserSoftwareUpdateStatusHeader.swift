@@ -58,16 +58,3 @@ struct BrowserSoftwareUpdateStatusHeader: View {
         }
     }
 }
-
-#Preview("Up to Date") {
-    let model = BrowserSoftwareUpdateModel()
-    BrowserSoftwareUpdateStatusHeader(model: model)
-        .frame(width: 520, alignment: .leading)
-        .padding()
-        .task {
-            model.presentNoUpdate(
-                message: "Crest 0.3 is the newest version available.",
-                acknowledgement: {}
-            )
-        }
-}

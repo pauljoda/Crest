@@ -48,7 +48,7 @@ const config = {
     metadata: [
       {
         name: 'description',
-        content: 'Crest help and guides for Spaces, extensions, passwords, and everyday browsing.',
+        content: 'Crest help for Spaces, Split View, shortcuts, gestures, privacy, migration, passwords, extensions, and everyday browsing.',
       },
     ],
     colorMode: {
@@ -64,7 +64,9 @@ const config = {
       },
       items: [
         {type: 'docSidebar', sidebarId: 'helpSidebar', position: 'left', label: 'Guides'},
+        {to: '/keyboard-shortcuts/', label: 'Shortcuts', position: 'left'},
         {to: '/extension-compatibility/', label: 'Compatibility', position: 'left'},
+        {href: 'https://github.com/pauljoda/Crest/releases', label: 'Download for Mac', position: 'right'},
         {href: 'https://crestbrowser.com/support/', label: 'Support', position: 'right'},
         {href: 'https://crestbrowser.com/', label: 'Product site', position: 'right'},
       ],
@@ -82,13 +84,16 @@ const config = {
           title: 'Crest',
           items: [
             {label: 'Product site', href: 'https://crestbrowser.com/'},
-            {label: 'Join TestFlight', href: 'https://testflight.apple.com/join/vV1CM49Q'},
+            {label: 'Download for Mac', href: 'https://github.com/pauljoda/Crest/releases'},
+            {label: 'iPhone & iPad TestFlight', href: 'https://testflight.apple.com/join/vV1CM49Q'},
           ],
         },
         {
           title: 'Help',
           items: [
             {label: 'All guides', to: '/'},
+            {label: 'Keyboard shortcuts', to: '/keyboard-shortcuts/'},
+            {label: 'Split View', to: '/split-view/'},
             {label: 'Extension compatibility', to: '/extension-compatibility/'},
             {label: 'Support', href: 'https://crestbrowser.com/support/'},
           ],

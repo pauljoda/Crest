@@ -20,11 +20,3 @@ struct BrowserImportSpaceCustomizationPreviewPane: View {
         .frame(maxHeight: .infinity)
     }
 }
-
-#Preview("Space Customization Preview Pane") {
-    BrowserImportSpaceCustomizationPreviewPane(
-        space: BrowserImportPreviewFixture.sourceSpace
-    )
-    .frame(width: 360, height: 620)
-    .padding()
-}

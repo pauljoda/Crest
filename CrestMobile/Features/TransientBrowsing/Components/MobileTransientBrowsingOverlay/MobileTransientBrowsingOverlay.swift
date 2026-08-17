@@ -32,13 +32,3 @@ struct MobileTransientBrowsingOverlay: View {
         )
     }
 }
-
-#Preview {
-    MobileTransientBrowsingOverlay(
-        browser: MobileBrowserTransientPreviewFixture.makeBrowser(),
-        pages: nil,
-        coordinator: MobileBrowserTransientPreviewFixture.makeCoordinator(),
-        spaceAccess: MobileBrowserTransientPreviewFixture.makeAccessController(),
-        didPromote: {}
-    )
-}

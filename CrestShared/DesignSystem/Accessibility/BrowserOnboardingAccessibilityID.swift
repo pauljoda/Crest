@@ -1,4 +1,0 @@
-import Foundation
-
-enum BrowserOnboardingAccessibilityID {
-}

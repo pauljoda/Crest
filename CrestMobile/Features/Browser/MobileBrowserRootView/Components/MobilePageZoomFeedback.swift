@@ -34,10 +34,3 @@ struct MobilePageZoomFeedback: View {
             .zIndex(MobileBrowserRootLayout.feedbackLayer)
     }
 }
-
-#Preview("Mobile Browser — Page Zoom Feedback") {
-    MobilePageZoomFeedback(
-        label: "125%",
-        topPadding: MobileBrowserRootLayout.compactOverlayTopPadding
-    )
-}

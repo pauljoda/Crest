@@ -36,13 +36,3 @@ struct BrowserSpaceSidebarTabRow: View {
         )
     }
 }
-
-#Preview("Space Sidebar Tab Row") {
-    BrowserSpaceSidebarTabRow(
-        tab: BrowserManualSetupPreviewFixture.openTab,
-        profileID: BrowserManualSetupPreviewFixture.profileID,
-        isSelected: true
-    )
-    .frame(width: 300)
-    .padding()
-}

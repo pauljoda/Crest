@@ -16,8 +16,3 @@ struct BrowserPeekUnavailableSpaceView: View {
         .background(.background)
     }
 }
-
-#Preview {
-    BrowserPeekUnavailableSpaceView(dismiss: {})
-        .frame(width: 700, height: 460)
-}

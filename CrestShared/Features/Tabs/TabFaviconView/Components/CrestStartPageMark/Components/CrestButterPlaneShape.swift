@@ -31,10 +31,3 @@ struct CrestButterPlaneShape: Shape {
         return path
     }
 }
-
-#Preview("Crest Butter Plane Shape") {
-    CrestButterPlaneShape()
-        .fill(.yellow)
-        .frame(width: 96, height: 96)
-        .padding()
-}

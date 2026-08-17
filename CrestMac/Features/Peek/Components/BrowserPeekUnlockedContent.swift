@@ -118,13 +118,3 @@ struct BrowserPeekUnlockedContent: View {
         )
     }
 }
-
-#Preview {
-    BrowserPeekUnlockedContent(
-        model: BrowserPeekPreviewFixture.makeModel(),
-        reservedLeadingWidth: 0,
-        layoutDirection: .leftToRight,
-        installsKeyboardMonitor: false
-    )
-    .frame(width: 900, height: 620)
-}

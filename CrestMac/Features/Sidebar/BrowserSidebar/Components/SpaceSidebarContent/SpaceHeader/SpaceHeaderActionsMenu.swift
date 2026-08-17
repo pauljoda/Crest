@@ -53,15 +53,3 @@ struct SpaceHeaderActionsMenu: View {
         .help("Space Actions")
     }
 }
-
-#Preview("Space Header Actions") {
-    SpaceHeaderActionsMenu(
-        isPrivateBrowsing: false,
-        openNewTab: {},
-        createFolder: {},
-        showHistory: {},
-        showExtensions: {},
-        cleanup: {}
-    )
-    .padding()
-}

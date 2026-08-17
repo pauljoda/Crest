@@ -37,24 +37,3 @@ struct BrowserPeekCardStack: View {
         .position(x: webContentFrame.midX, y: webContentFrame.midY)
     }
 }
-
-#Preview {
-    BrowserPeekCardStack(
-        model: BrowserPeekPreviewFixture.makeModel(),
-        state: BrowserPeekSurfaceState(
-            reservedLeadingWidth: 0,
-            layoutDirection: .leftToRight,
-            isCardVisible: true,
-            isCardExpanded: true,
-            isInitialWebContentRevealed: false,
-            reduceMotion: false,
-            reduceTransparency: false,
-            sourcePresentation: .resolved(nil)
-        ),
-        cardSize: CGSize(width: 640, height: 420),
-        webContentFrame: CGRect(x: 0, y: 0, width: 900, height: 620),
-        dismiss: {},
-        promote: { _ in }
-    )
-    .frame(width: 900, height: 620)
-}

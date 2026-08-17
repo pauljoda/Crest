@@ -14,14 +14,3 @@ struct BrowserSpaceCrestOrdinaryShape: View {
         .frame(width: size, height: size)
     }
 }
-
-#Preview("Crest Ordinary Shape") {
-    BrowserSpaceCrestOrdinaryShape(
-        ordinary: .bend,
-        color: BrowserSpaceBrandColor.lionGold.color,
-        size: 112
-    )
-    .background(BrowserSpaceBrandColor.lionCrimson.color)
-    .clipShape(.rect(cornerRadius: CrestRadius.card))
-    .padding()
-}

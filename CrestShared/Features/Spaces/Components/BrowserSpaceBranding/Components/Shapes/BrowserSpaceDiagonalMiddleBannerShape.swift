@@ -13,10 +13,3 @@ struct BrowserSpaceDiagonalMiddleBannerShape: Shape {
         }
     }
 }
-
-#Preview("Diagonal Middle Banner Shape") {
-    BrowserSpaceDiagonalMiddleBannerShape(size: CGSize(width: 240, height: 120))
-        .fill(BrowserSpaceBrandColor.gold.color)
-        .frame(width: 240, height: 120)
-        .padding()
-}

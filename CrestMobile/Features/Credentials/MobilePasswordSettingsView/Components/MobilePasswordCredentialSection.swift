@@ -24,14 +24,3 @@ struct MobilePasswordCredentialSection: View {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobilePasswordSettingsModel(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-    Form {
-        MobilePasswordCredentialSection(model: model)
-    }
-}

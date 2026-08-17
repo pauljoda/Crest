@@ -13,10 +13,3 @@ struct BrowserSpaceDiagonalLowerBannerShape: Shape {
         }
     }
 }
-
-#Preview("Diagonal Lower Banner Shape") {
-    BrowserSpaceDiagonalLowerBannerShape(size: CGSize(width: 240, height: 120))
-        .fill(BrowserSpaceBrandColor.ember.color)
-        .frame(width: 240, height: 120)
-        .padding()
-}

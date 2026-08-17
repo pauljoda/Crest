@@ -72,19 +72,3 @@ struct BrowserManualSetupWideLayout: View {
         )
     }
 }
-
-#Preview("Manual Setup — Wide") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-    @Previewable @State var selectedSpaceID =
-        BrowserManualSetupPreviewFixture.selectedSpaceID
-
-    BrowserManualSetupWideLayout(
-        plan: $plan,
-        selectedSpaceID: $selectedSpaceID,
-        existingSession: BrowserManualSetupPreviewFixture.existingSession,
-        previewSession: BrowserManualSetupPreviewFixture.previewSession,
-        detailHeight: 680,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 1_080, height: 720)
-}

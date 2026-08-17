@@ -81,28 +81,3 @@ struct MobileRegularPageSurface: View {
         return (space, members)
     }
 }
-
-#Preview("Mobile Regular Page Surface", traits: .fixedLayout(width: 1_024, height: 720)) {
-    @Previewable @State var address = ""
-    @Previewable @State var isAddressEditing = false
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileRegularPageSurface(
-        model: MobileBrowserRootPreviewFixture.makeModel(fixture: fixture),
-        adjoinsLeadingSidebar: true,
-        address: $address,
-        isAddressEditing: $isAddressEditing,
-        addressFocusRequest: 0,
-        isCommandPalettePresented: false,
-        compactToolbarIsHidden: false,
-        submitAddress: {},
-        beginNewTab: {},
-        showTabViewer: {},
-        hideCompactToolbar: {},
-        showCompactToolbar: {},
-        handleToolbarSwipe: { _ in },
-        selectSplitCard: { _ in },
-        compactTransitionEnded: { _ in }
-    )
-    .background(.quaternary)
-}

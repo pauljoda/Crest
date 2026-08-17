@@ -44,13 +44,3 @@ struct BrowserManagedExtensionRow: View {
         )
     }
 }
-
-#Preview("Managed Extension", traits: .fixedLayout(width: 560, height: 180)) {
-    List {
-        BrowserManagedExtensionRow(
-            model: BrowserExtensionsPreviewFixture.model,
-            summary: BrowserExtensionsPreviewFixture.summary,
-            platformActions: .none
-        )
-    }
-}

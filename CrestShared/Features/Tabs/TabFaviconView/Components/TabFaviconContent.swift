@@ -29,22 +29,3 @@ struct TabFaviconContent: View {
         }
     }
 }
-
-#Preview("Tab Favicon Content — Image") {
-    let request = BrowserFaviconTaskIdentityPolicy.renderRequest(
-        for: TabFaviconPreviewFixture.image,
-        profileID: TabFaviconPreviewFixture.profileID,
-        maximumPixelSize: 64
-    )
-    TabFaviconContent(
-        tab: TabFaviconPreviewFixture.image,
-        size: 48,
-        requestIdentity: request.identity,
-        renderedImage: TabFaviconPreviewFixture.renderedImage(
-            for: request.identity,
-            maximumPixelSize: 64
-        )
-    )
-    .frame(width: 48, height: 48)
-    .padding()
-}

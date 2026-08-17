@@ -72,10 +72,3 @@ struct MobileBrowserSettingsDestinationList: View {
             : Color.clear
     }
 }
-
-#Preview("Mobile Settings Destinations", traits: .fixedLayout(width: 280, height: 720)) {
-    MobileBrowserSettingsDestinationList(
-        selection: .constant(.general),
-        searchText: .constant("")
-    )
-}

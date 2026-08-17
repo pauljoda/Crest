@@ -18,11 +18,3 @@ struct BrowserSettingsPrivateSpaceUnlockControl: View {
         }
     }
 }
-
-#Preview("Private Space unlock") {
-    BrowserSettingsPrivateSpaceUnlockControl(
-        space: BrowserSettingsPrivateSpaceAccessPreviewFixture.space,
-        accessController: BrowserSettingsPrivateSpaceAccessPreviewFixture.accessController
-    )
-    .padding()
-}

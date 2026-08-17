@@ -86,16 +86,3 @@ struct BrowserSourceImportPinnedGrid: View {
         return included ? "Included" : "Not included"
     }
 }
-
-#Preview("Source Import Pinned Grid") {
-    BrowserSourceImportPinnedGrid(
-        review: BrowserImportPreviewFixture.review,
-        tabs: [BrowserImportPreviewFixture.pinnedTab],
-        overflowTabIDs: [],
-        duplicateTabIDs: [],
-        duplicateDestinationName: nil,
-        setIncluded: { _, _ in }
-    )
-    .frame(width: 320)
-    .padding()
-}

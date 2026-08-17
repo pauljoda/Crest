@@ -16,11 +16,3 @@ struct BrowserNavigationFailureSuggestionRow: View {
         .font(.callout)
     }
 }
-
-#Preview("Navigation Failure Suggestion Row") {
-    BrowserNavigationFailureSuggestionRow(
-        suggestion: "Check the address for typing mistakes.",
-        accent: .blue
-    )
-    .padding()
-}

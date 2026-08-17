@@ -65,15 +65,3 @@ struct BrowserImportSpaceCustomizationView: View {
         )
     }
 }
-
-#Preview("Space Customization") {
-    @Previewable @State var plan = BrowserImportPreviewFixture.plan
-
-    BrowserImportSpaceCustomizationView(
-        plan: $plan,
-        spaceID: BrowserImportPreviewFixture.review.id,
-        previewSpace: BrowserImportPreviewFixture.sourceSpace,
-        done: {}
-    )
-    .frame(width: 1_080, height: 720)
-}

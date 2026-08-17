@@ -21,9 +21,3 @@ struct BrowserCrestImportSpaceSwitcher: View {
         .background(.ultraThinMaterial)
     }
 }
-
-#Preview("Crest Import Space Switcher") {
-    BrowserCrestImportSpaceSwitcher(space: BrowserImportPreviewFixture.sourceSpace)
-        .frame(width: 340)
-        .padding()
-}

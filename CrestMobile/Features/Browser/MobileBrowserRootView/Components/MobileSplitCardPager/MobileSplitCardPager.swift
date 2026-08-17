@@ -187,19 +187,3 @@ struct MobileSplitCardPager: View {
         selectTab(tabID)
     }
 }
-
-#Preview("Split Card Pager", traits: .fixedLayout(width: 390, height: 640)) {
-    @Previewable @State var focusedTabID = BrowserSplitViewPreviewFixture.middleTabID
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSplitCardPager(
-        members: BrowserSplitViewPreviewFixture.members,
-        space: fixture.space,
-        focusedTabID: focusedTabID,
-        pages: fixture.pages,
-        viewport: .inline,
-        selectTab: { focusedTabID = $0 },
-        prepareMember: { _ in }
-    )
-    .background(.quaternary)
-}

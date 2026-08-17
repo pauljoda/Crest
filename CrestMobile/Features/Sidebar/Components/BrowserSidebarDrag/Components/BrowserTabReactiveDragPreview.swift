@@ -25,24 +25,3 @@ struct BrowserTabReactiveDragPreview: View {
         )
     }
 }
-
-#Preview("Reactive Tab Drag Preview", traits: .fixedLayout(width: 300, height: 160)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let currentDragState = fixture.makeTabDragState(tab: fixture.currentTab)
-    let pinnedDragState = fixture.makeTabDragState(tab: fixture.pinnedTab)
-
-    VStack(spacing: CrestSpacing.large) {
-        BrowserTabReactiveDragPreview(
-            tab: fixture.currentTab,
-            profileID: fixture.space.profile.id,
-            dragState: currentDragState
-        )
-        BrowserTabReactiveDragPreview(
-            tab: fixture.pinnedTab,
-            profileID: fixture.space.profile.id,
-            dragState: pinnedDragState,
-            reduceMotionOverride: true
-        )
-    }
-    .padding()
-}

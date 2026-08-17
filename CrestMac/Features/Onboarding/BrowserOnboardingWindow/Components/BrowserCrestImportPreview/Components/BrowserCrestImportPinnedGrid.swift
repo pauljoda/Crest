@@ -53,12 +53,3 @@ struct BrowserCrestImportPinnedGrid: View {
         )
     }
 }
-
-#Preview("Crest Import Pinned Grid") {
-    BrowserCrestImportPinnedGrid(
-        space: BrowserImportPreviewFixture.sourceSpace,
-        matchedTabIDs: [BrowserImportPreviewFixture.pinnedTab.id]
-    )
-    .frame(width: 320)
-    .padding()
-}

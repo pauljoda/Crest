@@ -30,18 +30,3 @@ struct SpaceSwitcherContent: View {
         }
     }
 }
-
-#Preview("Space Switcher Content") {
-    let preview = SpaceSwitcherPreviewFixture.makeContext()
-    SpaceSwitcherContent(
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: preview.spaceAccess,
-        selectSpace: { _ in },
-        commonListsAreExpanded: false,
-        toggleCommonLists: {},
-        recordCommonListsTriggerFrame: { _ in }
-    )
-    .padding()
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

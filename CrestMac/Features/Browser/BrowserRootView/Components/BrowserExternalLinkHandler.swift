@@ -68,30 +68,3 @@ struct BrowserExternalLinkHandler: ViewModifier {
         return assignment
     }
 }
-
-#Preview("External Link Handler") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    Color.clear
-        .modifier(
-            BrowserExternalLinkHandler(
-                browser: browser,
-                pages: BrowserPagePool(
-                    browsingMode: .privateBrowsing,
-                    usesEphemeralWebsiteDataStores: true
-                ),
-                chrome: BrowserChromeState(),
-                spaceAccess: BrowserSpaceAccessController(),
-                targetWindowID: BrowserWindowID(
-                    rawValue: UUID(
-                        uuid: (
-                            0x43, 0x52, 0x45, 0x53,
-                            0x54, 0x45,
-                            0x58, 0x54,
-                            0x4C, 0x49,
-                            0x4E, 0x4B, 0x50, 0x52, 0x45, 0x56
-                        ))
-                )
-            )
-        )
-        .frame(width: 480, height: 320)
-}

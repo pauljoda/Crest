@@ -19,18 +19,3 @@ struct BrowserImportSpaceCustomizationContent: View {
         }
     }
 }
-
-#Preview("Space Customization Content") {
-    @Previewable @State var name = BrowserImportPreviewFixture.sourceSpace.name
-    @Previewable @State var symbol = BrowserImportPreviewFixture.sourceSpace.symbol
-    @Previewable @State var branding = BrowserImportPreviewFixture.sourceSpace.branding
-
-    BrowserImportSpaceCustomizationContent(
-        previewSpace: BrowserImportPreviewFixture.sourceSpace,
-        name: $name,
-        symbol: $symbol,
-        branding: $branding,
-        done: {}
-    )
-    .frame(width: 1_080, height: 720)
-}

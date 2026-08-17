@@ -24,13 +24,3 @@ struct BrowserSiteQuickActionButton: View {
         .help(Text(title))
     }
 }
-
-#Preview("Site Quick Action") {
-    BrowserSiteQuickActionButton(
-        title: "Reload",
-        systemImage: "arrow.clockwise",
-        action: {}
-    )
-    .padding()
-    .frame(width: 90)
-}

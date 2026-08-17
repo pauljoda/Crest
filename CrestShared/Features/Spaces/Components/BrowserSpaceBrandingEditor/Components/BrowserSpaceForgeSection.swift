@@ -46,23 +46,3 @@ struct BrowserSpaceForgeSection<Content: View>: View {
         .accessibilityIdentifier(step.accessibilityIdentifier)
     }
 }
-
-#Preview("Branding Editor — Forge Section") {
-    BrowserSpaceForgeSection(
-        step: .field,
-        value: BrowserSpaceBrandingPreviewFixture.bannerBranding.colors
-            .map(\.title)
-            .joined(separator: " · "),
-        caption: "Start with a restrained palette, then make any color your own."
-    ) {
-        BrowserSpaceBannerBackground(
-            branding: BrowserSpaceBrandingPreviewFixture.bannerBranding
-        )
-        .frame(height: BrowserSpaceForgeMetrics.patternBannerHeight)
-        .clipShape(
-            .rect(cornerRadius: BrowserSpaceForgeMetrics.artworkCornerRadius)
-        )
-    }
-    .padding(CrestSpacing.large)
-    .frame(width: 520)
-}

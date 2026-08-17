@@ -47,25 +47,3 @@ struct SavedFolderHeader: View {
         }
     }
 }
-
-#Preview("Saved Folder Header") {
-    @Previewable @State var isExpanded = true
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    @Previewable @State var isDropTargeted = false
-    @Previewable @State var visibility =
-        BrowserCollapsedFolderTabVisibilityState()
-    @Previewable @FocusState var isTitleFocused: Bool
-
-    let configuration = SavedFolderGroupPreviewFixture.configuration()
-    SavedFolderHeader(
-        configuration: configuration,
-        interaction: SavedFolderGroupPreviewFixture.interaction(
-            isExpanded: $isExpanded,
-            editingFolderRequest: $editingFolderRequest,
-            isDropTargeted: $isDropTargeted,
-            collapsedTabVisibility: $visibility,
-            isTitleFocused: $isTitleFocused
-        )
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

@@ -14,9 +14,3 @@ struct CrestButtonStyle: ButtonStyle {
         CrestButtonSurface(role: role, tint: tint, configuration: configuration)
     }
 }
-
-#Preview("Primary Button") {
-    Button("Continue") {}
-        .buttonStyle(CrestButtonStyle(role: .primary, tint: nil))
-        .padding()
-}

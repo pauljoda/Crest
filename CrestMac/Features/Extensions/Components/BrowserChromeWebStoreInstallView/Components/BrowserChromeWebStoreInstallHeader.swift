@@ -26,14 +26,3 @@ struct BrowserChromeWebStoreInstallHeader: View {
         }
     }
 }
-
-#Preview("Chrome Web Store Install Header", traits: .sizeThatFitsLayout) {
-    BrowserChromeWebStoreInstallHeader(
-        phase: .review(
-            BrowserChromeWebStoreInstallPreviewFixture.candidate,
-            errorDescription: nil
-        ),
-        spaceID: BrowserChromeWebStoreInstallPreviewFixture.spaceID
-    )
-    .padding()
-}

@@ -51,14 +51,3 @@ struct BrowserWebPageSurface: View {
         }
     }
 }
-
-#Preview("Browser Web Page Surface") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserWebPageSurface(
-        page: preview.page,
-        browser: preview.browser,
-        pagePresentation: .livePage
-    )
-    .frame(width: 960, height: 640)
-}

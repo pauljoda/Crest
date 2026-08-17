@@ -12,14 +12,3 @@ struct BrowserSpaceCrestRasterization: ViewModifier {
         }
     }
 }
-
-#Preview("Crest Rasterization", traits: .sizeThatFitsLayout) {
-    BrowserSpaceCrestIcon(
-        branding: BrowserSpaceBrandingPreviewFixture.crestBranding,
-        size: 112,
-        rasterizesLayers: false
-    )
-    .modifier(BrowserSpaceCrestRasterization(enabled: true))
-    .padding()
-    .preferredColorScheme(.light)
-}

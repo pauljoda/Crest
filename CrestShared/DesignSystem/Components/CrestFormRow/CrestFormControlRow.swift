@@ -36,17 +36,3 @@ struct CrestFormControlRow<Control: View>: View {
         .frame(minHeight: CrestFormRowMetrics.minimumHeight)
     }
 }
-
-#Preview("Form Control Row") {
-    Form {
-        CrestFormControlRow(
-            "Block Trackers",
-            subtitle: "Apply protection in this Space",
-            systemImage: "shield.lefthalf.filled"
-        ) {
-            Toggle("Block Trackers", isOn: .constant(true))
-                .labelsHidden()
-        }
-    }
-    .formStyle(.grouped)
-}

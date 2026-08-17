@@ -18,8 +18,3 @@ struct BrowserExtensionEmptyState: View {
         .padding(.vertical, CrestSpacing.small)
     }
 }
-
-#Preview("Empty Extensions", traits: .sizeThatFitsLayout) {
-    BrowserExtensionEmptyState()
-        .padding()
-}

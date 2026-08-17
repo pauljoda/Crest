@@ -335,24 +335,3 @@ struct BrowserTabOrganizationMenuContent: View {
         )
     }
 }
-
-#Preview("Tab Organization Menu Content", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    Menu("Open Saved Tab Actions", systemImage: "bookmark.fill") {
-        BrowserTabOrganizationMenuContent(
-            menu: BrowserTabOrganizationMenu(
-                tab: fixture.savedTab,
-                assignment: fixture.tabAssignment,
-                browser: fixture.browser,
-                spaceAccess: fixture.spaceAccess,
-                isLoaded: true,
-                unload: { _ in },
-                pullNewIcon: {},
-                restoreSavedLocation: {},
-                renameTab: {}
-            )
-        )
-    }
-    .padding()
-}

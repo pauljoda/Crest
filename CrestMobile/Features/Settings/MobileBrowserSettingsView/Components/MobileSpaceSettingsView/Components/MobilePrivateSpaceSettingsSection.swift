@@ -25,12 +25,3 @@ struct MobilePrivateSpaceSettingsSection: View {
         }
     }
 }
-
-#Preview("Mobile Private Space Settings") {
-    Form {
-        MobilePrivateSpaceSettingsSection(
-            requiresAuthentication: .constant(true),
-            isUpdating: false
-        )
-    }
-}

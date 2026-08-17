@@ -21,10 +21,3 @@ struct MobileBrowserTransientReleasedPageView: View {
         isQuickWindow ? "Quick Window Released" : "Peek Released"
     }
 }
-
-#Preview {
-    MobileBrowserTransientReleasedPageView(
-        isQuickWindow: false,
-        restore: {}
-    )
-}

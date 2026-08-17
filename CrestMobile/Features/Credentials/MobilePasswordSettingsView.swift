@@ -33,12 +33,3 @@ struct MobilePasswordSettingsView: View {
         .presentationDetents([.large])
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    MobilePasswordSettingsView(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess,
-        passkeyAccess: fixture.passkeyAccess
-    )
-}

@@ -78,22 +78,3 @@ struct BrowserSplitCardLifecycleModifier: ViewModifier {
         Task { await pages.styleVisitedLinks(in: visitedSpace) }
     }
 }
-
-#Preview("Split Card Lifecycle") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    Text("Unfocused card lifecycle")
-        .frame(width: 320, height: 180)
-        .modifier(
-            BrowserSplitCardLifecycleModifier(
-                tab: BrowserTab.startPage(
-                    id: BrowserDetailPreviewFixture.tabID,
-                    lastActivatedAt: BrowserDetailPreviewFixture.fixedDate
-                ),
-                space: BrowserDetailPreviewFixture.space,
-                page: nil,
-                browser: preview.browser,
-                pages: preview.pages
-            )
-        )
-}

@@ -48,12 +48,3 @@ struct BrowserMacOnboardingTutorialPage: View {
         }
     }
 }
-
-#Preview("Spaces Tutorial") {
-    BrowserMacOnboardingTutorialPage(
-        tutorial: .spaces,
-        back: {},
-        next: {}
-    )
-    .frame(width: 980, height: 604)
-}

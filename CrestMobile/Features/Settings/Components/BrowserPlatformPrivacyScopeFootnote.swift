@@ -7,8 +7,3 @@ struct BrowserPlatformPrivacyScopeFootnote: View {
         )
     }
 }
-
-#Preview("Mobile Privacy Scope", traits: .sizeThatFitsLayout) {
-    BrowserPlatformPrivacyScopeFootnote()
-        .padding()
-}

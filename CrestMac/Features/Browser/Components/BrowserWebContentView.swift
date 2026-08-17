@@ -80,14 +80,3 @@ struct BrowserWebContentView: View {
         }
     }
 }
-
-#Preview("Browser Web Content") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserWebContentView(
-        page: preview.page,
-        browser: preview.browser,
-        pages: preview.pages
-    )
-    .frame(width: 960, height: 640)
-}

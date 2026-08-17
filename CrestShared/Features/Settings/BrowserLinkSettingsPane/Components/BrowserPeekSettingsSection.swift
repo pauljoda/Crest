@@ -29,15 +29,3 @@ struct BrowserPeekSettingsSection: View {
         }
     }
 }
-
-#Preview("Peek Settings") {
-    @Previewable @State var automaticallyOpensPeek = true
-    @Previewable @State var clickModifier = BrowserLinkClickModifier.command
-    Form {
-        BrowserPeekSettingsSection(
-            automaticallyOpensPeek: $automaticallyOpensPeek,
-            clickModifier: $clickModifier
-        )
-    }
-    .formStyle(.grouped)
-}

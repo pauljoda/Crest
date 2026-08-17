@@ -28,9 +28,3 @@ struct BrowserSettingsSidebar: View {
         .searchFocused($isSearchFocused)
     }
 }
-
-#Preview("Settings Sidebar") {
-    @Previewable @State var navigation = BrowserSettingsNavigationState()
-    BrowserSettingsSidebar(navigation: $navigation)
-        .frame(width: 240, height: 520)
-}

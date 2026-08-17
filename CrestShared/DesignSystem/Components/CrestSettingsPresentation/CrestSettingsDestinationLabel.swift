@@ -72,13 +72,3 @@ struct CrestSettingsDestinationLabel: View {
             : CrestSettingsPresentationMetrics.regularIconCornerRadius
     }
 }
-
-#Preview("Settings Destination") {
-    CrestSettingsDestinationLabel(
-        title: "Privacy & Permissions",
-        subtitle: "Site access and data",
-        systemImage: "hand.raised.fill",
-        color: CrestBrandPalette.sage
-    )
-    .padding()
-}

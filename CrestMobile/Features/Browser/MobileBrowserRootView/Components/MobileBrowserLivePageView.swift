@@ -42,10 +42,3 @@ struct MobileBrowserLivePageView: View {
         )
     }
 }
-
-#Preview("Mobile Browser Live Page") {
-    MobileBrowserLivePageView(
-        page: MobileBrowserPagePreviewFixture.makePage(),
-        viewport: .inline
-    )
-}

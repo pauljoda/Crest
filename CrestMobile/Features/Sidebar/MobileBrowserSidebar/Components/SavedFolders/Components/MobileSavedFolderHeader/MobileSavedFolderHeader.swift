@@ -72,19 +72,19 @@ struct MobileSavedFolderHeader: View {
     }
 }
 
-#Preview("Mobile Saved Folder Header", traits: .sizeThatFitsLayout) {
-    @Previewable @State var draftTitle = "Reading"
-    let fixture = MobileBrowserSidebarPreviewFixture()
+private struct MobileSavedFolderIcon: View {
+    let folder: SavedFolder
+    let isExpanded: Bool
 
-    MobileSavedFolderHeader(
-        folder: fixture.folder,
-        depth: 0,
-        isExpanded: true,
-        isEditing: false,
-        draftTitle: $draftTitle,
-        toggleExpansion: {},
-        commitTitle: {}
-    )
-    .frame(width: 340)
-    .padding()
+    var body: some View {
+        Image(
+            systemName: BrowserFolderRowPresentationPolicy.systemImage(
+                isExpanded: isExpanded
+            )
+        )
+        .font(.system(size: 17, weight: .medium))
+        .frame(width: 20)
+        .foregroundStyle(folder.color.color.opacity(0.86))
+        .accessibilityHidden(true)
+    }
 }

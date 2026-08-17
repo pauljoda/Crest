@@ -29,14 +29,3 @@ struct MobilePageActionsMenu: View {
         .accessibilityIdentifier("page-actions-menu")
     }
 }
-
-#Preview("Mobile Page Actions Menu") {
-    let fixture = MobilePageActionsPreviewFixture()
-
-    MobilePageActionsMenu(
-        browser: fixture.browser,
-        pages: fixture.actions,
-        systemImage: "ellipsis.circle"
-    )
-    .padding()
-}

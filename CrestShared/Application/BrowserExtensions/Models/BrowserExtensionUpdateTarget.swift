@@ -17,3 +17,9 @@ struct BrowserExtensionUpdateTarget: Equatable, Identifiable, Sendable {
         "\(spaceID.rawValue.uuidString.lowercased())/\(extensionID)"
     }
 }
+
+enum BrowserExtensionUpdateFollowUp {
+    case none
+    case scheduled
+    case retry
+}

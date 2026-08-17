@@ -16,11 +16,3 @@ struct BrowserWindowTransparencyControls: View {
         )
     }
 }
-
-#Preview("Transparency controls") {
-    Form {
-        BrowserWindowTransparencyControls()
-    }
-    .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-    .frame(width: 480)
-}

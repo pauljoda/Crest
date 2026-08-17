@@ -25,16 +25,3 @@ struct DesktopSpaceSelectionControl: View {
         }
     }
 }
-
-#Preview("Desktop Space Selection") {
-    let preview = SpaceSwitcherPreviewFixture.makeContext()
-    DesktopSpaceSelectionControl(
-        spaces: preview.browser.session.spaces,
-        selectedSpaceID: preview.browser.session.selectedSpaceID,
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: preview.spaceAccess,
-        selectSpace: { _ in }
-    )
-    .padding()
-}

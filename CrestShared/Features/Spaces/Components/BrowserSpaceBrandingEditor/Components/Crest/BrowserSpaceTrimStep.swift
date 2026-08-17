@@ -27,16 +27,3 @@ struct BrowserSpaceTrimStep: View {
         }
     }
 }
-
-#Preview("Branding Editor — Trim Step") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceTrimStep(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 600)
-}

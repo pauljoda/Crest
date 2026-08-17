@@ -87,20 +87,3 @@ struct MobileOnboardingSpaceCarousel: View {
         )
     }
 }
-
-#Preview("Onboarding Space Carousel") {
-    @Previewable @State var plan = MobileOnboardingPreviewFixtures.manualPlan
-    @Previewable @State var selectedSpaceID =
-        MobileOnboardingPreviewFixtures.manualPlan.spaces.first?.id
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingSpaceCarousel(
-        plan: $plan,
-        selectedSpaceID: $selectedSpaceID,
-        existingSession: fixture.browser.session,
-        horizontalSizeClass: .compact,
-        addSpace: {},
-        customize: { _ in },
-        remove: { _ in }
-    )
-    .frame(height: 360)
-}

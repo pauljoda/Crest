@@ -15,10 +15,3 @@ struct BrowserMacOnboardingTutorialArtwork: View {
         }
     }
 }
-
-#Preview("Tutorial Artwork") {
-    BrowserMacOnboardingTutorialArtwork(tutorial: .tabs)
-        .padding(42)
-        .frame(width: 540, height: 540)
-        .background(BrowserOnboardingPalette.parchment)
-}

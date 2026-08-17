@@ -7,8 +7,3 @@ struct BrowserUnloadedPageSurface: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Unloaded Browser Page") {
-    BrowserUnloadedPageSurface()
-        .frame(width: 640, height: 420)
-}

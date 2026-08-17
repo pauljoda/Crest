@@ -40,13 +40,3 @@ struct BrowserExtensionUpdateStatus: View {
         return String(localized: "Updated \(names.count) extensions")
     }
 }
-
-#Preview("Extension Update Status") {
-    Form {
-        BrowserExtensionUpdateStatus(
-            model: BrowserExtensionsPreviewFixture.updateModel
-        )
-    }
-    .formStyle(.grouped)
-    .frame(width: 520, height: 120)
-}

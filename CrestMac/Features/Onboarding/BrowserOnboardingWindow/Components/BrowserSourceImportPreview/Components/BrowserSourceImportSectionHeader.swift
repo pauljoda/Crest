@@ -24,14 +24,3 @@ struct BrowserSourceImportSectionHeader: View {
     private var tabIDs: Set<TabID> { Set(tabs.map(\.id)) }
     private var includesAll: Bool { tabIDs.isSubset(of: includedTabIDs) }
 }
-
-#Preview("Source Import Section Header") {
-    BrowserSourceImportSectionHeader(
-        title: "OPEN TABS",
-        tabs: [BrowserImportPreviewFixture.currentTab],
-        includedTabIDs: [BrowserImportPreviewFixture.currentTab.id],
-        setIncluded: { _, _ in }
-    )
-    .frame(width: 320)
-    .padding()
-}

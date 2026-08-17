@@ -84,20 +84,3 @@ struct BrowserStartPageContent: View {
         "crest-start-page-promotion-\(tabID)"
     }
 }
-
-#Preview("Browser Start Page Content") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserStartPageContent(
-        tab: preview.browser.selectedTab,
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: BrowserSpaceAccessController(
-            authenticator: BrowserDetailPreviewAuthenticator()
-        ),
-        tabPromotionNamespace: tabPromotionNamespace,
-        isCommandPalettePresented: false
-    )
-    .frame(width: 960, height: 640)
-}

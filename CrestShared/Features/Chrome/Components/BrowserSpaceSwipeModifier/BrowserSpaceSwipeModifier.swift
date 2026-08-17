@@ -31,36 +31,3 @@ struct BrowserSpaceSwipeModifier: ViewModifier {
         }
     }
 }
-
-#Preview("Space Swipe Modifier") {
-    @Previewable @State var lastDirection: BrowserSpaceSwipeDirection?
-    let status =
-        switch lastDirection {
-        case .previous:
-            "Previous Space"
-        case .next:
-            "Next Space"
-        case nil:
-            "Swipe horizontally"
-        }
-
-    VStack(spacing: CrestSpacing.medium) {
-        Text(status)
-            .font(.headline)
-
-        RoundedRectangle(cornerRadius: CrestRadius.card)
-            .fill(.blue.gradient)
-            .overlay {
-                Image(systemName: "hand.draw")
-                    .font(.largeTitle)
-                    .foregroundStyle(.white)
-            }
-            .modifier(
-                BrowserSpaceSwipeModifier {
-                    lastDirection = $0
-                }
-            )
-    }
-    .padding()
-    .frame(width: 320, height: 220)
-}

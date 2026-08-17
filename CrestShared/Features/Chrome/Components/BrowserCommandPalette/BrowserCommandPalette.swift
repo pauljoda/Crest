@@ -31,9 +31,7 @@ struct BrowserCommandPalette: View {
         dismiss: @escaping () -> Void,
         presentation: BrowserCommandPalettePresentation = .overlay,
         morphNamespace: Namespace.ID? = nil,
-        morphID: String? = nil,
-        omnibox: BrowserOmniboxRegistry? = nil,
-        omniboxDisposition: BrowserOmniboxDisposition = .currentTab
+        morphID: String? = nil
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
@@ -49,9 +47,7 @@ struct BrowserCommandPalette: View {
                 selectTab: selectTab,
                 selectTabInSpace: selectTabInSpace,
                 openURL: openURL,
-                dismiss: dismiss,
-                omnibox: omnibox,
-                omniboxDisposition: omniboxDisposition
+                dismiss: dismiss
             ))
     }
 

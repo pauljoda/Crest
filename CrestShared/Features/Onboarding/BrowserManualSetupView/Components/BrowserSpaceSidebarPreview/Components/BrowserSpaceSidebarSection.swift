@@ -31,14 +31,3 @@ struct BrowserSpaceSidebarSection: View {
         }
     }
 }
-
-#Preview("Space Sidebar Section") {
-    BrowserSpaceSidebarSection(
-        title: "OPEN TABS",
-        tabs: [BrowserManualSetupPreviewFixture.openTab],
-        profileID: BrowserManualSetupPreviewFixture.profileID,
-        selectedTabID: BrowserManualSetupPreviewFixture.openTab.id
-    )
-    .frame(width: 300)
-    .padding()
-}

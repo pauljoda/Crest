@@ -22,20 +22,3 @@ struct MobileSplitCardFocusTapModifier: ViewModifier {
         }
     }
 }
-
-#Preview("Split Card Focus Tap", traits: .fixedLayout(width: 260, height: 160)) {
-    @Previewable @State var focusRequestCount = 0
-
-    RoundedRectangle(cornerRadius: CrestRadius.card)
-        .fill(.quaternary)
-        .overlay {
-            Text("Focus requests: \(focusRequestCount)")
-                .font(.caption)
-        }
-        .modifier(
-            MobileSplitCardFocusTapModifier(
-                requestFocus: { focusRequestCount += 1 }
-            )
-        )
-        .padding()
-}

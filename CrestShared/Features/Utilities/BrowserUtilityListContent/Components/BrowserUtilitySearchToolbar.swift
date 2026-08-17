@@ -51,19 +51,3 @@ struct BrowserUtilitySearchToolbar: View {
         .accessibilityElement(children: .contain)
     }
 }
-
-#Preview("History Search Toolbar", traits: .fixedLayout(width: 360, height: 60)) {
-    @Previewable @State var searchText = "Crest"
-    @Previewable @State var filter = BrowserUtilityListFilter.historyPastWeek
-    @Previewable @Namespace var namespace
-
-    BrowserUtilitySearchToolbar(
-        surface: .history,
-        searchText: $searchText,
-        filter: $filter,
-        morphNamespace: namespace,
-        morphID: "utility-search-preview",
-        clearHistory: {}
-    )
-    .padding()
-}

@@ -35,29 +35,3 @@ struct BrowserSpaceOptionGallery<
         }
     }
 }
-
-#Preview("Branding Editor — Option Gallery") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    BrowserSpaceOptionGallery(
-        options: BrowserSpaceCrestBackplate.allCases,
-        minimumWidth: BrowserSpaceForgeMetrics.crestCardMinimumWidth,
-        isSelected: { option in
-            option == branding.crest.backplate
-        },
-        select: { option in
-            $branding.editorUpdateCrest { $0.backplate = option }
-        },
-        artwork: { option in
-            BrowserSpaceCrestIcon(
-                branding: $branding.editorPreview {
-                    $0.crest.backplate = option
-                },
-                size: BrowserSpaceForgeMetrics.crestThumbnailSize,
-                rasterizesLayers: false
-            )
-        }
-    )
-    .padding(CrestSpacing.large)
-    .frame(width: 620)
-}

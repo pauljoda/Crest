@@ -17,10 +17,3 @@ struct MobileCredentialPromptError: View {
             .foregroundStyle(.red)
     }
 }
-
-#Preview("Credential Prompt Error") {
-    MobileCredentialPromptError(
-        "The form changed before Crest could fill the password."
-    )
-    .padding()
-}

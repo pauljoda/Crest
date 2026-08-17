@@ -45,7 +45,7 @@ enum BrowserQuickWindowPreviewFixture {
 
     static func makeAccessController() -> BrowserSpaceAccessController {
         BrowserSpaceAccessController(
-            authenticator: BrowserQuickWindowPreviewAuthenticator()
+            authenticator: BrowserPreviewAuthenticator(result: false)
         )
     }
 

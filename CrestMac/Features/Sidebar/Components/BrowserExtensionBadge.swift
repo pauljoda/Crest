@@ -13,8 +13,3 @@ struct BrowserExtensionBadge: View {
             .offset(x: 5, y: -5)
     }
 }
-
-#Preview("Extension Badge") {
-    BrowserExtensionBadge(text: "3")
-        .padding()
-}

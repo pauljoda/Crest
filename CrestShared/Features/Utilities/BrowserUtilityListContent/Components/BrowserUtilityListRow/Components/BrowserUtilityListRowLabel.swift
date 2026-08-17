@@ -48,16 +48,3 @@ struct BrowserUtilityListRowLabel<Icon: View, Trailing: View>: View {
         .contentShape(.rect)
     }
 }
-
-#Preview("Utility List Row Label", traits: .fixedLayout(width: 360, height: 72)) {
-    BrowserUtilityListRowLabel(
-        title: BrowserUtilityListPreviewFixture.historyEntry.title,
-        subtitle: Text("Visited 3 times")
-    ) {
-        Image(systemName: "globe")
-    } trailing: {
-        Image(systemName: "arrow.up.forward")
-            .foregroundStyle(.tertiary)
-    }
-    .padding()
-}

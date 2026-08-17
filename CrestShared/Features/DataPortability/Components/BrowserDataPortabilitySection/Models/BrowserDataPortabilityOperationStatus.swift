@@ -1,5 +1,10 @@
 import Foundation
 
+enum BrowserDataPortabilityOperationMessage {
+    case localized(LocalizedStringResource)
+    case verbatim(String)
+}
+
 struct BrowserDataPortabilityOperationStatus {
     let message: BrowserDataPortabilityOperationMessage
     let isError: Bool

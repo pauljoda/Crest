@@ -10,8 +10,3 @@ struct BrowserQuickWindowAddressSecurityIcon: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Quick Window Address Security") {
-    BrowserQuickWindowAddressSecurityIcon(isSecure: true)
-        .padding()
-}

@@ -162,14 +162,3 @@ struct BrowserCredentialSuggestionPanel: View {
         }
     }
 }
-
-#Preview("Credential Suggestions", traits: .sizeThatFitsLayout) {
-    let preview = BrowserCredentialChromePreviewFixture.makeWebContent()
-
-    BrowserCredentialSuggestionPanel(
-        request: BrowserCredentialChromePreviewFixture.currentCredentialRequest,
-        page: preview.page,
-        browser: preview.browser
-    )
-    .padding()
-}

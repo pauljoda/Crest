@@ -20,13 +20,3 @@ struct BrowserPeekCloseButton: View {
         .help(Text(help))
     }
 }
-
-#Preview {
-    BrowserPeekCloseButton(
-        accessibilityLabel: "Close Peek",
-        help: "Close Peek (⌘W)",
-        dismiss: {}
-    )
-    .frame(width: BrowserPeekChromePolicy.closeControlWidth)
-    .padding()
-}

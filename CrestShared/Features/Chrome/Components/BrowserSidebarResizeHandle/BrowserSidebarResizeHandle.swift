@@ -71,38 +71,3 @@ struct BrowserSidebarResizeHandle: View {
         onResizeEnded(width)
     }
 }
-
-#Preview("Sidebar Resize Handle") {
-    @Previewable @State var width = BrowserChromeLayout.sidebarIdealWidth
-
-    HStack(spacing: 0) {
-        Text("Sidebar")
-            .frame(width: width, height: 180)
-            .background(.quaternary)
-
-        BrowserSidebarResizeHandle(width: $width)
-
-        Text("Page")
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.background)
-    }
-    .frame(width: 520, height: 180)
-}
-
-#Preview("Sidebar Resize Handle — Right to Left") {
-    @Previewable @State var width = BrowserChromeLayout.sidebarIdealWidth
-
-    HStack(spacing: 0) {
-        Text("Sidebar")
-            .frame(width: width, height: 180)
-            .background(.quaternary)
-
-        BrowserSidebarResizeHandle(width: $width)
-
-        Text("Page")
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.background)
-    }
-    .frame(width: 520, height: 180)
-    .environment(\.layoutDirection, .rightToLeft)
-}

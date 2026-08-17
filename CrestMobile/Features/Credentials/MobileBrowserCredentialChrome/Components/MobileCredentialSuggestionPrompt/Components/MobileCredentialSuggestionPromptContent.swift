@@ -33,18 +33,3 @@ struct MobileCredentialSuggestionPromptContent: View {
         }
     }
 }
-
-#Preview("Credential Suggestion Content") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileCredentialSuggestionPromptContent(
-        request: fixture.currentPasswordRequest,
-        space: fixture.space,
-        model: BrowserCredentialSuggestionModel(),
-        fillErrorMessage: nil,
-        dismiss: {},
-        fill: { _ in }
-    )
-    .padding()
-    .frame(width: 390)
-}

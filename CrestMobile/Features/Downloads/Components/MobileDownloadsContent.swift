@@ -34,14 +34,3 @@ struct MobileDownloadsContent: View {
         .presentationDetents([.medium, .large])
     }
 }
-
-#Preview("Mobile Downloads Content") {
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileDownloadsContent(
-        space: fixture.space,
-        downloads: [],
-        actions: BrowserUtilityListActions(),
-        dismiss: {}
-    )
-}

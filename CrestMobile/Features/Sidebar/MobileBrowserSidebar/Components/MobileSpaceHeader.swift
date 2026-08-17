@@ -128,23 +128,3 @@ struct MobileSpaceHeader: View {
         }
     }
 }
-
-#Preview("Mobile Space Header") {
-    @Previewable @State var isSavedTabsExpanded = true
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSpaceHeader(
-        space: fixture.space,
-        isPrivateBrowsing: false,
-        isSavedTabsExpanded: $isSavedTabsExpanded,
-        openNewTab: {},
-        createFolder: {},
-        showHistory: {},
-        showPasswords: {},
-        showSettings: {},
-        closePrivateBrowsing: {},
-        cleanup: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

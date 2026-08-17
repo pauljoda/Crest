@@ -34,11 +34,3 @@ struct BrowserOnboardingCompletionPage: View {
         .background(BrowserOnboardingPalette.parchment)
     }
 }
-
-#Preview("Onboarding Complete") {
-    BrowserOnboardingCompletionPage(
-        summary: "Imported 1 Space and 1 tab.",
-        openCrest: {}
-    )
-    .frame(width: 980, height: 604)
-}

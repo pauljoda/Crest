@@ -49,19 +49,3 @@ struct MobileBrowserStartPage: View {
         return BrowserSpaceForegroundPolicy.colorScheme(for: space.branding)
     }
 }
-
-#Preview("Mobile Browser — Start Page") {
-    @Previewable @State var address = ""
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserStartPage(
-        space: fixture.space,
-        isPrivateBrowsing: false,
-        address: $address,
-        focusRequest: 0,
-        usesCommandPalette: false,
-        isSourceAvailable: { _ in true },
-        selectTab: { _, _ in true },
-        openURL: { _, _ in true },
-        isCommandPaletteObscured: false
-    )
-}

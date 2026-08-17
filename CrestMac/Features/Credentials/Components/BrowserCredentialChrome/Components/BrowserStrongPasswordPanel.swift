@@ -138,14 +138,3 @@ struct BrowserStrongPasswordPanel: View {
         }
     }
 }
-
-#Preview("Strong Password Panel", traits: .sizeThatFitsLayout) {
-    let preview = BrowserCredentialChromePreviewFixture.makeWebContent()
-
-    BrowserStrongPasswordPanel(
-        request: BrowserCredentialChromePreviewFixture.newCredentialRequest,
-        page: preview.page,
-        browser: preview.browser
-    )
-    .padding()
-}

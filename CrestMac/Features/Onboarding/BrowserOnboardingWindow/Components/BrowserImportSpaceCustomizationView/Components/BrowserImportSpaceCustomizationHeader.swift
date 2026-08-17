@@ -35,8 +35,3 @@ struct BrowserImportSpaceCustomizationHeader: View {
         }
     }
 }
-
-#Preview("Space Customization Header") {
-    BrowserImportSpaceCustomizationHeader(done: {})
-        .frame(width: 1_080)
-}

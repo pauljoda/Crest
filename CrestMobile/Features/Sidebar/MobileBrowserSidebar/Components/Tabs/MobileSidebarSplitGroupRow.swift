@@ -114,23 +114,3 @@ struct MobileSidebarSplitGroupRow: View {
         )
     }
 }
-
-#Preview("Mobile Sidebar Split Group Row", traits: .sizeThatFitsLayout) {
-    let configuration = MobileSidebarSplitGroupRowPreviewFixture.configuration()
-
-    MobileSidebarSplitGroupRow(
-        groupID: configuration.groupID,
-        members: configuration.members,
-        followingTabID: nil,
-        hasVisibleFollowingRow: false,
-        spaceID: configuration.spaceID,
-        profileID: configuration.profileID,
-        selectedTabID: configuration.selectedTabID,
-        canClose: true,
-        browser: configuration.browser,
-        spaceAccess: configuration.spaceAccess,
-        select: { _ in }
-    )
-    .frame(width: 390)
-    .padding(.vertical)
-}

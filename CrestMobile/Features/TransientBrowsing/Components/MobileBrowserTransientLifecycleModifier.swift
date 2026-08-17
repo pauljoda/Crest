@@ -24,14 +24,3 @@ struct MobileBrowserTransientLifecycleModifier: ViewModifier {
         model.space != nil
     }
 }
-
-#Preview {
-    Color.clear
-        .modifier(
-            MobileBrowserTransientLifecycleModifier(
-                model: MobileBrowserTransientPreviewFixture.makeModel(),
-                spaceAccess:
-                    MobileBrowserTransientPreviewFixture.makeAccessController()
-            )
-        )
-}

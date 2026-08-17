@@ -148,14 +148,3 @@ struct BrowserQuickWindowScene: View {
         openWindow(id: BrowserSceneID.browser.rawValue)
     }
 }
-
-#Preview("Quick Window Scene") {
-    @Previewable @State var request: BrowserQuickWindowRequest? =
-        BrowserQuickWindowPreviewFixture.request
-    BrowserQuickWindowScene(
-        previewing: $request,
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController()
-    )
-    .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-}

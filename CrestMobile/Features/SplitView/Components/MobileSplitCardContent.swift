@@ -123,16 +123,3 @@ struct MobileSplitCardContent: View {
         )
     }
 }
-
-#Preview("Split Card — Unloaded Member", traits: .fixedLayout(width: 320, height: 480)) {
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSplitCardContent(
-        member: BrowserSplitViewPreviewFixture.members[0],
-        space: fixture.space,
-        pages: fixture.pages,
-        viewport: .inline,
-        failureLayout: .regular
-    )
-    .background(.quaternary)
-}

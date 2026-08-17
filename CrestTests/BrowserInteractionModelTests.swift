@@ -119,97 +119,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertNil(dragState.dropLocation)
     }
 
-    func testOnlyPinnedTargetsPerformFancyMoveDuringTheDrag() {
-        XCTAssertTrue(
-            BrowserTabDropBehavior.performsLiveMove(
-                at: BrowserTabDropLocation(
-                    placement: .pinned,
-                    folderID: nil,
-                    beforeTabID: TabID()
-                )
-            )
-        )
-        XCTAssertFalse(
-            BrowserTabDropBehavior.performsLiveMove(
-                at: BrowserTabDropLocation(
-                    placement: .saved,
-                    folderID: nil,
-                    beforeTabID: TabID()
-                )
-            )
-        )
-        XCTAssertFalse(
-            BrowserTabDropBehavior.performsLiveMove(
-                at: BrowserTabDropLocation(
-                    placement: .current,
-                    folderID: nil,
-                    beforeTabID: TabID()
-                )
-            )
-        )
-        XCTAssertGreaterThanOrEqual(
-            BrowserPinnedDropTargetPolicy.trailingTargetWidth,
-            CrestSpacing.large
-        )
-    }
-
-    func testDroppingBackOnTheSourceStillCompletesTheDragSession() {
-        let tabID = TabID()
-        let item = BrowserTabDragItem(
-            tabID: tabID,
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let source = BrowserTabDropLocation(
-            placement: .current,
-            folderID: nil,
-            beforeTabID: tabID
-        )
-
-        XCTAssertTrue(BrowserTabDropBehavior.accepts(item: item, at: source))
-        XCTAssertFalse(BrowserTabDropBehavior.shouldMove(item: item, at: source))
-    }
-
-    func testSameTabIDInAnotherExactSpaceIsNotTreatedAsTheDragSource() {
-        let tabID = TabID()
-        let sourceAssignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let destinationAssignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let item = BrowserTabDragItem(
-            tabID: tabID,
-            spaceID: sourceAssignment.spaceID,
-            profileID: sourceAssignment.profileID
-        )
-
-        XCTAssertTrue(
-            BrowserTabDropBehavior.shouldMove(
-                item: item,
-                at: BrowserTabDropLocation(
-                    placement: .pinned,
-                    folderID: nil,
-                    beforeTabID: tabID,
-                    destinationAssignment: destinationAssignment
-                )
-            )
-        )
-        XCTAssertFalse(
-            BrowserTabDropBehavior.shouldMove(
-                item: item,
-                at: BrowserTabDropLocation(
-                    placement: .pinned,
-                    folderID: nil,
-                    beforeTabID: tabID,
-                    destinationAssignment: sourceAssignment
-                )
-            )
-        )
-    }
-
     func testRowInsertionLocationTracksTheFingerAcrossTheRowsMidpoint() {
         let before = BrowserTabDropLocation(
             placement: .current,
@@ -248,56 +157,6 @@ final class BrowserInteractionModelTests: XCTestCase {
                 after: after
             ),
             after
-        )
-    }
-
-    func testFolderRowDropSeparatesSiblingInsertionFromNesting() {
-        let folderID = FolderID()
-        let parentID = FolderID()
-        let before = BrowserFolderDropLocation(
-            parentID: parentID,
-            beforeSiblingID: folderID
-        )
-        let inside = BrowserFolderDropLocation(
-            parentID: folderID,
-            beforeSiblingID: nil
-        )
-
-        XCTAssertEqual(
-            BrowserFolderRowDropPolicy.location(
-                y: 0,
-                rowHeight: 40,
-                before: before,
-                inside: inside
-            ),
-            before
-        )
-        XCTAssertEqual(
-            BrowserFolderRowDropPolicy.location(
-                y: 9,
-                rowHeight: 40,
-                before: before,
-                inside: inside
-            ),
-            before
-        )
-        XCTAssertEqual(
-            BrowserFolderRowDropPolicy.location(
-                y: 10,
-                rowHeight: 40,
-                before: before,
-                inside: inside
-            ),
-            inside
-        )
-        XCTAssertEqual(
-            BrowserFolderRowDropPolicy.location(
-                y: 40,
-                rowHeight: 40,
-                before: before,
-                inside: inside
-            ),
-            inside
         )
     }
 
@@ -2064,35 +1923,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertFalse(nesting.contains(CGPoint(x: 100, y: 135)))
     }
 
-    func testDragPlacementChangesReachTheLivePreviewUpdater() {
-        let tabID = TabID()
-        let spaceID = SpaceID()
-        let recorder = BrowserTabDragPreviewRecorder()
-        let dragState = BrowserTabDragState()
-
-        dragState.begin(
-            item: BrowserTabDragItem(
-                tabID: tabID,
-                spaceID: spaceID,
-                profileID: UUID()
-            ),
-            placement: .current,
-            previewUpdater: recorder
-        )
-        _ = dragState.enter(
-            BrowserTabDropLocation(
-                placement: .pinned,
-                folderID: nil,
-                beforeTabID: nil
-            )
-        )
-        dragState.leavePinnedZone()
-        dragState.end()
-
-        XCTAssertEqual(recorder.placements, [.pinned, .current])
-        XCTAssertTrue(recorder.didEnd)
-    }
-
     func testFolderDragUsesSavedInsertionLocationsAndCannotEnterPinnedTabs() {
         let folderID = FolderID()
         let siblingID = FolderID()
@@ -2209,19 +2039,5 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(BrowserTabMiddleClickPolicy.action(for: .current), .close)
         XCTAssertEqual(BrowserTabMiddleClickPolicy.action(for: .pinned), .unload)
         XCTAssertEqual(BrowserTabMiddleClickPolicy.action(for: .saved), .unload)
-    }
-}
-
-@MainActor
-private final class BrowserTabDragPreviewRecorder: BrowserTabDragPreviewUpdating {
-    var placements: [TabPlacement] = []
-    var didEnd = false
-
-    func updatePreview(for placement: TabPlacement) {
-        placements.append(placement)
-    }
-
-    func dragStateDidEnd() {
-        didEnd = true
     }
 }

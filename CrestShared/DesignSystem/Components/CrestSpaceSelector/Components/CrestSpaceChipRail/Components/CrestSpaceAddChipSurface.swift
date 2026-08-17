@@ -57,14 +57,3 @@ struct CrestSpaceAddChipSurface<LabelContent: View>: View {
             .onHover { isHovering = $0 && isEnabled }
     }
 }
-
-#Preview("Add Space Chip Surface", traits: .sizeThatFitsLayout) {
-    CrestSpaceAddChipSurface(
-        tint: CrestSpaceSelectorPreviewFixture.workSpace.accent.color,
-        isPressed: true,
-        label: Label("New Space", systemImage: "plus")
-    )
-    .padding()
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.light)
-}

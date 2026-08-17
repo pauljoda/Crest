@@ -37,12 +37,3 @@ struct SidebarSplitGroupHeader: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Split Group Header", traits: .sizeThatFitsLayout) {
-    VStack(alignment: .leading, spacing: CrestSpacing.small) {
-        SidebarSplitGroupHeader(memberCount: 2)
-        SidebarSplitGroupHeader(memberCount: 4)
-    }
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-    .padding()
-}

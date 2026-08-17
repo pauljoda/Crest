@@ -18,12 +18,3 @@ struct BrowserSettingsPrivateSpaceIdentity: View {
         }
     }
 }
-
-#Preview("Private Space identity") {
-    HStack {
-        BrowserSettingsPrivateSpaceIdentity(
-            space: BrowserSettingsPrivateSpaceAccessPreviewFixture.space
-        )
-    }
-    .padding()
-}

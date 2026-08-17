@@ -108,27 +108,3 @@ struct BrowserSplitCardView: View {
         )
     }
 }
-
-#Preview("Split Card — Focused") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserSplitCardView(
-        tab: BrowserTab.startPage(
-            id: BrowserDetailPreviewFixture.tabID,
-            lastActivatedAt: BrowserDetailPreviewFixture.fixedDate
-        ),
-        space: BrowserDetailPreviewFixture.space,
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: BrowserSpaceAccessController(
-            authenticator: BrowserDetailPreviewAuthenticator()
-        ),
-        tabPromotionNamespace: tabPromotionNamespace,
-        isCommandPalettePresented: false,
-        cardFrames: BrowserSplitCardFrameRegistry(),
-        focusesOnHover: { false },
-        onFocusRequest: {}
-    )
-    .frame(width: 520, height: 640)
-}

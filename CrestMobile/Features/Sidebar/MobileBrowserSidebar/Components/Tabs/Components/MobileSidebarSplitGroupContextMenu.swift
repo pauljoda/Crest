@@ -40,12 +40,3 @@ struct MobileSidebarSplitGroupContextMenu: View {
         }
     }
 }
-
-#Preview("Mobile Split Group Menu", traits: .sizeThatFitsLayout) {
-    let configuration = MobileSidebarSplitGroupRowPreviewFixture.configuration()
-
-    Menu("Open Split Actions", systemImage: "ellipsis.circle") {
-        MobileSidebarSplitGroupContextMenu(configuration: configuration)
-    }
-    .padding()
-}

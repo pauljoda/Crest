@@ -20,13 +20,3 @@ struct MobileSpaceSelectionSection: View {
         }
     }
 }
-
-#Preview("Mobile Space Selection") {
-    let fixture = MobileBrowserPreviewFixture()
-    Form {
-        MobileSpaceSelectionSection(
-            browser: fixture.browser,
-            selectedSpaceID: .constant(fixture.space.id)
-        )
-    }
-}

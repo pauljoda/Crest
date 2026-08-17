@@ -29,21 +29,3 @@ struct CrestSpaceMenuPicker<Tag: Hashable>: View {
         .crestAccessibilityIdentifier(accessibilityIdentifier)
     }
 }
-
-#Preview("Space Menu Picker", traits: .sizeThatFitsLayout) {
-    @Previewable @State var selection =
-        CrestSpaceSelectorPreviewFixture.selectedSpaceID(for: .menu)
-
-    Form {
-        CrestSpaceMenuPicker(
-            "Default Space",
-            selection: $selection,
-            spaces: CrestSpaceSelectorPreviewFixture.identities,
-            accessibilityIdentifier: "preview-space-menu"
-        )
-    }
-    .formStyle(.grouped)
-    .frame(width: 360)
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.light)
-}

@@ -19,13 +19,3 @@ struct MobileSpacePrivateBrowsingButton: View {
         .accessibilityIdentifier("private-browsing-toggle")
     }
 }
-
-#Preview("Private Browsing Button", traits: .sizeThatFitsLayout) {
-    MobileSpacePrivateBrowsingButton(
-        isPrivateBrowsing: true,
-        accentColor: .indigo,
-        action: {}
-    )
-    .buttonStyle(.plain)
-    .padding()
-}

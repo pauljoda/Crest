@@ -10,14 +10,3 @@ struct BrowserSpaceCrestBackplateMask: View {
             .frame(width: size, height: size)
     }
 }
-
-#Preview("Crest Backplate Mask", traits: .sizeThatFitsLayout) {
-    let branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    BrowserSpaceCrestBackplateMask(
-        systemImage: branding.crest.backplate.systemImage ?? "shield.fill",
-        size: 112
-    )
-    .foregroundStyle(branding.primaryColor.color)
-    .padding()
-}

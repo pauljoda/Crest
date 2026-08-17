@@ -35,11 +35,3 @@ struct BrowserPinnedExtensionStripContent: View {
         .accessibilityIdentifier("browser-pinned-extensions")
     }
 }
-
-#Preview("Pinned Extension Strip Content") {
-    BrowserPinnedExtensionStripContent(
-        actions: BrowserSidebarExtensionPreviewFixture.actions.filter(\.isPinned),
-        perform: { _, _ in }
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

@@ -32,16 +32,3 @@ struct BrowserSpaceFieldDivisionStep: View {
         }
     }
 }
-
-#Preview("Branding Editor — Field Division Step") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceFieldDivisionStep(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 600)
-}

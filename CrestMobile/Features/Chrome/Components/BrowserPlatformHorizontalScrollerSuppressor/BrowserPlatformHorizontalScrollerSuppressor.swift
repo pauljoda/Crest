@@ -7,15 +7,3 @@ struct BrowserPlatformHorizontalScrollerSuppressor: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Horizontal Scroller Suppressor") {
-    ZStack {
-        RoundedRectangle(cornerRadius: CrestRadius.card)
-            .fill(.blue.gradient)
-        Text("Pager content")
-            .foregroundStyle(.white)
-        BrowserPlatformHorizontalScrollerSuppressor()
-    }
-    .frame(width: 320, height: 120)
-    .padding()
-}

@@ -30,19 +30,3 @@ struct BrowserSourceImportPreview: View {
         )
     }
 }
-
-#Preview("Source Browser Import") {
-    BrowserSourceImportPreview(
-        application: .arc,
-        review: BrowserImportPreviewFixture.review,
-        overflowTabIDs: [],
-        duplicateTabIDs: [],
-        duplicateDestinationName: nil,
-        setIncluded: { _, _ in },
-        setSectionIncluded: { _, _ in },
-        setPlacement: { _, _ in }
-    )
-    .frame(width: 340, height: 620)
-    .padding()
-    .background(BrowserOnboardingPalette.parchment)
-}

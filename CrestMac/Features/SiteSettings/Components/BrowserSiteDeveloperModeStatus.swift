@@ -27,9 +27,3 @@ struct BrowserSiteDeveloperModeStatus: View {
         return page.isDeveloperModeEnabled ? "On" : "Off"
     }
 }
-
-#Preview("Developer Mode Status") {
-    let preview = BrowserSiteSettingsPreviewFixture.makePage()
-    BrowserSiteDeveloperModeStatus(page: preview.page)
-        .padding()
-}

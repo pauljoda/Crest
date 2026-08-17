@@ -106,7 +106,3 @@ final class BrowserWindowTransparencyHostView: NSView {
         }
     }
 }
-
-#Preview("Opaque transparency host") {
-    BrowserWindowTransparencyHostView(isTransparencyEnabled: false)
-}

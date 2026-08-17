@@ -17,10 +17,3 @@ struct BrowserOnboardingPanelModifier: ViewModifier {
             }
     }
 }
-
-#Preview("Onboarding Panel") {
-    Text("Set up your browser")
-        .padding()
-        .modifier(BrowserOnboardingPanelModifier())
-        .padding()
-}

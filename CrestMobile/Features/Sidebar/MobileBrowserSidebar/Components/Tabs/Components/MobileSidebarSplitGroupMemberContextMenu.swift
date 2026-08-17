@@ -54,15 +54,3 @@ struct MobileSidebarSplitGroupMemberContextMenu: View {
         )
     }
 }
-
-#Preview("Mobile Split Member Menu", traits: .sizeThatFitsLayout) {
-    let configuration = MobileSidebarSplitGroupRowPreviewFixture.configuration()
-
-    Menu("Open Member Actions", systemImage: "ellipsis.circle") {
-        MobileSidebarSplitGroupMemberContextMenu(
-            configuration: configuration,
-            member: configuration.members[0]
-        )
-    }
-    .padding()
-}

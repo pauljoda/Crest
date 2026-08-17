@@ -69,12 +69,3 @@ struct MobileOnboardingWelcomePage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Welcome") {
-    MobileOnboardingWelcomePage(
-        action: .setup,
-        primaryTitle: "Get Started",
-        status: "No existing setup was found in iCloud.",
-        primaryAction: {}
-    )
-}

@@ -207,22 +207,3 @@ struct MobileSavedTabsDropSection: View {
         ) != nil
     }
 }
-
-#Preview("Saved Tabs Section") {
-    @Previewable @Namespace var promotionNamespace
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileSavedTabsDropSection(
-        space: fixture.space,
-        tabSections: fixture.space.tabSections,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        selectTab: { _ in },
-        editingFolderRequest: $editingFolderRequest,
-        tabPromotionNamespace: promotionNamespace,
-        usesNativeNavigationTransition: false
-    )
-    .frame(width: 360)
-}

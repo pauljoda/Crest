@@ -24,12 +24,3 @@ struct CrestIconTile: View {
             )
     }
 }
-
-#Preview("Icon Tile") {
-    CrestIconTile(
-        systemImage: "shield.lefthalf.filled",
-        color: CrestBrandPalette.sage,
-        castsShadow: true
-    )
-    .padding()
-}

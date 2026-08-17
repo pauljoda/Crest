@@ -23,12 +23,3 @@ struct BrowserExtensionInstallAccessGroup: View {
         }
     }
 }
-
-#Preview("Extension Install Access Group", traits: .sizeThatFitsLayout) {
-    BrowserExtensionInstallAccessGroup(
-        title: "Permissions",
-        values: ["storage", "tabs"],
-        emptyText: "No additional browser permissions requested."
-    )
-    .padding()
-}

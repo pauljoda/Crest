@@ -57,12 +57,3 @@ struct BrowserDataPortabilitySection: View {
         }
     }
 }
-
-#Preview("Data Portability") {
-    BrowserDataPortabilitySection(
-        model: BrowserDataPortabilityPreviewFixture.makeModel(),
-        showsExternalBrowserImportControls: true,
-        showsMacOSImportRequirement: true
-    )
-    .frame(width: 680, height: 720)
-}

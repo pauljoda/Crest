@@ -127,3 +127,11 @@ final class BrowserCredentialSuggestionModel {
         return ordered
     }
 }
+
+enum BrowserCredentialSuggestionPhase: Equatable, Sendable {
+    case idle
+    case loading
+    case empty
+    case suggestions([CredentialDescriptor])
+    case failed
+}

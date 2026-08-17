@@ -119,22 +119,3 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
         #endif
     }
 }
-
-#Preview("Mobile Tab Drag Source", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let dragState = fixture.makeTabDragState(tab: fixture.currentTab)
-
-    Label(fixture.currentTab.displayTitle, systemImage: "doc.text.fill")
-        .frame(width: 220, alignment: .leading)
-        .padding(CrestSpacing.medium)
-        .background(CrestColor.selectedSurface, in: .rect(cornerRadius: 10))
-        .modifier(
-            BrowserPlatformTabDragSourceModifier(
-                tab: fixture.currentTab,
-                profileID: fixture.space.profile.id,
-                spaceID: fixture.space.id,
-                dragState: dragState
-            )
-        )
-        .padding()
-}

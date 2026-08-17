@@ -53,13 +53,3 @@ struct MobileSpaceCustomizationSection: View {
         }
     }
 }
-
-#Preview("Mobile Space Customization") {
-    let fixture = MobileBrowserPreviewFixture()
-    Form {
-        MobileSpaceCustomizationSection(
-            browser: fixture.browser,
-            space: fixture.space
-        )
-    }
-}

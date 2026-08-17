@@ -15,13 +15,3 @@ struct BrowserCredentialAccountSection: View {
         }
     }
 }
-
-#Preview("Credential Account", traits: .sizeThatFitsLayout) {
-    Form {
-        BrowserCredentialAccountSection(
-            descriptor: BrowserCredentialDetailPreviewFixture.descriptor,
-            spaceName: BrowserCredentialDetailPreviewFixture.spaceName
-        )
-    }
-    .frame(width: 420)
-}

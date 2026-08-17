@@ -63,10 +63,3 @@ struct BrowserMacOnboardingTutorialCopy: View {
         }
     }
 }
-
-#Preview("Tutorial Copy") {
-    BrowserMacOnboardingTutorialCopy(tutorial: .spaces)
-        .padding(48)
-        .frame(width: 440, height: 540)
-        .background(BrowserOnboardingPalette.paper)
-}

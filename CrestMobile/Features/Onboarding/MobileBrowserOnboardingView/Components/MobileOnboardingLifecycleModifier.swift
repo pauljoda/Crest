@@ -32,32 +32,3 @@ struct MobileOnboardingLifecycleModifier: ViewModifier {
             }
     }
 }
-
-#Preview("Onboarding Lifecycle") {
-    @Previewable @State var plan = MobileOnboardingPreviewFixtures.manualPlan
-    @Previewable @State var customizedSpaceID: SpaceID?
-    let fixture = MobileBrowserPreviewFixture()
-    let progress = BrowserOnboardingProgressStore(
-        persistence: InMemoryBrowserOnboardingProgressPersistence()
-    )
-    Color(uiColor: .systemBackground)
-        .modifier(
-            MobileOnboardingLifecycleModifier(
-                request: BrowserOnboardingRequest(
-                    entryPoint: .manualSetup,
-                    presentationID: UUID(
-                        uuid: (
-                            0x34, 0xC8, 0x5B, 0x68, 0x41, 0xE4, 0x4A, 0x3C,
-                            0xA4, 0xB9, 0x3F, 0x39, 0x72, 0x13, 0x3C, 0x43
-                        )
-                    )
-                ),
-                progress: progress,
-                plan: $plan,
-                customizedSpaceID: $customizedSpaceID,
-                draftPersistence: .preview,
-                existingSession: fixture.browser.session,
-                requestChanged: { _ in }
-            )
-        )
-}

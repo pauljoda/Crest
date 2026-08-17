@@ -49,7 +49,3 @@ struct MobileCollapsedSidebarRevealControl: View {
         }
     }
 }
-
-#Preview("Mobile Browser — Sidebar Reveal", traits: .fixedLayout(width: 120, height: 220)) {
-    MobileCollapsedSidebarRevealControl(showSidebar: {})
-}

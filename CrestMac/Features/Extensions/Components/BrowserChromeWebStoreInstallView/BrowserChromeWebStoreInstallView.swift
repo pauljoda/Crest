@@ -69,15 +69,3 @@ struct BrowserChromeWebStoreInstallView: View {
             )
     }
 }
-
-#Preview("Chrome Web Store Install — Review") {
-    let page = BrowserChromeWebStoreInstallPreviewFixture.makePage()
-
-    BrowserChromeWebStoreInstallView(
-        page: page,
-        phase: .review(
-            BrowserChromeWebStoreInstallPreviewFixture.candidate,
-            errorDescription: nil
-        )
-    )
-}

@@ -116,14 +116,3 @@ struct BrowserDataRetentionSettingsSection: View {
         pendingChange = nil
     }
 }
-
-#Preview("Data Retention") {
-    let browser = BrowserStore.preview()
-    Form {
-        BrowserDataRetentionSettingsSection(
-            browser: browser,
-            downloadCenter: BrowserDownloadCenter(),
-            spaceID: browser.session.spaces[0].id
-        )
-    }
-}

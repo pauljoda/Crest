@@ -20,12 +20,3 @@ struct SyncSettingsFactRow: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview("Sync Fact") {
-    SyncSettingsFactRow(
-        title: "Device-only data",
-        detail: "Cookies, downloads, and active page state stay on this device.",
-        symbol: "internaldrive.fill"
-    )
-    .padding()
-}

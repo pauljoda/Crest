@@ -27,7 +27,3 @@ struct MobileCompactStartPageToolbar: View {
         )
     }
 }
-
-#Preview("Mobile Browser — Start Page Toolbar", traits: .fixedLayout(width: 390, height: 88)) {
-    MobileCompactStartPageToolbar(showTabViewer: {})
-}

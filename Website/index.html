@@ -39,7 +39,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
   <link rel="mask-icon" href="assets/crest-logo.svg" color="#101827">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20260812-homepage-responsive">
+  <link rel="stylesheet" href="styles.css?v=20260816-direct-split-parity">
   <script src="site.js" defer></script>
   <script type="application/ld+json">
     {
@@ -64,6 +64,7 @@
           "image": "https://pauljoda.github.io/Crest-Website/assets/og-card-brand.jpg",
           "screenshot": [
             "https://pauljoda.github.io/Crest-Website/assets/crest-work-mac-2026.png",
+            "https://pauljoda.github.io/Crest-Website/assets/crest-split-view-mac-2026.png",
             "https://pauljoda.github.io/Crest-Website/assets/crest-work-ipad-2026.png",
             "https://pauljoda.github.io/Crest-Website/assets/crest-work-iphone-2026.png",
             "https://pauljoda.github.io/Crest-Website/assets/crest-import-browser-selection-mac-2026.png",
@@ -84,13 +85,14 @@
       <span>Crest</span>
     </a>
     <nav aria-label="Primary navigation">
-      <a href="#story">The story</a>
+      <a href="#story">Arc parity</a>
+      <a href="#split-view">Split View</a>
       <a href="#spaces">Spaces</a>
       <a href="#platforms">Every device</a>
       <a href="#migration">Move in</a>
       <a href="#extensions">Extensions</a>
       <a href="#features">Features</a>
-      <a class="nav-cta" href="guides/">Help &amp; guides</a>
+      <a class="nav-cta" href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Download for Mac</a>
     </nav>
   </header>
 
@@ -102,11 +104,14 @@
           <h1>The browser for life after <em>Arc.</em></h1>
           <p class="hero-lede"><strong>Created by an Arc diehard.</strong> Crest keeps the ideas worth carrying forward&mdash;Spaces, a calm sidebar, Peek, command-first browsing, and real separation between contexts&mdash;and makes them feel at home on Mac, iPad, and iPhone.</p>
           <div class="hero-actions">
-            <a class="hero-testflight-button" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer" aria-label="Join the Crest Browser beta in TestFlight">
-              <img src="assets/testflight-icon.webp" alt="" width="32" height="32">
-              <span><small>Join the beta</small>View in TestFlight</span>
+            <a class="hero-product-button hero-download-button" href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer" aria-label="Download the latest Crest release for Mac from GitHub">
+              <img src="assets/crest-logo.svg" alt="" width="32" height="32">
+              <span><small>Apple silicon Mac</small>Download the latest release</span>
             </a>
-            <a class="text-link text-link-light" href="#platforms">Explore every device <span aria-hidden="true">↘</span></a>
+            <a class="hero-product-button hero-testflight-button" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer" aria-label="Join the Crest Browser beta for iPhone and iPad in TestFlight">
+              <img src="assets/testflight-icon.webp" alt="" width="32" height="32">
+              <span><small>iPhone &amp; iPad beta</small>View in TestFlight</span>
+            </a>
           </div>
           <div class="hero-platforms" aria-label="Available platforms">
             <span>Mac</span><span>iPad</span><span>iPhone</span>
@@ -140,53 +145,51 @@
     </section>
 
     <div class="running-order" aria-hidden="true">
-      <div>Spaces · A calmer sidebar · Peek · Quick Window · Native on Mac, iPad, and iPhone · </div>
+      <div>Spaces · Split View · Peek · Quick Window · Air Traffic Control carried forward · Native on Mac, iPad, and iPhone · </div>
     </div>
 
     <section class="arc-story" id="story" aria-labelledby="story-heading">
       <div class="arc-story-lead reveal">
-        <p class="eyebrow">Why Crest exists</p>
-        <h2 id="story-heading">Arc made browsing feel personal. Crest keeps that feeling going.</h2>
-        <p class="story-declaration">Crest began with a simple idea: keep what made Arc special, be more careful about boundaries, and feel at home on every Apple device.</p>
+        <p class="eyebrow">The Arc feature map</p>
+        <h2 id="story-heading">The ideas you relied on are <em>still here.</em></h2>
+        <p class="story-declaration">This is the practical overlap, using Arc&rsquo;s names alongside Crest&rsquo;s implementation. The details are native to Crest, but the familiar job of each feature carries forward.</p>
       </div>
 
-      <div class="arc-bridge reveal">
-        <article class="bridge-card bridge-inherit">
-          <p class="eyebrow">What Arc got right</p>
-          <h3>The ideas from Arc that were worth keeping</h3>
-          <ul>
-            <li><strong>Spaces</strong><span>Different parts of life stay visibly separate.</span></li>
-            <li><strong>Sidebar-first</strong><span>Tabs become places, not disposable labels.</span></li>
-            <li><strong>Peek</strong><span>Look into a link without losing where you were.</span></li>
-            <li><strong>Command-first</strong><span>Move, search, and act without hunting through chrome.</span></li>
-            <li><strong>Quick Window</strong><span>Tiny Arc&rsquo;s lightweight handoff for external links, with a choice to keep or close.</span></li>
-          </ul>
-        </article>
-
-        <div class="bridge-crest" aria-hidden="true">
-          <span class="bridge-line"></span>
-          <img src="assets/space-crest-winter.svg" alt="">
-          <span class="bridge-line"></span>
+      <div class="parity-matrix reveal" role="table" aria-label="Arc and Crest feature parity">
+        <div class="parity-row parity-heading" role="row">
+          <span role="columnheader">The job</span><span role="columnheader">Arc called it</span><span role="columnheader">Crest carries it forward</span>
         </div>
-
-        <article class="bridge-card bridge-expand">
-          <p class="eyebrow">What Crest changes</p>
-          <h3>Spaces with firmer boundaries</h3>
-          <ul>
-            <li><strong>Full isolation</strong><span>Sessions, cookies, history, passwords, and WebKit data stay apart.</span></li>
-            <li><strong>Native mobile</strong><span>The same browser model extends naturally to iPad and iPhone.</span></li>
-            <li><strong>Your own standard</strong><span>Layered crests and palettes make every Space unmistakable.</span></li>
-            <li><strong>Tools in context</strong><span>Localhost controls, credentials, and site permissions belong to the right Space.</span></li>
-          </ul>
-        </article>
+        <div class="parity-row" role="row"><span role="cell">Separate contexts</span><strong role="cell">Spaces + Profiles</strong><span role="cell"><b>Spaces with isolated profiles</b><small>Sessions, history, passwords, extensions, permissions, and site data stay apart.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Browser structure</span><strong role="cell">Sidebar</strong><span role="cell"><b>Adaptive sidebar</b><small>Full on Mac and iPad; a dedicated, touch-native view on iPhone.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Always-close sites</span><strong role="cell">Favorites</strong><span role="cell"><b>Pinned sites</b><small>A fast icon grid scoped deliberately to each Space.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Durable pages</span><strong role="cell">Pinned Tabs</strong><span role="cell"><b>Saved tabs</b><small>Keep a home URL, wander away, then return to the saved location.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Projects and nesting</span><strong role="cell">Folders</strong><span role="cell"><b>Saved folders</b><small>Nest, color, collapse, reorder, and move complete folder trees.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Fast navigation</span><strong role="cell">Command Bar</strong><span role="cell"><b>Command palette</b><small>Search the web, tabs, history, other Spaces, and every Crest command.</small></span></div>
+        <div class="parity-row parity-featured" role="row"><span role="cell">Automatic link routing</span><strong role="cell">Air Traffic Control</strong><span role="cell"><b>Link Routing</b><small>Send exact URLs or matching domains to the right Space before the default route.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Multiple pages at once</span><strong role="cell">Split View</strong><span role="cell"><b>Split View</b><small>Two to four live cards, resizable on Mac and iPad and paged on iPhone.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Temporary link preview</span><strong role="cell">Peek</strong><span role="cell"><b>Peek</b><small>Preview above the source page, then close it or promote it into any Space.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">External-link triage</span><strong role="cell">Little Arc</strong><span role="cell"><b>Quick Window</b><small>Open small, choose the right Space, and keep only what matters.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Automatic cleanup</span><strong role="cell">Auto Archive</strong><span role="cell"><b>Space cleanup + Archive</b><small>Choose 12 hours through 30 days, or turn cleanup off; every result stays recoverable.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Recently used switching</span><strong role="cell">Recent Tab Switcher</strong><span role="cell"><b>Most Recent Tab</b><small>Use Control-Tab to move straight back to the tab you just left.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Personal key map</span><strong role="cell">Custom Keyboard Shortcuts</strong><span role="cell"><b>Rebindable Shortcuts</b><small>Search, record, reset, and resolve conflicts for the complete Mac command set.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Developer context</span><strong role="cell">Developer Mode</strong><span role="cell"><b>Localhost mode</b><small>Automatic address, capture, console, network, and Web Inspector controls.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Per-site control</span><strong role="cell">Site Control Center</strong><span role="cell"><b>Site Controls</b><small>Reader, blocking, permissions, extension actions, and page tools in context.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Browser add-ons</span><strong role="cell">Extensions</strong><span role="cell"><b>Per-Space extensions</b><small>Chrome Web Store, Firefox Add-ons, Safari Web Extensions, and unpacked packages on Mac.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Private browsing</span><strong role="cell">Incognito</strong><span role="cell"><b>Private Spaces</b><small>Non-persistent browsing with optional device authentication and foreground relocking.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Appearance</span><strong role="cell">Space Themes</strong><span role="cell"><b>Space Forge + gradients</b><small>Build a full crest or keep the familiar blended-color atmosphere.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Shared organization</span><strong role="cell">Arc Sync</strong><span role="cell"><b>iCloud sync</b><small>Spaces, tabs, folders, split groups, appearance, and durable state across Apple devices.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Browser library</span><strong role="cell">Library</strong><span role="cell"><b>History, Archive + Downloads</b><small>Common lists remain easy to reach while their records stay scoped by Space.</small></span></div>
+        <div class="parity-row" role="row"><span role="cell">Move-in flow</span><strong role="cell">Import from Another Browser</strong><span role="cell"><b>Review-first migration</b><small>Bring over supported data from Arc, Zen, Chrome, Safari, and Firefox on Mac.</small></span></div>
       </div>
+
+      <p class="parity-note reveal">This matrix covers the Arc features Crest implements today; it is not a claim that the two browsers share code or identical internals. Crest is independent and not affiliated with Arc.</p>
     </section>
 
     <section class="platform-story" id="platforms" aria-labelledby="platforms-heading">
       <div class="section-heading section-heading-light reveal">
-        <p class="eyebrow">Made for Apple devices</p>
-        <h2 id="platforms-heading">Crest follows the shape of each screen</h2>
-        <p>The same browser should fit every device without squeezing a desktop layout onto a phone. Spaces and tabs stay familiar while the interface adapts to Mac, iPad, and iPhone.</p>
+        <p class="eyebrow">Carried forward, then taken further</p>
+        <h2 id="platforms-heading">The full browser model now belongs on every Apple device</h2>
+        <p>Crest retains the complete Space, tab, folder, split, history, archive, settings, and command model. Mac and iPad have room to show it directly; iPhone adapts the same interface into focused views instead of throwing features away.</p>
       </div>
 
       <div class="platform-grid">
@@ -194,9 +197,9 @@
           <div class="platform-copy">
             <span class="platform-index">01</span>
             <p class="eyebrow">Crest for Mac</p>
-            <h3>Room for the full sidebar</h3>
-            <p>A generous sidebar, native windows, keyboard-first movement, Quick Window, Peek, and automatic localhost tools give the desktop room to work.</p>
-            <ul><li>Full sidebar anatomy</li><li>Native windows and menus</li><li>Developer-aware localhost mode</li></ul>
+            <h3>The complete desktop browser</h3>
+            <p>A generous sidebar, two-to-four-card Split View, native windows and menus, Quick Window, Peek, rebindable shortcuts, extensions, and automatic localhost tools give the Mac room to work.</p>
+            <ul><li>Direct releases and Sparkle updates</li><li>Full sidebar, splits, and native menus</li><li>Developer and extension workflows</li></ul>
           </div>
           <figure class="platform-shot platform-shot-mac">
             <img src="assets/crest-work-mac-2026.png" alt="Crest Work Space on Mac with its sidebar and project dashboard" width="1329" height="768">
@@ -207,8 +210,8 @@
           <div class="platform-copy">
             <span class="platform-index">02</span>
             <p class="eyebrow">Crest for iPad</p>
-            <h3>The same structure, made for touch</h3>
-            <p>Keep the sidebar, Space identity, and durable organization without pretending your iPad has a mouse attached.</p>
+            <h3>The desktop structure, made for touch</h3>
+            <p>Keep the full sidebar, resizable Split View columns, Space identity, durable organization, and hardware-keyboard commands without pretending your iPad is just a large phone.</p>
           </div>
           <figure class="platform-shot">
             <img src="assets/crest-work-ipad-2026.png" alt="Crest Work Space on iPad" width="2420" height="1668">
@@ -223,8 +226,8 @@
           <div class="platform-copy">
             <span class="platform-index">03</span>
             <p class="eyebrow">Crest for iPhone</p>
-            <h3>Your Spaces within thumb&rsquo;s reach</h3>
-            <p>Compact chrome keeps the page primary. Swipe between Spaces, reach the command palette quickly, and open the full sidebar only when you need it.</p>
+            <h3>The same browser, recomposed</h3>
+            <p>Compact chrome keeps the page primary. The full sidebar becomes a dedicated view, Split View becomes a focused card pager, and every Space remains within thumb&rsquo;s reach.</p>
           </div>
           <figure class="platform-shot platform-shot-phone">
             <img src="assets/crest-work-iphone-2026.png" alt="Crest Work Space on iPhone" width="1206" height="2622">
@@ -262,6 +265,33 @@
           </figure>
         </div>
       </div>
+    </section>
+
+    <section class="split-story" id="split-view" aria-labelledby="split-view-heading">
+      <div class="split-story-intro reveal">
+        <div>
+          <p class="eyebrow">Split View</p>
+          <h2 id="split-view-heading">Keep the pages that belong together, together.</h2>
+        </div>
+        <p>Build a working surface from two to four live tabs. The group becomes one durable row in the sidebar, the address and page controls follow the focused card, and the whole arrangement can synchronize across your devices.</p>
+      </div>
+
+      <figure class="split-product-shot reveal">
+        <img src="assets/crest-split-view-mac-2026.png" alt="Crest Split View on Mac showing a field guide and trail note side by side inside the Personal Space" width="1329" height="768">
+        <figcaption><span>Real Crest capture · Personal Space</span><strong>Two live pages, one saved group.</strong></figcaption>
+      </figure>
+
+      <div class="split-capabilities reveal">
+        <article><span>01</span><h3>Make a split naturally</h3><p>Drag a sidebar tab onto the page, split the current tab with another tab, or right-click a link and open it directly in Split View.</p></article>
+        <article><span>02</span><h3>Focus stays explicit</h3><p>Click a card or use Control-Command-Left and Right. Address, reload, find, page tools, Peek, and extension popups follow that card.</p></article>
+        <article><span>03</span><h3>Resize and rearrange</h3><p>Drag the dividers, move cards left or right, remove one card, or separate every tab while keeping the pages alive.</p></article>
+        <article><span>04</span><h3>Adapt, do not amputate</h3><p>Mac and iPad use resizable columns. iPhone keeps the same synchronized group and pages between cards from the compact toolbar.</p></article>
+      </div>
+
+      <a class="split-guide-link reveal" href="guides/split-view/">
+        <span><small>Help &amp; shortcuts</small><strong>Learn every way to create, focus, resize, reorder, sync, and separate a Split View.</strong></span>
+        <span>Open the guide</span>
+      </a>
     </section>
 
     <section class="space-story" id="spaces" aria-labelledby="spaces-heading" data-space-browser>
@@ -463,9 +493,9 @@
 
     <section class="feature-field" id="features" aria-labelledby="features-heading">
       <div class="section-heading reveal">
-        <p class="eyebrow">A few other useful things</p>
-        <h2 id="features-heading">Small conveniences that stay out of the way</h2>
-        <p>Crest keeps these tools close to the page and quiet until they are useful. Each one belongs to the current Space, so using a convenience never quietly crosses a boundary.</p>
+        <p class="eyebrow">The rest of the browser</p>
+        <h2 id="features-heading">A complete feature set, without a pile of chrome</h2>
+        <p>Crest keeps everyday browsing, serious organization, privacy, portability, and developer tools close at hand. Controls appear when they are relevant, and Space-scoped features keep the current boundary intact.</p>
       </div>
 
       <div class="feature-chapters">
@@ -501,27 +531,41 @@
       </div>
 
       <div class="feature-ledger reveal">
-        <article><span>⌕</span><h3>Command palette</h3><p>Search the web, find any open tab, and move around without leaving the keyboard.</p></article>
-        <article><span>◇</span><h3>Crest Passwords</h3><p>Origin-matched credentials in the Keychain, protected by device authentication.</p></article>
-        <article><span>¶</span><h3>Reader mode</h3><p>Turn supported pages into a calm, native reading surface without leaving the current Space.</p></article>
-        <article><span>⇄</span><h3>Portable and synced</h3><p>Import browser data, export a validated archive, and carry durable state through iCloud.</p></article>
-        <article><span>☾</span><h3>Actually private</h3><p>A non-persistent Space that leaves normal history, restoration, and sync behind.</p></article>
-        <article><span>⌁</span><h3>Native where it matters</h3><p>SwiftUI, WebKit, CloudKit, and Keychain—not a desktop wrapper stretched across devices.</p></article>
+        <article><span>⌕</span><h3>Command palette</h3><p>Search the web, open or move to tabs in any Space, search history, and run the full command set.</p></article>
+        <article><span>⌨</span><h3>Custom shortcuts</h3><p>Rebind the complete Mac command map, search actions, spot conflicts, and return any command to its default.</p></article>
+        <article><span>◇</span><h3>Crest Passwords</h3><p>Origin- and Space-matched credentials in the Keychain, with device authentication around sensitive access.</p></article>
+        <article><span>¶</span><h3>Reader mode</h3><p>Turn supported articles into a calm reading surface without leaving the tab or its Space.</p></article>
+        <article><span>◒</span><h3>Content blocking</h3><p>Use Crest&rsquo;s small built-in ad and tracker list per Space, or add a compatible blocking extension on Mac.</p></article>
+        <article><span>⚑</span><h3>Site permissions</h3><p>Remember or reset decisions for protected capabilities, popups, downloads, and external-app handoff per site and Space.</p></article>
+        <article><span>↗</span><h3>Page tools</h3><p>Find, zoom, copy a normal or Markdown link, share, print, export PDF, save a web archive, and inspect.</p></article>
+        <article><span>⌛</span><h3>History, archive &amp; downloads</h3><p>Common lists stay easy to reach while records and retention choices remain attached to the Space that made them.</p></article>
+        <article><span>⇄</span><h3>Portable and synced</h3><p>Import with a visual review, export a validated Crest archive, and carry durable state through iCloud.</p></article>
+        <article><span>☾</span><h3>Private Spaces</h3><p>Use non-persistent WebKit storage with no normal history or sync trail, then add device authentication if needed.</p></article>
+        <article><span>⊙</span><h3>Keep Loaded</h3><p>Protect important live pages from ordinary unloading while Crest still responds to genuine system memory pressure.</p></article>
+        <article><span>⌁</span><h3>Native where it matters</h3><p>SwiftUI, WebKit, CloudKit, Keychain, native windows, menus, share sheets, and platform authentication.</p></article>
       </div>
     </section>
 
     <section class="early-access" id="early-access" aria-labelledby="early-access-heading">
       <div class="early-access-copy reveal">
-        <p class="eyebrow">Crest is still growing</p>
-        <h2 id="early-access-heading">Try the beta and share how it feels</h2>
-        <p>Join the Crest beta in TestFlight and share feedback, ideas, or bug reports in r/CrestBrowser. Release notes and community conversations help shape what needs attention next.</p>
+        <p class="eyebrow">Choose your platform</p>
+        <h2 id="early-access-heading">Direct on Mac. TestFlight on iPhone and iPad.</h2>
+        <p>Mac releases are signed, notarized, and distributed directly through GitHub Releases with built-in Sparkle updates. The iPhone and iPad builds remain in TestFlight while Crest keeps growing.</p>
       </div>
-      <div class="community-actions reveal" aria-label="Crest early access and community links">
-        <a class="brand-action" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer" aria-label="Join Crest TestFlight for early builds">
+      <div class="community-actions reveal" aria-label="Crest downloads, early access, and community links">
+        <a class="brand-action" href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer" aria-label="Download Crest for Mac from GitHub Releases">
+          <img class="brand-action-icon brand-action-crest" src="assets/crest-logo.svg" alt="Crest" width="400" height="400">
+          <span class="brand-action-copy">
+            <strong>Crest for Mac</strong>
+            <small>Direct · signed · notarized · automatic updates</small>
+          </span>
+          <span class="service-button">View releases</span>
+        </a>
+        <a class="brand-action" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer" aria-label="Join Crest TestFlight for iPhone and iPad builds">
           <img class="brand-action-icon" src="assets/testflight-official.png" alt="TestFlight" width="400" height="400">
           <span class="brand-action-copy">
-            <strong>Crest Browser beta</strong>
-            <small>Early builds through TestFlight</small>
+            <strong>Crest for iPhone &amp; iPad</strong>
+            <small>Early mobile builds through TestFlight</small>
           </span>
           <span class="service-button">View in TestFlight</span>
         </a>
@@ -543,8 +587,8 @@
         <h2>A browser made to be worth keeping</h2>
         <p>Crest is a personal project shaped by the parts of Arc worth carrying forward, the things that could work differently, and a lot of care for how a browser should feel on Mac, iPad, and iPhone.</p>
         <div class="hero-actions">
-          <a class="button button-paper" href="guides/">Open Help &amp; guides</a>
-          <a class="text-link text-link-light" href="#spaces">Explore Spaces <span aria-hidden="true">↑</span></a>
+          <a class="button button-paper" href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Download for Mac</a>
+          <a class="text-link text-link-light" href="guides/">Open Help &amp; guides <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>
@@ -553,7 +597,7 @@
   <footer>
     <a class="wordmark" href="#top"><img class="brand-mark" src="assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a>
     <p>Crest is an independent browser created by an Arc diehard who wanted its best ideas to have a future on Mac, iPad, and iPhone. Crest is not affiliated with Arc. TestFlight is a trademark of Apple Inc. Reddit and the Reddit logo are trademarks of Reddit, Inc.</p>
-    <div><a href="#story">The story</a><a href="#spaces">Spaces</a><a href="#migration">Move in</a><a href="#extensions">Extensions</a><a href="#features">Features</a><a href="guides/">Help &amp; guides</a><a href="docs/">Field guide</a><a href="support/">Support</a><a href="privacy/">Privacy</a><a href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer">TestFlight</a><a href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer">Reddit</a></div>
+    <div><a href="#story">Arc parity</a><a href="#split-view">Split View</a><a href="#spaces">Spaces</a><a href="#migration">Move in</a><a href="#extensions">Extensions</a><a href="#features">Features</a><a href="guides/">Help &amp; guides</a><a href="docs/">Field guide</a><a href="support/">Support</a><a href="privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Mac releases</a><a href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer">iPhone &amp; iPad TestFlight</a><a href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer">Reddit</a></div>
   </footer>
 </body>
 </html>

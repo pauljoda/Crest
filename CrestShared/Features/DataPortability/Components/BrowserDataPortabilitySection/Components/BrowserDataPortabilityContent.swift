@@ -22,14 +22,3 @@ struct BrowserDataPortabilityContent: View {
         }
     }
 }
-
-#Preview("Data Portability Content") {
-    Form {
-        BrowserDataPortabilityContent(
-            model: BrowserDataPortabilityPreviewFixture.makeModel(),
-            showsExternalBrowserImportControls: true,
-            showsMacOSImportRequirement: true
-        )
-    }
-    .frame(width: 680, height: 720)
-}

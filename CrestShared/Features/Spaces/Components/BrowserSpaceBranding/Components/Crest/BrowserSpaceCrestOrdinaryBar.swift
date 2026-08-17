@@ -18,15 +18,3 @@ struct BrowserSpaceCrestOrdinaryBar: View {
         }
     }
 }
-
-#Preview("Crest Ordinary Bar") {
-    BrowserSpaceCrestOrdinaryBar(
-        ordinary: .bend,
-        color: BrowserSpaceBrandColor.lionGold.color,
-        size: 112
-    )
-    .frame(width: 112, height: 112)
-    .background(BrowserSpaceBrandColor.lionCrimson.color)
-    .clipShape(.rect(cornerRadius: CrestRadius.card))
-    .padding()
-}

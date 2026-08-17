@@ -12,10 +12,3 @@ struct MobileCredentialCrossOriginNotice: View {
         .foregroundStyle(.orange)
     }
 }
-
-#Preview("Credential Cross-Origin Notice") {
-    MobileCredentialCrossOriginNotice(
-        message: "Embedded sign-in from https://accounts.example.com"
-    )
-    .padding()
-}

@@ -12,9 +12,3 @@ struct MobileSpaceCustomizationPreview: View {
             .accessibilityIdentifier("mobile-space-customization-preview")
     }
 }
-
-#Preview("Mobile Space Sidebar Preview", traits: .fixedLayout(width: 240, height: 460)) {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileSpaceCustomizationPreview(space: fixture.space, wide: true)
-        .padding()
-}

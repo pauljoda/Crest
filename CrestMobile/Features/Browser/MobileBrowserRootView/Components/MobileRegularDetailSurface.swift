@@ -31,14 +31,3 @@ struct MobileRegularDetailSurface<Content: View>: View {
         )
     }
 }
-
-#Preview("Mobile Regular Detail Surface") {
-    MobileRegularDetailSurface(
-        adjoinsLeadingSidebar: true,
-        isStartPage: false,
-        hasActivePage: true,
-        hasSelectedSpace: true,
-        handleWebContentInteraction: {},
-        content: Color(uiColor: .systemBackground)
-    )
-}

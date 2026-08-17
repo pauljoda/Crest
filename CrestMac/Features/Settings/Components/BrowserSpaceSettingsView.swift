@@ -216,14 +216,3 @@ struct BrowserSpaceSettingsView: View {
         selectedSpaceID = requestedSpaceID
     }
 }
-
-#Preview("Space Settings") {
-    BrowserSpaceSettingsView(
-        browser: BrowserStore.preview(),
-        spaceAccess: BrowserSpaceAccessController(),
-        dataDeleter: BrowserSettingsPreviewDataDeleter(),
-        requestedSpaceID: nil,
-        requestRevision: 0
-    )
-    .frame(width: 760, height: 560)
-}

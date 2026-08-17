@@ -41,16 +41,3 @@ struct BrowserSpaceCrestTrimView: View {
         }
     }
 }
-
-#Preview("Crest Trim", traits: .sizeThatFitsLayout) {
-    let branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    BrowserSpaceCrestTrimView(
-        trim: branding.crest.trim,
-        outlineSystemImage: branding.crest.backplate.outlineSystemImage,
-        color: branding.secondaryColor.color,
-        size: 112
-    )
-    .frame(width: 112, height: 112)
-    .padding()
-}

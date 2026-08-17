@@ -36,28 +36,3 @@ struct SpaceSidebarUtilityContent: View {
         .transition(.opacity)
     }
 }
-
-#Preview("Space Sidebar Utility Content") {
-    @Previewable @State var searchText = ""
-    @Previewable @State var filter = BrowserUtilityListFilter.all
-    @Previewable @Namespace var commandSurfaceNamespace
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    let pages = BrowserSidebarPreviewFixture.makePages()
-    let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
-    SpaceSidebarUtilityContent(
-        surface: .history,
-        space: BrowserSidebarPreviewFixture.space,
-        searchText: $searchText,
-        filter: $filter,
-        commandSurfaceNamespace: commandSurfaceNamespace,
-        downloads: [],
-        actions: BrowserSidebarPreviewFixture.makeUtilityActions(
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
-        ),
-        dismissOnBlankSpace: {},
-        clearHistory: {}
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 540)
-}

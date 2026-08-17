@@ -51,18 +51,3 @@ struct MobileOnboardingPageActions: View {
         .frame(maxWidth: .infinity)
     }
 }
-
-#Preview("Onboarding Page Actions") {
-    MobileOnboardingPageActions(
-        primaryTitle: "Continue",
-        primarySystemImage: "chevron.right",
-        primaryIdentifier: "preview-primary",
-        primaryDisabled: false,
-        showsActivity: false,
-        secondaryTitle: "Close",
-        secondaryIdentifier: "preview-secondary",
-        secondaryAction: {},
-        primaryAction: {}
-    )
-    .padding()
-}

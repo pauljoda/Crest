@@ -26,11 +26,3 @@ struct BrowserExtensionActionArtwork: View {
         }
     }
 }
-
-#Preview("Extension Action Artwork") {
-    BrowserExtensionActionArtwork(
-        action: BrowserSidebarExtensionPreviewFixture.actions[0],
-        glyphSize: 20
-    )
-    .padding()
-}

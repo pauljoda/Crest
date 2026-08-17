@@ -41,16 +41,3 @@ struct MobileBrowserCompactSettingsLayout: View {
         )
     }
 }
-
-#Preview("Compact Mobile Settings", traits: .fixedLayout(width: 390, height: 844)) {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserCompactSettingsLayout(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        dataDeleter: fixture.pages,
-        searchText: .constant("")
-    )
-    .environment(fixture.cloudSync)
-    .environment(fixture.onboardingCoordinator)
-}

@@ -47,26 +47,3 @@ struct CrestStartPageMark: View {
         }
     }
 }
-
-#Preview("Start Page Mark — Light") {
-    CrestStartPageMark()
-        .frame(width: 64, height: 64)
-        .padding()
-        .preferredColorScheme(.light)
-}
-
-#Preview("Start Page Mark — Dark") {
-    CrestStartPageMark()
-        .frame(width: 64, height: 64)
-        .padding()
-        .preferredColorScheme(.dark)
-}
-
-#Preview("Start Page Mark — Tab Size") {
-    CrestStartPageMark()
-        .frame(
-            width: TabFaviconMetrics.defaultSize,
-            height: TabFaviconMetrics.defaultSize
-        )
-        .padding()
-}

@@ -13,12 +13,3 @@ struct SpacePickerIcon: View {
         )
     }
 }
-
-#Preview("Space Picker Icon") {
-    SpacePickerIcon(
-        space: SpaceSwitcherPreviewFixture.firstSpace,
-        size: 24,
-        lockSize: 6
-    )
-    .padding()
-}

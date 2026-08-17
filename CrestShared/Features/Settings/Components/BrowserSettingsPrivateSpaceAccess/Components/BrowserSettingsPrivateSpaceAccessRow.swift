@@ -17,13 +17,3 @@ struct BrowserSettingsPrivateSpaceAccessRow: View {
         .accessibilityElement(children: .contain)
     }
 }
-
-#Preview("Private Space row") {
-    Form {
-        BrowserSettingsPrivateSpaceAccessRow(
-            space: BrowserSettingsPrivateSpaceAccessPreviewFixture.space,
-            accessController: BrowserSettingsPrivateSpaceAccessPreviewFixture.accessController
-        )
-    }
-    .frame(maxWidth: 520)
-}

@@ -50,14 +50,3 @@ struct BrowserMozillaAddonsInstallActions: View {
         .disabled(session.isInstalling)
     }
 }
-
-#Preview("Firefox Add-ons Install Actions", traits: .fixedLayout(width: 480, height: 80)) {
-    BrowserMozillaAddonsInstallActions(
-        session: BrowserMozillaAddonsInstallPreviewFixture.makeSession(),
-        phase: .review(
-            BrowserMozillaAddonsInstallPreviewFixture.candidate,
-            errorDescription: nil
-        )
-    )
-    .padding()
-}

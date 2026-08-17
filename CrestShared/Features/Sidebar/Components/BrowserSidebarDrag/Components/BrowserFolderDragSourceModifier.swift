@@ -18,12 +18,13 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
                 spaceID: spaceID,
                 profileID: profileID
             )
-            let isDragging = reorder == nil
+            let isDragging =
+                reorder == nil
                 && BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                isDragging: dragState.isDragging(item),
-                hasReliableTerminalLifecycle:
-                    BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
-            )
+                    isDragging: dragState.isDragging(item),
+                    hasReliableTerminalLifecycle:
+                        BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
+                )
 
             content
                 .scaleEffect(
@@ -62,24 +63,4 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
             content
         }
     }
-}
-
-#Preview("Folder Drag Source Modifier", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let dragState = fixture.makeFolderDragState()
-
-    Label(fixture.folder.title, systemImage: fixture.folder.symbol)
-        .frame(width: 220, alignment: .leading)
-        .padding(CrestSpacing.medium)
-        .background(CrestColor.selectedSurface, in: .rect(cornerRadius: 10))
-        .modifier(
-            BrowserFolderDragSourceModifier(
-                folder: fixture.folder,
-                profileID: fixture.space.profile.id,
-                spaceID: fixture.space.id,
-                dragState: dragState,
-                isEnabled: true
-            )
-        )
-        .padding()
 }

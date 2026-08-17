@@ -12,10 +12,3 @@ struct BrowserSpaceCrestChevronFieldShape: Shape {
         }
     }
 }
-
-#Preview("Crest Chevron Field Shape") {
-    BrowserSpaceCrestChevronFieldShape()
-        .fill(BrowserSpaceBrandColor.lionCrimson.color)
-        .frame(width: 112, height: 112)
-        .padding()
-}

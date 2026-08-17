@@ -95,16 +95,3 @@ struct BrowserMozillaAddonsReviewContent: View {
         }
     }
 }
-
-#Preview("Firefox Add-ons Install — Access Review") {
-    @Previewable @State var isAccessExpanded = true
-
-    BrowserMozillaAddonsReviewContent(
-        candidate: BrowserMozillaAddonsInstallPreviewFixture.candidate,
-        spaceName: BrowserMozillaAddonsInstallPreviewFixture.spaceName,
-        errorDescription: nil,
-        isAccessExpanded: $isAccessExpanded
-    )
-    .padding()
-    .frame(width: BrowserExtensionInstallMetrics.width)
-}

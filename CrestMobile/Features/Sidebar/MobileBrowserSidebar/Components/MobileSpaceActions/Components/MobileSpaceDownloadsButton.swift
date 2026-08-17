@@ -46,14 +46,3 @@ struct MobileSpaceDownloadsButton: View {
         return "arrow.down.circle.fill"
     }
 }
-
-#Preview("Downloads Button", traits: .sizeThatFitsLayout) {
-    MobileSpaceDownloadsButton(
-        downloads: MobileSpaceActionsPreviewFixture.downloads,
-        newDownloads: MobileSpaceActionsPreviewFixture.downloads,
-        badgeColor: .indigo,
-        action: {}
-    )
-    .buttonStyle(.plain)
-    .padding()
-}

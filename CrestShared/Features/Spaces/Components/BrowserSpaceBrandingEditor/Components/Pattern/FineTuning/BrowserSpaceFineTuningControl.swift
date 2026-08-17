@@ -57,16 +57,3 @@ struct BrowserSpaceFineTuningControl: View {
         }
     }
 }
-
-#Preview("Fine Tuning Control — Expanded") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.gradientBranding
-    @Previewable @State var isExpanded = true
-
-    BrowserSpaceFineTuningControl(
-        branding: $branding,
-        isExpanded: $isExpanded,
-        showsTextureControl: true
-    )
-    .frame(width: 420)
-    .padding(CrestSpacing.large)
-}

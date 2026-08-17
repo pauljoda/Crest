@@ -39,13 +39,3 @@ struct BrowserSiteQuickActions: View {
         }
     }
 }
-
-#Preview("Site Quick Actions") {
-    let preview = BrowserSidebarExtensionPreviewFixture.makeContext()
-    BrowserSiteQuickActions(
-        page: preview.configuration.page,
-        dismiss: {}
-    )
-    .padding()
-    .frame(width: BrowserSiteControlLayoutPolicy.width)
-}

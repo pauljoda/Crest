@@ -52,36 +52,3 @@ struct MobileBrowserSidebarSurface: View {
         .toolbarVisibility(.hidden, for: .navigationBar)
     }
 }
-
-#Preview("Mobile Browser Sidebar Surface") {
-    @Previewable @Namespace var compactChromeNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    @Previewable @State var address = ""
-    @Previewable @State var isAddressEditing = false
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileBrowserSidebarSurface(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        dataDeleter: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        mode: .compactTabViewer,
-        compactChromeNamespace: compactChromeNamespace,
-        tabPromotionNamespace: tabPromotionNamespace,
-        address: $address,
-        isAddressEditing: $isAddressEditing,
-        activateAddress: {},
-        selectTab: { _ in },
-        submitAddress: {},
-        openURL: { _ in },
-        openNewTab: {},
-        showsCompactAddressBar: true,
-        showsBottomSpaceSwitcher: true,
-        compactPageIsFullyPresented: false,
-        compactTransitionEnded: { _ in },
-        togglePrivateBrowsing: {},
-        closePrivateBrowsing: {},
-        hideSidebar: {},
-        utilityPresentation: BrowserUtilityPresentationState()
-    )
-}

@@ -193,25 +193,3 @@ struct MobileBrowserSpacePage: View {
         ) != nil
     }
 }
-
-#Preview("Mobile Browser Space Page") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileBrowserSpacePage(
-        space: fixture.space,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        mode: .compactTabViewer,
-        tabPromotionNamespace: tabPromotionNamespace,
-        selectTab: { _ in },
-        openNewTab: {},
-        showHistory: {},
-        showPasswords: {},
-        showSettings: {},
-        closePrivateBrowsing: {},
-        compactPageIsFullyPresented: false
-    )
-    .frame(width: 390, height: 700)
-}

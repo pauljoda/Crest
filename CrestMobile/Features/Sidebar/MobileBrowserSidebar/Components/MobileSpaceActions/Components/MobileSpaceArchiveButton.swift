@@ -43,16 +43,3 @@ struct MobileSpaceArchiveButton: View {
         )
     }
 }
-
-#Preview("Archive Button", traits: .sizeThatFitsLayout) {
-    MobileSpaceArchiveButton(
-        mode: .compactTabViewer,
-        archivedTabCount: 3,
-        commonListsAreExpanded: false,
-        showArchive: {},
-        toggleCommonLists: {},
-        recordCommonListsTriggerFrame: { _ in }
-    )
-    .buttonStyle(.plain)
-    .padding()
-}

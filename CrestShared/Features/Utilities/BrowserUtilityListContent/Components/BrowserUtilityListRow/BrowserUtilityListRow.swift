@@ -97,26 +97,3 @@ struct BrowserUtilityListRow: View {
     }
 
 }
-
-#Preview("Utility List Rows", traits: .fixedLayout(width: 360, height: 210)) {
-    VStack(spacing: 0) {
-        BrowserUtilityListRow(
-            item: .archive(BrowserUtilityListPreviewFixture.archivedTab),
-            assignment: BrowserUtilityListPreviewFixture.assignment,
-            actions: BrowserUtilityListActions()
-        )
-        BrowserUtilityListRow(
-            item: .history(BrowserUtilityListPreviewFixture.historyEntry),
-            assignment: BrowserUtilityListPreviewFixture.assignment,
-            actions: BrowserUtilityListActions()
-        )
-        BrowserUtilityListRow(
-            item: .download(BrowserUtilityListPreviewFixture.failedDownload),
-            assignment: BrowserUtilityListPreviewFixture.assignment,
-            actions: BrowserUtilityListActions(
-                downloadDestinations: [.revealInFinder]
-            )
-        )
-    }
-    .padding()
-}

@@ -25,12 +25,3 @@ struct BrowserCredentialDetailContent: View {
         }
     }
 }
-
-#Preview("Credential Detail Content") {
-    NavigationStack {
-        BrowserCredentialDetailContent(
-            model: BrowserCredentialDetailPreviewFixture.makeModel(),
-            dismiss: {}
-        )
-    }
-}

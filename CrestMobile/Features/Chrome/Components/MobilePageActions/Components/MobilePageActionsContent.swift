@@ -123,14 +123,3 @@ struct MobilePageActionsContent: View {
         )
     }
 }
-
-#Preview("Mobile Page Actions Content") {
-    let fixture = MobilePageActionsPreviewFixture()
-
-    Form {
-        MobilePageActionsContent(
-            browser: fixture.browser,
-            pages: fixture.actions
-        )
-    }
-}

@@ -38,14 +38,3 @@ struct BrowserDataPortabilityExportControls: View {
         }
     }
 }
-
-#Preview("Locked Export Controls") {
-    Form {
-        BrowserDataPortabilityExportControls(
-            model: BrowserDataPortabilityPreviewFixture.makeModel(
-                isProtected: true
-            )
-        )
-    }
-    .frame(width: 620)
-}

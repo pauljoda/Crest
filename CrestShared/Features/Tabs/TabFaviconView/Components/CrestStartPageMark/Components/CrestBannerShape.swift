@@ -48,10 +48,3 @@ struct CrestBannerShape: Shape {
         return path
     }
 }
-
-#Preview("Crest Banner Shape") {
-    CrestBannerShape()
-        .fill(.orange)
-        .frame(width: 96, height: 96)
-        .padding()
-}

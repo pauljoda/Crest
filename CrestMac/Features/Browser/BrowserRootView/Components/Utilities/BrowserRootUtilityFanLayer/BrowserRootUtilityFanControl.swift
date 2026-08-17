@@ -50,15 +50,3 @@ struct BrowserRootUtilityFanControl: View {
         .zIndex(BrowserRootMetrics.utilityFanZIndex)
     }
 }
-
-#Preview("Browser Root Utility Fan Control") {
-    GeometryReader { proxy in
-        BrowserRootUtilityFanControl(
-            model: BrowserRootPreviewFixture.makeModel(),
-            proxy: proxy,
-            triggerFrame: CGRect(x: 20, y: 20, width: 44, height: 44),
-            layoutDirection: .leftToRight
-        )
-    }
-    .frame(width: 480, height: 320)
-}

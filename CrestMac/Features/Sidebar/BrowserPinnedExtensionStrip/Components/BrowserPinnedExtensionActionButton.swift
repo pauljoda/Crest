@@ -57,11 +57,3 @@ struct BrowserPinnedExtensionActionButton: View {
         )
     }
 }
-
-#Preview("Pinned Extension Action") {
-    BrowserPinnedExtensionActionButton(
-        action: BrowserSidebarExtensionPreviewFixture.actions[0],
-        perform: { _ in }
-    )
-    .padding()
-}

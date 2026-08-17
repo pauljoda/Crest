@@ -11,9 +11,3 @@ struct BrowserOnboardingPrimaryButtonStyle: ButtonStyle {
             .makeBody(configuration: configuration)
     }
 }
-
-#Preview("Primary Onboarding Button") {
-    Button("Continue") {}
-        .buttonStyle(BrowserOnboardingPrimaryButtonStyle())
-        .padding()
-}

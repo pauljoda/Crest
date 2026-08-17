@@ -57,38 +57,3 @@ struct MobileOnboardingCurrentPage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Current Page") {
-    @Previewable @State var plan = MobileOnboardingPreviewFixtures.manualPlan
-    @Previewable @State var selectedSpaceID =
-        MobileOnboardingPreviewFixtures.manualPlan.spaces.first?.id
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingCurrentPage(
-        context: MobileOnboardingPageContext(
-            step: .featureSpaces,
-            welcomeAction: .setup,
-            welcomePrimaryTitle: "Get Started",
-            welcomeStatus: "No existing setup was found in iCloud.",
-            previewWidth: MobileOnboardingLayout.compactPreviewWidth,
-            personalSpace: fixture.alternateSpace,
-            workSpace: fixture.space,
-            featureCloseTitle: nil,
-            featureCloseAction: nil,
-            plan: $plan,
-            selectedSpaceID: $selectedSpaceID,
-            existingSession: fixture.browser.session,
-            horizontalSizeClass: .compact,
-            errorMessage: nil,
-            setupSecondaryTitle: "Back",
-            welcomePrimaryAction: {},
-            advance: {},
-            setupSecondaryAction: {},
-            finish: {},
-            addSpace: {},
-            customize: { _ in },
-            remove: { _ in },
-            close: {},
-            reviewFeatures: {}
-        )
-    )
-}

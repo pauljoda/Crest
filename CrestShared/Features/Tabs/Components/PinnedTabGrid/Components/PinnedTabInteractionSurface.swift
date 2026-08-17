@@ -44,21 +44,3 @@ struct PinnedTabInteractionSurface: ViewModifier {
         )
     }
 }
-
-#Preview("Pinned Tab Interaction Surface", traits: .sizeThatFitsLayout) {
-    Label("Selected", systemImage: "square.grid.2x2.fill")
-        .frame(width: 150, height: 47)
-        .modifier(
-            PinnedTabInteractionSurface(
-                faviconData: nil,
-                siteTheme: BrowserTabIconAccent(
-                    red: 0.31,
-                    green: 0.58,
-                    blue: 0.96
-                ),
-                isSelected: true,
-                isHovering: true
-            )
-        )
-        .padding()
-}

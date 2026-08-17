@@ -21,3 +21,16 @@ enum BrowserUtilityListItem: Identifiable, Sendable {
         }
     }
 }
+
+enum BrowserUtilityListItemID: Hashable, Sendable {
+    case archive(TabID)
+    case history(UUID)
+    case download(UUID)
+}
+
+struct BrowserUtilityListSection: Identifiable, Sendable {
+    let timeframe: BrowserUtilityTimeSection
+    let items: [BrowserUtilityListItem]
+
+    var id: String { timeframe.id }
+}

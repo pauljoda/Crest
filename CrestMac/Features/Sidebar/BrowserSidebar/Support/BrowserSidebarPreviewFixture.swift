@@ -74,7 +74,7 @@ enum BrowserSidebarPreviewFixture {
     @MainActor
     static func makeSpaceAccess() -> BrowserSpaceAccessController {
         BrowserSpaceAccessController(
-            authenticator: BrowserSidebarPreviewAuthenticator()
+            authenticator: BrowserPreviewAuthenticator(result: true)
         )
     }
 

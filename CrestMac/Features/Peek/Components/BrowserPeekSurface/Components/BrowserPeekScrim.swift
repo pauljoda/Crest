@@ -13,8 +13,3 @@ struct BrowserPeekScrim: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview {
-    BrowserPeekScrim(opacity: 0.34, dismiss: {})
-        .frame(width: 900, height: 620)
-}

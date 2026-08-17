@@ -90,14 +90,3 @@ struct MobileSidebarSplitGroupMemberLine: View {
             : MobileSidebarSplitGroupRowMetrics.memberLineHeight
     }
 }
-
-#Preview("Mobile Split Member Line", traits: .sizeThatFitsLayout) {
-    let configuration = MobileSidebarSplitGroupRowPreviewFixture.configuration()
-
-    MobileSidebarSplitGroupMemberLine(
-        configuration: configuration,
-        member: configuration.members[1]
-    )
-    .frame(width: 340)
-    .padding()
-}

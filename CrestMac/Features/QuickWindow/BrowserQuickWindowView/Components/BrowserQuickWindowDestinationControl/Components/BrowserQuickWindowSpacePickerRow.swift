@@ -39,12 +39,3 @@ struct BrowserQuickWindowSpacePickerRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
-
-#Preview("Quick Window Space Row") {
-    BrowserQuickWindowSpacePickerRow(
-        space: BrowserQuickWindowPreviewFixture.sourceSpace,
-        isSelected: true,
-        select: {}
-    )
-    .frame(width: BrowserQuickWindowLayout.spacePickerWidth)
-}

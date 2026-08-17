@@ -52,7 +52,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
     func testANewWindowRequestFromAnExtensionPageIsNotATopLevelNavigation() throws {
         let page = try makePage()
         let extensionURL = try XCTUnwrap(
-            URL(string: "webkit-extension://abcdef/options.html")
+            URL(string: "crest-extension://abcdef/options.html")
         )
         let destinationURL = try XCTUnwrap(URL(string: "https://example.com/docs"))
         let newWindowAction = NewWindowNavigationAction(url: destinationURL)

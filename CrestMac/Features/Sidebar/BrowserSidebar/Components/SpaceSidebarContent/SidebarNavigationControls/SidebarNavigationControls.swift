@@ -101,13 +101,3 @@ struct SidebarNavigationControls: View {
         .frame(height: BrowserChromeLayout.sidebarTitlebarHeight)
     }
 }
-
-#Preview("Sidebar Navigation Controls") {
-    SidebarNavigationControls(
-        browser: BrowserSidebarPreviewFixture.makeBrowser(),
-        pages: BrowserSidebarPreviewFixture.makePages(),
-        sidebarToggleAction: .hide,
-        toggleSidebar: {}
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

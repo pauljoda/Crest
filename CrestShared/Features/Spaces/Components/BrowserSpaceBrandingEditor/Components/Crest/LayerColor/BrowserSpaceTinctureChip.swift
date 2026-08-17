@@ -38,17 +38,3 @@ struct BrowserSpaceTinctureChip: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
-
-#Preview("Branding Editor — Tincture Chip") {
-    @Previewable @State var selection =
-        BrowserSpaceBrandingPreviewFixture.crestBranding.crest.symbolColorIndex
-    let role = BrowserSpaceBrandColorRole.secondary
-
-    BrowserSpaceTinctureChip(
-        title: "Charge color",
-        role: role,
-        color: BrowserSpaceBrandingPreviewFixture.crestBranding.colors[role.rawValue].color,
-        selection: $selection
-    )
-    .padding(CrestSpacing.large)
-}

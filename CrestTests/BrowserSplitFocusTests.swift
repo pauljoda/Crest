@@ -156,64 +156,49 @@ final class BrowserSplitFocusPolicyTests: XCTestCase {
     }
 }
 
-/// Where the Follow Mouse preference is kept, mirroring the window-transparency
-/// store's contract: defaults, live persistence through the injected port, and an
-/// isolated launch that never constructs the persistent adapter.
+/// Follow Mouse persists immediately without allowing isolated launches to
+/// touch the installed profile.
 @MainActor
 final class BrowserSplitFocusPreferenceTests: XCTestCase {
-    func testUserDefaultsPersistenceDefaultsToOffAndRoundTrips() {
+    func testPreferenceDefaultsToOffAndPersistsChanges() {
         let suiteName =
             "BrowserSplitFocusPreferenceTests.persistence.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let persistence = UserDefaultsBrowserSplitFocusPreferencePersistence(
+        let store = BrowserSplitFocusPreferenceStore(
             defaults: defaults
         )
-
-        XCTAssertEqual(persistence.load(), BrowserSplitFocusPreference())
-        XCTAssertFalse(persistence.load().followsMouse)
-
-        persistence.saveFollowsMouse(true)
-
-        XCTAssertTrue(
-            defaults.bool(
-                forKey: UserDefaultsBrowserSplitFocusPreferencePersistence
-                    .followsMouseKey
-            )
-        )
-        XCTAssertTrue(persistence.load().followsMouse)
-    }
-
-    func testStorePersistsLiveChangesThroughItsInjectedPort() {
-        let persistence = InMemoryBrowserSplitFocusPreferencePersistence()
-        let store = BrowserSplitFocusPreferenceStore(persistence: persistence)
 
         XCTAssertFalse(store.followsMouse)
         store.followsMouse = true
 
-        XCTAssertEqual(
-            persistence.preference,
-            BrowserSplitFocusPreference(followsMouse: true)
+        XCTAssertTrue(
+            defaults.bool(
+                forKey: BrowserSplitFocusPreferenceStore.followsMouseKey
+            )
+        )
+        XCTAssertTrue(
+            BrowserSplitFocusPreferenceStore(defaults: defaults).followsMouse
         )
     }
 
-    func testIsolatedLaunchNeverConstructsPersistentPreferences() {
-        var persistentFactoryWasCalled = false
+    func testIsolatedLaunchNeverWritesPersistentPreferences() {
+        let suiteName =
+            "BrowserSplitFocusPreferenceTests.isolation.\(UUID().uuidString)"
+        let persistentDefaults = UserDefaults(suiteName: suiteName)!
+        defer { persistentDefaults.removePersistentDomain(forName: suiteName) }
         let store = BrowserSplitFocusPreferenceStore.launch(
             usesIsolatedLaunch: true,
-            makePersistentPersistence: {
-                persistentFactoryWasCalled = true
-                return InMemoryBrowserSplitFocusPreferencePersistence()
-            },
-            makeIsolatedPersistence: {
-                InMemoryBrowserSplitFocusPreferencePersistence(
-                    preference: BrowserSplitFocusPreference(followsMouse: true)
-                )
-            }
+            persistentDefaults: persistentDefaults
         )
 
-        XCTAssertFalse(persistentFactoryWasCalled)
-        XCTAssertTrue(store.followsMouse)
+        store.followsMouse = true
+
+        XCTAssertFalse(
+            persistentDefaults.bool(
+                forKey: BrowserSplitFocusPreferenceStore.followsMouseKey
+            )
+        )
     }
 }
 

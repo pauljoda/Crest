@@ -70,14 +70,3 @@ struct BrowserExtensionSettingsPane: View {
         selectedSpaceID = browser.session.selectedSpaceID
     }
 }
-
-#Preview("Extension Settings") {
-    BrowserExtensionSettingsPane(
-        browser: BrowserExtensionSettingsPreviewFixture.linkSettings.browser,
-        spaceAccess:
-            BrowserExtensionSettingsPreviewFixture.linkSettings.spaceAccess,
-        extensionControllerPool:
-            BrowserExtensionSettingsPreviewFixture.extensionControllerPool
-    )
-    .frame(width: 680, height: 720)
-}

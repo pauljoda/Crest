@@ -31,12 +31,3 @@ struct BrowserSettingsPaneHeader: View {
         .accessibilityIdentifier(identifier)
     }
 }
-
-#Preview("Settings Pane Header") {
-    BrowserSettingsPaneHeader(
-        destination: .general,
-        identifier: "settings-page-header",
-        layout: .macOSPage
-    )
-    .frame(width: 620)
-}

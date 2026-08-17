@@ -18,14 +18,3 @@ struct MobileCredentialSuggestionList: View {
         .frame(maxHeight: 176)
     }
 }
-
-#Preview("Credential Suggestion List") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileCredentialSuggestionList(
-        suggestions: [fixture.suggestion],
-        fill: { _ in }
-    )
-    .padding()
-    .frame(width: 390)
-}

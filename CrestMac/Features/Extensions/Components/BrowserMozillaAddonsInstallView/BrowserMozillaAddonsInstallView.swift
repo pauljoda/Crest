@@ -62,13 +62,3 @@ struct BrowserMozillaAddonsInstallView: View {
         .interactiveDismissDisabled(session.isInstalling)
     }
 }
-
-#Preview("Firefox Add-ons Install — Review") {
-    BrowserMozillaAddonsInstallView(
-        session: BrowserMozillaAddonsInstallPreviewFixture.makeSession(),
-        phase: .review(
-            BrowserMozillaAddonsInstallPreviewFixture.candidate,
-            errorDescription: nil
-        )
-    )
-}

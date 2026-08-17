@@ -41,22 +41,3 @@ struct BrowserDetailContent: View {
         }
     }
 }
-
-#Preview("Browser Detail Content — Start Page") {
-    @Previewable @Namespace var tabPromotionNamespace
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserDetailContent(
-        page: preview.page,
-        tab: preview.browser.selectedTab,
-        pagePresentation: .startPage,
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: BrowserSpaceAccessController(
-            authenticator: BrowserDetailPreviewAuthenticator()
-        ),
-        tabPromotionNamespace: tabPromotionNamespace,
-        isCommandPalettePresented: false
-    )
-    .frame(width: 960, height: 640)
-}

@@ -16,13 +16,3 @@ struct MobileCompactBrowserSurface<Sidebar: View, Page: View>: View {
             }
     }
 }
-
-#Preview("Mobile Compact Browser Surface") {
-    @Previewable @State var isPagePresented = false
-    MobileCompactBrowserSurface(
-        compactShowsPage: false,
-        isPagePresented: $isPagePresented,
-        sidebar: Color.indigo.opacity(0.1),
-        page: ContentUnavailableView("Preview Page", systemImage: "globe")
-    )
-}

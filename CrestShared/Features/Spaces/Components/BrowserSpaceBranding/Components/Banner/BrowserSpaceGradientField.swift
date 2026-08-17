@@ -24,15 +24,3 @@ struct BrowserSpaceGradientField: View {
         )
     }
 }
-
-#Preview("Gradient Field — Storm") {
-    let branding = BrowserSpaceBrandingPreviewFixture.gradientBranding
-
-    BrowserSpaceGradientField(
-        colors: branding.colors.map(\.color),
-        angle: branding.gradientAngle
-    )
-    .frame(width: 320, height: 180)
-    .clipShape(.rect(cornerRadius: CrestRadius.card))
-    .padding(CrestSpacing.large)
-}

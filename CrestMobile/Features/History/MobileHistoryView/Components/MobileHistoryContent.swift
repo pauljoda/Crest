@@ -48,12 +48,3 @@ struct MobileHistoryContent: View {
         dismiss()
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileHistoryContent(
-        space: fixture.space,
-        clearHistory: {},
-        openURL: { _ in }
-    )
-}

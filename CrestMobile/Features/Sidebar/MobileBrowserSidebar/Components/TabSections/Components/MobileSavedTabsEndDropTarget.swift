@@ -45,18 +45,3 @@ struct MobileSavedTabsEndDropTarget: View {
         BrowserFolderDropLocation(parentID: nil, beforeSiblingID: nil)
     }
 }
-
-#Preview("Saved Tabs End Drop Target", traits: .sizeThatFitsLayout) {
-    @Previewable @State var isTargeted = false
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileSavedTabsEndDropTarget(
-        tabs: [fixture.unfiledSavedTab],
-        browser: fixture.browser,
-        isTargeted: $isTargeted,
-        moveTab: { _, _ in false },
-        moveFolder: { _, _ in false }
-    )
-    .frame(width: 320)
-    .background(.quaternary)
-}

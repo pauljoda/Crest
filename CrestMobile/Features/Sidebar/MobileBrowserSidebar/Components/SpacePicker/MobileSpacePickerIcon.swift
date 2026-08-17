@@ -12,10 +12,3 @@ struct MobileSpacePickerIcon: View {
         .padding(4)
     }
 }
-
-#Preview("Mobile Space Picker Icon", traits: .sizeThatFitsLayout) {
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSpacePickerIcon(space: fixture.space)
-        .padding()
-}

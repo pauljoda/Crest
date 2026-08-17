@@ -29,17 +29,3 @@ struct MobileBrowserRegularSettingsLayout: View {
         .navigationSplitViewStyle(.balanced)
     }
 }
-
-#Preview("Regular Mobile Settings", traits: .fixedLayout(width: 1_024, height: 768)) {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserRegularSettingsLayout(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        dataDeleter: fixture.pages,
-        selection: .constant(.general),
-        searchText: .constant("")
-    )
-    .environment(fixture.cloudSync)
-    .environment(fixture.onboardingCoordinator)
-}

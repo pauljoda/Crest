@@ -17,10 +17,3 @@ struct BrowserSiteControlHeader: View {
         }
     }
 }
-
-#Preview("Site Control Header") {
-    let preview = BrowserSidebarExtensionPreviewFixture.makeContext()
-    BrowserSiteControlHeader(page: preview.configuration.page)
-        .padding()
-        .frame(width: BrowserSiteControlLayoutPolicy.width)
-}

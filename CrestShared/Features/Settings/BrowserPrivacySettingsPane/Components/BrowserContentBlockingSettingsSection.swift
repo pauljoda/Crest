@@ -33,13 +33,3 @@ struct BrowserContentBlockingSettingsSection: View {
         }
     }
 }
-
-#Preview("Content Blocking") {
-    @Previewable @State var policy = BrowserContentBlockingPolicy.balanced
-    Form {
-        BrowserContentBlockingSettingsSection(
-            policy: $policy,
-            errorDescription: nil
-        )
-    }
-}

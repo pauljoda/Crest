@@ -45,12 +45,3 @@ struct BrowserQuickWindowContent: View {
         model.selectSpace(candidate)
     }
 }
-
-#Preview("Quick Window Content") {
-    BrowserQuickWindowContent(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(),
-        dismiss: {},
-        openBrowserWindow: {}
-    )
-}

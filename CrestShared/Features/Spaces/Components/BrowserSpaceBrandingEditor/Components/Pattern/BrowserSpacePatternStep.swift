@@ -86,35 +86,3 @@ struct BrowserSpacePatternStep: View {
         }
     }
 }
-
-#Preview("Pattern Step — Banner") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.bannerBranding
-
-    ScrollView {
-        BrowserSpacePatternStep(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(
-        width: BrowserSpaceForgeMetrics.previewMaximumWidth,
-        height: 620
-    )
-}
-
-#Preview("Pattern Step — Gradient") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.gradientBranding
-
-    ScrollView {
-        BrowserSpacePatternStep(
-            branding: $branding,
-            compact: true
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(
-        width: BrowserSpaceForgeMetrics.previewMaximumWidth,
-        height: 420
-    )
-}

@@ -68,15 +68,3 @@ struct MobileBrowserTransientPhoneCard: View {
             }
     }
 }
-
-#Preview {
-    @Previewable @State var offset: CGFloat = 0
-    MobileBrowserTransientPhoneCard(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        state: MobileBrowserTransientPreviewFixture.presentationState,
-        safeAreaInsets: EdgeInsets(),
-        dismissalOffset: $offset,
-        dismiss: {},
-        promote: { _ in }
-    )
-}

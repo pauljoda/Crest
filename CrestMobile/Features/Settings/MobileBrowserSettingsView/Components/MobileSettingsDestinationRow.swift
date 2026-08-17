@@ -14,8 +14,3 @@ struct MobileSettingsDestinationRow: View {
         .accessibilityElement(children: .contain)
     }
 }
-
-#Preview("Mobile Settings Destination") {
-    MobileSettingsDestinationRow(destination: .privacy)
-        .padding()
-}

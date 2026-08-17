@@ -38,15 +38,3 @@ struct BrowserManualSetupEditorHeader: View {
         model.removeSpace(draft.id, plan: $plan)
     }
 }
-
-#Preview("Manual Setup Editor Header") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-
-    BrowserManualSetupEditorHeader(
-        plan: $plan,
-        draft: BrowserManualSetupPreviewFixture.draft,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 620)
-    .padding()
-}

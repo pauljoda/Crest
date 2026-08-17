@@ -19,24 +19,3 @@ struct MobileNavigationHistoryMenu: View {
         }
     }
 }
-
-#Preview("Navigation History") {
-    MobileNavigationHistoryMenu(
-        items: [
-            BrowserNavigationHistoryItem(
-                depth: 1,
-                title: "Apple Developer",
-                url: URL(fileURLWithPath: "/preview/apple-developer")
-            ),
-            BrowserNavigationHistoryItem(
-                depth: 2,
-                title: "WebKit",
-                url: URL(fileURLWithPath: "/preview/webkit")
-            ),
-        ],
-        emptyTitle: "No Earlier Pages",
-        action: { _ in }
-    )
-    .padding()
-    .frame(width: 280)
-}

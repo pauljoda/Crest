@@ -27,11 +27,3 @@ struct BrowserCrestImportContent: View {
         }
     }
 }
-
-#Preview("Crest Import Content") {
-    BrowserCrestImportContent(
-        space: BrowserImportPreviewFixture.sourceSpace,
-        matchedTabIDs: [BrowserImportPreviewFixture.pinnedTab.id]
-    )
-    .frame(width: 340, height: 620)
-}

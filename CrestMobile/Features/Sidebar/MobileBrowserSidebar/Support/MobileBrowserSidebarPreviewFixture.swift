@@ -99,7 +99,7 @@ struct MobileBrowserSidebarPreviewFixture {
         )
         pages = base.pages
         spaceAccess = BrowserSpaceAccessController(
-            authenticator: MobileBrowserPreviewAuthenticator()
+            authenticator: BrowserPreviewAuthenticator(result: false)
         )
     }
 

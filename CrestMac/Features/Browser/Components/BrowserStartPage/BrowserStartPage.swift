@@ -48,19 +48,3 @@ struct BrowserStartPage: View {
         }
     }
 }
-
-#Preview("Start Page") {
-    @Previewable @Namespace var promotionNamespace
-    BrowserStartPage(
-        space: BrowserDetailPreviewFixture.space,
-        isPrivateBrowsing: true,
-        selectedTabID: BrowserDetailPreviewFixture.tabID,
-        isSourceAvailable: { _ in true },
-        selectTab: { _, _ in true },
-        openURL: { _, _ in true },
-        promotionNamespace: promotionNamespace,
-        promotionID: "start-page-preview",
-        isCommandPaletteObscured: false
-    )
-    .frame(width: 900, height: 650)
-}

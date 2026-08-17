@@ -16,18 +16,3 @@ struct BrowserAccessibleMaterialBackground<BackgroundShape: Shape>: View {
         }
     }
 }
-
-#Preview("Accessible Material") {
-    Text("Accessible Material")
-        .padding(CrestSpacing.extraExtraLarge)
-        .background {
-            BrowserAccessibleMaterialBackground(
-                material: .regularMaterial,
-                shape: RoundedRectangle(
-                    cornerRadius: CrestRadius.card,
-                    style: .continuous
-                )
-            )
-        }
-        .padding(CrestSpacing.large)
-}

@@ -26,18 +26,3 @@ struct BrowserExternalLinkDestinationSection: View {
         }
     }
 }
-
-#Preview("External Link Destination") {
-    @Previewable @State var destination = BrowserExternalLinkDestination.chosenSpace
-    @Previewable @State var spaceID: SpaceID? =
-        BrowserLinkSettingsPreviewFixture().secondarySpace.id
-    let fixture = BrowserLinkSettingsPreviewFixture()
-    Form {
-        BrowserExternalLinkDestinationSection(
-            destination: $destination,
-            spaceID: $spaceID,
-            spaces: fixture.browser.session.spaces
-        )
-    }
-    .formStyle(.grouped)
-}

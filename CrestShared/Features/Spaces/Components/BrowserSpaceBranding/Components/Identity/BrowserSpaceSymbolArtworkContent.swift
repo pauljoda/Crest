@@ -18,14 +18,3 @@ struct BrowserSpaceSymbolArtworkContent: View {
             .frame(width: size, height: size)
     }
 }
-
-#Preview("Symbol Artwork Content — Locked Crest") {
-    BrowserSpaceSymbolArtworkContent(
-        space: BrowserSpaceBrandingPreviewFixture.crestSpace,
-        size: 72,
-        lockSize: 16
-    )
-    .padding(CrestSpacing.large)
-    .frame(width: 128, height: 128)
-    .preferredColorScheme(.dark)
-}

@@ -132,15 +132,3 @@ struct BrowserLinkSettingsContent: View {
         links.updateRoute(routeID, field: field)
     }
 }
-
-#Preview("Link Settings Content") {
-    let fixture = BrowserLinkSettingsPreviewFixture()
-    Form {
-        BrowserLinkSettingsContent(
-            browser: fixture.browser,
-            spaceAccess: fixture.spaceAccess,
-            links: fixture.links
-        )
-    }
-    .formStyle(.grouped)
-}

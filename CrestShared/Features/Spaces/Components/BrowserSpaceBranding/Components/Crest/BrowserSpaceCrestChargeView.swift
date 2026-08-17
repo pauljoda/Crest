@@ -57,16 +57,3 @@ struct BrowserSpaceCrestChargeView: View {
         }
     }
 }
-
-#Preview("Crest Charge Layout", traits: .sizeThatFitsLayout) {
-    let branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    BrowserSpaceCrestChargeView(
-        symbol: branding.crest.symbol,
-        layout: branding.crest.chargeLayout,
-        color: branding.secondaryColor.color,
-        size: 112
-    )
-    .frame(width: 112, height: 112)
-    .padding()
-}

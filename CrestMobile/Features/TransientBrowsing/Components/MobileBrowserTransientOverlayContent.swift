@@ -45,15 +45,3 @@ struct MobileBrowserTransientOverlayContent<UnlockedContent: View>: View {
         }
     }
 }
-
-#Preview {
-    MobileBrowserTransientOverlayContent(
-        requestID: MobileBrowserTransientPreviewFixture.requestID,
-        space: MobileBrowserTransientPreviewFixture.space,
-        spaces: [MobileBrowserTransientPreviewFixture.space],
-        spaceAccess: MobileBrowserTransientPreviewFixture.makeAccessController(),
-        selectSpace: { _ in },
-        dismissUnavailable: {},
-        unlockedContent: { Text("Transient page") }
-    )
-}

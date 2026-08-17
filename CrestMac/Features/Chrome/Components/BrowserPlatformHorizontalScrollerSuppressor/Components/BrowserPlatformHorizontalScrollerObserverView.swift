@@ -50,9 +50,3 @@ final class BrowserPlatformHorizontalScrollerObserverView: NSView {
         return nil
     }
 }
-
-#Preview("Horizontal Scroller Observer") {
-    BrowserPlatformHorizontalScrollerObserverView(
-        frame: NSRect(x: 0, y: 0, width: 320, height: 120)
-    )
-}

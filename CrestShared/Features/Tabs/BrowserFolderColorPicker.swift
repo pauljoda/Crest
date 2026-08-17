@@ -57,9 +57,3 @@ struct BrowserFolderColorPicker: View {
         .frame(width: 246)
     }
 }
-
-#Preview("Folder Color") {
-    @Previewable @State var color = BrowserSpaceBrandColor.indigo
-    BrowserFolderColorPicker(color: $color)
-        .padding()
-}

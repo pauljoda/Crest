@@ -34,15 +34,21 @@ final class BrowserFaviconImageCacheTests: XCTestCase {
     }
 
     func testPurgePreventsOlderDecodeFromRepopulatingOrClearingNewRequest() async throws {
+        let inlinePNG = try XCTUnwrap(
+            Data(
+                base64Encoded:
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+            )
+        )
         let oldImage = try XCTUnwrap(
             BrowserFaviconImageDecoder.decodeSynchronously(
-                TabFaviconPreviewFixture.imageData,
+                inlinePNG,
                 maximumPixelSize: 64
             )
         )
         let newImage = try XCTUnwrap(
             BrowserFaviconImageDecoder.decodeSynchronously(
-                TabFaviconPreviewFixture.imageData,
+                inlinePNG,
                 maximumPixelSize: 32
             )
         )

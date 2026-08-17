@@ -31,9 +31,3 @@ struct BrowserSiteControlTrigger: View {
         .help("Site Controls")
     }
 }
-
-#Preview("Site Control Trigger") {
-    @Previewable @State var isPresented = false
-    BrowserSiteControlTrigger(isPresented: $isPresented)
-        .padding()
-}

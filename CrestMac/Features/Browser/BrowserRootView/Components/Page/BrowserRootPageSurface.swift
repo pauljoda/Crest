@@ -31,7 +31,7 @@ struct BrowserRootPageSurface: View {
     /// The slot a drag in flight would drop a card into, for this Space.
     private var splitInsertIndex: Int? {
         guard let space = presentingSpace,
-            case let .splitInsert(assignment, index) =
+            case .splitInsert(let assignment, let index) =
                 model.browser.sidebarReorderState.resolvedTarget?.kind,
             assignment.spaceID == space.id
         else { return nil }
@@ -144,13 +144,4 @@ struct BrowserRootPageSurface: View {
         guard presentingSpace != nil else { return nil }
         return model.browser.selectedTab?.id
     }
-}
-
-#Preview("Browser Root Page Surface") {
-    @Previewable @Namespace var tabPromotionNamespace
-    BrowserRootPageSurface(
-        model: BrowserRootPreviewFixture.makeModel(),
-        tabPromotionNamespace: tabPromotionNamespace
-    )
-    .frame(width: 760, height: 600)
 }

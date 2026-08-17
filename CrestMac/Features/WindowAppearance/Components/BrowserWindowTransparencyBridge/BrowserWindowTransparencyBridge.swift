@@ -28,16 +28,3 @@ struct BrowserWindowTransparencyBridge: NSViewRepresentable {
         nsView.restoreWindowBacking()
     }
 }
-
-#Preview("Opaque window bridge") {
-    @Previewable @State var isWindowFocused = true
-    Color.clear
-        .frame(width: 240, height: 120)
-        .overlay {
-            BrowserWindowTransparencyBridge(
-                isEnabled: false,
-                isWindowFocused: $isWindowFocused
-            )
-            .frame(width: 0, height: 0)
-        }
-}

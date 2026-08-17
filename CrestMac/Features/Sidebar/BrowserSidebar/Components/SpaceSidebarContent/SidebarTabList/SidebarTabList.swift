@@ -86,23 +86,3 @@ struct SidebarTabList: View {
         _ = actions.clearCurrentTabs()
     }
 }
-
-#Preview("Sidebar Tab List") {
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    @Previewable @Namespace var tabPromotionNamespace
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    SidebarTabList(
-        space: BrowserSidebarPreviewFixture.space,
-        tabSections: BrowserSidebarPreviewFixture.space.tabSections,
-        browser: browser,
-        pages: BrowserSidebarPreviewFixture.makePages(),
-        spaceAccess: BrowserSidebarPreviewFixture.makeSpaceAccess(),
-        openNewTab: {},
-        isSavedTabsExpanded: true,
-        editingFolderRequest: $editingFolderRequest,
-        tabPromotionNamespace: tabPromotionNamespace,
-        editSpace: {},
-        createSpace: {}
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 520)
-}

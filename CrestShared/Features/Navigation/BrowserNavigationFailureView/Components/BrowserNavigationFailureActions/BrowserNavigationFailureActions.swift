@@ -62,33 +62,3 @@ struct BrowserNavigationFailureActions: View {
         }
     }
 }
-
-#Preview("Navigation Failure Actions — Compact") {
-    BrowserNavigationFailureActions(
-        layout: .compact,
-        canGoBack: true,
-        canProceed: false,
-        showsDetails: false,
-        accent: .blue,
-        retry: {},
-        goBack: {},
-        proceed: {},
-        toggleDetails: {}
-    )
-    .padding()
-}
-
-#Preview("Navigation Failure Actions — Regular Details") {
-    BrowserNavigationFailureActions(
-        layout: .regular,
-        canGoBack: true,
-        canProceed: true,
-        showsDetails: true,
-        accent: .blue,
-        retry: {},
-        goBack: {},
-        proceed: {},
-        toggleDetails: {}
-    )
-    .padding()
-}

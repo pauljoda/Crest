@@ -25,21 +25,3 @@ struct BrowserPeekTaskLifecycleModifier: ViewModifier {
             }
     }
 }
-
-#Preview {
-    Text("Peek lifecycle")
-        .modifier(
-            BrowserPeekTaskLifecycleModifier(
-                requestID: UUID(
-                    uuid: (
-                        0x43, 0x52, 0x45, 0x53, 0x54, 0x50, 0x45, 0x45,
-                        0x4B, 0x54, 0x41, 0x53, 0x4B, 0x4D, 0x4F, 0x44
-                    )),
-                committedNavigationCount: nil,
-                completedNavigationCount: nil,
-                present: {},
-                reveal: {},
-                recordCompletedNavigation: {}
-            )
-        )
-}

@@ -52,27 +52,3 @@ struct PinnedTabOrganizationMenu: View {
         dragState?.contextMenuDidClose(for: assignment)
     }
 }
-
-#Preview("Pinned Tab Organization Menu") {
-    let fixture = PinnedTabGridPreviewFixture()
-
-    Menu("Open Pinned Tab Actions", systemImage: "ellipsis.circle") {
-        PinnedTabOrganizationMenu(
-            tab: fixture.pinnedTab,
-            assignment: BrowserTabRuntimeAssignment(
-                tabID: fixture.pinnedTab.id,
-                spaceID: fixture.space.id,
-                profileID: fixture.space.profile.id
-            ),
-            browser: fixture.browser,
-            spaceAccess: fixture.spaceAccess,
-            isLoaded: true,
-            dragState: fixture.browser.tabDragState,
-            unload: { _ in },
-            pullNewIcon: { _ in },
-            restoreSavedLocation: { _ in },
-            renameTab: {}
-        )
-    }
-    .padding()
-}

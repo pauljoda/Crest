@@ -33,12 +33,3 @@ struct BrowserSourceImportSpaceHeader: View {
         }
     }
 }
-
-#Preview("Source Import Space Header") {
-    BrowserSourceImportSpaceHeader(
-        application: .arc,
-        space: BrowserImportPreviewFixture.sourceSpace
-    )
-    .frame(width: 340)
-    .padding()
-}

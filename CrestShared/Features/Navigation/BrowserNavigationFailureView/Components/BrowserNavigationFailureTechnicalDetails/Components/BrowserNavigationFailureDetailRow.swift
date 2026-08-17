@@ -16,11 +16,3 @@ struct BrowserNavigationFailureDetailRow: View {
         }
     }
 }
-
-#Preview("Navigation Failure Detail Row") {
-    BrowserNavigationFailureDetailRow(
-        label: "Error Domain",
-        value: "NSURLErrorDomain"
-    )
-    .padding()
-}

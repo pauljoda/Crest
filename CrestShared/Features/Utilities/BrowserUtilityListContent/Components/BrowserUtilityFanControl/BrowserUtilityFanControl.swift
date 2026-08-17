@@ -133,22 +133,3 @@ struct BrowserUtilityFanControl: View {
     }
 
 }
-
-#Preview("Expanded Utility Fan", traits: .fixedLayout(width: 180, height: 260)) {
-    @Previewable @State var selectedSurface: BrowserUtilitySurface? = .history
-
-    BrowserUtilityFanControl(
-        isExpanded: true,
-        origin: CGPoint(x: 24, y: 130),
-        destination: CGPoint(x: 90, y: 130),
-        selectedSurface: selectedSurface,
-        badgeColor: .indigo,
-        downloads: [
-            BrowserUtilityListPreviewFixture.activeDownload,
-            BrowserUtilityListPreviewFixture.failedDownload,
-        ],
-        newDownloadCount: 2,
-        select: { selectedSurface = $0 },
-        reduceMotionOverride: true
-    )
-}

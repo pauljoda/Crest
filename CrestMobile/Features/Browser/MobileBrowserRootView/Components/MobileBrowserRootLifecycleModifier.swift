@@ -135,22 +135,3 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
         model.synchronizePageMetadata(isAddressEditing: isAddressEditing)
     }
 }
-
-#Preview("Mobile Browser Root Lifecycle") {
-    @Previewable @State var isAddressEditing = false
-    @Previewable @State var storedSidebarWidth = Double(
-        MobileBrowserRootLayout.defaultRegularSidebarWidth
-    )
-    let fixture = MobileBrowserPreviewFixture()
-    Text("Browser")
-        .modifier(
-            MobileBrowserRootLifecycleModifier(
-                model: MobileBrowserRootPreviewFixture.makeModel(
-                    fixture: fixture
-                ),
-                presentation: .compact,
-                isAddressEditing: $isAddressEditing,
-                storedSidebarWidth: $storedSidebarWidth
-            )
-        )
-}

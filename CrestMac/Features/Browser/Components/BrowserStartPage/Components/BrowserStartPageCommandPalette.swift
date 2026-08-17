@@ -62,19 +62,3 @@ struct BrowserStartPageCommandPalette: View {
         )
     }
 }
-
-#Preview("Start Page Command Palette") {
-    @Previewable @Namespace var promotionNamespace
-    BrowserStartPageCommandPalette(
-        space: BrowserDetailPreviewFixture.space,
-        selectedTabID: BrowserDetailPreviewFixture.tabID,
-        isSourceAvailable: { _ in true },
-        selectTab: { _, _ in true },
-        openURL: { _, _ in true },
-        promotionNamespace: promotionNamespace,
-        promotionID: "start-page-command-palette-preview",
-        isObscured: false,
-        reduceMotion: false
-    )
-    .frame(width: 720, height: 420)
-}

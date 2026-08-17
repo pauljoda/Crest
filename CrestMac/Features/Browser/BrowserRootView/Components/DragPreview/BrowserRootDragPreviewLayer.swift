@@ -90,11 +90,3 @@ struct BrowserRootDragPreviewLayer: View {
         }
     }
 }
-
-#Preview("Browser Root Drag Preview Layer") {
-    BrowserRootDragPreviewLayer(
-        model: BrowserRootPreviewFixture.makeModel(),
-        reduceMotion: false
-    )
-    .frame(width: 1, height: 1)
-}

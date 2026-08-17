@@ -24,18 +24,3 @@ struct BrowserTabDropIndicator: View {
         )
     }
 }
-
-#Preview("Tab Drop Indicator", traits: .fixedLayout(width: 300, height: 60)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let dragState = fixture.makeTabDragState(
-        tab: fixture.currentTab,
-        dropLocation: fixture.tabDropLocation
-    )
-
-    BrowserTabDropIndicator(
-        location: fixture.tabDropLocation,
-        dragState: dragState,
-        isTargeted: true
-    )
-    .padding()
-}

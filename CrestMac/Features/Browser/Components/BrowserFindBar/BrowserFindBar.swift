@@ -74,10 +74,3 @@ struct BrowserFindBar: View {
         .accessibilityIdentifier("find-bar")
     }
 }
-
-#Preview("Find in Page", traits: .sizeThatFitsLayout) {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserFindBar(page: preview.page)
-        .padding()
-}

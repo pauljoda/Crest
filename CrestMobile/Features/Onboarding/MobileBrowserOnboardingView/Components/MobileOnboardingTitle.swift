@@ -18,11 +18,3 @@ struct MobileOnboardingTitle: View {
         .frame(maxWidth: MobileOnboardingLayout.titleMaximumWidth)
     }
 }
-
-#Preview("Onboarding Title") {
-    MobileOnboardingTitle(
-        title: "Everything in its Space",
-        detail: "Each Space keeps its own tabs, history, and identity."
-    )
-    .padding()
-}

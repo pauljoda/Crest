@@ -15,9 +15,3 @@ struct BrowserSiteControlButton: View {
             }
     }
 }
-
-#Preview("Site Control Button") {
-    let preview = BrowserSidebarExtensionPreviewFixture.makeContext()
-    BrowserSiteControlButton(configuration: preview.configuration)
-        .padding()
-}

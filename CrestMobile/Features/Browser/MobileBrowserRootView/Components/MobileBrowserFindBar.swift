@@ -78,8 +78,3 @@ struct MobileBrowserFindBar: View {
             .disabled(!enabled)
     }
 }
-
-#Preview("Mobile Browser — Find Bar", traits: .fixedLayout(width: 390, height: 88)) {
-    MobileBrowserFindBar(page: MobileBrowserPagePreviewFixture.makePage())
-        .padding()
-}

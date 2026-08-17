@@ -31,14 +31,3 @@ struct MobileTransientBrowsingRequestOverlay: View {
         }
     }
 }
-
-#Preview {
-    MobileTransientBrowsingRequestOverlay(
-        presentation: MobileBrowserTransientPreviewFixture.presentation,
-        browser: MobileBrowserTransientPreviewFixture.makeBrowser(),
-        pages: nil,
-        coordinator: BrowserTransientBrowsingCoordinator(),
-        spaceAccess: MobileBrowserTransientPreviewFixture.makeAccessController(),
-        didPromote: {}
-    )
-}

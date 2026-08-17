@@ -38,14 +38,3 @@ struct BrowserQuickWindowAppearanceModifier: ViewModifier {
         )
     }
 }
-
-#Preview("Quick Window Appearance") {
-    Color.clear
-        .frame(width: 480, height: 320)
-        .modifier(
-            BrowserQuickWindowAppearanceModifier(
-                model: BrowserQuickWindowPreviewFixture.makeModel()
-            )
-        )
-        .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-}

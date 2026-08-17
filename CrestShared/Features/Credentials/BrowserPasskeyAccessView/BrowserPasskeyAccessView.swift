@@ -70,12 +70,3 @@ struct BrowserPasskeyAccessView: View {
         }
     }
 }
-
-#Preview("Passkeys — Ready", traits: .fixedLayout(width: 440, height: 180)) {
-    BrowserPasskeyAccessView(
-        access: BrowserPasskeyAccessPreviewFixture.controller(
-            authorizationState: .authorized
-        )
-    )
-    .padding()
-}

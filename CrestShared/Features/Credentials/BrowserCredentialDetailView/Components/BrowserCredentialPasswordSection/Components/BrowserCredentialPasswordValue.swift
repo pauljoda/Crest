@@ -18,13 +18,3 @@ struct BrowserCredentialPasswordValue: View {
         }
     }
 }
-
-#Preview("Credential Password Values", traits: .sizeThatFitsLayout) {
-    VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-        BrowserCredentialPasswordValue(password: nil)
-        BrowserCredentialPasswordValue(
-            password: "correct-horse-battery-staple"
-        )
-    }
-    .padding()
-}

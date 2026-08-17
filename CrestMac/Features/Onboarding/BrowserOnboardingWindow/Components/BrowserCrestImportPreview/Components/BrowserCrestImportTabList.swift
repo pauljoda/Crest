@@ -52,12 +52,3 @@ struct BrowserCrestImportTabList: View {
         )
     }
 }
-
-#Preview("Crest Import Tab List") {
-    BrowserCrestImportTabList(
-        space: BrowserImportPreviewFixture.sourceSpace,
-        matchedTabIDs: [BrowserImportPreviewFixture.savedTab.id]
-    )
-    .frame(width: 340, height: 360)
-    .padding()
-}

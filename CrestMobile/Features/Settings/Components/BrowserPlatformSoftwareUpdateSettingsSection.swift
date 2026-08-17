@@ -5,7 +5,3 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
         EmptyView()
     }
 }
-
-#Preview {
-    BrowserPlatformSoftwareUpdateSettingsSection()
-}

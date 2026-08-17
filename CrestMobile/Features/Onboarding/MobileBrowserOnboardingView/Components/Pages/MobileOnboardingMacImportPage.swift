@@ -58,7 +58,3 @@ struct MobileOnboardingMacImportPage: View {
         }
     }
 }
-
-#Preview("Mobile Onboarding — Mac Import") {
-    MobileOnboardingMacImportPage(close: {}, reviewFeatures: {})
-}

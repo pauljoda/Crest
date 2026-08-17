@@ -95,33 +95,3 @@ struct SpaceHeader: View {
         }
     }
 }
-
-#Preview("Space Header — Expanded", traits: .sizeThatFitsLayout) {
-    @Previewable @State var isExpanded = true
-    SpaceHeader(
-        space: BrowserSidebarPreviewFixture.space,
-        isPrivateBrowsing: false,
-        isSavedTabsExpanded: $isExpanded,
-        openNewTab: {},
-        createFolder: {},
-        showHistory: {},
-        showExtensions: {},
-        cleanup: {}
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}
-
-#Preview("Space Header — Collapsed", traits: .sizeThatFitsLayout) {
-    @Previewable @State var isExpanded = false
-    SpaceHeader(
-        space: BrowserSidebarPreviewFixture.space,
-        isPrivateBrowsing: false,
-        isSavedTabsExpanded: $isExpanded,
-        openNewTab: {},
-        createFolder: {},
-        showHistory: {},
-        showExtensions: {},
-        cleanup: {}
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

@@ -49,14 +49,3 @@ struct BrowserSiteExtensionsSection: View {
         }
     }
 }
-
-#Preview("Site Extension Actions") {
-    BrowserSiteExtensionsSection(
-        actions: BrowserSidebarExtensionPreviewFixture.actions,
-        manageExtensions: {},
-        perform: { _, _ in },
-        togglePinned: { _ in }
-    )
-    .padding()
-    .frame(width: BrowserSiteControlLayoutPolicy.width)
-}

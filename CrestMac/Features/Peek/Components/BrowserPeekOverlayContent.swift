@@ -34,13 +34,3 @@ struct BrowserPeekOverlayContent<UnlockedContent: View>: View {
         }
     }
 }
-
-#Preview {
-    BrowserPeekOverlayContent(
-        model: BrowserPeekPreviewFixture.makeModel(),
-        spaceAccess: BrowserPeekPreviewFixture.makeAccessController()
-    ) {
-        Text("Peek")
-    }
-    .frame(width: 900, height: 620)
-}

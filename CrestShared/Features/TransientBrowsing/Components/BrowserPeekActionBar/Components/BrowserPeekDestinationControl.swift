@@ -52,13 +52,3 @@ struct BrowserPeekDestinationControl: View {
         openInSpace(BrowserSpaceRuntimeAssignment(space: selectedSpace))
     }
 }
-
-#Preview {
-    BrowserPeekDestinationControl(
-        spaces: BrowserPeekActionBarPreviewFixture.spaces,
-        selectedSpaceID: BrowserPeekActionBarPreviewFixture.workID,
-        openInSpace: { _ in }
-    )
-    .frame(width: BrowserPeekChromePolicy.openControlWidth)
-    .padding()
-}

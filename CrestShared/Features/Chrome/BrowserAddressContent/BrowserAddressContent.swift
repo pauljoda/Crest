@@ -140,11 +140,3 @@ struct BrowserAddressContent: View {
         selection = TextSelection(range: text.startIndex..<text.endIndex)
     }
 }
-
-#Preview("Address Summary", traits: .fixedLayout(width: 420, height: 80)) {
-    @Previewable @State var text = "https://www.apple.com/mac/iphone/"
-    @Previewable @State var isEditing = false
-
-    BrowserAddressContent(text: $text, isEditing: $isEditing, submit: {})
-        .padding()
-}

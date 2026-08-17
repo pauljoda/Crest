@@ -55,10 +55,3 @@ struct BrowserSettingsLabeledActionButtonStyle: ButtonStyle {
             )
     }
 }
-
-#Preview("Settings Action Button") {
-    Button("Import Browser Data", systemImage: "square.and.arrow.down") {}
-        .buttonStyle(BrowserSettingsLabeledActionButtonStyle())
-        .padding()
-        .frame(width: 320)
-}

@@ -132,12 +132,3 @@ struct BrowserSiteControlPopover: View {
         }
     }
 }
-
-#Preview("Site Control Popover") {
-    let preview = BrowserSidebarExtensionPreviewFixture.makeContext()
-    BrowserSiteControlPopover(
-        configuration: preview.configuration,
-        dismiss: {},
-        actionPresentationOverride: BrowserSidebarExtensionPreviewFixture.actions
-    )
-}

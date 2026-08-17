@@ -127,13 +127,3 @@ struct BrowserSpaceAccessView: View {
         .ignoresSafeArea()
     }
 }
-
-#Preview("Private Space Access") {
-    BrowserSpaceAccessView(
-        space: BrowserSettingsPrivateSpaceAccessPreviewFixture.space,
-        spaces: [BrowserSettingsPrivateSpaceAccessPreviewFixture.space],
-        accessController: BrowserSettingsPrivateSpaceAccessPreviewFixture.accessController,
-        selectSpace: { _ in }
-    )
-    .frame(width: 560, height: 520)
-}

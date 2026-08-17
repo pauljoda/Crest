@@ -75,14 +75,3 @@ struct BrowserPasswordDescriptorRow: View {
         .accessibilityElement(children: .contain)
     }
 }
-
-#Preview("Password Descriptor") {
-    BrowserPasswordDescriptorRow(
-        descriptor: BrowserCredentialDetailPreviewFixture.descriptor,
-        space: nil,
-        showDetails: {},
-        requestDeletion: {}
-    )
-    .padding()
-    .frame(width: 420)
-}

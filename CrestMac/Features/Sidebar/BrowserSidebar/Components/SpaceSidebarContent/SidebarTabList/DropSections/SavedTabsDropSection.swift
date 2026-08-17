@@ -176,17 +176,3 @@ struct SavedTabsDropSection: View {
         ) != nil
     }
 }
-
-#Preview("Saved Tabs Drop Section") {
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    SavedTabsDropSection(
-        space: BrowserSidebarPreviewFixture.space,
-        tabSections: BrowserSidebarPreviewFixture.space.tabSections,
-        browser: browser,
-        pages: BrowserSidebarPreviewFixture.makePages(),
-        spaceAccess: BrowserSidebarPreviewFixture.makeSpaceAccess(),
-        editingFolderRequest: $editingFolderRequest
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

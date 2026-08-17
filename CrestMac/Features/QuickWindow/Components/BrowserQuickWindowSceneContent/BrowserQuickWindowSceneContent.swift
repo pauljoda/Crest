@@ -53,18 +53,3 @@ struct BrowserQuickWindowSceneContent: View {
         }
     }
 }
-
-#Preview("Quick Window Scene Content") {
-    BrowserQuickWindowSceneContent(
-        request: BrowserQuickWindowPreviewFixture.request,
-        context: nil,
-        isRoutingExternalURL: false,
-        spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(),
-        pagePoolRegistry: nil,
-        preferences: .isolated,
-        previewModel: BrowserQuickWindowPreviewFixture.makeModel(),
-        requestLifecycle: .preview,
-        openBrowserWindow: {}
-    )
-    .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-}

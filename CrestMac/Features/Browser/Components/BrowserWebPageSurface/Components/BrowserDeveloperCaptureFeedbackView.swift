@@ -25,8 +25,3 @@ struct BrowserDeveloperCaptureFeedbackView: View {
             .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
-
-#Preview("Developer Capture Feedback", traits: .sizeThatFitsLayout) {
-    BrowserDeveloperCaptureFeedbackView(feedback: "Capture Copied")
-        .padding()
-}

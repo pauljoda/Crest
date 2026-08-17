@@ -100,26 +100,3 @@ struct MobileSidebarAddressField: View {
         )
     }
 }
-
-#Preview("Sidebar Address Field") {
-    @Previewable @Namespace var morphNamespace
-    @Previewable @State var text = "example.com"
-    @Previewable @State var isEditing = false
-    let fixture = MobilePageActionsPreviewFixture()
-
-    MobileSidebarAddressField(
-        browser: fixture.browser,
-        pageActions: fixture.actions,
-        text: $text,
-        isEditing: $isEditing,
-        isSecure: true,
-        progress: 0.4,
-        isLoading: true,
-        activate: {},
-        submit: {},
-        morphNamespace: morphNamespace,
-        morphID: "preview-address-field"
-    )
-    .padding()
-    .frame(width: 390)
-}

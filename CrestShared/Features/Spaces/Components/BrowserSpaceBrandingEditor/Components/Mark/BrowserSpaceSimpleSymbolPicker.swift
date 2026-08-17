@@ -13,11 +13,3 @@ struct BrowserSpaceSimpleSymbolPicker: View {
         .labelsHidden()
     }
 }
-
-#Preview("Simple Symbol Picker") {
-    @Previewable @State var symbol = BrowserSpaceSimpleSymbol.work.rawValue
-
-    BrowserSpaceSimpleSymbolPicker(symbol: $symbol)
-        .frame(width: 240)
-        .padding(CrestSpacing.large)
-}

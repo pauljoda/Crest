@@ -14,10 +14,3 @@ struct BrowserSpaceChevronLowerBannerShape: Shape {
         }
     }
 }
-
-#Preview("Chevron Lower Banner Shape") {
-    BrowserSpaceChevronLowerBannerShape(size: CGSize(width: 240, height: 120))
-        .fill(BrowserSpaceBrandColor.indigo.color)
-        .frame(width: 240, height: 120)
-        .padding()
-}

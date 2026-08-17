@@ -144,37 +144,3 @@ struct SpaceSidebarBrowsingContent: View {
         )
     }
 }
-
-#Preview("Space Sidebar Browsing Content") {
-    @Previewable @State var address = "https://developer.apple.com"
-    @Previewable @State var isAddressEditing = false
-    @Previewable @State var isSavedTabsExpanded = true
-    @Previewable @State var editingFolderRequest: BrowserFolderRuntimeAssignment? = nil
-    @Previewable @Namespace var commandSurfaceNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    SpaceSidebarBrowsingContent(
-        space: BrowserSidebarPreviewFixture.space,
-        tabSections: BrowserSidebarPreviewFixture.space.tabSections,
-        browser: browser,
-        pages: BrowserSidebarPreviewFixture.makePages(),
-        spaceAccess: BrowserSidebarPreviewFixture.makeSpaceAccess(),
-        isSelected: true,
-        address: $address,
-        isAddressEditing: $isAddressEditing,
-        addressFocusRequest: 0,
-        activateAddress: {},
-        submitAddress: {},
-        commandSurfaceNamespace: commandSurfaceNamespace,
-        isSavedTabsExpanded: $isSavedTabsExpanded,
-        openNewTab: {},
-        beginCreatingFolder: {},
-        showHistory: {},
-        showExtensions: {},
-        editingFolderRequest: $editingFolderRequest,
-        tabPromotionNamespace: tabPromotionNamespace,
-        editSpace: {},
-        createSpace: {}
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 620)
-}

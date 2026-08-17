@@ -54,12 +54,3 @@ struct BrowserSpaceCrestIcon: View {
         return colors[(0..<colors.count).contains(index) ? index : 0].color
     }
 }
-
-#Preview("Layered Crest Icon", traits: .sizeThatFitsLayout) {
-    BrowserSpaceCrestIcon(
-        branding: BrowserSpaceBrandingPreviewFixture.crestBranding,
-        size: 112
-    )
-    .padding()
-    .preferredColorScheme(.light)
-}

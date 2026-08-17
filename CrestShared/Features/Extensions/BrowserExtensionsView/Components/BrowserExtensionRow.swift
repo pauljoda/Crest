@@ -164,19 +164,3 @@ struct BrowserExtensionRow: View {
         .padding(.vertical, CrestSpacing.extraSmall)
     }
 }
-
-#Preview("Extension Row", traits: .fixedLayout(width: 560, height: 180)) {
-    List {
-        BrowserExtensionRow(
-            summary: BrowserExtensionsPreviewFixture.summary,
-            spaceID: BrowserExtensionsPreviewFixture.space.id,
-            extensionControllerPool: BrowserExtensionsPreviewFixture.pool,
-            platformActions: .none,
-            isBusy: false,
-            setEnabled: { _ in },
-            setPermissionDecision: { _, _ in },
-            setHostDecision: { _, _ in },
-            requestRemoval: {}
-        )
-    }
-}

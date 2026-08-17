@@ -14,7 +14,3 @@ struct BrowserWindowAtmosphere: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Window Atmosphere", traits: .fixedLayout(width: 560, height: 320)) {
-    BrowserWindowAtmosphere(space: BrowserRootPreviewFixture.space)
-}

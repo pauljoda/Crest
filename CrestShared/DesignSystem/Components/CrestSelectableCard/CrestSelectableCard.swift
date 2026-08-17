@@ -53,20 +53,3 @@ struct CrestSelectableCard<Content: View>: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Selectable Card") {
-    CrestSelectableCard(
-        isSelected: true,
-        accessibilityLabel: Text("Private"),
-        action: {}
-    ) {
-        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-            Text("Private").font(CrestTypography.controlTitle)
-            Text("Require authentication")
-                .font(CrestTypography.metadata)
-                .foregroundStyle(.secondary)
-        }
-    }
-    .padding()
-    .frame(width: 360)
-}

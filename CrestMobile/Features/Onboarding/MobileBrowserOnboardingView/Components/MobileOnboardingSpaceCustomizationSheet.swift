@@ -87,13 +87,3 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
         )
     }
 }
-
-#Preview("Onboarding Space Customization") {
-    @Previewable @State var plan = MobileOnboardingPreviewFixtures.manualPlan
-    let fixture = MobileBrowserPreviewFixture()
-    MobileOnboardingSpaceCustomizationSheet(
-        spaceID: fixture.space.id,
-        plan: $plan,
-        existingSession: fixture.browser.session
-    )
-}

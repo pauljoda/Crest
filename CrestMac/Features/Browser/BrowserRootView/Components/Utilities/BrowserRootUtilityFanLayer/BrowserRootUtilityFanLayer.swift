@@ -21,8 +21,3 @@ struct BrowserRootUtilityFanLayer: View {
         }
     }
 }
-
-#Preview("Browser Root Utility Fan Layer") {
-    BrowserRootUtilityFanLayer(model: BrowserRootPreviewFixture.makeModel())
-        .frame(width: 480, height: 320)
-}

@@ -13,12 +13,3 @@ struct BrowserSearchProviderIcon: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Search Provider Icons") {
-    HStack(spacing: CrestSpacing.large) {
-        ForEach(BrowserSearchProvider.allCases) { provider in
-            BrowserSearchProviderIcon(provider: provider, size: 28)
-        }
-    }
-    .padding(CrestSpacing.large)
-}

@@ -81,15 +81,3 @@ struct BrowserSpaceBannerBackground: View {
         previewContrast ?? contrast
     }
 }
-
-#Preview("Banner Background — Textured Gradient") {
-    BrowserSpaceBannerBackground(
-        previewBranding: BrowserSpaceBrandingPreviewFixture.gradientBranding,
-        reduceTransparency: false,
-        contrast: .standard
-    )
-    .frame(width: 420, height: 240)
-    .clipShape(.rect(cornerRadius: CrestRadius.card))
-    .padding(CrestSpacing.large)
-    .preferredColorScheme(.dark)
-}

@@ -46,17 +46,3 @@ struct BrowserManualSetupSpacePicker: View {
         )
     }
 }
-
-#Preview("Manual Setup Space Picker") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-    @Previewable @State var selectedSpaceID =
-        BrowserManualSetupPreviewFixture.selectedSpaceID
-
-    BrowserManualSetupSpacePicker(
-        plan: $plan,
-        selectedSpaceID: $selectedSpaceID,
-        previewSession: BrowserManualSetupPreviewFixture.previewSession,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .padding()
-}

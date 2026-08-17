@@ -29,12 +29,3 @@ struct MobileHistoryList: View {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileHistoryList(
-        space: fixture.space,
-        searchText: "",
-        openHistoryEntry: { _ in }
-    )
-}

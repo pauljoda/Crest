@@ -40,25 +40,3 @@ struct BrowserCrestImportPreview: View {
         }
     }
 }
-
-#Preview("Crest Import Result") {
-    BrowserCrestImportPreview(
-        space: BrowserImportPreviewFixture.sourceSpace,
-        sourceName: "Arc",
-        matchedTabIDs: [BrowserImportPreviewFixture.pinnedTab.id]
-    )
-    .frame(width: 340, height: 620)
-    .padding()
-    .background(BrowserOnboardingPalette.parchment)
-}
-
-#Preview("Skipped Import Result") {
-    BrowserCrestImportPreview(
-        space: BrowserImportPreviewFixture.sourceSpace,
-        sourceName: "Arc",
-        isSpaceIncluded: false
-    )
-    .frame(width: 340, height: 620)
-    .padding()
-    .background(BrowserOnboardingPalette.parchment)
-}

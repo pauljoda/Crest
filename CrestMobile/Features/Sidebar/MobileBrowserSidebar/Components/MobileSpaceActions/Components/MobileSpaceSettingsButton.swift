@@ -12,9 +12,3 @@ struct MobileSpaceSettingsButton: View {
         .accessibilityIdentifier("space-settings-button")
     }
 }
-
-#Preview("Space Settings Button", traits: .sizeThatFitsLayout) {
-    MobileSpaceSettingsButton(action: {})
-        .buttonStyle(.plain)
-        .padding()
-}

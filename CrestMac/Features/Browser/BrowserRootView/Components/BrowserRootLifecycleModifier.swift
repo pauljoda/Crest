@@ -137,16 +137,3 @@ struct BrowserRootLifecycleModifier: ViewModifier {
             )
     }
 }
-
-#Preview("Browser Root Lifecycle") {
-    @Previewable @State var sidebarWidth = Double(
-        BrowserChromeLayout.sidebarIdealWidth
-    )
-    Text("Browser")
-        .modifier(
-            BrowserRootLifecycleModifier(
-                model: BrowserRootPreviewFixture.makeModel(),
-                storedSidebarWidth: $sidebarWidth
-            )
-        )
-}

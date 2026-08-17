@@ -48,14 +48,3 @@ struct CrestLiftedSurfaceShadow: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Lifted Surface Shadow") {
-    CrestLiftedSurfaceShadow(
-        cornerRadius: CrestRadius.card,
-        opacity: BrowserPageSurfacePolicy.shadowOpacity,
-        radius: BrowserPageSurfacePolicy.shadowRadius,
-        yOffset: BrowserPageSurfacePolicy.shadowYOffset
-    )
-    .frame(width: 320, height: 180)
-    .padding(CrestSpacing.extraExtraLarge)
-}

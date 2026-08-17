@@ -75,16 +75,3 @@ struct MobileBrowserSettingsDestinationView: View {
         }
     }
 }
-
-#Preview("Mobile General Settings") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserSettingsDestinationView(
-        destination: .general,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        dataDeleter: fixture.pages
-    )
-    .environment(fixture.cloudSync)
-    .environment(fixture.onboardingCoordinator)
-}

@@ -14,16 +14,3 @@ struct BrowserSpaceForgeCrestSteps: View {
         }
     }
 }
-
-#Preview("Branding Editor — Crest Steps") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceForgeCrestSteps(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 760)
-}

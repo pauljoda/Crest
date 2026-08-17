@@ -135,7 +135,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// the pointer moves the neighbour it passed the other way, which is the
     /// direction that holds the new index.
     func testTheGapSurvivesTheLayoutItsOwnMovementCauses() {
-        let members = BrowserSplitViewPreviewFixture.members
+        let members = BrowserSplitCardTestFixture.members
         let widths = [CGFloat](repeating: 300, count: members.count)
 
         for pointerX in stride(from: CGFloat(5), to: 920, by: 5) {
@@ -199,7 +199,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// gap. That is what lets a whole reorder happen without remounting the card
     /// — and therefore without handing a live web view to a second superview.
     func testTheCarriedMemberIsMovedRatherThanReplaced() {
-        let members = BrowserSplitViewPreviewFixture.members
+        let members = BrowserSplitCardTestFixture.members
 
         XCTAssertEqual(
             BrowserSplitCardLiftPolicy.displayMembers(
@@ -222,7 +222,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     }
 
     func testAGapStillAtItsOriginLeavesTheRowExactlyAsItWas() {
-        let members = BrowserSplitViewPreviewFixture.members
+        let members = BrowserSplitCardTestFixture.members
 
         XCTAssertEqual(
             BrowserSplitCardLiftPolicy.displayMembers(
@@ -245,7 +245,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// The row clamps for the same reason the domain does: a gap resolved past
     /// either end is still that end.
     func testASlotPastEitherEndIsStillThatEnd() {
-        let members = BrowserSplitViewPreviewFixture.members
+        let members = BrowserSplitCardTestFixture.members
 
         XCTAssertEqual(
             BrowserSplitCardLiftPolicy.displayMembers(
@@ -269,7 +269,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
 
     /// A member that is no longer in the row cannot be moved within it.
     func testAnUnknownCarriedMemberChangesNothing() {
-        let members = BrowserSplitViewPreviewFixture.members
+        let members = BrowserSplitCardTestFixture.members
 
         XCTAssertEqual(
             BrowserSplitCardLiftPolicy.displayMembers(
@@ -371,7 +371,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// from the others. Focus is not among the inputs, so it cannot be among the
     /// answers.
     func testEveryCardInTheRowResolvesTheSameWay() {
-        let members = BrowserSplitViewPreviewFixture.members
+        let members = BrowserSplitCardTestFixture.members
         let frames = Self.registeredFrames(count: 3)
 
         for (index, member) in members.enumerated() {
@@ -393,7 +393,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// order — which is a pickup silently refused, on whichever card the
     /// stranger happened to cover.
     func testAFrameBelongingToNoMemberIsNotACard() {
-        let members = Array(BrowserSplitViewPreviewFixture.members.prefix(2))
+        let members = Array(BrowserSplitCardTestFixture.members.prefix(2))
         var frames = Self.registeredFrames(count: 2)
         let departed = TabID()
         // The whole row, as the leaving card measured it before it shrank.
@@ -413,7 +413,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         XCTAssertNil(
             BrowserSplitCardLiftPolicy.card(
                 at: CGPoint(x: 5_000, y: 300),
-                members: BrowserSplitViewPreviewFixture.members,
+                members: BrowserSplitCardTestFixture.members,
                 cardFrames: Self.registeredFrames(count: 3)
             )
         )
@@ -423,7 +423,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
     /// the middle of a card, which reads a whole column as the control that
     /// resizes it and refuses every pickup inside it.
     func testDividerGeometryIgnoresFramesNoMemberOwns() {
-        let members = Array(BrowserSplitViewPreviewFixture.members.prefix(2))
+        let members = Array(BrowserSplitCardTestFixture.members.prefix(2))
         var frames = Self.registeredFrames(count: 2)
         frames[TabID()] = CGRect(x: 120, y: 0, width: 60, height: 600)
 
@@ -444,9 +444,9 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
 
     // MARK: - Fixtures
 
-    private static let leading = BrowserSplitViewPreviewFixture.leadingTabID
-    private static let middle = BrowserSplitViewPreviewFixture.middleTabID
-    private static let trailing = BrowserSplitViewPreviewFixture.trailingTabID
+    private static let leading = BrowserSplitCardTestFixture.leadingTabID
+    private static let middle = BrowserSplitCardTestFixture.middleTabID
+    private static let trailing = BrowserSplitCardTestFixture.trailingTabID
 
     private static func picksUp(
         modifiers: BrowserKeyboardModifierFlags = [.command, .shift],
@@ -494,7 +494,7 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
 
     private static func registeredFrames(count: Int) -> [TabID: CGRect] {
         registeredFrames(
-            members: Array(BrowserSplitViewPreviewFixture.members.prefix(count)),
+            members: Array(BrowserSplitCardTestFixture.members.prefix(count)),
             widths: Array(repeating: 300, count: count)
         )
     }
@@ -956,8 +956,8 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
 
     // MARK: - Fixtures
 
-    private static let tabID = BrowserSplitViewPreviewFixture.middleTabID
-    private static let otherTabID = BrowserSplitViewPreviewFixture.leadingTabID
+    private static let tabID = BrowserSplitCardTestFixture.middleTabID
+    private static let otherTabID = BrowserSplitCardTestFixture.leadingTabID
     private static let cardFrame = CGRect(x: 308, y: 0, width: 400, height: 600)
     private static let surfaceOrigin = CGPoint(x: 260, y: 40)
     private static let image = NSImage(size: CGSize(width: 4, height: 4))
@@ -995,5 +995,46 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
             x: lift.previewOrigin.x + lift.grabFraction.x * lift.cardSize.width,
             y: lift.previewOrigin.y + lift.grabFraction.y * lift.cardSize.height
         )
+    }
+}
+
+private enum BrowserSplitCardTestFixture {
+    static let leadingTabID = tabID(0x11)
+    static let middleTabID = tabID(0x12)
+    static let trailingTabID = tabID(0x13)
+
+    static let members = [
+        member(id: leadingTabID, title: "Release Notes"),
+        member(id: middleTabID, title: "Layout Research"),
+        member(id: trailingTabID, title: "Split View Spec"),
+    ]
+
+    private static let groupID = SplitGroupID(rawValue: uuid(0x01))
+
+    private static func member(id: TabID, title: String) -> BrowserTab {
+        BrowserTab(
+            id: id,
+            title: title,
+            url: URL(fileURLWithPath: "/split-card-tests/\(id.rawValue.uuidString)"),
+            symbol: "globe",
+            placement: .current,
+            splitGroupID: groupID,
+            lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+    }
+
+    private static func tabID(_ finalByte: UInt8) -> TabID {
+        TabID(rawValue: uuid(finalByte))
+    }
+
+    private static func uuid(_ finalByte: UInt8) -> UUID {
+        UUID(
+            uuid: (
+                0x43, 0x52, 0x45, 0x53,
+                0x54, 0x54,
+                0x45, 0x53,
+                0x54, 0x53,
+                0x50, 0x4C, 0x49, 0x54, 0x00, finalByte
+            ))
     }
 }

@@ -66,22 +66,3 @@ struct BrowserSpaceSymbolArtwork: View {
         )
     }
 }
-
-#Preview("Symbol Artwork") {
-    HStack(spacing: CrestSpacing.large) {
-        BrowserSpaceSymbolArtwork(
-            space: BrowserSpaceBrandingPreviewFixture.simpleSpace,
-            size: 52,
-            lockSize: 12
-        )
-        BrowserSpaceSymbolArtwork(
-            space: BrowserSpaceBrandingPreviewFixture.crestSpace,
-            size: 52,
-            lockSize: 12
-        )
-    }
-    .padding(CrestSpacing.large)
-    .frame(width: 180, height: 96)
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.dark)
-}

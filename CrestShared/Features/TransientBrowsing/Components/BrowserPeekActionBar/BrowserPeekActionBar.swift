@@ -27,16 +27,3 @@ struct BrowserPeekActionBar: View {
         }
     }
 }
-
-#Preview {
-    BrowserPeekActionBar(
-        spaces: BrowserPeekActionBarPreviewFixture.spaces,
-        selectedSpaceID: BrowserPeekActionBarPreviewFixture.workID,
-        closeAccessibilityLabel: "Close Peek",
-        closeHelp: "Close Peek (⌘W)",
-        dismiss: {},
-        openInSpace: { _ in }
-    )
-    .frame(width: BrowserPeekChromePolicy.controlBarWidth)
-    .padding(CrestSpacing.large)
-}

@@ -35,9 +35,3 @@ struct BrowserSourceImportChrome: View {
         .padding(.top, 10)
     }
 }
-
-#Preview("Source Import Chrome") {
-    BrowserSourceImportChrome(application: .arc)
-        .frame(width: 340)
-        .padding()
-}

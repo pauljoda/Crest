@@ -19,16 +19,3 @@ struct BrowserSpaceShieldStep: View {
         }
     }
 }
-
-#Preview("Branding Editor — Shield Step") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceShieldStep(
-            branding: $branding,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 520)
-}

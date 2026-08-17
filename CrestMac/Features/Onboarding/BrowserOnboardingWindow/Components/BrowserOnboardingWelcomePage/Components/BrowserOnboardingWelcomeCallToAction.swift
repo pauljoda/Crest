@@ -35,12 +35,3 @@ struct BrowserOnboardingWelcomeCallToAction: View {
         }
     }
 }
-
-#Preview("Welcome Action") {
-    BrowserOnboardingWelcomeCallToAction(
-        action: .setup,
-        cloudStatusDetail: "No existing setup was found.",
-        perform: {}
-    )
-    .padding()
-}

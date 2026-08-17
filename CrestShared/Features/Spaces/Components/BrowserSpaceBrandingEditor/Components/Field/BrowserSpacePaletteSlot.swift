@@ -73,33 +73,3 @@ struct BrowserSpacePaletteSlot: View {
                 : BrowserSpaceForgeMetrics.paletteMaximumWidth)
     }
 }
-
-#Preview("Branding Editor — Palette Slots") {
-    @Previewable @State var color = BrowserSpaceBrandingPreviewFixture
-        .crestBranding
-        .backgroundColor
-        .color
-
-    HStack(alignment: .top, spacing: CrestSpacing.large) {
-        BrowserSpacePaletteSlot(
-            role: .background,
-            color: $color,
-            canAdd: false,
-            canRemove: true,
-            compact: false,
-            addColor: {},
-            removeColor: {}
-        )
-        BrowserSpacePaletteSlot(
-            role: .secondary,
-            color: nil,
-            canAdd: true,
-            canRemove: false,
-            compact: false,
-            addColor: {},
-            removeColor: {}
-        )
-    }
-    .padding(CrestSpacing.large)
-    .frame(width: 260)
-}

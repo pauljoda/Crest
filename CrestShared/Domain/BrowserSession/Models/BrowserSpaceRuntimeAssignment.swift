@@ -17,3 +17,9 @@ struct BrowserSpaceRuntimeAssignment: Codable, Equatable, Hashable, Sendable {
         space.id == spaceID && space.profile.id == profileID
     }
 }
+
+// MARK: - Identifiable
+
+extension BrowserSpaceRuntimeAssignment: Identifiable {
+    var id: Self { self }
+}

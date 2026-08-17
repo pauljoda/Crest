@@ -83,16 +83,3 @@ struct BrowserPinnedExtensionStrip: View {
     }
 
 }
-
-#Preview("Pinned Extension Strip") {
-    let preview = BrowserSidebarExtensionPreviewFixture.makeContext()
-    BrowserPinnedExtensionStrip(
-        spaceID: BrowserSidebarExtensionPreviewFixture.spaceID,
-        selectedTabID: BrowserSidebarExtensionPreviewFixture.tabID,
-        extensionControllerPool:
-            preview.configuration.extensionControllerPool,
-        actionPresentationOverride:
-            BrowserSidebarExtensionPreviewFixture.actions.filter(\.isPinned)
-    )
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth)
-}

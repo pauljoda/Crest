@@ -285,15 +285,3 @@ struct BrowserSpaceEditorView: View {
         browser.browsingPreferenceBinding(keyPath, in: space)
     }
 }
-
-#Preview("Space Editor") {
-    let browser = BrowserStore.preview()
-    BrowserSpaceEditorView(
-        browser: browser,
-        space: browser.session.spaces[0],
-        section: .appearance,
-        spaceAccess: BrowserSpaceAccessController(),
-        dataDeleter: BrowserSettingsPreviewDataDeleter()
-    )
-    .frame(width: 720, height: 560)
-}

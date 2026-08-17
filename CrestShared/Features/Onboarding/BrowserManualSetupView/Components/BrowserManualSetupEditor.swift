@@ -60,17 +60,3 @@ struct BrowserManualSetupEditor: View {
         }
     }
 }
-
-#Preview("Manual Setup Editor") {
-    @Previewable @State var plan = BrowserManualSetupPreviewFixture.plan
-
-    BrowserManualSetupEditor(
-        plan: $plan,
-        draft: BrowserManualSetupPreviewFixture.draft,
-        existingSession: BrowserManualSetupPreviewFixture.existingSession,
-        compact: false,
-        model: BrowserManualSetupPreviewFixture.model()
-    )
-    .frame(width: 620)
-    .padding()
-}

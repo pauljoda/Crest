@@ -18,13 +18,3 @@ struct BrowserSettingsPrivateSpaceAccessSection: View {
         .accessibilityIdentifier("settings-private-space-lock")
     }
 }
-
-#Preview("Private Space access") {
-    Form {
-        BrowserSettingsPrivateSpaceAccessSection(
-            space: BrowserSettingsPrivateSpaceAccessPreviewFixture.space,
-            accessController: BrowserSettingsPrivateSpaceAccessPreviewFixture.accessController
-        )
-    }
-    .frame(maxWidth: 520)
-}

@@ -31,8 +31,3 @@ struct MobileOnboardingProgressIndicator: View {
         return "Onboarding step \(currentIndex + 1) of \(MobileOnboardingLayout.progressStepCount)"
     }
 }
-
-#Preview("Onboarding Progress", traits: .fixedLayout(width: 240, height: 44)) {
-    MobileOnboardingProgressIndicator(currentIndex: 2)
-        .padding()
-}

@@ -12,15 +12,3 @@ struct CrestSpaceAddChipStyle: ButtonStyle {
         )
     }
 }
-
-#Preview("Add Space Chip Style", traits: .sizeThatFitsLayout) {
-    Button("New Space", systemImage: "plus") {}
-        .buttonStyle(
-            CrestSpaceAddChipStyle(
-                tint: CrestSpaceSelectorPreviewFixture.workSpace.accent.color
-            )
-        )
-        .padding()
-        .environment(\.displayScale, 2)
-        .preferredColorScheme(.light)
-}

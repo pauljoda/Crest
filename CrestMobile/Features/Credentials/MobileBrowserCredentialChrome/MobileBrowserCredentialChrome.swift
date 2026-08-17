@@ -19,13 +19,3 @@ struct MobileBrowserCredentialChrome: View {
         }
     }
 }
-
-#Preview("Credential Chrome — Idle") {
-    let fixture = MobileBrowserCredentialChromePreviewFixture()
-
-    MobileBrowserCredentialChrome(
-        page: fixture.page,
-        browser: fixture.browser
-    )
-    .frame(width: 390)
-}

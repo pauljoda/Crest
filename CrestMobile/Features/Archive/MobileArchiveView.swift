@@ -29,13 +29,3 @@ struct MobileArchiveView: View {
         )
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileArchiveView(
-        browser: fixture.browser,
-        assignment: BrowserSpaceRuntimeAssignment(space: fixture.space),
-        spaceAccess: fixture.spaceAccess,
-        selectTab: { _ in }
-    )
-}

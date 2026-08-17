@@ -65,21 +65,3 @@ struct MobileBrowserCommandPaletteLayer: View {
         )
     }
 }
-
-#Preview("Mobile Browser Command Palette Layer") {
-    @Previewable @Namespace var morphNamespace
-
-    MobileBrowserCommandPaletteLayer(
-        mode: .newTab,
-        space: BrowserCommandPalettePreviewFixture.currentSpace,
-        selectedTabID: BrowserCommandPalettePreviewFixture.selectedTabID,
-        otherSpaces: [BrowserCommandPalettePreviewFixture.otherSpace],
-        commands: BrowserCommandPalettePreviewFixture.registry,
-        isSourceAvailable: { _ in true },
-        selectTab: { _, _ in true },
-        selectTabInSpace: { _, _ in true },
-        openURL: { _, _, _ in true },
-        dismiss: {},
-        morphNamespace: morphNamespace
-    )
-}

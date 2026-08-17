@@ -111,5 +111,5 @@ struct BrowserSettingsView: View {
         onboardingCoordinator: BrowserOnboardingCoordinator()
     )
     .environment(BrowserWindowTransparencyPreviewFixture.makeStore())
-    .environment(BrowserSplitFocusPreviewFixture.makeStore())
+    .environment(BrowserSplitFocusPreferenceStore.isolated())
 }

@@ -37,22 +37,3 @@ struct BrowserDownloadStatusIcon: View {
         }
     }
 }
-
-#Preview("Download Status Icons", traits: .fixedLayout(width: 220, height: 64)) {
-    HStack(spacing: 20) {
-        BrowserDownloadStatusIcon(
-            item: BrowserUtilityListPreviewFixture.preparingDownload
-        )
-        BrowserDownloadStatusIcon(
-            item: BrowserUtilityListPreviewFixture.activeDownload
-        )
-        BrowserDownloadStatusIcon(
-            item: BrowserUtilityListPreviewFixture.finishedDownload
-        )
-        BrowserDownloadStatusIcon(
-            item: BrowserUtilityListPreviewFixture.failedDownload
-        )
-    }
-    .frame(height: 24)
-    .padding()
-}

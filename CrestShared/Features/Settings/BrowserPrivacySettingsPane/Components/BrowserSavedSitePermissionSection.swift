@@ -32,14 +32,3 @@ struct BrowserSavedSitePermissionSection: View {
         }
     }
 }
-
-#Preview("Saved Site Permissions") {
-    Form {
-        BrowserSavedSitePermissionSection(
-            records: [BrowserPrivacySettingsPreviewFixture.record],
-            permissionCenter:
-                BrowserPrivacySettingsPreviewFixture.permissionCenter,
-            resetAll: {}
-        )
-    }
-}

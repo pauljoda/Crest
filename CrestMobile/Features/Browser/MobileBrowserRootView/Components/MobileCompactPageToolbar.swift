@@ -69,22 +69,3 @@ struct MobileCompactPageToolbar: View {
         pageActions?.reloadOrStop()
     }
 }
-
-#Preview("Mobile Browser — Page Toolbar", traits: .fixedLayout(width: 390, height: 88)) {
-    @Previewable @State var address = "developer.apple.com"
-    @Previewable @State var isAddressEditing = false
-    let fixture = MobileBrowserPreviewFixture()
-    MobileCompactPageToolbar(
-        browser: fixture.browser,
-        pageActions: nil,
-        address: $address,
-        isAddressEditing: $isAddressEditing,
-        submitAddress: {},
-        beginNewTab: {},
-        showTabViewer: {},
-        hideToolbar: {},
-        handleSwipe: { _ in },
-        compactTransitionEnded: { _ in }
-    )
-    .padding()
-}

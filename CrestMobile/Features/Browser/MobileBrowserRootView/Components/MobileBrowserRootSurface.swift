@@ -91,26 +91,3 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
         )
     }
 }
-
-#Preview("Mobile Browser Root Surface") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserRootSurface(
-        presentation: .compact,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        navigation: MobileBrowserNavigationState(),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        spaceAccess: fixture.spaceAccess,
-        preferredSidebarWidth: 320,
-        isCommandPalettePresented: false,
-        isURLCopiedFeedbackVisible: false,
-        pageZoomFeedbackLabel: nil,
-        reduceMotion: false,
-        didPromoteTransientPage: {},
-        compact: ContentUnavailableView("Compact Browser", systemImage: "iphone"),
-        regular: { _ in
-            ContentUnavailableView("Regular Browser", systemImage: "ipad")
-        },
-        palette: Color.clear
-    )
-}

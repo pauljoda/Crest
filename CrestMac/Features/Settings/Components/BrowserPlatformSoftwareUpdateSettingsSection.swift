@@ -53,17 +53,3 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
         }
     }
 }
-
-#Preview {
-    Form {
-        BrowserPlatformSoftwareUpdateSettingsSection()
-    }
-    .formStyle(.grouped)
-    .frame(width: 480)
-    .environment(
-        BrowserSoftwareUpdateService(
-            isEnabled: false,
-            preferences: nil
-        )
-    )
-}

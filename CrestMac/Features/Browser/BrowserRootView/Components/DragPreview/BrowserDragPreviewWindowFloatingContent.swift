@@ -24,21 +24,3 @@ struct BrowserDragPreviewWindowFloatingContent: View {
         }
     }
 }
-
-#Preview("Drag Preview Window Floating Content", traits: .fixedLayout(width: 620, height: 460)) {
-    BrowserDragPreviewWindowFloatingContent(
-        content: .splitCardLift(
-            BrowserSplitCardLiftPreviewContent(
-                tab: BrowserSplitViewPreviewFixture.members[0],
-                profileID: BrowserSplitViewPreviewFixture.profileID,
-                snapshot: nil,
-                origin: CGPoint(x: 70, y: 50),
-                size: CGSize(width: 420, height: 340),
-                grabFraction: CGPoint(x: 0.5, y: 0.15),
-                isSettling: false,
-                reduceMotion: false
-            )
-        )
-    )
-    .background(CrestBrandTheme.canvas)
-}

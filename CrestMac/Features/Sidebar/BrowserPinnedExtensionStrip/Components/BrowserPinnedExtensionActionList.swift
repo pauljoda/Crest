@@ -27,11 +27,3 @@ struct BrowserPinnedExtensionActionList: View {
         }
     }
 }
-
-#Preview("Pinned Extension Action List") {
-    BrowserPinnedExtensionActionList(
-        actions: BrowserSidebarExtensionPreviewFixture.actions.filter(\.isPinned),
-        perform: { _, _ in }
-    )
-    .frame(width: 240, height: 32)
-}

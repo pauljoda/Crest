@@ -32,10 +32,3 @@ struct BrowserFolderDragPreview: View {
         .accessibilityLabel("\(folder.title) folder")
     }
 }
-
-#Preview("Folder Drag Preview", traits: .fixedLayout(width: 300, height: 100)) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    BrowserFolderDragPreview(folder: fixture.folder)
-        .padding()
-}

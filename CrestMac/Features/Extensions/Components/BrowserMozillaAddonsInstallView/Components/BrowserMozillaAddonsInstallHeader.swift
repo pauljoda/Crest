@@ -32,14 +32,3 @@ struct BrowserMozillaAddonsInstallHeader: View {
             : "Mozilla-signed Firefox Add-ons package"
     }
 }
-
-#Preview("Firefox Add-ons Install Header", traits: .sizeThatFitsLayout) {
-    BrowserMozillaAddonsInstallHeader(
-        phase: .review(
-            BrowserMozillaAddonsInstallPreviewFixture.candidate,
-            errorDescription: nil
-        ),
-        spaceID: BrowserMozillaAddonsInstallPreviewFixture.spaceID
-    )
-    .padding()
-}

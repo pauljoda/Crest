@@ -43,23 +43,3 @@ struct TabFaviconView: View {
         )
     }
 }
-
-#Preview("Tab Favicon — Start Page") {
-    TabFaviconView(tab: TabFaviconPreviewFixture.startPage, size: 48)
-        .padding()
-}
-
-#Preview("Tab Favicon — Emoji") {
-    TabFaviconView(tab: TabFaviconPreviewFixture.emoji, size: 48)
-        .padding()
-}
-
-#Preview("Tab Favicon — Image") {
-    TabFaviconView(tab: TabFaviconPreviewFixture.image, size: 48)
-        .padding()
-}
-
-#Preview("Tab Favicon — Fallback") {
-    TabFaviconView(tab: TabFaviconPreviewFixture.fallback, size: 48)
-        .padding()
-}

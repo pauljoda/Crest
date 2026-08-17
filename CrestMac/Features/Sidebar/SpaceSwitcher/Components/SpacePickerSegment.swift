@@ -57,15 +57,3 @@ struct SpacePickerSegment: View {
         BrowserTabDragAction(browser: browser, spaceAccess: spaceAccess)
     }
 }
-
-#Preview("Space Picker Segment") {
-    let preview = SpaceSwitcherPreviewFixture.makeContext()
-    SpacePickerSegment(
-        space: SpaceSwitcherPreviewFixture.firstSpace,
-        browser: preview.browser,
-        pages: preview.pages,
-        spaceAccess: preview.spaceAccess,
-        selectSpace: { _ in }
-    )
-    .padding()
-}

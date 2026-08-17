@@ -284,25 +284,3 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         )
     }
 }
-
-#Preview("Mobile Browser Root Content") {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobileBrowserRootModel(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        navigation: MobileBrowserNavigationState(),
-        spaceAccess: fixture.spaceAccess,
-        windowState: fixture.windowState,
-        startupBehavior: .waitForTabSelection,
-        persistedSidebarWidth: MobileBrowserRootLayout.defaultRegularSidebarWidth
-    )
-
-    MobileBrowserRootContent(
-        model: model,
-        dataDeleter: fixture.pages,
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        suspendsCompactPagePresentation: false,
-        togglePrivateBrowsing: {},
-        closePrivateBrowsing: {}
-    )
-}

@@ -43,12 +43,3 @@ struct BrowserRootBackdrop: View, BrowserChromeAnimating {
         )
     }
 }
-
-#Preview("Browser Root Backdrop") {
-    BrowserRootBackdrop(
-        space: BrowserRootPreviewFixture.space,
-        transparencyIsEnabled: true,
-        transparencyStrength: 0.5,
-        isWindowFocused: true
-    )
-}

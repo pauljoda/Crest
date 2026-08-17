@@ -17,8 +17,3 @@ struct BrowserSettingsPaneHeaderCopy: View {
         }
     }
 }
-
-#Preview("Settings Pane Header Copy") {
-    BrowserSettingsPaneHeaderCopy(destination: .advanced)
-        .frame(width: 420)
-}

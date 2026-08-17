@@ -41,14 +41,3 @@ struct BrowserUtilityListSectionList: View {
     }
 
 }
-
-#Preview("Download Section List", traits: .fixedLayout(width: 360, height: 420)) {
-    BrowserUtilityListSectionList(
-        sections: [BrowserUtilityListPreviewFixture.downloadSection],
-        assignment: BrowserUtilityListPreviewFixture.assignment,
-        actions: BrowserUtilityListActions(
-            downloadDestinations: [.revealInFinder, .files]
-        ),
-        dismissOnBlankSpace: {}
-    )
-}

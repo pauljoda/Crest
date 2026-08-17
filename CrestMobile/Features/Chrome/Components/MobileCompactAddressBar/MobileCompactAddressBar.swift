@@ -118,27 +118,3 @@ struct MobileCompactAddressBar: View {
         await pageActions?.clearSiteDataAndReload()
     }
 }
-
-#Preview("Compact Address Bar") {
-    @Previewable @State var text = "example.com"
-    @Previewable @State var isEditing = false
-    let fixture = MobilePageActionsPreviewFixture()
-
-    MobileCompactAddressBar(
-        browser: fixture.browser,
-        text: $text,
-        isEditing: $isEditing,
-        isSecure: true,
-        progress: 0.62,
-        isLoading: true,
-        pageActions: fixture.actions,
-        hideToolbar: nil,
-        reloadOrStop: {},
-        transition: .revealTabViewer,
-        transitionEnded: { _ in },
-        beginNewTab: {},
-        submit: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

@@ -38,17 +38,3 @@ struct MobileCompactNewTabPrompt: View {
         .accessibilityIdentifier("new-tab-prompt")
     }
 }
-
-#Preview("Compact New Tab Prompt") {
-    @Previewable @Namespace var namespace
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileCompactNewTabPrompt(
-        namespace: namespace,
-        geometryID: fixture.space.id,
-        transitionEnded: { _ in },
-        openNewTab: {}
-    )
-    .padding()
-    .frame(width: 390)
-}

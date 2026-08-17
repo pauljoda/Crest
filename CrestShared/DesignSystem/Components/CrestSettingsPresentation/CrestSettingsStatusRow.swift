@@ -25,11 +25,3 @@ struct CrestSettingsStatusRow<Status: View>: View {
         }
     }
 }
-
-#Preview("Settings Status Row") {
-    CrestSettingsStatusRow("Status") {
-        Label("Up to Date", systemImage: "checkmark.circle.fill")
-            .foregroundStyle(CrestBrandPalette.sage)
-    }
-    .padding()
-}

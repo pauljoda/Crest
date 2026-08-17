@@ -33,7 +33,8 @@ enum BrowserPasskeyAccessStatus: Equatable, Sendable {
             )
         case .managedCapabilityRequired:
             String(
-                localized: "This build cannot request browser-wide passkey access until Apple approves Crest’s managed capability."
+                localized:
+                    "This build cannot request browser-wide passkey access until Apple approves Crest’s managed capability."
             )
         case .deviceNotConfigured:
             String(
@@ -49,7 +50,8 @@ enum BrowserPasskeyAccessStatus: Equatable, Sendable {
             )
         case .denied:
             String(
-                localized: "Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings."
+                localized:
+                    "Turn on Crest under Privacy & Security > Passkeys Access for Web Browsers in system settings."
             )
         }
     }
@@ -70,4 +72,36 @@ enum BrowserPasskeyAccessStatus: Equatable, Sendable {
             "hand.raised.slash"
         }
     }
+}
+
+enum BrowserPasskeyAuthorizationState: Equatable, Sendable {
+    case authorized
+    case denied
+    case notDetermined
+}
+
+enum BrowserPasskeyCredentialAccessScope: Equatable, Sendable {
+    case applicationWideSystemProvider
+}
+
+enum BrowserPasskeyDeviceConfiguration: Equatable, Sendable {
+    case configured
+    case notConfigured
+    case unknown
+}
+
+struct BrowserPasskeyPrivacyBoundary: Equatable, Sendable {
+    let credentialAccess: BrowserPasskeyCredentialAccessScope
+    let websiteSession: BrowserPasskeyWebsiteSessionScope
+    let storesCredentialInventoryInCrest: Bool
+
+    static let webKit = BrowserPasskeyPrivacyBoundary(
+        credentialAccess: .applicationWideSystemProvider,
+        websiteSession: .spaceIsolated,
+        storesCredentialInventoryInCrest: false
+    )
+}
+
+enum BrowserPasskeyWebsiteSessionScope: Equatable, Sendable {
+    case spaceIsolated
 }

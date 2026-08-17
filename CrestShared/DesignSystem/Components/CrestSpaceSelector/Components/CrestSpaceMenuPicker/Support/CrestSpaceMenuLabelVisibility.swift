@@ -12,31 +12,3 @@ struct CrestSpaceMenuLabelVisibility: ViewModifier {
         }
     }
 }
-
-#Preview("Space Menu Label Visibility", traits: .sizeThatFitsLayout) {
-    @Previewable @State var selection =
-        CrestSpaceSelectorPreviewFixture.selectedSpaceID(for: .menu)
-
-    Form {
-        Picker("Labeled Space", selection: $selection) {
-            ForEach(CrestSpaceSelectorPreviewFixture.identities) { identity in
-                Text(verbatim: identity.name)
-                    .tag(Optional(identity.id))
-            }
-        }
-        .modifier(CrestSpaceMenuLabelVisibility(labelsHidden: false))
-
-        Picker("Hidden Space Label", selection: $selection) {
-            ForEach(CrestSpaceSelectorPreviewFixture.identities) { identity in
-                Text(verbatim: identity.name)
-                    .tag(Optional(identity.id))
-            }
-        }
-        .modifier(CrestSpaceMenuLabelVisibility(labelsHidden: true))
-        .accessibilityLabel("Hidden Space Label")
-    }
-    .formStyle(.grouped)
-    .frame(width: 360)
-    .environment(\.displayScale, 2)
-    .preferredColorScheme(.light)
-}

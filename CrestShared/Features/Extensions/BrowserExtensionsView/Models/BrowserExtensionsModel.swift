@@ -139,3 +139,8 @@ final class BrowserExtensionsModel {
         )
     }
 }
+
+struct BrowserExtensionOperationFailure: Identifiable {
+    let id = UUID()
+    let message: String
+}

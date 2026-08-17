@@ -34,18 +34,3 @@ struct BrowserSpaceCrestOptionGallery<
         )
     }
 }
-
-#Preview("Branding Editor — Crest Option Gallery") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    ScrollView {
-        BrowserSpaceCrestOptionGallery(
-            branding: $branding,
-            options: BrowserSpaceCrestBackplate.allCases,
-            keyPath: \.backplate,
-            compact: false
-        )
-        .padding(CrestSpacing.large)
-    }
-    .frame(width: 620, height: 360)
-}

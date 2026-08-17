@@ -36,10 +36,3 @@ struct MobileURLCopyFeedback: View {
         }
     }
 }
-
-#Preview("Mobile Browser — URL Copy Feedback", traits: .fixedLayout(width: 390, height: 100)) {
-    MobileURLCopyFeedback(
-        isVisible: true,
-        topPadding: MobileBrowserRootLayout.compactOverlayTopPadding
-    )
-}

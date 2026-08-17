@@ -117,23 +117,3 @@ struct BrowserFolderOrganizationMenuContent: View {
         action()
     }
 }
-
-#Preview("Folder Organization Menu Content", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    Menu("Open Reading List Actions", systemImage: fixture.folder.symbol) {
-        BrowserFolderOrganizationMenuContent(
-            menu: BrowserFolderOrganizationMenu(
-                folder: fixture.folder,
-                assignment: fixture.folderAssignment,
-                browser: fixture.browser,
-                spaceAccess: fixture.spaceAccess,
-                createNestedFolder: {},
-                renameFolder: {},
-                changeColor: {},
-                deleteFolder: {}
-            )
-        )
-    }
-    .padding()
-}

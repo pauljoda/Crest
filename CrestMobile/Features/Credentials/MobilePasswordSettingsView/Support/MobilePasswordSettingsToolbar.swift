@@ -23,17 +23,3 @@ struct MobilePasswordSettingsToolbar: ToolbarContent {
         }
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    let model = MobilePasswordSettingsModel(
-        browser: fixture.browser,
-        spaceAccess: fixture.spaceAccess
-    )
-    NavigationStack {
-        Text("Passwords")
-            .toolbar {
-                MobilePasswordSettingsToolbar(model: model, dismiss: {})
-            }
-    }
-}

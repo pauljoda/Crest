@@ -12,10 +12,3 @@ struct BrowserOnboardingFailureMessage: View {
         }
     }
 }
-
-#Preview("Onboarding Failure") {
-    BrowserOnboardingFailureMessage(
-        message: .verbatim("The preview import could not be completed.")
-    )
-    .padding()
-}

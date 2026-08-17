@@ -9,12 +9,6 @@ final class BrowserCommandPaletteModel {
     let selectedTabID: TabID?
     let otherSpaces: [BrowserSpace]
     let commands: BrowserCommandPaletteCommandRegistry?
-    /// Keyword providers eligible to take over the query. Nil leaves keyword
-    /// mode switched off entirely.
-    let omnibox: BrowserOmniboxRegistry?
-    /// Where an accepted keyword suggestion opens, decided by how the palette
-    /// was presented.
-    let omniboxDisposition: BrowserOmniboxDisposition
 
     var query: String {
         didSet {
@@ -30,7 +24,6 @@ final class BrowserCommandPaletteModel {
 
     @ObservationIgnored private var rebuildTask: Task<Void, Never>?
     @ObservationIgnored private var publishedQuery: String
-    @ObservationIgnored private var activeOmniboxKeyword: BrowserOmniboxKeyword?
 
     private let isSourceAvailableAction: (BrowserTabRuntimeAssignment) -> Bool
     private let selectTabAction:
@@ -67,9 +60,7 @@ final class BrowserCommandPaletteModel {
             ) -> Bool
         )?,
         openURL: @escaping (BrowserTabRuntimeAssignment, URL) -> Bool,
-        dismiss: @escaping () -> Void,
-        omnibox: BrowserOmniboxRegistry? = nil,
-        omniboxDisposition: BrowserOmniboxDisposition = .currentTab
+        dismiss: @escaping () -> Void
     ) {
         let actionableOtherSpaces = selectTabInSpace == nil ? [] : otherSpaces
         let input = BrowserCommandPaletteInput(
@@ -86,8 +77,6 @@ final class BrowserCommandPaletteModel {
         self.selectedTabID = selectedTabID
         self.otherSpaces = actionableOtherSpaces
         self.commands = commands
-        self.omnibox = omnibox
-        self.omniboxDisposition = omniboxDisposition
         query = initialQuery
         results = prepared.results
         resultGroups = prepared.groups
@@ -132,28 +121,8 @@ final class BrowserCommandPaletteModel {
             guard availableSourceAssignment != nil else { return }
             commands?.perform(command)
             didActivate = commands != nil
-        case .omniboxSuggestion(let acceptance):
-            didActivate = acceptOmniboxSuggestion(acceptance)
         }
         if didActivate { dismiss() }
-    }
-
-    /// Removes a keyword suggestion from its provider's own history.
-    ///
-    /// Backs `chrome.omnibox.onDeleteSuggestion`. Rows that permit it offer the
-    /// action in their context menu; a row whose provider did not mark it
-    /// deletable is refused here as well as hidden there.
-    @discardableResult
-    func deleteOmniboxSuggestion(_ acceptance: BrowserOmniboxAcceptance) -> Bool {
-        guard acceptance.isDeletable,
-            let provider = omnibox?.provider(for: acceptance.keyword)
-        else {
-            return false
-        }
-
-        provider.deleteSuggestion(acceptance.content)
-        scheduleResultsRebuild()
-        return true
     }
 
     func dismiss() {
@@ -174,7 +143,7 @@ final class BrowserCommandPaletteModel {
                 })
             else { return nil }
             return space.tabs.first { $0.id == assignment.tabID }
-        case .url, .command, .omniboxSuggestion:
+        case .url, .command:
             return nil
         }
     }
@@ -183,7 +152,7 @@ final class BrowserCommandPaletteModel {
         switch result.target {
         case .tab(let assignment), .spaceTab(let assignment):
             assignment.profileID
-        case .url, .command, .omniboxSuggestion:
+        case .url, .command:
             nil
         }
     }
@@ -198,32 +167,10 @@ final class BrowserCommandPaletteModel {
     private func scheduleResultsRebuild() {
         rebuildTask?.cancel()
         let requestedQuery = query
-        let resolution = omnibox?.resolve(requestedQuery)
-        updateOmniboxSession(for: resolution?.input.keyword)
+        let input = input(query: requestedQuery)
 
         rebuildTask = Task { [weak self] in
-            // Keyword mode resolves its provider first: the rows it returns
-            // replace every other source, so there is nothing to prepare until
-            // the provider has answered.
-            var context: BrowserCommandPaletteOmniboxContext?
-            if let resolution {
-                let suggestions = await resolution.provider.suggestions(
-                    for: resolution.input.query
-                )
-                guard !Task.isCancelled else { return }
-                let descriptor = resolution.provider.descriptor
-                context = BrowserCommandPaletteOmniboxContext(
-                    keyword: resolution.input.keyword,
-                    query: resolution.input.query,
-                    title: descriptor.title,
-                    defaultSuggestionDescription: descriptor
-                        .defaultSuggestionDescription,
-                    suggestions: suggestions
-                )
-            }
-
             guard let self else { return }
-            let input = self.input(query: requestedQuery, omnibox: context)
             let preparation = Task.detached(priority: .userInitiated) {
                 BrowserCommandPaletteResultPreparation.prepare(for: input)
             }
@@ -240,30 +187,6 @@ final class BrowserCommandPaletteModel {
         }
     }
 
-    /// Raises `onInputStarted` and `onInputCancelled` as the query crosses into
-    /// and out of a provider's keyword.
-    private func updateOmniboxSession(for keyword: BrowserOmniboxKeyword?) {
-        guard keyword != activeOmniboxKeyword else { return }
-        if let previous = activeOmniboxKeyword {
-            omnibox?.provider(for: previous)?.inputCancelled()
-        }
-        activeOmniboxKeyword = keyword
-        if let keyword {
-            omnibox?.provider(for: keyword)?.inputStarted()
-        }
-    }
-
-    private func acceptOmniboxSuggestion(
-        _ acceptance: BrowserOmniboxAcceptance
-    ) -> Bool {
-        guard let provider = omnibox?.provider(for: acceptance.keyword) else {
-            return false
-        }
-        provider.accept(acceptance.content, disposition: omniboxDisposition)
-        activeOmniboxKeyword = nil
-        return true
-    }
-
     private var availableSourceAssignment: BrowserTabRuntimeAssignment? {
         guard let sourceAssignment, isSourceAvailableAction(sourceAssignment)
         else {
@@ -272,18 +195,14 @@ final class BrowserCommandPaletteModel {
         return sourceAssignment
     }
 
-    private func input(
-        query: String,
-        omnibox omniboxContext: BrowserCommandPaletteOmniboxContext? = nil
-    ) -> BrowserCommandPaletteInput {
+    private func input(query: String) -> BrowserCommandPaletteInput {
         BrowserCommandPaletteInput(
             query: query,
             space: space,
             selectedTabID: selectedTabID,
             otherSpaces: otherSpaces,
             commands: commands?.commands ?? [],
-            searchProvider: space?.browsingPreferences.searchProvider ?? .google,
-            omnibox: omniboxContext
+            searchProvider: space?.browsingPreferences.searchProvider ?? .google
         )
     }
 

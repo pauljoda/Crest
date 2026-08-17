@@ -60,24 +60,3 @@ struct MobileSpaceActions: View {
         downloads.contains(where: { $0.state.needsAttention }) ? .red : selectedAccentColor
     }
 }
-
-#Preview("Mobile Space Actions", traits: .sizeThatFitsLayout) {
-    @Previewable @State var commonListsAreExpanded = false
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSpaceActions(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        mode: .regularSidebar,
-        configuration: MobileSpaceActionsConfiguration(
-            showSettings: {},
-            showArchive: {},
-            showDownloads: {},
-            commonListsAreExpanded: commonListsAreExpanded,
-            toggleCommonLists: { commonListsAreExpanded.toggle() },
-            recordCommonListsTriggerFrame: { _ in },
-            togglePrivateBrowsing: {}
-        )
-    )
-    .padding()
-}

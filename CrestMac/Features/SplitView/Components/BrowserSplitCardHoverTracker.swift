@@ -20,16 +20,3 @@ struct BrowserSplitCardHoverTracker: NSViewRepresentable {
         nsView.onHoverChange = onHoverChange
     }
 }
-
-#Preview("Split Card Hover Tracker") {
-    @Previewable @State var isHovering = false
-
-    Text(isHovering ? "Pointer inside the card" : "Pointer outside the card")
-        .font(.headline)
-        .frame(width: 320, height: 180)
-        .overlay {
-            BrowserSplitCardHoverTracker { hovering in
-                isHovering = hovering
-            }
-        }
-}

@@ -44,14 +44,3 @@ struct BrowserExtensionInstallCompletionContent: View {
         compatibilityIssues.isEmpty ? .green : .orange
     }
 }
-
-#Preview("Extension Install — Completed", traits: .sizeThatFitsLayout) {
-    BrowserExtensionInstallCompletionContent(
-        name: "Reading Focus",
-        spaceName: "Research",
-        compatibilityIssues: [
-            "Some extension features are unavailable in this Crest build."
-        ]
-    )
-    .padding()
-}

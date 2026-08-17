@@ -17,9 +17,3 @@ struct BrowserCrestImportSpaceHeader: View {
         .frame(height: 36)
     }
 }
-
-#Preview("Crest Import Space Header") {
-    BrowserCrestImportSpaceHeader(space: BrowserImportPreviewFixture.sourceSpace)
-        .frame(width: 340)
-        .padding()
-}

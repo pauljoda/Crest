@@ -20,17 +20,3 @@ struct BrowserAdvancedSetupActionButton: View {
         .crestAccessibilityIdentifier(setupAction.identifier)
     }
 }
-
-#Preview("Advanced Setup Action") {
-    Form {
-        BrowserAdvancedSetupActionButton(
-            setupAction: BrowserAdvancedSetupAction(
-                id: "review-setup",
-                title: "Review Crest Setup",
-                symbol: "sparkles",
-                help: "Review Spaces and tabs"
-            ) {}
-        )
-    }
-    .formStyle(.grouped)
-}

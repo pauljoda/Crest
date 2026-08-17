@@ -1,5 +1,21 @@
 import Foundation
 
+/// Framework-neutral projection of the host notification authorization state.
+///
+/// `chrome.notifications.create` has no authorization concept of its own, so the
+/// emulation layer maps Crest's own system authorization onto a posting outcome
+/// rather than surfacing a separate permission prompt to extension code.
+enum BrowserExtensionNotificationAuthorization: Equatable, Hashable, Sendable {
+    case notDetermined
+    case authorized
+    case denied
+
+    /// Whether a delivery attempt can reach the notification center.
+    var allowsDelivery: Bool {
+        self == .authorized
+    }
+}
+
 /// One `chrome.notifications.create` payload, normalized for the host.
 ///
 /// The emulation bridge fills this in from the extension-supplied options
@@ -28,5 +44,40 @@ struct BrowserExtensionNotificationRequest: Equatable, Hashable, Sendable {
         self.message = message
         self.iconData = iconData
         self.buttonTitles = buttonTitles
+    }
+}
+
+/// A notification resolved down to the flat identifiers and content the host
+/// notification center needs.
+///
+/// Every extension-facing concern — identity encoding, authorization gating,
+/// per-client bookkeeping — has already been applied by the time a delivery
+/// reaches ``BrowserExtensionNotificationCentering``, which keeps the platform
+/// adapter free of routing rules.
+struct BrowserExtensionNotificationDelivery: Equatable, Hashable, Sendable {
+    let systemIdentifier: String
+    let threadIdentifier: String
+    let categoryIdentifier: String
+    let title: String
+    let body: String
+    let iconData: Data?
+    let buttonTitles: [String]
+}
+
+/// The result of a posting attempt.
+///
+/// A denied authorization is an ordinary outcome rather than an error: an
+/// extension that calls `chrome.notifications.create` while Crest itself is
+/// muted in System Settings should receive a quiet negative answer, not a
+/// rejected promise that its background script is unlikely to handle.
+enum BrowserExtensionNotificationPostOutcome: Equatable, Hashable, Sendable {
+    case presented(BrowserExtensionNotificationIdentity)
+    case authorizationDenied
+    case rejected(description: String)
+
+    /// The identity the host accepted, when the notification was presented.
+    var presentedIdentity: BrowserExtensionNotificationIdentity? {
+        guard case .presented(let identity) = self else { return nil }
+        return identity
     }
 }

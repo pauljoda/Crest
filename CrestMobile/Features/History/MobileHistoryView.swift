@@ -33,13 +33,3 @@ struct MobileHistoryView: View {
         openURL(url)
     }
 }
-
-#Preview {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileHistoryView(
-        browser: fixture.browser,
-        assignment: BrowserSpaceRuntimeAssignment(space: fixture.space),
-        spaceAccess: fixture.spaceAccess,
-        openURL: { _ in }
-    )
-}

@@ -102,7 +102,7 @@ struct MobileBrowserPreviewFixture {
         cloudSync = .isolated(browser: browser)
         onboardingCoordinator = BrowserOnboardingCoordinator()
         spaceAccess = BrowserSpaceAccessController(
-            authenticator: MobileBrowserPreviewAuthenticator()
+            authenticator: BrowserPreviewAuthenticator(result: false)
         )
         passkeyAccess = BrowserPasskeyAccessController(
             capabilityCheck: { true },

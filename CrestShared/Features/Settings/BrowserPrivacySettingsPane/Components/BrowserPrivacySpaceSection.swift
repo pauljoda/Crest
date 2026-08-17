@@ -14,16 +14,3 @@ struct BrowserPrivacySpaceSection: View {
         }
     }
 }
-
-#Preview("Privacy Space") {
-    @Previewable @State var selectedSpaceID: SpaceID? =
-        BrowserPrivacySettingsPreviewFixture.space.id
-
-    Form {
-        BrowserPrivacySpaceSection(
-            selectedSpaceID: $selectedSpaceID,
-            spaces: BrowserPrivacySettingsPreviewFixture.linkSettings.browser
-                .session.spaces
-        )
-    }
-}

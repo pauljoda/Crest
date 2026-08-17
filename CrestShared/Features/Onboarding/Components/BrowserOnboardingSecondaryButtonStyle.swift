@@ -8,9 +8,3 @@ struct BrowserOnboardingSecondaryButtonStyle: ButtonStyle {
             .makeBody(configuration: configuration)
     }
 }
-
-#Preview("Secondary Onboarding Button") {
-    Button("Back") {}
-        .buttonStyle(BrowserOnboardingSecondaryButtonStyle())
-        .padding()
-}

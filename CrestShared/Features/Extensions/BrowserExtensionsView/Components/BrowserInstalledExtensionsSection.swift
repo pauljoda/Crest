@@ -22,13 +22,3 @@ struct BrowserInstalledExtensionsSection: View {
         }
     }
 }
-
-#Preview("Installed Extensions") {
-    Form {
-        BrowserInstalledExtensionsSection(
-            model: BrowserExtensionsPreviewFixture.model,
-            platformActions: .none
-        )
-    }
-    .frame(width: 560, height: 260)
-}

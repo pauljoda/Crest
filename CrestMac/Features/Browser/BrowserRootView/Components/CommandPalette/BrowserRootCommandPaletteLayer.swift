@@ -31,9 +31,7 @@ struct BrowserRootCommandPaletteLayer: View {
                 morphNamespace: commandSurfaceNamespace,
                 morphID: BrowserRootCommandSurfaceID.address(
                     spaceID: model.browser.selectedSpace?.id
-                ),
-                omnibox: .shared,
-                omniboxDisposition: mode.omniboxDisposition
+                )
             )
             .id(
                 BrowserCommandPalettePresentationIdentity(
@@ -57,14 +55,4 @@ struct BrowserRootCommandPaletteLayer: View {
             layoutDirection: layoutDirection
         )
     }
-}
-
-#Preview("Browser Root Command Palette Layer") {
-    @Previewable @Namespace var commandSurfaceNamespace
-    BrowserRootCommandPaletteLayer(
-        model: BrowserRootPreviewFixture.makeModel(state: .commandPalette),
-        shortcuts: nil,
-        commandSurfaceNamespace: commandSurfaceNamespace
-    )
-    .frame(width: 800, height: 600)
 }

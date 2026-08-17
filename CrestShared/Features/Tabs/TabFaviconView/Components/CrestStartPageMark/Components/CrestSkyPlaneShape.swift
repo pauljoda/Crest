@@ -31,10 +31,3 @@ struct CrestSkyPlaneShape: Shape {
         return path
     }
 }
-
-#Preview("Crest Sky Plane Shape") {
-    CrestSkyPlaneShape()
-        .fill(.blue)
-        .frame(width: 96, height: 96)
-        .padding()
-}

@@ -31,14 +31,3 @@ struct BrowserSpaceFineTuningFields: View {
         }
     }
 }
-
-#Preview("Fine Tuning Fields") {
-    @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.gradientBranding
-
-    BrowserSpaceFineTuningFields(
-        branding: $branding,
-        showsTextureControl: true
-    )
-    .frame(width: 420)
-    .padding(CrestSpacing.large)
-}

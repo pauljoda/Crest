@@ -9,7 +9,3 @@ final class BrowserPeekWindowTrackingView: NSView {
         onWindowChange?(window?.windowNumber)
     }
 }
-
-#Preview {
-    BrowserPeekWindowTrackingView()
-}

@@ -24,11 +24,3 @@ struct MobileBrowserTransientScrim: View {
             .contentShape(.rect)
     }
 }
-
-#Preview {
-    MobileBrowserTransientScrim(
-        opacity: 0.34,
-        allowsDismissal: true,
-        dismiss: {}
-    )
-}

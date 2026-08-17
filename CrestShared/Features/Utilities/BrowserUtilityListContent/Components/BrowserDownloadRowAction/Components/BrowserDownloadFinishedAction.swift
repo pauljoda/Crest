@@ -34,12 +34,3 @@ struct BrowserDownloadFinishedAction: View {
         }
     }
 }
-
-#Preview("Finished Download Action", traits: .fixedLayout(width: 96, height: 64)) {
-    BrowserDownloadFinishedAction(
-        itemID: BrowserUtilityListPreviewFixture.finishedDownload.id,
-        destinations: [.revealInFinder, .files],
-        perform: { _ in }
-    )
-    .padding()
-}

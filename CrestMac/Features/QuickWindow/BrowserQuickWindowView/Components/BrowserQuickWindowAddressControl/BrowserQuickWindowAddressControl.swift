@@ -61,15 +61,3 @@ struct BrowserQuickWindowAddressControl: View {
         model.page?.performReload(.standard)
     }
 }
-
-#Preview("Quick Window Address") {
-    @Previewable @State var addressText = ""
-    @Previewable @State var isEditing = false
-    BrowserQuickWindowAddressControl(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        addressText: $addressText,
-        isAddressEditing: $isEditing,
-        addressFocusRequest: 0
-    )
-    .frame(width: 480)
-}

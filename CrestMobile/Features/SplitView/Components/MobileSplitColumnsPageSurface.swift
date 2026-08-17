@@ -73,15 +73,3 @@ struct MobileSplitColumnsPageSurface: View {
         )
     }
 }
-
-#Preview("Split Columns Page Surface", traits: .fixedLayout(width: 1_024, height: 720)) {
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileSplitColumnsPageSurface(
-        model: MobileBrowserRootPreviewFixture.makeModel(fixture: fixture),
-        space: fixture.space,
-        members: BrowserSplitViewPreviewFixture.members,
-        adjoinsLeadingSidebar: true
-    )
-    .background(.quaternary)
-}

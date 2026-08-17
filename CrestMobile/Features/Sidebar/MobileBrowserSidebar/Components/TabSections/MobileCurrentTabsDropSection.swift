@@ -139,21 +139,3 @@ struct MobileCurrentTabsDropSection: View {
         ) != nil
     }
 }
-
-#Preview("Current Tabs Section") {
-    @Previewable @Namespace var promotionNamespace
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileCurrentTabsDropSection(
-        space: fixture.space,
-        tabs: fixture.space.currentTabs,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        selectTab: { _ in },
-        openNewTab: {},
-        tabPromotionNamespace: promotionNamespace,
-        usesNativeNavigationTransition: false
-    )
-    .frame(width: 360)
-}

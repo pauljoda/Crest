@@ -255,23 +255,4 @@
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
-
-    #Preview("Controls — Light") {
-        CrestControlsGallery()
-            .preferredColorScheme(.light)
-    }
-
-    #Preview("Controls — Dark") {
-        CrestControlsGallery()
-            .preferredColorScheme(.dark)
-    }
-
-    #Preview("Controls — Right to left") {
-        CrestControlsGallery()
-            .environment(\.layoutDirection, .rightToLeft)
-    }
-
-    #Preview("Controls — Disabled") {
-        CrestControlsGallery(isEnabled: false)
-    }
 #endif

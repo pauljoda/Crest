@@ -18,12 +18,13 @@ struct BrowserTabDragSourceModifier: ViewModifier {
                 spaceID: spaceID,
                 profileID: profileID
             )
-            let isDragging = reorder == nil
+            let isDragging =
+                reorder == nil
                 && BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                isDragging: dragState.isDragging(item),
-                hasReliableTerminalLifecycle:
-                    BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
-            )
+                    isDragging: dragState.isDragging(item),
+                    hasReliableTerminalLifecycle:
+                        BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
+                )
             content
                 .scaleEffect(
                     BrowserTabDragVisualPolicy.sourceScale(isDragging: isDragging)
@@ -61,23 +62,4 @@ struct BrowserTabDragSourceModifier: ViewModifier {
             content
         }
     }
-}
-
-#Preview("Tab Drag Source Modifier", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-    let dragState = fixture.makeTabDragState(tab: fixture.currentTab)
-
-    Label(fixture.currentTab.displayTitle, systemImage: "doc.text.fill")
-        .frame(width: 220, alignment: .leading)
-        .padding(CrestSpacing.medium)
-        .background(CrestColor.selectedSurface, in: .rect(cornerRadius: 10))
-        .modifier(
-            BrowserTabDragSourceModifier(
-                tab: fixture.currentTab,
-                profileID: fixture.space.profile.id,
-                spaceID: fixture.space.id,
-                dragState: dragState
-            )
-        )
-        .padding()
 }

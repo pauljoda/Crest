@@ -50,15 +50,3 @@ struct CrestFormActionRow: View {
         .buttonStyle(.plain)
     }
 }
-
-#Preview("Form Action Row") {
-    Form {
-        CrestFormActionRow(
-            "Default Space",
-            subtitle: "Choose where links open",
-            systemImage: "square.grid.2x2",
-            value: "Personal"
-        ) {}
-    }
-    .formStyle(.grouped)
-}

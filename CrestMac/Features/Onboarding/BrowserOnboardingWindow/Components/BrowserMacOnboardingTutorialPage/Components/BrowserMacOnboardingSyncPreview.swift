@@ -38,8 +38,3 @@ struct BrowserMacOnboardingSyncPreview: View {
         )
     }
 }
-
-#Preview("Sync Artwork") {
-    BrowserMacOnboardingSyncPreview()
-        .frame(width: 540, height: 480)
-}

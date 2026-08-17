@@ -23,9 +23,3 @@ struct BrowserAddressLongPressButtonStyle: PrimitiveButtonStyle {
             .accessibilityAddTraits(.isButton)
     }
 }
-
-#Preview("Address Long Press") {
-    Button("Address") {}
-        .buttonStyle(BrowserAddressLongPressButtonStyle(action: {}))
-        .padding()
-}

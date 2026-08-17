@@ -10,8 +10,3 @@ struct MobileSpaceUtilityButtonLabel: View {
             .contentShape(.rect)
     }
 }
-
-#Preview("Space Utility Button Label", traits: .sizeThatFitsLayout) {
-    MobileSpaceUtilityButtonLabel(systemImage: "archivebox")
-        .padding()
-}

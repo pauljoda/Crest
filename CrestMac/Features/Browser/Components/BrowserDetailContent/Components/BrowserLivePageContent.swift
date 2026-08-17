@@ -17,14 +17,3 @@ struct BrowserLivePageContent: View {
         }
     }
 }
-
-#Preview("Browser Live Page Content") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserLivePageContent(
-        page: preview.page,
-        browser: preview.browser,
-        pages: preview.pages
-    )
-    .frame(width: 960, height: 640)
-}

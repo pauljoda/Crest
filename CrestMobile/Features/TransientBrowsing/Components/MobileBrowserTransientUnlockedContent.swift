@@ -113,10 +113,3 @@ struct MobileBrowserTransientUnlockedContent: View {
         _ = model.promote(to: assignment)
     }
 }
-
-#Preview {
-    MobileBrowserTransientUnlockedContent(
-        model: MobileBrowserTransientPreviewFixture.makeModel(),
-        presentationPhase: .committed
-    )
-}

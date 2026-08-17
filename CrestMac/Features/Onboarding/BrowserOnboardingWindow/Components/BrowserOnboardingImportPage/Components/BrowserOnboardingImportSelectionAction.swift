@@ -17,12 +17,3 @@ struct BrowserOnboardingImportSelectionAction: View {
         }
     }
 }
-
-#Preview("Import Selection Action") {
-    BrowserOnboardingImportSelectionAction(
-        hasSelection: true,
-        skip: {},
-        continueImport: {}
-    )
-    .padding()
-}

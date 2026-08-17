@@ -87,14 +87,3 @@ struct MobileDownloadsView: View {
         )
     }
 }
-
-#Preview("Mobile Downloads") {
-    let fixture = MobileBrowserPreviewFixture()
-
-    MobileDownloadsView(
-        browser: fixture.browser,
-        pages: fixture.pages,
-        assignment: BrowserSpaceRuntimeAssignment(space: fixture.space),
-        spaceAccess: fixture.spaceAccess
-    )
-}

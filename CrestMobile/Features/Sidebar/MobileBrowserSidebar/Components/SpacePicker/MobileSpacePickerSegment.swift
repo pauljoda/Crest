@@ -50,16 +50,3 @@ struct MobileSpacePickerSegment: View {
         BrowserTabDragAction(browser: browser, spaceAccess: spaceAccess)
     }
 }
-
-#Preview("Mobile Space Picker Segment", traits: .sizeThatFitsLayout) {
-    let fixture = MobileBrowserSidebarPreviewFixture()
-
-    MobileSpacePickerSegment(
-        space: fixture.protectedSpace,
-        browser: fixture.browser,
-        pages: fixture.pages,
-        spaceAccess: fixture.spaceAccess,
-        selectSpace: { _ in }
-    )
-    .padding()
-}

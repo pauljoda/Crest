@@ -52,16 +52,3 @@ struct BrowserSpaceCrestField: View {
         .frame(width: size, height: size)
     }
 }
-
-#Preview("Crest Divided Field", traits: .sizeThatFitsLayout) {
-    let branding = BrowserSpaceBrandingPreviewFixture.crestBranding
-
-    BrowserSpaceCrestField(
-        division: branding.crest.fieldDivision,
-        primaryColor: branding.primaryColor.color,
-        secondaryColor: branding.backgroundColor.color,
-        size: 112
-    )
-    .clipShape(.rect(cornerRadius: CrestRadius.compact))
-    .padding()
-}

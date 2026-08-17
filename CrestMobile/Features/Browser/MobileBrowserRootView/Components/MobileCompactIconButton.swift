@@ -25,13 +25,3 @@ struct MobileCompactIconButton: View {
         .accessibilityLabel(title)
     }
 }
-
-#Preview("Mobile Browser — Compact Icon Button", traits: .sizeThatFitsLayout) {
-    MobileCompactIconButton(
-        title: "Tabs",
-        systemImage: "square.on.square",
-        action: {}
-    )
-    .glassEffect(.regular.interactive(), in: .circle)
-    .padding()
-}

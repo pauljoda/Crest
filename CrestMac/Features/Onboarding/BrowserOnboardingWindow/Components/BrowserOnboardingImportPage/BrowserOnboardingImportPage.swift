@@ -112,21 +112,3 @@ struct BrowserOnboardingImportPage: View {
         .background(BrowserOnboardingPalette.parchment)
     }
 }
-
-#Preview("Import Page") {
-    BrowserOnboardingImportPage(
-        entryPoint: .firstRun,
-        sources: [BrowserOnboardingWindowPreviewFixture.importSource],
-        selectedApplications: [.arc],
-        isReading: false,
-        isLocked: false,
-        failure: nil,
-        accessLabel: { _ in "Ready to review" },
-        toggleSelection: { _ in },
-        beginManualSetup: {},
-        continueImport: {},
-        back: {},
-        close: {}
-    )
-    .frame(width: 980, height: 604)
-}

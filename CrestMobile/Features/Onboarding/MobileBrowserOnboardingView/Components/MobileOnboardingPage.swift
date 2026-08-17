@@ -61,23 +61,3 @@ struct MobileOnboardingPage<Content: View>: View {
             .padding(.vertical, MobileOnboardingLayout.pageContentVerticalPadding)
     }
 }
-
-#Preview("Onboarding Page Chrome") {
-    MobileOnboardingPage(
-        progressIndex: 1,
-        primaryTitle: "Continue",
-        primarySystemImage: "chevron.right",
-        primaryIdentifier: "preview-primary",
-        secondaryTitle: "Close",
-        secondaryIdentifier: "preview-secondary",
-        secondaryAction: {},
-        primaryAction: {},
-        content: {
-            MobileOnboardingTitle(
-                title: "A place for every tab",
-                detail: "Crest keeps the important things ready."
-            )
-            .padding(.vertical, 40)
-        }
-    )
-}

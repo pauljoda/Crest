@@ -32,13 +32,3 @@ struct BrowserSpaceThemeTexture: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Theme Texture — Storm") {
-    BrowserSpaceThemeTexture()
-        .frame(width: 320, height: 180)
-        .background(
-            BrowserSpaceBrandingPreviewFixture.gradientBranding.primaryColor.color
-        )
-        .clipShape(.rect(cornerRadius: CrestRadius.card))
-        .padding(CrestSpacing.large)
-}

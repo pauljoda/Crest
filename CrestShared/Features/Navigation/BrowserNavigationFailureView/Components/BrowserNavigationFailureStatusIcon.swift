@@ -25,12 +25,3 @@ struct BrowserNavigationFailureStatusIcon: View {
             .accessibilityHidden(true)
     }
 }
-
-#Preview("Navigation Failure Status Icon") {
-    BrowserNavigationFailureStatusIcon(
-        symbolName: "wifi.slash",
-        accent: .blue,
-        iconSize: BrowserNavigationFailureMetrics.iconSize
-    )
-    .padding()
-}

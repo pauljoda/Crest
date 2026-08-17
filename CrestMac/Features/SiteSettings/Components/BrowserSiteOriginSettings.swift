@@ -25,16 +25,3 @@ struct BrowserSiteOriginSettings: View {
         }
     }
 }
-
-#Preview("Origin Settings") {
-    @Previewable @State var isExpanded = true
-    let preview = BrowserSiteSettingsPreviewFixture.makePage()
-    BrowserSiteOriginSettings(
-        page: preview.page,
-        origin: BrowserSiteSettingsPreviewFixture.origin,
-        permissionCenter: preview.permissionCenter,
-        isExpanded: $isExpanded
-    )
-    .padding()
-    .frame(width: 300)
-}

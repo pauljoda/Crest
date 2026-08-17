@@ -40,23 +40,3 @@ struct PinnedTabSelectionButton: View {
         .onHover { isHovering = $0 }
     }
 }
-
-#Preview("Pinned Tab Selection Button", traits: .sizeThatFitsLayout) {
-    @Previewable @State var isSelected = true
-    let fixture = PinnedTabGridPreviewFixture()
-
-    PinnedTabSelectionButton(
-        tab: fixture.pinnedTab,
-        profileID: fixture.space.profile.id,
-        isSelected: isSelected,
-        isLoaded: false,
-        siteTheme: BrowserTabIconAccent(
-            red: 0.31,
-            green: 0.58,
-            blue: 0.96
-        ),
-        select: { isSelected.toggle() }
-    )
-    .frame(width: 92)
-    .padding()
-}

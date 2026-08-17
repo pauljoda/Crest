@@ -29,17 +29,3 @@ struct BrowserSpaceBannerSlider: View {
         }
     }
 }
-
-#Preview("Banner Slider") {
-    @Previewable @State var value =
-        BrowserSpaceBrandingPreviewFixture.gradientBranding.bannerStrength
-
-    BrowserSpaceBannerSlider(
-        title: "Color intensity",
-        value: $value,
-        identifier: "preview-space-branding-color-intensity",
-        help: "Controls how strongly the chosen colors enter the sidebar."
-    )
-    .frame(width: 360)
-    .padding(CrestSpacing.large)
-}

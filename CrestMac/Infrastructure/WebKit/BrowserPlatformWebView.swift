@@ -17,10 +17,3 @@ struct BrowserPlatformWebView: NSViewRepresentable {
         host.detach()
     }
 }
-
-#Preview("Platform Web View") {
-    let preview = BrowserDetailPreviewFixture.makeWebContent()
-
-    BrowserPlatformWebView(page: preview.page)
-        .frame(width: 720, height: 480)
-}

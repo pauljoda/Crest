@@ -14,9 +14,3 @@ struct BrowserSoftwareUpdateWindowPresenter: View {
             }
     }
 }
-
-#Preview {
-    BrowserSoftwareUpdateWindowPresenter(
-        model: BrowserSoftwareUpdateModel()
-    )
-}

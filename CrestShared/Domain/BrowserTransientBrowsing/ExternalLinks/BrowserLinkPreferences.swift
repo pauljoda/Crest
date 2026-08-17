@@ -1,5 +1,28 @@
 import Foundation
 
+enum BrowserExternalLinkDestination:
+    String,
+    Codable,
+    CaseIterable,
+    Equatable,
+    Identifiable,
+    Sendable
+{
+    case quickWindow
+    case mostRecentSpace
+    case chosenSpace
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .quickWindow: "Quick Window"
+        case .mostRecentSpace: "Most Recent Space"
+        case .chosenSpace: "Chosen Space"
+        }
+    }
+}
+
 struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     var externalLinkDestination: BrowserExternalLinkDestination
     var externalLinkSpaceID: SpaceID?
@@ -54,37 +77,44 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        externalLinkDestination = try container.decodeIfPresent(
-            BrowserExternalLinkDestination.self,
-            forKey: .externalLinkDestination
-        ) ?? .quickWindow
+        externalLinkDestination =
+            try container.decodeIfPresent(
+                BrowserExternalLinkDestination.self,
+                forKey: .externalLinkDestination
+            ) ?? .quickWindow
         externalLinkSpaceID = try container.decodeIfPresent(
             SpaceID.self,
             forKey: .externalLinkSpaceID
         )
-        automaticallyOpensPeek = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .automaticallyOpensPeek
-        ) ?? true
-        peekClickModifier = try container.decodeIfPresent(
-            BrowserLinkClickModifier.self,
-            forKey: .peekClickModifier
-        ) ?? .option
-        quickWindowArchivePolicy = try container.decodeIfPresent(
-            BrowserQuickWindowArchivePolicy.self,
-            forKey: .quickWindowArchivePolicy
-        ) ?? .after6Hours
-        remembersQuickWindowSpaceBySite = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .remembersQuickWindowSpaceBySite
-        ) ?? true
-        routes = try container.decodeIfPresent(
-            [BrowserLinkRoute].self,
-            forKey: .routes
-        ) ?? []
-        rememberedQuickWindowSpacesBySite = try container.decodeIfPresent(
-            [String: SpaceID].self,
-            forKey: .rememberedQuickWindowSpacesBySite
-        ) ?? [:]
+        automaticallyOpensPeek =
+            try container.decodeIfPresent(
+                Bool.self,
+                forKey: .automaticallyOpensPeek
+            ) ?? true
+        peekClickModifier =
+            try container.decodeIfPresent(
+                BrowserLinkClickModifier.self,
+                forKey: .peekClickModifier
+            ) ?? .option
+        quickWindowArchivePolicy =
+            try container.decodeIfPresent(
+                BrowserQuickWindowArchivePolicy.self,
+                forKey: .quickWindowArchivePolicy
+            ) ?? .after6Hours
+        remembersQuickWindowSpaceBySite =
+            try container.decodeIfPresent(
+                Bool.self,
+                forKey: .remembersQuickWindowSpaceBySite
+            ) ?? true
+        routes =
+            try container.decodeIfPresent(
+                [BrowserLinkRoute].self,
+                forKey: .routes
+            ) ?? []
+        rememberedQuickWindowSpacesBySite =
+            try container.decodeIfPresent(
+                [String: SpaceID].self,
+                forKey: .rememberedQuickWindowSpacesBySite
+            ) ?? [:]
     }
 }

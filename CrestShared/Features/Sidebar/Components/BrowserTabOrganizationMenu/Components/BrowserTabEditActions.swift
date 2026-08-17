@@ -51,21 +51,3 @@ struct BrowserTabEditActions: View {
         }
     }
 }
-
-#Preview("Tab Edit Actions", traits: .sizeThatFitsLayout) {
-    let fixture = BrowserSidebarInteractionPreviewFixture()
-
-    Menu("Open Edit Actions", systemImage: "pencil") {
-        BrowserTabEditActions(
-            tab: fixture.savedTab,
-            isLoaded: true,
-            pullNewIcon: {},
-            restoreSavedLocation: {},
-            performIfCurrent: { action in action(fixture.savedTab) },
-            replaceSavedLocation: { _ in },
-            clearIcon: { _ in },
-            setEmoji: { _, _ in }
-        )
-    }
-    .padding()
-}

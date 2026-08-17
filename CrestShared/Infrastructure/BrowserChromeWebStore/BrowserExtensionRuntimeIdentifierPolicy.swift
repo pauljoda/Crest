@@ -23,9 +23,13 @@ enum BrowserExtensionRuntimeIdentifierPolicy {
         let digest = SHA256.hash(data: Data(uniqueIdentifier.utf8))
             .map { String(format: "%02x", $0) }
             .joined()
-        let baseURL = URL(
-            string: "\(urlScheme)://extension-\(digest)/"
-        )!
+        guard
+            let baseURL = URL(
+                string: "\(urlScheme)://extension-\(digest)/"
+            )
+        else {
+            preconditionFailure("Unable to construct extension runtime URL")
+        }
         return BrowserExtensionRuntimeIdentity(
             extensionID: extensionID,
             uniqueIdentifier: uniqueIdentifier,

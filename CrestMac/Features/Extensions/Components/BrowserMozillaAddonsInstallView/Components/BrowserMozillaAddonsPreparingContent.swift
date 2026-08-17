@@ -18,8 +18,3 @@ struct BrowserMozillaAddonsPreparingContent: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview("Firefox Add-ons Install — Preparing", traits: .sizeThatFitsLayout) {
-    BrowserMozillaAddonsPreparingContent()
-        .padding()
-}

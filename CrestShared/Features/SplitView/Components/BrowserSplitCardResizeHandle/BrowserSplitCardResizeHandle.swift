@@ -99,30 +99,3 @@ struct BrowserSplitCardResizeHandle: View {
         )
     }
 }
-
-#Preview("Split Card Resize Handle") {
-    @Previewable @State var transaction = BrowserSplitWidthTransaction(
-        persistedFractions: [0.5, 0.5]
-    )
-
-    HStack(spacing: 0) {
-        Color.gray.opacity(0.2)
-        BrowserSplitCardResizeHandle(
-            dividerIndex: 0,
-            resize: { delta in
-                transaction.resize(
-                    dividerIndex: 0,
-                    delta: delta,
-                    containerWidth: 520
-                )
-            },
-            commit: { _ = transaction.commit() }
-        )
-        Color.gray.opacity(0.2)
-    }
-    .frame(width: 520, height: 180)
-    // The row the handle measures its drag against, declared here for the same
-    // reason `BrowserSplitColumnsView` declares it: the gesture resolves against
-    // a container, never against the handle.
-    .coordinateSpace(BrowserSplitResizeSpace.coordinateSpace)
-}

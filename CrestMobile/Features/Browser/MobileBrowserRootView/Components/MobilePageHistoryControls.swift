@@ -111,8 +111,3 @@ struct MobilePageHistoryControls: View {
         )
     }
 }
-
-#Preview("Mobile Browser — History Controls", traits: .sizeThatFitsLayout) {
-    MobilePageHistoryControls(pageActions: nil)
-        .padding()
-}

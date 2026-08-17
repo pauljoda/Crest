@@ -16,11 +16,3 @@ struct MobileBrowserStartPageBackground: View {
         .accessibilityHidden(true)
     }
 }
-
-#Preview("Mobile Browser Start Page Background") {
-    let fixture = MobileBrowserPreviewFixture()
-    MobileBrowserStartPageBackground(
-        space: fixture.space,
-        usesCommandPalette: false
-    )
-}

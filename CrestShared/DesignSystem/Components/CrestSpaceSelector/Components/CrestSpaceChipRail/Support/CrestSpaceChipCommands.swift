@@ -21,19 +21,3 @@ struct CrestSpaceChipCommands: ViewModifier {
         }
     }
 }
-
-#Preview("Space Chip Commands", traits: .sizeThatFitsLayout) {
-    Button(CrestSpaceSelectorPreviewFixture.workSpace.name) {}
-        .modifier(
-            CrestSpaceChipCommands(
-                commands: [
-                    .rename {},
-                    .customize {},
-                    .delete {},
-                ]
-            )
-        )
-        .padding()
-        .environment(\.displayScale, 2)
-        .preferredColorScheme(.light)
-}

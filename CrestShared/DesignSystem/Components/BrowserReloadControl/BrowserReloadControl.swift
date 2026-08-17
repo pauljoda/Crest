@@ -123,15 +123,3 @@ struct BrowserReloadControl: View {
         isPlayingReloadFeedback = false
     }
 }
-
-#Preview("Developer Reload Control") {
-    BrowserReloadControl(
-        isLoading: false,
-        isDeveloperMode: true,
-        reloadOrStop: {},
-        reload: {},
-        reloadFromOrigin: {},
-        clearSiteDataAndReload: {}
-    )
-    .padding()
-}

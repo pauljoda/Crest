@@ -22,20 +22,3 @@ struct BrowserAdvancedSettingsPane: View {
         }
     }
 }
-
-#Preview("Advanced Settings") {
-    BrowserAdvancedSettingsPane(
-        browser: BrowserStore.preview(),
-        spaceAccess: BrowserSpaceAccessController(),
-        setupActions: [
-            BrowserAdvancedSetupAction(
-                id: "review-setup",
-                title: "Review Crest Setup",
-                symbol: "sparkles",
-                help: "Review Spaces and tabs"
-            ) {}
-        ],
-        showsMacOSImportRequirement: true
-    )
-    .frame(width: 680, height: 720)
-}

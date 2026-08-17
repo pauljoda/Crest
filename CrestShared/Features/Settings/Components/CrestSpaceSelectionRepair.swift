@@ -20,13 +20,3 @@ struct CrestSpaceSelectionRepair: ViewModifier {
         selection = repaired
     }
 }
-
-#Preview("Space Selection Repair") {
-    Text("Settings")
-        .modifier(
-            CrestSpaceSelectionRepair(
-                browser: BrowserStore.preview(),
-                selection: .constant(nil)
-            )
-        )
-}

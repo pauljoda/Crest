@@ -33,18 +33,3 @@ struct BrowserCommandPaletteContent: View {
         )
     }
 }
-
-#Preview("Command Palette Content — Embedded") {
-    @Previewable @State var model = BrowserCommandPalettePreviewFixture.model(
-        query: "swift"
-    )
-
-    BrowserCommandPaletteContent(
-        model: model,
-        presentation: .embedded,
-        morphNamespace: nil,
-        morphID: nil
-    )
-    .padding(CrestSpacing.large)
-    .frame(width: 760)
-}

@@ -24,13 +24,3 @@ struct BrowserPlatformLinkSettingsGuidance: View {
         }
     }
 }
-
-#Preview("Link Settings Guidance") {
-    Form {
-        BrowserPlatformLinkSettingsGuidance(
-            kind: .peek,
-            peekClickModifier: .command
-        )
-    }
-    .formStyle(.grouped)
-}

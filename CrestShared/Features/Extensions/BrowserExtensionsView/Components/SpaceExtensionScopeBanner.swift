@@ -17,8 +17,3 @@ struct SpaceExtensionScopeBanner: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview("Space Extension Scope", traits: .sizeThatFitsLayout) {
-    SpaceExtensionScopeBanner(space: BrowserExtensionsPreviewFixture.space)
-        .padding()
-}

@@ -23,8 +23,3 @@ struct BrowserNativeWindowControlsBridge: NSViewRepresentable {
         nsView.restoreWindowChrome()
     }
 }
-
-#Preview("Native Window Controls Bridge") {
-    BrowserNativeWindowControlsBridge(isVisible: true)
-        .frame(width: 1, height: 1)
-}

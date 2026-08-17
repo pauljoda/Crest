@@ -28,15 +28,3 @@ struct BrowserQuickWindowActivityLifecycleModifier: ViewModifier {
             }
     }
 }
-
-#Preview("Quick Window Activity Lifecycle") {
-    Color.clear
-        .modifier(
-            BrowserQuickWindowActivityLifecycleModifier(
-                model: BrowserQuickWindowPreviewFixture.makeModel(),
-                spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(),
-                dismiss: {}
-            )
-        )
-        .frame(width: 480, height: 320)
-}

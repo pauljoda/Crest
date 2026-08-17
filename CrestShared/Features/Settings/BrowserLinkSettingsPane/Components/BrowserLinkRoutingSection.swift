@@ -36,19 +36,3 @@ struct BrowserLinkRoutingSection: View {
         }
     }
 }
-
-#Preview("Link Routing") {
-    let fixture = BrowserLinkSettingsPreviewFixture()
-    Form {
-        BrowserLinkRoutingSection(
-            routes: [fixture.route],
-            spaces: fixture.browser.session.spaces,
-            selectedSpaceID: fixture.primarySpace.id,
-            updateRoute: { _, _ in },
-            remove: { _ in },
-            move: { _, _ in },
-            add: { _ in }
-        )
-    }
-    .formStyle(.grouped)
-}

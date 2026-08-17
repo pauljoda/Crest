@@ -7,8 +7,3 @@ struct BrowserPlatformPrivacyScopeFootnote: View {
         )
     }
 }
-
-#Preview("Mac Privacy Scope", traits: .sizeThatFitsLayout) {
-    BrowserPlatformPrivacyScopeFootnote()
-        .padding()
-}

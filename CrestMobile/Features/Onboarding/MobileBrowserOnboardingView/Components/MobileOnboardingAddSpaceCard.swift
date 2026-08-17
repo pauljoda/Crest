@@ -53,8 +53,3 @@ struct MobileOnboardingAddSpaceCard: View {
         )
     }
 }
-
-#Preview("Onboarding Add Space Card", traits: .fixedLayout(width: 340, height: 420)) {
-    MobileOnboardingAddSpaceCard(action: {})
-        .padding()
-}
