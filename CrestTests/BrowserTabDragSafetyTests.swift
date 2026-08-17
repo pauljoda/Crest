@@ -538,6 +538,75 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// Offset rows continue reporting geometry while their drag animation is
+    /// running. That presentation frame must not replace the resting frame the
+    /// reorder calculation started from, or repeated hovers feed each temporary
+    /// offset back into the next one and can push a current tab into Saved.
+    func testActiveDragKeepsTheRestingRowGeometryStable() {
+        let context = makeSplitContext()
+        let state = context.browser.sidebarReorderState
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let groupFrame = CGRect(x: 8, y: 154, width: 374, height: 120)
+        let trailingFrame = CGRect(x: 8, y: 274, width: 374, height: 44)
+        let groupOwner = UUID()
+        let trailingOwner = UUID()
+
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .splitGroup(context.groupID),
+                section: section,
+                frame: groupFrame
+            ),
+            owner: groupOwner
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(context.outsider.id),
+                section: section,
+                frame: trailingFrame
+            ),
+            owner: trailingOwner
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(section),
+                frame: CGRect(x: 0, y: 100, width: 390, height: 300)
+            ),
+            for: UUID()
+        )
+
+        state.begin(
+            item: .splitGroup(context.item),
+            section: section,
+            at: CGPoint(x: groupFrame.midX, y: groupFrame.midY)
+        )
+        state.update(
+            pointer: CGPoint(x: trailingFrame.midX, y: trailingFrame.midY + 1)
+        )
+        XCTAssertEqual(
+            state.displacement(for: .tab(context.outsider.id)),
+            CGSize(width: 0, height: -groupFrame.height)
+        )
+
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(context.outsider.id),
+                section: section,
+                frame: trailingFrame.offsetBy(dx: 0, dy: -groupFrame.height)
+            ),
+            owner: trailingOwner
+        )
+
+        XCTAssertEqual(
+            state.frame(ofRow: .tab(context.outsider.id)),
+            trailingFrame,
+            "Animated hover offsets must never become the row's resting geometry."
+        )
+    }
+
     /// The `.onDrag` provider hands the session a JSON payload. It never leaves
     /// Crest, but it does have to survive the round trip the provider encodes.
     func testTheSplitGroupDragPayloadRoundTripsAsJSON() throws {

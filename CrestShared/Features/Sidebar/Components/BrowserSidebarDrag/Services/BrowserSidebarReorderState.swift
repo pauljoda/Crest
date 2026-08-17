@@ -118,6 +118,11 @@ final class BrowserSidebarReorderState {
     // MARK: - Geometry registration
 
     func register(row: BrowserSidebarReorderRow, owner: UUID) {
+        // A drag offsets neighbouring rows without changing their layout slots.
+        // Their global geometry therefore follows the presentation transform
+        // while the animation runs. Freeze the resting registry at lift time so
+        // those temporary frames cannot feed back into ordering and compound.
+        guard !isDragging else { return }
         rows[row.id] = RegisteredRow(owner: owner, row: row)
     }
 
