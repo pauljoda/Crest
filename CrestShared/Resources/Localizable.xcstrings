@@ -1393,6 +1393,7 @@
       }
     },
     "1Password requires the production-signed Crest for Mac release. Development-signed builds can’t complete sign-in, unlocking, or filling. After installing Crest in Applications, add it in 1Password’s Browser settings." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3831,6 +3832,7 @@
       }
     },
     "Create a tab or choose one from the sidebar." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4474,6 +4476,7 @@
       }
     },
     "Crest verifies native companion access for Chrome Web Store extensions only. This Firefox add-on’s companion connection isn’t available yet; install its Chrome Web Store version in Crest for Mac instead." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8498,6 +8501,7 @@
       }
     },
     "No Tab Selected" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10304,6 +10308,7 @@
       }
     },
     "Remove Suggestion" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

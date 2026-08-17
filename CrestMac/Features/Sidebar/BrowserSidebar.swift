@@ -75,7 +75,7 @@ struct BrowserSidebar: View {
             } message: { _ in
                 Text("History in other Spaces is not affected.")
             }
-            .onChange(of: utilityPresentation.surface) { previous, current in
+            .onChange(of: utilityP''resentation.surface) { previous, current in
                 if previous != current {
                     utilitySearchText = ""
                     utilityFilter = .all
