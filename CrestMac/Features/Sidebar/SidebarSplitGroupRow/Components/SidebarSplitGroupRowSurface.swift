@@ -17,6 +17,10 @@ struct SidebarSplitGroupRowSurface: ViewModifier {
                 .horizontal,
                 SidebarSplitGroupRowMetrics.rowHorizontalInset
             )
+            .padding(
+                .vertical,
+                SidebarSplitGroupRowMetrics.rowVerticalInset
+            )
             .contentShape(.rect)
             .browserSplitGroupDraggable(
                 item: configuration.dragItem,

@@ -13,6 +13,10 @@ enum SidebarSplitGroupRowMetrics {
     /// column as the tabs above and below it.
     static let rowHorizontalInset = SidebarTabRowMetrics.surfaceHorizontalInset
 
+    /// Half the visible gutter between neighboring grouped surfaces. This
+    /// mirrors the mobile row so two adjacent Split Views remain distinct.
+    static let rowVerticalInset: CGFloat = CrestSpacing.extraExtraSmall
+
     /// Inset between the container's edge and the rows inside it.
     static let containerPadding: CGFloat = CrestSpacing.extraSmall
 
