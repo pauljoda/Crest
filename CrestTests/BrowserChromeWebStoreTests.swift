@@ -110,6 +110,73 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    func testVerifierReadsTheSignedIdentityForADirectCRXImport() throws {
+        let fixture = try signedFixture()
+        let verifier = BrowserCRX3Verifier(
+            requiredPublisherKeyHash: fixture.publisherKeyHash
+        )
+
+        let package = try verifier.verify(fixture.crxData)
+
+        XCTAssertEqual(package.extensionID, fixture.extensionID)
+        XCTAssertEqual(package.zipArchiveData, fixture.zipData)
+        XCTAssertEqual(
+            package.publisherKeyHashHex,
+            fixture.publisherKeyHash.hexString
+        )
+    }
+
+    func testDirectCRXPreparationKeepsTheSignedChromeIdentity()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let rootURL = fileManager.temporaryDirectory.appending(
+            path: "crest-local-crx-import-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let sourceURL = rootURL.appending(
+            path: "Source",
+            directoryHint: .isDirectory
+        )
+        let archiveURL = rootURL.appending(path: "probe.zip")
+        let packageURL = rootURL.appending(path: "probe.crx")
+        defer { try? fileManager.removeItem(at: rootURL) }
+        try fileManager.createDirectory(
+            at: sourceURL,
+            withIntermediateDirectories: true
+        )
+        try JSONSerialization.data(
+            withJSONObject: [
+                "manifest_version": 3,
+                "name": "Local CRX Probe",
+                "version": "1.0",
+                "permissions": ["storage"],
+            ] as [String: Any]
+        ).write(to: sourceURL.appending(path: "manifest.json"))
+        try createZipArchive(from: sourceURL, at: archiveURL)
+        let archiveData = try Data(contentsOf: archiveURL)
+        let fixture = try signedFixture(zipData: archiveData)
+        try fixture.crxData.write(to: packageURL)
+
+        let candidate = try await BrowserLocalExtensionProvider(
+            fileManager: fileManager,
+            crxVerifier: BrowserCRX3Verifier(
+                requiredPublisherKeyHash: fixture.publisherKeyHash
+            ),
+            nativeMessagingCapability: .available
+        ).candidate(for: packageURL)
+
+        XCTAssertEqual(candidate.id, fixture.extensionID.rawValue)
+        XCTAssertEqual(candidate.displayName, "Local CRX Probe")
+        XCTAssertEqual(candidate.format, .chromeCRX3)
+        XCTAssertEqual(candidate.package.archiveData, archiveData)
+        XCTAssertEqual(candidate.requestedPermissions, ["storage"])
+        XCTAssertEqual(
+            candidate.format.sourceDisplayName,
+            "Local Chrome Package"
+        )
+    }
+
     func testVerifierRejectsAMismatchedStoreIDAndTampering() throws {
         let fixture = try signedFixture()
         let verifier = BrowserCRX3Verifier(
@@ -255,7 +322,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             <button aria-label="Known message">Open</button>
             </body></html>
             """
-                .utf8
+            .utf8
         ).write(to: popupURL)
         let appPageURL = root.appending(path: "app/app.html")
         try fileManager.createDirectory(
@@ -3149,7 +3216,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
     }
 
     private func signedFixture(
-        includesPublisherProof: Bool = true
+        includesPublisherProof: Bool = true,
+        zipData suppliedZipData: Data? = nil
     ) throws -> SignedFixture {
         let developer = P256.Signing.PrivateKey()
         let publisher = P256.Signing.PrivateKey()
@@ -3164,7 +3232,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let extensionIDBytes = Data(developerHash.prefix(16))
         let signedHeader = protobufField(1, bytes: extensionIDBytes)
         let zipData =
-            Data([0x50, 0x4b, 0x03, 0x04])
+            suppliedZipData
+            ?? Data([0x50, 0x4b, 0x03, 0x04])
             + Data("signed crest extension fixture".utf8)
         let signedMessage =
             Data("CRX3 SignedData\0".utf8)

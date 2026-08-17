@@ -6,4 +6,9 @@ extension BrowserExtensionInstallationSource {
         if case .chromeWebStore = self { return true }
         return false
     }
+
+    var isLocalPackage: Bool {
+        if case .localPackage = self { return true }
+        return false
+    }
 }

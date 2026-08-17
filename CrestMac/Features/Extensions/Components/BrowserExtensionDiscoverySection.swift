@@ -2,12 +2,14 @@ import SwiftUI
 
 struct BrowserExtensionDiscoverySection: View {
     @Bindable var model: BrowserExtensionDiscoveryModel
+    let isPackageImportBusy: Bool
+    let choosePackage: () -> Void
 
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: CrestSpacing.medium) {
                 Text(
-                    "Find signed Safari Web Extensions in installed apps, or choose another source. Crest verifies each extension before offering it."
+                    "Find signed Safari Web Extensions in installed apps, install a Chrome or Firefox package, or choose an unpacked extension. Crest inspects every extension before adding it."
                 )
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -27,13 +29,20 @@ struct BrowserExtensionDiscoverySection: View {
                     .buttonStyle(.bordered)
 
                     Button(
+                        "Install Package…",
+                        systemImage: "doc.badge.plus",
+                        action: choosePackage
+                    )
+                    .buttonStyle(.bordered)
+
+                    Button(
                         "Load Unpacked…",
                         systemImage: "folder.badge.plus",
                         action: model.chooseUnpackedExtension
                     )
                     .buttonStyle(.bordered)
                 }
-                .disabled(model.isBusy)
+                .disabled(model.isBusy || isPackageImportBusy)
             }
             .padding(.vertical, CrestSpacing.extraSmall)
 
@@ -59,7 +68,7 @@ struct BrowserExtensionDiscoverySection: View {
                         Text("No Installable Extensions Found")
                             .font(.body.weight(.medium))
                         Text(
-                            "You can still choose a signed extension app or load an unpacked WebExtension."
+                            "You can still choose a signed extension app, install a Chrome or Firefox package, or load an unpacked WebExtension."
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)

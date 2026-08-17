@@ -406,6 +406,10 @@ final class BrowserExtensionRegistry {
         switch source {
         case .unpackedPackage:
             return true
+        case .localPackage(let localSource):
+            return localSource.extensionID == extensionID
+                && isSafeIdentifier(localSource.extensionID)
+                && isSHA256Hex(localSource.sha256Hex)
         case .safariWebExtension(let safariSource):
             guard !safariSource.applicationBookmark.isEmpty,
                 isSafeIdentifier(

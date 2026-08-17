@@ -23,18 +23,21 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
         resourceURL: URL,
         installation: BrowserExtensionInstallation
     ) throws -> BrowserExtensionStoredResource {
-        let hasVerifiedStoreIdentity: Bool
+        let supportsCompatibilityPreparation: Bool
         switch installation.source {
         case .chromeWebStore(let source):
-            hasVerifiedStoreIdentity =
+            supportsCompatibilityPreparation =
                 source.extensionID.rawValue == installation.id
         case .mozillaAddons(let source):
-            hasVerifiedStoreIdentity =
+            supportsCompatibilityPreparation =
                 source.extensionID.rawValue == installation.id
+        case .localPackage(let source):
+            supportsCompatibilityPreparation =
+                source.extensionID == installation.id
         case .unpackedPackage, .safariWebExtension, nil:
-            hasVerifiedStoreIdentity = false
+            supportsCompatibilityPreparation = false
         }
-        guard hasVerifiedStoreIdentity else {
+        guard supportsCompatibilityPreparation else {
             return BrowserExtensionStoredResource(resourceURL: resourceURL)
         }
         guard

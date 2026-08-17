@@ -439,6 +439,98 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         }
     }
 
+    func testDirectXPIIsReviewedAndInstalledAsALocalSpacePackage()
+        async throws
+    {
+        let fixture = try archiveFixture()
+        let fileManager = FileManager.default
+        let rootURL = fileManager.temporaryDirectory.appending(
+            path: "crest-local-xpi-import-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let sourceURL = rootURL.appending(path: "dark-reader.xpi")
+        let packageRootURL = rootURL.appending(
+            path: "Packages",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: rootURL) }
+        try fileManager.createDirectory(
+            at: rootURL,
+            withIntermediateDirectories: true
+        )
+        try fixture.archiveData.write(to: sourceURL)
+
+        let candidate = try await BrowserLocalExtensionProvider(
+            fileManager: fileManager,
+            nativeMessagingCapability: .available
+        ).candidate(for: sourceURL)
+
+        XCTAssertEqual(candidate.id, fixture.extensionID.rawValue)
+        XCTAssertEqual(candidate.format, .firefoxXPI)
+        XCTAssertEqual(candidate.package.archiveData, fixture.archiveData)
+        XCTAssertEqual(candidate.source.sha256Hex, fixture.sha256Hex)
+        XCTAssertEqual(
+            candidate.format.sourceDisplayName,
+            "Local Firefox Package"
+        )
+
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                fileManager: fileManager,
+                rootURL: packageRootURL,
+                removesRootOnDeinit: false
+            ),
+            registry: registry
+        )
+        let space = BrowserSession.preview.spaces[0]
+        let summary = try await pool.installLocalExtension(
+            candidate,
+            in: space
+        )
+        let installation = try XCTUnwrap(
+            registry.installation(extensionID: candidate.id, in: space.id)
+        )
+
+        XCTAssertEqual(summary.sourceDisplayName, "Local Firefox Package")
+        XCTAssertEqual(installation.source, .localPackage(candidate.source))
+        XCTAssertEqual(
+            installation.sourceDisplayName,
+            "Local Firefox Package"
+        )
+        XCTAssertTrue(
+            fileManager.fileExists(
+                atPath:
+                    packageRootURL
+                    .appending(
+                        path: space.id.rawValue.uuidString.lowercased(),
+                        directoryHint: .isDirectory
+                    )
+                    .appending(path: installation.packageName).path
+            )
+        )
+
+        try await pool.removeExtension(
+            extensionID: candidate.id,
+            from: space
+        )
+
+        XCTAssertNil(
+            registry.installation(extensionID: candidate.id, in: space.id)
+        )
+        XCTAssertFalse(
+            fileManager.fileExists(
+                atPath:
+                    packageRootURL
+                    .appending(
+                        path: space.id.rawValue.uuidString.lowercased(),
+                        directoryHint: .isDirectory
+                    )
+                    .appending(path: installation.packageName).path
+            )
+        )
+    }
+
     // MARK: - Provenance
 
     func testVerifiedArchiveStagesUnderTheGeckoIdentityInItsSpace() throws {
@@ -1196,6 +1288,9 @@ final class BrowserMozillaAddonsTests: XCTestCase {
                     "manifest_version": 2,
                     "name": "Dark Reader",
                     "version": "4.9.129",
+                    "browser_specific_settings": [
+                        "gecko": ["id": darkReaderGUID]
+                    ],
                 ] as [String: Any]
             ).write(to: sourceURL.appending(path: "manifest.json"))
         } else {

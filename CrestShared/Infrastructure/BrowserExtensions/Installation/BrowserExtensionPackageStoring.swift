@@ -16,6 +16,11 @@ protocol BrowserExtensionPackageStoring {
         in spaceID: SpaceID
     ) throws -> BrowserExtensionPackage
 
+    func stage(
+        _ package: BrowserLocalExtensionPackage,
+        in spaceID: SpaceID
+    ) throws -> BrowserExtensionPackage
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,

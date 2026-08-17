@@ -34,6 +34,21 @@ struct BrowserCRX3Verifier: Sendable {
         _ crxData: Data,
         expectedID: BrowserChromeExtensionID
     ) throws -> BrowserVerifiedCRX3Package {
+        try verify(crxData, expectedID: Optional(expectedID))
+    }
+
+    /// Verifies a directly selected CRX3 package and trusts only the identity
+    /// carried by its signed header. The Chrome Web Store publisher proof is
+    /// still mandatory, so choosing a file never weakens the store install
+    /// path into accepting a self-signed lookalike.
+    func verify(_ crxData: Data) throws -> BrowserVerifiedCRX3Package {
+        try verify(crxData, expectedID: nil)
+    }
+
+    private func verify(
+        _ crxData: Data,
+        expectedID: BrowserChromeExtensionID?
+    ) throws -> BrowserVerifiedCRX3Package {
         guard crxData.count <= Self.maximumPackageByteCount else {
             throw BrowserCRX3VerifierError.packageTooLarge
         }
@@ -74,7 +89,7 @@ struct BrowserCRX3Verifier: Sendable {
         else {
             throw BrowserCRX3VerifierError.invalidHeader
         }
-        guard declaredID == expectedID else {
+        guard expectedID == nil || declaredID == expectedID else {
             throw BrowserCRX3VerifierError.extensionIDMismatch
         }
 

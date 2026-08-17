@@ -194,7 +194,7 @@ final class BrowserExtensionRuntimeContextController {
             )
             runtimeResourceAccess[space.id, default: [:]][installation.id] =
                 resource.access
-        case .chromeWebStore, .mozillaAddons:
+        case .chromeWebStore, .mozillaAddons, .localPackage:
             context = try await loadStoredPackage(
                 installation,
                 in: space

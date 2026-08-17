@@ -19,6 +19,12 @@ Do not publish a blanket claim that all Chrome or all Firefox extensions work.
 - The Chrome Web Store page opens a native Crest review sheet. Crest verifies
   the signed CRX3 package, shows requested permissions and website access, and
   installs the extension into the selected Space.
+- Extensions settings can also review and install a selected `.crx` or `.xpi`
+  file. A CRX still has to carry both a valid developer signature and Chrome
+  Web Store publisher proof. An XPI is validated as a WebExtension archive but
+  remains a local package because the file alone cannot reproduce its Firefox
+  Add-ons listing provenance. Both formats are copied into the selected Space,
+  and neither receives store updates or verified native-companion access.
 - Extension installations remain **per Space and per device**. Permissions,
   storage, enablement, website access, and pinning do not silently cross into
   another Space or device.
@@ -56,6 +62,10 @@ what decides whether it can be updated.
 - **Unpacked extensions** are never updated. There is no store identity to
   verify a replacement against, which is the same reason they are ineligible
   for native messaging.
+- **Local CRX and XPI packages** are never updated. Even when a selected CRX
+  proves its Chrome Web Store signature, choosing a file does not establish the
+  canonical store page needed for the update contract. A local XPI likewise
+  has no trusted Firefox Add-ons listing bound to its bytes.
 - **Extensions loaded from an installed app** are not updated by Crest. They
   belong to the host application and change when it does.
 

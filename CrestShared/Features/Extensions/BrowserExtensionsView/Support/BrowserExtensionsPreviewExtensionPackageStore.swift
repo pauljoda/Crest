@@ -24,6 +24,13 @@ struct BrowserExtensionsPreviewExtensionPackageStore:
         throw BrowserExtensionPackageStoreError.unsupportedSource
     }
 
+    func stage(
+        _ package: BrowserLocalExtensionPackage,
+        in spaceID: SpaceID
+    ) throws -> BrowserExtensionPackage {
+        throw BrowserExtensionPackageStoreError.unsupportedSource
+    }
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,

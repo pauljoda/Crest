@@ -211,5 +211,6 @@ final class BrowserExtensionInstallationController {
         installation.source == nil
             || installation.source == .unpackedPackage
             || installation.source?.isChromeWebStore == true
+            || installation.source?.isLocalPackage == true
     }
 }

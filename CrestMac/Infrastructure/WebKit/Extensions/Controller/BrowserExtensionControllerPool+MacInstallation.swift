@@ -31,4 +31,15 @@ extension BrowserExtensionControllerPool {
             in: space
         )
     }
+
+    @discardableResult
+    func installLocalExtension(
+        _ candidate: BrowserLocalExtensionCandidate,
+        in space: BrowserSpace
+    ) async throws -> BrowserExtensionSummary {
+        try await installationController.installLocalExtension(
+            candidate,
+            in: space
+        )
+    }
 }

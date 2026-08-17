@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
@@ -168,6 +169,49 @@ final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
         }
         return BrowserExtensionPackage(
             extensionID: package.extensionID.rawValue,
+            packageName: packageName,
+            resourceURL: destinationURL
+        )
+    }
+
+    func stage(
+        _ package: BrowserLocalExtensionPackage,
+        in spaceID: SpaceID
+    ) throws -> BrowserExtensionPackage {
+        guard package.archiveData.count <= Self.maximumArchiveByteCount else {
+            throw BrowserExtensionPackageStoreError.packageTooLarge
+        }
+        guard package.archiveData.starts(with: [0x50, 0x4b, 0x03, 0x04]) else {
+            throw BrowserExtensionPackageStoreError.unsupportedSource
+        }
+        let digest = Data(SHA256.hash(data: package.archiveData)).hexString
+        guard digest == package.sha256Hex.lowercased() else {
+            throw BrowserExtensionPackageStoreError.unsupportedSource
+        }
+
+        let packageName =
+            "local-\(UUID().uuidString.lowercased())-"
+            + "\(package.format.filenameExtension).zip"
+        let destinationURL = try resourceURL(
+            packageName: packageName,
+            in: spaceID,
+            requiresExistingFile: false
+        )
+        try fileManager.createDirectory(
+            at: destinationURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        do {
+            try package.archiveData.write(
+                to: destinationURL,
+                options: [.atomic]
+            )
+        } catch {
+            try? fileManager.removeItem(at: destinationURL)
+            throw error
+        }
+        return BrowserExtensionPackage(
+            extensionID: package.extensionID,
             packageName: packageName,
             resourceURL: destinationURL
         )

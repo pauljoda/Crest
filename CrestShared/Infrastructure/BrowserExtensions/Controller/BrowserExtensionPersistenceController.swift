@@ -187,6 +187,13 @@ final class BrowserExtensionPersistenceController {
         try packageStore.stage(package, in: spaceID)
     }
 
+    func stage(
+        _ package: BrowserLocalExtensionPackage,
+        in spaceID: SpaceID
+    ) throws -> BrowserExtensionPackage {
+        try packageStore.stage(package, in: spaceID)
+    }
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,
@@ -399,6 +406,7 @@ final class BrowserExtensionPersistenceController {
             previous.source == nil
                 || previous.source == .unpackedPackage
                 || previous.source?.isChromeWebStore == true
+                || previous.source?.isLocalPackage == true
         else {
             return
         }

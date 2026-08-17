@@ -1,7 +1,7 @@
 extension BrowserExtensionCompatibilitySource {
     init(installationSource: BrowserExtensionInstallationSource?) {
         switch installationSource {
-        case nil, .unpackedPackage:
+        case nil, .unpackedPackage, .localPackage:
             self = .unpackedPackage
         case .chromeWebStore:
             self = .chromeWebStore
