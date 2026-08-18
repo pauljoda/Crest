@@ -39,8 +39,10 @@ Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) to discuss early
 ideas, user questions, and compatibility experiences before they become
 actionable engineering work. Use GitHub Issues for reproducible bugs and
 concrete outcomes. The public
-[Crest 0.5 project](https://github.com/users/pauljoda/projects/3) and milestones
-summarize planned release work without exposing private planning details.
+[Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
+release milestones summarize planned work without exposing private planning
+details. The one-way mapping is documented in
+[`Documentation/PlanningSync.md`](Documentation/PlanningSync.md).
 
 See [SUPPORT.md](SUPPORT.md) for reporting routes and
 [GOVERNANCE.md](GOVERNANCE.md) for the current ownership and decision model.

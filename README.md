@@ -15,7 +15,7 @@
     ·
     <a href="https://github.com/pauljoda/Crest/releases/latest">Download for Mac</a>
     ·
-    <a href="https://github.com/users/pauljoda/projects/3">0.5 roadmap</a>
+    <a href="https://github.com/users/pauljoda/projects/3">Roadmap</a>
     ·
     <a href="https://www.reddit.com/r/CrestBrowser">Community</a>
   </p>
@@ -103,7 +103,7 @@ Behavior changes should begin with a focused regression test, followed by the af
 
 ## Project status
 
-Crest is under active development. The current implementation includes the core browsing, Space isolation, native platform chrome, credentials, data portability, synchronization foundations, Quick Window, Peek, and privacy features described above. The [Crest 0.5 project](https://github.com/users/pauljoda/projects/3) is the public release view; approval-gated and physical-device work remains documented in the [roadmap](Documentation/ROADMAP.md).
+Crest is under active development. The current implementation includes the core browsing, Space isolation, native platform chrome, credentials, data portability, synchronization foundations, Quick Window, Peek, and privacy features described above. The [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) is the public release view; approval-gated and physical-device work remains documented in the [roadmap](Documentation/ROADMAP.md).
 
 ## Community and support
 
