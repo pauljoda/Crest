@@ -40,6 +40,28 @@ version_file="$repository_path/Config/Version.xcconfig"
 [ -f "$version_file" ] \
     || fail "Config/Version.xcconfig is missing from the primary repository."
 
+project_file="$repository_path/Crest.xcodeproj/project.pbxproj"
+[ -f "$project_file" ] \
+    || fail "Crest.xcodeproj/project.pbxproj is missing from the primary repository."
+
+expected_build="${CI_BUILD_NUMBER:-}"
+case "$expected_build" in
+    ''|*[!0-9]*)
+        fail "CI_BUILD_NUMBER must be a positive integer; received '${expected_build:-unset}'."
+        ;;
+    0)
+        fail "CI_BUILD_NUMBER must be a positive integer; received '0'."
+        ;;
+esac
+
+# Xcode Cloud exposes its monotonically increasing build number through
+# CI_BUILD_NUMBER, but it does not override CURRENT_PROJECT_VERSION for the
+# archive. Stamp the generated project in this ephemeral checkout so the
+# distributed artifact uses the number Xcode Cloud assigned.
+sed -i '' -E \
+    "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $expected_build;/g" \
+    "$project_file"
+
 expected_version="$(
     sed -nE \
         's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' \
@@ -68,4 +90,11 @@ resolved_version="$(
 [ "$resolved_version" = "$expected_version" ] \
     || fail "${expected_scheme} Release resolves MARKETING_VERSION as '${resolved_version:-unset}', expected $expected_version."
 
-echo "Validated ${expected_scheme} Release MARKETING_VERSION $resolved_version before the Xcode Cloud archive."
+resolved_build="$(
+    echo "$build_settings" \
+        | awk -F ' = ' '$1 ~ /^[[:space:]]*CURRENT_PROJECT_VERSION$/ { print $2; exit }'
+)"
+[ "$resolved_build" = "$expected_build" ] \
+    || fail "${expected_scheme} Release resolves CURRENT_PROJECT_VERSION as '${resolved_build:-unset}', expected Xcode Cloud build $expected_build."
+
+echo "Validated ${expected_scheme} Release version $resolved_version ($resolved_build) before the Xcode Cloud archive."
