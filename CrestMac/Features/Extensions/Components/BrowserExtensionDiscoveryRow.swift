@@ -7,7 +7,7 @@ struct BrowserExtensionDiscoveryRow: View {
     let isDisabled: Bool
     let install: () -> Void
 
-    private var candidate: BrowserSafariWebExtensionCandidate {
+    private var candidate: BrowserExtensionDiscoveryCandidate {
         item.candidate
     }
 
@@ -63,12 +63,7 @@ struct BrowserExtensionDiscoveryRow: View {
 
             DisclosureGroup("Review Access and Compatibility") {
                 VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-                    LabeledContent("Type", value: "Safari Web Extension")
-                    LabeledContent(
-                        "Signed Developer",
-                        value: candidate.source.developerTeamIdentifier
-                            ?? "Verified"
-                    )
+                    sourceReview
                     LabeledContent("Install In", value: "\(space.name) Space")
 
                     if !candidate.requestedPermissions.isEmpty {
@@ -97,5 +92,31 @@ struct BrowserExtensionDiscoveryRow: View {
             .font(.callout)
         }
         .padding(.vertical, CrestSpacing.small)
+    }
+
+    @ViewBuilder
+    private var sourceReview: some View {
+        switch item.candidate {
+        case .safariApplication(let applicationCandidate):
+            LabeledContent("Type", value: "Safari Web Extension")
+            LabeledContent(
+                "Signed Developer",
+                value: applicationCandidate.source.developerTeamIdentifier
+                    ?? "Verified"
+            )
+        case .safariCustom:
+            LabeledContent("Type", value: "Safari Custom WebExtension")
+            LabeledContent("Source", value: "Copied from Safari")
+            Label {
+                Text(
+                    "Crest installs its own copy. Safari permissions, profile assignments, and updates are not imported."
+                )
+                .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "doc.on.doc")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
     }
 }

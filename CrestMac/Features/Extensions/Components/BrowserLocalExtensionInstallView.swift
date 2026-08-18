@@ -272,6 +272,8 @@ struct BrowserLocalExtensionInstallView: View {
             String(localized: "Chrome Web Store signature verified")
         case .firefoxXPI:
             String(localized: "Local Firefox package")
+        case .safariCustom:
+            String(localized: "Safari custom extension")
         }
     }
 
@@ -283,6 +285,8 @@ struct BrowserLocalExtensionInstallView: View {
             "checkmark.seal.fill"
         case .firefoxXPI:
             "doc.zipper"
+        case .safariCustom:
+            "wand.and.sparkles"
         }
     }
 }

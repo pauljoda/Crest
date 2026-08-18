@@ -1,6 +1,6 @@
 import Foundation
 
-struct BrowserLocalExtensionCandidate: Identifiable, Sendable {
+struct BrowserLocalExtensionCandidate: Equatable, Identifiable, Sendable {
     let package: BrowserLocalExtensionPackage
     let displayName: String
     let version: String?

@@ -9,17 +9,17 @@ struct BrowserExtensionDiscoverySection: View {
         Section {
             VStack(alignment: .leading, spacing: CrestSpacing.medium) {
                 Text(
-                    "Find signed Safari Web Extensions in installed apps, install a Chrome or Firefox package, or choose an unpacked extension. Crest inspects every extension before adding it."
+                    "Find Safari Web Extensions in installed apps and Safari-created custom extensions, install a Chrome or Firefox package, or choose an unpacked extension. Crest inspects every extension before adding it."
                 )
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
                 HStack(spacing: CrestSpacing.small) {
                     Button(
-                        "Scan for Apps",
+                        "Scan Installed",
                         systemImage: "sparkle.magnifyingglass"
                     ) {
-                        Task { await model.scanApplications() }
+                        Task { await model.scanInstalled() }
                     }
                     .buttonStyle(.borderedProminent)
 
@@ -46,19 +46,52 @@ struct BrowserExtensionDiscoverySection: View {
             }
             .padding(.vertical, CrestSpacing.extraSmall)
 
-            if model.isScanningApplications {
+            if model.isScanningInstalled {
                 HStack(spacing: CrestSpacing.small) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Scanning Applications…")
+                    Text("Scanning Installed Extensions…")
                         .foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .combine)
             }
 
-            if model.didScanApplications,
+            if model.needsSafariCustomExtensionAccess,
+                !model.isScanningInstalled
+            {
+                HStack(alignment: .center, spacing: CrestSpacing.medium) {
+                    Label {
+                        VStack(
+                            alignment: .leading,
+                            spacing: CrestSpacing.extraSmall
+                        ) {
+                            Text("Include Safari Custom Extensions")
+                                .font(.body.weight(.medium))
+                            Text(
+                                "Safari keeps extensions it creates in a privacy-protected folder. Choose that folder once so Crest can inspect and copy them."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "hand.raised")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer(minLength: CrestSpacing.medium)
+
+                    Button("Choose Safari Folder…") {
+                        model.chooseSafariCustomExtensionFolder()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(.vertical, CrestSpacing.extraSmall)
+            }
+
+            if model.didScanInstalled,
                 model.installableItems.isEmpty,
-                !model.isScanningApplications
+                !model.isScanningInstalled,
+                !model.needsSafariCustomExtensionAccess
             {
                 Label {
                     VStack(
@@ -93,7 +126,7 @@ struct BrowserExtensionDiscoverySection: View {
                     isInstalling: model.installingExtensionID == item.id,
                     isDisabled: model.installingExtensionID != nil,
                     install: {
-                        Task { await model.install(item.candidate) }
+                        Task { await model.install(item) }
                     }
                 )
             }
@@ -101,7 +134,7 @@ struct BrowserExtensionDiscoverySection: View {
             Text("Find Extensions")
         } footer: {
             Text(
-                "Crest supports standards-based Safari Web Extensions. Safari content blockers and legacy Safari App Extensions can’t be hosted by another browser."
+                "Safari-created extensions are copied into this Space and reviewed with fresh Crest permissions. Safari content blockers and legacy Safari App Extensions can’t be hosted by another browser."
             )
         }
     }

@@ -2,8 +2,10 @@ import CryptoKit
 import Foundation
 
 final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
-    private static let maximumDirectoryEntryCount = 5_000
-    private static let maximumDirectoryByteCount = 256 * 1_024 * 1_024
+    private static let maximumDirectoryEntryCount =
+        BrowserLocalExtensionPackage.maximumDirectoryEntryCount
+    private static let maximumDirectoryByteCount =
+        BrowserLocalExtensionPackage.maximumDirectoryByteCount
     private static let maximumArchiveByteCount = 64 * 1_024 * 1_024
 
     private let fileManager: FileManager
@@ -178,13 +180,25 @@ final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
         _ package: BrowserLocalExtensionPackage,
         in spaceID: SpaceID
     ) throws -> BrowserExtensionPackage {
-        guard package.archiveData.count <= Self.maximumArchiveByteCount else {
-            throw BrowserExtensionPackageStoreError.packageTooLarge
+        if case .directory(let files) = package.payload {
+            return try stageDirectoryPackage(
+                package,
+                files: files,
+                in: spaceID
+            )
         }
-        guard package.archiveData.starts(with: [0x50, 0x4b, 0x03, 0x04]) else {
+        guard case .archive(let archiveData) = package.payload,
+            package.format != .safariCustom
+        else {
             throw BrowserExtensionPackageStoreError.unsupportedSource
         }
-        let digest = Data(SHA256.hash(data: package.archiveData)).hexString
+        guard archiveData.count <= Self.maximumArchiveByteCount else {
+            throw BrowserExtensionPackageStoreError.packageTooLarge
+        }
+        guard archiveData.starts(with: [0x50, 0x4b, 0x03, 0x04]) else {
+            throw BrowserExtensionPackageStoreError.unsupportedSource
+        }
+        let digest = Data(SHA256.hash(data: archiveData)).hexString
         guard digest == package.sha256Hex.lowercased() else {
             throw BrowserExtensionPackageStoreError.unsupportedSource
         }
@@ -202,10 +216,53 @@ final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
             withIntermediateDirectories: true
         )
         do {
-            try package.archiveData.write(
+            try archiveData.write(
                 to: destinationURL,
                 options: [.atomic]
             )
+        } catch {
+            try? fileManager.removeItem(at: destinationURL)
+            throw error
+        }
+        return BrowserExtensionPackage(
+            extensionID: package.extensionID,
+            packageName: packageName,
+            resourceURL: destinationURL
+        )
+    }
+
+    private func stageDirectoryPackage(
+        _ package: BrowserLocalExtensionPackage,
+        files: [BrowserLocalExtensionDirectoryFile],
+        in spaceID: SpaceID
+    ) throws -> BrowserExtensionPackage {
+        guard package.validatedSafariCustomDirectoryFiles == files
+        else {
+            throw BrowserExtensionPackageStoreError.unsupportedSource
+        }
+
+        let packageName =
+            "local-\(UUID().uuidString.lowercased())-safari-custom"
+        let destinationURL = try resourceURL(
+            packageName: packageName,
+            in: spaceID,
+            requiresExistingFile: false
+        )
+        try fileManager.createDirectory(
+            at: destinationURL,
+            withIntermediateDirectories: true
+        )
+        do {
+            for file in files {
+                let fileURL = destinationURL.appending(
+                    path: file.relativePath
+                )
+                try fileManager.createDirectory(
+                    at: fileURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try file.data.write(to: fileURL, options: [.atomic])
+            }
         } catch {
             try? fileManager.removeItem(at: destinationURL)
             throw error

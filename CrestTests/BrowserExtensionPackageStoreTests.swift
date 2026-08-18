@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 final class BrowserExtensionPackageStoreTests: XCTestCase {
@@ -23,9 +24,11 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         let fileManager = FileManager.default
         let testRoot = fileManager.temporaryDirectory
             .appending(path: "crest-extension-store-test-\(UUID().uuidString)", directoryHint: .isDirectory)
-        let source = testRoot
+        let source =
+            testRoot
             .appending(path: "source", directoryHint: .isDirectory)
-        let staging = testRoot
+        let staging =
+            testRoot
             .appending(path: "staging", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: testRoot) }
         try fileManager.createDirectory(at: source, withIntermediateDirectories: true)
@@ -44,6 +47,94 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         XCTAssertTrue(package.resourceURL.path.hasPrefix(staging.path))
     }
 
+    func testStagingASafariCustomSnapshotCreatesAnOwnedDirectory() throws {
+        let fileManager = FileManager.default
+        let testRoot = fileManager.temporaryDirectory.appending(
+            path: "crest-safari-custom-store-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: testRoot) }
+        let store = BrowserExtensionPackageStore(
+            fileManager: fileManager,
+            rootURL: testRoot
+        )
+        let package = BrowserLocalExtensionPackage(
+            extensionID:
+                "com.apple.Safari.MagicExtensions.OblivionPortalGlow-F5B5",
+            format: .safariCustom,
+            directoryFiles: [
+                BrowserLocalExtensionDirectoryFile(
+                    relativePath: "manifest.json",
+                    data: Data(
+                        #"{"manifest_version":3,"name":"Glow","version":"1.0"}"#
+                            .utf8
+                    )
+                ),
+                BrowserLocalExtensionDirectoryFile(
+                    relativePath: "styles/glow.css",
+                    data: Data("body { color: red; }".utf8)
+                ),
+            ]
+        )
+
+        let staged = try store.stage(package, in: SpaceID())
+
+        XCTAssertEqual(staged.extensionID, package.extensionID)
+        XCTAssertTrue(
+            fileManager.fileExists(
+                atPath: staged.resourceURL
+                    .appending(path: "manifest.json")
+                    .path
+            )
+        )
+        XCTAssertEqual(
+            try Data(
+                contentsOf: staged.resourceURL.appending(
+                    path: "styles/glow.css"
+                )
+            ),
+            Data("body { color: red; }".utf8)
+        )
+    }
+
+    func testStagingASafariCustomSnapshotRejectsTraversal() throws {
+        let fileManager = FileManager.default
+        let rootURL = fileManager.temporaryDirectory.appending(
+            path: "crest-safari-custom-traversal-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: rootURL) }
+        let store = BrowserExtensionPackageStore(
+            fileManager: fileManager,
+            rootURL: rootURL
+        )
+        let package = BrowserLocalExtensionPackage(
+            extensionID: "com.apple.Safari.MagicExtensions.Invalid-1234",
+            format: .safariCustom,
+            directoryFiles: [
+                BrowserLocalExtensionDirectoryFile(
+                    relativePath: "manifest.json",
+                    data: Data("{}".utf8)
+                ),
+                BrowserLocalExtensionDirectoryFile(
+                    relativePath: "../outside.js",
+                    data: Data("nope".utf8)
+                ),
+            ]
+        )
+
+        XCTAssertThrowsError(try store.stage(package, in: SpaceID()))
+        XCTAssertFalse(
+            fileManager.fileExists(
+                atPath:
+                    rootURL
+                    .deletingLastPathComponent()
+                    .appending(path: "outside.js")
+                    .path
+            )
+        )
+    }
+
     func testRestagingTheSameFolderKeepsOneIdentityAndANewStoredCopy() throws {
         let fileManager = FileManager.default
         let testRoot = fileManager.temporaryDirectory
@@ -51,9 +142,11 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 path: "crest-extension-identity-test-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        let source = testRoot
+        let source =
+            testRoot
             .appending(path: "source", directoryHint: .isDirectory)
-        let staging = testRoot
+        let staging =
+            testRoot
             .appending(path: "staging", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: testRoot) }
         try fileManager.createDirectory(
@@ -81,7 +174,8 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 path: "crest-extension-distinct-test-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        let staging = testRoot
+        let staging =
+            testRoot
             .appending(path: "staging", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: testRoot) }
         let store = BrowserExtensionPackageStore(
@@ -90,7 +184,8 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         )
         var identifiers: Set<String> = []
         for name in ["alpha", "beta"] {
-            let source = testRoot
+            let source =
+                testRoot
                 .appending(path: name, directoryHint: .isDirectory)
             try fileManager.createDirectory(
                 at: source,
@@ -112,7 +207,8 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 path: "crest-extension-key-test-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        let staging = testRoot
+        let staging =
+            testRoot
             .appending(path: "staging", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: testRoot) }
         let store = BrowserExtensionPackageStore(
@@ -125,7 +221,8 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         )
         var identifiers: Set<String> = []
         for name in ["before-move", "after-move"] {
-            let source = testRoot
+            let source =
+                testRoot
                 .appending(path: name, directoryHint: .isDirectory)
             try fileManager.createDirectory(
                 at: source,
@@ -142,9 +239,11 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         let fileManager = FileManager.default
         let testRoot = fileManager.temporaryDirectory
             .appending(path: "crest-extension-discard-test-\(UUID().uuidString)", directoryHint: .isDirectory)
-        let source = testRoot
+        let source =
+            testRoot
             .appending(path: "source", directoryHint: .isDirectory)
-        let staging = testRoot
+        let staging =
+            testRoot
             .appending(path: "staging", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: testRoot) }
         try fileManager.createDirectory(at: source, withIntermediateDirectories: true)
@@ -165,9 +264,11 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 path: "crest-extension-reconstruction-test-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        let source = testRoot
+        let source =
+            testRoot
             .appending(path: "source", directoryHint: .isDirectory)
-        let packageRoot = testRoot
+        let packageRoot =
+            testRoot
             .appending(path: "packages", directoryHint: .isDirectory)
         let spaceID = SpaceID()
         defer { try? fileManager.removeItem(at: testRoot) }
@@ -201,7 +302,8 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         )
         XCTAssertTrue(
             fileManager.fileExists(
-                atPath: reconstructedURL
+                atPath:
+                    reconstructedURL
                     .appending(path: "manifest.json")
                     .path
             )
@@ -221,9 +323,11 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 path: "crest-extension-space-deletion-test-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        let source = testRoot
+        let source =
+            testRoot
             .appending(path: "source", directoryHint: .isDirectory)
-        let packageRoot = testRoot
+        let packageRoot =
+            testRoot
             .appending(path: "packages", directoryHint: .isDirectory)
         let deletedSpaceID = SpaceID()
         let retainedSpaceID = SpaceID()
@@ -255,9 +359,11 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
                 path: "crest-extension-symlink-test-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        let source = testRoot
+        let source =
+            testRoot
             .appending(path: "source", directoryHint: .isDirectory)
-        let staging = testRoot
+        let staging =
+            testRoot
             .appending(path: "staging", directoryHint: .isDirectory)
         defer { try? fileManager.removeItem(at: testRoot) }
         try fileManager.createDirectory(

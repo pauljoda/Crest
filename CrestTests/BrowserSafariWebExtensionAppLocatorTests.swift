@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
@@ -46,7 +47,7 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
                     bundleIdentifier: "com.example.host.safari-extension",
                     extensionPointIdentifier: "com.apple.Safari.extension",
                     version: "2.4"
-                )
+                ),
             ]
         )
 
@@ -88,10 +89,13 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
     }
 
     func testApplicationScannerFindsCompatibleAppsRecursivelyAndSortsThem()
-        throws {
-        let applicationsURL = temporaryDirectoryURL
+        throws
+    {
+        let applicationsURL =
+            temporaryDirectoryURL
             .appendingPathComponent("Applications", isDirectory: true)
-        let nestedURL = applicationsURL
+        let nestedURL =
+            applicationsURL
             .appendingPathComponent("Setapp", isDirectory: true)
         try FileManager.default.createDirectory(
             at: nestedURL,
@@ -148,7 +152,8 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
     }
 
     func testApplicationScannerDeduplicatesOverlappingSearchRoots() throws {
-        let applicationsURL = temporaryDirectoryURL
+        let applicationsURL =
+            temporaryDirectoryURL
             .appendingPathComponent("Applications", isDirectory: true)
         let applicationURL = try makeApplication(
             name: "Example",
@@ -171,12 +176,204 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
         XCTAssertEqual(matches.first?.applicationURL, applicationURL)
     }
 
+    func testSafariCustomScannerSnapshotsOnlyManifestDirectories() throws {
+        let rootURL =
+            temporaryDirectoryURL
+            .appendingPathComponent("MagicExtensions", isDirectory: true)
+        let extensionURL = rootURL.appendingPathComponent(
+            "OblivionPortalGlow-F5B5",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        try Data(
+            #"{"manifest_version":3,"name":"Oblivion Portal Glow","version":"1.0"}"#
+                .utf8
+        ).write(to: extensionURL.appendingPathComponent("manifest.json"))
+        try Data("body { box-shadow: 0 0 24px red; }".utf8).write(
+            to: extensionURL.appendingPathComponent("glow.css")
+        )
+        try Data("private database".utf8).write(
+            to: rootURL.appendingPathComponent("Extensions.db")
+        )
+
+        let result = try BrowserSafariCustomExtensionScanner()
+            .scan(searchRoot: rootURL)
+
+        XCTAssertEqual(result.rejectedExtensionCount, 0)
+        XCTAssertEqual(result.packages.count, 1)
+        let package = try XCTUnwrap(result.packages.first)
+        XCTAssertEqual(
+            package.extensionID,
+            "com.apple.Safari.MagicExtensions.OblivionPortalGlow-F5B5"
+        )
+        XCTAssertEqual(package.format, .safariCustom)
+        XCTAssertEqual(
+            package.directoryFiles.map(\.relativePath),
+            ["glow.css", "manifest.json"]
+        )
+    }
+
+    func testSafariCustomScannerRejectsSymbolicLinksWithoutDroppingSiblings()
+        throws
+    {
+        let rootURL =
+            temporaryDirectoryURL
+            .appendingPathComponent("MagicExtensions", isDirectory: true)
+        for name in ["Safe-1234", "Linked-5678"] {
+            let extensionURL = rootURL.appendingPathComponent(
+                name,
+                isDirectory: true
+            )
+            try FileManager.default.createDirectory(
+                at: extensionURL,
+                withIntermediateDirectories: true
+            )
+            try Data(
+                #"{"manifest_version":3,"name":"Fixture","version":"1.0"}"#
+                    .utf8
+            ).write(to: extensionURL.appendingPathComponent("manifest.json"))
+        }
+        try FileManager.default.createSymbolicLink(
+            at:
+                rootURL
+                .appendingPathComponent("Linked-5678")
+                .appendingPathComponent("outside"),
+            withDestinationURL: temporaryDirectoryURL
+        )
+
+        let result = try BrowserSafariCustomExtensionScanner()
+            .scan(searchRoot: rootURL)
+
+        XCTAssertEqual(
+            result.packages.map(\.extensionID),
+            [
+                "com.apple.Safari.MagicExtensions.Safe-1234"
+            ])
+        XCTAssertEqual(result.rejectedExtensionCount, 1)
+    }
+
+    @MainActor
+    func testSafariCustomExtensionIsReviewedAndInstalledFromItsSnapshot()
+        async throws
+    {
+        let rootURL =
+            temporaryDirectoryURL
+            .appendingPathComponent("MagicExtensions", isDirectory: true)
+        let extensionURL = rootURL.appendingPathComponent(
+            "OblivionPortalGlow-F5B5",
+            isDirectory: true
+        )
+        let packageRootURL = temporaryDirectoryURL.appendingPathComponent(
+            "CrestPackages",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        try Data(
+            #"{"manifest_version":3,"name":"Oblivion Portal Glow","version":"1.0","description":"Adds a red glow.","content_scripts":[{"matches":["https://www.reddit.com/*"],"css":["glow.css"]}]}"#
+                .utf8
+        ).write(to: extensionURL.appendingPathComponent("manifest.json"))
+        try Data("body { box-shadow: 0 0 24px red; }".utf8).write(
+            to: extensionURL.appendingPathComponent("glow.css")
+        )
+        let scanResult = try BrowserSafariCustomExtensionScanner()
+            .scan(searchRoot: rootURL)
+        let package = try XCTUnwrap(scanResult.packages.first)
+
+        try FileManager.default.removeItem(at: rootURL)
+
+        let candidate = try await BrowserSafariCustomExtensionProvider(
+            fileManager: .default,
+            nativeMessagingCapability: .available
+        ).candidate(for: package)
+        XCTAssertEqual(candidate.displayName, "Oblivion Portal Glow")
+        XCTAssertEqual(candidate.format, .safariCustom)
+        XCTAssertEqual(
+            candidate.requestedHosts,
+            ["https://www.reddit.com/*"]
+        )
+
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                fileManager: .default,
+                rootURL: packageRootURL,
+                removesRootOnDeinit: false
+            ),
+            registry: registry
+        )
+        let space = BrowserSession.preview.spaces[0]
+        let summary = try await pool.installLocalExtension(
+            candidate,
+            in: space
+        )
+        let installation = try XCTUnwrap(
+            registry.installation(extensionID: candidate.id, in: space.id)
+        )
+
+        XCTAssertEqual(summary.sourceDisplayName, "Safari Custom Extension")
+        XCTAssertEqual(installation.source, .localPackage(candidate.source))
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath:
+                    packageRootURL
+                    .appendingPathComponent(
+                        space.id.rawValue.uuidString.lowercased(),
+                        isDirectory: true
+                    )
+                    .appendingPathComponent(
+                        installation.packageName,
+                        isDirectory: true
+                    )
+                    .appendingPathComponent("manifest.json")
+                    .path
+            )
+        )
+    }
+
+    @MainActor
+    func testSafariCustomExtensionReviewRejectsTraversal() async throws {
+        let package = BrowserLocalExtensionPackage(
+            extensionID: "com.apple.Safari.MagicExtensions.Invalid-1234",
+            format: .safariCustom,
+            directoryFiles: [
+                BrowserLocalExtensionDirectoryFile(
+                    relativePath: "manifest.json",
+                    data: Data(
+                        #"{"manifest_version":3,"name":"Invalid","version":"1.0"}"#
+                            .utf8
+                    )
+                ),
+                BrowserLocalExtensionDirectoryFile(
+                    relativePath: "../outside.js",
+                    data: Data("nope".utf8)
+                ),
+            ]
+        )
+
+        do {
+            _ = try await BrowserSafariCustomExtensionProvider()
+                .candidate(for: package)
+            XCTFail("Expected the unsafe snapshot to be rejected")
+        } catch is BrowserSafariCustomExtensionProviderError {
+            // Expected: review never reconstructs a path outside its sandbox.
+        }
+    }
+
     @MainActor
     func testSignedSafariWebExtensionApplicationCanBePreflighted()
-        async throws {
-        guard let path = ProcessInfo.processInfo.environment[
-            "CREST_TEST_SAFARI_EXTENSION_APP"
-        ] else {
+        async throws
+    {
+        guard
+            let path = ProcessInfo.processInfo.environment[
+                "CREST_TEST_SAFARI_EXTENSION_APP"
+            ]
+        else {
             throw XCTSkip(
                 "Set CREST_TEST_SAFARI_EXTENSION_APP to a signed host app."
             )
@@ -209,9 +406,11 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
     ) throws -> URL {
         let applicationURL = (directory ?? temporaryDirectoryURL)
             .appendingPathComponent("\(name).app", isDirectory: true)
-        let contentsURL = applicationURL
+        let contentsURL =
+            applicationURL
             .appendingPathComponent("Contents", isDirectory: true)
-        let plugInsURL = contentsURL
+        let plugInsURL =
+            contentsURL
             .appendingPathComponent("PlugIns", isDirectory: true)
         try FileManager.default.createDirectory(
             at: plugInsURL,
@@ -222,15 +421,17 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
                 "CFBundleIdentifier": bundleIdentifier,
                 "CFBundleName": name,
                 "CFBundleDisplayName": name,
-                "CFBundlePackageType": "APPL"
+                "CFBundlePackageType": "APPL",
             ],
             to: contentsURL.appendingPathComponent("Info.plist")
         )
 
         for fixture in extensions {
-            let bundleURL = plugInsURL
+            let bundleURL =
+                plugInsURL
                 .appendingPathComponent("\(fixture.name).appex", isDirectory: true)
-            let bundleContentsURL = bundleURL
+            let bundleContentsURL =
+                bundleURL
                 .appendingPathComponent("Contents", isDirectory: true)
             try FileManager.default.createDirectory(
                 at: bundleContentsURL,
@@ -246,7 +447,7 @@ final class BrowserSafariWebExtensionAppLocatorTests: XCTestCase {
                     "NSExtension": [
                         "NSExtensionPointIdentifier":
                             fixture.extensionPointIdentifier
-                    ]
+                    ],
                 ],
                 to: bundleContentsURL.appendingPathComponent("Info.plist")
             )

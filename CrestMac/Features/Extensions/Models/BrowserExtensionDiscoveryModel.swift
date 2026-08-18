@@ -10,8 +10,9 @@ final class BrowserExtensionDiscoveryModel {
     private(set) var discoveryItems: [BrowserExtensionDiscoveryItem] = []
     private(set) var installingExtensionID: String?
     private(set) var isInspectingApplication = false
-    private(set) var isScanningApplications = false
-    private(set) var didScanApplications = false
+    private(set) var isScanningInstalled = false
+    private(set) var didScanInstalled = false
+    private(set) var needsSafariCustomExtensionAccess = false
     private(set) var statusMessage: String?
     private(set) var operationFailure: BrowserExtensionOperationFailure?
 
@@ -21,7 +22,7 @@ final class BrowserExtensionDiscoveryModel {
     }
 
     var isBusy: Bool {
-        isScanningApplications
+        isScanningInstalled
             || isInspectingApplication
             || extensionsModel.isLoadingExtension
             || installingExtensionID != nil
@@ -33,6 +34,18 @@ final class BrowserExtensionDiscoveryModel {
 
     func chooseUnpackedExtension() {
         extensionsModel.isChoosingExtension = true
+    }
+
+    func chooseSafariCustomExtensionFolder() {
+        BrowserSafariCustomExtensionFilePicker.chooseFolder {
+            [weak self] directoryURL in
+            guard let self, let directoryURL else { return }
+            Task {
+                await self.inspectSafariCustomExtensionFolder(
+                    from: .success([directoryURL])
+                )
+            }
+        }
     }
 
     func inspectSafariApplication(
@@ -59,14 +72,44 @@ final class BrowserExtensionDiscoveryModel {
         }
     }
 
-    func scanApplications() async {
-        guard !isScanningApplications else { return }
-        isScanningApplications = true
-        didScanApplications = false
+    func inspectSafariCustomExtensionFolder(
+        from result: Result<[URL], any Error>
+    ) async {
+        do {
+            guard let directoryURL = try result.get().first else { return }
+            isScanningInstalled = true
+            defer { isScanningInstalled = false }
+            let hasSecurityScope =
+                directoryURL.startAccessingSecurityScopedResource()
+            defer {
+                if hasSecurityScope {
+                    directoryURL.stopAccessingSecurityScopedResource()
+                }
+            }
+            let result = try await scanSafariCustomExtensions(
+                at: directoryURL
+            )
+            try BrowserSafariCustomExtensionAccessStore.remember(
+                directoryURL
+            )
+            merge(result.candidates)
+            needsSafariCustomExtensionAccess = false
+            statusMessage = rejectionMessage(
+                customExtensionCount: result.rejectedCount
+            )
+        } catch {
+            publishFailure(error)
+        }
+    }
+
+    func scanInstalled() async {
+        guard !isScanningInstalled else { return }
+        isScanningInstalled = true
+        didScanInstalled = false
         statusMessage = nil
         defer {
-            isScanningApplications = false
-            didScanApplications = true
+            isScanningInstalled = false
+            didScanInstalled = true
         }
 
         let roots = BrowserSafariWebExtensionApplicationScanner
@@ -86,27 +129,60 @@ final class BrowserExtensionDiscoveryModel {
                 rejectedApplicationCount += 1
             }
         }
-        replace(with: candidates)
-        if rejectedApplicationCount > 0 {
-            let noun = rejectedApplicationCount == 1 ? "app" : "apps"
-            statusMessage =
-                "Crest found \(rejectedApplicationCount) additional \(noun) that couldn’t pass signature or WebKit verification."
+
+        let customRoot =
+            BrowserSafariCustomExtensionAccessStore.resolve()
+            ?? BrowserSafariCustomExtensionScanner.defaultSearchRoot
+        let hasSecurityScope =
+            customRoot.startAccessingSecurityScopedResource()
+        defer {
+            if hasSecurityScope {
+                customRoot.stopAccessingSecurityScopedResource()
+            }
         }
+        var customCandidates: [BrowserLocalExtensionCandidate] = []
+        var rejectedCustomExtensionCount = 0
+        do {
+            let result = try await scanSafariCustomExtensions(at: customRoot)
+            customCandidates = result.candidates
+            rejectedCustomExtensionCount = result.rejectedCount
+            needsSafariCustomExtensionAccess = false
+        } catch {
+            needsSafariCustomExtensionAccess = true
+            BrowserSafariCustomExtensionAccessStore.clear()
+        }
+        replace(
+            safariApplications: candidates,
+            safariCustomExtensions: customCandidates
+        )
+        statusMessage = rejectionMessage(
+            applicationCount: rejectedApplicationCount,
+            customExtensionCount: rejectedCustomExtensionCount
+        )
     }
 
     func install(
-        _ candidate: BrowserSafariWebExtensionCandidate
+        _ item: BrowserExtensionDiscoveryItem
     ) async {
         guard installingExtensionID == nil else { return }
-        installingExtensionID = candidate.id
+        installingExtensionID = item.id
         defer { installingExtensionID = nil }
         do {
-            try await extensionsModel.extensionControllerPool
-                .installSafariWebExtension(
-                    candidate,
-                    in: extensionsModel.space
-                )
-            discoveryItems.removeAll { $0.id == candidate.id }
+            switch item.candidate {
+            case .safariApplication(let candidate):
+                try await extensionsModel.extensionControllerPool
+                    .installSafariWebExtension(
+                        candidate,
+                        in: extensionsModel.space
+                    )
+            case .safariCustom(let candidate):
+                try await extensionsModel.extensionControllerPool
+                    .installLocalExtension(
+                        candidate,
+                        in: extensionsModel.space
+                    )
+            }
+            discoveryItems.removeAll { $0.id == item.id }
         } catch {
             publishFailure(error)
         }
@@ -130,11 +206,31 @@ final class BrowserExtensionDiscoveryModel {
         discoveryItems = sorted(Array(itemsByID.values))
     }
 
+    private func merge(
+        _ candidates: [BrowserLocalExtensionCandidate]
+    ) {
+        var itemsByID = Dictionary(
+            uniqueKeysWithValues: discoveryItems.map { ($0.id, $0) }
+        )
+        for candidate in candidates {
+            itemsByID[candidate.id] = BrowserExtensionDiscoveryItem(
+                candidate: candidate
+            )
+        }
+        discoveryItems = sorted(Array(itemsByID.values))
+    }
+
     private func replace(
-        with candidates: [BrowserSafariWebExtensionCandidate]
+        safariApplications: [BrowserSafariWebExtensionCandidate],
+        safariCustomExtensions: [BrowserLocalExtensionCandidate]
     ) {
         discoveryItems = sorted(
-            candidates.map(BrowserExtensionDiscoveryItem.init(candidate:))
+            safariApplications.map(
+                BrowserExtensionDiscoveryItem.init(candidate:)
+            )
+                + safariCustomExtensions.map(
+                    BrowserExtensionDiscoveryItem.init(candidate:)
+                )
         )
     }
 
@@ -152,5 +248,56 @@ final class BrowserExtensionDiscoveryModel {
         operationFailure = BrowserExtensionOperationFailure(
             message: error.localizedDescription
         )
+    }
+
+    private func scanSafariCustomExtensions(
+        at searchRoot: URL
+    ) async throws -> (
+        candidates: [BrowserLocalExtensionCandidate],
+        rejectedCount: Int
+    ) {
+        let scanResult = try await Task.detached(
+            priority: .userInitiated
+        ) {
+            try BrowserSafariCustomExtensionScanner()
+                .scan(searchRoot: searchRoot)
+        }.value
+        let provider = BrowserSafariCustomExtensionProvider()
+        var candidates: [BrowserLocalExtensionCandidate] = []
+        var rejectedCount = scanResult.rejectedExtensionCount
+        for package in scanResult.packages {
+            do {
+                candidates.append(
+                    try await provider.candidate(for: package)
+                )
+            } catch {
+                rejectedCount += 1
+            }
+        }
+        return (candidates, rejectedCount)
+    }
+
+    private func rejectionMessage(
+        applicationCount: Int = 0,
+        customExtensionCount: Int = 0
+    ) -> String? {
+        var messages: [String] = []
+        if applicationCount > 0 {
+            let noun = applicationCount == 1 ? "app" : "apps"
+            messages.append(
+                "\(applicationCount) additional \(noun) couldn’t pass signature or WebKit verification"
+            )
+        }
+        if customExtensionCount > 0 {
+            let noun =
+                customExtensionCount == 1
+                ? "Safari custom extension"
+                : "Safari custom extensions"
+            messages.append(
+                "\(customExtensionCount) \(noun) couldn’t pass safe file or WebKit inspection"
+            )
+        }
+        guard !messages.isEmpty else { return nil }
+        return "Crest skipped " + messages.joined(separator: " and ") + "."
     }
 }

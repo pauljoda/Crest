@@ -120,6 +120,16 @@
         }
       }
     },
+    "%@ %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ · %3$@"
+          }
+        }
+      }
+    },
     "%@ and its Space-local data will be removed. The host app and other Spaces are unchanged." : {
       "localizations" : {
         "ar" : {
@@ -10781,6 +10791,12 @@
           }
         }
       }
+    },
+    "Safari custom extension" : {
+
+    },
+    "Safari Custom Extension" : {
+
     },
     "Safari Session" : {
       "localizations" : {

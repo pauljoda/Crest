@@ -70,6 +70,8 @@ final class BrowserLocalExtensionProvider {
                 archiveData: selectedData,
                 sha256Hex: Data(SHA256.hash(data: selectedData)).hexString
             )
+        case .safariCustom:
+            throw BrowserLocalExtensionProviderError.unsupportedFileType
         }
 
         let webExtension = try await inspect(package)
