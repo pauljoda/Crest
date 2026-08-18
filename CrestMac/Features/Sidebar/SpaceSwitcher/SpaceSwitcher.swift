@@ -5,6 +5,8 @@ struct SpaceSwitcher: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let selectSpace: (SpaceID) -> Void
+    let sidebarToggleAction: BrowserSidebarToggleAction
+    let toggleSidebar: () -> Void
     let commonListsAreExpanded: Bool
     let toggleCommonLists: () -> Void
     let recordCommonListsTriggerFrame: (CGRect) -> Void
@@ -15,6 +17,8 @@ struct SpaceSwitcher: View {
             pages: pages,
             spaceAccess: spaceAccess,
             selectSpace: selectSpace,
+            sidebarToggleAction: sidebarToggleAction,
+            toggleSidebar: toggleSidebar,
             commonListsAreExpanded: commonListsAreExpanded,
             toggleCommonLists: toggleCommonLists,
             recordCommonListsTriggerFrame: recordCommonListsTriggerFrame

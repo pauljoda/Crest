@@ -5,6 +5,8 @@ struct SpaceSwitcherContent: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let selectSpace: (SpaceID) -> Void
+    let sidebarToggleAction: BrowserSidebarToggleAction
+    let toggleSidebar: () -> Void
     let commonListsAreExpanded: Bool
     let toggleCommonLists: () -> Void
     let recordCommonListsTriggerFrame: (CGRect) -> Void
@@ -12,6 +14,20 @@ struct SpaceSwitcherContent: View {
     var body: some View {
         ZStack {
             HStack(spacing: 2) {
+                Button(
+                    sidebarToggleAction.title,
+                    systemImage: "sidebar.left",
+                    action: toggleSidebar
+                )
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+                .frame(
+                    width: BrowserSpaceSwitcherLayout.utilityButtonSize,
+                    height: BrowserSpaceSwitcherLayout.utilityButtonSize
+                )
+                .accessibilityIdentifier("browser-sidebar-toggle")
+                .help(sidebarToggleAction.title)
+
                 Spacer()
                 SpaceSwitcherCommonListsButton(
                     isExpanded: commonListsAreExpanded,

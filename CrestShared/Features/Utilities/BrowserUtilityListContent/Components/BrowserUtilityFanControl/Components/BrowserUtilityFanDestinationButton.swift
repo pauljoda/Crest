@@ -11,6 +11,31 @@ struct BrowserUtilityFanDestinationButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        styledButton
+            .overlay(alignment: .topTrailing) {
+                if surface == .downloads, newDownloadCount > 0 {
+                    BrowserUtilityNotificationBadge(
+                        count: newDownloadCount,
+                        tint: downloadBadgeColor,
+                        progress: BrowserDownloadNotificationPolicy.progress(
+                            in: downloads
+                        )
+                    )
+                    .offset(
+                        x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
+                        y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
+                    )
+                }
+            }
+            .zIndex(surface == .downloads ? 1 : 0)
+            .help(Text(surface.title))
+            .accessibilityLabel(Text(surface.title))
+            .accessibilityValue(Text(accessibilityValue))
+            .accessibilityAddTraits(selectedSurface == surface ? .isSelected : [])
+            .accessibilityIdentifier(BrowserUtilityAccessibilityID.destination(surface))
+    }
+
+    private var destinationButton: some View {
         Button {
             select(surface)
         } label: {
@@ -29,34 +54,29 @@ struct BrowserUtilityFanDestinationButton: View {
         }
         .labelStyle(.iconOnly)
         .buttonBorderShape(.circle)
-        .buttonStyle(
-            GlassButtonStyle(
-                selectedSurface == surface
-                    ? .regular.tint(badgeColor)
-                    : .regular
-            )
-        )
-        .overlay(alignment: .topTrailing) {
-            if surface == .downloads, newDownloadCount > 0 {
-                BrowserUtilityNotificationBadge(
-                    count: newDownloadCount,
-                    tint: downloadBadgeColor,
-                    progress: BrowserDownloadNotificationPolicy.progress(
-                        in: downloads
+    }
+
+    @ViewBuilder
+    private var styledButton: some View {
+        #if os(macOS)
+            if selectedSurface == surface {
+                destinationButton
+                    .buttonStyle(.glassProminent)
+                    .tint(badgeColor)
+            } else {
+                destinationButton
+                    .buttonStyle(GlassButtonStyle(.regular))
+            }
+        #else
+            destinationButton
+                .buttonStyle(
+                    GlassButtonStyle(
+                        selectedSurface == surface
+                            ? .regular.tint(badgeColor)
+                            : .regular
                     )
                 )
-                .offset(
-                    x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
-                    y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
-                )
-            }
-        }
-        .zIndex(surface == .downloads ? 1 : 0)
-        .help(Text(surface.title))
-        .accessibilityLabel(Text(surface.title))
-        .accessibilityValue(Text(accessibilityValue))
-        .accessibilityAddTraits(selectedSurface == surface ? .isSelected : [])
-        .accessibilityIdentifier(BrowserUtilityAccessibilityID.destination(surface))
+        #endif
     }
 
     private var symbol: String {

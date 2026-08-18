@@ -14,6 +14,10 @@ final class BrowserUtilityPresentationState {
         isSiteControlPresented || isSiteControlContextMenuPresented
     }
 
+    var isSidebarInteractionActive: Bool {
+        isSwitcherExpanded || isSiteControlInteractionActive
+    }
+
     func recordTriggerFrame(_ frame: CGRect) {
         guard frame != triggerFrameInGlobal else { return }
         triggerFrameInGlobal = frame

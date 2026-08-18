@@ -3,29 +3,12 @@ import SwiftUI
 struct SidebarNavigationControls: View {
     let browser: BrowserStore
     let pages: BrowserPagePool
-    let sidebarToggleAction: BrowserSidebarToggleAction
-    let toggleSidebar: () -> Void
 
     var body: some View {
         let controlSize = BrowserChromeLayout.sidebarNavigationControlHitTarget
         let symbolPointSize = BrowserChromeLayout.sidebarNavigationSymbolPointSize
 
         HStack(spacing: BrowserSidebarMetrics.navigationControlSpacing) {
-            Color.clear
-                .frame(width: BrowserChromeLayout.windowControlsReservedWidth)
-
-            Button(action: toggleSidebar) {
-                BrowserChromeSymbolLabel(
-                    systemName: "sidebar.left",
-                    pointSize: symbolPointSize
-                )
-                .offset(y: BrowserChromeLayout.sidebarToggleSymbolOffsetY)
-            }
-            .padding(.leading, BrowserChromeLayout.sidebarToggleLeadingInset)
-            .accessibilityLabel(sidebarToggleAction.title)
-            .accessibilityIdentifier("browser-sidebar-toggle")
-            .help(sidebarToggleAction.title)
-
             Spacer(minLength: CrestSpacing.small)
 
             Button(action: pages.goBack) {

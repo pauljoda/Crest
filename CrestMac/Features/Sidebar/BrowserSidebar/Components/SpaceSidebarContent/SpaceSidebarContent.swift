@@ -16,8 +16,6 @@ struct SpaceSidebarContent: View {
     let showExtensions: () -> Void
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
-    let sidebarToggleAction: BrowserSidebarToggleAction
-    let toggleSidebar: () -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
@@ -36,9 +34,7 @@ struct SpaceSidebarContent: View {
         VStack(spacing: 0) {
             SidebarNavigationControls(
                 browser: browser,
-                pages: pages,
-                sidebarToggleAction: sidebarToggleAction,
-                toggleSidebar: toggleSidebar
+                pages: pages
             )
 
             Group {

@@ -51,16 +51,10 @@ final class BrowserChromeLayoutTests: XCTestCase {
             [.back, .forward]
         )
         XCTAssertEqual(BrowserChromeLayout.sidebarTitlebarHeight, 48)
-        XCTAssertEqual(BrowserChromeLayout.windowControlsReservedWidth, 67)
-        XCTAssertEqual(
-            BrowserChromeLayout.sidebarToggleLeadingInset,
-            CrestSpacing.medium
-        )
         XCTAssertEqual(
             BrowserChromeLayout.sidebarNavigationTrailingInset,
             CrestSpacing.medium
         )
-        XCTAssertEqual(BrowserChromeLayout.sidebarToggleSymbolOffsetY, 1)
         XCTAssertEqual(BrowserChromeLayout.sidebarNavigationControlHitTarget, 30)
         XCTAssertEqual(BrowserChromeLayout.sidebarNavigationSymbolPointSize, 15)
     }
@@ -580,6 +574,7 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
                 isAddressEditing: false,
                 hasActiveSite: false,
+                hasAddress: false,
                 hasResidentPage: false
             )
         )
@@ -587,13 +582,23 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
                 isAddressEditing: true,
                 hasActiveSite: false,
+                hasAddress: false,
                 hasResidentPage: false
+            )
+        )
+        XCTAssertFalse(
+            BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
+                isAddressEditing: false,
+                hasActiveSite: false,
+                hasAddress: false,
+                hasResidentPage: true
             )
         )
         XCTAssertTrue(
             BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
                 isAddressEditing: false,
                 hasActiveSite: false,
+                hasAddress: true,
                 hasResidentPage: true
             )
         )
@@ -838,24 +843,24 @@ final class BrowserChromeLayoutTests: XCTestCase {
         let utilityPresentation = model.chrome.utilityPresentation
 
         model.presentFloatingSidebar(reduceMotion: true)
-        model.floatingSidebarHoverChanged(true, reduceMotion: true)
+        model.sidebarSurfaceHoverChanged(true, reduceMotion: true)
         utilityPresentation.setSiteControlPresented(true)
-        model.floatingSidebarHoverChanged(false, reduceMotion: true)
+        model.sidebarSurfaceHoverChanged(false, reduceMotion: true)
 
         XCTAssertTrue(model.isFloatingSidebarPresented)
 
         utilityPresentation.setSiteControlContextMenuPresented(true)
         utilityPresentation.setSiteControlPresented(false)
-        model.siteControlInteractionChanged(
-            utilityPresentation.isSiteControlInteractionActive,
+        model.sidebarInteractionChanged(
+            utilityPresentation.isSidebarInteractionActive,
             reduceMotion: true
         )
 
         XCTAssertTrue(model.isFloatingSidebarPresented)
 
         utilityPresentation.setSiteControlContextMenuPresented(false)
-        model.siteControlInteractionChanged(
-            utilityPresentation.isSiteControlInteractionActive,
+        model.sidebarInteractionChanged(
+            utilityPresentation.isSidebarInteractionActive,
             reduceMotion: true
         )
 
@@ -865,6 +870,19 @@ final class BrowserChromeLayoutTests: XCTestCase {
     func testFloatingSidebarUsesTheFullSpaceThemeAndItsSidebarButtonDocks() {
         XCTAssertEqual(BrowserFloatingSidebarThemePolicy.spaceThemeOpacity, 1)
         XCTAssertEqual(
+            BrowserSidebarPresentationPolicy.matchedGeometryID,
+            "browser-sidebar-surface"
+        )
+        XCTAssertEqual(CrestMotion.sidebarMorphTransition, 0.28)
+        XCTAssertEqual(
+            CrestMotion.sidebarMorphCompletionDelay,
+            .seconds(CrestMotion.sidebarMorphTransition)
+        )
+        XCTAssertGreaterThan(
+            CrestMotion.sidebarRetreatTransition,
+            CrestMotion.dismissalTransition
+        )
+        XCTAssertEqual(
             BrowserSidebarPresentation.floating.sidebarToggleAction,
             .dock
         )
@@ -872,6 +890,98 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserSidebarPresentation.docked.sidebarToggleAction,
             .hide
         )
+    }
+
+    @MainActor
+    func testHidingSidebarKeepsItsUndockedSurfaceWhileHovered() async throws {
+        let model = BrowserRootPreviewFixture.makeModel()
+
+        model.sidebarSurfaceHoverChanged(true, reduceMotion: false)
+        model.hideSidebar(reduceMotion: false)
+        try await Task.sleep(for: .milliseconds(10))
+
+        XCTAssertEqual(model.sidebarPresentation, .floating)
+        XCTAssertTrue(model.isSidebarMorphing)
+
+        try await Task.sleep(for: .milliseconds(300))
+
+        XCTAssertEqual(model.sidebarPresentation, .floating)
+        XCTAssertFalse(model.isSidebarMorphing)
+
+        model.sidebarSurfaceHoverChanged(false, reduceMotion: true)
+
+        XCTAssertEqual(model.sidebarPresentation, .collapsed)
+        XCTAssertFalse(model.isSidebarMorphing)
+    }
+
+    @MainActor
+    func testHidingSidebarDismissesAfterMorphWhenPointerIsAway() async throws {
+        let model = BrowserRootPreviewFixture.makeModel()
+
+        model.hideSidebar(reduceMotion: false)
+        try await Task.sleep(for: .milliseconds(300))
+
+        XCTAssertEqual(model.sidebarPresentation, .collapsed)
+        XCTAssertFalse(model.isSidebarMorphing)
+    }
+
+    @MainActor
+    func testFloatingSidebarWaitsForCommonListsBeforeDismissing() {
+        let model = BrowserRootPreviewFixture.makeModel(state: .collapsed)
+        let utilityPresentation = model.chrome.utilityPresentation
+
+        model.presentFloatingSidebar(reduceMotion: true)
+        model.sidebarSurfaceHoverChanged(true, reduceMotion: true)
+        utilityPresentation.present(.archive)
+        model.sidebarSurfaceHoverChanged(false, reduceMotion: true)
+
+        XCTAssertTrue(model.isFloatingSidebarPresented)
+
+        utilityPresentation.dismiss()
+        model.sidebarInteractionChanged(
+            utilityPresentation.isSidebarInteractionActive,
+            reduceMotion: true
+        )
+
+        XCTAssertFalse(model.isFloatingSidebarPresented)
+    }
+
+    @MainActor
+    func testClosingCommonListsKeepsHoveredFloatingSidebarPresented() {
+        let model = BrowserRootPreviewFixture.makeModel(state: .collapsed)
+        let utilityPresentation = model.chrome.utilityPresentation
+
+        model.presentFloatingSidebar(reduceMotion: true)
+        model.sidebarSurfaceHoverChanged(true, reduceMotion: true)
+        utilityPresentation.present(.archive)
+        utilityPresentation.dismiss()
+        model.sidebarInteractionChanged(
+            utilityPresentation.isSidebarInteractionActive,
+            reduceMotion: true
+        )
+
+        XCTAssertTrue(model.isFloatingSidebarPresented)
+    }
+
+    @MainActor
+    func testReducedMotionCollapsesSidebarWithoutAnIntermediateSurface() {
+        let model = BrowserRootPreviewFixture.makeModel()
+
+        model.hideSidebar(reduceMotion: true)
+
+        XCTAssertEqual(model.sidebarPresentation, .collapsed)
+        XCTAssertFalse(model.isSidebarMorphing)
+    }
+
+    @MainActor
+    func testReducedMotionRetainsHoveredSidebarWithoutAnimating() {
+        let model = BrowserRootPreviewFixture.makeModel()
+
+        model.sidebarSurfaceHoverChanged(true, reduceMotion: true)
+        model.hideSidebar(reduceMotion: true)
+
+        XCTAssertEqual(model.sidebarPresentation, .floating)
+        XCTAssertFalse(model.isSidebarMorphing)
     }
 
     func testDockedSidebarKeepsNativeWindowControlsAndLayoutWidth() {
@@ -1065,9 +1175,13 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    func testDesktopSpaceSwitcherUsesArchiveAsTheSingleCommonListTrigger() {
-        XCTAssertNil(BrowserSpaceSwitcherLayout.leadingUtility)
+    func testDesktopSpaceSwitcherBalancesSidebarAndCommonListUtilities() {
+        XCTAssertEqual(
+            BrowserSpaceSwitcherLayout.leadingUtility,
+            .sidebarToggle
+        )
         XCTAssertEqual(BrowserSpaceSwitcherLayout.trailingUtility, .commonLists)
+        XCTAssertEqual(BrowserSpaceSwitcherLayout.utilityButtonSize, 32)
         XCTAssertFalse(BrowserSpaceSwitcherLayout.showsSpaceCreation)
     }
 

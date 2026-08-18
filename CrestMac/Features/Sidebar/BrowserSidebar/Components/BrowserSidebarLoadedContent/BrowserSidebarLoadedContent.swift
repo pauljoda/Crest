@@ -42,8 +42,6 @@ struct BrowserSidebarLoadedContent: View {
                     activateAddress: activateAddress,
                     submitAddress: submitAddress,
                     openNewTab: openNewTab,
-                    sidebarToggleAction: sidebarToggleAction,
-                    toggleSidebar: toggleSidebar,
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     tabPromotionNamespace: tabPromotionNamespace,
                     utilityPresentation: utilityPresentation,
@@ -61,6 +59,8 @@ struct BrowserSidebarLoadedContent: View {
                 pages: pages,
                 spaceAccess: spaceAccess,
                 selectSpace: actions.selectSpace,
+                sidebarToggleAction: sidebarToggleAction,
+                toggleSidebar: toggleSidebar,
                 commonListsAreExpanded: utilityPresentation.isSwitcherExpanded,
                 toggleCommonLists: {
                     utilityPresentation.toggleSwitcher(

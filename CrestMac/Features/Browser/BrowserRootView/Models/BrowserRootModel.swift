@@ -18,7 +18,10 @@ final class BrowserRootModel {
     var isURLCopiedFeedbackVisible = false
     var visiblePageZoomFeedbackLabel: String?
     var isFloatingSidebarPresented = false
-    private(set) var isFloatingSidebarHovered = false
+    private(set) var isSidebarMorphing = false
+    private(set) var isSidebarSurfaceHovered = false
+    private var sidebarMorphRevision = 0
+    @ObservationIgnored private var sidebarMorphTask: Task<Void, Never>?
     var isWindowFocused = true
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Pointer-rate column widths for the presented split, seeded from this
@@ -305,9 +308,36 @@ extension BrowserRootModel {
 
     func hideSidebar(reduceMotion: Bool) {
         chrome.utilityPresentation.dismiss()
-        dismissFloatingSidebar(reduceMotion: reduceMotion)
-        withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
+        guard !reduceMotion else {
+            cancelSidebarMorph()
+            isFloatingSidebarPresented = isSidebarSurfaceHovered
             chrome.hideSidebar()
+            return
+        }
+
+        let revision = beginSidebarMorph()
+        sidebarMorphTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self,
+                !Task.isCancelled,
+                self.sidebarMorphRevision == revision
+            else { return }
+            withAnimation(
+                self.accessibleAnimation(CrestMotion.sidebarMorph, reduceMotion)
+            ) {
+                self.isFloatingSidebarPresented = true
+                self.chrome.hideSidebar()
+            }
+            try? await Task.sleep(
+                for: CrestMotion.sidebarMorphCompletionDelay
+            )
+            guard !Task.isCancelled,
+                self.finishSidebarMorph(revision),
+                self.sidebarPresentation == .floating
+            else { return }
+            self.dismissFloatingSidebarIfInteractionAllows(
+                reduceMotion: reduceMotion
+            )
         }
     }
 
@@ -316,17 +346,40 @@ extension BrowserRootModel {
         case .hide:
             hideSidebar(reduceMotion: reduceMotion)
         case .dock:
-            withAnimation(
-                accessibleAnimation(CrestMotion.chrome, reduceMotion)
-            ) {
+            guard !reduceMotion else {
+                cancelSidebarMorph()
                 isFloatingSidebarPresented = false
                 chrome.showSidebar()
+                return
+            }
+            let revision = beginSidebarMorph()
+            sidebarMorphTask = Task { @MainActor [weak self] in
+                await Task.yield()
+                guard let self,
+                    !Task.isCancelled,
+                    self.sidebarMorphRevision == revision
+                else { return }
+                withAnimation(
+                    self.accessibleAnimation(
+                        CrestMotion.sidebarMorph,
+                        reduceMotion
+                    )
+                ) {
+                    self.isFloatingSidebarPresented = false
+                    self.chrome.showSidebar()
+                }
+                try? await Task.sleep(
+                    for: CrestMotion.sidebarMorphCompletionDelay
+                )
+                guard !Task.isCancelled else { return }
+                _ = self.finishSidebarMorph(revision)
             }
         }
     }
 
     func presentFloatingSidebar(reduceMotion: Bool) {
         guard chrome.columnVisibility == .detailOnly else { return }
+        cancelSidebarMorph()
         withAnimation(
             accessibleAnimation(CrestMotion.floatingPane, reduceMotion)
         ) {
@@ -335,33 +388,33 @@ extension BrowserRootModel {
     }
 
     func dismissFloatingSidebar(reduceMotion: Bool) {
+        cancelSidebarMorph()
         if sidebarPresentation == .floating {
             chrome.utilityPresentation.dismiss()
         }
         withAnimation(
-            accessibleAnimation(CrestMotion.dismissal, reduceMotion)
+            accessibleAnimation(CrestMotion.sidebarRetreat, reduceMotion)
         ) {
             isFloatingSidebarPresented = false
         }
+        isSidebarSurfaceHovered = false
     }
 
-    func floatingSidebarHoverChanged(
+    func sidebarSurfaceHoverChanged(
         _ isHovering: Bool,
         reduceMotion: Bool
     ) {
-        isFloatingSidebarHovered = isHovering
-        guard !isHovering,
-            !chrome.utilityPresentation.isSiteControlInteractionActive
-        else { return }
-        dismissFloatingSidebar(reduceMotion: reduceMotion)
+        isSidebarSurfaceHovered = isHovering
+        guard sidebarPresentation == .floating, !isHovering else { return }
+        dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
     }
 
-    func siteControlInteractionChanged(
+    func sidebarInteractionChanged(
         _ isActive: Bool,
         reduceMotion: Bool
     ) {
-        guard !isActive, !isFloatingSidebarHovered else { return }
-        dismissFloatingSidebar(reduceMotion: reduceMotion)
+        guard !isActive else { return }
+        dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
     }
 
     func columnVisibilityChanged(reduceMotion: Bool) {
@@ -369,7 +422,47 @@ extension BrowserRootModel {
             chrome.utilityPresentation.dismiss()
             return
         }
+        guard !isSidebarMorphing else { return }
         dismissFloatingSidebar(reduceMotion: reduceMotion)
+    }
+
+    private func beginSidebarMorph() -> Int {
+        sidebarMorphTask?.cancel()
+        sidebarMorphTask = nil
+        sidebarMorphRevision += 1
+        withTransaction(Transaction(animation: nil)) {
+            isSidebarMorphing = true
+        }
+        return sidebarMorphRevision
+    }
+
+    private func dismissFloatingSidebarIfInteractionAllows(
+        reduceMotion: Bool
+    ) {
+        guard !isSidebarMorphing,
+            !isSidebarSurfaceHovered,
+            !chrome.utilityPresentation.isSidebarInteractionActive
+        else { return }
+        dismissFloatingSidebar(reduceMotion: reduceMotion)
+    }
+
+    @discardableResult
+    private func finishSidebarMorph(_ revision: Int) -> Bool {
+        guard revision == sidebarMorphRevision else { return false }
+        sidebarMorphTask = nil
+        withTransaction(Transaction(animation: nil)) {
+            isSidebarMorphing = false
+        }
+        return true
+    }
+
+    private func cancelSidebarMorph() {
+        sidebarMorphTask?.cancel()
+        sidebarMorphTask = nil
+        sidebarMorphRevision += 1
+        withTransaction(Transaction(animation: nil)) {
+            isSidebarMorphing = false
+        }
     }
 }
 

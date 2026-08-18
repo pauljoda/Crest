@@ -6,6 +6,8 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
     let space: BrowserSpace?
     let reduceMotion: Bool
     let reduceTransparency: Bool
+    let morphsWithDockedSidebar: Bool
+    let namespace: Namespace.ID
     let hoverChanged: (Bool) -> Void
     let content: Content
 
@@ -15,6 +17,8 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
         space: BrowserSpace?,
         reduceMotion: Bool,
         reduceTransparency: Bool,
+        morphsWithDockedSidebar: Bool,
+        namespace: Namespace.ID,
         hoverChanged: @escaping (Bool) -> Void,
         @ViewBuilder content: () -> Content
     ) {
@@ -23,6 +27,8 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
         self.space = space
         self.reduceMotion = reduceMotion
         self.reduceTransparency = reduceTransparency
+        self.morphsWithDockedSidebar = morphsWithDockedSidebar
+        self.namespace = namespace
         self.hoverChanged = hoverChanged
         self.content = content()
     }
@@ -30,56 +36,90 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
     @ViewBuilder
     var body: some View {
         if presentation == .floating {
-            let shape = RoundedRectangle(
-                cornerRadius: BrowserSidebarPresentationPolicy
-                    .floatingCardCornerRadius,
-                style: .continuous
-            )
-
-            content
-                .frame(width: width)
-                .frame(maxHeight: .infinity)
-                .background {
-                    BrowserFloatingSidebarCardBackground(space: space)
-                }
-                .compositingGroup()
-                .clipShape(shape)
-                .overlay {
-                    shape
-                        .strokeBorder(
-                            .primary.opacity(
-                                BrowserRootMetrics.floatingSidebarBorderOpacity
-                            ),
-                            lineWidth: BrowserRootMetrics
-                                .floatingSidebarBorderWidth
-                        )
-                        .allowsHitTesting(false)
-                }
-                .shadow(
-                    color: .black.opacity(
-                        reduceTransparency
-                            ? 0
-                            : BrowserRootMetrics.floatingSidebarShadowOpacity
-                    ),
-                    radius: BrowserRootMetrics.floatingSidebarShadowRadius,
-                    x: BrowserRootMetrics.floatingSidebarShadowOffset,
-                    y: BrowserRootMetrics.floatingSidebarShadowOffset
+            cardSurface
+                .modifier(
+                    BrowserFloatingSidebarGeometryModifier(
+                        isActive: morphsWithDockedSidebar,
+                        namespace: namespace
+                    )
                 )
-                .contentShape(.interaction, shape)
                 .padding(BrowserSidebarPresentationPolicy.floatingCardInset)
                 .frame(
-                    width: BrowserSidebarPresentationPolicy
+                    width:
+                        BrowserSidebarPresentationPolicy
                         .floatingHoverRegionWidth(sidebarWidth: width)
                 )
                 .frame(maxHeight: .infinity)
                 .contentShape(.interaction, .rect)
                 .onHover(perform: hoverChanged)
                 .transition(
-                    reduceMotion
-                        ? .opacity
-                        : .move(edge: .leading).combined(with: .opacity)
+                    morphsWithDockedSidebar
+                        ? .identity
+                        : reduceMotion
+                            ? .opacity
+                            : .move(edge: .leading).combined(with: .opacity)
                 )
                 .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
+        }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(
+            cornerRadius: BrowserSidebarPresentationPolicy
+                .floatingCardCornerRadius,
+            style: .continuous
+        )
+    }
+
+    private var cardSurface: some View {
+        content
+            .frame(width: width)
+            .frame(maxHeight: .infinity)
+            .background {
+                BrowserFloatingSidebarCardBackground(space: space)
+            }
+            .compositingGroup()
+            .clipShape(shape)
+            .overlay {
+                shape
+                    .strokeBorder(
+                        .primary.opacity(
+                            BrowserRootMetrics.floatingSidebarBorderOpacity
+                        ),
+                        lineWidth: BrowserRootMetrics.floatingSidebarBorderWidth
+                    )
+                    .allowsHitTesting(false)
+            }
+            .shadow(
+                color: .black.opacity(
+                    reduceTransparency
+                        ? 0
+                        : BrowserRootMetrics.floatingSidebarShadowOpacity
+                ),
+                radius: BrowserRootMetrics.floatingSidebarShadowRadius,
+                x: BrowserRootMetrics.floatingSidebarShadowOffset,
+                y: BrowserRootMetrics.floatingSidebarShadowOffset
+            )
+            .contentShape(.interaction, shape)
+    }
+}
+
+private struct BrowserFloatingSidebarGeometryModifier: ViewModifier {
+    let isActive: Bool
+    let namespace: Namespace.ID
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isActive {
+            content.matchedGeometryEffect(
+                id: BrowserSidebarPresentationPolicy.matchedGeometryID,
+                in: namespace,
+                properties: .frame,
+                anchor: .topLeading,
+                isSource: false
+            )
+        } else {
+            content
         }
     }
 }

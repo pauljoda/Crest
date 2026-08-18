@@ -88,6 +88,7 @@ private struct BrowserAddressLeadingControl: View {
         } else if BrowserAddressLeadingControlPolicy.showsPlaceholderGlyph(
             isAddressEditing: configuration.isEditing.wrappedValue,
             hasActiveSite: configuration.siteControl != nil,
+            hasAddress: !configuration.text.wrappedValue.isEmpty,
             hasResidentPage: configuration.hasResidentPage
         ) {
             BrowserAddressPlaceholderGlyph(isSecure: configuration.isSecure)
@@ -178,6 +179,7 @@ enum BrowserAddressLeadingControlPolicy {
     static func showsPlaceholderGlyph(
         isAddressEditing: Bool,
         hasActiveSite: Bool,
+        hasAddress: Bool,
         hasResidentPage: Bool
     ) -> Bool {
         guard
@@ -188,7 +190,7 @@ enum BrowserAddressLeadingControlPolicy {
         else {
             return false
         }
-        return isAddressEditing || hasResidentPage
+        return isAddressEditing || (hasResidentPage && hasAddress)
     }
 }
 
