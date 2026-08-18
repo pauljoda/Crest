@@ -6,6 +6,8 @@ from __future__ import annotations
 import os
 import pathlib
 import plistlib
+import shlex
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -82,7 +84,22 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             fake_bin = pathlib.Path(temporary_directory)
+            fake_git = fake_bin / "git"
             fake_xcodebuild = fake_bin / "xcodebuild"
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+            fake_git.write_text(
+                "#!/bin/sh\n"
+                "case \"$*\" in\n"
+                "    *' remote get-url origin')\n"
+                "        printf '%s\\n' 'http://github.com/pauljoda/Crest.git'\n"
+                "        ;;\n"
+                "    *)\n"
+                f"        exec {shlex.quote(real_git)} \"$@\"\n"
+                "        ;;\n"
+                "esac\n"
+            )
+            fake_git.chmod(0o755)
             environment = os.environ | {
                 "CI_XCODE_CLOUD": "TRUE",
                 "CI_START_CONDITION": "manual",

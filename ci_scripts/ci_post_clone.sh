@@ -60,7 +60,7 @@ repository_path="${CI_PRIMARY_REPOSITORY_PATH:-}"
 
 repository_url="$(git -C "$repository_path" remote get-url origin 2>/dev/null || true)"
 case "$repository_url" in
-    https://github.com/pauljoda/Crest.git|git@github.com:pauljoda/Crest.git|https://*@github.com/pauljoda/Crest.git)
+    http://github.com/pauljoda/Crest.git|https://github.com/pauljoda/Crest.git|git@github.com:pauljoda/Crest.git|http://*@github.com/pauljoda/Crest.git|https://*@github.com/pauljoda/Crest.git)
         ;;
     *)
         fail "The Crest workflow must use https://github.com/pauljoda/Crest.git as its primary repository; received '${repository_url:-unset}'."
