@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import plistlib
 import subprocess
 import tempfile
 import unittest
@@ -15,6 +16,11 @@ REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 class XcodeCloudConfigurationTests(unittest.TestCase):
+    @staticmethod
+    def marketing_version() -> str:
+        version_file = REPOSITORY_ROOT / "Config" / "Version.xcconfig"
+        return version_file.read_text().split("=", maxsplit=1)[1].strip()
+
     def test_project_targets_os26_with_the_current_project_format(self) -> None:
         project = (REPOSITORY_ROOT / "project.yml").read_text()
 
@@ -61,6 +67,8 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
             "manual",
             "manual_rebuild",
             "CI_PRODUCT_PLATFORM",
+            "CI_COMMIT",
+            "https://github.com/pauljoda/Crest.git",
             "CrestMobile",
             "Crest",
             "26.1",
@@ -82,6 +90,11 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "CI_PRODUCT_PLATFORM": "iOS",
                 "CI_XCODE_SCHEME": "CrestMobile",
                 "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "CI_COMMIT": subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=REPOSITORY_ROOT,
+                    text=True,
+                ).strip(),
                 "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             }
 
@@ -107,6 +120,128 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                     self.assertEqual(result.returncode, expected_return_code)
                     if expected_return_code:
                         self.assertIn("beta or prerelease", result.stderr)
+
+    def test_cloud_version_guards_are_executable(self) -> None:
+        for script_name, required_environment in (
+            (
+                "ci_pre_xcodebuild.sh",
+                ("CI_XCODE_SCHEME", "MARKETING_VERSION", "-showBuildSettings"),
+            ),
+            (
+                "ci_post_xcodebuild.sh",
+                (
+                    "CI_ARCHIVE_PATH",
+                    "CI_BUILD_NUMBER",
+                    "CFBundleShortVersionString",
+                ),
+            ),
+        ):
+            with self.subTest(script=script_name):
+                script = REPOSITORY_ROOT / "ci_scripts" / script_name
+                self.assertTrue(script.is_file())
+                self.assertTrue(os.access(script, os.X_OK))
+                contents = script.read_text()
+                for required in required_environment:
+                    self.assertIn(required, contents)
+
+    def test_pre_xcodebuild_guard_rejects_resolved_version_drift(self) -> None:
+        guard = REPOSITORY_ROOT / "ci_scripts" / "ci_pre_xcodebuild.sh"
+        expected_version = self.marketing_version()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            fake_bin = pathlib.Path(temporary_directory)
+            fake_xcodebuild = fake_bin / "xcodebuild"
+            environment = os.environ | {
+                "CI_XCODE_CLOUD": "TRUE",
+                "CI_XCODEBUILD_ACTION": "archive",
+                "CI_PRODUCT_PLATFORM": "iOS",
+                "CI_XCODE_SCHEME": "CrestMobile",
+                "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+            }
+
+            for resolved_version, expected_return_code in (
+                (expected_version, 0),
+                ("0.3.0", 64),
+            ):
+                with self.subTest(resolved_version=resolved_version):
+                    fake_xcodebuild.write_text(
+                        "#!/bin/sh\n"
+                        f"printf '    MARKETING_VERSION = {resolved_version}\\n'\n"
+                    )
+                    fake_xcodebuild.chmod(0o755)
+                    result = subprocess.run(
+                        [str(guard)],
+                        cwd=REPOSITORY_ROOT,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+
+                    self.assertEqual(result.returncode, expected_return_code)
+                    if expected_return_code:
+                        self.assertIn(
+                            f"expected {expected_version}",
+                            result.stderr,
+                        )
+
+    def test_post_xcodebuild_guard_rejects_archived_version_drift(self) -> None:
+        guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_xcodebuild.sh"
+        expected_version = self.marketing_version()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            archive = pathlib.Path(temporary_directory) / "CrestMobile.xcarchive"
+            app = archive / "Products" / "Applications" / "Crest.app"
+            app.mkdir(parents=True)
+            with (archive / "Info.plist").open("wb") as stream:
+                plistlib.dump(
+                    {
+                        "ApplicationProperties": {
+                            "ApplicationPath": "Applications/Crest.app",
+                        },
+                    },
+                    stream,
+                )
+
+            environment = os.environ | {
+                "CI_XCODE_CLOUD": "TRUE",
+                "CI_XCODEBUILD_ACTION": "archive",
+                "CI_XCODEBUILD_EXIT_CODE": "0",
+                "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "CI_ARCHIVE_PATH": str(archive),
+                "CI_BUILD_NUMBER": "20",
+            }
+
+            for archived_version, expected_return_code in (
+                (expected_version, 0),
+                ("0.3.0", 64),
+            ):
+                with self.subTest(archived_version=archived_version):
+                    with (app / "Info.plist").open("wb") as stream:
+                        plistlib.dump(
+                            {
+                                "CFBundleIdentifier": "com.pauldavis.crest",
+                                "CFBundleShortVersionString": archived_version,
+                                "CFBundleVersion": "20",
+                            },
+                            stream,
+                        )
+                    result = subprocess.run(
+                        [str(guard)],
+                        cwd=REPOSITORY_ROOT,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+
+                    self.assertEqual(result.returncode, expected_return_code)
+                    if expected_return_code:
+                        self.assertIn(
+                            f"but Config/Version.xcconfig requires {expected_version}",
+                            result.stderr,
+                        )
 
     def test_extension_toggle_avoids_xcode_26_setter_thunk_crash(self) -> None:
         extensions_view = (
