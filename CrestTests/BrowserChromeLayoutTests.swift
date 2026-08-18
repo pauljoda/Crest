@@ -878,6 +878,16 @@ final class BrowserChromeLayoutTests: XCTestCase {
             CrestMotion.sidebarMorphCompletionDelay,
             .seconds(CrestMotion.sidebarMorphTransition)
         )
+        XCTAssertEqual(CrestMotion.sidebarDockApproachTransition, 0.22)
+        XCTAssertEqual(CrestMotion.sidebarDockAttachmentTransition, 0.16)
+        XCTAssertEqual(
+            CrestMotion.sidebarDockApproachCompletionDelay,
+            .seconds(CrestMotion.sidebarDockApproachTransition)
+        )
+        XCTAssertEqual(
+            CrestMotion.sidebarDockAttachmentCompletionDelay,
+            .seconds(CrestMotion.sidebarDockAttachmentTransition)
+        )
         XCTAssertGreaterThan(
             CrestMotion.sidebarRetreatTransition,
             CrestMotion.dismissalTransition
@@ -923,6 +933,54 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
         XCTAssertEqual(model.sidebarPresentation, .collapsed)
         XCTAssertFalse(model.isSidebarMorphing)
+    }
+
+    @MainActor
+    func testDockingSidebarMakesRoomBeforeAttachingItsCard() async throws {
+        let model = BrowserRootPreviewFixture.makeModel(state: .collapsed)
+
+        model.presentFloatingSidebar(reduceMotion: true)
+        model.toggleSidebar(reduceMotion: false)
+        try await Task.sleep(for: .milliseconds(10))
+
+        XCTAssertEqual(model.sidebarPresentation, .floating)
+        XCTAssertTrue(model.isSidebarApproachingDock)
+        XCTAssertTrue(model.isSidebarMorphing)
+        XCTAssertFalse(model.isSidebarGeometryMorphing)
+        XCTAssertEqual(
+            model.sidebarPresentation.reservedWidth(
+                for: 289,
+                whileApproachingDock: model.isSidebarApproachingDock
+            ),
+            289
+        )
+
+        try await Task.sleep(for: .milliseconds(230))
+
+        XCTAssertEqual(model.sidebarPresentation, .docked)
+        XCTAssertTrue(model.isSidebarApproachingDock)
+        XCTAssertTrue(model.isSidebarMorphing)
+        XCTAssertTrue(model.isSidebarGeometryMorphing)
+
+        try await Task.sleep(for: .milliseconds(170))
+
+        XCTAssertEqual(model.sidebarPresentation, .docked)
+        XCTAssertFalse(model.isSidebarApproachingDock)
+        XCTAssertFalse(model.isSidebarMorphing)
+        XCTAssertFalse(model.isSidebarGeometryMorphing)
+    }
+
+    @MainActor
+    func testReducedMotionDocksSidebarWithoutAnApproachPhase() {
+        let model = BrowserRootPreviewFixture.makeModel(state: .collapsed)
+
+        model.presentFloatingSidebar(reduceMotion: true)
+        model.toggleSidebar(reduceMotion: true)
+
+        XCTAssertEqual(model.sidebarPresentation, .docked)
+        XCTAssertFalse(model.isSidebarApproachingDock)
+        XCTAssertFalse(model.isSidebarMorphing)
+        XCTAssertFalse(model.isSidebarGeometryMorphing)
     }
 
     @MainActor
@@ -994,6 +1052,22 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(presentation.showsSidebar)
         XCTAssertTrue(presentation.showsWindowControls)
         XCTAssertTrue(presentation.reservesSidebarWidth)
+        XCTAssertEqual(presentation.reservedWidth(for: 289), 289)
+        XCTAssertEqual(
+            BrowserSidebarPresentation.floating.reservedWidth(for: 289),
+            0
+        )
+        XCTAssertEqual(
+            BrowserSidebarPresentation.collapsed.reservedWidth(for: 289),
+            0
+        )
+        XCTAssertEqual(
+            BrowserSidebarPresentation.floating.reservedWidth(
+                for: 289,
+                whileApproachingDock: true
+            ),
+            289
+        )
     }
 
     func testAddressControlUsesCompactArcAlignedMetrics() {

@@ -19,6 +19,12 @@ final class BrowserRootModel {
     var visiblePageZoomFeedbackLabel: String?
     var isFloatingSidebarPresented = false
     private(set) var isSidebarMorphing = false
+    /// True only while both placements needed by matched geometry participate
+    /// in the hierarchy. The broader morph can begin earlier to move pages.
+    private(set) var isSidebarGeometryMorphing = false
+    /// True while the page row is making the sidebar's dock available, before
+    /// the floating card changes identity and occupies it.
+    private(set) var isSidebarApproachingDock = false
     private(set) var isSidebarSurfaceHovered = false
     private var sidebarMorphRevision = 0
     @ObservationIgnored private var sidebarMorphTask: Task<Void, Never>?
@@ -352,7 +358,7 @@ extension BrowserRootModel {
                 chrome.showSidebar()
                 return
             }
-            let revision = beginSidebarMorph()
+            let revision = beginSidebarMorph(morphsGeometry: false)
             sidebarMorphTask = Task { @MainActor [weak self] in
                 await Task.yield()
                 guard let self,
@@ -361,17 +367,37 @@ extension BrowserRootModel {
                 else { return }
                 withAnimation(
                     self.accessibleAnimation(
-                        CrestMotion.sidebarMorph,
+                        CrestMotion.sidebarDockApproach,
                         reduceMotion
                     )
                 ) {
+                    self.isSidebarApproachingDock = true
+                }
+                try? await Task.sleep(
+                    for: CrestMotion.sidebarDockApproachCompletionDelay
+                )
+                guard !Task.isCancelled,
+                    self.sidebarMorphRevision == revision
+                else { return }
+                withAnimation(
+                    self.accessibleAnimation(
+                        CrestMotion.sidebarDockAttachment,
+                        reduceMotion
+                    )
+                ) {
+                    self.isSidebarGeometryMorphing = true
                     self.isFloatingSidebarPresented = false
                     self.chrome.showSidebar()
                 }
                 try? await Task.sleep(
-                    for: CrestMotion.sidebarMorphCompletionDelay
+                    for: CrestMotion.sidebarDockAttachmentCompletionDelay
                 )
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled,
+                    self.sidebarMorphRevision == revision
+                else { return }
+                withTransaction(Transaction(animation: nil)) {
+                    self.isSidebarApproachingDock = false
+                }
                 _ = self.finishSidebarMorph(revision)
             }
         }
@@ -426,12 +452,13 @@ extension BrowserRootModel {
         dismissFloatingSidebar(reduceMotion: reduceMotion)
     }
 
-    private func beginSidebarMorph() -> Int {
+    private func beginSidebarMorph(morphsGeometry: Bool = true) -> Int {
         sidebarMorphTask?.cancel()
         sidebarMorphTask = nil
         sidebarMorphRevision += 1
         withTransaction(Transaction(animation: nil)) {
             isSidebarMorphing = true
+            isSidebarGeometryMorphing = morphsGeometry
         }
         return sidebarMorphRevision
     }
@@ -452,6 +479,7 @@ extension BrowserRootModel {
         sidebarMorphTask = nil
         withTransaction(Transaction(animation: nil)) {
             isSidebarMorphing = false
+            isSidebarGeometryMorphing = false
         }
         return true
     }
@@ -462,6 +490,8 @@ extension BrowserRootModel {
         sidebarMorphRevision += 1
         withTransaction(Transaction(animation: nil)) {
             isSidebarMorphing = false
+            isSidebarGeometryMorphing = false
+            isSidebarApproachingDock = false
         }
     }
 }

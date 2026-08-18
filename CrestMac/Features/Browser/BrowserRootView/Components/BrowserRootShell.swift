@@ -29,7 +29,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     presentation: model.sidebarPresentation,
                     width: model.sidebarWidth,
                     reduceMotion: reduceMotion,
-                    morphsWithFloatingSidebar: model.isSidebarMorphing,
+                    morphsWithFloatingSidebar: model.isSidebarGeometryMorphing,
+                    isApproachingDock: model.isSidebarApproachingDock,
                     namespace: sidebarSurfaceNamespace,
                     hoverChanged: {
                         model.sidebarSurfaceHoverChanged(
@@ -74,7 +75,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 space: model.browser.selectedSpace,
                 reduceMotion: reduceMotion,
                 reduceTransparency: reduceTransparency,
-                morphsWithDockedSidebar: model.isSidebarMorphing,
+                morphsWithDockedSidebar: model.isSidebarGeometryMorphing,
                 namespace: sidebarSurfaceNamespace,
                 hoverChanged: {
                     model.sidebarSurfaceHoverChanged(
@@ -143,16 +144,26 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             }
         }
         .animation(
-            chromeAnimation(CrestMotion.sidebarMorph),
+            chromeAnimation(
+                model.isSidebarApproachingDock
+                    ? CrestMotion.sidebarDockAttachment
+                    : CrestMotion.sidebarMorph
+            ),
             value: model.chrome.columnVisibility
         )
         .animation(
             chromeAnimation(
-                model.isSidebarMorphing
+                model.isSidebarApproachingDock
+                    ? CrestMotion.sidebarDockAttachment
+                    : model.isSidebarMorphing
                     ? CrestMotion.sidebarMorph
                     : CrestMotion.floatingPane
             ),
             value: model.isFloatingSidebarPresented
+        )
+        .animation(
+            chromeAnimation(CrestMotion.sidebarDockApproach),
+            value: model.isSidebarApproachingDock
         )
         .animation(
             chromeAnimation(CrestMotion.pane),

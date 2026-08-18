@@ -41,11 +41,23 @@ enum CrestMotion {
     static let chromeTransition: TimeInterval = 0.28
     /// Handing the sidebar surface between its docked and floating placements.
     static let sidebarMorphTransition: TimeInterval = 0.28
+    /// Moving page surfaces aside before a floating sidebar attaches to the row.
+    static let sidebarDockApproachTransition: TimeInterval = 0.22
+    /// The short final handoff from the floating sidebar card to its docked seat.
+    static let sidebarDockAttachmentTransition: TimeInterval = 0.16
     /// Letting the undocked sidebar retreat after pointer interaction ends.
     static let sidebarRetreatTransition: TimeInterval = 0.30
     /// Keeps phased sidebar work aligned with the visible geometry handoff.
     static let sidebarMorphCompletionDelay: Duration = .seconds(
         sidebarMorphTransition
+    )
+    /// Keeps the dock handoff behind the page-surface approach.
+    static let sidebarDockApproachCompletionDelay: Duration = .seconds(
+        sidebarDockApproachTransition
+    )
+    /// Keeps the morph alive until the card has finished attaching.
+    static let sidebarDockAttachmentCompletionDelay: Duration = .seconds(
+        sidebarDockAttachmentTransition
     )
     /// Showing or changing a secondary pane layered over browser chrome.
     static let floatingPaneTransition: TimeInterval = 0.24
@@ -120,6 +132,12 @@ enum CrestMotion {
     static var chrome: Animation { .smooth(duration: chromeTransition) }
     static var sidebarMorph: Animation {
         .smooth(duration: sidebarMorphTransition)
+    }
+    static var sidebarDockApproach: Animation {
+        .smooth(duration: sidebarDockApproachTransition)
+    }
+    static var sidebarDockAttachment: Animation {
+        .smooth(duration: sidebarDockAttachmentTransition)
     }
     static var sidebarRetreat: Animation {
         .smooth(duration: sidebarRetreatTransition)

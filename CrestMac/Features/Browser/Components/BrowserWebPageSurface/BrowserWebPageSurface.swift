@@ -8,9 +8,6 @@ struct BrowserWebPageSurface: View {
     var body: some View {
         ZStack(alignment: .top) {
             BrowserPlatformWebView(page: page)
-                .transaction { transaction in
-                    transaction.animation = nil
-                }
                 .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
 
             if page.isFindPresented {

@@ -23,7 +23,7 @@ struct SpaceSwitcherCommonListsButton: View {
                 .bounce,
                 value: reduceMotion ? nil : newDownloads.first?.id
             )
-            .overlay(alignment: .top) {
+            .overlay(alignment: .topTrailing) {
                 if !newDownloads.isEmpty {
                     BrowserUtilityNotificationBadge(
                         count: newDownloads.count,
@@ -35,6 +35,7 @@ struct SpaceSwitcherCommonListsButton: View {
                         )
                     )
                     .offset(
+                        x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
                         y: -BrowserUtilitySwitcherLayout.notificationBadgeOffset
                     )
                 }

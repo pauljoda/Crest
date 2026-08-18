@@ -104,6 +104,7 @@ struct BrowserSplitColumnsView<Content: View>: View {
                     column.element,
                     width: width(at: column.offset, in: widths)
                 )
+                .zIndex(cardZIndex(for: column.element))
             }
         }
     }
@@ -291,5 +292,12 @@ struct BrowserSplitColumnsView<Content: View>: View {
 
     private func width(at index: Int, in widths: [CGFloat]) -> CGFloat {
         widths.indices.contains(index) ? widths[index] : 0
+    }
+
+    private func cardZIndex(for slot: BrowserSplitColumnSlot) -> Double {
+        guard case .member(let member) = slot,
+            member.id == focusedTabID
+        else { return BrowserSplitLayoutMetrics.restingCardZIndex }
+        return BrowserSplitLayoutMetrics.focusedCardZIndex
     }
 }
