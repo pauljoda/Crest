@@ -7,6 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.4.0</title>
+            <pubDate>Tue, 18 Aug 2026 00:48:23 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1032</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Crest stable release
+
+[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/v0.4.0/Installer-Crest-0.4.0-arm64.dmg)
+
+Built from [`25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f).
+
+This release is signed and notarized for direct distribution.
+
+## Changes in this build
+
+### chore(release): prepare 0.4.0
+
+Crest 0.4 adds Split View across Mac, iPhone, and iPad; expands standards-based extension support across Chrome, Firefox, and Safari-created packages; and establishes signed, notarized direct updates through Sparkle.
+
+It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, retention, and WebKit compatibility fixes collected in the 0.4.0 changelog.
+
+[View commit `25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.4.0/Installer-Crest-0.4.0-arm64.dmg" length="7505632" type="application/octet-stream" sparkle:edSignature="k4EGWp6622xra5umpPZ+V859HBeyN/tt8aNr+UDQhYkvUBM6+JdjnsBUemFrSjo3OBUFx3plkUajOSr7GYkHBQ=="/>
+        </item>
+        <item>
+            <title>0.4.0</title>
             <pubDate>Mon, 17 Aug 2026 09:06:19 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
@@ -47,6 +75,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 3IHCkyeSXTj/wby9a4wWhI7GXTPfW2KDV+DAEdJb4zB8/5j03a4igdp1CAZJ8ikKUcqnceyLIjSH6bIlCFpCDA==
-length: 3505
+edSignature: e6Fh3JFFUysnsQ9hwYeAbkbIzooJptPX2JpGu4sHiV1IYygrCCF1bzKkA4ZEh2xQGjaC9kesFclSSf0/t0WHBQ==
+length: 5194
 -->
