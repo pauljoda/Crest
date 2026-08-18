@@ -7,6 +7,160 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.4.0</title>
+            <pubDate>Tue, 18 Aug 2026 09:00:44 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1034</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Crest nightly build
+
+[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.0-nightly-2026-08-18-c5ddb24-arm64.dmg)
+
+Built from [`c5ddb24`](https://github.com/pauljoda/Crest/commit/c5ddb24e3d321c151308565ba90404af24b03f15).
+
+Nightly builds are signed and notarized, but contain changes that have not yet reached a stable release.
+
+## Changes since the previous nightly build
+
+### fix(browser): stabilize Peek and floating sidebar
+
+[View commit `54cb03f`](https://github.com/pauljoda/Crest/commit/54cb03f20a9247b9820c7ee2067684c76f208a92)
+
+### Streamline rolling release publication and release notes
+
+[View commit `6741cba`](https://github.com/pauljoda/Crest/commit/6741cba19910beffa3ecec1d66341171b3ae6bc7)
+
+### Dismiss transient surfaces when navigation becomes a download
+
+[View commit `8a89711`](https://github.com/pauljoda/Crest/commit/8a8971112afb22b6613ef66686539662fdd6f9fa)
+
+### fix: resolve tab grouping regressions
+
+[View commit `4322921`](https://github.com/pauljoda/Crest/commit/43229214c4e1a47db9f62ac01e028e7087005303)
+
+### fix: freeze sidebar geometry during drag
+
+[View commit `cd4da8f`](https://github.com/pauljoda/Crest/commit/cd4da8fc0fd1b0bb6f6b0aafeba22c0aa9a2904a)
+
+### fix: reveal selected tabs in collapsed folders
+
+[View commit `2edf4a3`](https://github.com/pauljoda/Crest/commit/2edf4a394ecde0086fe386d44d88dd758a6ccc35)
+
+### fix: reveal reloaded tabs in collapsed folders
+
+[View commit `7d3659c`](https://github.com/pauljoda/Crest/commit/7d3659c9f036c41ea5133e3a384795d1bdbedb01)
+
+### fix: reserve split-group destination space
+
+[View commit `6980e71`](https://github.com/pauljoda/Crest/commit/6980e71e21c7800d5354ab20421d5fdf5c91b3ec)
+
+### fix: separate mobile split tab groups
+
+[View commit `34f709c`](https://github.com/pauljoda/Crest/commit/34f709c7928ba05805fce733073833ceb808369f)
+
+### Restore Xcode scheme compatibility and localization metadata
+
+[View commit `f8e06d3`](https://github.com/pauljoda/Crest/commit/f8e06d31de4cd703ad529d90f1e04f4fd357129a)
+
+### fix(ci): restore sidebar presentation reference
+
+[View commit `3e67cd3`](https://github.com/pauljoda/Crest/commit/3e67cd3121568db872d8cc0a36610b4d468d6001)
+
+### fix: polish archive and download utilities
+
+[View commit `30bdae0`](https://github.com/pauljoda/Crest/commit/30bdae0f191c0940f1a2967d56e2837a0b70faa2)
+
+### fix: align sidebar badges and split groups
+
+[View commit `778dc69`](https://github.com/pauljoda/Crest/commit/778dc699597228a0825c9a2ec597a5650f5dcae8)
+
+### fix: align utility fan animation origin
+
+[View commit `3e0942a`](https://github.com/pauljoda/Crest/commit/3e0942a94fa8d8c0e55a5eb507a5bd8423e49ba2)
+
+### fix: center empty desktop address prompt
+
+[View commit `453c388`](https://github.com/pauljoda/Crest/commit/453c3886731ec9aeba8b396e1a21d5f960e3e9fa)
+
+### Preserve extension page state and harden release publishing
+
+[View commit `2c53ff5`](https://github.com/pauljoda/Crest/commit/2c53ff5357553dfb451957e65cb3fe858433f6ad)
+
+### feat: install extension packages from file
+
+[View commit `f612cf1`](https://github.com/pauljoda/Crest/commit/f612cf1bef21ee92030dd73581f80ae3b1151aff)
+
+### feat: import Safari custom extensions
+
+[View commit `f6c0f7d`](https://github.com/pauljoda/Crest/commit/f6c0f7d59938aa77de8da6c689d5918ba098fe9f)
+
+### chore: align version references to 0.4
+
+[View commit `63670dc`](https://github.com/pauljoda/Crest/commit/63670dceb7e27d24c5554eb611c256a6122e3ccc)
+
+### Update GitHub Sponsors username in FUNDING.yml
+
+[View commit `4cf71e8`](https://github.com/pauljoda/Crest/commit/4cf71e82701e075c22b5c0ba42ca035497dbea32)
+
+### chore(release): prepare 0.4.0
+
+Crest 0.4 adds Split View across Mac, iPhone, and iPad; expands standards-based extension support across Chrome, Firefox, and Safari-created packages; and establishes signed, notarized direct updates through Sparkle.
+
+It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, retention, and WebKit compatibility fixes collected in the 0.4.0 changelog.
+
+[View commit `25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f)
+
+### fix(release): validate Xcode Cloud archive version
+
+[View commit `3a5b322`](https://github.com/pauljoda/Crest/commit/3a5b32259276edb21db2dc2b95f3b59bb7f5b70c)
+
+### fix(release): accept Xcode Cloud repository URL
+
+[View commit `d17f0ef`](https://github.com/pauljoda/Crest/commit/d17f0efc301d629c7adc9434747038c14148dfa5)
+
+### Polish the public repository and Crest 0.5 roadmap (#10)
+
+[View commit `f7fe0be`](https://github.com/pauljoda/Crest/commit/f7fe0be9dc147178ce0092ad1ba2c3d44619b653)
+
+### fix(release): stamp Xcode Cloud build number
+
+[View commit `a3dafaa`](https://github.com/pauljoda/Crest/commit/a3dafaa9e5581f77640ad9fba5c808f47c5a3d1b)
+
+### Add monthly sponsor recognition tiers (#11)
+
+## What changed
+
+- add a ranked public sponsor roll for Sponsor, Sustainer, and Supporter
+members
+- explain the recognition boundaries in the README and support guide
+- point the website and Help Center sponsorship links directly to the
+Ko-fi tiers
+- replace the README marketing tagline with a plain description of Crest
+
+## Why
+
+Ko-fi now offers simple recurring support without invented content
+perks. The only distinction between tiers is optional public
+recognition, and sponsorship does not buy access, endorsement, support
+priority, ownership, or roadmap influence.
+
+## Validation
+
+- `npm run build:website`
+- `python3 Scripts/Tests/test_product_site.py` — 24 passed
+- `Scripts/check-public-source.py`
+- `git diff --check`
+
+Signed-off-by: Paul Davis <pauldavis101@gmail.com>
+
+[View commit `c5ddb24`](https://github.com/pauljoda/Crest/commit/c5ddb24e3d321c151308565ba90404af24b03f15)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.0-nightly-2026-08-18-c5ddb24-arm64.dmg" length="7525654" type="application/octet-stream" sparkle:edSignature="XBZyH8DQLQhaHSs+vq4D/CmVoaHkHdK898J++02AeWQSX7hkU8FCWa1s8pClccJRQYleyWm1FGJWkg7tA1ARAg=="/>
+        </item>
+        <item>
+            <title>0.4.0</title>
             <pubDate>Tue, 18 Aug 2026 00:48:23 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:version>1032</sparkle:version>
@@ -33,48 +187,9 @@ It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, reten
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.4.0/Installer-Crest-0.4.0-arm64.dmg" length="7505632" type="application/octet-stream" sparkle:edSignature="k4EGWp6622xra5umpPZ+V859HBeyN/tt8aNr+UDQhYkvUBM6+JdjnsBUemFrSjo3OBUFx3plkUajOSr7GYkHBQ=="/>
         </item>
-        <item>
-            <title>0.4.0</title>
-            <pubDate>Mon, 17 Aug 2026 09:06:19 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1027</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[**Full Changelog**: https://github.com/pauljoda/Crest/compare/nightly-2026-08-16-5d65272...nightly-2026-08-17-3ad8f6f
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-2026-08-17-3ad8f6f/Crest-0.4.0-nightly-2026-08-17-3ad8f6f-arm64.dmg" length="7385856" type="application/octet-stream" sparkle:edSignature="dYhRDl/HIpE5xRgzyOc3MUsnBjvfWyrOdIDG73JfrK0c7/QDzRO+K0PRdK2JVR13q2sc5G/62unskZY9qjZJAA=="/>
-        </item>
-        <item>
-            <title>0.4.0</title>
-            <pubDate>Sun, 16 Aug 2026 08:55:39 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1017</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[**Full Changelog**: https://github.com/pauljoda/Crest/compare/nightly-2026-08-15-96af10b...nightly-2026-08-16-5d65272
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-2026-08-16-5d65272/Crest-0.4.0-nightly-2026-08-16-5d65272-arm64.dmg" length="7918335" type="application/octet-stream" sparkle:edSignature="QmBT9QAIdss94ZnyANcrjE1UU+0gvEfO7MSYBkOH4V5kViAIYWSJ7sKHZBZEBXAm0gJO6PFVcZCnxCebMGPVDw=="/>
-        </item>
-        <item>
-            <title>0.3.0</title>
-            <pubDate>Sat, 15 Aug 2026 22:54:30 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[**Full Changelog**: https://github.com/pauljoda/Crest/compare/nightly-3...nightly-2026-08-15-96af10b
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-2026-08-15-96af10b/Crest-0.3.0-nightly-2026-08-15-96af10b-arm64.dmg" length="7889663" type="application/octet-stream" sparkle:edSignature="Z5Lpm4639O9h0qEX6QdbxV4v80dC6xxcV4srQKwqvFilf06c3cDaoCL3qrL5LUxtjHH6G0FqqbuJ2NHm2pDDCg=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: e6Fh3JFFUysnsQ9hwYeAbkbIzooJptPX2JpGu4sHiV1IYygrCCF1bzKkA4ZEh2xQGjaC9kesFclSSf0/t0WHBQ==
-length: 5194
+edSignature: oDQ6KJgCr1MN0Wb74ccCWddUGikVNTfautBaM6FxgwMvIkLLlyjpdA27+2i0Keg+z8NBMS1LhvU2AUKGyYDCBg==
+length: 8760
 -->
