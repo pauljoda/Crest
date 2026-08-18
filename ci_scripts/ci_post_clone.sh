@@ -58,6 +58,22 @@ repository_path="${CI_PRIMARY_REPOSITORY_PATH:-}"
 [ -n "$repository_path" ] \
     || fail "CI_PRIMARY_REPOSITORY_PATH is unavailable."
 
+repository_url="$(git -C "$repository_path" remote get-url origin 2>/dev/null || true)"
+case "$repository_url" in
+    https://github.com/pauljoda/Crest.git|git@github.com:pauljoda/Crest.git|https://*@github.com/pauljoda/Crest.git)
+        ;;
+    *)
+        fail "The Crest workflow must use https://github.com/pauljoda/Crest.git as its primary repository; received '${repository_url:-unset}'."
+        ;;
+esac
+
+cloud_commit="${CI_COMMIT:-}"
+[ -n "$cloud_commit" ] \
+    || fail "CI_COMMIT is unavailable."
+checked_out_commit="$(git -C "$repository_path" rev-parse HEAD)"
+[ "$checked_out_commit" = "$cloud_commit" ] \
+    || fail "Xcode Cloud reports commit $cloud_commit but checked out $checked_out_commit."
+
 project="$repository_path/project.yml"
 scheme="$repository_path/Crest.xcodeproj/xcshareddata/xcschemes/${expected_scheme}.xcscheme"
 [ -f "$project" ] || fail "project.yml is missing from the primary repository."
@@ -73,4 +89,4 @@ grep -q 'macOS: "26.1"' "$project" \
 CREST_VERSION_REPOSITORY_ROOT="$repository_path" \
     "$repository_path/Scripts/check-version.sh" --static
 
-echo "Validated manual ${CI_PRODUCT_PLATFORM} archive with ${expected_scheme} on release Xcode ${xcode_version}."
+echo "Validated manual ${CI_PRODUCT_PLATFORM} archive for ${cloud_commit} from ${repository_url} with ${expected_scheme} on release Xcode ${xcode_version}."
