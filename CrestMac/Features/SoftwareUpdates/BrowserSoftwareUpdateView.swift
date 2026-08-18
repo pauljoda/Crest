@@ -48,7 +48,21 @@ struct BrowserSoftwareUpdateView: View {
             model.presentUpdate(
                 title: "Crest 0.4",
                 version: "0.4.0",
-                releaseNotes: "## What’s new\n\n- Native software updates\n- Security fixes",
+                releaseNotes: """
+                    ## Highlights
+
+                    ### New
+
+                    - Native software updates
+
+                    ### Fixed
+
+                    - Restored extension pages after relaunch
+
+                    ---
+
+                    [View all changes](https://crestbrowser.com/)
+                    """,
                 isInformationOnly: false,
                 install: {},
                 dismiss: {},

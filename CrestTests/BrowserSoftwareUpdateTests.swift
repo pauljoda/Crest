@@ -180,4 +180,69 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         model.retryApplicationTermination()
         XCTAssertEqual(retryCount, 1)
     }
+
+    func testReleaseNotesPreserveMarkdownBlockHierarchy() {
+        let document = BrowserSoftwareUpdateReleaseNotesDocument(
+            markdown: """
+                ## Highlights
+
+                A short introduction with **emphasis**.
+
+                ### Fixed
+
+                - Restored tab selection
+                - Kept extension pages live
+
+                [View all changes](https://example.com/compare)
+                """
+        )
+
+        XCTAssertEqual(
+            document.blocks.map(\.kind),
+            [
+                .heading(level: 2),
+                .paragraph,
+                .heading(level: 3),
+                .bullet,
+                .bullet,
+                .paragraph,
+            ]
+        )
+        XCTAssertEqual(
+            document.blocks.map(\.plainText),
+            [
+                "Highlights",
+                "A short introduction with emphasis.",
+                "Fixed",
+                "Restored tab selection",
+                "Kept extension pages live",
+                "View all changes",
+            ]
+        )
+    }
+
+    func testReleaseNotesKeepWrappedParagraphsTogether() {
+        let document = BrowserSoftwareUpdateReleaseNotesDocument(
+            markdown: """
+                Development builds contain the newest changes and may be less
+                reliable than stable releases.
+                - Includes the latest browsing improvements.
+
+                ---
+                """
+        )
+
+        XCTAssertEqual(
+            document.blocks.map(\.kind),
+            [.paragraph, .bullet, .divider]
+        )
+        XCTAssertEqual(
+            document.blocks.first?.plainText,
+            "Development builds contain the newest changes and may be less reliable than stable releases."
+        )
+        XCTAssertEqual(
+            document.blocks.dropFirst().first?.plainText,
+            "Includes the latest browsing improvements."
+        )
+    }
 }
