@@ -77,6 +77,8 @@ final class BrowserPage: NSObject {
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
+    @ObservationIgnored let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
+    @ObservationIgnored let recoverNotificationSystemAuthorization: @MainActor () async -> Void
     @ObservationIgnored let serverTrustOverrides: BrowserServerTrustOverrideStore
     @ObservationIgnored let spaceID: SpaceID
     @ObservationIgnored let profileID: UUID
@@ -109,6 +111,11 @@ final class BrowserPage: NSObject {
     @ObservationIgnored let splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
+    @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
+    @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
+    @ObservationIgnored private var hostedNotificationMessageProxy: BrowserHostedWebNotificationScriptMessageProxy?
+    @ObservationIgnored var hostedNotificationIdentifiers: Set<String> = []
+    @ObservationIgnored var hostedNotificationDocumentIdentifier = UUID().uuidString
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
     @ObservationIgnored let credentialState: BrowserCredentialPageState<CredentialFillTarget>
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
@@ -163,6 +170,14 @@ final class BrowserPage: NSObject {
         dialogPresenter: BrowserDialogPresenter,
         downloadCenter: BrowserDownloadCenter,
         permissionCenter: BrowserSitePermissionCenter,
+        geolocationService: any BrowserGeolocationServicing =
+            BrowserGeolocationSystemService(),
+        recoverGeolocationSystemAuthorization:
+            BrowserGeolocationCoordinator.RecoverSystemAuthorization? = nil,
+        hostedNotificationCenter:
+            (any BrowserHostedWebNotificationCentering)? = nil,
+        recoverNotificationSystemAuthorization:
+            (@MainActor () async -> Void)? = nil,
         serverTrustOverrides: BrowserServerTrustOverrideStore = BrowserServerTrustOverrideStore(),
         spaceID: SpaceID,
         profileID: UUID,
@@ -215,6 +230,13 @@ final class BrowserPage: NSObject {
         self.dialogPresenter = dialogPresenter
         self.downloadCenter = downloadCenter
         self.permissionCenter = permissionCenter
+        self.hostedNotificationCenter = hostedNotificationCenter
+        self.recoverNotificationSystemAuthorization =
+            recoverNotificationSystemAuthorization
+            ?? {
+                await dialogPresenter
+                    .recoverNotificationSystemAuthorization()
+            }
         self.serverTrustOverrides = serverTrustOverrides
         self.spaceID = spaceID
         self.profileID = profileID
@@ -328,6 +350,47 @@ final class BrowserPage: NSObject {
             ) { [weak self] message in
                 self?.receiveLinkContextMessage(message)
             }
+        }
+        if extensionBaseURL == nil {
+            geolocationCoordinator = BrowserGeolocationCoordinator(
+                webView: webView,
+                permissionCenter: permissionCenter,
+                service: geolocationService,
+                spaceID: spaceID,
+                spaceName: spaceName,
+                prompt: { origin, topLevelURL, requestedSpaceName in
+                    await dialogPresenter.presentGeolocationPermission(
+                        origin: origin,
+                        topLevelURL: topLevelURL,
+                        spaceName: requestedSpaceName
+                    )
+                },
+                recoverSystemAuthorization:
+                    recoverGeolocationSystemAuthorization
+                    ?? {
+                        await dialogPresenter
+                            .recoverGeolocationSystemAuthorization()
+                    }
+            )
+            if ownsUserContentController {
+                geolocationMessageProxy = BrowserGeolocationContentBridge.install(
+                    in: webView.configuration.userContentController
+                ) { [weak self] message in
+                    self?.receiveGeolocationMessage(message)
+                }
+            }
+        }
+        if let hostedNotificationCenter,
+            extensionBaseURL == nil,
+            ownsUserContentController
+        {
+            _ = hostedNotificationCenter
+            hostedNotificationMessageProxy =
+                BrowserHostedWebNotificationContentBridge.install(
+                    in: webView.configuration.userContentController
+                ) { [weak self] message in
+                    self?.receiveHostedWebNotificationMessage(message)
+                }
         }
         if allowsChromeWebStoreExtensions, ownsUserContentController {
             chromeWebStoreMessageProxy =
@@ -576,6 +639,8 @@ final class BrowserPage: NSObject {
         (webView as? BrowserDesktopWebView)?.menuHost = nil
         linkContextCapture.clear()
         observations.removeAll()
+        removeGeolocationRequests()
+        removeHostedWebNotifications()
         guard ownsUserContentController else {
             // A popup shares its opener's content controller. Removing handlers
             // here would silence them for the opener too.
@@ -583,6 +648,9 @@ final class BrowserPage: NSObject {
             linkContextMessageProxy = nil
             chromeWebStoreMessageProxy = nil
             userActivityMessageProxy = nil
+            geolocationMessageProxy = nil
+            geolocationCoordinator = nil
+            hostedNotificationMessageProxy = nil
             userActivityHandler = nil
             return
         }
@@ -620,6 +688,25 @@ final class BrowserPage: NSObject {
                 )
         }
         userActivityMessageProxy = nil
+        if geolocationMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserGeolocationContentBridge.messageHandlerName,
+                    contentWorld: BrowserGeolocationContentBridge.contentWorld
+                )
+        }
+        geolocationMessageProxy = nil
+        geolocationCoordinator = nil
+        if hostedNotificationMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserHostedWebNotificationContentBridge
+                        .messageHandlerName,
+                    contentWorld: BrowserHostedWebNotificationContentBridge
+                        .contentWorld
+                )
+        }
+        hostedNotificationMessageProxy = nil
         userActivityHandler = nil
     }
 

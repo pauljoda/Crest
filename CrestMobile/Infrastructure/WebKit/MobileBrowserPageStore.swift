@@ -863,6 +863,15 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         closeWebContentInitiatedPage(page)
     }
 
+    func routeGeolocationMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pagesByTabID.values.first(where: {
+                $0.webView === sourceWebView
+            })
+        else { return }
+        page.receiveGeolocationMessage(message)
+    }
+
     func goBack() {
         activePage?.goBack()
     }

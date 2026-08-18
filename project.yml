@@ -56,7 +56,9 @@ targets:
         product: Sparkle
       - sdk: AuthenticationServices.framework
       - sdk: CloudKit.framework
+      - sdk: CoreLocation.framework
       - sdk: LocalAuthentication.framework
+      - sdk: UserNotifications.framework
       - sdk: WebKit.framework
       - sdk: Security.framework
     settings:
@@ -105,6 +107,7 @@ targets:
     dependencies:
       - sdk: AuthenticationServices.framework
       - sdk: CloudKit.framework
+      - sdk: CoreLocation.framework
       - sdk: LocalAuthentication.framework
       - sdk: WebKit.framework
       - sdk: Security.framework

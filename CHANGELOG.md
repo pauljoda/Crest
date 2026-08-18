@@ -11,6 +11,11 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added a public Crest 0.5 project and milestone, clear Reddit/GitHub/security support routes, maintainer governance, a documentation index, and Ko-fi and GitHub Sponsors links.
 
+### Fixed
+
+- Made a site's allowed location request resume immediately with a real Core Location result, and surfaced the macOS system-privacy block with a direct Settings recovery path instead of failing invisibly or asking again after refresh.
+- Delivered allowed website notifications through macOS Notification Center, while keeping Crest's per-site decision boundary and surfacing the system notification setting when macOS blocks delivery.
+
 ## [0.4.0] - 2026-08-18
 
 ### Changed

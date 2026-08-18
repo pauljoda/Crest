@@ -57,14 +57,23 @@ See [SUPPORT.md](SUPPORT.md) for reporting routes and
 ## Versions, changelog, and commits
 
 `Config/Version.xcconfig` is the only source for Crest's public version. Versions
-use complete `X.Y.Z` semantic versioning. Use `Scripts/set-version.sh X.Y.Z` for
-an intentional release-line change; Xcode Cloud owns distributed integer build
-numbers while the repository keeps build `1` as its local fallback.
+use complete `X.Y.Z` semantic versioning. Once a fix is verified and ready to
+commit, run `Scripts/set-version.sh --patch`, stage the version file with the
+fix, and run `Scripts/check-version.sh --fix-commit`. Each independently
+verified fix advances the patch component once; when several already verified
+fixes intentionally share one commit, use `Scripts/set-version.sh --patch N` to
+account for all of them.
+
+Changing the major or minor release line is a separate release decision. Use
+`Scripts/set-version.sh --release X.Y.Z` only when that release and its tag have
+been explicitly approved. Xcode Cloud continues to own distributed integer
+build numbers while the repository keeps build `1` as its local fallback.
 
 Every user-visible or architecture-significant work commit updates the
 `Unreleased` section of `CHANGELOG.md` in plain language. Keep commits focused
 and use a Conventional Commit subject such as `refactor(settings): adopt native
-split navigation`. Release commits freeze `Unreleased` under an ISO date and
+split navigation`. A fix commit includes its patch bump and changelog entry in
+that same commit. Release commits freeze `Unreleased` under an ISO date and
 receive an annotated `vX.Y.Z` tag. Do not invent historical release tags.
 
 ## Developer Certificate of Origin

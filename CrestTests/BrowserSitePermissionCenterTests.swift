@@ -14,6 +14,8 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
             (.camera, "camera"),
             (.microphone, "microphone"),
             (.cameraAndMicrophone, "cameraAndMicrophone"),
+            (.location, "location"),
+            (.notifications, "notifications"),
             (.popups, "popups"),
             (.automaticDownloads, "automaticDownloads"),
             (.externalApplications, "externalApplications"),
@@ -179,13 +181,32 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         )
     }
 
-    func testEmbeddedWebKitNotificationBoundaryDoesNotInventAHostPermission() {
+    func testHostedNotificationBoundarySupportsOnlyLivePageDelivery() {
         let capabilities = BrowserHostedWebNotificationCapabilities.wkWebView
 
-        XCTAssertFalse(capabilities.supportsPermissionDelegation)
+        XCTAssertTrue(capabilities.supportsPermissionDelegation)
+        XCTAssertTrue(capabilities.supportsForegroundPageDelivery)
         XCTAssertFalse(capabilities.supportsBackgroundPushDelivery)
-        XCTAssertEqual(capabilities.systemOwner, .safariOrInstalledWebApp)
-        XCTAssertFalse(BrowserSitePermission.allCases.map(\.settingsLabel).contains("Notifications"))
+        XCTAssertEqual(capabilities.systemOwner, .crestWhilePageIsLoaded)
+        XCTAssertTrue(BrowserSitePermission.allCases.map(\.settingsLabel).contains("Notifications"))
+    }
+
+    func testHostedNotificationsRequireHTTPSOrLoopbackHTTP() {
+        XCTAssertTrue(
+            BrowserHostedWebNotificationOriginPolicy.allows(
+                BrowserSiteOrigin(scheme: "https", host: "news.example", port: 443)
+            )
+        )
+        XCTAssertTrue(
+            BrowserHostedWebNotificationOriginPolicy.allows(
+                BrowserSiteOrigin(scheme: "http", host: "localhost", port: 8080)
+            )
+        )
+        XCTAssertFalse(
+            BrowserHostedWebNotificationOriginPolicy.allows(
+                BrowserSiteOrigin(scheme: "http", host: "news.example", port: 80)
+            )
+        )
     }
 
     func testUnknownPermissionAsksByDefault() {

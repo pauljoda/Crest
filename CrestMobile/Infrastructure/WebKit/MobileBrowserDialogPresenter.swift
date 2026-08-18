@@ -93,6 +93,72 @@ enum MobileBrowserDialogPresenter {
         )
     }
 
+    static func presentGeolocationPermission(
+        origin: BrowserSiteOrigin,
+        topLevelURL: URL?,
+        spaceName: String
+    ) async -> BrowserSitePermissionPromptResponse {
+        var message =
+            "This site will be able to use your current location for this request. "
+            + "The choice belongs only to the \(spaceName) Space."
+        if let topLevelHost = topLevelURL?.host(),
+            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
+        {
+            message += " It comes from \(origin.displayName) inside \(topLevelHost)."
+        }
+        return await presentSitePermission(
+            title: "Allow \(origin.host) to use your location?",
+            message: message,
+            allowOnceTitle: "Allow Once",
+            alwaysAllowTitle: "Always Allow",
+            blockTitle: "Block"
+        )
+    }
+
+    /// Keeps the originating web request alive while the person repairs the
+    /// app-level permission in Settings, then lets the coordinator recheck it.
+    static func recoverGeolocationSystemAuthorization() async {
+        guard
+            let settingsURL = URL(
+                string: UIApplication.openSettingsURLString
+            )
+        else { return }
+        let shouldOpen = await withCheckedContinuation { continuation in
+            let alert = UIAlertController(
+                title: "Location Access Is Off for Crest",
+                message:
+                    "iOS is blocking Crest from receiving a location, even when this site is allowed. "
+                    + "Turn on Location for Crest in Settings. "
+                    + "This request will continue when you return.",
+                preferredStyle: .alert
+            )
+            alert.addAction(
+                UIAlertAction(title: "Not Now", style: .cancel) { _ in
+                    continuation.resume(returning: false)
+                })
+            alert.addAction(
+                UIAlertAction(title: "Open Settings", style: .default) { _ in
+                    continuation.resume(returning: true)
+                })
+            present(alert) {
+                continuation.resume(returning: false)
+            }
+        }
+        guard shouldOpen,
+            await UIApplication.shared.open(settingsURL)
+        else { return }
+        var observedInactiveApplication =
+            UIApplication.shared.applicationState != .active
+        while !observedInactiveApplication {
+            try? await Task.sleep(for: .milliseconds(100))
+            observedInactiveApplication =
+                UIApplication.shared.applicationState != .active
+        }
+        while UIApplication.shared.applicationState != .active {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
     static func presentPopupPermission(
         origin: BrowserSiteOrigin,
         destinationURL: URL,

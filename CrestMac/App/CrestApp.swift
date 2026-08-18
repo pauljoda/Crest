@@ -65,6 +65,7 @@ struct CrestApp: App {
             usesIsolatedLaunch
             ? BrowserSitePermissionCenter()
             : BrowserSitePermissionCenter.production(reset: shouldReset)
+        let hostedNotificationCenter = BrowserHostedWebNotificationSystemCenter()
         let extensionControllerPool =
             usesIsolatedLaunch
             ? BrowserExtensionControllerPool()
@@ -124,6 +125,7 @@ struct CrestApp: App {
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             extensionControllerPool: extensionControllerPool,
             permissionCenter: permissionCenter,
+            hostedNotificationCenter: hostedNotificationCenter,
             downloadLedger: Self.showcaseDownloadLedger(
                 launchEnvironment: launchEnvironment,
                 browser: browser
@@ -150,7 +152,11 @@ struct CrestApp: App {
                 browser.openNewTab(url: url, in: spaceID, selecting: selecting)
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
-            splitLinkHost: browser.splitLinkHost
+            splitLinkHost: browser.splitLinkHost,
+            activateHostedNotificationSource: { spaceID, tabID in
+                browser.selectSpace(spaceID)
+                browser.selectTab(tabID)
+            }
         )
         let privatePages = BrowserPagePool(
             // A private window can hold as many live web views as a standard one,

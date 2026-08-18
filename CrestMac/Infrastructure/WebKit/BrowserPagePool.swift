@@ -71,6 +71,8 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     @ObservationIgnored private let openModifiedLink: (URL, SpaceID, Bool) -> Void
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
+    @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
+    @ObservationIgnored private let activateHostedNotificationSource: (SpaceID, TabID) -> Void
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
     @ObservationIgnored private let websiteDataStoreRemover: any BrowserWebsiteDataStoreRemoving
@@ -105,6 +107,8 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         mozillaAddonsProvider: BrowserMozillaAddonsProvider =
             BrowserMozillaAddonsProvider(),
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
+        hostedNotificationCenter:
+            (any BrowserHostedWebNotificationCentering)? = nil,
         downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
@@ -120,6 +124,8 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
+        activateHostedNotificationSource:
+            @escaping (SpaceID, TabID) -> Void = { _, _ in },
         residencyDecisionProvider: @escaping ResidencyDecisionProvider = {
             page,
             isSelected in
@@ -139,6 +145,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         self.chromeWebStoreProvider = chromeWebStoreProvider
         self.mozillaAddonsProvider = mozillaAddonsProvider
         self.permissionCenter = permissionCenter
+        self.hostedNotificationCenter = hostedNotificationCenter
         self.dialogPresenter = dialogPresenter
         self.popupTabHost = popupTabHost
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
@@ -149,6 +156,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         self.splitLinkHost = splitLinkHost
+        self.activateHostedNotificationSource = activateHostedNotificationSource
         downloadCenter = BrowserDownloadCenter(
             ledger: downloadLedger,
             promptForCredentials: { prompt, spaceName in
@@ -1056,6 +1064,31 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         closeWebContentInitiatedPage(page)
     }
 
+    func activateNotificationSourcePage(_ page: BrowserPage) {
+        guard let tabID = tabID(for: page) else { return }
+        activateHostedNotificationSource(page.spaceID, tabID)
+    }
+
+    func routeHostedWebNotificationMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pages.values.first(where: { $0.webView === sourceWebView })
+                ?? suspendedPagesByTabID.values
+                .joined()
+                .first(where: { $0.webView === sourceWebView })
+        else { return }
+        page.receiveHostedWebNotificationMessage(message)
+    }
+
+    func routeGeolocationMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pages.values.first(where: { $0.webView === sourceWebView })
+                ?? suspendedPagesByTabID.values
+                .joined()
+                .first(where: { $0.webView === sourceWebView })
+        else { return }
+        page.receiveGeolocationMessage(message)
+    }
+
     func goBack() {
         activePage?.goBack()
     }
@@ -1383,6 +1416,9 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             dialogPresenter: dialogPresenter,
             downloadCenter: downloadCenter,
             permissionCenter: permissionCenter,
+            hostedNotificationCenter: extensionConfiguration == nil
+                ? hostedNotificationCenter
+                : nil,
             serverTrustOverrides: serverTrustOverrides,
             spaceID: space.id,
             profileID: space.profile.id,

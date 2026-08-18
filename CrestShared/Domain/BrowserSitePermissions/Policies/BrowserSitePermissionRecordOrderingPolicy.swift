@@ -27,10 +27,14 @@ enum BrowserSitePermissionRecordOrderingPolicy {
             2
         case .externalApplications:
             3
-        case .microphone:
+        case .location:
             4
-        case .popups:
+        case .microphone:
             5
+        case .notifications:
+            6
+        case .popups:
+            7
         }
     }
 }

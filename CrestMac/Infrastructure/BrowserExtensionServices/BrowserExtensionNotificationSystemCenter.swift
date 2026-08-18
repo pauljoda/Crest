@@ -17,7 +17,7 @@ final class BrowserExtensionNotificationSystemCenter:
     private static let buttonActionSeparator = ".button."
 
     private let center: UNUserNotificationCenter
-    private let responder = BrowserExtensionNotificationSystemResponder()
+    private let responder = BrowserExtensionNotificationSystemResponder.shared
     private var categories: [String: UNNotificationCategory] = [:]
     private var eventHandler: ((BrowserExtensionNotificationSystemEvent) -> Void)?
 
@@ -200,7 +200,7 @@ final class BrowserExtensionNotificationSystemCenter:
         }
     }
 
-    private static func authorization(
+    nonisolated private static func authorization(
         from status: UNAuthorizationStatus
     ) -> BrowserExtensionNotificationAuthorization {
         switch status {

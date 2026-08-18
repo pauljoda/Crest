@@ -5,8 +5,8 @@ script_root="${0:A:h:h}"
 repository_root="${CREST_VERSION_REPOSITORY_ROOT:-$script_root}"
 mode="${1:-}"
 
-if [[ -n "$mode" && "$mode" != "--static" ]]; then
-  print -u2 "Usage: Scripts/check-version.sh [--static]"
+if [[ -n "$mode" && "$mode" != "--static" && "$mode" != "--fix-commit" ]]; then
+  print -u2 "Usage: Scripts/check-version.sh [--static|--fix-commit]"
   exit 64
 fi
 
@@ -45,6 +45,33 @@ marketing_version="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:sp
 is_strict_semver "$marketing_version" \
   || fail "MARKETING_VERSION must use strict X.Y.Z SemVer without leading zeroes or suffixes."
 
+if [[ "$mode" == "--fix-commit" ]]; then
+  if git -C "$repository_root" diff --cached --quiet -- Config/Version.xcconfig; then
+    fail "Fix commits must stage Config/Version.xcconfig with their patch version increase."
+  fi
+
+  head_version="$({
+    git -C "$repository_root" show HEAD:Config/Version.xcconfig 2>/dev/null \
+      | sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p'
+  } || true)"
+  staged_version="$({
+    git -C "$repository_root" show :Config/Version.xcconfig 2>/dev/null \
+      | sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p'
+  } || true)"
+
+  is_strict_semver "$head_version" || fail "HEAD does not contain a valid Crest marketing version."
+  is_strict_semver "$staged_version" || fail "The staged Crest marketing version is invalid."
+  [[ "$marketing_version" == "$staged_version" ]] \
+    || fail "The working and staged Crest marketing versions differ; stage Config/Version.xcconfig again."
+
+  head_parts=("${(@s:.:)head_version}")
+  staged_parts=("${(@s:.:)staged_version}")
+  [[ "${staged_parts[1]}.${staged_parts[2]}" == "${head_parts[1]}.${head_parts[2]}" ]] \
+    || fail "A fix commit must increment the patch version without changing the release line."
+  (( staged_parts[3] > head_parts[3] )) \
+    || fail "A fix commit must increment the patch version."
+fi
+
 for plist in "$mac_plist" "$mobile_plist"; do
   [[ -f "$plist" ]] || fail "${plist#$repository_root/} is missing."
 
@@ -77,7 +104,7 @@ done
 grep -Eq '^[[:space:]]+CURRENT_PROJECT_VERSION:[[:space:]]+"1"[[:space:]]*$' "$project_file" \
   || fail "project.yml must keep CURRENT_PROJECT_VERSION at the local fallback value 1."
 
-if [[ "$mode" != "--static" ]]; then
+if [[ -z "$mode" ]]; then
   [[ -d "$project_bundle" ]] || fail "Crest.xcodeproj is missing; run XcodeGen first."
 
   for target in Crest CrestMobile; do
@@ -111,4 +138,10 @@ if [[ "$mode" != "--static" ]]; then
   done
 fi
 
-print "Validated Crest $marketing_version version metadata${mode:+ (static)}."
+if [[ "$mode" == "--fix-commit" ]]; then
+  print "Validated fix commit patch version from $head_version to $staged_version."
+elif [[ "$mode" == "--static" ]]; then
+  print "Validated Crest $marketing_version version metadata (static)."
+else
+  print "Validated Crest $marketing_version version metadata."
+fi

@@ -3126,6 +3126,9 @@
         }
       }
     },
+    "Chrome CRX package" : {
+
+    },
     "Chrome or Chromium" : {
       "localizations" : {
         "ar" : {
@@ -4876,6 +4879,12 @@
         }
       }
     },
+    "Deleted" : {
+
+    },
+    "Deleted on another device" : {
+
+    },
     "Deleting Space…" : {
       "localizations" : {
         "ar" : {
@@ -5038,6 +5047,9 @@
           }
         }
       }
+    },
+    "Download Actions" : {
+
     },
     "download files transfers" : {
       "localizations" : {
@@ -5631,6 +5643,7 @@
       }
     },
     "Export Download" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5955,6 +5968,9 @@
           }
         }
       }
+    },
+    "Firefox XPI package" : {
+
     },
     "Fish" : {
       "localizations" : {
@@ -7799,6 +7815,15 @@
           }
         }
       }
+    },
+    "Loading…" : {
+
+    },
+    "Local Chrome Package" : {
+
+    },
+    "Local Firefox Package" : {
+
     },
     "Local journal" : {
       "localizations" : {
@@ -12343,7 +12368,7 @@
         }
       }
     },
-    "Synced from Another Device" : {
+    "Synced from another device" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12353,7 +12378,7 @@
         }
       }
     },
-    "Synced from another device" : {
+    "Synced from Another Device" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {

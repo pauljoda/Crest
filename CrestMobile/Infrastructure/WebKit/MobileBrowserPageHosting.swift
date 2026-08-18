@@ -22,4 +22,8 @@ protocol MobileBrowserPageHosting: AnyObject {
 
     /// Retires an empty transient surface whose initial navigation became a download.
     func discardDownloadOnlyPage(_ page: MobileBrowserPage)
+
+    /// Routes a pre-iOS 27 geolocation bridge message from a shared popup
+    /// content controller to the page whose web view authored it.
+    func routeGeolocationMessage(_ message: WKScriptMessage)
 }

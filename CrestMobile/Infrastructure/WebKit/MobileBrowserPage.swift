@@ -88,6 +88,8 @@ final class MobileBrowserPage: NSObject {
     @ObservationIgnored let linkPeekPressCoordinator = MobileLinkPeekPressCoordinator()
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
+    @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
+    @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
     @ObservationIgnored private var appliedContentRuleLists: [WKContentRuleList]
@@ -119,6 +121,10 @@ final class MobileBrowserPage: NSObject {
         space: BrowserSpace,
         downloadCenter: BrowserDownloadCenter = BrowserDownloadCenter(),
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
+        geolocationService: any BrowserGeolocationServicing =
+            BrowserGeolocationSystemService(),
+        recoverGeolocationSystemAuthorization:
+            BrowserGeolocationCoordinator.RecoverSystemAuthorization? = nil,
         serverTrustOverrides: BrowserServerTrustOverrideStore = BrowserServerTrustOverrideStore(),
         websiteDataStore: WKWebsiteDataStore? = nil,
         adoptedConfiguration: WKWebViewConfiguration? = nil,
@@ -267,6 +273,33 @@ final class MobileBrowserPage: NSObject {
         linkPeekMessageProxy?.receive = { [weak self] message in
             self?.receiveLinkPeekPressMessage(message)
         }
+        geolocationCoordinator = BrowserGeolocationCoordinator(
+            webView: webView,
+            permissionCenter: permissionCenter,
+            service: geolocationService,
+            spaceID: space.id,
+            spaceName: space.name,
+            prompt: { origin, topLevelURL, requestedSpaceName in
+                await MobileBrowserDialogPresenter.presentGeolocationPermission(
+                    origin: origin,
+                    topLevelURL: topLevelURL,
+                    spaceName: requestedSpaceName
+                )
+            },
+            recoverSystemAuthorization:
+                recoverGeolocationSystemAuthorization
+                ?? {
+                    await MobileBrowserDialogPresenter
+                        .recoverGeolocationSystemAuthorization()
+                }
+        )
+        if ownsUserContentController {
+            geolocationMessageProxy = BrowserGeolocationContentBridge.install(
+                in: webView.configuration.userContentController
+            ) { [weak self] message in
+                self?.receiveGeolocationMessage(message)
+            }
+        }
         installObservations()
         if allowsCredentialAccess, ownsUserContentController {
             credentialMessageProxy = BrowserCredentialContentBridge.install(
@@ -393,12 +426,15 @@ final class MobileBrowserPage: NSObject {
             observation.invalidate()
         }
         observations.removeAll()
+        removeGeolocationRequests()
         guard ownsUserContentController else {
             // A popup shares its opener's content controller. Removing handlers
             // here would silence them for the opener too.
             credentialMessageProxy = nil
             linkPeekMessageProxy = nil
             userActivityMessageProxy = nil
+            geolocationMessageProxy = nil
+            geolocationCoordinator = nil
             userActivityHandler = nil
             return
         }
@@ -427,6 +463,15 @@ final class MobileBrowserPage: NSObject {
                 )
         }
         userActivityMessageProxy = nil
+        if geolocationMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserGeolocationContentBridge.messageHandlerName,
+                    contentWorld: BrowserGeolocationContentBridge.contentWorld
+                )
+        }
+        geolocationMessageProxy = nil
+        geolocationCoordinator = nil
         userActivityHandler = nil
     }
 
