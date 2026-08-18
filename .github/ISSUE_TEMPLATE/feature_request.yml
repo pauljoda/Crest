@@ -3,6 +3,9 @@ description: Propose a user problem Crest could solve.
 title: "feature: "
 labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: Discuss early ideas and alternatives in [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Use this form when there is a clear user problem and a concrete outcome Crest could track.
   - type: textarea
     id: problem
     attributes:
