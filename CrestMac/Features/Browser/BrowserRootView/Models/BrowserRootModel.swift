@@ -87,6 +87,10 @@ extension BrowserRootModel {
         pages.reconcile(session: browser.session)
     }
 
+    func extensionHostWindowFocusChanged(_ isFocused: Bool) {
+        pages.extensionControllerPool.setHostWindowFocused(isFocused)
+    }
+
     /// Republishes tab state that lives on the page rather than in the session,
     /// so `tabs.onUpdated` reports load progress and reader mode. Deliberately
     /// narrower than `reconcileExtensions()`, which also re-evaluates page

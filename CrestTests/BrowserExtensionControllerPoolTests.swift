@@ -67,6 +67,98 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertNil(first.configuration.defaultWebsiteDataStore.identifier)
     }
 
+    func testExtensionWindowFocusTracksHostActivationAndSelectedSpace()
+        throws
+    {
+        let browser = BrowserStore.preview()
+        let selectedSpace = try XCTUnwrap(browser.session.selectedSpace)
+        let otherSpace = try XCTUnwrap(
+            browser.session.spaces.first(where: { $0.id != selectedSpace.id })
+        )
+        var reportedControllerIDs: [ObjectIdentifier] = []
+        var reportedSpaceIDs: [SpaceID?] = []
+        let coordinator = BrowserExtensionTabWindowCoordinator {
+            controller,
+            window in
+            reportedControllerIDs.append(ObjectIdentifier(controller))
+            reportedSpaceIDs.append(window?.spaceID)
+        }
+        coordinator.connect(
+            browser: browser,
+            pageProvider: PageProviderSpy(),
+            openCommandSettings: { _, _ in false }
+        )
+        let selectedController = WKWebExtensionController(
+            configuration: .nonPersistent()
+        )
+        let otherController = WKWebExtensionController(
+            configuration: .nonPersistent()
+        )
+
+        // Connecting establishes the selected Space before its controller is
+        // loaded. Registering that controller must publish the initial focus.
+        coordinator.register(
+            controller: otherController,
+            spaceID: otherSpace.id
+        )
+        coordinator.register(
+            controller: selectedController,
+            spaceID: selectedSpace.id
+        )
+
+        XCTAssertEqual(reportedSpaceIDs, [selectedSpace.id])
+        XCTAssertEqual(
+            reportedControllerIDs,
+            [ObjectIdentifier(selectedController)]
+        )
+
+        coordinator.setHostWindowFocused(false)
+        coordinator.setHostWindowFocused(false)
+        browser.selectSpace(otherSpace.id)
+        coordinator.reconcile(session: browser.session)
+
+        // Space selection while the host is inactive must not focus a WebKit
+        // extension window, and duplicate inactive reports are ignored.
+        XCTAssertEqual(reportedSpaceIDs, [selectedSpace.id, nil])
+        XCTAssertEqual(
+            reportedControllerIDs,
+            [
+                ObjectIdentifier(selectedController),
+                ObjectIdentifier(selectedController),
+            ]
+        )
+
+        coordinator.setHostWindowFocused(true)
+        browser.selectSpace(selectedSpace.id)
+        coordinator.reconcile(session: browser.session)
+
+        XCTAssertEqual(
+            reportedSpaceIDs,
+            [selectedSpace.id, nil, otherSpace.id, nil, selectedSpace.id]
+        )
+        XCTAssertEqual(
+            reportedControllerIDs,
+            [
+                ObjectIdentifier(selectedController),
+                ObjectIdentifier(selectedController),
+                ObjectIdentifier(otherController),
+                ObjectIdentifier(otherController),
+                ObjectIdentifier(selectedController),
+            ]
+        )
+
+        coordinator.unregister(spaceID: selectedSpace.id)
+
+        XCTAssertEqual(
+            reportedSpaceIDs,
+            [selectedSpace.id, nil, otherSpace.id, nil, selectedSpace.id, nil]
+        )
+        XCTAssertEqual(
+            reportedControllerIDs.last,
+            ObjectIdentifier(selectedController)
+        )
+    }
+
     func testEphemeralExtensionContextCanAccessOnlyItsIsolatedData()
         async throws
     {

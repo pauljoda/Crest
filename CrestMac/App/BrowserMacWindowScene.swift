@@ -137,6 +137,7 @@ struct BrowserMacWindowScene: View {
     }
 
     private func closeWindowRuntime() {
+        extensionControllerPool.setHostWindowFocused(false)
         pagePoolRegistry.unregister(pages, for: id)
         flushPendingPersistence()
     }

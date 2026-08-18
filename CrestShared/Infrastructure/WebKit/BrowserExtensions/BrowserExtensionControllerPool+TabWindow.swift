@@ -18,6 +18,10 @@ extension BrowserExtensionControllerPool {
         tabWindowCoordinator.reconcile(session: session)
     }
 
+    func setHostWindowFocused(_ isFocused: Bool) {
+        tabWindowCoordinator.setHostWindowFocused(isFocused)
+    }
+
     func registerTransientExtensionTab(
         _ tab: BrowserExtensionTransientTab,
         in spaceID: SpaceID
