@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 extension MobileBrowserRootContent {
     var browser: BrowserStore { model.browser }
@@ -9,7 +8,39 @@ extension MobileBrowserRootContent {
     var address: String { model.address }
 
     var presentation: MobileBrowserPresentation {
-        UIDevice.current.userInterfaceIdiom == .phone ? .compact : .regular
+        MobileBrowserPresentationPolicy.resolve(
+            availableWidth: availableRootSize.width
+        )
+    }
+
+    var presentsSplitView: Bool {
+        guard let space = browser.selectedSpace,
+            !spaceAccess.isLocked(space)
+        else { return false }
+        return model.presentedSplitMembers.count > 1
+    }
+
+    var usesCollapsedSidebarBorderlessFrame: Bool {
+        MobileSidebarPageFramePolicy.usesBorderlessFrame(
+            preferenceIsEnabled: collapsedSidebarFullscreenIsEnabled,
+            sidebarPresentation: navigation.regularSidebarPresentation,
+            presentsSplitView: presentsSplitView,
+            browserPresentation: presentation
+        )
+    }
+
+    var showsCompactPageToolbar: Bool {
+        MobileSidebarPageFramePolicy.showsCompactToolbar(
+            sidebarPresentation: navigation.regularSidebarPresentation,
+            presentsSplitView: presentsSplitView
+        )
+    }
+
+    var ignoresFloatingKeyboardSafeArea: Bool {
+        MobileKeyboardLayoutPolicy.isFloating(
+            keyboardFrame: keyboardEndFrame,
+            availableSize: availableRootSize
+        )
     }
 
     var compactPagePresentation: Binding<Bool> {
@@ -29,15 +60,16 @@ extension MobileBrowserRootContent {
         )
     }
 
-    /// The iPad detail area, built once for the side-by-side layout and once for
-    /// the overlay layout. The two differ only in whether the row adjoins a
-    /// docked sidebar, so everything else is assembled here rather than twice.
+    /// The expanded detail area. The container decides whether it adjoins a
+    /// docked sidebar, while the page and split composition stay identical.
     func regularPageSurface(
         adjoinsLeadingSidebar: Bool
     ) -> MobileRegularPageSurface {
         MobileRegularPageSurface(
             model: model,
             adjoinsLeadingSidebar: adjoinsLeadingSidebar,
+            usesCollapsedSidebarBorderlessFrame:
+                usesCollapsedSidebarBorderlessFrame,
             address: model.addressBinding,
             isAddressEditing: $isAddressEditing,
             addressFocusRequest: addressFocusRequest,

@@ -24,7 +24,9 @@ struct MobileBrowserSidebar: View {
     let compactTransitionEnded: (CGSize) -> Void
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
-    let hideSidebar: () -> Void
+    let toggleSidebar: () -> Void
+    let showsSidebarToggle: Bool
+    let sidebarIsDocked: Bool
     let utilityPresentation: BrowserUtilityPresentationState
 
     @State private var showsPasswords = false
@@ -74,7 +76,9 @@ struct MobileBrowserSidebar: View {
             compactPageIsFullyPresented: compactPageIsFullyPresented,
             compactTransitionEnded: compactTransitionEnded,
             closePrivateBrowsing: closePrivateBrowsing,
-            hideSidebar: hideSidebar,
+            toggleSidebar: toggleSidebar,
+            showsSidebarToggle: showsSidebarToggle,
+            sidebarIsDocked: sidebarIsDocked,
             selectSpace: selectSpace,
             settleSpaceSelection: settlePendingPageSelection,
             showHistory: presentHistory,
@@ -298,7 +302,9 @@ struct MobileBrowserSidebar: View {
         compactTransitionEnded: { _ in },
         togglePrivateBrowsing: {},
         closePrivateBrowsing: {},
-        hideSidebar: {},
+        toggleSidebar: {},
+        showsSidebarToggle: true,
+        sidebarIsDocked: true,
         utilityPresentation: BrowserUtilityPresentationState()
     )
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     let model: MobileBrowserRootModel
@@ -18,6 +19,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var isURLCopiedFeedbackVisible = false
     @State var visiblePageZoomFeedbackLabel: String?
     @State var storedRegularSidebarWidth: Double
+    @State var availableRootSize = CGSize.zero
+    @State var keyboardEndFrame = CGRect.null
+    @AppStorage(MobileCollapsedSidebarFullscreenPreference.key)
+    var collapsedSidebarFullscreenIsEnabled = false
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace
 
@@ -57,7 +62,21 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             compact: MobileCompactBrowserSurface(
                 compactShowsPage: navigation.compactShowsPage,
                 isPagePresented: compactPagePresentation,
-                sidebar: MobileBrowserSidebarSurface(
+                usesDockedDetailPresentation:
+                    navigation.regularSidebarIsDocked,
+                sidebarPresentation: navigation.regularSidebarPresentation,
+                preferredSidebarWidth: model.sidebarWidthBinding,
+                space: browser.selectedSpace,
+                reduceTransparency: reduceTransparency,
+                layoutDirection: layoutDirection,
+                usesBorderlessFloatingPageFrame:
+                    usesCollapsedSidebarBorderlessFrame,
+                isStartPage: browser.selectedTab?.isStartPage == true,
+                hasActivePage: model.selectedPage != nil,
+                hasSelectedSpace: browser.selectedSpace != nil,
+                showSidebar: showRegularSidebar,
+                commitSidebarWidth: commitRegularSidebarWidth,
+                dockedSidebar: MobileBrowserSidebarSurface(
                     browser: browser,
                     pages: pages,
                     dataDeleter: dataDeleter,
@@ -81,8 +100,46 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     compactTransitionEnded: finishCompactTransition,
                     togglePrivateBrowsing: togglePrivateBrowsing,
                     closePrivateBrowsing: closePrivateBrowsing,
-                    hideSidebar: {},
+                    toggleSidebar: toggleCompactSidebar,
+                    showsSidebarToggle: true,
+                    sidebarIsDocked: true,
                     utilityPresentation: navigation.utilityPresentation
+                ),
+                floatingSidebar: MobileBrowserSidebarSurface(
+                    browser: browser,
+                    pages: pages,
+                    dataDeleter: dataDeleter,
+                    spaceAccess: spaceAccess,
+                    mode: .regularSidebar,
+                    compactChromeNamespace: compactChromeNamespace,
+                    tabPromotionNamespace: tabPromotionNamespace,
+                    address: model.addressBinding,
+                    isAddressEditing: $isAddressEditing,
+                    activateAddress: openLocation,
+                    selectTab: selectTab,
+                    submitAddress: submitAddress,
+                    openURL: openURL,
+                    openNewTab: beginNewTab,
+                    showsCompactAddressBar: false,
+                    showsBottomSpaceSwitcher: true,
+                    compactPageIsFullyPresented: false,
+                    compactTransitionEnded: finishCompactTransition,
+                    togglePrivateBrowsing: togglePrivateBrowsing,
+                    closePrivateBrowsing: closePrivateBrowsing,
+                    toggleSidebar: toggleCompactSidebar,
+                    showsSidebarToggle: true,
+                    sidebarIsDocked: false,
+                    utilityPresentation: navigation.utilityPresentation
+                )
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        navigation.handleRegularSidebarInteraction()
+                    }
+                )
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0).onChanged { _ in
+                        navigation.handleRegularSidebarInteraction()
+                    }
                 ),
                 page: MobileCompactPageSurface(
                     browser: browser,
@@ -98,11 +155,13 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     completePagePresentation:
                         navigation.completePagePresentation,
                     backdrop: MobileCompactPageBackdrop(
-                        isStartPage: browser.selectedTab?.isStartPage == true,
+                        isStartPage:
+                            browser.selectedTab?.isStartPage == true,
                         hasSelectedPage: model.selectedPage != nil,
                         pageThemeColor: model.selectedPage?.themeColor,
                         underPageBackgroundColor:
-                            model.selectedPage?.webView.underPageBackgroundColor,
+                            model.selectedPage?.webView
+                            .underPageBackgroundColor,
                         space: browser.selectedSpace
                     ),
                     detail: MobileBrowserDetailSurface(
@@ -112,16 +171,23 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         address: model.addressBinding,
                         isAddressEditing: $isAddressEditing,
                         addressFocusRequest: addressFocusRequest,
-                        isCommandPalettePresented: commandPaletteMode != nil,
+                        isCommandPalettePresented:
+                            commandPaletteMode != nil,
                         isCompact: true,
-                        showsCompactToolbar: true,
+                        obscuresSystemSafeAreas:
+                            usesCollapsedSidebarBorderlessFrame,
+                        showsCompactToolbar: showsCompactPageToolbar,
                         compactToolbarIsHidden:
                             navigation.compactToolbarIsHidden,
+                        handleWebContentInteraction:
+                            navigation.handleRegularPageInteraction,
                         submitAddress: submitAddress,
                         beginNewTab: beginNewTab,
                         showTabViewer: showTabViewer,
-                        hideCompactToolbar: navigation.hideCompactToolbar,
-                        showCompactToolbar: navigation.showCompactToolbar,
+                        hideCompactToolbar:
+                            navigation.hideCompactToolbar,
+                        showCompactToolbar:
+                            navigation.showCompactToolbar,
                         handleToolbarSwipe: handleToolbarSwipe,
                         selectSplitCard: selectSplitCard,
                         compactTransitionEnded: finishCompactTransition
@@ -131,90 +197,57 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             regular: { layout in
                 MobileRegularBrowserLayout(
                     layout: layout,
-                    sidebarIsPresented:
-                        navigation.regularSidebarIsPresented,
-                    isCommandPalettePresented: commandPaletteMode != nil,
-                    sideBySide: { sidebarWidth in
-                        MobileRegularSideBySideLayout(
-                            sidebarWidth: sidebarWidth,
-                            sidebarIsPresented:
-                                navigation.regularSidebarIsPresented,
-                            preferredSidebarWidth: model.sidebarWidthBinding,
-                            reduceMotion: reduceMotion,
-                            layoutDirection: layoutDirection,
-                            showSidebar: showRegularSidebar,
-                            commitSidebarWidth: commitRegularSidebarWidth,
-                            sidebar: MobileBrowserSidebarSurface(
-                                browser: browser,
-                                pages: pages,
-                                dataDeleter: dataDeleter,
-                                spaceAccess: spaceAccess,
-                                mode: .regularSidebar,
-                                compactChromeNamespace: compactChromeNamespace,
-                                tabPromotionNamespace: tabPromotionNamespace,
-                                address: model.addressBinding,
-                                isAddressEditing: $isAddressEditing,
-                                activateAddress: openLocation,
-                                selectTab: selectTab,
-                                submitAddress: submitAddress,
-                                openURL: openURL,
-                                openNewTab: beginNewTab,
-                                showsCompactAddressBar: false,
-                                showsBottomSpaceSwitcher: true,
-                                compactPageIsFullyPresented: false,
-                                compactTransitionEnded: finishCompactTransition,
-                                togglePrivateBrowsing: togglePrivateBrowsing,
-                                closePrivateBrowsing: closePrivateBrowsing,
-                                hideSidebar: hideRegularSidebar,
-                                utilityPresentation:
-                                    navigation.utilityPresentation
-                            ),
-                            detail: regularPageSurface(
-                                adjoinsLeadingSidebar:
-                                    navigation.regularSidebarIsPresented
-                            )
-                        )
-                    },
-                    overlay: { sidebarWidth in
-                        MobileRegularOverlayLayout(
-                            sidebarWidth: sidebarWidth,
-                            sidebarIsPresented:
-                                navigation.regularSidebarIsPresented,
-                            reduceMotion: reduceMotion,
-                            reduceTransparency: reduceTransparency,
-                            layoutDirection: layoutDirection,
-                            showSidebar: showRegularSidebar,
-                            hideSidebar: hideRegularSidebar,
-                            sidebar: MobileBrowserSidebarSurface(
-                                browser: browser,
-                                pages: pages,
-                                dataDeleter: dataDeleter,
-                                spaceAccess: spaceAccess,
-                                mode: .regularSidebar,
-                                compactChromeNamespace: compactChromeNamespace,
-                                tabPromotionNamespace: tabPromotionNamespace,
-                                address: model.addressBinding,
-                                isAddressEditing: $isAddressEditing,
-                                activateAddress: openLocation,
-                                selectTab: selectTab,
-                                submitAddress: submitAddress,
-                                openURL: openURL,
-                                openNewTab: beginNewTab,
-                                showsCompactAddressBar: false,
-                                showsBottomSpaceSwitcher: true,
-                                compactPageIsFullyPresented: false,
-                                compactTransitionEnded: finishCompactTransition,
-                                togglePrivateBrowsing: togglePrivateBrowsing,
-                                closePrivateBrowsing: closePrivateBrowsing,
-                                hideSidebar: hideRegularSidebar,
-                                utilityPresentation:
-                                    navigation.utilityPresentation
-                            ),
-                            detail: regularPageSurface(
-                                adjoinsLeadingSidebar: false
-                            )
-                        )
-                    }
+                    sidebarPresentation:
+                        navigation.regularSidebarPresentation,
+                    preferredSidebarWidth: model.sidebarWidthBinding,
+                    reduceTransparency: reduceTransparency,
+                    layoutDirection: layoutDirection,
+                    space: browser.selectedSpace,
+                    showSidebar: showRegularSidebar,
+                    commitSidebarWidth: commitRegularSidebarWidth,
+                    sidebar: MobileBrowserSidebarSurface(
+                        browser: browser,
+                        pages: pages,
+                        dataDeleter: dataDeleter,
+                        spaceAccess: spaceAccess,
+                        mode: .regularSidebar,
+                        compactChromeNamespace: compactChromeNamespace,
+                        tabPromotionNamespace: tabPromotionNamespace,
+                        address: model.addressBinding,
+                        isAddressEditing: $isAddressEditing,
+                        activateAddress: openLocation,
+                        selectTab: selectTab,
+                        submitAddress: submitAddress,
+                        openURL: openURL,
+                        openNewTab: beginNewTab,
+                        showsCompactAddressBar: false,
+                        showsBottomSpaceSwitcher: true,
+                        compactPageIsFullyPresented: false,
+                        compactTransitionEnded: finishCompactTransition,
+                        togglePrivateBrowsing: togglePrivateBrowsing,
+                        closePrivateBrowsing: closePrivateBrowsing,
+                        toggleSidebar: toggleRegularSidebar,
+                        showsSidebarToggle: true,
+                        sidebarIsDocked:
+                            navigation.regularSidebarIsDocked,
+                        utilityPresentation:
+                            navigation.utilityPresentation
+                    )
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
+                            navigation.handleRegularSidebarInteraction()
+                        }
+                    )
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0).onChanged { _ in
+                            navigation.handleRegularSidebarInteraction()
+                        }
+                    ),
+                    detail: regularPageSurface(
+                        adjoinsLeadingSidebar:
+                            navigation.regularSidebarIsDocked
+                            && layout.reservesSidebarWidth
+                    )
                 )
                 .overlay {
                     MobileRegularUtilityFanLayer(
@@ -282,5 +315,34 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 storedSidebarWidth: $storedRegularSidebarWidth
             )
         )
+        .onChange(of: browser.sidebarReorderState.isDragging, initial: true) {
+            _, isDragging in
+            navigation.setTransientSidebarDismissalPaused(isDragging)
+        }
+        .onGeometryChange(for: CGSize.self) { proxy in
+            proxy.size
+        } action: { size in
+            availableRootSize = size
+        }
+        .ignoresSafeArea(
+            .keyboard,
+            edges: ignoresFloatingKeyboardSafeArea ? .bottom : []
+        )
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: UIResponder.keyboardWillChangeFrameNotification
+            )
+        ) { notification in
+            keyboardEndFrame =
+                notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
+                as? CGRect ?? .null
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: UIResponder.keyboardWillHideNotification
+            )
+        ) { _ in
+            keyboardEndFrame = .null
+        }
     }
 }

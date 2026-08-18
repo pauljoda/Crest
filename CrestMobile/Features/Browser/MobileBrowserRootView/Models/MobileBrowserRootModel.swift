@@ -51,7 +51,7 @@ extension MobileBrowserRootModel {
         guard presentation == .regular else { return }
         windowState?.captureSidebar(
             width: Double(sidebarWidth),
-            isPresented: navigation.regularSidebarIsPresented
+            isPresented: navigation.regularSidebarIsDocked
         )
     }
 
@@ -113,9 +113,11 @@ extension MobileBrowserRootModel {
         )
     }
 
-    func regularSidebarPresentationChanged(_ isPresented: Bool) {
-        windowState?.captureSidebar(isPresented: isPresented)
-        if !isPresented {
+    func regularSidebarPresentationChanged(
+        _ presentation: BrowserSidebarPresentation
+    ) {
+        windowState?.captureSidebar(isPresented: presentation.reservesSidebarWidth)
+        if !presentation.showsSidebar {
             navigation.utilityPresentation.dismiss()
         }
     }
@@ -404,10 +406,14 @@ extension MobileBrowserRootModel {
         reduceMotion: Bool
     ) {
         if presentation == .compact {
-            if navigation.compactShowsPage {
-                navigation.showTabViewer()
-            } else {
-                activateSelectedTab()
+            let revealsPage =
+                navigation.compactSidebarPresentation == .docked
+            if revealsPage {
+                pages.select(session: browser.session)
+                address = browser.selectedTab?.url?.absoluteString ?? ""
+            }
+            withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
+                navigation.toggleCompactSidebar()
             }
             return
         }

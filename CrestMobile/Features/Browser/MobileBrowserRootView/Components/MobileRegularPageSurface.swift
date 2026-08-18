@@ -16,6 +16,7 @@ import SwiftUI
 struct MobileRegularPageSurface: View {
     let model: MobileBrowserRootModel
     let adjoinsLeadingSidebar: Bool
+    let usesCollapsedSidebarBorderlessFrame: Bool
     @Binding var address: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
@@ -41,12 +42,14 @@ struct MobileRegularPageSurface: View {
         } else {
             MobileRegularDetailSurface(
                 adjoinsLeadingSidebar: adjoinsLeadingSidebar,
+                usesBorderlessFrame: usesCollapsedSidebarBorderlessFrame,
                 isStartPage: model.browser.selectedTab?.isStartPage == true,
                 hasActivePage: model.selectedPage != nil,
                 hasSelectedSpace: model.browser.selectedSpace != nil,
                 handleWebContentInteraction: {
                     model.navigation.utilityPresentation
                         .handleInteraction(.webContent)
+                    model.navigation.handleRegularPageInteraction()
                 },
                 content: MobileBrowserDetailSurface(
                     browser: model.browser,
@@ -57,8 +60,15 @@ struct MobileRegularPageSurface: View {
                     addressFocusRequest: addressFocusRequest,
                     isCommandPalettePresented: isCommandPalettePresented,
                     isCompact: false,
+                    obscuresSystemSafeAreas:
+                        usesCollapsedSidebarBorderlessFrame,
                     showsCompactToolbar: false,
                     compactToolbarIsHidden: compactToolbarIsHidden,
+                    handleWebContentInteraction: {
+                        model.navigation.utilityPresentation
+                            .handleInteraction(.webContent)
+                        model.navigation.handleRegularPageInteraction()
+                    },
                     submitAddress: submitAddress,
                     beginNewTab: beginNewTab,
                     showTabViewer: showTabViewer,

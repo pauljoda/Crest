@@ -242,7 +242,7 @@ final class MobileBrowserWindowSceneModel {
         _ navigation: MobileBrowserNavigationState
     ) {
         if windowState.sidebarIsPresented ?? true {
-            navigation.showRegularSidebar()
+            navigation.dockRegularSidebar()
             return
         }
         navigation.hideRegularSidebar()

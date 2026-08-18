@@ -42,6 +42,11 @@ struct MobileSplitColumnsPageSurface: View {
                     pages: model.pages,
                     viewport: .inline,
                     failureLayout: .regular,
+                    handleInteraction: {
+                        model.navigation.utilityPresentation
+                            .handleInteraction(.webContent)
+                        model.navigation.handleRegularPageInteraction()
+                    },
                     requestFocus: { model.focusSplitCard(member.id) }
                 )
             }
@@ -49,6 +54,7 @@ struct MobileSplitColumnsPageSurface: View {
         .simultaneousGesture(
             TapGesture().onEnded {
                 model.navigation.utilityPresentation.handleInteraction(.webContent)
+                model.navigation.handleRegularPageInteraction()
             }
         )
         .onChange(of: members.map(\.id), initial: true) { _, _ in

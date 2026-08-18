@@ -2,6 +2,10 @@ import UIKit
 
 @MainActor
 final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelegate {
+    /// Refreshed by the representable so a retained host never dismisses a
+    /// sidebar through a stale window's navigation state.
+    var handleInteraction: (() -> Void)?
+
     /// What an unfocused split card does when it is tapped. Refreshed on every
     /// `updateUIView` so the recognizer never holds a stale member's closure.
     var requestFocus: (() -> Void)?
@@ -30,6 +34,7 @@ final class MobileBrowserWebViewCoordinator: NSObject, UIGestureRecognizerDelega
 
     @objc private func dismissAddressFocus() {
         BrowserAddressFocusDismissal.dismiss()
+        handleInteraction?()
     }
 
     @objc private func requestCardFocus() {

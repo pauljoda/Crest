@@ -1,21 +1,13 @@
 import CoreGraphics
 
-enum BrowserSidebarPresentation: Equatable {
+enum BrowserSidebarPresentation: Equatable, Sendable {
     case docked
     case floating
     case collapsed
 
-    var showsSidebar: Bool {
-        self != .collapsed
-    }
-
-    var showsWindowControls: Bool {
-        self != .collapsed
-    }
-
-    var reservesSidebarWidth: Bool {
-        self == .docked
-    }
+    var showsSidebar: Bool { self != .collapsed }
+    var showsWindowControls: Bool { self != .collapsed }
+    var reservesSidebarWidth: Bool { self == .docked }
 
     func reservedWidth(
         for sidebarWidth: CGFloat,
@@ -27,5 +19,4 @@ enum BrowserSidebarPresentation: Equatable {
     var sidebarToggleAction: BrowserSidebarToggleAction {
         self == .docked ? .hide : .dock
     }
-
 }

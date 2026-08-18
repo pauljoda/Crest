@@ -9,6 +9,7 @@ struct BrowserRootContentSurface<Content: View>: View {
     let frameInsets: EdgeInsets
     let usesTransparentInnerSurface: Bool
     let showsFallbackBorder: Bool
+    let showsBoundary: Bool
     let content: Content
 
     init(
@@ -17,6 +18,7 @@ struct BrowserRootContentSurface<Content: View>: View {
         frameInsets: EdgeInsets,
         usesTransparentInnerSurface: Bool,
         showsFallbackBorder: Bool = false,
+        showsBoundary: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.cornerRadius = cornerRadius
@@ -24,6 +26,7 @@ struct BrowserRootContentSurface<Content: View>: View {
         self.frameInsets = frameInsets
         self.usesTransparentInnerSurface = usesTransparentInnerSurface
         self.showsFallbackBorder = showsFallbackBorder
+        self.showsBoundary = showsBoundary
         self.content = content()
     }
 
@@ -52,7 +55,9 @@ struct BrowserRootContentSurface<Content: View>: View {
             .background {
                 CrestLiftedSurfaceShadow(
                     cornerRadius: cornerRadius,
-                    opacity: BrowserPageSurfacePolicy.shadowOpacity,
+                    opacity: showsBoundary
+                        ? BrowserPageSurfacePolicy.shadowOpacity
+                        : 0,
                     radius: BrowserPageSurfacePolicy.shadowRadius,
                     yOffset: BrowserPageSurfacePolicy.shadowYOffset
                 )
@@ -61,9 +66,12 @@ struct BrowserRootContentSurface<Content: View>: View {
                 outerShape
                     .strokeBorder(
                         Color.black.opacity(
-                            showsFallbackBorder
-                                ? CrestOpacity.border
-                                : BrowserPageSurfacePolicy.boundaryStrokeOpacity
+                            showsBoundary
+                                ? showsFallbackBorder
+                                    ? CrestOpacity.border
+                                    : BrowserPageSurfacePolicy
+                                        .boundaryStrokeOpacity
+                                : 0
                         ),
                         lineWidth: BrowserPageSurfacePolicy.boundaryStrokeWidth,
                         antialiased: true

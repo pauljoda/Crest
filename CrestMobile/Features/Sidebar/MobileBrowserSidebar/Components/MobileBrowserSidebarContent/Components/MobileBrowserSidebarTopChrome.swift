@@ -7,8 +7,7 @@ struct MobileBrowserSidebarTopChrome: View {
         if configuration.mode == .regularSidebar {
             MobileSidebarNavigationControls(
                 browser: configuration.browser,
-                pageActions: selectedPageActions,
-                hideSidebar: configuration.hideSidebar
+                pageActions: selectedPageActions
             )
 
             if let utilitySurface = configuration.utilityPresentation.surface {

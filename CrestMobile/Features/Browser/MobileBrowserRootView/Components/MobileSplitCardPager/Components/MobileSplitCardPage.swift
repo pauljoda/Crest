@@ -17,6 +17,7 @@ struct MobileSplitCardPage: View {
     let pages: MobileBrowserPageStore
     let viewport: MobileBrowserPageViewport
     let prepareMember: (TabID) -> Void
+    let handleInteraction: () -> Void
 
     var body: some View {
         MobileSplitCardContent(
@@ -24,7 +25,8 @@ struct MobileSplitCardPage: View {
             space: space,
             pages: pages,
             viewport: viewport,
-            failureLayout: .compact
+            failureLayout: .compact,
+            handleInteraction: handleInteraction
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {

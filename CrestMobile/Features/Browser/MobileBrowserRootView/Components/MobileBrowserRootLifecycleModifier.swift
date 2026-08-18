@@ -111,9 +111,9 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
                 model.restoreSidebarWidth(CGFloat(width))
             }
             .onChange(
-                of: model.navigation.regularSidebarIsPresented
-            ) { _, isPresented in
-                model.regularSidebarPresentationChanged(isPresented)
+                of: model.navigation.regularSidebarPresentation
+            ) { _, presentation in
+                model.regularSidebarPresentationChanged(presentation)
             }
             .onChange(of: model.lockedSpaceIDs, initial: true) { _, spaceIDs in
                 model.relockProtectedSpaces(spaceIDs)

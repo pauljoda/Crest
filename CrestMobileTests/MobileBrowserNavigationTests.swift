@@ -984,6 +984,220 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertFalse(navigation.defersPageActivation)
     }
 
+    func testOnlyExpandedContainersUseTheRegularBrowserPresentation() {
+        XCTAssertEqual(
+            MobileBrowserPresentationPolicy.resolve(
+                availableWidth: 430
+            ),
+            .compact
+        )
+        XCTAssertEqual(
+            MobileBrowserPresentationPolicy.resolve(
+                availableWidth: 852
+            ),
+            .regular
+        )
+        XCTAssertEqual(
+            MobileBrowserPresentationPolicy.resolve(
+                availableWidth: 599
+            ),
+            .compact,
+            "A setting must not force a thin phone into the expanded shell."
+        )
+    }
+
+    func testCompactSidebarUsesItsFullScreenViewerAsTheDockedState() {
+        let navigation = MobileBrowserNavigationState()
+        navigation.adapt(to: .compact)
+
+        XCTAssertEqual(navigation.compactSidebarPresentation, .docked)
+        XCTAssertFalse(navigation.compactShowsPage)
+
+        navigation.toggleCompactSidebar()
+        XCTAssertEqual(navigation.compactSidebarPresentation, .floating)
+        XCTAssertTrue(navigation.compactShowsPage)
+
+        navigation.toggleCompactSidebar()
+        XCTAssertEqual(navigation.compactSidebarPresentation, .docked)
+        XCTAssertFalse(navigation.compactShowsPage)
+
+        navigation.selectTab()
+        XCTAssertEqual(navigation.compactSidebarPresentation, .collapsed)
+        XCTAssertTrue(navigation.compactShowsPage)
+    }
+
+    func testSelectingFromTheFullScreenPhoneSidebarUsesTheDockedDetailFlow() {
+        let navigation = MobileBrowserNavigationState(
+            regularSidebarIsPresented: false
+        )
+        navigation.adapt(to: .compact)
+
+        XCTAssertEqual(navigation.compactSidebarPresentation, .docked)
+        XCTAssertFalse(navigation.regularSidebarIsDocked)
+
+        navigation.selectTab()
+
+        XCTAssertTrue(navigation.regularSidebarIsDocked)
+        XCTAssertTrue(navigation.compactShowsPage)
+    }
+
+    func testCollapsedSidebarFullscreenOnlyChangesTheFloatingSinglePageFrame() {
+        XCTAssertFalse(
+            MobileSidebarPageFramePolicy.usesBorderlessFrame(
+                preferenceIsEnabled: false,
+                sidebarPresentation: .floating,
+                presentsSplitView: false,
+                browserPresentation: .compact
+            )
+        )
+        XCTAssertTrue(
+            MobileSidebarPageFramePolicy.usesBorderlessFrame(
+                preferenceIsEnabled: true,
+                sidebarPresentation: .collapsed,
+                presentsSplitView: false,
+                browserPresentation: .compact
+            )
+        )
+        XCTAssertTrue(
+            MobileSidebarPageFramePolicy.usesBorderlessFrame(
+                preferenceIsEnabled: true,
+                sidebarPresentation: .floating,
+                presentsSplitView: false,
+                browserPresentation: .regular
+            )
+        )
+        XCTAssertTrue(
+            MobileSidebarPageFramePolicy.usesBorderlessFrame(
+                preferenceIsEnabled: false,
+                sidebarPresentation: .docked,
+                presentsSplitView: false,
+                browserPresentation: .compact
+            ),
+            "The docked phone's tab-to-detail transition remains the existing borderless presentation."
+        )
+        XCTAssertFalse(
+            MobileSidebarPageFramePolicy.usesBorderlessFrame(
+                preferenceIsEnabled: true,
+                sidebarPresentation: .docked,
+                presentsSplitView: false,
+                browserPresentation: .regular
+            )
+        )
+        XCTAssertFalse(
+            MobileSidebarPageFramePolicy.usesBorderlessFrame(
+                preferenceIsEnabled: true,
+                sidebarPresentation: .floating,
+                presentsSplitView: true,
+                browserPresentation: .compact
+            )
+        )
+    }
+
+    func testOnlyDockedPhoneDetailsAndSplitViewKeepTheCompactToolbar() {
+        XCTAssertTrue(
+            MobileSidebarPageFramePolicy.showsCompactToolbar(
+                sidebarPresentation: .docked,
+                presentsSplitView: false
+            )
+        )
+        XCTAssertFalse(
+            MobileSidebarPageFramePolicy.showsCompactToolbar(
+                sidebarPresentation: .floating,
+                presentsSplitView: false
+            )
+        )
+        XCTAssertFalse(
+            MobileSidebarPageFramePolicy.showsCompactToolbar(
+                sidebarPresentation: .collapsed,
+                presentsSplitView: false
+            )
+        )
+        XCTAssertTrue(
+            MobileSidebarPageFramePolicy.showsCompactToolbar(
+                sidebarPresentation: .floating,
+                presentsSplitView: true
+            ),
+            "Split View keeps the floating toolbar because it owns the card-swipe interaction."
+        )
+    }
+
+    func testSelectingATabDismissesOnlyTheFloatingPhoneSidebar() {
+        XCTAssertTrue(
+            MobileSidebarTabSelectionPolicy.dismissesSidebar(
+                browserPresentation: .compact,
+                sidebarPresentation: .floating
+            )
+        )
+        XCTAssertFalse(
+            MobileSidebarTabSelectionPolicy.dismissesSidebar(
+                browserPresentation: .compact,
+                sidebarPresentation: .docked
+            )
+        )
+        XCTAssertFalse(
+            MobileSidebarTabSelectionPolicy.dismissesSidebar(
+                browserPresentation: .regular,
+                sidebarPresentation: .floating
+            ),
+            "iPad keeps the normal shared floating-sidebar selection behavior."
+        )
+    }
+
+    func testWebContentKeepsNativeBackNavigationOutsideTheRevealStrip() throws {
+        let space = makeSpace(index: 66)
+        let page = MobileBrowserPage(
+            tab: try XCTUnwrap(space.tabs.first),
+            space: space,
+            loadsInitialURL: false,
+            openNewTab: { _ in }
+        )
+
+        XCTAssertTrue(page.webView.allowsBackForwardNavigationGestures)
+        XCTAssertEqual(
+            MobileBrowserChromeLayout.collapsedSidebarRevealWidth,
+            26,
+            "Only the extreme leading edge is reserved for revealing the sidebar; the rest of the page remains WebKit navigation territory."
+        )
+    }
+
+    func testOnlyFloatingKeyboardsIgnoreTheKeyboardSafeArea() {
+        let availableSize = CGSize(width: 1_366, height: 1_024)
+
+        XCTAssertFalse(
+            MobileKeyboardLayoutPolicy.isFloating(
+                keyboardFrame: CGRect(x: 0, y: 650, width: 1_366, height: 374),
+                availableSize: availableSize
+            )
+        )
+        XCTAssertTrue(
+            MobileKeyboardLayoutPolicy.isFloating(
+                keyboardFrame: CGRect(x: 930, y: 610, width: 360, height: 280),
+                availableSize: availableSize
+            )
+        )
+        XCTAssertFalse(
+            MobileKeyboardLayoutPolicy.isFloating(
+                keyboardFrame: .null,
+                availableSize: availableSize
+            )
+        )
+
+        let resizedPhoneWindow = CGSize(width: 701, height: 435)
+        XCTAssertTrue(
+            MobileKeyboardLayoutPolicy.isFloating(
+                keyboardFrame: CGRect(x: 260, y: 253, width: 270, height: 182),
+                availableSize: resizedPhoneWindow
+            ),
+            "Floating-keyboard handling must be based on the window, not the device family."
+        )
+        XCTAssertFalse(
+            MobileKeyboardLayoutPolicy.isFloating(
+                keyboardFrame: CGRect(x: 0, y: 150, width: 701, height: 285),
+                availableSize: resizedPhoneWindow
+            )
+        )
+    }
+
     func testRegularSidebarPresentationRestoresPerNativeWindow() {
         let hiddenWindow = MobileBrowserNavigationState(
             regularSidebarIsPresented: false
@@ -1082,14 +1296,49 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         navigation.hideRegularSidebar()
         XCTAssertFalse(navigation.regularSidebarIsPresented)
+        XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
 
         navigation.showRegularSidebar()
         XCTAssertTrue(navigation.regularSidebarIsPresented)
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
 
+        navigation.toggleRegularSidebar()
+        XCTAssertTrue(navigation.regularSidebarIsPresented)
+        XCTAssertTrue(navigation.regularSidebarIsDocked)
         navigation.toggleRegularSidebar()
         XCTAssertFalse(navigation.regularSidebarIsPresented)
         navigation.toggleRegularSidebar()
-        XCTAssertTrue(navigation.regularSidebarIsPresented)
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+    }
+
+    func testTransientRegularSidebarDismissesAfterItsIdleDelay() async {
+        let navigation = MobileBrowserNavigationState(
+            regularSidebarIsPresented: false,
+            transientSidebarDismissalDelay: .milliseconds(20)
+        )
+
+        navigation.showRegularSidebar()
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+
+        try? await Task.sleep(for: .milliseconds(60))
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
+    }
+
+    func testTransientRegularSidebarPausesWhileATabIsBeingDragged() async {
+        let navigation = MobileBrowserNavigationState(
+            regularSidebarIsPresented: false,
+            transientSidebarDismissalDelay: .milliseconds(20)
+        )
+
+        navigation.showRegularSidebar()
+        navigation.setTransientSidebarDismissalPaused(true)
+        try? await Task.sleep(for: .milliseconds(60))
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+
+        navigation.setTransientSidebarDismissalPaused(false)
+        try? await Task.sleep(for: .milliseconds(60))
+        XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
     }
 
     func testMobileBrowserCommandControllerCyclesTabsAndSpaces() throws {
