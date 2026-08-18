@@ -1,8 +1,8 @@
 <div align="center">
   <img src="Website/assets/crest-logo.svg" width="128" alt="Crest app icon">
   <h1>Crest</h1>
-  <p><strong>Your internet, under your colors.</strong></p>
-  <p>A native browser for Apple silicon where every part of your life gets its own Space—and every Space keeps its own world.</p>
+  <p><strong>An open source browser for Mac, iPhone, and iPad.</strong></p>
+  <p>Built with SwiftUI and WebKit, with separate Spaces for different parts of your life.</p>
   <p>
     <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
     <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver"></a>
@@ -115,9 +115,24 @@ reproducible bugs and concrete tracked outcomes. Security concerns belong in a
 never a public post. [SUPPORT.md](SUPPORT.md) explains each route in detail.
 
 Crest is one of several open source projects built by Paul Davis. You can
-support the work through [Ko-fi](https://ko-fi.com/pauljoda) or
+support the work through [Ko-fi](https://ko-fi.com/pauljoda/tiers) or
 [GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not
 buy roadmap priority or private access.
+
+## Sponsors
+
+Monthly support helps pay for hosting, signing, testing, and development across
+Paul's open source projects. Sponsors can be recognized in the public
+[sponsor roll](SPONSORS.md) at one of three levels:
+
+- **Sponsor — $25/month:** top placement with an optional approved link.
+- **Sustainer — $10/month:** higher placement with an optional approved link.
+- **Supporter — $3/month:** name in the public roll.
+
+Recognition is optional. A listing is a thank-you, not an endorsement or a way
+to buy roadmap priority, private support, or project ownership. See the
+[membership tiers on Ko-fi](https://ko-fi.com/pauljoda/tiers) to become a
+monthly sponsor.
 
 ## Contributing
 
