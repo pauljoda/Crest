@@ -108,18 +108,17 @@ private struct BrowserFloatingSidebarGeometryModifier: ViewModifier {
     let isActive: Bool
     let namespace: Namespace.ID
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if isActive {
-            content.matchedGeometryEffect(
-                id: BrowserSidebarPresentationPolicy.matchedGeometryID,
-                in: namespace,
-                properties: .frame,
-                anchor: .topLeading,
-                isSource: false
-            )
-        } else {
-            content
-        }
+        // Changing only the source role preserves the sidebar's structural
+        // identity while still giving the docked surface ownership during a
+        // morph. An inactive floating surface owns itself and needs no peer.
+        content.matchedGeometryEffect(
+            id: BrowserSidebarPresentationPolicy.matchedGeometryID,
+            in: namespace,
+            properties: .frame,
+            anchor: .topLeading,
+            isSource: BrowserSidebarPresentation.floating
+                .isMatchedGeometrySource(whileMorphing: isActive)
+        )
     }
 }
