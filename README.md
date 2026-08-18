@@ -4,13 +4,20 @@
   <p><strong>Your internet, under your colors.</strong></p>
   <p>A native browser for Apple silicon where every part of your life gets its own Space—and every Space keeps its own world.</p>
   <p>
+    <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver"></a>
+    <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-315f93"></a>
+  </p>
+  <p>
     <a href="https://crestbrowser.com/"><strong>Visit the product site</strong></a>
     ·
     <a href="https://crestbrowser.com/guides/">Read the guides</a>
     ·
-    <a href="https://github.com/pauljoda/Crest/releases">Download for Mac</a>
+    <a href="https://github.com/pauljoda/Crest/releases/latest">Download for Mac</a>
     ·
-    <a href="Documentation/ROADMAP.md">Roadmap</a>
+    <a href="https://github.com/users/pauljoda/projects/3">0.5 roadmap</a>
+    ·
+    <a href="https://www.reddit.com/r/CrestBrowser">Community</a>
   </p>
 </div>
 
@@ -34,6 +41,12 @@ Switching Spaces changes more than the color of the window. It changes the brows
 - **Native everywhere** — SwiftUI chrome shaped for macOS, iPad, and iPhone, backed by WebKit rather than a cross-platform shell.
 - **Power when it helps** — reader mode, content blocking, downloads, website permissions, authentication challenges, popup handling, recovery, and keyboard customization.
 - **Portable by design** — import browser data, export a validated Crest archive, and synchronize durable state through CloudKit.
+
+<p align="center">
+  <img src="Website/assets/crest-work-mac-clean.png" width="49%" alt="Crest Work Space on Mac">
+  <img src="Website/assets/crest-personal-ipad.png" width="27%" alt="Crest Personal Space on iPad">
+  <img src="Website/assets/crest-personal-iphone.png" width="12%" alt="Crest Personal Space on iPhone">
+</p>
 
 ## Built as an Apple-platform app
 
@@ -90,11 +103,29 @@ Behavior changes should begin with a focused regression test, followed by the af
 
 ## Project status
 
-Crest is under active development. The current implementation includes the core browsing, Space isolation, native platform chrome, credentials, data portability, synchronization foundations, Quick Window, Peek, and privacy features described above. Approval-gated and physical-device release work is tracked in the [roadmap](Documentation/ROADMAP.md).
+Crest is under active development. The current implementation includes the core browsing, Space isolation, native platform chrome, credentials, data portability, synchronization foundations, Quick Window, Peek, and privacy features described above. The [Crest 0.5 project](https://github.com/users/pauljoda/projects/3) is the public release view; approval-gated and physical-device work remains documented in the [roadmap](Documentation/ROADMAP.md).
+
+## Community and support
+
+Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) for questions,
+feedback, ideas, and website or extension compatibility discussion. Use
+[GitHub Issues](https://github.com/pauljoda/Crest/issues/new/choose) for
+reproducible bugs and concrete tracked outcomes. Security concerns belong in a
+[private vulnerability report](https://github.com/pauljoda/Crest/security/advisories/new),
+never a public post. [SUPPORT.md](SUPPORT.md) explains each route in detail.
+
+Crest is one of several open source projects built by Paul Davis. You can
+support the work through [Ko-fi](https://ko-fi.com/pauljoda) or
+[GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not
+buy roadmap priority or private access.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline. Architecture changes should preserve the Space boundary and the native shape of each platform.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline,
+[GOVERNANCE.md](GOVERNANCE.md) for project ownership, and the
+[documentation index](Documentation/README.md) for engineering references.
+Architecture changes should preserve the Space boundary and the native shape
+of each platform.
 
 ## License and brand
 

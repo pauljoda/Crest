@@ -11,7 +11,7 @@ Crest for Mac is distributed directly as a signed and notarized Apple silicon ap
 
 ## Install the latest Mac release
 
-1. Open [Crest Releases](https://github.com/pauljoda/Crest/releases).
+1. Open the [latest stable Crest release](https://github.com/pauljoda/Crest/releases/latest).
 2. Open the newest release and download its `.dmg` file.
 3. Open the disk image, then drag Crest into **Applications**.
 4. Eject the disk image and open Crest from Applications.

@@ -1,6 +1,29 @@
 # Crest roadmap
 
-This file contains only work that is still outstanding or intentionally deferred.
+This file summarizes public release outcomes and work that is still outstanding
+or intentionally deferred. The live
+[Crest 0.5 project](https://github.com/users/pauljoda/projects/3) shows status;
+the matching [0.5 milestone](https://github.com/pauljoda/Crest/milestone/1)
+holds the actionable issue descriptions.
+
+## Crest 0.5
+
+- [Global sidebar widgets](https://github.com/pauljoda/Crest/issues/4) for
+  update availability and active media sessions.
+- [Website notifications](https://github.com/pauljoda/Crest/issues/5) with
+  explicit per-site and per-Space controls.
+- [Picture-in-picture](https://github.com/pauljoda/Crest/issues/6), including an
+  optional automatic mode when leaving a playing video tab.
+- [An About section](https://github.com/pauljoda/Crest/issues/7) for build,
+  update, license, and community information.
+- [An adaptive full mobile sidebar](https://github.com/pauljoda/Crest/issues/8)
+  for iPad, multitasking, and wider iPhone layouts.
+- [Native emoji picking](https://github.com/pauljoda/Crest/issues/9) for icon
+  customization across Apple platforms.
+
+These describe intended user outcomes rather than fixed implementation
+promises. Scope may change when WebKit capability, accessibility, or physical
+device evidence shows a better boundary.
 
 ## Approval-gated capabilities
 

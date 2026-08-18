@@ -33,6 +33,18 @@ must have a redistributable license and a preserved notice before they land.
 
 The project supports Apple silicon only. Keep new targets, destinations, and scripts arm64-native.
 
+## Community and planning
+
+Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) to discuss early
+ideas, user questions, and compatibility experiences before they become
+actionable engineering work. Use GitHub Issues for reproducible bugs and
+concrete outcomes. The public
+[Crest 0.5 project](https://github.com/users/pauljoda/projects/3) and milestones
+summarize planned release work without exposing private planning details.
+
+See [SUPPORT.md](SUPPORT.md) for reporting routes and
+[GOVERNANCE.md](GOVERNANCE.md) for the current ownership and decision model.
+
 ## Change discipline
 
 - Keep SwiftUI presentation native and adaptive.

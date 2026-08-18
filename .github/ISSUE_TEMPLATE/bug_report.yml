@@ -5,7 +5,7 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: Do not include passwords, account tokens, private URLs, or browsing data. Report security issues through the private security form.
+      value: Questions, early feedback, and compatibility discussion belong in [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Use this form for reproducible engineering work. Do not include passwords, account tokens, private URLs, or browsing data; report security issues through the private security form.
   - type: input
     id: version
     attributes:
