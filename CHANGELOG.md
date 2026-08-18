@@ -10,6 +10,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Added a public Crest 0.5 project and milestone, clear Reddit/GitHub/security support routes, maintainer governance, a documentation index, and Ko-fi and GitHub Sponsors links.
+- Added simple monthly sponsor levels with optional public recognition and clear boundaries around access, endorsement, and roadmap influence.
 
 ### Fixed
 

@@ -40,6 +40,9 @@ Do not post suspected vulnerabilities on Reddit or in a public issue. See
 
 Crest is one of several open source projects built by Paul Davis. If the
 project is useful to you, you can support the work through
-[Ko-fi](https://ko-fi.com/pauljoda) or
+[Ko-fi memberships](https://ko-fi.com/pauljoda/tiers), make a
+[one-time contribution](https://ko-fi.com/pauljoda), or use
 [GitHub Sponsors](https://github.com/sponsors/pauljoda). Sponsorship does not buy
-roadmap priority, private support, or access to security information.
+roadmap priority, private support, or access to security information. Active
+monthly sponsors who want public recognition are listed in
+[SPONSORS.md](SPONSORS.md).
