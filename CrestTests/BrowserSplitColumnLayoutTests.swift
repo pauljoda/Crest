@@ -14,6 +14,13 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
     private let gap: CGFloat = BrowserSplitLayoutMetrics.interCardGap
     private let minimum: CGFloat = BrowserSplitLayoutMetrics.minimumCardWidth
 
+    func testFocusedCardDrawsAboveItsRestingSiblings() {
+        XCTAssertGreaterThan(
+            BrowserSplitLayoutMetrics.focusedCardZIndex,
+            BrowserSplitLayoutMetrics.restingCardZIndex
+        )
+    }
+
     // MARK: - Widths
 
     func testEqualFractionsShareTheWidthLeftByTheGaps() {

@@ -30,4 +30,11 @@ enum BrowserSplitLayoutMetrics {
     /// which keeps both of Crest's resize affordances feeling identical under
     /// the pointer.
     static let resizeHandleHitWidth = interCardGap + resizeHandleOverhang * 2
+
+    /// Resting cards share the row's ordinary drawing plane.
+    static let restingCardZIndex: Double = 0
+
+    /// The card browser chrome speaks for crosses above its siblings while the
+    /// row changes order, preserving the sense that it is the card being moved.
+    static let focusedCardZIndex: Double = 1
 }

@@ -5,6 +5,7 @@ struct BrowserRootDockedSidebarLayer<Content: View>: View {
     let width: CGFloat
     let reduceMotion: Bool
     let morphsWithFloatingSidebar: Bool
+    let isApproachingDock: Bool
     let namespace: Namespace.ID
     let hoverChanged: (Bool) -> Void
     let content: Content
@@ -14,6 +15,7 @@ struct BrowserRootDockedSidebarLayer<Content: View>: View {
         width: CGFloat,
         reduceMotion: Bool,
         morphsWithFloatingSidebar: Bool,
+        isApproachingDock: Bool,
         namespace: Namespace.ID,
         hoverChanged: @escaping (Bool) -> Void,
         @ViewBuilder content: () -> Content
@@ -22,31 +24,43 @@ struct BrowserRootDockedSidebarLayer<Content: View>: View {
         self.width = width
         self.reduceMotion = reduceMotion
         self.morphsWithFloatingSidebar = morphsWithFloatingSidebar
+        self.isApproachingDock = isApproachingDock
         self.namespace = namespace
         self.hoverChanged = hoverChanged
         self.content = content()
     }
 
-    @ViewBuilder
     var body: some View {
-        if presentation == .docked {
-            content
-                .frame(width: width)
-                .modifier(
-                    BrowserDockedSidebarGeometryModifier(
-                        isActive: morphsWithFloatingSidebar,
-                        namespace: namespace
+        ZStack(alignment: .leading) {
+            if presentation == .docked {
+                content
+                    .frame(width: width)
+                    .modifier(
+                        BrowserDockedSidebarGeometryModifier(
+                            isActive: morphsWithFloatingSidebar,
+                            namespace: namespace
+                        )
                     )
-                )
-                .onHover(perform: hoverChanged)
-                .transition(
-                    morphsWithFloatingSidebar
-                        ? .identity
-                        : reduceMotion
-                            ? .opacity
-                            : .move(edge: .leading).combined(with: .opacity)
-                )
+                    .onHover(perform: hoverChanged)
+                    .transition(
+                        morphsWithFloatingSidebar
+                            ? .identity
+                            : reduceMotion
+                                ? .opacity
+                                : .move(edge: .leading).combined(with: .opacity)
+                    )
+            }
         }
+        // Keep one layout participant alive for the lifetime of the shell.
+        // Animating its reservation lets the page edge travel with the sidebar
+        // instead of inserting a full-width column before the surface morphs.
+        .frame(
+            width: presentation.reservedWidth(
+                for: width,
+                whileApproachingDock: isApproachingDock
+            ),
+            alignment: .leading
+        )
     }
 }
 
