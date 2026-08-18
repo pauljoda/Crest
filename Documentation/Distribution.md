@@ -51,10 +51,14 @@ notarizing, creating a release, or advancing an appcast. After the first
 successful rolling nightly publication, the workflow removes the superseded
 date-stamped nightly releases and tags.
 
-Release notes come directly from Git history. Each channel lists every commit
-since that channel's previous publication in chronological order, including
-the commit subject, full commit body when one exists, and a link to the commit.
-The same notes appear on GitHub and in Sparkle's update interface.
+Release notes come directly from Git history, but present it as product copy
+rather than a raw log. The generator groups user-facing commits into New,
+Improved, and Fixed highlights; removes conventional-commit prefixes, pull
+request and tracker references, merge commits, internal release/CI work,
+bodies, and per-commit hashes; and limits long ranges to the 12 most recent
+highlights. A single comparison link keeps the complete history available. The
+same concise notes appear on GitHub and as structured Markdown in Sparkle's
+update interface.
 
 ## Publication order
 

@@ -4,28 +4,103 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import pathlib
+import re
 import subprocess
 import urllib.parse
 
 
-CHANNEL_HEADINGS = {
-    "stable": "# Crest stable release",
-    "nightly": "# Crest nightly build",
-    "development": "# Crest development build",
-}
-
 CHANNEL_DESCRIPTIONS = {
-    "stable": "This release is signed and notarized for direct distribution.",
+    "stable": "Stable releases are signed, notarized, and ready for everyday use.",
     "nightly": (
-        "Nightly builds are signed and notarized, but contain changes that have "
-        "not yet reached a stable release."
+        "Nightly builds contain the newest changes and may be less reliable "
+        "than stable releases."
     ),
     "development": (
-        "Development builds are signed and notarized, but may be less reliable "
+        "Development builds contain the newest changes and may be less reliable "
         "than stable releases."
     ),
 }
+
+CATEGORY_HEADINGS = (
+    ("new", "New"),
+    ("improved", "Improved"),
+    ("fixed", "Fixed"),
+)
+
+CATEGORY_BY_COMMIT_TYPE = {
+    "feat": "new",
+    "fix": "fixed",
+    "perf": "improved",
+    "revert": "fixed",
+}
+
+INTERNAL_COMMIT_TYPES = {
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "refactor",
+    "style",
+    "test",
+}
+
+INTERNAL_COMMIT_SCOPES = {
+    "build",
+    "ci",
+    "distribution",
+    "docs",
+    "release",
+    "test",
+    "tooling",
+    "workflow",
+}
+
+CONVENTIONAL_SUBJECT = re.compile(
+    r"^(?P<type>[A-Za-z]+)(?:\((?P<scope>[^)]+)\))?!?:\s*(?P<description>.+)$"
+)
+ISSUE_REFERENCE_SUFFIX = re.compile(
+    r"\s+\((?:#\d+|[A-Z][A-Z0-9]+-\d+)\)$"
+)
+NEW_CHANGE_VERBS = {
+    "add",
+    "added",
+    "adds",
+    "enable",
+    "enabled",
+    "enables",
+    "introduce",
+    "introduced",
+    "introduces",
+    "support",
+    "supported",
+    "supports",
+}
+FIXED_CHANGE_VERBS = {
+    "correct",
+    "corrected",
+    "corrects",
+    "fix",
+    "fixed",
+    "fixes",
+    "prevent",
+    "prevented",
+    "prevents",
+    "restore",
+    "restored",
+    "restores",
+    "resolve",
+    "resolved",
+    "resolves",
+}
+MAX_HIGHLIGHTS = 12
+
+
+@dataclass(frozen=True)
+class ReleaseNoteChange:
+    category: str
+    description: str
 
 
 def git(repository_root: pathlib.Path, *arguments: str) -> str:
@@ -66,9 +141,56 @@ def commit_range(
         repository_root,
         "rev-list",
         "--reverse",
+        "--no-merges",
         f"{previous_commit}..{current_commit}",
     ).splitlines()
     return current_commit, commits
+
+
+def release_note_change(subject: str) -> ReleaseNoteChange | None:
+    match = CONVENTIONAL_SUBJECT.match(subject)
+    if match is None:
+        description = polished_subject(subject)
+        return ReleaseNoteChange(inferred_category(description), description)
+
+    commit_type = match.group("type").lower()
+    scope = (match.group("scope") or "").lower()
+    if commit_type in INTERNAL_COMMIT_TYPES or scope in INTERNAL_COMMIT_SCOPES:
+        return None
+
+    category = CATEGORY_BY_COMMIT_TYPE.get(commit_type, "improved")
+    return ReleaseNoteChange(category, polished_subject(match.group("description")))
+
+
+def inferred_category(description: str) -> str:
+    leading_verb = description.partition(" ")[0].lower()
+    if leading_verb in NEW_CHANGE_VERBS:
+        return "new"
+    if leading_verb in FIXED_CHANGE_VERBS:
+        return "fixed"
+    return "improved"
+
+
+def polished_subject(subject: str) -> str:
+    description = ISSUE_REFERENCE_SUFFIX.sub("", subject).strip()
+    if not description:
+        return description
+    return description[0].upper() + description[1:]
+
+
+def release_note_sections(changes: list[ReleaseNoteChange]) -> list[str]:
+    if not changes:
+        return ["### Maintenance", "", "- Reliability and internal improvements.", ""]
+
+    lines: list[str] = []
+    for category, heading in CATEGORY_HEADINGS:
+        descriptions = [change.description for change in changes if change.category == category]
+        if not descriptions:
+            continue
+        lines.extend([f"### {heading}", ""])
+        lines.extend(f"- {description}" for description in descriptions)
+        lines.append("")
+    return lines
 
 
 def release_notes(
@@ -88,43 +210,45 @@ def release_notes(
         f"{urllib.parse.quote(release_tag, safe='.-_')}/"
         f"{urllib.parse.quote(asset_name, safe='.-_')}"
     )
-    short_commit = current_commit[:7]
-
-    lines = [
-        CHANNEL_HEADINGS[channel],
-        "",
-        f"[Download Crest for Mac (Apple silicon)]({download_url})",
-        "",
-        (
-            f"Built from [`{short_commit}`]"
-            f"({repository_url}/commit/{current_commit})."
-        ),
-        "",
-        CHANNEL_DESCRIPTIONS[channel],
-        "",
-        (
-            f"## Changes since the previous {channel} build"
-            if previous_ref is not None
-            else "## Changes in this build"
-        ),
-        "",
+    changes = [
+        change
+        for commit in commits
+        if (
+            change := release_note_change(
+                git(repository_root, "show", "-s", "--format=%s", commit)
+            )
+        )
     ]
+    visible_changes = changes[-MAX_HIGHLIGHTS:]
+    details_url = (
+        f"{repository_url}/compare/{previous_ref}...{current_commit}"
+        if previous_ref is not None
+        else f"{repository_url}/commit/{current_commit}"
+    )
+    details_label = "View all changes" if previous_ref is not None else "View source"
 
-    if not commits:
-        lines.extend(["No new commits are included in this build.", ""])
-
-    for commit in commits:
-        subject = git(repository_root, "show", "-s", "--format=%s", commit)
-        body = git(repository_root, "show", "-s", "--format=%b", commit)
-        lines.extend([f"### {subject}", ""])
-        if body:
-            lines.extend([body, ""])
+    lines = ["## Highlights", ""]
+    if len(changes) > len(visible_changes):
         lines.extend(
             [
-                f"[View commit `{commit[:7]}`]({repository_url}/commit/{commit})",
+                (
+                    f"Showing the {len(visible_changes)} most recent highlights "
+                    f"from {len(changes)} user-facing changes."
+                ),
                 "",
             ]
         )
+    lines.extend(release_note_sections(visible_changes))
+    lines.extend(
+        [
+            "---",
+            "",
+            CHANNEL_DESCRIPTIONS[channel],
+            "",
+            f"[{details_label}]({details_url}) · [Download the installer]({download_url})",
+            "",
+        ]
+    )
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -134,7 +258,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--repository-root", type=pathlib.Path, default=pathlib.Path.cwd())
     parser.add_argument("--repository", required=True)
     parser.add_argument("--server-url", default="https://github.com")
-    parser.add_argument("--channel", choices=CHANNEL_HEADINGS, required=True)
+    parser.add_argument("--channel", choices=CHANNEL_DESCRIPTIONS, required=True)
     parser.add_argument("--release-tag")
     parser.add_argument("--current-ref", required=True)
     parser.add_argument("--previous-ref")

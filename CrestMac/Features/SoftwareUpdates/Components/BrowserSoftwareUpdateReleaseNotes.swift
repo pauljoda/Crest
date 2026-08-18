@@ -1,24 +1,30 @@
 import SwiftUI
 
 struct BrowserSoftwareUpdateReleaseNotes: View {
-    let releaseNotes: String
+    private let document: BrowserSoftwareUpdateReleaseNotesDocument
+
+    init(releaseNotes: String) {
+        document = BrowserSoftwareUpdateReleaseNotesDocument(markdown: releaseNotes)
+    }
 
     var body: some View {
-        GroupBox("Release Notes") {
+        GroupBox {
             ScrollView {
-                Group {
-                    if let attributedNotes = try? AttributedString(
-                        markdown: releaseNotes
-                    ) {
-                        Text(attributedNotes)
-                    } else {
-                        Text(releaseNotes)
+                LazyVStack(alignment: .leading, spacing: CrestSpacing.small) {
+                    ForEach(document.blocks.indices, id: \.self) { index in
+                        BrowserSoftwareUpdateReleaseNoteBlock(
+                            block: document.blocks[index]
+                        )
                     }
                 }
+                .padding(CrestSpacing.medium)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
             }
-            .frame(minHeight: 120, maxHeight: 240)
+            .frame(minHeight: 200, maxHeight: 320)
+        } label: {
+            Label("Release Notes", systemImage: "text.alignleft")
         }
+        .tint(CrestBrandTheme.accent)
     }
 }
