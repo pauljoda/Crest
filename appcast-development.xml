@@ -7,102 +7,56 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.4.0</title>
-            <pubDate>Mon, 17 Aug 2026 21:33:57 +0000</pubDate>
+            <pubDate>Tue, 18 Aug 2026 01:34:53 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1030</sparkle:version>
+            <sparkle:version>1033</sparkle:version>
             <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[# Crest development build
 
-[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.0-development-2026-08-17-2c53ff5-arm64.dmg)
+[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.0-development-2026-08-18-3a5b322-arm64.dmg)
 
-Built from [`2c53ff5`](https://github.com/pauljoda/Crest/commit/2c53ff5357553dfb451957e65cb3fe858433f6ad).
+Built from [`3a5b322`](https://github.com/pauljoda/Crest/commit/3a5b32259276edb21db2dc2b95f3b59bb7f5b70c).
 
 Development builds are signed and notarized, but may be less reliable than stable releases.
 
 ## Changes since the previous development build
 
-### refactor: consolidate Crest codebase
+### feat: install extension packages from file
 
-Regroup Swift sources around functional ownership, remove dead code and low-value previews/tests, and include the refreshed website, help center, and generated project state.
+[View commit `f612cf1`](https://github.com/pauljoda/Crest/commit/f612cf1bef21ee92030dd73581f80ae3b1151aff)
 
-[View commit `0cc5bba`](https://github.com/pauljoda/Crest/commit/0cc5bba25b45ea2e18b49dc6eec38beeaa5a3e6a)
+### feat: import Safari custom extensions
 
-### Website work
+[View commit `f6c0f7d`](https://github.com/pauljoda/Crest/commit/f6c0f7d59938aa77de8da6c689d5918ba098fe9f)
 
-[View commit `3ad8f6f`](https://github.com/pauljoda/Crest/commit/3ad8f6f773eb0b45a92166644e3fa1ce49d8382f)
+### chore: align version references to 0.4
 
-### fix(browser): stabilize Peek and floating sidebar
+[View commit `63670dc`](https://github.com/pauljoda/Crest/commit/63670dceb7e27d24c5554eb611c256a6122e3ccc)
 
-[View commit `54cb03f`](https://github.com/pauljoda/Crest/commit/54cb03f20a9247b9820c7ee2067684c76f208a92)
+### Update GitHub Sponsors username in FUNDING.yml
 
-### Streamline rolling release publication and release notes
+[View commit `4cf71e8`](https://github.com/pauljoda/Crest/commit/4cf71e82701e075c22b5c0ba42ca035497dbea32)
 
-[View commit `6741cba`](https://github.com/pauljoda/Crest/commit/6741cba19910beffa3ecec1d66341171b3ae6bc7)
+### chore(release): prepare 0.4.0
 
-### Dismiss transient surfaces when navigation becomes a download
+Crest 0.4 adds Split View across Mac, iPhone, and iPad; expands standards-based extension support across Chrome, Firefox, and Safari-created packages; and establishes signed, notarized direct updates through Sparkle.
 
-[View commit `8a89711`](https://github.com/pauljoda/Crest/commit/8a8971112afb22b6613ef66686539662fdd6f9fa)
+It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, retention, and WebKit compatibility fixes collected in the 0.4.0 changelog.
 
-### fix: resolve tab grouping regressions
+[View commit `25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f)
 
-[View commit `4322921`](https://github.com/pauljoda/Crest/commit/43229214c4e1a47db9f62ac01e028e7087005303)
+### fix(release): validate Xcode Cloud archive version
 
-### fix: freeze sidebar geometry during drag
-
-[View commit `cd4da8f`](https://github.com/pauljoda/Crest/commit/cd4da8fc0fd1b0bb6f6b0aafeba22c0aa9a2904a)
-
-### fix: reveal selected tabs in collapsed folders
-
-[View commit `2edf4a3`](https://github.com/pauljoda/Crest/commit/2edf4a394ecde0086fe386d44d88dd758a6ccc35)
-
-### fix: reveal reloaded tabs in collapsed folders
-
-[View commit `7d3659c`](https://github.com/pauljoda/Crest/commit/7d3659c9f036c41ea5133e3a384795d1bdbedb01)
-
-### fix: reserve split-group destination space
-
-[View commit `6980e71`](https://github.com/pauljoda/Crest/commit/6980e71e21c7800d5354ab20421d5fdf5c91b3ec)
-
-### fix: separate mobile split tab groups
-
-[View commit `34f709c`](https://github.com/pauljoda/Crest/commit/34f709c7928ba05805fce733073833ceb808369f)
-
-### Restore Xcode scheme compatibility and localization metadata
-
-[View commit `f8e06d3`](https://github.com/pauljoda/Crest/commit/f8e06d31de4cd703ad529d90f1e04f4fd357129a)
-
-### fix(ci): restore sidebar presentation reference
-
-[View commit `3e67cd3`](https://github.com/pauljoda/Crest/commit/3e67cd3121568db872d8cc0a36610b4d468d6001)
-
-### fix: polish archive and download utilities
-
-[View commit `30bdae0`](https://github.com/pauljoda/Crest/commit/30bdae0f191c0940f1a2967d56e2837a0b70faa2)
-
-### fix: align sidebar badges and split groups
-
-[View commit `778dc69`](https://github.com/pauljoda/Crest/commit/778dc699597228a0825c9a2ec597a5650f5dcae8)
-
-### fix: align utility fan animation origin
-
-[View commit `3e0942a`](https://github.com/pauljoda/Crest/commit/3e0942a94fa8d8c0e55a5eb507a5bd8423e49ba2)
-
-### fix: center empty desktop address prompt
-
-[View commit `453c388`](https://github.com/pauljoda/Crest/commit/453c3886731ec9aeba8b396e1a21d5f960e3e9fa)
-
-### Preserve extension page state and harden release publishing
-
-[View commit `2c53ff5`](https://github.com/pauljoda/Crest/commit/2c53ff5357553dfb451957e65cb3fe858433f6ad)
+[View commit `3a5b322`](https://github.com/pauljoda/Crest/commit/3a5b32259276edb21db2dc2b95f3b59bb7f5b70c)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.0-development-2026-08-17-2c53ff5-arm64.dmg" length="7439647" type="application/octet-stream" sparkle:edSignature="ZBBamjbhlNIfgW02S5+WGp32g3RbsRyYI0OsuUnREj1iBj7ztG3G1JRQnmlAcTiTI2xqk546mG3PXZ2op9tLCQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.0-development-2026-08-18-3a5b322-arm64.dmg" length="7505694" type="application/octet-stream" sparkle:edSignature="dr+iS5WYcilJ1julx7lwV52D5odzV0Qe64bN3EKJ68yMtNpwxlJxusVGWJVcnrNFUVk+uBzOzDNfowu2LEATCw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: AZQh6ETuP09xzjgVDHqUinah5bE5708k2nmxqkv27BYCyMh3Jo3jpJn9XWzBOTqfvBtHMzFDzInrwASc8BkVCQ==
-length: 4811
+edSignature: pbRqQPTJTBVHrFkHKFnL/xD6xB7jVDINkPV+9Ne46/L9S6N8BCKGBHV4VkJ7uzfQbomdZEVWdZ9tbQaY6bcNCg==
+length: 3088
 -->
