@@ -30,6 +30,10 @@ struct BrowserRootLifecycleModifier: ViewModifier {
             .task {
                 await model.prepareBrowser()
             }
+            .onChange(of: model.isWindowFocused, initial: true) {
+                _, isFocused in
+                model.extensionHostWindowFocusChanged(isFocused)
+            }
             .modifier(
                 BrowserRootSelectionObserver(
                     selectedTabID: model.browser.selectedTab?.id,

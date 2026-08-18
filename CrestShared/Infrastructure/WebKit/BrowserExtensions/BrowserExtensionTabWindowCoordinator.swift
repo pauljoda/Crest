@@ -9,6 +9,8 @@ struct BrowserExtensionControllerEntry {
 @MainActor
 final class BrowserExtensionTabWindowCoordinator: NSObject {
 
+    private let reportWindowFocus: (WKWebExtensionController, BrowserExtensionWindowAdapter?) -> Void
+
     var controllers: [SpaceID: BrowserExtensionControllerEntry] = [:]
     var tabsBySpace: [SpaceID: [TabID: BrowserExtensionTabAdapter]] = [:]
     var transientTabsBySpace: [SpaceID: [BrowserExtensionTransientTab]] = [:]
@@ -23,6 +25,21 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         var pendingActionPopupRequests: [ObjectIdentifier: BrowserExtensionActionPopupRequest] = [:]
     #endif
     var actionDidUpdate: (() -> Void)?
+    private var isHostWindowFocused = true
+    private var reportedFocusedSpaceID: SpaceID?
+
+    init(
+        reportWindowFocus:
+            @escaping (
+                WKWebExtensionController,
+                BrowserExtensionWindowAdapter?
+            ) -> Void = { controller, window in
+                controller.didFocusWindow(window)
+            }
+    ) {
+        self.reportWindowFocus = reportWindowFocus
+        super.init()
+    }
 
     func connect<
         SessionHandler: BrowserExtensionTabWindowSessionHandling,
@@ -71,12 +88,18 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
                 }
             }
         }
+        reconcileWindowFocus()
     }
 
     func unregister(spaceID: SpaceID) {
-        guard let entry = controllers.removeValue(forKey: spaceID) else {
+        guard let entry = controllers[spaceID] else {
             return
         }
+        if reportedFocusedSpaceID == spaceID {
+            reportWindowFocus(entry.controller, nil)
+            reportedFocusedSpaceID = nil
+        }
+        controllers.removeValue(forKey: spaceID)
         if let adapters = tabsBySpace.removeValue(forKey: spaceID) {
             for adapter in adapters.values {
                 entry.controller.didCloseTab(adapter, windowIsClosing: true)
@@ -100,17 +123,45 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
             )
         }
 
-        if oldState?.selectedSpaceID != newState.selectedSpaceID {
-            if let oldID = oldState?.selectedSpaceID,
-                let oldController = controllers[oldID]?.controller
-            {
-                oldController.didFocusWindow(nil)
-            }
-            if let newEntry = controllers[newState.selectedSpaceID] {
-                newEntry.controller.didFocusWindow(newEntry.window)
-            }
-        }
         lastState = newState
+        reconcileWindowFocus(selectedSpaceID: newState.selectedSpaceID)
+    }
+
+    /// Keeps WebKit's extension-window focus aligned with the real host window.
+    /// A selected Space is not focused while Crest's browser window is not key.
+    func setHostWindowFocused(_ isFocused: Bool) {
+        guard isHostWindowFocused != isFocused else { return }
+        isHostWindowFocused = isFocused
+        reconcileWindowFocus()
+    }
+
+    private func reconcileWindowFocus(selectedSpaceID: SpaceID? = nil) {
+        let selectedSpaceID = selectedSpaceID ?? currentState?.selectedSpaceID
+        let desiredFocusedSpaceID: SpaceID?
+        if isHostWindowFocused,
+            let selectedSpaceID,
+            controllers[selectedSpaceID] != nil
+        {
+            desiredFocusedSpaceID = selectedSpaceID
+        } else {
+            desiredFocusedSpaceID = nil
+        }
+
+        guard reportedFocusedSpaceID != desiredFocusedSpaceID else { return }
+
+        if let reportedFocusedSpaceID,
+            let entry = controllers[reportedFocusedSpaceID]
+        {
+            reportWindowFocus(entry.controller, nil)
+        }
+        reportedFocusedSpaceID = nil
+
+        if let desiredFocusedSpaceID,
+            let entry = controllers[desiredFocusedSpaceID]
+        {
+            reportWindowFocus(entry.controller, entry.window)
+            reportedFocusedSpaceID = desiredFocusedSpaceID
+        }
     }
 
     var currentState: BrowserExtensionSessionState? {
