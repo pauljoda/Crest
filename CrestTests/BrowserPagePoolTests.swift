@@ -900,11 +900,13 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(
             firstPage.webView.configuration.userContentController.userScripts
                 .map(\.source),
-            [BrowserLinkContextContentBridge.source],
+            [
+                BrowserLinkContextContentBridge.source,
+                BrowserGeolocationContentBridge.source,
+            ],
             """
-            A private page carries the link-context bridge — it reports the link \
-            under the cursor and stores nothing — and no credential or \
-            extension script.
+            A private page carries only nonpersistent browsing bridges for link \
+            context and geolocation, with no credential or extension script.
             """
         )
 
