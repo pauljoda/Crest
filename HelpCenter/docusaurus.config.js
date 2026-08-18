@@ -66,7 +66,7 @@ const config = {
         {type: 'docSidebar', sidebarId: 'helpSidebar', position: 'left', label: 'Guides'},
         {to: '/keyboard-shortcuts/', label: 'Shortcuts', position: 'left'},
         {to: '/extension-compatibility/', label: 'Compatibility', position: 'left'},
-        {href: 'https://github.com/pauljoda/Crest/releases', label: 'Download for Mac', position: 'right'},
+        {href: 'https://github.com/pauljoda/Crest/releases/latest', label: 'Download for Mac', position: 'right'},
         {href: 'https://crestbrowser.com/support/', label: 'Support', position: 'right'},
         {href: 'https://crestbrowser.com/', label: 'Product site', position: 'right'},
       ],
@@ -84,7 +84,7 @@ const config = {
           title: 'Crest',
           items: [
             {label: 'Product site', href: 'https://crestbrowser.com/'},
-            {label: 'Download for Mac', href: 'https://github.com/pauljoda/Crest/releases'},
+            {label: 'Download for Mac', href: 'https://github.com/pauljoda/Crest/releases/latest'},
             {label: 'iPhone & iPad TestFlight', href: 'https://testflight.apple.com/join/vV1CM49Q'},
           ],
         },
@@ -102,11 +102,13 @@ const config = {
           title: 'Community',
           items: [
             {label: 'r/CrestBrowser', href: 'https://www.reddit.com/r/CrestBrowser'},
+            {label: 'GitHub Issues', href: 'https://github.com/pauljoda/Crest/issues/new/choose'},
+            {label: 'Support open source software', href: 'https://ko-fi.com/pauljoda'},
             {label: 'Privacy', href: 'https://crestbrowser.com/privacy/'},
           ],
         },
       ],
-      copyright: `Crest is independent and not affiliated with Arc. © ${new Date().getFullYear()} Paul Davis.`,
+      copyright: `Crest is not affiliated with Arc. © ${new Date().getFullYear()} Paul Davis.`,
     },
     prism: {
       theme: prismThemes.github,
