@@ -17,10 +17,6 @@ enum BrowserRootMetrics {
     static let urlCopyFeedbackShadowYOffset: CGFloat = 8
     static let urlCopyFeedbackTopInset: CGFloat = 18
     static let urlCopyFeedbackDuration: Duration = .milliseconds(1_400)
-    /// Raises the docked sidebar above the page surface it sits beside, so a
-    /// row lifted out of it stays visible over the content area. Ranked within
-    /// the shell's content `HStack`, not the shell's own `ZStack`.
-    static let draggedSidebarZIndex: Double = 1
     static let sidebarResizeControlZIndex: Double = 3
     static let floatingSidebarZIndex: Double = 4
     static let utilityFanZIndex: Double = 8

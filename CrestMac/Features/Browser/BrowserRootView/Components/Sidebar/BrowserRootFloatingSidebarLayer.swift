@@ -1,72 +1,52 @@
 import SwiftUI
 
-struct BrowserRootFloatingSidebarLayer<Content: View>: View {
+struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     let presentation: BrowserSidebarPresentation
     let width: CGFloat
     let space: BrowserSpace?
-    let reduceMotion: Bool
     let reduceTransparency: Bool
-    let morphsWithDockedSidebar: Bool
-    let namespace: Namespace.ID
     let hoverChanged: (Bool) -> Void
     let content: Content
+
+    @Environment(\.layoutDirection) private var layoutDirection
 
     init(
         presentation: BrowserSidebarPresentation,
         width: CGFloat,
         space: BrowserSpace?,
-        reduceMotion: Bool,
         reduceTransparency: Bool,
-        morphsWithDockedSidebar: Bool,
-        namespace: Namespace.ID,
         hoverChanged: @escaping (Bool) -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.presentation = presentation
         self.width = width
         self.space = space
-        self.reduceMotion = reduceMotion
         self.reduceTransparency = reduceTransparency
-        self.morphsWithDockedSidebar = morphsWithDockedSidebar
-        self.namespace = namespace
         self.hoverChanged = hoverChanged
         self.content = content()
     }
 
-    @ViewBuilder
     var body: some View {
-        if presentation == .floating {
-            cardSurface
-                .modifier(
-                    BrowserFloatingSidebarGeometryModifier(
-                        isActive: morphsWithDockedSidebar,
-                        namespace: namespace
-                    )
-                )
-                .padding(BrowserSidebarPresentationPolicy.floatingCardInset)
-                .frame(
-                    width:
-                        BrowserSidebarPresentationPolicy
-                        .floatingHoverRegionWidth(sidebarWidth: width)
-                )
-                .frame(maxHeight: .infinity)
-                .contentShape(.interaction, .rect)
-                .onHover(perform: hoverChanged)
-                .transition(
-                    morphsWithDockedSidebar
-                        ? .identity
-                        : reduceMotion
-                            ? .opacity
-                            : .move(edge: .leading).combined(with: .opacity)
-                )
-                .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
-        }
+        cardSurface
+            .padding(surfaceInset)
+            .frame(width: surfaceRegionWidth)
+            .frame(maxHeight: .infinity)
+            .contentShape(.interaction, .rect)
+            .onHover(perform: hoverChanged)
+            .offset(x: hiddenOffset)
+            .opacity(presentation.showsSidebar ? 1 : 0)
+            .allowsHitTesting(presentation.showsSidebar)
+            .accessibilityHidden(!presentation.showsSidebar)
+            .zIndex(
+                presentation == .floating
+                    ? BrowserRootMetrics.floatingSidebarZIndex
+                    : 0
+            )
     }
 
     private var shape: RoundedRectangle {
         RoundedRectangle(
-            cornerRadius: BrowserSidebarPresentationPolicy
-                .floatingCardCornerRadius,
+            cornerRadius: surfaceCornerRadius,
             style: .continuous
         )
     }
@@ -77,6 +57,7 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
             .frame(maxHeight: .infinity)
             .background {
                 BrowserFloatingSidebarCardBackground(space: space)
+                    .opacity(usesFloatingCardAppearance ? 1 : 0)
             }
             .compositingGroup()
             .clipShape(shape)
@@ -84,7 +65,10 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
                 shape
                     .strokeBorder(
                         .primary.opacity(
-                            BrowserRootMetrics.floatingSidebarBorderOpacity
+                            usesFloatingCardAppearance
+                                ? BrowserRootMetrics
+                                    .floatingSidebarBorderOpacity
+                                : 0
                         ),
                         lineWidth: BrowserRootMetrics.floatingSidebarBorderWidth
                     )
@@ -92,7 +76,7 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
             }
             .shadow(
                 color: .black.opacity(
-                    reduceTransparency
+                    reduceTransparency || !usesFloatingCardAppearance
                         ? 0
                         : BrowserRootMetrics.floatingSidebarShadowOpacity
                 ),
@@ -102,23 +86,36 @@ struct BrowserRootFloatingSidebarLayer<Content: View>: View {
             )
             .contentShape(.interaction, shape)
     }
-}
 
-private struct BrowserFloatingSidebarGeometryModifier: ViewModifier {
-    let isActive: Bool
-    let namespace: Namespace.ID
+    private var usesFloatingCardAppearance: Bool {
+        presentation != .docked
+    }
 
-    func body(content: Content) -> some View {
-        // Changing only the source role preserves the sidebar's structural
-        // identity while still giving the docked surface ownership during a
-        // morph. An inactive floating surface owns itself and needs no peer.
-        content.matchedGeometryEffect(
-            id: BrowserSidebarPresentationPolicy.matchedGeometryID,
-            in: namespace,
-            properties: .frame,
-            anchor: .topLeading,
-            isSource: BrowserSidebarPresentation.floating
-                .isMatchedGeometrySource(whileMorphing: isActive)
+    private var surfaceInset: CGFloat {
+        usesFloatingCardAppearance
+            ? BrowserSidebarPresentationPolicy.floatingCardInset
+            : 0
+    }
+
+    private var surfaceCornerRadius: CGFloat {
+        usesFloatingCardAppearance
+            ? BrowserSidebarPresentationPolicy.floatingCardCornerRadius
+            : 0
+    }
+
+    private var surfaceRegionWidth: CGFloat {
+        usesFloatingCardAppearance
+            ? BrowserSidebarPresentationPolicy.floatingHoverRegionWidth(
+                sidebarWidth: width
+            )
+            : width
+    }
+
+    private var hiddenOffset: CGFloat {
+        guard presentation == .collapsed else { return 0 }
+        return BrowserChromeDirectionPolicy.leadingOffset(
+            -surfaceRegionWidth,
+            layoutDirection: layoutDirection
         )
     }
 }

@@ -19,11 +19,8 @@ final class BrowserRootModel {
     var visiblePageZoomFeedbackLabel: String?
     var isFloatingSidebarPresented = false
     private(set) var isSidebarMorphing = false
-    /// True only while both placements needed by matched geometry participate
-    /// in the hierarchy. The broader morph can begin earlier to move pages.
-    private(set) var isSidebarGeometryMorphing = false
     /// True while the page row is making the sidebar's dock available, before
-    /// the floating card changes identity and occupies it.
+    /// the persistent floating card adopts its docked appearance.
     private(set) var isSidebarApproachingDock = false
     private(set) var isSidebarSurfaceHovered = false
     private var sidebarMorphRevision = 0
@@ -358,7 +355,7 @@ extension BrowserRootModel {
                 chrome.showSidebar()
                 return
             }
-            let revision = beginSidebarMorph(morphsGeometry: false)
+            let revision = beginSidebarMorph()
             sidebarMorphTask = Task { @MainActor [weak self] in
                 await Task.yield()
                 guard let self,
@@ -385,7 +382,6 @@ extension BrowserRootModel {
                         reduceMotion
                     )
                 ) {
-                    self.isSidebarGeometryMorphing = true
                     self.isFloatingSidebarPresented = false
                     self.chrome.showSidebar()
                 }
@@ -452,13 +448,12 @@ extension BrowserRootModel {
         dismissFloatingSidebar(reduceMotion: reduceMotion)
     }
 
-    private func beginSidebarMorph(morphsGeometry: Bool = true) -> Int {
+    private func beginSidebarMorph() -> Int {
         sidebarMorphTask?.cancel()
         sidebarMorphTask = nil
         sidebarMorphRevision += 1
         withTransaction(Transaction(animation: nil)) {
             isSidebarMorphing = true
-            isSidebarGeometryMorphing = morphsGeometry
         }
         return sidebarMorphRevision
     }
@@ -479,7 +474,6 @@ extension BrowserRootModel {
         sidebarMorphTask = nil
         withTransaction(Transaction(animation: nil)) {
             isSidebarMorphing = false
-            isSidebarGeometryMorphing = false
         }
         return true
     }
@@ -490,7 +484,6 @@ extension BrowserRootModel {
         sidebarMorphRevision += 1
         withTransaction(Transaction(animation: nil)) {
             isSidebarMorphing = false
-            isSidebarGeometryMorphing = false
             isSidebarApproachingDock = false
         }
     }
