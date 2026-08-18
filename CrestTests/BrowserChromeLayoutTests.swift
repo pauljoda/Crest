@@ -900,6 +900,22 @@ final class BrowserChromeLayoutTests: XCTestCase {
             BrowserSidebarPresentation.docked.sidebarToggleAction,
             .hide
         )
+        XCTAssertTrue(
+            BrowserSidebarPresentation.docked
+                .isMatchedGeometrySource(whileMorphing: false)
+        )
+        XCTAssertTrue(
+            BrowserSidebarPresentation.docked
+                .isMatchedGeometrySource(whileMorphing: true)
+        )
+        XCTAssertTrue(
+            BrowserSidebarPresentation.floating
+                .isMatchedGeometrySource(whileMorphing: false)
+        )
+        XCTAssertFalse(
+            BrowserSidebarPresentation.floating
+                .isMatchedGeometrySource(whileMorphing: true)
+        )
     }
 
     @MainActor

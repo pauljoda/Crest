@@ -37,7 +37,6 @@ struct BrowserRootDockedSidebarLayer<Content: View>: View {
                     .frame(width: width)
                     .modifier(
                         BrowserDockedSidebarGeometryModifier(
-                            isActive: morphsWithFloatingSidebar,
                             namespace: namespace
                         )
                     )
@@ -65,21 +64,17 @@ struct BrowserRootDockedSidebarLayer<Content: View>: View {
 }
 
 private struct BrowserDockedSidebarGeometryModifier: ViewModifier {
-    let isActive: Bool
     let namespace: Namespace.ID
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if isActive {
-            content.matchedGeometryEffect(
-                id: BrowserSidebarPresentationPolicy.matchedGeometryID,
-                in: namespace,
-                properties: .frame,
-                anchor: .topLeading,
-                isSource: true
-            )
-        } else {
-            content
-        }
+        // Keep this modifier structurally present after attachment. Removing it
+        // would recreate the sidebar subtree and reset the horizontal pager.
+        content.matchedGeometryEffect(
+            id: BrowserSidebarPresentationPolicy.matchedGeometryID,
+            in: namespace,
+            properties: .frame,
+            anchor: .topLeading,
+            isSource: true
+        )
     }
 }

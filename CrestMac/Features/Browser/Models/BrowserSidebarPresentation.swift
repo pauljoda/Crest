@@ -27,4 +27,13 @@ enum BrowserSidebarPresentation: Equatable {
     var sidebarToggleAction: BrowserSidebarToggleAction {
         self == .docked ? .hide : .dock
     }
+
+    func isMatchedGeometrySource(whileMorphing: Bool) -> Bool {
+        switch self {
+        case .docked, .collapsed:
+            true
+        case .floating:
+            !whileMorphing
+        }
+    }
 }
