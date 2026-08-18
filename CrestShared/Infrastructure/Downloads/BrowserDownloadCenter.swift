@@ -6,6 +6,12 @@ import WebKit
 @Observable
 @MainActor
 final class BrowserDownloadCenter: NSObject {
+    private struct AutomaticDownloadScope: Hashable {
+        let webViewID: ObjectIdentifier
+        let origin: BrowserSiteOrigin
+        let spaceID: SpaceID
+    }
+
     typealias CredentialPromptHandler =
         @MainActor (
             BrowserHTTPAuthenticationPrompt,
@@ -49,6 +55,9 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var spaceNames: [ObjectIdentifier: String] = [:]
     @ObservationIgnored private var spaceIDs: [ObjectIdentifier: SpaceID] = [:]
     @ObservationIgnored private var sourceOrigins: [ObjectIdentifier: BrowserSiteOrigin] = [:]
+    @ObservationIgnored private var sourceWebViewIDs: [ObjectIdentifier: ObjectIdentifier] = [:]
+    @ObservationIgnored private var automaticDownloadSequences:
+        [AutomaticDownloadScope: BrowserAutomaticDownloadSequence] = [:]
     @ObservationIgnored private var approvedRetryKeys: Set<ObjectIdentifier> = []
     @ObservationIgnored private var retryContexts: [UUID: BrowserDownloadRetryContext] = [:]
     @ObservationIgnored private var retryLeases: [UUID: BrowserDownloadRetryLease] = [:]
@@ -193,6 +202,16 @@ final class BrowserDownloadCenter: NSObject {
             lease.assignment.profileID != profileID
                 || lease.assignment.spaceID != spaceID
         }
+        automaticDownloadSequences = automaticDownloadSequences.filter {
+            $0.key.spaceID != spaceID
+        }
+    }
+
+    func resetAutomaticDownloadSequence(in webView: WKWebView) {
+        let webViewID = ObjectIdentifier(webView)
+        automaticDownloadSequences = automaticDownloadSequences.filter {
+            $0.key.webViewID != webViewID
+        }
     }
 
     private static func shorter(
@@ -233,6 +252,7 @@ final class BrowserDownloadCenter: NSObject {
             profileID: profileID,
             spaceID: spaceID,
             spaceName: spaceName,
+            sourceWebView: webView,
             isUserApprovedRetry: false
         )
     }
@@ -296,6 +316,7 @@ final class BrowserDownloadCenter: NSObject {
             profileID: context.assignment.profileID,
             spaceID: context.assignment.spaceID,
             spaceName: context.spaceName,
+            sourceWebView: webView,
             isUserApprovedRetry: true
         )
         return true
@@ -321,6 +342,7 @@ final class BrowserDownloadCenter: NSObject {
         profileID: UUID,
         spaceID: SpaceID,
         spaceName: String,
+        sourceWebView: WKWebView,
         isUserApprovedRetry: Bool
     ) {
         let key = ObjectIdentifier(download)
@@ -333,6 +355,7 @@ final class BrowserDownloadCenter: NSObject {
         }
         spaceNames[key] = spaceName
         spaceIDs[key] = spaceID
+        sourceWebViewIDs[key] = ObjectIdentifier(sourceWebView)
         let frameOrigin = BrowserSiteOrigin(download.originatingFrame.securityOrigin)
         if !frameOrigin.host.isEmpty {
             sourceOrigins[key] = frameOrigin
@@ -404,11 +427,33 @@ final class BrowserDownloadCenter: NSObject {
         } else {
             savedDecision = .denyPersistently
         }
-        switch BrowserAutomaticDownloadPolicy.action(
-            isUserInitiated: download.isUserInitiated,
-            savedDecision: savedDecision,
-            isUserApprovedRetry: approvedRetryKeys.contains(key)
-        ) {
+        let automaticDownloadAction: BrowserAutomaticDownloadAction
+        if let origin = sourceOrigins[key],
+            let webViewID = sourceWebViewIDs[key],
+            let spaceID = spaceIDs[key]
+        {
+            let scope = AutomaticDownloadScope(
+                webViewID: webViewID,
+                origin: origin,
+                spaceID: spaceID
+            )
+            var sequence =
+                automaticDownloadSequences[scope]
+                ?? BrowserAutomaticDownloadSequence()
+            automaticDownloadAction = sequence.action(
+                isUserInitiated: download.isUserInitiated,
+                savedDecision: savedDecision,
+                isUserApprovedRetry: approvedRetryKeys.contains(key)
+            )
+            automaticDownloadSequences[scope] = sequence
+        } else {
+            automaticDownloadAction = BrowserAutomaticDownloadPolicy.action(
+                isUserInitiated: download.isUserInitiated,
+                savedDecision: savedDecision,
+                isUserApprovedRetry: approvedRetryKeys.contains(key)
+            )
+        }
+        switch automaticDownloadAction {
         case .allow:
             break
         case .deny:
@@ -431,7 +476,9 @@ final class BrowserDownloadCenter: NSObject {
                 return nil
             }
         }
-        if assessment.requiresConfirmation {
+        if assessment.requiresConfirmation(
+            isUserInitiated: download.isUserInitiated
+        ) {
             let approved = await approveRiskyDownload(
                 assessment,
                 response.url ?? download.originalRequest?.url,
@@ -670,6 +717,7 @@ final class BrowserDownloadCenter: NSObject {
         spaceNames.removeValue(forKey: key)
         spaceIDs.removeValue(forKey: key)
         sourceOrigins.removeValue(forKey: key)
+        sourceWebViewIDs.removeValue(forKey: key)
         approvedRetryKeys.remove(key)
     }
 }

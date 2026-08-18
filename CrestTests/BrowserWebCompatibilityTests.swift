@@ -593,6 +593,59 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         await removeDataStore(profileB.id)
     }
 
+    func testUnapprovedAutomaticWindowOpenIsBlockedByWebKit() async throws {
+        let origin = try XCTUnwrap(URL(string: "https://blocked-popups.crest.test/"))
+        let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
+        let profile = BrowsingProfile()
+        let space = makeSpace(profile: profile, tabs: [openerTab])
+        let store = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserPagePool(popupTabHost: store.popupTabHost)
+
+        do {
+            pool.select(session: store.session)
+            let opener = try XCTUnwrap(pool.activePage)
+            opener.webView.loadSimulatedRequest(
+                URLRequest(url: origin),
+                responseHTML: """
+                    <!doctype html>
+                    <html><body><script>
+                    globalThis.automaticPopupResult = 'pending';
+                    setTimeout(() => {
+                      globalThis.automaticPopupResult =
+                        window.open() === null ? 'null' : 'window';
+                    }, 100);
+                    </script></body></html>
+                    """
+            )
+            try await waitUntil("the popup blocker fixture to load") {
+                opener.url == origin && !opener.isLoading
+            }
+
+            XCTAssertFalse(
+                opener.webView.configuration.preferences
+                    .javaScriptCanOpenWindowsAutomatically
+            )
+            try await waitUntil("the automatic window request to run") {
+                try await self.stringResult(
+                    from: opener.webView,
+                    script: "return globalThis.automaticPopupResult;"
+                ) != "pending"
+            }
+            let openResult = try await stringResult(
+                from: opener.webView,
+                script: "return globalThis.automaticPopupResult;"
+            )
+
+            XCTAssertEqual(openResult, "null")
+            XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
+        }
+
+        await removeDataStore(profile.id)
+    }
+
     func testScriptedWindowOpenAdoptsAPopupThatKeepsItsOpener() async throws {
         let origin = try XCTUnwrap(URL(string: "https://popups.crest.test/"))
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
@@ -623,6 +676,19 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         do {
             pool.select(session: store.session)
             let opener = try XCTUnwrap(pool.activePage)
+            // A saved allow decision enables genuinely automatic windows for
+            // this top-level origin. User-activated windows do not need it.
+            pool.permissionCenter.setDecision(
+                .grantPersistently,
+                for: .popups,
+                origin: try XCTUnwrap(BrowserSiteOrigin(url: origin)),
+                in: space.id
+            )
+            opener.synchronizePopupPermission(for: origin)
+            XCTAssertTrue(
+                opener.webView.configuration.preferences
+                    .javaScriptCanOpenWindowsAutomatically
+            )
             opener.webView.loadSimulatedRequest(
                 URLRequest(url: origin),
                 responseHTML: fixtureHTML
@@ -630,15 +696,6 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             try await waitUntil("the opener fixture to load") {
                 opener.url == origin && !opener.isLoading
             }
-            // `window.open()` is scripted, so it answers to the site's pop-up
-            // permission rather than to a user gesture.
-            pool.permissionCenter.setDecision(
-                .grantPersistently,
-                for: .popups,
-                origin: try XCTUnwrap(BrowserSiteOrigin(url: origin)),
-                in: space.id
-            )
-
             let openResult = try await stringResult(
                 from: opener.webView,
                 script: """

@@ -9,7 +9,6 @@ xcuserdata/
 
 # Xcode products and diagnostics
 DerivedData/
-.codex-build/
 build/
 *.xcarchive
 *.xcresult
@@ -34,6 +33,7 @@ build/
 # Local editor and coding-assistant state
 .claude/
 .codex/
+.codex-*/
 .cursor/
 .idea/
 .vscode/

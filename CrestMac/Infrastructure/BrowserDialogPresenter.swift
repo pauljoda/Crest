@@ -236,23 +236,6 @@ final class BrowserDialogPresenter {
         )
     }
 
-    func presentPopupPermission(
-        origin: BrowserSiteOrigin,
-        destinationURL: URL,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        let destination = destinationURL.host() ?? destinationURL.absoluteString
-        return await presentSitePermission(
-            title: "Allow pop-ups from \(origin.host)?",
-            message:
-                "This site wants to open \(destination) in a new tab. "
-                + "The choice belongs only to the \(spaceName) Space.",
-            allowOnceTitle: "Open Once",
-            alwaysAllowTitle: "Always Allow in \(spaceName)",
-            blockTitle: "Block in \(spaceName)"
-        )
-    }
-
     /// Asks before Crest leaves the browser for another application. Cancelling
     /// is not offered as a saved block, so Escape declines this one hand-off
     /// rather than silently muting the site for good.

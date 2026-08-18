@@ -27,6 +27,16 @@ final class BrowserDownloadRiskAssessmentTests: XCTestCase {
         }
     }
 
+    func testUserInitiatedInstallerUsesThePlatformDownloadProtection() {
+        let assessment = BrowserDownloadRiskAssessment.assess(
+            suggestedFilename: "Crest.dmg",
+            mimeType: "application/x-apple-diskimage"
+        )
+
+        XCTAssertFalse(assessment.requiresConfirmation(isUserInitiated: true))
+        XCTAssertTrue(assessment.requiresConfirmation(isUserInitiated: false))
+    }
+
     func testDirectionChangingFilenameIsSanitizedAndRequiresConfirmation() {
         let assessment = BrowserDownloadRiskAssessment.assess(
             suggestedFilename: "photo.jpg\u{202E}gpj.command",
@@ -36,6 +46,7 @@ final class BrowserDownloadRiskAssessmentTests: XCTestCase {
         XCTAssertFalse(assessment.sanitizedFilename.contains("\u{202E}"))
         XCTAssertTrue(assessment.reasons.contains(.deceptiveFilename))
         XCTAssertTrue(assessment.reasons.contains(.executableOrInstaller))
+        XCTAssertTrue(assessment.requiresConfirmation(isUserInitiated: true))
     }
 
     func testDangerousMIMEAndBenignExtensionMismatchIsExplicit() {
@@ -46,6 +57,7 @@ final class BrowserDownloadRiskAssessmentTests: XCTestCase {
 
         XCTAssertTrue(assessment.reasons.contains(.executableOrInstaller))
         XCTAssertTrue(assessment.reasons.contains(.dangerousTypeMismatch))
+        XCTAssertTrue(assessment.requiresConfirmation(isUserInitiated: true))
     }
 
     func testPathTraversalIsNeutralizedWithoutMakingTheSafeResultDangerous() {

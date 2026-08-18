@@ -193,16 +193,6 @@ final class MobileBrowserPage: NSObject {
         )
         self.externalSchemeCoordinator = externalSchemeCoordinator
         popupCoordinator = BrowserPopupCoordinator(
-            spaceID: space.id,
-            spaceName: space.name,
-            permissionCenter: permissionCenter,
-            prompt: { origin, destinationURL, requestedSpaceName in
-                await MobileBrowserDialogPresenter.presentPopupPermission(
-                    origin: origin,
-                    destinationURL: destinationURL,
-                    spaceName: requestedSpaceName
-                )
-            },
             openNewTab: openNewTab,
             handOffExternalScheme: { destinationURL, trigger, origin in
                 externalSchemeCoordinator.handOff(
@@ -418,6 +408,7 @@ final class MobileBrowserPage: NSObject {
 
     func prepareForSpaceDeletion() {
         linkPeekPressCoordinator.cancel()
+        downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
         webView.navigationDelegate = nil
@@ -1092,6 +1083,7 @@ final class MobileBrowserPage: NSObject {
     }
 
     func prepareForNavigation(to url: URL?) {
+        synchronizePopupPermission(for: url)
         if navigationContext?.iconMode == .automatic {
             let current = webView.url.flatMap(BrowserHistoryURL.normalized) ?? webView.url
             let destination = url.flatMap(BrowserHistoryURL.normalized) ?? url
@@ -1101,6 +1093,17 @@ final class MobileBrowserPage: NSObject {
         }
         pendingNavigationURL = url
         clearNavigationFailure(preservingPendingURL: true)
+    }
+
+    func synchronizePopupPermission(for url: URL? = nil) {
+        let origin = (url ?? displayURL ?? webView.url)
+            .flatMap(BrowserSiteOrigin.init(url:))
+        let decision =
+            origin.map {
+                permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
+            } ?? .ask
+        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
+            BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
     }
 
     /// True when Crest, not web content, asked for this navigation. Two signals

@@ -12,7 +12,7 @@ struct BrowserSavedSitePermissionSection: View {
                     "No Saved Permissions",
                     systemImage: "hand.raised.slash",
                     description: Text(
-                        "Sites will ask before using protected capabilities, opening pop-ups, or starting automatic downloads in this Space."
+                        "Protected capabilities ask first. Automatic pop-ups are blocked, and a site can download one file before asking to send more."
                     )
                 )
                 .frame(maxWidth: .infinity)
@@ -28,7 +28,7 @@ struct BrowserSavedSitePermissionSection: View {
             Button("Reset All", role: .destructive, action: resetAll)
                 .buttonStyle(.crestDestructive)
                 .disabled(records.isEmpty)
-                .accessibilityHint("Makes every site ask again in this Space")
+                .accessibilityHint("Restores each site's default permission behavior")
         }
     }
 }

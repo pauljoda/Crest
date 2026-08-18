@@ -294,16 +294,6 @@ final class BrowserPage: NSObject {
         )
         self.externalSchemeCoordinator = externalSchemeCoordinator
         popupCoordinator = BrowserPopupCoordinator(
-            spaceID: spaceID,
-            spaceName: spaceName,
-            permissionCenter: permissionCenter,
-            prompt: { origin, destinationURL, requestedSpaceName in
-                await dialogPresenter.presentPopupPermission(
-                    origin: origin,
-                    destinationURL: destinationURL,
-                    spaceName: requestedSpaceName
-                )
-            },
             openNewTab: openNewTab,
             handOffExternalScheme: { destinationURL, trigger, origin in
                 externalSchemeCoordinator.handOff(
@@ -632,6 +622,7 @@ final class BrowserPage: NSObject {
         chromeWebStoreTask?.cancel()
         chromeWebStoreTask = nil
         mozillaAddonsInstall.cancel()
+        downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
         webView.navigationDelegate = nil
@@ -1357,6 +1348,7 @@ final class BrowserPage: NSObject {
     }
 
     func prepareForNavigation(to url: URL?) {
+        synchronizePopupPermission(for: url)
         if navigationContext?.iconMode == .automatic {
             let current = webView.url.flatMap(BrowserHistoryURL.normalized) ?? webView.url
             let destination = url.flatMap(BrowserHistoryURL.normalized) ?? url
@@ -1370,6 +1362,17 @@ final class BrowserPage: NSObject {
         // must not survive into the next document.
         linkContextCapture.clear()
         clearNavigationFailure(preservingPendingURL: true)
+    }
+
+    func synchronizePopupPermission(for url: URL? = nil) {
+        let origin = (url ?? displayURL ?? webView.url)
+            .flatMap(BrowserSiteOrigin.init(url:))
+        let decision =
+            origin.map {
+                permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
+            } ?? .ask
+        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
+            BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
     }
 
     func recordNavigationFailure(

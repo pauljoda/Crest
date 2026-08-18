@@ -3,13 +3,6 @@ import WebKit
 
 @MainActor
 final class BrowserPopupCoordinator {
-    typealias Prompt =
-        @MainActor (
-            BrowserSiteOrigin,
-            URL,
-            String
-        ) async -> BrowserSitePermissionPromptResponse
-
     /// Routes a popup destination another application owns into the
     /// external-scheme consent path.
     typealias ExternalSchemeHandOff =
@@ -19,25 +12,13 @@ final class BrowserPopupCoordinator {
             BrowserSiteOrigin?
         ) -> Void
 
-    private let spaceID: SpaceID
-    private let spaceName: String
-    private let permissionCenter: BrowserSitePermissionCenter
-    private let prompt: Prompt
     private let openNewTab: (URL) -> Void
     private let handOffExternalScheme: ExternalSchemeHandOff
 
     init(
-        spaceID: SpaceID,
-        spaceName: String,
-        permissionCenter: BrowserSitePermissionCenter,
-        prompt: @escaping Prompt,
         openNewTab: @escaping (URL) -> Void,
         handOffExternalScheme: @escaping ExternalSchemeHandOff = { _, _, _ in }
     ) {
-        self.spaceID = spaceID
-        self.spaceName = spaceName
-        self.permissionCenter = permissionCenter
-        self.prompt = prompt
         self.openNewTab = openNewTab
         self.handOffExternalScheme = handOffExternalScheme
     }
@@ -73,103 +54,17 @@ final class BrowserPopupCoordinator {
             return nil
         }
 
-        switch disposition(for: navigationAction, currentURL: currentURL) {
-        case .open:
-            if let popupWebView = adopt(destinationURL) {
-                return popupWebView
-            }
-            if let destinationURL {
-                openNewTab(destinationURL)
-            }
-            return nil
-        case .deny:
-            return nil
-        case .prompt:
-            // A scripted popup with no destination has nothing to ask about, so
-            // it is declined rather than described to the user as a blank window.
-            guard let destinationURL,
-                let origin = sourceOrigin(
-                    for: navigationAction,
-                    currentURL: currentURL
-                )
-            else { return nil }
-            requestPermission(origin: origin, destinationURL: destinationURL)
-            return nil
+        // WebKit has already enforced its user-activation / automatic-window
+        // preference before this delegate runs. Every request that reaches here
+        // must be adopted synchronously so `window.opener`, about:blank, and the
+        // identity provider's return channel survive.
+        if let popupWebView = adopt(destinationURL) {
+            return popupWebView
         }
-    }
-
-    private func disposition(
-        for navigationAction: WKNavigationAction,
-        currentURL: URL?
-    ) -> BrowserPopupDisposition {
-        let trigger = BrowserPopupTrigger.classify(navigationAction.navigationType)
-        guard trigger == .scripted else { return .open }
-        guard
-            let origin = sourceOrigin(
-                for: navigationAction,
-                currentURL: currentURL
-            )
-        else {
-            return .deny
+        if let destinationURL {
+            openNewTab(destinationURL)
         }
-        return Self.disposition(
-            trigger: trigger,
-            decision: permissionCenter.decision(
-                for: .popups,
-                origin: origin,
-                in: spaceID
-            )
-        )
-    }
-
-    /// The popup policy itself: a link click or form submission is the user
-    /// asking for a window, while script-driven requests answer to the
-    /// per-origin pop-up permission.
-    nonisolated static func disposition(
-        trigger: BrowserPopupTrigger,
-        decision: BrowserSitePermissionDecision
-    ) -> BrowserPopupDisposition {
-        guard trigger == .scripted else { return .open }
-        switch decision {
-        case .grantForSession, .grantPersistently:
-            return .open
-        case .denyForSession, .denyPersistently:
-            return .deny
-        case .ask:
-            return .prompt
-        }
-    }
-
-    /// A prompt cannot answer while `createWebViewWith` is on the stack, so an
-    /// allowed popup arrives as a plain tab. WebKit has already discarded its
-    /// configuration by then, which is why this path cannot adopt.
-    private func requestPermission(
-        origin: BrowserSiteOrigin,
-        destinationURL: URL
-    ) {
-        Task { [prompt, spaceName, weak self] in
-            guard let self else { return }
-            let response = await prompt(origin, destinationURL, spaceName)
-            switch response {
-            case .allowOnce:
-                self.openNewTab(destinationURL)
-            case .grantPersistently:
-                self.permissionCenter.setDecision(
-                    .grantPersistently,
-                    for: .popups,
-                    origin: origin,
-                    in: self.spaceID
-                )
-                self.openNewTab(destinationURL)
-            case .denyPersistently:
-                self.permissionCenter.setDecision(
-                    .denyPersistently,
-                    for: .popups,
-                    origin: origin,
-                    in: self.spaceID
-                )
-            }
-        }
+        return nil
     }
 
     /// The origin that asked for the window. WebKit annotates `sourceFrame` as
