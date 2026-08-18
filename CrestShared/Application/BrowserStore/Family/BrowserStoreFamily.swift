@@ -10,6 +10,7 @@ final class BrowserStoreFamily {
 
     private var stores: [WeakStore] = []
     private(set) var authoritativeSession: BrowserSession
+    private(set) var syncRevision: BrowserStoreSyncRevision = .initial
     private(set) var deletingSpaceIDs: Set<SpaceID> = []
     @ObservationIgnored private var lastCleanupSweepAt: Date?
 
@@ -22,12 +23,35 @@ final class BrowserStoreFamily {
         stores.append(WeakStore(value: store))
     }
 
-    func publish(_ session: BrowserSession, from source: BrowserStore) {
+    @discardableResult
+    func publish(
+        _ session: BrowserSession,
+        from source: BrowserStore,
+        at reservedRevision: BrowserStoreSyncRevision? = nil
+    ) -> BrowserStoreSyncRevision {
+        let revision = reservedRevision ?? reserveSyncRevision()
+        precondition(revision == syncRevision)
         authoritativeSession = session
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) where store !== source {
             store.receiveSharedSession(session)
         }
+        return revision
+    }
+
+    /// Orders every window's background sync work against the one shared
+    /// session. A window may still hold a task captured before another window's
+    /// edit; invalidating its local generation avoids needless work, while the
+    /// revision lets the shared coordinator reject it even if it was already
+    /// running when the newer edit arrived.
+    @discardableResult
+    func reserveSyncRevision() -> BrowserStoreSyncRevision {
+        syncRevision = syncRevision.successor()
+        stores.removeAll { $0.value == nil }
+        for store in stores.compactMap(\.value) {
+            store.invalidatePendingSyncStage()
+        }
+        return syncRevision
     }
 
     /// Claims the next retention sweep for the whole family. There is no primary

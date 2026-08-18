@@ -771,6 +771,60 @@ final class BrowserStoreTests: XCTestCase {
         )
     }
 
+    func testDeletingAPinnedTabStagesItsExplicitTombstoneAndArchiveAudit() async throws {
+        let session = BrowserSession.preview
+        let pinnedTab = try XCTUnwrap(session.selectedSpace?.pinnedTabs.first)
+        let coordinator = BrowserSyncCoordinator(
+            persistence: InMemoryBrowserSyncJournalPersistence(),
+            deviceID: UUID(
+                uuid: (
+                    0x44, 0x45, 0x4C, 0x45, 0x54, 0x45, 0x41, 0x55,
+                    0x44, 0x49, 0x54, 0x00, 0x00, 0x00, 0x00, 0x01
+                )
+            )
+        )
+        try coordinator.stage(session: session)
+        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let store = BrowserStore(
+            session: session,
+            persistence: InMemoryBrowserSessionPersistence(),
+            syncCoordinator: coordinator,
+            syncCoalescingDelay: .zero
+        )
+
+        store.deleteTab(pinnedTab.id, in: session.selectedSpaceID)
+        await store.flushPendingSyncPersistence()
+
+        XCTAssertEqual(
+            store.selectedSpace?.archivedTabs.first {
+                $0.id == pinnedTab.id
+            }?.reason,
+            .deleted
+        )
+        let tabRecordID = BrowserSyncRecordID(
+            kind: .tab,
+            value: pinnedTab.id.rawValue
+        )
+        XCTAssertEqual(
+            coordinator.journal.records.first { $0.id == tabRecordID }?
+                .tombstone?.reason,
+            .explicitDelete
+        )
+        let archiveRecord = try XCTUnwrap(
+            coordinator.journal.records.first {
+                $0.id
+                    == BrowserSyncRecordID(
+                        kind: .archive,
+                        value: pinnedTab.id.rawValue
+                    )
+            }
+        )
+        guard case .archive(let archive)? = archiveRecord.payload else {
+            return XCTFail("Expected deletion archive payload")
+        }
+        XCTAssertEqual(archive.reason, .deleted)
+    }
+
     func testModifiedLinkOpensImmediatelyBelowItsOriginTab() throws {
         let store = BrowserStore(
             session: .preview,
@@ -1494,6 +1548,105 @@ final class BrowserStoreTests: XCTestCase {
             firstWindow.session.spaces.map(\.profile.id),
             secondWindow.session.spaces.map(\.profile.id)
         )
+    }
+
+    func testDelayedStageFromAnotherWindowCannotDeleteANewerPinnedTab() async throws {
+        let session = BrowserSession.preview
+        let coordinator = BrowserSyncCoordinator(
+            persistence: InMemoryBrowserSyncJournalPersistence(),
+            deviceID: UUID(
+                uuid: (
+                    0x4D, 0x55, 0x4C, 0x54, 0x49, 0x57, 0x49, 0x4E,
+                    0x44, 0x4F, 0x57, 0x53, 0x00, 0x00, 0x00, 0x01
+                )
+            )
+        )
+        try coordinator.stage(session: session)
+        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let firstWindow = BrowserStore(
+            session: session,
+            persistence: InMemoryBrowserSessionPersistence(),
+            syncCoordinator: coordinator,
+            syncCoalescingDelay: .milliseconds(100)
+        )
+        let secondWindow = firstWindow.makeWindowStore()
+        let existingTab = try XCTUnwrap(secondWindow.selectedTab)
+
+        XCTAssertTrue(
+            secondWindow.setTabCustomTitle(
+                "Queued before the pinned tab",
+                for: existingTab.id,
+                in: secondWindow.session.selectedSpaceID
+            )
+        )
+        let pinnedTabID = try XCTUnwrap(
+            firstWindow.openExtensionTab(
+                url: try XCTUnwrap(URL(string: "https://pinned.crest.test")),
+                in: firstWindow.session.selectedSpaceID,
+                pinned: true,
+                requestedIndex: nil,
+                shouldSelect: false
+            )
+        )
+
+        await firstWindow.flushPendingSyncPersistence()
+        await secondWindow.flushPendingSyncPersistence()
+
+        let recordID = BrowserSyncRecordID(
+            kind: .tab,
+            value: pinnedTabID.rawValue
+        )
+        let record = try XCTUnwrap(
+            coordinator.journal.records.first { $0.id == recordID }
+        )
+        XCTAssertNotNil(record.payload)
+        XCTAssertNil(record.tombstone)
+        XCTAssertTrue(
+            try coordinator.journal
+                .materializedSession(applyingTo: firstWindow.session)
+                .space(id: firstWindow.session.selectedSpaceID)?
+                .tabs.contains(where: { $0.id == pinnedTabID }) == true
+        )
+    }
+
+    func testCoordinatorRejectsAStageOlderThanThePublishedFamilyRevision() throws {
+        var session = BrowserSession.preview
+        let folder = SavedFolder(title: "Keep Me", symbol: "folder")
+        session.spaces[0].folders.append(folder)
+        let coordinator = BrowserSyncCoordinator(
+            persistence: InMemoryBrowserSyncJournalPersistence(),
+            deviceID: UUID(
+                uuid: (
+                    0x52, 0x45, 0x56, 0x49, 0x53, 0x49, 0x4F, 0x4E,
+                    0x42, 0x41, 0x52, 0x52, 0x49, 0x45, 0x52, 0x01
+                )
+            )
+        )
+        try coordinator.stage(session: session)
+        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let family = BrowserStoreFamily(session: session)
+        let staleRevision = family.reserveSyncRevision()
+        var staleSession = session
+        staleSession.spaces[0].folders.removeAll { $0.id == folder.id }
+        let currentRevision = family.reserveSyncRevision()
+        coordinator.advanceStoreRevision(to: currentRevision)
+
+        let staged = try coordinator.stage(
+            session: staleSession,
+            deletionReason: .superseded,
+            storeRevision: staleRevision
+        )
+
+        XCTAssertFalse(staged)
+        let folderRecordID = BrowserSyncRecordID(
+            kind: .folder,
+            value: folder.id.rawValue
+        )
+        XCTAssertNotNil(
+            coordinator.journal.records.first { $0.id == folderRecordID }?
+                .payload
+        )
+        XCTAssertTrue(coordinator.journal.pendingRecordIDs.isEmpty)
     }
 
     func testSceneActivationSweepArchivesExpiredCurrentTabsInALongLivedSession() throws {

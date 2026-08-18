@@ -636,11 +636,19 @@ final class BrowserSyncTests: XCTestCase {
 
     func testRemovingAProjectedRecordCreatesADurableTombstone() throws {
         var session = oneSpaceSession()
-        let removedTabID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
+        let removedTab = try XCTUnwrap(session.selectedSpace?.tabs.first)
+        let removedTabID = removedTab.id
         var journal = BrowserSyncJournal(deviceID: fixedUUID(3))
         try journal.stage(session: session, at: fixedDate(100))
         journal.markUploaded(journal.pendingRecordIDs)
         session.spaces[0].tabs.removeAll { $0.id == removedTabID }
+        session.spaces[0].archivedTabs.append(
+            ArchivedTab(
+                tab: removedTab,
+                archivedAt: fixedDate(200),
+                reason: .deleted
+            )
+        )
 
         try journal.stage(session: session, at: fixedDate(200))
 
@@ -652,6 +660,74 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(record.tombstone?.reason, .explicitDelete)
         XCTAssertEqual(record.tombstone?.deletedAt, fixedDate(200))
         XCTAssertTrue(journal.pendingRecordIDs.contains(record.id))
+    }
+
+    func testAProjectedTabWithoutRemovalEvidenceIsNeverTombstoned() throws {
+        var session = oneSpaceSession()
+        let retainedTabID = try XCTUnwrap(session.selectedSpace?.tabs.first?.id)
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(301))
+        try journal.stage(session: session, at: fixedDate(100))
+        journal.markUploaded(journal.pendingRecordIDs)
+        session.spaces[0].tabs.removeAll { $0.id == retainedTabID }
+
+        try journal.stage(
+            session: session,
+            deletionReason: .superseded,
+            at: fixedDate(200)
+        )
+
+        let record = try XCTUnwrap(
+            journal.records.first {
+                $0.id
+                    == BrowserSyncRecordID(
+                        kind: .tab,
+                        value: retainedTabID.rawValue
+                    )
+            }
+        )
+        XCTAssertNotNil(record.payload)
+        XCTAssertNil(record.tombstone)
+        XCTAssertFalse(journal.pendingRecordIDs.contains(record.id))
+
+    }
+
+    func testAContainerWithoutExplicitRemovalIntentIsNeverTombstoned() throws {
+        var session = oneSpaceSession()
+        let folder = SavedFolder(title: "Retained", symbol: "folder")
+        session.spaces[0].folders.append(folder)
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(302))
+        try journal.stage(session: session, at: fixedDate(100))
+        journal.markUploaded(journal.pendingRecordIDs)
+        session.spaces[0].folders.removeAll()
+
+        try journal.stage(
+            session: session,
+            deletionReason: .superseded,
+            at: fixedDate(200)
+        )
+
+        let record = try XCTUnwrap(
+            journal.records.first {
+                $0.id
+                    == BrowserSyncRecordID(
+                        kind: .folder,
+                        value: folder.id.rawValue
+                    )
+            }
+        )
+        XCTAssertNotNil(record.payload)
+        XCTAssertNil(record.tombstone)
+        XCTAssertFalse(journal.pendingRecordIDs.contains(record.id))
+
+        try journal.stage(
+            session: session,
+            deletionReason: .explicitDelete,
+            at: fixedDate(300)
+        )
+        let explicitRecord = try XCTUnwrap(
+            journal.records.first { $0.id == record.id }
+        )
+        XCTAssertEqual(explicitRecord.tombstone?.reason, .explicitDelete)
     }
 
     func testExplicitDeleteWinsAgainstANewerEdit() throws {
@@ -1353,6 +1429,88 @@ final class BrowserSyncTests: XCTestCase {
                 return archive.reason
             }.allSatisfy { $0 != .synced }
         )
+    }
+
+    func testDeletionAuditCannotRemoveALiveTabBeforeItsTombstoneArrives() throws {
+        let session = oneSpaceSession()
+        let space = try XCTUnwrap(session.selectedSpace)
+        let tab = try XCTUnwrap(space.tabs.first)
+        let tabRecord = BrowserSyncRecord.save(
+            .tab(syncTab(tab, spaceID: space.id)),
+            version: BrowserSyncVersion(
+                logicalClock: 10,
+                deviceID: fixedUUID(1_182)
+            )
+        )
+        let deletionAudit = BrowserSyncRecord.save(
+            .archive(
+                BrowserSyncArchive(
+                    tab: syncTab(tab, spaceID: space.id),
+                    archivedAt: fixedDate(500),
+                    reason: .deleted
+                )
+            ),
+            version: BrowserSyncVersion(
+                logicalClock: 20,
+                deviceID: fixedUUID(1_183)
+            )
+        )
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(1_184))
+        try journal.merge([tabRecord, deletionAudit])
+
+        let materialized = try journal.materializedSession(applyingTo: session)
+
+        XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).contains(tab.id))
+        XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).archivedTabs.isEmpty)
+    }
+
+    func testExplicitRemoteDeleteMovesTheLocalTabIntoDeletionArchive() throws {
+        var session = oneSpaceSession()
+        session.spaces[0].tabs[0].placement = .pinned
+        let tab = try XCTUnwrap(session.selectedSpace?.tabs.first)
+        let coordinator = BrowserSyncCoordinator(
+            persistence: InMemoryBrowserSyncJournalPersistence(),
+            deviceID: fixedUUID(1_185)
+        )
+        try coordinator.stage(session: session, at: fixedDate(100))
+        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        let deletion = BrowserSyncRecord.delete(
+            id: BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue),
+            spaceID: session.selectedSpaceID,
+            version: BrowserSyncVersion(
+                logicalClock: 100,
+                deviceID: fixedUUID(1_186)
+            ),
+            reason: .explicitDelete,
+            at: fixedDate(500)
+        )
+
+        let materialized = try coordinator.merge(
+            remoteRecords: [deletion],
+            into: session,
+            at: fixedDate(600)
+        )
+
+        let space = try XCTUnwrap(materialized.selectedSpace)
+        XCTAssertFalse(space.contains(tab.id))
+        let archive = try XCTUnwrap(
+            space.archivedTabs.first { $0.id == tab.id }
+        )
+        XCTAssertEqual(archive.reason, .deletedOnAnotherDevice)
+        XCTAssertEqual(archive.archivedAt, fixedDate(500))
+        let archiveRecord = try XCTUnwrap(
+            coordinator.journal.records.first {
+                $0.id
+                    == BrowserSyncRecordID(
+                        kind: .archive,
+                        value: tab.id.rawValue
+                    )
+            }
+        )
+        guard case .archive(let projectedArchive)? = archiveRecord.payload else {
+            return XCTFail("Expected deletion archive payload")
+        }
+        XCTAssertEqual(projectedArchive.reason, .deleted)
     }
 
     func testSyncMaterializationPreservesAnExistingLocalArchiveCause() throws {
@@ -2203,9 +2361,9 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertTrue(coordinator.journal.records.allSatisfy { $0.payload != nil })
     }
 
-    /// The other side of the same discriminator: a folder somebody deleted keeps a
-    /// tombstone, so the tabs it held are still deleted everywhere.
-    func testDeletingAFolderStillTombstonesTheTabsItHeld() throws {
+    /// A folder somebody deleted keeps a tombstone, but the container's content
+    /// is promoted rather than deleted with it.
+    func testFolderDeletionImmediatelyPromotesItsPreservedTab() throws {
         let spaceID = SpaceID(rawValue: fixedUUID(990))
         let folder = SavedFolder(
             id: FolderID(rawValue: fixedUUID(991)),
@@ -2269,14 +2427,40 @@ final class BrowserSyncTests: XCTestCase {
 
         XCTAssertTrue(try XCTUnwrap(resolved.space(id: spaceID)).folders.isEmpty)
         XCTAssertEqual(
-            resolved.space(id: spaceID)?.tabs.map(\.id),
-            [currentTab.id]
+            Set(try XCTUnwrap(resolved.space(id: spaceID)).tabs.map(\.id)),
+            [currentTab.id, savedTab.id]
+        )
+        XCTAssertNil(
+            resolved.space(id: spaceID)?.tabs.first { $0.id == savedTab.id }?
+                .folderID
         )
         let tabRecord = try XCTUnwrap(
             coordinator.journal.records.first { $0.id == savedTabRecordID }
         )
-        XCTAssertNil(tabRecord.payload)
-        XCTAssertEqual(tabRecord.tombstone?.reason, .superseded)
+        XCTAssertNotNil(tabRecord.payload)
+        XCTAssertNil(tabRecord.tombstone)
+
+        var movedTab = syncTab(savedTab, spaceID: spaceID)
+        movedTab.folderID = nil
+        movedTab.positionModifiedAt = fixedDate(901)
+        let afterMove = try coordinator.merge(
+            remoteRecords: [
+                BrowserSyncRecord.save(
+                    .tab(movedTab),
+                    version: BrowserSyncVersion(
+                        logicalClock: 901,
+                        deviceID: fixedUUID(996)
+                    )
+                )
+            ],
+            into: resolved
+        )
+
+        let restored = try XCTUnwrap(
+            afterMove.space(id: spaceID)?.tabs.first { $0.id == savedTab.id }
+        )
+        XCTAssertEqual(restored.placement, .saved)
+        XCTAssertNil(restored.folderID)
     }
 
     /// The last layer of the same problem. A nested folder used to fail the whole
@@ -2388,9 +2572,10 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertTrue(coordinator.journal.records.allSatisfy { $0.payload != nil })
     }
 
-    /// Deleting a folder in the middle of a chain still reaches everything under
-    /// it: the folder below and the tab inside that folder both go.
-    func testDeletingAParentFolderStillTombstonesItsWholeSubtree() throws {
+    /// Folder deletion removes only the container. Child records can arrive
+    /// before their promoted payloads, so neither they nor their tabs may be
+    /// tombstoned while waiting for the rest of the batch.
+    func testDeletingAParentFolderPreservesItsWaitingSubtreeRecords() throws {
         let spaceID = SpaceID(rawValue: fixedUUID(1_020))
         let root = SavedFolder(
             id: FolderID(rawValue: fixedUUID(1_021)),
@@ -2459,13 +2644,16 @@ final class BrowserSyncTests: XCTestCase {
             into: session
         )
 
+        let resolvedSpace = try XCTUnwrap(resolved.space(id: spaceID))
+        XCTAssertEqual(resolvedSpace.folders.map(\.id), [root.id, leaf.id])
+        XCTAssertEqual(resolvedSpace.folders.map(\.parentID), [nil, root.id])
         XCTAssertEqual(
-            try XCTUnwrap(resolved.space(id: spaceID)).folders.map(\.id),
-            [root.id]
+            Set(resolvedSpace.tabs.map(\.id)),
+            [currentTab.id, savedTab.id]
         )
         XCTAssertEqual(
-            resolved.space(id: spaceID)?.tabs.map(\.id),
-            [currentTab.id]
+            resolvedSpace.tabs.first { $0.id == savedTab.id }?.folderID,
+            leaf.id
         )
         for recordID in [
             BrowserSyncRecordID(kind: .folder, value: leaf.id.rawValue),
@@ -2474,10 +2662,11 @@ final class BrowserSyncTests: XCTestCase {
             let record = try XCTUnwrap(
                 coordinator.journal.records.first { $0.id == recordID }
             )
-            XCTAssertNil(
+            XCTAssertNotNil(
                 record.payload,
-                "\(recordID.recordName) outlived the folder that held it"
+                "\(recordID.recordName) was deleted with its container"
             )
+            XCTAssertNil(record.tombstone)
         }
         let rootRecord = try XCTUnwrap(
             coordinator.journal.records.first {

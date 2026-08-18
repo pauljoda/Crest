@@ -64,8 +64,8 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         BrowserSyncRecordReconciler.reconciledRecords(records).filter { $0.payload != nil }
     }
 
-    /// Rewrites the journal so it describes `session`, tombstoning whatever the
-    /// session no longer contains.
+    /// Rewrites the journal so it describes `session`, tombstoning records only
+    /// when the session carries evidence for why they were removed.
     ///
     /// A record whose owning Space has no record of its own is deliberately left
     /// alone. Restaging happens after every remote merge, and a fetch arrives in
@@ -87,6 +87,11 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         let knownSpaceIDs = Self.spaceIDs(in: byID)
         let knownFolderIDs = Self.folderIDs(in: byID)
         let parentIDsByFolderID = Self.parentIDsByFolderID(in: byID)
+        let archivedTabReasonsByID = Dictionary(
+            uniqueKeysWithValues: session.spaces.flatMap { space in
+                space.archivedTabs.map { ($0.id, $0.reason) }
+            }
+        )
         let desiredPayloads = try BrowserSyncProjection.payloads(
             from: session,
             preferences: preferences,
@@ -123,11 +128,19 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
                 parentIDsByFolderID: parentIDsByFolderID
             )
             guard ancestryHasArrived else { continue }
+            guard
+                let resolvedDeletionReason = Self.deletionReason(
+                    for: payload,
+                    desiredPayloadsByID: desiredByID,
+                    archivedTabReasonsByID: archivedTabReasonsByID,
+                    fallback: deletionReason
+                )
+            else { continue }
             let tombstone = BrowserSyncRecord.delete(
                 id: record.id,
                 spaceID: record.spaceID,
                 version: try nextVersion(),
-                reason: deletionReason,
+                reason: resolvedDeletionReason,
                 at: date
             )
             byID[record.id] = tombstone
@@ -332,8 +345,8 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
     /// arrived, so the same protection applies — and it has to reach the whole
     /// chain, because a tab's own folder can be present while that folder's
     /// parent is the one still missing. A folder somebody deleted keeps its
-    /// tombstone, which ends the walk: the subtree it held is still tombstoned
-    /// here and the deletion goes on reaching every device.
+    /// tombstone, but its content is deliberately held until promoted payloads
+    /// arrive because Crest's folder deletion removes only the container.
     private static func ancestryHasArrived(
         _ payload: BrowserSyncPayload,
         knownFolderIDs: Set<FolderID>,
@@ -355,10 +368,52 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
             // A cycle is never delivery order, so it is not this rule's to hold
             // back; materialization fails closed on it.
             guard seen.insert(folderID).inserted else { return true }
-            guard let parentID = parentIDsByFolderID[folderID] else { return true }
+            // A folder with no payload is a tombstone. Deleting a folder in
+            // Crest preserves its tabs and promotes its children, so the old
+            // child records must wait for those moved payloads rather than be
+            // cascaded into deletions above their remote versions.
+            guard let parentID = parentIDsByFolderID[folderID] else { return false }
             next = parentID
         }
         return true
+    }
+
+    /// A live tab may leave sync only with evidence for why it left the session.
+    /// Close and cleanup create an archive record; saved/pinned deletion creates
+    /// a deletion audit; deleting a whole Space is the one parent-level action.
+    /// Any other absence can be a stale window snapshot or partial Cloud batch,
+    /// so keeping the record is safer than manufacturing a tombstone.
+    private static func deletionReason(
+        for payload: BrowserSyncPayload,
+        desiredPayloadsByID: [BrowserSyncRecordID: BrowserSyncPayload],
+        archivedTabReasonsByID: [TabID: TabArchiveReason],
+        fallback: BrowserSyncTombstoneReason
+    ) -> BrowserSyncTombstoneReason? {
+        guard case .tab(let tab) = payload else {
+            return switch payload {
+            case .space, .folder:
+                fallback == .explicitDelete ? .explicitDelete : nil
+            case .history, .archive:
+                fallback
+            case .tab:
+                nil
+            }
+        }
+        if let archiveReason = archivedTabReasonsByID[tab.id] {
+            if archiveReason.isExplicitDeletion { return .explicitDelete }
+            if archiveReason == .autoCleanup { return .retention }
+            return .superseded
+        }
+        let spaceRecordID = BrowserSyncRecordID(
+            kind: .space,
+            value: tab.spaceID.rawValue
+        )
+        if fallback == .explicitDelete,
+            desiredPayloadsByID[spaceRecordID] == nil
+        {
+            return .explicitDelete
+        }
+        return nil
     }
 
     private func validatedRecordDictionary() throws -> [BrowserSyncRecordID: BrowserSyncRecord] {

@@ -1988,7 +1988,7 @@ final class BrowserPagePoolTests: XCTestCase {
         pool.reconcile(validTabIDs: [])
     }
 
-    func testASessionSweepKeepsArchivedTabsAndDropsDeletedOnes() async throws {
+    func testASessionSweepKeepsClosedAndDeletedArchiveState() async throws {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
         let live = BrowserTab(title: "Live", url: url, placement: .current)
@@ -2022,9 +2022,9 @@ final class BrowserPagePoolTests: XCTestCase {
             archive.archivedState(profileID: space.profile.id, tabID: closed.id),
             "A closed tab can be reopened, so its state is worth keeping."
         )
-        XCTAssertNil(
+        XCTAssertNotNil(
             archive.archivedState(profileID: space.profile.id, tabID: deleted.id),
-            "A tab that is neither current nor archived has nothing to restore into."
+            "A deliberate deletion now leaves a recoverable archive audit."
         )
     }
 

@@ -58,7 +58,8 @@ extension BrowserStore {
                 ? session.spaces.index(before: index)
                 : session.spaces.index(after: index)
             session.selectSpace(session.spaces[replacementIndex].id)
-            family.publish(session, from: self)
+            let revision = family.publish(session, from: self)
+            syncCoordinator?.advanceStoreRevision(to: revision)
             persistence.save(session, scope: .core)
         }
 
