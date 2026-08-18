@@ -26,6 +26,8 @@ struct BrowserSiteOriginSettings: View {
                         page.synchronizeHostedWebNotificationPermission()
                     case .location:
                         page.synchronizeGeolocationPermission()
+                    case .popups:
+                        page.synchronizePopupPermission()
                     default:
                         break
                     }

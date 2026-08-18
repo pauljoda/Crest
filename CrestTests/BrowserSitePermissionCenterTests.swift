@@ -176,7 +176,7 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
                 "Camera & Microphone",
                 "External Apps (mailto)",
                 "Microphone",
-                "Pop-ups",
+                "Automatic Pop-ups",
             ]
         )
     }
@@ -189,6 +189,25 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
         XCTAssertFalse(capabilities.supportsBackgroundPushDelivery)
         XCTAssertEqual(capabilities.systemOwner, .crestWhilePageIsLoaded)
         XCTAssertTrue(BrowserSitePermission.allCases.map(\.settingsLabel).contains("Notifications"))
+    }
+
+    func testPopupAndDownloadDefaultsDescribeTheirNonInterruptiveBehavior() {
+        XCTAssertEqual(
+            BrowserSitePermission.popups.settingsLabel(for: .ask),
+            "Blocked by Default"
+        )
+        XCTAssertEqual(
+            BrowserSitePermission.popups.defaultDecisionLabel,
+            "Default (Block)"
+        )
+        XCTAssertEqual(
+            BrowserSitePermission.automaticDownloads.settingsLabel(for: .ask),
+            "Ask after First"
+        )
+        XCTAssertEqual(
+            BrowserSitePermission.automaticDownloads.defaultDecisionLabel,
+            "Default (Ask after First)"
+        )
     }
 
     func testHostedNotificationsRequireHTTPSOrLoopbackHTTP() {
@@ -573,7 +592,7 @@ final class BrowserSitePermissionCenterTests: XCTestCase {
 
         XCTAssertEqual(records.first?.permission, .popups)
         XCTAssertNil(records.first?.detail)
-        XCTAssertEqual(records.first?.displayLabel, "Pop-ups")
+        XCTAssertEqual(records.first?.displayLabel, "Automatic Pop-ups")
     }
 
     private func assertCodableRawValue<Value: Codable & Equatable>(

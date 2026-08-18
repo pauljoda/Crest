@@ -130,9 +130,21 @@ final class BrowserDownloadLedgerTests: XCTestCase {
         )
     }
 
-    func testAutomaticDownloadsRespectSavedDecisionOrRequestPermission() {
+    func testFirstAutomaticDownloadIsAllowedBeforeAdditionalDownloadsAsk() {
+        var sequence = BrowserAutomaticDownloadSequence()
+
+        XCTAssertEqual(
+            sequence.action(isUserInitiated: false, savedDecision: .ask),
+            .allow
+        )
+        XCTAssertEqual(
+            sequence.action(isUserInitiated: false, savedDecision: .ask),
+            .requestPermission
+        )
+    }
+
+    func testAutomaticDownloadsRespectSavedAllowAndBlockDecisions() {
         let expectations: [(BrowserSitePermissionDecision, BrowserAutomaticDownloadAction)] = [
-            (.ask, .requestPermission),
             (.grantForSession, .allow),
             (.grantPersistently, .allow),
             (.denyForSession, .deny),
@@ -142,12 +154,29 @@ final class BrowserDownloadLedgerTests: XCTestCase {
             XCTAssertEqual(
                 BrowserAutomaticDownloadPolicy.action(
                     isUserInitiated: false,
-                    savedDecision: decision
+                    savedDecision: decision,
+                    hasAllowedAutomaticDownload: true
                 ),
                 expectedAction,
                 "Unexpected action for \(decision)"
             )
         }
+    }
+
+    func testAUserInitiatedDownloadResetsTheAutomaticDownloadAllowance() {
+        var sequence = BrowserAutomaticDownloadSequence()
+        XCTAssertEqual(
+            sequence.action(isUserInitiated: false, savedDecision: .ask),
+            .allow
+        )
+        XCTAssertEqual(
+            sequence.action(isUserInitiated: true, savedDecision: .ask),
+            .allow
+        )
+        XCTAssertEqual(
+            sequence.action(isUserInitiated: false, savedDecision: .ask),
+            .allow
+        )
     }
 
     func testBeginningDownloadsPreservesInsertionOrderAndCreationDate() throws {

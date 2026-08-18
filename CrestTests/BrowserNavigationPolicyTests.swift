@@ -225,64 +225,29 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         )
     }
 
-    func testScriptedWindowRequestsRequirePopupPolicy() {
+    func testNonLinkWindowRequestsRemainScriptedForExternalSchemeConsent() {
         XCTAssertEqual(BrowserPopupTrigger.classify(.other), .scripted)
         XCTAssertEqual(BrowserPopupTrigger.classify(.reload), .scripted)
     }
 
-    func testUserActivatedPopupsOpenWithoutConsultingTheSitePermission() {
-        let decisions: [BrowserSitePermissionDecision] = [
-            .ask,
-            .grantForSession,
+    func testOnlyAnExplicitSiteDecisionAllowsAutomaticPopups() {
+        for decision in [
+            BrowserSitePermissionDecision.ask,
             .denyForSession,
-            .grantPersistently,
             .denyPersistently,
-        ]
-        for decision in decisions {
-            XCTAssertEqual(
-                BrowserPopupCoordinator.disposition(
-                    trigger: .explicitUserNavigation,
-                    decision: decision
-                ),
-                .open,
-                "A link or form popup must not wait on \(decision)."
+        ] {
+            XCTAssertFalse(
+                BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
             )
         }
-    }
-
-    func testScriptedPopupsFollowTheStoredSitePermission() {
-        XCTAssertEqual(
-            BrowserPopupCoordinator.disposition(
-                trigger: .scripted,
-                decision: .grantPersistently
-            ),
-            .open
-        )
-        XCTAssertEqual(
-            BrowserPopupCoordinator.disposition(
-                trigger: .scripted,
-                decision: .grantForSession
-            ),
-            .open
-        )
-        XCTAssertEqual(
-            BrowserPopupCoordinator.disposition(
-                trigger: .scripted,
-                decision: .denyPersistently
-            ),
-            .deny
-        )
-        XCTAssertEqual(
-            BrowserPopupCoordinator.disposition(
-                trigger: .scripted,
-                decision: .denyForSession
-            ),
-            .deny
-        )
-        XCTAssertEqual(
-            BrowserPopupCoordinator.disposition(trigger: .scripted, decision: .ask),
-            .prompt
-        )
+        for decision in [
+            BrowserSitePermissionDecision.grantForSession,
+            .grantPersistently,
+        ] {
+            XCTAssertTrue(
+                BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
+            )
+        }
     }
 
     func testExternalSchemesLeaveWebKitWhileItsOwnSchemesStay() throws {
@@ -787,6 +752,24 @@ final class BrowserPopupSchemeRoutingTests: XCTestCase {
         XCTAssertTrue(harness.handedOff.isEmpty)
     }
 
+    func testAUserActivatedWindowOpenClassifiedAsOtherStillReachesAdoption() throws {
+        let harness = Harness()
+        let signInURL = try XCTUnwrap(URL(string: "https://accounts.google.com/gsi/transform"))
+
+        _ = harness.resolveOpen(
+            url: signInURL,
+            navigationType: .other,
+            currentURL: try XCTUnwrap(URL(string: "https://www.reddit.com/"))
+        )
+
+        XCTAssertEqual(harness.adoptedURLs, [signInURL])
+        XCTAssertEqual(
+            harness.openedTabURLs,
+            [signInURL],
+            "The harness cannot host an adopted web view, so the tested request falls back to a plain tab only after reaching adoption."
+        )
+    }
+
     @MainActor
     private final class Harness {
         struct HandOff: Equatable {
@@ -795,8 +778,6 @@ final class BrowserPopupSchemeRoutingTests: XCTestCase {
             let origin: BrowserSiteOrigin?
         }
 
-        let spaceID = SpaceID()
-        let permissionCenter = BrowserSitePermissionCenter()
         let coordinator: BrowserPopupCoordinator
         private(set) var handedOff: [HandOff] = []
         private(set) var openedTabURLs: [URL] = []
@@ -806,10 +787,6 @@ final class BrowserPopupSchemeRoutingTests: XCTestCase {
             var recordOpenTab: (URL) -> Void = { _ in }
             var recordHandOff: (HandOff) -> Void = { _ in }
             coordinator = BrowserPopupCoordinator(
-                spaceID: spaceID,
-                spaceName: "Work",
-                permissionCenter: permissionCenter,
-                prompt: { _, _, _ in .denyPersistently },
                 openNewTab: { recordOpenTab($0) },
                 handOffExternalScheme: { url, trigger, origin in
                     recordHandOff(HandOff(url: url, trigger: trigger, origin: origin))

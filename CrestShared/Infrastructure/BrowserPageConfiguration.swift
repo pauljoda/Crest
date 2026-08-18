@@ -25,9 +25,11 @@ enum BrowserPageConfiguration {
 
         let preferences = WKPreferences()
         preferences.isElementFullscreenEnabled = true
-        // Crest owns every new-window request in WKUIDelegate and applies the
-        // exact Space/site pop-up decision there.
-        preferences.javaScriptCanOpenWindowsAutomatically = true
+        // WebKit can distinguish a user-activated `window.open()` from an
+        // unsolicited automatic window. Keep automatic windows blocked by
+        // default; each page enables them only for an explicitly allowed site.
+        // User-activated new tabs and windows are unaffected by this setting.
+        preferences.javaScriptCanOpenWindowsAutomatically = false
         // Resident background tabs stay alive for instant host swaps, while
         // WebKit suspends their JavaScript and layout when detached from a window.
         preferences.inactiveSchedulingPolicy = .suspend

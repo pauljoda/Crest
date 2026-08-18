@@ -12,8 +12,8 @@ struct BrowserSitePermissionRow: View {
             Label(permission.settingsLabel, systemImage: permission.symbol)
                 .font(.caption)
             Spacer(minLength: CrestSpacing.small)
-            Menu(currentDecision.settingsLabel) {
-                Button("Ask") { setDecision(.ask) }
+            Menu(permission.settingsLabel(for: currentDecision)) {
+                Button(permission.defaultDecisionLabel) { setDecision(.ask) }
                 Button("Allow") { setDecision(.grantPersistently) }
                 Button("Block") { setDecision(.denyPersistently) }
             }

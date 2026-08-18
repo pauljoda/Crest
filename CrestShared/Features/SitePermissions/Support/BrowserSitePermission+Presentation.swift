@@ -12,7 +12,7 @@ extension BrowserSitePermission {
         case .notifications:
             "Notifications"
         case .popups:
-            "Pop-ups"
+            "Automatic Pop-ups"
         case .automaticDownloads:
             "Automatic Downloads"
         case .externalApplications:
@@ -38,6 +38,30 @@ extension BrowserSitePermission {
             "arrow.down.circle"
         case .externalApplications:
             "arrow.up.forward.app"
+        }
+    }
+
+    func settingsLabel(
+        for decision: BrowserSitePermissionDecision
+    ) -> String {
+        switch (self, decision) {
+        case (.popups, .ask):
+            "Blocked by Default"
+        case (.automaticDownloads, .ask):
+            "Ask after First"
+        default:
+            decision.settingsLabel
+        }
+    }
+
+    var defaultDecisionLabel: String {
+        switch self {
+        case .popups:
+            "Default (Block)"
+        case .automaticDownloads:
+            "Default (Ask after First)"
+        default:
+            "Ask"
         }
     }
 }

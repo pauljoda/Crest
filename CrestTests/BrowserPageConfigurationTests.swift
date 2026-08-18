@@ -23,7 +23,10 @@ final class BrowserPageConfigurationTests: XCTestCase {
         XCTAssertTrue(configuration.defaultWebpagePreferences.allowsContentJavaScript)
         XCTAssertTrue(configuration.allowsAirPlayForMediaPlayback)
         XCTAssertTrue(configuration.preferences.isElementFullscreenEnabled)
-        XCTAssertTrue(configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+        XCTAssertFalse(
+            configuration.preferences.javaScriptCanOpenWindowsAutomatically,
+            "Automatic windows are blocked until the site has explicit permission; user-activated windows are unaffected by this WebKit setting."
+        )
         XCTAssertEqual(configuration.preferences.inactiveSchedulingPolicy, .suspend)
         XCTAssertTrue(configuration.upgradeKnownHostsToHTTPS)
         XCTAssertFalse(configuration.suppressesIncrementalRendering)
