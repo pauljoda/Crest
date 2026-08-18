@@ -100,7 +100,9 @@ extension MobileBrowserPage: WKUIDelegate {
     ) {
         let mediaPermission = BrowserMediaPermission(type)
         let sitePermission = mediaPermission.sitePermission
-        let siteOrigin = BrowserSiteOrigin(origin)
+        let siteOrigin =
+            frame.request.url.flatMap { BrowserSiteOrigin(url: $0) }
+            ?? BrowserSiteOrigin(origin)
         switch permissionCenter.decision(
             for: sitePermission,
             origin: siteOrigin,
@@ -135,6 +137,62 @@ extension MobileBrowserPage: WKUIDelegate {
                     permissionCenter.setDecision(
                         .denyPersistently,
                         for: sitePermission,
+                        origin: siteOrigin,
+                        in: spaceID
+                    )
+                    decisionHandler(.deny)
+                }
+            }
+        }
+    }
+
+    @available(iOS 27.0, *)
+    func webView(
+        _ webView: WKWebView,
+        requestGeolocationPermissionFor origin: WKSecurityOrigin,
+        initiatedByFrame frame: WKFrameInfo,
+        decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
+    ) {
+        let siteOrigin =
+            frame.request.url.flatMap { BrowserSiteOrigin(url: $0) }
+            ?? BrowserSiteOrigin(origin)
+        switch permissionCenter.decision(
+            for: .location,
+            origin: siteOrigin,
+            in: spaceID
+        ) {
+        case .grantForSession, .grantPersistently:
+            decisionHandler(.grant)
+        case .denyForSession, .denyPersistently:
+            decisionHandler(.deny)
+        case .ask:
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    decisionHandler(.deny)
+                    return
+                }
+                let response =
+                    await MobileBrowserDialogPresenter
+                    .presentGeolocationPermission(
+                        origin: siteOrigin,
+                        topLevelURL: webView.url,
+                        spaceName: spaceName
+                    )
+                switch response {
+                case .allowOnce:
+                    decisionHandler(.grant)
+                case .grantPersistently:
+                    permissionCenter.setDecision(
+                        .grantPersistently,
+                        for: .location,
+                        origin: siteOrigin,
+                        in: spaceID
+                    )
+                    decisionHandler(.grant)
+                case .denyPersistently:
+                    permissionCenter.setDecision(
+                        .denyPersistently,
+                        for: .location,
                         origin: siteOrigin,
                         in: spaceID
                     )

@@ -78,6 +78,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Websites can request microphone access for calls and other browser features.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Websites can request your location when you choose to share it.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>SUFeedURL</key>

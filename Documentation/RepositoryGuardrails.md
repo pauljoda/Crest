@@ -18,6 +18,24 @@ Scripts/check-swift-format.sh --base main
 
 The script only invokes strict `swift-format lint`. It never runs formatter write mode and never performs a repository-wide formatting pass.
 
+## Fix commit versions
+
+Every verified fix advances the patch component of Crest's public version in
+the same commit:
+
+```sh
+Scripts/set-version.sh --patch
+git add Config/Version.xcconfig
+Scripts/check-version.sh --fix-commit
+```
+
+Pass a positive count to `--patch` only when one focused commit intentionally
+contains that many independently verified fixes. The fix-commit check reads the
+Git index and rejects a missing, unstaged, non-increasing, or major/minor bump.
+Changing release lines uses `Scripts/set-version.sh --release X.Y.Z` and remains
+an explicit release-and-tag decision. Neither path changes
+`CURRENT_PROJECT_VERSION`; Xcode Cloud owns distributed build numbers.
+
 ## Architecture and Xcode 27 compatibility
 
 Run:

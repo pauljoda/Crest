@@ -61,6 +61,8 @@
 	<string>Websites can connect to devices on your local network when you allow them.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Websites can request microphone access for calls and other browser features.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Websites can request your location while you use Crest.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

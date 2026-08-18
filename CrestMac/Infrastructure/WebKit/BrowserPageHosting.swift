@@ -24,4 +24,15 @@ protocol BrowserPageHosting: AnyObject {
 
     /// Retires an empty transient surface whose initial navigation became a download.
     func discardDownloadOnlyPage(_ page: BrowserPage)
+
+    /// Brings the live tab that authored a clicked system notification forward.
+    func activateNotificationSourcePage(_ page: BrowserPage)
+
+    /// Routes a message received by a shared popup content controller to the
+    /// page whose web view actually authored it.
+    func routeHostedWebNotificationMessage(_ message: WKScriptMessage)
+
+    /// Routes a pre-macOS 27 geolocation bridge message from a shared popup
+    /// content controller to the page whose web view authored it.
+    func routeGeolocationMessage(_ message: WKScriptMessage)
 }

@@ -37,8 +37,30 @@ class VersionContractTests(unittest.TestCase):
             "CREST_VERSION_REPOSITORY_ROOT": str(self.fixture_root),
         }
         self.current_version = self.current_marketing_version()
-        major, minor, _ = (int(part) for part in self.current_version.split("."))
-        self.next_version = f"{major}.{minor + 1}.0"
+        major, minor, patch = (
+            int(part) for part in self.current_version.split(".")
+        )
+        self.next_patch_version = f"{major}.{minor}.{patch + 1}"
+        self.two_fix_version = f"{major}.{minor}.{patch + 2}"
+        self.next_release_line = f"{major}.{minor + 1}.0"
+
+        subprocess.run(["git", "init", "-q"], cwd=self.fixture_root, check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "crest-tests@example.com"],
+            cwd=self.fixture_root,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Crest Tests"],
+            cwd=self.fixture_root,
+            check=True,
+        )
+        subprocess.run(["git", "add", "."], cwd=self.fixture_root, check=True)
+        subprocess.run(
+            ["git", "commit", "-qm", "fixture"],
+            cwd=self.fixture_root,
+            check=True,
+        )
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
@@ -53,9 +75,9 @@ class VersionContractTests(unittest.TestCase):
             check=False,
         )
 
-    def run_set(self, version: str) -> subprocess.CompletedProcess[str]:
+    def run_set(self, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [str(SET_SCRIPT), version],
+            [str(SET_SCRIPT), *arguments],
             cwd=self.fixture_root,
             env=self.environment,
             capture_output=True,
@@ -68,6 +90,18 @@ class VersionContractTests(unittest.TestCase):
             self.fixture_root / "Config" / "Version.xcconfig"
         ).read_text()
         return contents.split("=", maxsplit=1)[1].strip()
+
+    def write_version(self, version: str) -> None:
+        (self.fixture_root / "Config" / "Version.xcconfig").write_text(
+            f"MARKETING_VERSION = {version}\n"
+        )
+
+    def stage_version(self) -> None:
+        subprocess.run(
+            ["git", "add", "Config/Version.xcconfig"],
+            cwd=self.fixture_root,
+            check=True,
+        )
 
     def install_fake_xcodebuild(self, marketing_version: str | None = None) -> None:
         fake_bin = self.fixture_root / "fake-bin"
@@ -158,16 +192,48 @@ class VersionContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must contain only MARKETING_VERSION", result.stderr)
 
-    def test_set_version_rejects_non_increasing_and_shorthand_versions(self) -> None:
-        major, minor, _ = self.current_version.split(".")
-        for requested in (
-            "0.0.0",
-            self.current_version,
-            f"{major}.{minor}",
-            f"{self.current_version}-beta",
+    def test_fix_commit_check_rejects_a_missing_staged_patch_bump(self) -> None:
+        self.write_version(self.next_patch_version)
+
+        result = self.run_check("--fix-commit")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("stage Config/Version.xcconfig", result.stderr)
+
+    def test_fix_commit_check_accepts_a_staged_patch_bump(self) -> None:
+        self.write_version(self.two_fix_version)
+        self.stage_version()
+
+        result = self.run_check("--fix-commit")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            f"{self.current_version} to {self.two_fix_version}", result.stdout
+        )
+
+    def test_fix_commit_check_rejects_a_new_release_line(self) -> None:
+        self.write_version(self.next_release_line)
+        self.stage_version()
+
+        result = self.run_check("--fix-commit")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("patch version", result.stderr)
+
+    def test_set_version_rejects_ambiguous_or_invalid_requests(self) -> None:
+        for arguments in (
+            (),
+            (self.next_patch_version,),
+            ("--patch", "0"),
+            ("--patch", "-1"),
+            ("--patch", "two"),
+            ("--release", self.current_version),
+            ("--release", self.next_patch_version),
+            ("--release", "0.4"),
+            ("--release", f"{self.current_version}-beta"),
         ):
-            with self.subTest(version=requested):
-                result = self.run_set(requested)
+            with self.subTest(arguments=arguments):
+                result = self.run_set(*arguments)
                 self.assertNotEqual(result.returncode, 0)
 
         self.assertEqual(
@@ -175,7 +241,9 @@ class VersionContractTests(unittest.TestCase):
             f"MARKETING_VERSION = {self.current_version}\n",
         )
 
-    def test_set_version_updates_only_the_marketing_version_source(self) -> None:
+    def test_set_version_patch_count_updates_only_the_marketing_version_source(
+        self,
+    ) -> None:
         self.install_fake_xcodebuild()
         before = {
             path: (self.fixture_root / path).read_bytes()
@@ -186,20 +254,31 @@ class VersionContractTests(unittest.TestCase):
             )
         }
 
-        result = self.run_set(self.next_version)
+        result = self.run_set("--patch", "2")
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
             (self.fixture_root / "Config" / "Version.xcconfig").read_text(),
-            f"MARKETING_VERSION = {self.next_version}\n",
+            f"MARKETING_VERSION = {self.two_fix_version}\n",
         )
         for path, contents in before.items():
             self.assertEqual((self.fixture_root / path).read_bytes(), contents)
 
+    def test_set_version_requires_release_mode_to_change_release_lines(self) -> None:
+        self.install_fake_xcodebuild()
+
+        result = self.run_set("--release", self.next_release_line)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (self.fixture_root / "Config" / "Version.xcconfig").read_text(),
+            f"MARKETING_VERSION = {self.next_release_line}\n",
+        )
+
     def test_set_version_restores_the_previous_value_when_resolution_drifts(self) -> None:
         self.install_fake_xcodebuild(marketing_version="9.9.9")
 
-        result = self.run_set(self.next_version)
+        result = self.run_set("--patch")
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(f"restored {self.current_version}", result.stderr)

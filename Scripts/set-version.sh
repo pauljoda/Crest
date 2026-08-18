@@ -7,7 +7,9 @@ version_file="$repository_root/Config/Version.xcconfig"
 check_script="${0:A:h}/check-version.sh"
 
 usage() {
-  print -u2 "Usage: Scripts/set-version.sh X.Y.Z"
+  print -u2 "Usage:"
+  print -u2 "  Scripts/set-version.sh --patch [COUNT]"
+  print -u2 "  Scripts/set-version.sh --release X.Y.Z"
   exit 64
 }
 
@@ -47,15 +49,40 @@ is_version_greater() {
   return 1
 }
 
-[[ "$#" == "1" ]] || usage
-requested_version="$1"
-is_strict_semver "$requested_version" || usage
-
 "$check_script" --static >/dev/null
 
 current_version="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' "$version_file")"
-is_version_greater "$requested_version" "$current_version" \
-  || { print -u2 "error: $requested_version must be greater than current version $current_version."; exit 1; }
+
+case "${1:-}" in
+  --patch)
+    [[ "$#" -le 2 ]] || usage
+    patch_count="${2:-1}"
+    [[ "$patch_count" =~ '^[1-9][0-9]*$' ]] || usage
+
+    current_parts=("${(@s:.:)current_version}")
+    next_patch=$(( current_parts[3] + patch_count ))
+    requested_version="${current_parts[1]}.${current_parts[2]}.$next_patch"
+    update_kind="fix"
+    ;;
+  --release)
+    [[ "$#" == 2 ]] || usage
+    requested_version="$2"
+    is_strict_semver "$requested_version" || usage
+    is_version_greater "$requested_version" "$current_version" \
+      || { print -u2 "error: $requested_version must be greater than current version $current_version."; exit 1; }
+
+    current_parts=("${(@s:.:)current_version}")
+    requested_parts=("${(@s:.:)requested_version}")
+    if [[ "${requested_parts[1]}.${requested_parts[2]}" == "${current_parts[1]}.${current_parts[2]}" ]]; then
+      print -u2 "error: use --patch for fixes on the current release line."
+      exit 1
+    fi
+    update_kind="release line"
+    ;;
+  *)
+    usage
+    ;;
+esac
 
 backup_file="$(mktemp "${version_file}.backup.XXXXXX")"
 updated_file="$(mktemp "${version_file}.updated.XXXXXX")"
@@ -78,4 +105,4 @@ if ! "$check_script"; then
   exit 1
 fi
 
-print "Updated Crest from $current_version to $requested_version."
+print "Updated Crest $update_kind from $current_version to $requested_version."

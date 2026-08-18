@@ -7,6 +7,10 @@ extension BrowserSitePermission {
             "Microphone"
         case .cameraAndMicrophone:
             "Camera & Microphone"
+        case .location:
+            "Location"
+        case .notifications:
+            "Notifications"
         case .popups:
             "Pop-ups"
         case .automaticDownloads:
@@ -24,6 +28,10 @@ extension BrowserSitePermission {
             "mic"
         case .cameraAndMicrophone:
             "video.and.waveform"
+        case .location:
+            "location"
+        case .notifications:
+            "bell"
         case .popups:
             "macwindow.on.rectangle"
         case .automaticDownloads:

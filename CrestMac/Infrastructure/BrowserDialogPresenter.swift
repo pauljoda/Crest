@@ -125,14 +125,18 @@ final class BrowserDialogPresenter {
         origin: BrowserSiteOrigin,
         topLevelURL: URL?,
         spaceName: String,
-        completion: @escaping @MainActor @Sendable (BrowserSitePermissionPromptResponse) -> Void
+        completion:
+            @escaping @MainActor @Sendable (BrowserSitePermissionPromptResponse) -> Void
     ) {
         let alert = NSAlert()
         alert.messageText = "Allow \(origin.host) to use your \(permission.displayName)?"
-        var message = "This request belongs only to the \(spaceName) Space. Saved choices can be changed in Settings > Site Permissions."
+        var message =
+            "This request belongs only to the \(spaceName) Space. "
+            + "Saved choices can be changed in Settings > Site Permissions."
         if let topLevelURL,
-           let topLevelHost = topLevelURL.host(),
-           topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame {
+            let topLevelHost = topLevelURL.host(),
+            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
+        {
             message += "\n\nThe request comes from \(origin.displayName) inside \(topLevelHost)."
         }
         alert.informativeText = message
@@ -153,6 +157,85 @@ final class BrowserDialogPresenter {
         }
     }
 
+    func presentGeolocationPermission(
+        origin: BrowserSiteOrigin,
+        topLevelURL: URL?,
+        spaceName: String
+    ) async -> BrowserSitePermissionPromptResponse {
+        var message =
+            "This site will be able to use your current location for this request. "
+            + "The choice belongs only to the \(spaceName) Space."
+        if let topLevelURL,
+            let topLevelHost = topLevelURL.host(),
+            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
+        {
+            message += "\n\nThe request comes from \(origin.displayName) inside \(topLevelHost)."
+        }
+        return await presentSitePermission(
+            title: "Allow \(origin.host) to use your location?",
+            message: message,
+            allowOnceTitle: "Allow Once",
+            alwaysAllowTitle: "Always Allow in \(spaceName)",
+            blockTitle: "Block in \(spaceName)"
+        )
+    }
+
+    func presentHostedNotificationPermission(
+        origin: BrowserSiteOrigin,
+        spaceName: String
+    ) async -> BrowserSitePermissionPromptResponse {
+        await presentSitePermission(
+            title: "Allow notifications from \(origin.host)?",
+            message:
+                "Notifications can appear outside Crest while this page is open. "
+                + "Background Web Push is not supported. "
+                + "The choice belongs only to the \(spaceName) Space.",
+            allowOnceTitle: "Allow for Session",
+            alwaysAllowTitle: "Always Allow in \(spaceName)",
+            blockTitle: "Block in \(spaceName)"
+        )
+    }
+
+    /// Explains the second, app-level permission boundary before leaving Crest.
+    /// The caller keeps the page's original request pending, then rechecks the
+    /// system authorization after Crest becomes active again.
+    func recoverGeolocationSystemAuthorization() async {
+        guard
+            let settingsURL = URL(
+                string:
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices"
+            )
+        else { return }
+        await presentSystemPermissionRecovery(
+            title: "Location Access Is Off for Crest",
+            message:
+                "macOS is blocking Crest from receiving a location, even when this site is allowed. "
+                + "Turn on Crest in Privacy & Security > Location Services. "
+                + "This request will continue when you return.",
+            openButtonTitle: "Open Location Settings",
+            settingsURL: settingsURL
+        )
+    }
+
+    func recoverNotificationSystemAuthorization() async {
+        var components = URLComponents(
+            string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "id", value: Bundle.main.bundleIdentifier)
+        ]
+        guard let settingsURL = components?.url else { return }
+        await presentSystemPermissionRecovery(
+            title: "Notifications Are Off for Crest",
+            message:
+                "macOS is blocking Crest notifications, even when this site is allowed. "
+                + "Turn on Allow notifications for Crest. "
+                + "This request will continue when you return.",
+            openButtonTitle: "Open Notification Settings",
+            settingsURL: settingsURL
+        )
+    }
+
     func presentPopupPermission(
         origin: BrowserSiteOrigin,
         destinationURL: URL,
@@ -161,7 +244,9 @@ final class BrowserDialogPresenter {
         let destination = destinationURL.host() ?? destinationURL.absoluteString
         return await presentSitePermission(
             title: "Allow pop-ups from \(origin.host)?",
-            message: "This site wants to open \(destination) in a new tab. The choice belongs only to the \(spaceName) Space.",
+            message:
+                "This site wants to open \(destination) in a new tab. "
+                + "The choice belongs only to the \(spaceName) Space.",
             allowOnceTitle: "Open Once",
             alwaysAllowTitle: "Always Allow in \(spaceName)",
             blockTitle: "Block in \(spaceName)"
@@ -180,7 +265,11 @@ final class BrowserDialogPresenter {
         return await withCheckedContinuation { continuation in
             let alert = NSAlert()
             alert.messageText = "Open this “\(scheme)” link in another app?"
-            alert.informativeText = "\(origin.host) wants to leave Crest and open \(Self.externalDestinationLabel(for: destinationURL)). The choice belongs only to the \(spaceName) Space and can be changed in Settings > Site Permissions."
+            alert.informativeText =
+                "\(origin.host) wants to leave Crest and open "
+                + "\(Self.externalDestinationLabel(for: destinationURL)). "
+                + "The choice belongs only to the \(spaceName) Space and can be "
+                + "changed in Settings > Site Permissions."
             alert.alertStyle = .informational
             alert.addButton(withTitle: "Open")
             alert.addButton(withTitle: "Always Allow in \(spaceName)")
@@ -217,7 +306,9 @@ final class BrowserDialogPresenter {
     ) async -> BrowserSitePermissionPromptResponse {
         await presentSitePermission(
             title: "Allow automatic downloads from \(origin.host)?",
-            message: "The site started “\(filename)” without a direct download action. The choice belongs only to the \(spaceName) Space.",
+            message:
+                "The site started “\(filename)” without a direct download action. "
+                + "The choice belongs only to the \(spaceName) Space.",
             allowOnceTitle: "Download Once",
             alwaysAllowTitle: "Always Allow in \(spaceName)",
             blockTitle: "Block in \(spaceName)"
@@ -286,9 +377,15 @@ final class BrowserDialogPresenter {
             components.append("Realm: \(realm)")
         }
         if prompt.allowsSaving {
-            components.append("This sign-in belongs only to the \(spaceName) Space. Crest saves it only after the site accepts it.")
+            components.append(
+                "This sign-in belongs only to the \(spaceName) Space. "
+                    + "Crest saves it only after the site accepts it."
+            )
         } else {
-            components.append("This sign-in belongs only to the \(spaceName) Space and cannot be saved because the connection is not protected by HTTPS.")
+            components.append(
+                "This sign-in belongs only to the \(spaceName) Space and cannot "
+                    + "be saved because the connection is not protected by HTTPS."
+            )
         }
         if descriptor.previousFailureCount > 0 {
             components.append("The previous credentials were not accepted.")
@@ -324,6 +421,40 @@ final class BrowserDialogPresenter {
                     continuation.resume(returning: .denyPersistently)
                 }
             }
+        }
+    }
+
+    private func presentSystemPermissionRecovery(
+        title: String,
+        message: String,
+        openButtonTitle: String,
+        settingsURL: URL
+    ) async {
+        let shouldOpen = await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            alert.messageText = title
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: openButtonTitle)
+            alert.addButton(withTitle: "Not Now")
+            present(alert) { response in
+                continuation.resume(
+                    returning: response == .alertFirstButtonReturn
+                )
+            }
+        }
+        guard shouldOpen, NSWorkspace.shared.open(settingsURL) else { return }
+        await waitForApplicationReturn()
+    }
+
+    private func waitForApplicationReturn() async {
+        var observedInactiveApplication = !NSApp.isActive
+        while !observedInactiveApplication {
+            try? await Task.sleep(for: .milliseconds(100))
+            observedInactiveApplication = !NSApp.isActive
+        }
+        while !NSApp.isActive {
+            try? await Task.sleep(for: .milliseconds(100))
         }
     }
 

@@ -11,4 +11,5 @@
 - [ ] Space and browsing-profile isolation are preserved.
 - [ ] The macOS and mobile platform behavior remains intentionally native.
 - [ ] User-visible or architecture-significant changes update `CHANGELOG.md`.
+- [ ] Every verified fix commit includes its patch bump and passes `Scripts/check-version.sh --fix-commit`.
 - [ ] I have signed off every commit as described in `CONTRIBUTING.md`.

@@ -20,6 +20,16 @@ struct BrowserSiteOriginSettings: View {
                 origin: origin,
                 spaceID: page.spaceID,
                 permissionCenter: permissionCenter,
+                didChange: { permission in
+                    switch permission {
+                    case .notifications:
+                        page.synchronizeHostedWebNotificationPermission()
+                    case .location:
+                        page.synchronizeGeolocationPermission()
+                    default:
+                        break
+                    }
+                },
                 isExpanded: $isExpanded
             )
         }
