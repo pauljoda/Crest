@@ -14,7 +14,10 @@ struct SpaceSwitcherCommonListsButton: View {
         Button("Common Lists", systemImage: "archivebox", action: action)
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
-            .frame(width: 32, height: 32)
+            .frame(
+                width: BrowserSpaceSwitcherLayout.utilityButtonSize,
+                height: BrowserSpaceSwitcherLayout.utilityButtonSize
+            )
             .symbolVariant(isExpanded ? .fill : .none)
             .symbolEffect(
                 .bounce,

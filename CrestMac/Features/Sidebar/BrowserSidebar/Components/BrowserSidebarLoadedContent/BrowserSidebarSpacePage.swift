@@ -12,8 +12,6 @@ struct BrowserSidebarSpacePage: View {
     let activateAddress: () -> Void
     let submitAddress: () -> Void
     let openNewTab: () -> Void
-    let sidebarToggleAction: BrowserSidebarToggleAction
-    let toggleSidebar: () -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
     let utilityPresentation: BrowserUtilityPresentationState
@@ -47,8 +45,6 @@ struct BrowserSidebarSpacePage: View {
             siteControlContextMenuPresentationChanged: {
                 utilityPresentation.setSiteControlContextMenuPresented($0)
             },
-            sidebarToggleAction: sidebarToggleAction,
-            toggleSidebar: toggleSidebar,
             commandSurfaceNamespace: commandSurfaceNamespace,
             tabPromotionNamespace: tabPromotionNamespace,
             editSpace: { actions.presentSpaceSettings(space) },

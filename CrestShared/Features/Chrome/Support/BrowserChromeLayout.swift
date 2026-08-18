@@ -13,9 +13,6 @@ enum BrowserChromeLayout {
     static let usesSystemWindowControlColors = true
     static let usesSystemWindowControlActions = true
     static let sidebarTitlebarHeight: CGFloat = 48
-    static let windowControlsReservedWidth: CGFloat = 67
-    static let sidebarToggleLeadingInset = CrestSpacing.medium
-    static let sidebarToggleSymbolOffsetY: CGFloat = 1
     static let sidebarNavigationControlHitTarget: CGFloat = 30
     static let sidebarNavigationSymbolPointSize: CGFloat = 15
     static let sidebarNavigationTrailingInset = CrestSpacing.medium

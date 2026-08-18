@@ -676,7 +676,12 @@ final class BrowserUtilityListTests: XCTestCase {
         presentation.toggleSwitcher()
 
         XCTAssertTrue(presentation.isSwitcherExpanded)
+        XCTAssertTrue(presentation.isSidebarInteractionActive)
         XCTAssertEqual(presentation.surface, .archive)
+
+        presentation.dismiss()
+
+        XCTAssertFalse(presentation.isSidebarInteractionActive)
     }
 
     @MainActor

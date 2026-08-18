@@ -13,6 +13,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
 
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Namespace private var sidebarSurfaceNamespace
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -27,7 +28,15 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 BrowserRootDockedSidebarLayer(
                     presentation: model.sidebarPresentation,
                     width: model.sidebarWidth,
-                    reduceMotion: reduceMotion
+                    reduceMotion: reduceMotion,
+                    morphsWithFloatingSidebar: model.isSidebarMorphing,
+                    namespace: sidebarSurfaceNamespace,
+                    hoverChanged: {
+                        model.sidebarSurfaceHoverChanged(
+                            $0,
+                            reduceMotion: reduceMotion
+                        )
+                    }
                 ) {
                     BrowserRootSidebarContent(
                         model: model,
@@ -65,8 +74,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 space: model.browser.selectedSpace,
                 reduceMotion: reduceMotion,
                 reduceTransparency: reduceTransparency,
+                morphsWithDockedSidebar: model.isSidebarMorphing,
+                namespace: sidebarSurfaceNamespace,
                 hoverChanged: {
-                    model.floatingSidebarHoverChanged(
+                    model.sidebarSurfaceHoverChanged(
                         $0,
                         reduceMotion: reduceMotion
                     )
@@ -132,11 +143,15 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             }
         }
         .animation(
-            chromeAnimation(CrestMotion.chrome),
+            chromeAnimation(CrestMotion.sidebarMorph),
             value: model.chrome.columnVisibility
         )
         .animation(
-            chromeAnimation(CrestMotion.floatingPane),
+            chromeAnimation(
+                model.isSidebarMorphing
+                    ? CrestMotion.sidebarMorph
+                    : CrestMotion.floatingPane
+            ),
             value: model.isFloatingSidebarPresented
         )
         .animation(
@@ -144,9 +159,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             value: model.chrome.isCommandPalettePresented
         )
         .onChange(
-            of: model.chrome.utilityPresentation.isSiteControlInteractionActive
+            of: model.chrome.utilityPresentation.isSidebarInteractionActive
         ) { _, isActive in
-            model.siteControlInteractionChanged(
+            model.sidebarInteractionChanged(
                 isActive,
                 reduceMotion: reduceMotion
             )

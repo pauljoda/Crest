@@ -39,6 +39,14 @@ enum CrestMotion {
     static let navigationTransition: TimeInterval = 0.28
     /// Showing or hiding the app's primary browser chrome.
     static let chromeTransition: TimeInterval = 0.28
+    /// Handing the sidebar surface between its docked and floating placements.
+    static let sidebarMorphTransition: TimeInterval = 0.28
+    /// Letting the undocked sidebar retreat after pointer interaction ends.
+    static let sidebarRetreatTransition: TimeInterval = 0.30
+    /// Keeps phased sidebar work aligned with the visible geometry handoff.
+    static let sidebarMorphCompletionDelay: Duration = .seconds(
+        sidebarMorphTransition
+    )
     /// Showing or changing a secondary pane layered over browser chrome.
     static let floatingPaneTransition: TimeInterval = 0.24
     /// Showing or hiding compact toolbars within web content.
@@ -110,6 +118,12 @@ enum CrestMotion {
     static var dragPreview: Animation { .smooth(duration: dragPreviewTransition) }
     static var navigation: Animation { .snappy(duration: navigationTransition) }
     static var chrome: Animation { .smooth(duration: chromeTransition) }
+    static var sidebarMorph: Animation {
+        .smooth(duration: sidebarMorphTransition)
+    }
+    static var sidebarRetreat: Animation {
+        .smooth(duration: sidebarRetreatTransition)
+    }
     static var floatingPane: Animation { .smooth(duration: floatingPaneTransition) }
     static var toolbar: Animation { .snappy(duration: toolbarTransition) }
     static var dismissal: Animation { .easeOut(duration: dismissalTransition) }
