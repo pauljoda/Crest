@@ -17,18 +17,9 @@ struct MobileSidebarAddressField: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if let pageActions, pageActions.isAvailable, !isEditing {
-                MobilePageActionsMenu(
-                    browser: browser,
-                    pages: pageActions,
-                    systemImage: "ellipsis.circle"
-                )
-                .frame(width: 44, height: 44)
-            } else {
+            if isEditing {
                 Image(
-                    systemName: isEditing
-                        ? (isSecure ? "lock.fill" : "magnifyingglass")
-                        : "ellipsis.circle"
+                    systemName: isSecure ? "lock.fill" : "magnifyingglass"
                 )
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)

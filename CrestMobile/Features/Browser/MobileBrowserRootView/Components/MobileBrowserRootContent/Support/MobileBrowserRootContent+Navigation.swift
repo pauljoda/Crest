@@ -3,7 +3,15 @@ import SwiftUI
 extension MobileBrowserRootContent {
     func selectTab(_ id: TabID) {
         dismissAddressFocus()
+        let dismissesFloatingPhoneSidebar =
+            MobileSidebarTabSelectionPolicy.dismissesSidebar(
+                browserPresentation: presentation,
+                sidebarPresentation: navigation.regularSidebarPresentation
+            )
         model.selectTab(id)
+        if dismissesFloatingPhoneSidebar {
+            hideRegularSidebar()
+        }
     }
 
     func submitAddress() {
@@ -134,6 +142,21 @@ extension MobileBrowserRootContent {
 
     func showRegularSidebar() {
         model.showRegularSidebar(reduceMotion: reduceMotion)
+    }
+
+    func toggleRegularSidebar() {
+        model.toggleSidebar(
+            presentation: .regular,
+            reduceMotion: reduceMotion
+        )
+    }
+
+    func toggleCompactSidebar() {
+        dismissAddressFocus()
+        model.toggleSidebar(
+            presentation: .compact,
+            reduceMotion: reduceMotion
+        )
     }
 
     func dismissAddressFocus() {

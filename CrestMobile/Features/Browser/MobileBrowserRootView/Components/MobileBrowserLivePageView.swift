@@ -18,6 +18,7 @@ import SwiftUI
 struct MobileBrowserLivePageView: View {
     let page: MobileBrowserPage
     let viewport: MobileBrowserPageViewport
+    var handleInteraction: (() -> Void)?
     /// An unfocused card's request to become the focused one. `nil` wherever
     /// the page on screen is already the focused one.
     var requestFocus: (() -> Void)?
@@ -26,6 +27,7 @@ struct MobileBrowserLivePageView: View {
         MobileBrowserWebView(
             page: page,
             viewport: viewport,
+            handleInteraction: handleInteraction,
             requestFocus: requestFocus
         )
         .id(page.tabID)

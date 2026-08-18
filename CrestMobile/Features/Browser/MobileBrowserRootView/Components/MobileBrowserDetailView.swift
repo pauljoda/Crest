@@ -9,8 +9,10 @@ struct MobileBrowserDetailView: View {
     let addressFocusRequest: Int
     let isCommandPalettePresented: Bool
     let isCompact: Bool
+    let obscuresSystemSafeAreas: Bool
     let showsCompactToolbar: Bool
     let compactToolbarIsHidden: Bool
+    let handleWebContentInteraction: () -> Void
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
     let showTabViewer: () -> Void
@@ -47,7 +49,8 @@ struct MobileBrowserDetailView: View {
                     pages: pages,
                     viewport: viewport,
                     selectTab: selectSplitCard,
-                    prepareMember: prepareSplitCardPage
+                    prepareMember: prepareSplitCardPage,
+                    handleInteraction: handleWebContentInteraction
                 )
                 .ignoresSafeArea(.container, edges: .vertical)
             } else {
@@ -72,7 +75,11 @@ struct MobileBrowserDetailView: View {
                     }
                 case .livePage:
                     if let page {
-                        MobileBrowserLivePageView(page: page, viewport: viewport)
+                        MobileBrowserLivePageView(
+                            page: page,
+                            viewport: viewport,
+                            handleInteraction: handleWebContentInteraction
+                        )
                     } else {
                         unloadedPageSurface
                     }
@@ -216,7 +223,7 @@ struct MobileBrowserDetailView: View {
             layoutDirection: layoutDirection
         )
         return MobileBrowserPageViewport(
-            obscuresSystemSafeAreas: isCompact,
+            obscuresSystemSafeAreas: obscuresSystemSafeAreas,
             systemSafeAreaInsets: safeAreaInsets,
             bottomChromeHeight: isCompact && showsCompactToolbar
                 ? compactBottomChromeHeight

@@ -4,6 +4,10 @@ import UIKit
 struct MobileBrowserWebView: UIViewRepresentable {
     let page: MobileBrowserPage
     var viewport = MobileBrowserPageViewport.inline
+    /// Observes page taps without taking them away from WebKit. Horizontal pans
+    /// remain exclusively WebKit's so native back/forward navigation keeps its
+    /// normal recognition priority.
+    var handleInteraction: (() -> Void)?
     /// An unfocused split card's request to become the focused one.
     ///
     /// A SwiftUI `TapGesture` over web content is unreliable — the page's own
@@ -26,6 +30,7 @@ struct MobileBrowserWebView: UIViewRepresentable {
                 context.coordinator.dismissFocusRecognizer
             )
         }
+        context.coordinator.handleInteraction = handleInteraction
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
         return host
     }
@@ -33,6 +38,7 @@ struct MobileBrowserWebView: UIViewRepresentable {
     func updateUIView(_ host: MobileBrowserWebHostView, context: Context) {
         host.configureViewport(viewport)
         host.attach(page.webView)
+        context.coordinator.handleInteraction = handleInteraction
         installFocusRecognizerIfNeeded(on: host, coordinator: context.coordinator)
     }
 

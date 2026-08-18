@@ -9,8 +9,10 @@ struct MobileBrowserDetailSurface: View {
     let addressFocusRequest: Int
     let isCommandPalettePresented: Bool
     let isCompact: Bool
+    let obscuresSystemSafeAreas: Bool
     let showsCompactToolbar: Bool
     let compactToolbarIsHidden: Bool
+    let handleWebContentInteraction: () -> Void
     let submitAddress: () -> Void
     let beginNewTab: () -> Void
     let showTabViewer: () -> Void
@@ -30,8 +32,10 @@ struct MobileBrowserDetailSurface: View {
             addressFocusRequest: addressFocusRequest,
             isCommandPalettePresented: isCommandPalettePresented,
             isCompact: isCompact,
+            obscuresSystemSafeAreas: obscuresSystemSafeAreas,
             showsCompactToolbar: showsCompactToolbar,
             compactToolbarIsHidden: compactToolbarIsHidden,
+            handleWebContentInteraction: handleWebContentInteraction,
             submitAddress: submitAddress,
             beginNewTab: beginNewTab,
             showTabViewer: showTabViewer,

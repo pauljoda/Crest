@@ -19,6 +19,10 @@ struct BrowserGeneralSettingsPane: View {
     @State private var isCheckingDefaultBrowser = true
     @AppStorage(BrowserStartupPreference.key) private var startupBehaviorRawValue =
         BrowserStartupBehavior.defaultBehavior.rawValue
+#if os(iOS)
+    @AppStorage(MobileCollapsedSidebarFullscreenPreference.key)
+    private var collapsedSidebarFullscreenIsEnabled = false
+#endif
 
     var body: some View {
         BrowserSettingsPane(.general) {
@@ -44,6 +48,22 @@ struct BrowserGeneralSettingsPane: View {
             BrowserPlatformAppearanceSettingsSection()
 
             BrowserPlatformSoftwareUpdateSettingsSection()
+
+#if os(iOS)
+            Section("Layout") {
+                Toggle(
+                    "Collapsed Sidebar Fullscreen",
+                    isOn: $collapsedSidebarFullscreenIsEnabled
+                )
+                .accessibilityIdentifier(
+                    "collapsed-sidebar-fullscreen-toggle"
+                )
+
+                CrestFormFootnote(
+                    "Removes the themed border around a single webpage whenever the sidebar is undocked. Split View always keeps its border."
+                )
+            }
+#endif
 
             Section("Default browser") {
                 CrestSettingsStatusRow("Status") {

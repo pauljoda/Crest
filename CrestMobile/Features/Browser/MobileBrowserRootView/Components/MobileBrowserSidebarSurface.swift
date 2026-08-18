@@ -21,7 +21,9 @@ struct MobileBrowserSidebarSurface: View {
     let compactTransitionEnded: (CGSize) -> Void
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
-    let hideSidebar: () -> Void
+    let toggleSidebar: () -> Void
+    let showsSidebarToggle: Bool
+    let sidebarIsDocked: Bool
     let utilityPresentation: BrowserUtilityPresentationState
 
     var body: some View {
@@ -46,7 +48,9 @@ struct MobileBrowserSidebarSurface: View {
             compactTransitionEnded: compactTransitionEnded,
             togglePrivateBrowsing: togglePrivateBrowsing,
             closePrivateBrowsing: closePrivateBrowsing,
-            hideSidebar: hideSidebar,
+            toggleSidebar: toggleSidebar,
+            showsSidebarToggle: showsSidebarToggle,
+            sidebarIsDocked: sidebarIsDocked,
             utilityPresentation: utilityPresentation
         )
         .toolbarVisibility(.hidden, for: .navigationBar)

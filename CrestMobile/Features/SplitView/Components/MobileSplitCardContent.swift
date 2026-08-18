@@ -25,6 +25,7 @@ struct MobileSplitCardContent: View {
     let pages: MobileBrowserPageStore
     let viewport: MobileBrowserPageViewport
     let failureLayout: BrowserNavigationFailureLayout
+    var handleInteraction: (() -> Void)?
     /// A tap's request to make this card the focused one. `nil` where focus is
     /// not a tap away, which is every carousel cell: the phone shows one card at
     /// a time, so the card on screen is already the focused one.
@@ -84,6 +85,7 @@ struct MobileSplitCardContent: View {
         MobileBrowserLivePageView(
             page: page,
             viewport: viewport,
+            handleInteraction: handleInteraction,
             requestFocus: requestFocus
         )
     }

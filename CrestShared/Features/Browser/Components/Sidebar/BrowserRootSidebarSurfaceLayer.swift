@@ -45,10 +45,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     }
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(
-            cornerRadius: surfaceCornerRadius,
-            style: .continuous
-        )
+        RoundedRectangle(cornerRadius: surfaceCornerRadius, style: .continuous)
     }
 
     private var cardSurface: some View {
@@ -66,8 +63,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                     .strokeBorder(
                         .primary.opacity(
                             usesFloatingCardAppearance
-                                ? BrowserRootMetrics
-                                    .floatingSidebarBorderOpacity
+                                ? BrowserRootMetrics.floatingSidebarBorderOpacity
                                 : 0
                         ),
                         lineWidth: BrowserRootMetrics.floatingSidebarBorderWidth

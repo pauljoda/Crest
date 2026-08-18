@@ -6,46 +6,35 @@ struct MobileCollapsedSidebarRevealControl: View {
     @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            Color.clear
-                .contentShape(.rect)
-                .frame(width: MobileBrowserChromeLayout.collapsedSidebarRevealWidth)
-                .frame(maxHeight: .infinity)
-                .gesture(
-                    DragGesture(
-                        minimumDistance: MobileBrowserChromeLayout
-                            .collapsedSidebarGestureDistance
-                    )
-                    .onEnded { value in
-                        guard
-                            BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
-                                value.translation,
-                                layoutDirection: layoutDirection
-                            )
-                        else {
-                            return
-                        }
-                        showSidebar()
-                    }
+        Color.clear
+            .contentShape(.rect)
+            .frame(width: MobileBrowserChromeLayout.collapsedSidebarRevealWidth)
+            .frame(maxHeight: .infinity)
+            .gesture(
+                DragGesture(
+                    minimumDistance: MobileBrowserChromeLayout
+                        .collapsedSidebarGestureDistance
                 )
-                .accessibilityHidden(true)
-
-            Button(action: showSidebar) {
-                Image(systemName: "sidebar.left")
-                    .frame(
-                        width: CrestLayout.glassIconButtonDiameter,
-                        height: CrestLayout.glassIconButtonDiameter
-                    )
-                    .contentShape(.circle)
+                .onEnded { value in
+                    guard
+                        BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
+                            value.translation,
+                            layoutDirection: layoutDirection
+                        )
+                    else {
+                        return
+                    }
+                    showSidebar()
+                }
+            )
+            .accessibilityRepresentation {
+                Button("Show Sidebar", systemImage: "sidebar.left") {
+                    showSidebar()
+                }
+                .accessibilityHint(
+                    "You can also swipe inward from the leading edge"
+                )
+                .accessibilityIdentifier("show-sidebar")
             }
-            .buttonBorderShape(.circle)
-            .buttonStyle(.glass)
-            .hoverEffect(.highlight)
-            .help("Show Sidebar")
-            .accessibilityLabel("Show Sidebar")
-            .accessibilityHint("Also available by swiping inward from the leading edge")
-            .accessibilityIdentifier("show-sidebar")
-            .padding(MobileBrowserChromeLayout.collapsedSidebarControlPadding)
-        }
     }
 }

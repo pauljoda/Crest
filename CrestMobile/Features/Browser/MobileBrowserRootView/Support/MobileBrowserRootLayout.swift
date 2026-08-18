@@ -62,10 +62,83 @@ enum MobileBrowserRootLayout {
     static let feedbackLayer: Double = 30
     static let sidebarLayer: Double = 3
     static let utilityLayer: Double = 8
+
+    /// Gives detached sidebar controls the same breathing room as the card's
+    /// other floating chrome without moving their docked-window alignment.
+    static let floatingSidebarBottomChromeInset: CGFloat = 6
 }
 
 enum MobileBrowserRootPreferences {
-    static let regularSidebarWidthKey = "crest.sidebar.width.ipad"
+    /// Keep the existing key so current installs retain their preferred width.
+    /// The value now applies to every expanded iOS layout, not only iPad.
+    static let adaptiveSidebarWidthKey = "crest.sidebar.width.ipad"
+}
+
+enum MobileCollapsedSidebarFullscreenPreference {
+    static let key = "crest.sidebar.collapsed.fullscreen.mobile"
+}
+
+enum MobileBrowserPresentationPolicy {
+    static let expandedLayoutMinimumWidth: CGFloat = 600
+
+    static func resolve(
+        availableWidth: CGFloat
+    ) -> MobileBrowserPresentation {
+        if availableWidth >= expandedLayoutMinimumWidth {
+            return .regular
+        }
+        return .compact
+    }
+}
+
+enum MobileSidebarPageFramePolicy {
+    static func usesBorderlessFrame(
+        preferenceIsEnabled: Bool,
+        sidebarPresentation: BrowserSidebarPresentation,
+        presentsSplitView: Bool,
+        browserPresentation: MobileBrowserPresentation
+    ) -> Bool {
+        guard !presentsSplitView else { return false }
+        if browserPresentation == .compact,
+            sidebarPresentation == .docked
+        {
+            return true
+        }
+        return preferenceIsEnabled && sidebarPresentation != .docked
+    }
+
+    static func showsCompactToolbar(
+        sidebarPresentation: BrowserSidebarPresentation,
+        presentsSplitView: Bool
+    ) -> Bool {
+        presentsSplitView || sidebarPresentation == .docked
+    }
+}
+
+enum MobileSidebarTabSelectionPolicy {
+    static func dismissesSidebar(
+        browserPresentation: MobileBrowserPresentation,
+        sidebarPresentation: BrowserSidebarPresentation
+    ) -> Bool {
+        browserPresentation == .compact
+            && sidebarPresentation == .floating
+    }
+}
+
+enum MobileKeyboardLayoutPolicy {
+    static let floatingKeyboardMaximumWidthRatio: CGFloat = 0.85
+
+    static func isFloating(
+        keyboardFrame: CGRect,
+        availableSize: CGSize
+    ) -> Bool {
+        guard !keyboardFrame.isNull,
+            !keyboardFrame.isEmpty,
+            availableSize.width > 0
+        else { return false }
+        return keyboardFrame.width
+            < availableSize.width * floatingKeyboardMaximumWidthRatio
+    }
 }
 
 enum MobileCompactDomainChipLayout {

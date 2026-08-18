@@ -3,16 +3,12 @@ import SwiftUI
 struct MobileSidebarNavigationControls: View {
     let browser: BrowserStore
     let pageActions: (any MobilePageActions)?
-    let hideSidebar: () -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         HStack(spacing: 2) {
-            Text(ProductIdentity.name)
-                .font(.headline)
-
-            Spacer(minLength: 12)
+            Spacer(minLength: 0)
 
             Button("Back", systemImage: "chevron.left") {
                 pageActions?.goBack()
@@ -62,9 +58,6 @@ struct MobileSidebarNavigationControls: View {
                 isEnabled: pageActions?.isAvailable == true,
                 menuControlSize: CGSize(width: 28, height: 44)
             )
-            Button("Hide Sidebar", systemImage: "sidebar.left", action: hideSidebar)
-                .font(.system(size: 17, weight: .medium))
-
             if let pageActions, pageActions.isAvailable {
                 MobilePageActionsMenu(
                     browser: browser,

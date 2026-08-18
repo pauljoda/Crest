@@ -23,7 +23,9 @@ struct MobileBrowserSidebarContentConfiguration {
     let compactPageIsFullyPresented: Bool
     let compactTransitionEnded: (CGSize) -> Void
     let closePrivateBrowsing: () -> Void
-    let hideSidebar: () -> Void
+    let toggleSidebar: () -> Void
+    let showsSidebarToggle: Bool
+    let sidebarIsDocked: Bool
     let selectSpace: (SpaceID) -> Void
     let settleSpaceSelection: (SpaceID) -> Void
     let showHistory: () -> Void

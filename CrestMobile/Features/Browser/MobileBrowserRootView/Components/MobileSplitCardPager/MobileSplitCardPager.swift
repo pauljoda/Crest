@@ -20,6 +20,7 @@ struct MobileSplitCardPager: View {
     let viewport: MobileBrowserPageViewport
     let selectTab: (TabID) -> Void
     let prepareMember: (TabID) -> Void
+    let handleInteraction: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var visibleTabID: TabID?
@@ -32,7 +33,8 @@ struct MobileSplitCardPager: View {
         pages: MobileBrowserPageStore,
         viewport: MobileBrowserPageViewport,
         selectTab: @escaping (TabID) -> Void,
-        prepareMember: @escaping (TabID) -> Void
+        prepareMember: @escaping (TabID) -> Void,
+        handleInteraction: @escaping () -> Void
     ) {
         self.members = members
         self.space = space
@@ -41,6 +43,7 @@ struct MobileSplitCardPager: View {
         self.viewport = viewport
         self.selectTab = selectTab
         self.prepareMember = prepareMember
+        self.handleInteraction = handleInteraction
         _visibleTabID = State(initialValue: focusedTabID)
         assert(
             Set(members.map(\.id)).count == members.count,
@@ -65,7 +68,8 @@ struct MobileSplitCardPager: View {
                             space: space,
                             pages: pages,
                             viewport: viewport,
-                            prepareMember: prepareMember
+                            prepareMember: prepareMember,
+                            handleInteraction: handleInteraction
                         )
                         .containerRelativeFrame(.horizontal)
                         .id(member.id)

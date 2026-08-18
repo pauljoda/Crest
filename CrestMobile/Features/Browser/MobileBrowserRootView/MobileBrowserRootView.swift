@@ -30,7 +30,7 @@ struct MobileBrowserRootView: View {
         let fallbackWidth =
             windowState?.sidebarWidth.map { CGFloat($0) }
             ?? BrowserSidebarWidthPreference.value(
-                forKey: MobileBrowserRootPreferences.regularSidebarWidthKey,
+                forKey: MobileBrowserRootPreferences.adaptiveSidebarWidthKey,
                 default: MobileBrowserRootLayout.defaultRegularSidebarWidth
             )
         _model = State(
@@ -60,7 +60,28 @@ struct MobileBrowserRootView: View {
     }
 }
 
-#Preview("Mobile Browser Root") {
+#Preview(
+    "Mobile Browser - Compact",
+    traits: .fixedLayout(width: 393, height: 852)
+) {
+    let fixture = MobileBrowserPreviewFixture()
+    MobileBrowserRootView(
+        browser: fixture.browser,
+        pages: fixture.pages,
+        dataDeleter: fixture.pages,
+        navigation: MobileBrowserNavigationState(),
+        transientBrowsing: BrowserTransientBrowsingCoordinator(),
+        spaceAccess: fixture.spaceAccess,
+        windowState: fixture.windowState,
+        togglePrivateBrowsing: {},
+        closePrivateBrowsing: {}
+    )
+}
+
+#Preview(
+    "Mobile Browser - Expanded",
+    traits: .fixedLayout(width: 1_024, height: 768)
+) {
     let fixture = MobileBrowserPreviewFixture()
     MobileBrowserRootView(
         browser: fixture.browser,

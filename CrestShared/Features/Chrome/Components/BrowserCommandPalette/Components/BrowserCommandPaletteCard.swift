@@ -38,6 +38,12 @@ struct BrowserCommandPaletteCard: View {
                 reduceTransparency: reduceTransparency
             )
         )
+        .clipShape(
+            .rect(
+                cornerRadius: BrowserCommandPaletteMetrics.cardCornerRadius,
+                style: .continuous
+            )
+        )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("command-palette")
     }

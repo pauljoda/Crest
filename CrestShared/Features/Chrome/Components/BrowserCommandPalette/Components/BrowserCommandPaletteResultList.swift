@@ -30,5 +30,6 @@ struct BrowserCommandPaletteResultList: View {
             .padding(BrowserCommandPaletteMetrics.resultContentPadding)
         }
         .frame(height: resultAreaHeight)
+        .clipped()
     }
 }

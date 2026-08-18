@@ -26,7 +26,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             {
                 MobileBrowserWindowAtmosphere(space: browser.selectedSpace)
                     .ignoresSafeArea(
-                        .container,
+                        .all,
                         edges: MobileRegularBrowserBackdropPolicy.atmosphereSafeAreaEdges
                     )
             }

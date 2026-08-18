@@ -2123,6 +2123,7 @@
       }
     },
     "Also available by swiping inward from the leading edge" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3470,6 +3471,9 @@
           }
         }
       }
+    },
+    "Collapsed Sidebar Fullscreen" : {
+
     },
     "Collapses saved tabs" : {
       "localizations" : {
@@ -4997,6 +5001,9 @@
           }
         }
       }
+    },
+    "Dock Sidebar" : {
+
     },
     "Done" : {
       "localizations" : {
@@ -7608,6 +7615,9 @@
           }
         }
       }
+    },
+    "Layout" : {
+
     },
     "Leaf" : {
       "localizations" : {
@@ -10362,6 +10372,9 @@
           }
         }
       }
+    },
+    "Removes the themed border around a single webpage whenever the sidebar is undocked. Split View always keeps its border." : {
+
     },
     "Removing private browser data…" : {
       "localizations" : {
@@ -13555,6 +13568,9 @@
         }
       }
     },
+    "Undock Sidebar" : {
+
+    },
     "Unavailable in Crest" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14236,6 +14252,9 @@
           }
         }
       }
+    },
+    "You can also swipe inward from the leading edge" : {
+
     },
     "You can still create and rename Spaces on this device." : {
       "localizations" : {

@@ -1,4 +1,8 @@
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import SwiftUI
 
 struct BrowserFloatingSidebarCardBackground: View {
@@ -8,7 +12,7 @@ struct BrowserFloatingSidebarCardBackground: View {
 
     var body: some View {
         ZStack {
-            Color(nsColor: .windowBackgroundColor)
+            platformBackground
 
             if let space {
                 BrowserSpaceBannerBackground(branding: space.branding)
@@ -32,5 +36,13 @@ struct BrowserFloatingSidebarCardBackground: View {
             }
         }
         .accessibilityHidden(true)
+    }
+
+    private var platformBackground: Color {
+#if os(macOS)
+        Color(nsColor: .windowBackgroundColor)
+#else
+        Color(uiColor: .secondarySystemBackground)
+#endif
     }
 }
