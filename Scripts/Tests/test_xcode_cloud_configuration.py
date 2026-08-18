@@ -142,7 +142,13 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
         for script_name, required_environment in (
             (
                 "ci_pre_xcodebuild.sh",
-                ("CI_XCODE_SCHEME", "MARKETING_VERSION", "-showBuildSettings"),
+                (
+                    "CI_XCODE_SCHEME",
+                    "CI_BUILD_NUMBER",
+                    "MARKETING_VERSION",
+                    "CURRENT_PROJECT_VERSION",
+                    "-showBuildSettings",
+                ),
             ),
             (
                 "ci_post_xcodebuild.sh",
@@ -166,14 +172,28 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
         expected_version = self.marketing_version()
 
         with tempfile.TemporaryDirectory() as temporary_directory:
-            fake_bin = pathlib.Path(temporary_directory)
+            temporary_root = pathlib.Path(temporary_directory)
+            repository = temporary_root / "repository"
+            version_file = repository / "Config" / "Version.xcconfig"
+            project_file = repository / "Crest.xcodeproj" / "project.pbxproj"
+            version_file.parent.mkdir(parents=True)
+            project_file.parent.mkdir(parents=True)
+            version_file.write_text(f"MARKETING_VERSION = {expected_version}\n")
+            project_file.write_text(
+                "CURRENT_PROJECT_VERSION = 1;\n"
+                "CURRENT_PROJECT_VERSION = 1;\n"
+            )
+
+            fake_bin = temporary_root / "bin"
+            fake_bin.mkdir()
             fake_xcodebuild = fake_bin / "xcodebuild"
             environment = os.environ | {
                 "CI_XCODE_CLOUD": "TRUE",
                 "CI_XCODEBUILD_ACTION": "archive",
                 "CI_PRODUCT_PLATFORM": "iOS",
                 "CI_XCODE_SCHEME": "CrestMobile",
-                "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "CI_PRIMARY_REPOSITORY_PATH": str(repository),
+                "CI_BUILD_NUMBER": "22",
                 "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             }
 
@@ -185,6 +205,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                     fake_xcodebuild.write_text(
                         "#!/bin/sh\n"
                         f"printf '    MARKETING_VERSION = {resolved_version}\\n'\n"
+                        "printf '    CURRENT_PROJECT_VERSION = 22\\n'\n"
                     )
                     fake_xcodebuild.chmod(0o755)
                     result = subprocess.run(
@@ -197,6 +218,16 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                     )
 
                     self.assertEqual(result.returncode, expected_return_code)
+                    self.assertNotIn(
+                        "CURRENT_PROJECT_VERSION = 1;",
+                        project_file.read_text(),
+                    )
+                    self.assertEqual(
+                        project_file.read_text().count(
+                            "CURRENT_PROJECT_VERSION = 22;"
+                        ),
+                        2,
+                    )
                     if expected_return_code:
                         self.assertIn(
                             f"expected {expected_version}",
