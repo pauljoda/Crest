@@ -21,11 +21,4 @@ struct BrowserQuickWindowGeometryBridge: NSViewRepresentable {
         )
         nsView.updateWindowGeometry()
     }
-
-    static func dismantleNSView(
-        _ nsView: BrowserQuickWindowGeometryHostView,
-        coordinator: Void
-    ) {
-        nsView.stopObserving()
-    }
 }

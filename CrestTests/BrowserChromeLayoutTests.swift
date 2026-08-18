@@ -1713,6 +1713,35 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     @MainActor
+    func testQuickWindowKeepsTheFrameChosenByTheUserAfterInitialPlacement() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
+        let window = NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 640, height: 480),
+            styleMask: [.titled, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let host = BrowserQuickWindowGeometryHostView(
+            pagePoolRegistry: nil,
+            targetWindowID: nil
+        )
+        window.contentView?.addSubview(host)
+        host.updateWindowGeometry()
+
+        let initialFrame = BrowserQuickWindowGeometryHostView.targetFrame(
+            sourceWebContentFrame: nil,
+            fallbackVisibleFrame: screen.visibleFrame
+        )
+        let userFrame = initialFrame.offsetBy(dx: 80, dy: -60)
+        window.setFrame(userFrame, display: false)
+        let frameAfterUserMove = window.frame
+
+        host.updateWindowGeometry()
+
+        XCTAssertEqual(window.frame, frameAfterUserMove)
+    }
+
+    @MainActor
     func testBrowserChromeClipsItsThemeFrameToFullscreenWindowBounds() throws {
         let window = NSWindow(
             contentRect: CGRect(x: 0, y: 0, width: 900, height: 600),
