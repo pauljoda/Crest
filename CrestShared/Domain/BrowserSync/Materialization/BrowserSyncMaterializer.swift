@@ -8,6 +8,12 @@ enum BrowserSyncMaterializer {
     ) throws -> BrowserSession {
         let active = records.filter { $0.payload != nil }
         let folderRecordSpaceIDs = Self.folderRecordSpaceIDs(in: records)
+        let tombstonedFolderIDs = Set(
+            records.compactMap { record in
+                record.id.kind == .folder && record.tombstone != nil
+                    ? FolderID(rawValue: record.id.value)
+                    : nil
+            })
         let spaceRecords = active.compactMap { record -> BrowserSyncSpace? in
             guard case .space(let space)? = record.payload else { return nil }
             return space
@@ -30,7 +36,8 @@ enum BrowserSyncMaterializer {
                 records: active,
                 preferences: preferences,
                 local: local,
-                folderRecordSpaceIDs: folderRecordSpaceIDs
+                folderRecordSpaceIDs: folderRecordSpaceIDs,
+                tombstonedFolderIDs: tombstonedFolderIDs
             )
             let tabs = try materializedTabs(
                 spaceID: syncedSpace.id,
@@ -38,11 +45,12 @@ enum BrowserSyncMaterializer {
                 preferences: preferences,
                 local: local,
                 folders: folders,
-                folderRecordSpaceIDs: folderRecordSpaceIDs
+                folderRecordSpaceIDs: folderRecordSpaceIDs,
+                tombstonedFolderIDs: tombstonedFolderIDs
             )
             let archive = materializedArchive(
                 spaceID: syncedSpace.id,
-                records: active,
+                records: records,
                 preferences: preferences,
                 local: local,
                 activeTabs: tabs
@@ -126,7 +134,8 @@ enum BrowserSyncMaterializer {
         records: [BrowserSyncRecord],
         preferences: BrowserSyncPreferences,
         local: BrowserSpace?,
-        folderRecordSpaceIDs: [FolderID: SpaceID]
+        folderRecordSpaceIDs: [FolderID: SpaceID],
+        tombstonedFolderIDs: Set<FolderID>
     ) throws -> [SavedFolder] {
         guard preferences.savedStructure else { return local?.folders ?? [] }
         let synced = records.compactMap { record -> BrowserSyncFolder? in
@@ -138,6 +147,11 @@ enum BrowserSyncMaterializer {
         }
 
         let foldersByID = Dictionary(uniqueKeysWithValues: synced.map { ($0.id, $0) })
+        let activeFolderIDs = Set(foldersByID.keys)
+        let localFoldersByID = Dictionary(
+            uniqueKeysWithValues: (local?.folders ?? []).map { ($0.id, $0) }
+        )
+        var resolvedParentsByFolderID: [FolderID: FolderParentResolution] = [:]
         var childrenByParentID: [FolderID: [BrowserSyncFolder]] = [:]
         var roots: [BrowserSyncFolder] = []
         var waitingForAParent: Set<FolderID> = []
@@ -149,21 +163,33 @@ enum BrowserSyncMaterializer {
             guard parentID != folder.id else {
                 throw BrowserSyncError.invalidFolderHierarchy(spaceID)
             }
-            guard foldersByID[parentID] != nil else {
-                // A parent recorded in another Space is not something delivery
-                // order can explain, so it still fails closed.
-                guard (folderRecordSpaceIDs[parentID] ?? spaceID) == spaceID else {
-                    throw BrowserSyncError.invalidFolderHierarchy(spaceID)
-                }
-                // Either the parent has not arrived yet or somebody deleted it.
-                // Both mean this folder is not part of the Space right now, and
-                // holding it back costs nothing: its record is untouched, so
-                // `stage` keeps it while the parent is still on its way and
-                // tombstones it once the parent is gone.
-                waitingForAParent.insert(folder.id)
+            guard foldersByID[parentID] == nil else {
+                childrenByParentID[parentID, default: []].append(folder)
                 continue
             }
-            childrenByParentID[parentID, default: []].append(folder)
+            // A parent recorded in another Space is not something delivery
+            // order can explain, so it still fails closed.
+            guard (folderRecordSpaceIDs[parentID] ?? spaceID) == spaceID else {
+                throw BrowserSyncError.invalidFolderHierarchy(spaceID)
+            }
+            if let resolution = promotedParent(
+                replacing: parentID,
+                activeFolderIDs: activeFolderIDs,
+                localFoldersByID: localFoldersByID,
+                tombstonedFolderIDs: tombstonedFolderIDs
+            ) {
+                resolvedParentsByFolderID[folder.id] = resolution
+                if let resolvedParentID = resolution.parentID {
+                    childrenByParentID[resolvedParentID, default: []]
+                        .append(folder)
+                } else {
+                    roots.append(folder)
+                }
+                continue
+            }
+            // An unknown parent has not arrived yet. Keep the subtree out
+            // of the session without mutating its sync records.
+            waitingForAParent.insert(folder.id)
         }
         roots.sort(by: ordered)
         for parentID in childrenByParentID.keys {
@@ -178,13 +204,19 @@ enum BrowserSyncMaterializer {
             else {
                 throw BrowserSyncError.invalidFolderHierarchy(spaceID)
             }
+            let parentID: FolderID?
+            if let resolution = resolvedParentsByFolderID[folder.id] {
+                parentID = resolution.parentID
+            } else {
+                parentID = folder.parentID
+            }
             materialized.append(
                 SavedFolder(
                     id: folder.id,
                     title: folder.title,
                     symbol: folder.symbol,
                     color: folder.color,
-                    parentID: folder.parentID,
+                    parentID: parentID,
                     isCollapsed: folder.isCollapsed,
                     collapseModifiedAt: folder.collapseModifiedAt
                 ))
@@ -236,7 +268,8 @@ enum BrowserSyncMaterializer {
         preferences: BrowserSyncPreferences,
         local: BrowserSpace?,
         folders: [SavedFolder],
-        folderRecordSpaceIDs: [FolderID: SpaceID]
+        folderRecordSpaceIDs: [FolderID: SpaceID],
+        tombstonedFolderIDs: Set<FolderID>
     ) throws -> [BrowserTab] {
         let synced = records.compactMap { record -> BrowserSyncTab? in
             guard case .tab(let tab)? = record.payload, tab.spaceID == spaceID else { return nil }
@@ -255,11 +288,15 @@ enum BrowserSyncMaterializer {
             tab.placement == .current ? !preferences.currentTabs : !preferences.savedStructure
         }
         let localTabsByID = Dictionary(uniqueKeysWithValues: (local?.tabs ?? []).map { ($0.id, $0) })
+        let localFoldersByID = Dictionary(
+            uniqueKeysWithValues: (local?.folders ?? []).map { ($0.id, $0) }
+        )
         let syncedIDs = Set(synced.map(\.id))
         tabs.removeAll { syncedIDs.contains($0.id) }
         let folderIDs = Set(folders.map(\.id))
 
         for tab in synced {
+            var materializedFolderID = tab.folderID
             if tab.placement == .saved,
                 let folderID = tab.folderID,
                 !folderIDs.contains(folderID)
@@ -269,15 +306,19 @@ enum BrowserSyncMaterializer {
                 guard (folderRecordSpaceIDs[folderID] ?? spaceID) == spaceID else {
                     throw BrowserSyncError.danglingFolder(tab.id)
                 }
-                // Otherwise the folder either has not arrived yet or somebody
-                // deleted it. Holding the tab out of this session is what both
-                // cases need, and it costs nothing: the record itself is
-                // untouched, so `stage` keeps it while the folder is still on its
-                // way and tombstones it once the folder is gone. Materializing it
-                // instead would be worse than either — runtime repair strips a
-                // folder it cannot find, and the next stage would upload that
-                // stripped placement to every device.
-                continue
+                guard
+                    let resolution = promotedParent(
+                        replacing: folderID,
+                        activeFolderIDs: folderIDs,
+                        localFoldersByID: localFoldersByID,
+                        tombstonedFolderIDs: tombstonedFolderIDs
+                    )
+                else {
+                    // An unknown folder has not arrived yet. Keep the tab out of
+                    // this materialization without touching its record.
+                    continue
+                }
+                materializedFolderID = resolution.parentID
             }
             tabs.append(
                 BrowserTab(
@@ -291,7 +332,9 @@ enum BrowserSyncMaterializer {
                     iconAccent: localTabsByID[tab.id]?.iconAccent,
                     iconMode: localTabsByID[tab.id]?.iconMode,
                     placement: tab.placement,
-                    folderID: tab.placement == .saved ? tab.folderID : nil,
+                    folderID: tab.placement == .saved
+                        ? materializedFolderID
+                        : nil,
                     // Membership is carried through as written. A member whose
                     // siblings have not arrived yet is simply a smaller group,
                     // so there is nothing to hold back and nothing to wait for:
@@ -311,6 +354,34 @@ enum BrowserSyncMaterializer {
         return tabs
     }
 
+    private struct FolderParentResolution {
+        let parentID: FolderID?
+    }
+
+    /// Resolves a locally known deleted container to its nearest surviving
+    /// ancestor. Missing records that have not been tombstoned remain unknown,
+    /// so partial first-sync batches are still held back rather than rewritten.
+    private static func promotedParent(
+        replacing folderID: FolderID,
+        activeFolderIDs: Set<FolderID>,
+        localFoldersByID: [FolderID: SavedFolder],
+        tombstonedFolderIDs: Set<FolderID>
+    ) -> FolderParentResolution? {
+        var candidate: FolderID? = folderID
+        var seen: Set<FolderID> = []
+        while let current = candidate {
+            if activeFolderIDs.contains(current) {
+                return FolderParentResolution(parentID: current)
+            }
+            guard tombstonedFolderIDs.contains(current),
+                seen.insert(current).inserted,
+                let localFolder = localFoldersByID[current]
+            else { return nil }
+            candidate = localFolder.parentID
+        }
+        return FolderParentResolution(parentID: nil)
+    }
+
     private static func materializedArchive(
         spaceID: SpaceID,
         records: [BrowserSyncRecord],
@@ -323,7 +394,7 @@ enum BrowserSyncMaterializer {
         let localArchiveByID = Dictionary(
             uniqueKeysWithValues: (local?.archivedTabs ?? []).map { ($0.id, $0) }
         )
-        return records.compactMap { record -> BrowserSyncArchive? in
+        let projected = records.compactMap { record -> BrowserSyncArchive? in
             guard case .archive(let archive)? = record.payload,
                 archive.spaceID == spaceID,
                 !activeTabIDs.contains(archive.id)
@@ -353,8 +424,36 @@ enum BrowserSyncMaterializer {
                     keepsPageLoaded: archive.tab.keepsPageLoaded
                 ),
                 archivedAt: archive.archivedAt,
-                reason: localArchiveByID[archive.tab.id]?.reason ?? .synced
+                reason: localArchiveByID[archive.tab.id]?.reason
+                    ?? (archive.reason.isExplicitDeletion
+                        ? .deletedOnAnotherDevice
+                        : .synced)
             )
+        }
+        let projectedIDs = Set(projected.map(\.id))
+        let explicitDeletions = records.compactMap { record -> ArchivedTab? in
+            guard record.id.kind == .tab,
+                record.spaceID == spaceID,
+                record.tombstone?.reason == .explicitDelete,
+                !projectedIDs.contains(TabID(rawValue: record.id.value)),
+                let localTab = local?.tabs.first(where: {
+                    $0.id.rawValue == record.id.value
+                })
+            else { return nil }
+            var archivedTab = localTab
+            archivedTab.placement = .current
+            archivedTab.folderID = nil
+            archivedTab.splitGroupID = nil
+            archivedTab.savedURL = nil
+            archivedTab.faviconData = nil
+            return ArchivedTab(
+                tab: archivedTab,
+                archivedAt: record.tombstone?.deletedAt ?? .now,
+                reason: .deletedOnAnotherDevice
+            )
+        }
+        return (projected + explicitDeletions).sorted {
+            $0.archivedAt > $1.archivedAt
         }
     }
 

@@ -56,7 +56,10 @@ extension BrowserStore {
         let syncCoordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence()
         )
-        try? syncCoordinator.stage(session: session, deletionReason: .retention)
+        _ = try? syncCoordinator.stage(
+            session: session,
+            deletionReason: .retention
+        )
         return BrowserStore(
             session: session,
             persistence: InMemoryBrowserSessionPersistence(),

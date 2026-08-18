@@ -221,7 +221,17 @@ extension BrowserSession {
             return false
         }
         let wasSelected = spaces[spaceIndex].selectedTabID == tabID
-        spaces[spaceIndex].tabs.remove(at: tabIndex)
+        var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
+        tab.placement = .current
+        tab.folderID = nil
+        tab.splitGroupID = nil
+        tab.savedURL = nil
+        tab.faviconData = nil
+        if !tab.isStartPage {
+            spaces[spaceIndex].archivedTabs.append(
+                ArchivedTab(tab: tab, archivedAt: date, reason: .deleted)
+            )
+        }
         if wasSelected {
             spaces[spaceIndex].selectedTabID = nil
         }

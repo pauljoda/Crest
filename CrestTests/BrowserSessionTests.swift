@@ -1021,21 +1021,50 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(session.selectedTab?.id, duplicateID)
     }
 
-    func testDeletingPinnedAndSavedTabsRemovesThemWithoutArchiving() throws {
+    func testDeletingPinnedAndSavedTabsLeavesExplicitArchiveEvidence() throws {
         var session = BrowserSession.preview
         let space = try XCTUnwrap(session.selectedSpace)
         let pinned = try XCTUnwrap(space.pinnedTabs.first)
         let saved = try XCTUnwrap(space.savedTabs.first)
         let archivedIDs = Set(space.archivedTabs.map(\.id))
+        let deletedAt = Date(timeIntervalSince1970: 2_000)
 
-        XCTAssertTrue(session.deleteTab(pinned.id, in: space.id))
-        XCTAssertTrue(session.deleteTab(saved.id, in: space.id))
+        XCTAssertTrue(session.deleteTab(pinned.id, in: space.id, at: deletedAt))
+        XCTAssertTrue(session.deleteTab(saved.id, in: space.id, at: deletedAt))
 
         let updated = try XCTUnwrap(session.space(id: space.id))
         XCTAssertFalse(updated.contains(pinned.id))
         XCTAssertFalse(updated.contains(saved.id))
-        XCTAssertEqual(Set(updated.archivedTabs.map(\.id)), archivedIDs)
+        let deletionEvidence = updated.archivedTabs.filter {
+            $0.id == pinned.id || $0.id == saved.id
+        }
+        XCTAssertEqual(Set(updated.archivedTabs.map(\.id)), archivedIDs.union([pinned.id, saved.id]))
+        XCTAssertEqual(deletionEvidence.map(\.reason), [.deleted, .deleted])
+        XCTAssertTrue(deletionEvidence.allSatisfy { $0.archivedAt == deletedAt })
         XCTAssertNotNil(updated.selectedTabID)
+    }
+
+    func testDeletionArchiveRoundTripsThroughRollbackCompatibleSessionTerms() throws {
+        let archived = ArchivedTab(
+            tab: BrowserTab(
+                title: "Deleted",
+                url: URL(string: "https://deleted.crest.test"),
+                symbol: "trash",
+                placement: .current
+            ),
+            archivedAt: Date(timeIntervalSince1970: 2_000),
+            reason: .deleted
+        )
+
+        let data = try JSONEncoder().encode(archived)
+        let payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let decoded = try JSONDecoder().decode(ArchivedTab.self, from: data)
+
+        XCTAssertEqual(payload["reason"] as? String, "closed")
+        XCTAssertEqual(payload["deletionOrigin"] as? String, "local")
+        XCTAssertEqual(decoded, archived)
     }
 
     func testAutomaticFaviconCacheKeepsLastKnownGoodIconWhileCurrentURLChanges() throws {

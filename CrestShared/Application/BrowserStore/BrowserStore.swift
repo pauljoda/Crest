@@ -102,7 +102,8 @@ extension BrowserStore {
         folderDragState.end()
         session = .privateBrowsing()
         localSyncErrorDescription = nil
-        family.publish(session, from: self)
+        let revision = family.publish(session, from: self)
+        syncCoordinator?.advanceStoreRevision(to: revision)
         persistence.save(session)
     }
 
@@ -141,28 +142,40 @@ extension BrowserStore {
 extension BrowserStore {
     func mergeRemoteSyncRecords(_ records: [BrowserSyncRecord]) throws {
         guard let syncCoordinator else { return }
-        session = try syncCoordinator.merge(remoteRecords: records, into: session)
-        family.publish(session, from: self)
+        let revision = family.reserveSyncRevision()
+        syncCoordinator.advanceStoreRevision(to: revision)
+        session = try syncCoordinator.merge(
+            remoteRecords: records,
+            into: session,
+            storeRevision: revision
+        )
+        family.publish(session, from: self, at: revision)
         persistence.save(session)
         localSyncErrorDescription = nil
     }
 
     func prepareToOverwriteCloud(with remoteRecords: [BrowserSyncRecord]) throws {
         guard let syncCoordinator else { return }
+        let revision = family.reserveSyncRevision()
+        syncCoordinator.advanceStoreRevision(to: revision)
         try syncCoordinator.prepareToOverwriteCloud(
             with: session,
-            remoteRecords: remoteRecords
+            remoteRecords: remoteRecords,
+            storeRevision: revision
         )
         localSyncErrorDescription = nil
     }
 
     func replaceLocalWithCloud(_ remoteRecords: [BrowserSyncRecord]) throws {
         guard let syncCoordinator else { return }
+        let revision = family.reserveSyncRevision()
+        syncCoordinator.advanceStoreRevision(to: revision)
         session = try syncCoordinator.replaceLocalWithCloud(
             remoteRecords,
-            replacing: session
+            replacing: session,
+            storeRevision: revision
         )
-        family.publish(session, from: self)
+        family.publish(session, from: self, at: revision)
         persistence.save(session)
         localSyncErrorDescription = nil
     }
@@ -193,7 +206,8 @@ extension BrowserStore {
         syncUrgency: BrowserStoreSyncStageUrgency = .immediate,
         scope: BrowserSessionSaveScope = .everything
     ) {
-        family.publish(session, from: self)
+        let storeRevision = family.publish(session, from: self)
+        syncCoordinator?.advanceStoreRevision(to: storeRevision)
         persistence.save(session, scope: scope)
         guard let syncCoordinator, !session.hasDisposableSeedState else { return }
 
@@ -212,12 +226,15 @@ extension BrowserStore {
                 return
             }
             do {
-                try await syncCoordinator.stageInBackground(
+                let staged = try await syncCoordinator.stageInBackground(
                     session: sessionSnapshot,
-                    deletionReason: deletionReason
+                    deletionReason: deletionReason,
+                    storeRevision: storeRevision
                 )
                 self?.localSyncErrorDescription = nil
-                self?.cloudSyncChangeHandler?()
+                if staged {
+                    self?.cloudSyncChangeHandler?()
+                }
             } catch {
                 self?.localSyncErrorDescription = String(describing: error)
             }
@@ -246,6 +263,10 @@ extension BrowserStore {
             session.spaces[index].selectedTabID = tabID
         }
         session.repairRuntimeIntegrity()
+    }
+
+    func invalidatePendingSyncStage() {
+        syncStageGeneration &+= 1
     }
 }
 
