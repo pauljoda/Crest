@@ -869,10 +869,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     func testFloatingSidebarUsesTheFullSpaceThemeAndItsSidebarButtonDocks() {
         XCTAssertEqual(BrowserFloatingSidebarThemePolicy.spaceThemeOpacity, 1)
-        XCTAssertEqual(
-            BrowserSidebarPresentationPolicy.matchedGeometryID,
-            "browser-sidebar-surface"
-        )
         XCTAssertEqual(CrestMotion.sidebarMorphTransition, 0.28)
         XCTAssertEqual(
             CrestMotion.sidebarMorphCompletionDelay,
@@ -899,22 +895,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(
             BrowserSidebarPresentation.docked.sidebarToggleAction,
             .hide
-        )
-        XCTAssertTrue(
-            BrowserSidebarPresentation.docked
-                .isMatchedGeometrySource(whileMorphing: false)
-        )
-        XCTAssertTrue(
-            BrowserSidebarPresentation.docked
-                .isMatchedGeometrySource(whileMorphing: true)
-        )
-        XCTAssertTrue(
-            BrowserSidebarPresentation.floating
-                .isMatchedGeometrySource(whileMorphing: false)
-        )
-        XCTAssertFalse(
-            BrowserSidebarPresentation.floating
-                .isMatchedGeometrySource(whileMorphing: true)
         )
     }
 
@@ -962,7 +942,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(model.sidebarPresentation, .floating)
         XCTAssertTrue(model.isSidebarApproachingDock)
         XCTAssertTrue(model.isSidebarMorphing)
-        XCTAssertFalse(model.isSidebarGeometryMorphing)
         XCTAssertEqual(
             model.sidebarPresentation.reservedWidth(
                 for: 289,
@@ -976,14 +955,12 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(model.sidebarPresentation, .docked)
         XCTAssertTrue(model.isSidebarApproachingDock)
         XCTAssertTrue(model.isSidebarMorphing)
-        XCTAssertTrue(model.isSidebarGeometryMorphing)
 
         try await Task.sleep(for: .milliseconds(170))
 
         XCTAssertEqual(model.sidebarPresentation, .docked)
         XCTAssertFalse(model.isSidebarApproachingDock)
         XCTAssertFalse(model.isSidebarMorphing)
-        XCTAssertFalse(model.isSidebarGeometryMorphing)
     }
 
     @MainActor
@@ -996,7 +973,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(model.sidebarPresentation, .docked)
         XCTAssertFalse(model.isSidebarApproachingDock)
         XCTAssertFalse(model.isSidebarMorphing)
-        XCTAssertFalse(model.isSidebarGeometryMorphing)
     }
 
     @MainActor

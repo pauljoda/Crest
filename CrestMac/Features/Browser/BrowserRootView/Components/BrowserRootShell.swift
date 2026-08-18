@@ -13,7 +13,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
 
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Namespace private var sidebarSurfaceNamespace
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -25,40 +24,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             )
 
             HStack(spacing: 0) {
-                BrowserRootDockedSidebarLayer(
+                BrowserRootSidebarLayoutReservation(
                     presentation: model.sidebarPresentation,
                     width: model.sidebarWidth,
-                    reduceMotion: reduceMotion,
-                    morphsWithFloatingSidebar: model.isSidebarGeometryMorphing,
-                    isApproachingDock: model.isSidebarApproachingDock,
-                    namespace: sidebarSurfaceNamespace,
-                    hoverChanged: {
-                        model.sidebarSurfaceHoverChanged(
-                            $0,
-                            reduceMotion: reduceMotion
-                        )
-                    }
-                ) {
-                    BrowserRootSidebarContent(
-                        model: model,
-                        spaceSettingsPresentation: spaceSettingsPresentation,
-                        commandSurfaceNamespace: commandSurfaceNamespace,
-                        tabPromotionNamespace: tabPromotionNamespace
-                    )
-                }
-                // A drag reshapes the sidebar — the gap the lifted row leaves,
-                // its neighbours stepping aside, the insertion line — and
-                // siblings of an `HStack` paint in order, so without this the
-                // page surface would paint over the sidebar's own edge while
-                // that is happening. It settles the order between SwiftUI
-                // siblings only: the page's web view is an AppKit subtree and
-                // outranks any of them, which is why the travelling preview is
-                // drawn by `BrowserRootDragPreviewLayer` instead, for the whole
-                // lift.
-                .zIndex(
-                    model.browser.sidebarReorderState.isDragging
-                        ? BrowserRootMetrics.draggedSidebarZIndex
-                        : 0
+                    isApproachingDock: model.isSidebarApproachingDock
                 )
 
                 BrowserRootPageSurface(
@@ -69,14 +38,14 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
 
-            BrowserRootFloatingSidebarLayer(
+            // One content tree owns the sidebar in every presentation. Card
+            // styling and layout move around it, so docking never recreates
+            // the native space pager or replays its initial scroll position.
+            BrowserRootSidebarSurfaceLayer(
                 presentation: model.sidebarPresentation,
                 width: model.sidebarWidth,
                 space: model.browser.selectedSpace,
-                reduceMotion: reduceMotion,
                 reduceTransparency: reduceTransparency,
-                morphsWithDockedSidebar: model.isSidebarGeometryMorphing,
-                namespace: sidebarSurfaceNamespace,
                 hoverChanged: {
                     model.sidebarSurfaceHoverChanged(
                         $0,
