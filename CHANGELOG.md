@@ -7,6 +7,8 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-18
+
 ### Changed
 
 - Added an explicit `CrestMobile Production` Xcode scheme that runs a Release build against production CloudKit, while keeping the ordinary mobile scheme on Debug and development CloudKit.
@@ -270,5 +272,6 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Crest releases before 0.3.0 predate this changelog. Their development history remains available in Git.
 
-[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/pauljoda/Crest/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pauljoda/Crest/releases/tag/v0.3.0
