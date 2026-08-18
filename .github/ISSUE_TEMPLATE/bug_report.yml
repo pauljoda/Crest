@@ -10,7 +10,7 @@ body:
     id: version
     attributes:
       label: Crest version
-      placeholder: "For example: 0.3.0 (42), stable or nightly"
+      placeholder: "For example: 0.4.0 (42), stable or nightly"
     validations:
       required: true
   - type: dropdown
