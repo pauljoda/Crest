@@ -6,7 +6,6 @@ struct BrowserUtilityFanDestinationButton: View {
     let badgeColor: Color
     let downloads: [BrowserDownloadItem]
     let newDownloadCount: Int
-    let glassNamespace: Namespace.ID
     let select: (BrowserUtilitySurface) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -37,7 +36,6 @@ struct BrowserUtilityFanDestinationButton: View {
                     : .regular
             )
         )
-        .glassEffectUnion(id: surface, namespace: glassNamespace)
         .overlay(alignment: .topTrailing) {
             if surface == .downloads, newDownloadCount > 0 {
                 BrowserUtilityNotificationBadge(

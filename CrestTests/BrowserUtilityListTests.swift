@@ -485,7 +485,6 @@ final class BrowserUtilityListTests: XCTestCase {
         )
         XCTAssertEqual(BrowserUtilitySwitcherLayout.buttonSize, 44)
         XCTAssertEqual(BrowserUtilitySwitcherLayout.collapsedScale, 0.08)
-        XCTAssertEqual(BrowserUtilitySwitcherLayout.spacing, 0)
         XCTAssertEqual(BrowserUtilitySwitcherLayout.destinationGap, 18)
         XCTAssertEqual(
             BrowserUtilitySwitcherLayout.expansionDelay(for: 0),

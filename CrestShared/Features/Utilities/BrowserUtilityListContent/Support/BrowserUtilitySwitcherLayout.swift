@@ -2,7 +2,6 @@ import CoreGraphics
 
 enum BrowserUtilitySwitcherLayout {
     static let destinations: [BrowserUtilitySurface] = [.archive, .history, .downloads]
-    static let spacing: CGFloat = 0
     static let step: CGFloat = 64
     static let buttonSize = CrestLayout.glassIconButtonDiameter
     static let collapsedScale: CGFloat = 0.08

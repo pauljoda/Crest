@@ -14,46 +14,41 @@ struct BrowserUtilityFanControl: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealedSurfaces: Set<BrowserUtilitySurface> = []
     @State private var isContainerVisible = false
-    @Namespace private var glassNamespace
 
     var body: some View {
-        GlassEffectContainer(spacing: BrowserUtilitySwitcherLayout.spacing) {
-            ZStack {
-                ForEach(
-                    BrowserUtilitySwitcherLayout.destinations.enumerated(),
-                    id: \.element
-                ) { index, surface in
-                    let isRevealed = revealedSurfaces.contains(surface)
-                    let destinationPosition = CGPoint(
-                        x: destination.x,
-                        y: destination.y
-                            + BrowserUtilitySwitcherLayout.verticalOffset(
-                                for: index,
-                                count: BrowserUtilitySwitcherLayout.destinations.count
-                            )
-                    )
-                    BrowserUtilityFanDestinationButton(
-                        surface: surface,
-                        selectedSurface: selectedSurface,
-                        badgeColor: badgeColor,
-                        downloads: downloads,
-                        newDownloadCount: newDownloadCount,
-                        glassNamespace: glassNamespace,
-                        select: select
-                    )
-                    .scaleEffect(
-                        isRevealed ? 1 : BrowserUtilitySwitcherLayout.collapsedScale
-                    )
-                    .opacity(isRevealed ? 1 : 0)
-                    // Keep the system glass and its SF Symbol on one layout
-                    // path. A final `position` plus a render-only `offset`
-                    // gives those layers different animation origins.
-                    .position(isRevealed ? destinationPosition : origin)
-                    .allowsHitTesting(isExpanded && isRevealed)
-                    .accessibilityHidden(!isExpanded || !isRevealed)
-                }
+        ZStack {
+            ForEach(
+                BrowserUtilitySwitcherLayout.destinations.enumerated(),
+                id: \.element
+            ) { index, surface in
+                let isRevealed = revealedSurfaces.contains(surface)
+                let destinationPosition = CGPoint(
+                    x: destination.x,
+                    y: destination.y
+                        + BrowserUtilitySwitcherLayout.verticalOffset(
+                            for: index,
+                            count: BrowserUtilitySwitcherLayout.destinations.count
+                        )
+                )
+                BrowserUtilityFanDestinationButton(
+                    surface: surface,
+                    selectedSurface: selectedSurface,
+                    badgeColor: badgeColor,
+                    downloads: downloads,
+                    newDownloadCount: newDownloadCount,
+                    select: select
+                )
+                .scaleEffect(
+                    isRevealed ? 1 : BrowserUtilitySwitcherLayout.collapsedScale
+                )
+                .opacity(isRevealed ? 1 : 0)
+                // Each destination keeps its own glass surface. A shared
+                // GlassEffectContainer morphs the three overlapping surfaces
+                // independently from their labels while the fan is moving.
+                .position(isRevealed ? destinationPosition : origin)
+                .allowsHitTesting(isExpanded && isRevealed)
+                .accessibilityHidden(!isExpanded || !isRevealed)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .opacity(isContainerVisible ? 1 : 0)
