@@ -10,6 +10,8 @@ engineering contracts needed to build and maintain it.
   synchronization, and the native/WebKit boundary.
 - [Roadmap](ROADMAP.md) — current public release outcomes and outstanding
   platform gates.
+- [Public planning sync](PlanningSync.md) — the one-way Linear-to-GitHub
+  mapping for release projects, issues, completion evidence, and the roadmap.
 - [Repository guardrails](RepositoryGuardrails.md) — source layout, validation,
   dependency, and public-tree contracts.
 - [Distribution](Distribution.md) — stable and rolling channels, signing,

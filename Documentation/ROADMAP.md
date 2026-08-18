@@ -2,24 +2,38 @@
 
 This file summarizes public release outcomes and work that is still outstanding
 or intentionally deferred. The live
-[Crest 0.5 project](https://github.com/users/pauljoda/projects/3) shows status;
-the matching [0.5 milestone](https://github.com/pauljoda/Crest/milestone/1)
-holds the actionable issue descriptions.
+[Crest Roadmap project](https://github.com/users/pauljoda/projects/3) shows
+status; release milestones hold the actionable issue descriptions.
 
-## Crest 0.5
+<!-- crest-roadmap-sync:start -->
+## Active releases
 
-- [Global sidebar widgets](https://github.com/pauljoda/Crest/issues/4) for
-  update availability and active media sessions.
-- [Website notifications](https://github.com/pauljoda/Crest/issues/5) with
-  explicit per-site and per-Space controls.
-- [Picture-in-picture](https://github.com/pauljoda/Crest/issues/6), including an
-  optional automatic mode when leaving a playing video tab.
-- [An About section](https://github.com/pauljoda/Crest/issues/7) for build,
-  update, license, and community information.
-- [An adaptive full mobile sidebar](https://github.com/pauljoda/Crest/issues/8)
-  for iPad, multitasking, and wider iPhone layouts.
-- [Native emoji picking](https://github.com/pauljoda/Crest/issues/9) for icon
-  customization across Apple platforms.
+Release milestones are shown from earliest to latest. The project board holds
+the live status for each issue.
+
+### [0.5](https://github.com/pauljoda/Crest/milestone/1)
+
+#### Planned and in progress
+
+- [ ] [Add global sidebar widgets for updates and media](https://github.com/pauljoda/Crest/issues/4)
+- [ ] [Support video picture-in-picture and optional automatic PiP](https://github.com/pauljoda/Crest/issues/6)
+- [ ] [Add an About section for build, updates, and community links](https://github.com/pauljoda/Crest/issues/7)
+- [ ] [Make the full sidebar adaptive across iPad and wider iPhone layouts](https://github.com/pauljoda/Crest/issues/8)
+- [ ] [Add native emoji picking to icon customization](https://github.com/pauljoda/Crest/issues/9)
+- [ ] [Import passwords from standard browser exports](https://github.com/pauljoda/Crest/issues/16)
+- [ ] [Refine split-view groups with editable names, icons, and tint](https://github.com/pauljoda/Crest/issues/17)
+- [ ] [Improve download access and archive-menu behavior](https://github.com/pauljoda/Crest/issues/18)
+- [ ] [Offer optional search suggestions in the command palette](https://github.com/pauljoda/Crest/issues/19)
+- [ ] [Add a default page zoom setting](https://github.com/pauljoda/Crest/issues/20)
+- [ ] [Keep the iPad layout stable with the floating keyboard](https://github.com/pauljoda/Crest/issues/21)
+
+#### Completed
+
+- [x] [Add website notification support with clear per-Space controls](https://github.com/pauljoda/Crest/issues/5) — [`116cecc8`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01)
+- [x] [Prevent synced pinned and saved tabs from disappearing](https://github.com/pauljoda/Crest/issues/14) — [`ba775bfe`](https://github.com/pauljoda/Crest/commit/ba775bfe1819db9b2d0792f8f3687309078d8a5e)
+- [x] [Support website location permissions](https://github.com/pauljoda/Crest/issues/15) — [`116cecc8`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01), [`986bee77`](https://github.com/pauljoda/Crest/commit/986bee77f3e4331c5ab0f619a225a6a8aa97d1b2)
+
+<!-- crest-roadmap-sync:end -->
 
 These describe intended user outcomes rather than fixed implementation
 promises. Scope may change when WebKit capability, accessibility, or physical
