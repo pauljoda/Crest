@@ -562,10 +562,10 @@ final class BrowserImportReviewPlanTests: XCTestCase {
             "The marker gates every sync stage, so an imported Space that kept it never syncs."
         )
         XCTAssertFalse(preview.hasDisposableSeedState)
-        XCTAssertTrue(preview.spaces.contains { $0.name == "Research" })
+        XCTAssertEqual(preview.spaces.map(\.name), ["Research"])
     }
 
-    func testAnImportEveryoneOptedOutOfLeavesAFreshInstallAFreshInstall() throws {
+    func testAnImportEveryoneOptedOutOfCannotProduceASession() throws {
         let seeded = makeSeededSession()
         let importedSpace = makeResearchSpace()
         var plan = BrowserImportReviewPlan(
@@ -574,12 +574,12 @@ final class BrowserImportReviewPlanTests: XCTestCase {
         )
         plan.setSpace(importedSpace.id, isIncluded: false)
 
-        let preview = try plan.preview(mergingInto: seeded)
-
-        XCTAssertTrue(
-            preview.hasDisposableSeedState,
-            "Nothing landed, so nothing graduated out of the fresh-install state."
-        )
+        XCTAssertThrowsError(try plan.preview(mergingInto: seeded)) { error in
+            XCTAssertEqual(
+                error as? BrowserImportReviewPlan.ValidationError,
+                .noIncludedSpaces
+            )
+        }
     }
 
     func testABlankReviewedSpaceNameAndSymbolFallBackInsteadOfCommittingEmpty() throws {

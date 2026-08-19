@@ -46,9 +46,6 @@ enum ArcTabSessionAdapter {
             )
 
             for (spaceIndex, space) in spaces.enumerated() {
-                guard drafts.count < BrowserPortableArchive.maximumSpaceCount else {
-                    throw BrowserTabMigrationError.resourceLimitExceeded
-                }
                 let profileKey = profileKey(space["profile"])
                 var folders: [BrowserTabSessionFolderDraft] = []
                 var tabs: [BrowserTabSessionTabDraft] = []
@@ -110,6 +107,10 @@ enum ArcTabSessionAdapter {
                     ))
             }
         }
+        // Arc can retain empty or otherwise non-importable Space records. The
+        // shared materializer removes those drafts before enforcing the Space
+        // limit, so counting raw records here can reject an otherwise small
+        // import.
         return drafts
     }
 

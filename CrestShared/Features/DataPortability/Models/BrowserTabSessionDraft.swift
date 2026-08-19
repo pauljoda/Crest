@@ -90,7 +90,7 @@ enum BrowserTabMigrationError: LocalizedError, Equatable, Sendable {
         case .noImportableTabs:
             "This session has no HTTP or HTTPS tabs Crest can import."
         case .resourceLimitExceeded:
-            "This session exceeds Crest’s tab, window, text, or decompression limits."
+            "This session exceeds Crest’s Space, tab, folder, or text limits."
         }
     }
 

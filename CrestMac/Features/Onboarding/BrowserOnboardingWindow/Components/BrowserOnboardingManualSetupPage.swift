@@ -41,13 +41,11 @@ struct BrowserOnboardingManualSetupPage: View {
                 .background(CrestBrandTheme.surface)
 
                 HStack {
-                    if !flow.didCommitImportInCurrentRun {
-                        Button("Back", action: back)
-                            .buttonStyle(
-                                BrowserOnboardingSecondaryButtonStyle()
-                            )
-                            .accessibilityIdentifier("onboarding-back")
-                    }
+                    Button("Back", action: back)
+                        .buttonStyle(
+                            BrowserOnboardingSecondaryButtonStyle()
+                        )
+                        .accessibilityIdentifier("onboarding-back")
                     Spacer()
                     if let message = flow.failure?.message {
                         Label {

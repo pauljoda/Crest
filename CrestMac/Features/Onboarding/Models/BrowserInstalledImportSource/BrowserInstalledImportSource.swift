@@ -26,4 +26,15 @@ struct BrowserInstalledImportSource: Identifiable {
             $0.bookmarksURL != nil || $0.sessionURL != nil
         }
     }
+
+    var hasReadableDetectedData: Bool {
+        let urls =
+            detectedPayload.profiles.flatMap { profile in
+                [profile.bookmarksURL, profile.sessionURL].compactMap { $0 }
+            } + detectedPayload.passwordStores.map(\.databaseURL)
+        return !urls.isEmpty
+            && urls.allSatisfy {
+                FileManager.default.isReadableFile(atPath: $0.path)
+            }
+    }
 }
