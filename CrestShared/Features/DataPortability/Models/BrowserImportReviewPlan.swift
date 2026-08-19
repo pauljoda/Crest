@@ -1,19 +1,34 @@
 import Foundation
 
 struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
+    enum ValidationError: LocalizedError, Equatable, Sendable {
+        case noIncludedSpaces
+
+        var errorDescription: String? {
+            switch self {
+            case .noIncludedSpaces:
+                String(localized: "Choose at least one Space to import.")
+            }
+        }
+    }
+
     private(set) var spaces: [BrowserImportSpaceReview]
     private var destinationCustomizations: [SpaceID: BrowserImportSpaceCustomization]
 
     init(imported: BrowserPortableImport, existing: BrowserSession) {
+        let destinationSpaces =
+            existing.hasDisposableSeedState
+            ? []
+            : existing.spaces
         destinationCustomizations = Dictionary(
-            uniqueKeysWithValues: existing.spaces.map {
+            uniqueKeysWithValues: destinationSpaces.map {
                 ($0.id, BrowserImportSpaceCustomization(space: $0))
             }
         )
         spaces = imported.spaces.map { sourceSpace in
             let matchingSpace = Self.bestMatchingSpace(
                 for: sourceSpace.name,
-                in: existing.spaces
+                in: destinationSpaces
             )
             let destination =
                 matchingSpace.map {
@@ -45,6 +60,10 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
                 passwordInclusionOverride: nil
             )
         }
+    }
+
+    var hasIncludedSpaces: Bool {
+        spaces.contains(where: \.isIncluded)
     }
 
     mutating func setDestination(
@@ -240,6 +259,10 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
     }
 
     func preview(mergingInto existing: BrowserSession) throws -> BrowserSession {
+        guard hasIncludedSpaces else {
+            throw ValidationError.noIncludedSpaces
+        }
+        let replacesDisposableSeed = existing.hasDisposableSeedState
         let newSpaceCount = spaces.filter { review in
             if case .newSpace = review.destination {
                 return review.isIncluded
@@ -247,7 +270,7 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
             return false
         }.count
         guard
-            existing.spaces.count + newSpaceCount
+            (replacesDisposableSeed ? 0 : existing.spaces.count) + newSpaceCount
                 <= BrowserPortableArchive.maximumSpaceCount
         else {
             throw BrowserPortableArchiveError.spaceLimitExceeded(
@@ -257,6 +280,10 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
 
         let overflow = overflowTabIDs(in: existing)
         var result = existing
+        if replacesDisposableSeed {
+            result.spaces.removeAll()
+            result.defaultSpaceID = nil
+        }
         var firstAffectedSpaceID: SpaceID?
         for review in spaces where review.isIncluded {
             switch review.destination {

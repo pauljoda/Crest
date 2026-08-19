@@ -864,6 +864,7 @@
 		434FED80C7BD4B1C58745010 /* BrowserRootPreviewFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = F55F9A3B0A1AEFBC18F0B938 /* BrowserRootPreviewFixture.swift */; };
 		437506A62FC52DC50B2B3952 /* BrowserStrongPasswordGenerationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101D0EAC41D4B8E96D9FF7EC /* BrowserStrongPasswordGenerationError.swift */; };
 		4382DB450810FC6B1EE18154 /* BrowserSession+Organization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834E821369ED6902BCF27EE9 /* BrowserSession+Organization.swift */; };
+		43A94B3EF7D661C307580CE2 /* BrowserArcImportLimitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D978422CB59F6E96C23FBBD4 /* BrowserArcImportLimitTests.swift */; };
 		43BB46837B17383BC6542E67 /* BrowserShortcutStore+InMemory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D6FAAAA464835BF1E2C32E /* BrowserShortcutStore+InMemory.swift */; };
 		43BF0F9A014443929A3CBACF /* BrowserChromeWebStoreUpdateCheckParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CB36222508D592906FB1EA5 /* BrowserChromeWebStoreUpdateCheckParser.swift */; };
 		43DD858036BAC20A38FA9C36 /* BrowserCredentialSensitiveAccessError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D9626D4D59FE2409B169A7E /* BrowserCredentialSensitiveAccessError.swift */; };
@@ -5271,6 +5272,7 @@
 		D95FEAFB57169F725B2B465A /* BrowserSafariWebExtensionAppLocatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSafariWebExtensionAppLocatorTests.swift; sourceTree = "<group>"; };
 		D96676035D13CC1AEF87C540 /* SidebarTabRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarTabRow.swift; sourceTree = "<group>"; };
 		D9704FD82AF1630EA093DA4F /* BrowserPopupTabRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPopupTabRegistration.swift; sourceTree = "<group>"; };
+		D978422CB59F6E96C23FBBD4 /* BrowserArcImportLimitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserArcImportLimitTests.swift; sourceTree = "<group>"; };
 		D99A09FF0C6E3F5DB7792C37 /* MobileBrowserCommandPaletteLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileBrowserCommandPaletteLayer.swift; sourceTree = "<group>"; };
 		DA6324D7780740A763535362 /* BrowserSplitCardLiftState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSplitCardLiftState.swift; sourceTree = "<group>"; };
 		DA8943CEE1A6D1893ACFA16E /* MobileSpacePrivateBrowsingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSpacePrivateBrowsingButton.swift; sourceTree = "<group>"; };
@@ -5733,6 +5735,7 @@
 			children = (
 				45B9A7DDA70F71E7F01449CA /* AddressResolverTests.swift */,
 				AAD0339FDC13015E4F6C38CB /* BrowserAddressPresentationTests.swift */,
+				D978422CB59F6E96C23FBBD4 /* BrowserArcImportLimitTests.swift */,
 				9E779D2C2A0B51C4321988C4 /* BrowserAuthenticationPolicyTests.swift */,
 				AE6BA72F1F0858CA267DBB5B /* BrowserChromeLayoutTests.swift */,
 				3ACFB4DC31708A07AA857DAC /* BrowserChromeWebStoreTests.swift */,
@@ -14756,12 +14759,12 @@
 					ADA9BA9F3D6E69D3F8FBB95C = {
 						DevelopmentTeam = 3U2R97HLXF;
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.Push\": [\"enabled\": 1], \"com.apple.iCloud\": [\"enabled\": 1]]";
+						SystemCapabilities = "[\"com.apple.iCloud\": [\"enabled\": 1], \"com.apple.Push\": [\"enabled\": 1]]";
 					};
 					E7D659FB7197EB7B4A7EA254 = {
 						DevelopmentTeam = 3U2R97HLXF;
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.Push\": [\"enabled\": 1], \"com.apple.BackgroundModes\": [\"enabled\": 1], \"com.apple.iCloud\": [\"enabled\": 1]]";
+						SystemCapabilities = "[\"com.apple.BackgroundModes\": [\"enabled\": 1], \"com.apple.iCloud\": [\"enabled\": 1], \"com.apple.Push\": [\"enabled\": 1]]";
 					};
 				};
 			};
@@ -16347,6 +16350,7 @@
 			files = (
 				E84ADAA860AE55768AA647ED /* AddressResolverTests.swift in Sources */,
 				DECBE86CE992B1760E6FCBBF /* BrowserAddressPresentationTests.swift in Sources */,
+				43A94B3EF7D661C307580CE2 /* BrowserArcImportLimitTests.swift in Sources */,
 				8C0F2EEBBCEDDFA2C8ADE5D3 /* BrowserAuthenticationPolicyTests.swift in Sources */,
 				9BAC546AA151846FBDC5613B /* BrowserChromeLayoutTests.swift in Sources */,
 				C8BA470499A1BDCE45757ECE /* BrowserChromeWebStoreTests.swift in Sources */,

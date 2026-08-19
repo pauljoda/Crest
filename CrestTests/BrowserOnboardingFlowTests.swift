@@ -165,6 +165,32 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         XCTAssertFalse(flow.isReading)
     }
 
+    func testUnreadableDetectedSafariDataRequestsFolderAccessBeforeReading() {
+        let dataAccessProvider = SuspendedDataAccessProvider()
+        let missingURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        let flow = makeFlow(
+            sourceDiscovery: StubSourceDiscovery(
+                sources: [
+                    source(
+                        .safari,
+                        detectedDataURL: missingURL
+                    )
+                ]
+            ),
+            dataAccessProvider: dataAccessProvider
+        )
+        flow.discoverInstalledSources()
+        flow.toggleImportSelection(.safari)
+
+        flow.continueImportQueue()
+
+        XCTAssertTrue(dataAccessProvider.hasPendingRequest)
+        XCTAssertTrue(flow.isChoosingDataAccess)
+        XCTAssertFalse(flow.isReading)
+        XCTAssertEqual(flow.state, .importSelection)
+    }
+
     func testManualSetupAbandonsAPendingDataAccessCallback() {
         let dataAccessProvider = SuspendedDataAccessProvider()
         let flow = makeFlow(
@@ -258,7 +284,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         XCTAssertTrue(flow.browser.session.spaces.contains { $0.id == imported.id })
     }
 
-    func testFinalFirstRunImportAdvancesToManualSetupWithoutOfferingBack() async {
+    func testFinalFirstRunImportAdvancesToCompletion() async {
         let flow = makeFlow(
             entryPoint: .firstRun,
             sourceDiscovery: StubSourceDiscovery(sources: [source(.safari)]),
@@ -279,11 +305,42 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         await waitUntil { flow.state == .reviewing(.safari) }
 
         flow.commitReviewedImport()
-        await waitUntil { flow.state == .manualSetup }
+        await waitUntil { flow.state == .complete }
 
-        XCTAssertEqual(flow.state, .manualSetup)
-        XCTAssertTrue(flow.didCommitImportInCurrentRun)
-        XCTAssertNotNil(flow.manualPlan)
+        XCTAssertEqual(flow.state, .complete)
+        XCTAssertNil(flow.manualPlan)
+    }
+
+    func testCommitRequiresAtLeastOneIncludedSpace() async throws {
+        let imported = makeSpace(name: "Excluded")
+        let flow = makeFlow(
+            sourceDiscovery: StubSourceDiscovery(sources: [source(.arc)]),
+            reader: ImmediateImportReader(
+                result: .success(
+                    readOutput(
+                        application: .arc,
+                        import: portableImport(spaces: [imported])
+                    )
+                )
+            )
+        )
+        flow.discoverInstalledSources()
+        flow.toggleImportSelection(.arc)
+        flow.continueImportQueue()
+        await waitUntil { flow.state == .reviewing(.arc) }
+        let originalSession = flow.browser.session
+        let spaceID = try XCTUnwrap(flow.plan?.spaces.first?.id)
+        flow.setSpaceIncluded(false, in: spaceID)
+
+        flow.commitReviewedImport()
+
+        XCTAssertEqual(flow.state, .reviewing(.arc))
+        XCTAssertEqual(
+            flow.failure?.message,
+            .verbatim("Choose at least one Space to import.")
+        )
+        XCTAssertFalse(flow.isCommittingImport)
+        XCTAssertEqual(flow.browser.session, originalSession)
     }
 
     func testFailedCommitRetainsTheReviewAndCanRetry() async {
@@ -553,7 +610,8 @@ final class BrowserOnboardingFlowTests: XCTestCase {
 
     private func source(
         _ application: BrowserImportApplication,
-        hasDetectedData: Bool = true
+        hasDetectedData: Bool = true,
+        detectedDataURL: URL? = nil
     ) -> BrowserInstalledImportSource {
         BrowserInstalledImportSource(
             application: application,
@@ -565,7 +623,8 @@ final class BrowserOnboardingFlowTests: XCTestCase {
                         id: "Default",
                         name: "Default",
                         bookmarksURL: hasDetectedData
-                            ? URL(fileURLWithPath: "/tmp/bookmarks")
+                            ? detectedDataURL
+                                ?? URL(fileURLWithPath: #filePath)
                             : nil,
                         sessionURL: nil
                     )

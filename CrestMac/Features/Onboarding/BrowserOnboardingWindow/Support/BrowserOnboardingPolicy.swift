@@ -50,9 +50,9 @@ enum BrowserMacOnboardingPolicy {
     }
 
     static func destinationAfterImport(
-        for entryPoint: BrowserOnboardingEntryPoint
+        for _: BrowserOnboardingEntryPoint
     ) -> BrowserOnboardingStep {
-        entryPoint == .firstRun ? .manualSetup : .complete
+        .complete
     }
 }
 

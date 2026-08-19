@@ -30,10 +30,10 @@ final class BrowserMacOnboardingPolicyTests: XCTestCase {
         )
     }
 
-    func testFirstRunImportContinuesToMandatorySpaceSetup() {
+    func testEverySuccessfulImportContinuesToCompletion() {
         XCTAssertEqual(
             BrowserMacOnboardingPolicy.destinationAfterImport(for: .firstRun),
-            .manualSetup
+            .complete
         )
         XCTAssertEqual(
             BrowserMacOnboardingPolicy.destinationAfterImport(for: .importBrowser),

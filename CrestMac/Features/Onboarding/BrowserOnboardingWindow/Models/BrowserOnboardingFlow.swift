@@ -18,7 +18,6 @@ final class BrowserOnboardingFlow {
     private(set) var currentImportPayload: BrowserDetectedImportPayload?
     private(set) var failure: BrowserOnboardingFailure?
     private(set) var completionSummary: LocalizedStringResource?
-    private(set) var didCommitImportInCurrentRun = false
     private(set) var isChoosingDataAccess = false
     private(set) var isCommittingImport = false
 
@@ -118,7 +117,6 @@ final class BrowserOnboardingFlow {
         currentImportPayload = nil
         failure = nil
         completionSummary = nil
-        didCommitImportInCurrentRun = false
 
         manualPlan =
             request.entryPoint == .manualSetup
@@ -322,6 +320,13 @@ final class BrowserOnboardingFlow {
     func commitReviewedImport() {
         guard let plan, !isCommittingImport else { return }
         guard let application = selectedApplication else { return }
+        guard plan.hasIncludedSpaces else {
+            failure = .importCommit(
+                BrowserImportReviewPlan.ValidationError.noIncludedSpaces
+                    .localizedDescription
+            )
+            return
+        }
         let generation = operationGeneration
         state = .committing(application)
         failure = nil
@@ -432,7 +437,7 @@ final class BrowserOnboardingFlow {
     func importAccessLabel(
         for source: BrowserInstalledImportSource
     ) -> String {
-        if source.hasDetectedData {
+        if source.hasReadableDetectedData {
             return detectedDataLabel(source)
         }
         if dataAccessProvider.hasSavedAccess(for: source.application) {
@@ -472,7 +477,7 @@ final class BrowserOnboardingFlow {
         failure = nil
         selectedApplication = source.application
 
-        if source.hasDetectedData {
+        if source.hasReadableDetectedData {
             readImport(source.detectedPayload)
             return
         }
@@ -722,7 +727,6 @@ final class BrowserOnboardingFlow {
             for: request.entryPoint
         )
         if destination == .manualSetup {
-            didCommitImportInCurrentRun = true
             prepareManualSetup()
         } else {
             state = .complete

@@ -63,9 +63,7 @@ struct BrowserOnboardingReviewPage: View {
                     summary: flow.reviewSummary(),
                     isCommitting: flow.isCommittingImport,
                     isFinalSpace: isFinalSpace(in: plan),
-                    isImportDisabled: plan.spaces.allSatisfy {
-                        !$0.isIncluded
-                    },
+                    isImportDisabled: !plan.hasIncludedSpaces,
                     actionTitle: reviewActionTitle(in: plan),
                     back: back,
                     advance: { advanceReviewOrImport(plan) }
