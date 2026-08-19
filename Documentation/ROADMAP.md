@@ -26,12 +26,18 @@ the live status for each issue.
 - [ ] [Offer optional search suggestions in the command palette](https://github.com/pauljoda/Crest/issues/19)
 - [ ] [Add a default page zoom setting](https://github.com/pauljoda/Crest/issues/20)
 - [ ] [Keep the iPad layout stable with the floating keyboard](https://github.com/pauljoda/Crest/issues/21)
+- [ ] [Investigate Google Drive pages that remain blurred](https://github.com/pauljoda/Crest/issues/26)
 
 #### Completed
 
 - [x] [Add website notification support with clear per-Space controls](https://github.com/pauljoda/Crest/issues/5) — [`116cecc8`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01)
 - [x] [Prevent synced pinned and saved tabs from disappearing](https://github.com/pauljoda/Crest/issues/14) — [`ba775bfe`](https://github.com/pauljoda/Crest/commit/ba775bfe1819db9b2d0792f8f3687309078d8a5e)
 - [x] [Support website location permissions](https://github.com/pauljoda/Crest/issues/15) — [`116cecc8`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01), [`986bee77`](https://github.com/pauljoda/Crest/commit/986bee77f3e4331c5ab0f619a225a6a8aa97d1b2)
+- [x] [Keep WebExtension background pages responsive after returning to Crest](https://github.com/pauljoda/Crest/issues/23) — [`465a4913`](https://github.com/pauljoda/Crest/commit/465a491331ab56fbec25ba6f7e861d0445fe0e9a)
+- [x] [Let Quick Windows remain where users place them](https://github.com/pauljoda/Crest/issues/24) — [`9e19a244`](https://github.com/pauljoda/Crest/commit/9e19a24407f60b45863c9127e26782759b40c0c4)
+- [x] [Preserve sign-in return flows in new browser windows](https://github.com/pauljoda/Crest/issues/25) — [`0c5d61c6`](https://github.com/pauljoda/Crest/commit/0c5d61c6f770a398859e8c8dd5de55f03aad250b)
+- [x] [Show the Crest install action on localized Chrome Web Store pages](https://github.com/pauljoda/Crest/issues/27) — [`d62a26b7`](https://github.com/pauljoda/Crest/commit/d62a26b764d2cd387119c2eb7c2080498e890229)
+- [x] [Make browser-import setup respect selections and source access](https://github.com/pauljoda/Crest/issues/28) — [`8c9d0f78`](https://github.com/pauljoda/Crest/commit/8c9d0f782b1e7cbbccd74f64cc1dfe4aeabd0b96)
 
 <!-- crest-roadmap-sync:end -->
 
