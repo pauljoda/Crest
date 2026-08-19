@@ -20,17 +20,6 @@ struct BrowserMiddleClickGesture: NSGestureRecognizerRepresentable {
     }
 }
 
-enum BrowserTabMiddleClickAction: Equatable {
-    case close
-    case unload
-}
-
-enum BrowserTabMiddleClickPolicy {
-    static func action(for placement: TabPlacement) -> BrowserTabMiddleClickAction {
-        placement == .current ? .close : .unload
-    }
-}
-
 extension View {
     func browserOnMiddleClick(
         perform: @escaping @MainActor () -> Void
