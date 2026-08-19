@@ -11,6 +11,14 @@ enum BrowserUtilitySwitcherLayout {
     static let notificationBadgeHorizontalPadding: CGFloat = 4
     static let notificationBadgeOffset: CGFloat = 4
 
+    static var expansionSteps: [BrowserUtilityFanExpansionStep] {
+        destinations.enumerated().flatMap { index, surface in
+            let reveal = BrowserUtilityFanExpansionStep.reveal(surface)
+            guard index > 0 else { return [reveal] }
+            return [.wait(staggerInterval), reveal]
+        }
+    }
+
     static func verticalOffset(for index: Int, count: Int) -> CGFloat {
         (CGFloat(index) - CGFloat(count - 1) / 2) * step
     }
@@ -27,6 +35,11 @@ enum BrowserUtilitySwitcherLayout {
     static func collapseDelay(for index: Int, count: Int) -> Double {
         Double(max(count - index - 1, 0)) * staggerInterval * 0.55
     }
+}
+
+enum BrowserUtilityFanExpansionStep: Equatable, Sendable {
+    case wait(Double)
+    case reveal(BrowserUtilitySurface)
 }
 
 enum BrowserDownloadNotificationPolicy {

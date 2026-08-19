@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import XCTest
 
@@ -14,11 +15,11 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             "Reading without taking leaves the capture for the menu."
         )
         XCTAssertEqual(
-            policy.takeLink(),
+            policy.take()?.linkURL,
             URL(string: "https://example.com/article")
         )
         XCTAssertNil(
-            policy.takeLink(),
+            policy.take()?.linkURL,
             "A second menu must never inherit the first menu's link."
         )
         XCTAssertNil(policy.pendingLink)
@@ -30,7 +31,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         policy.record(body: makeBody(href: nil))
 
         XCTAssertNil(
-            policy.takeLink(),
+            policy.take()?.linkURL,
             "Plain content reports itself so the previous link cannot leak."
         )
     }
@@ -41,7 +42,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         policy.clear()
 
         XCTAssertNil(policy.pendingLink)
-        XCTAssertNil(policy.takeLink())
+        XCTAssertNil(policy.take())
     }
 
     func testALaterRightClickReplacesAnEarlierCapture() throws {
@@ -50,7 +51,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         policy.record(body: makeBody(href: "https://example.com/second"))
 
         XCTAssertEqual(
-            policy.takeLink(),
+            policy.take()?.linkURL,
             URL(string: "https://example.com/second")
         )
     }
@@ -62,7 +63,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         policy.record(body: makeBody(href: "https://example.com/second"))
 
         XCTAssertEqual(
-            policy.takeLink(),
+            policy.take()?.linkURL,
             URL(string: "https://example.com/second"),
             "Clearing retires the previous report, not the whole bridge."
         )
@@ -82,7 +83,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             var policy = BrowserLinkContextCapturePolicy()
             policy.record(body: makeBody(href: href))
             XCTAssertNil(
-                policy.takeLink(),
+                policy.take()?.linkURL,
                 "\(href) is not a destination the new-tab path would accept."
             )
         }
@@ -105,7 +106,7 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
             var policy = BrowserLinkContextCapturePolicy()
             policy.record(body: body)
             XCTAssertNil(
-                policy.takeLink(),
+                policy.take()?.linkURL,
                 "A payload the script never sends must not reach the menu."
             )
         }
@@ -117,17 +118,94 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
         policy.record(body: "not a dictionary")
 
         XCTAssertNil(
-            policy.takeLink(),
+            policy.take()?.linkURL,
             "A report Crest cannot read is still a new right-click."
         )
     }
 
-    private func makeBody(href: String?) -> [String: Any] {
+    func testImageAndLinkFromTheSameRightClickAreConsumedTogether() throws {
+        var policy = BrowserLinkContextCapturePolicy()
+        policy.record(
+            body: makeBody(
+                href: "https://example.com/article",
+                imageURL: "https://cdn.example.com/photo.webp"
+            )
+        )
+
+        XCTAssertEqual(
+            policy.pendingImage,
+            URL(string: "https://cdn.example.com/photo.webp")
+        )
+        let context = try XCTUnwrap(policy.take())
+        XCTAssertEqual(context.linkURL, URL(string: "https://example.com/article"))
+        XCTAssertEqual(
+            context.imageURL,
+            URL(string: "https://cdn.example.com/photo.webp")
+        )
+        XCTAssertNil(policy.take(), "One menu consumes both destinations.")
+    }
+
+    func testImageCaptureAcceptsPageDownloadSchemesButRefusesExecutableOnes() {
+        let accepted = [
+            "https://cdn.example.com/photo.webp",
+            "http://localhost/photo.png",
+            "blob:https://example.com/00000000-0000-4000-8000-000000000001",
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
+        ]
+        for imageURL in accepted {
+            var policy = BrowserLinkContextCapturePolicy()
+            policy.record(body: makeBody(imageURL: imageURL))
+            XCTAssertEqual(policy.take()?.imageURL?.absoluteString, imageURL)
+        }
+
+        let refused = [
+            "javascript:alert(1)",
+            "file:///etc/passwd",
+            "mailto:someone@example.com",
+            "about:blank",
+            "https:///no-host",
+            "data:image/png;base64,\(String(repeating: "a", count: 4_096))",
+        ]
+        for imageURL in refused {
+            var policy = BrowserLinkContextCapturePolicy()
+            policy.record(body: makeBody(imageURL: imageURL))
+            XCTAssertNil(policy.take()?.imageURL)
+        }
+    }
+
+    @MainActor
+    func testImageDownloadMenuLookupUsesWebKitsIdentifierInsteadOfItsTitle() {
+        let menu = NSMenu()
+        let unrelated = NSMenuItem(
+            title: "Download Linked File",
+            action: nil,
+            keyEquivalent: ""
+        )
+        let imageDownload = NSMenuItem(
+            title: "Localized Image Command",
+            action: nil,
+            keyEquivalent: ""
+        )
+        imageDownload.identifier =
+            BrowserDesktopWebViewMenuPolicy.downloadImageIdentifier
+        menu.items = [unrelated, imageDownload]
+
+        XCTAssertTrue(
+            BrowserDesktopWebViewMenuPolicy.downloadImageItem(in: menu)
+                === imageDownload
+        )
+    }
+
+    private func makeBody(
+        href: String? = nil,
+        imageURL: String? = nil
+    ) -> [String: Any] {
         var body: [String: Any] = [
             "version": BrowserLinkContextCapturePolicy.contractVersion,
             "token": 1,
         ]
         body["href"] = href ?? NSNull()
+        body["imageURL"] = imageURL ?? NSNull()
         return body
     }
 }

@@ -12,7 +12,7 @@ struct CrestApp: App {
     @State private var mainWindowState: BrowserWindowStateStore
     @State private var privateBrowser: BrowserStore
     @State private var privatePages: BrowserPagePool
-    @State private var privateChrome = BrowserChromeState()
+    @State private var privateChrome: BrowserChromeState
     @State private var privateTransientBrowsing: BrowserTransientBrowsingCoordinator
     @State private var spaceAccess: BrowserSpaceAccessController
     @State private var shortcuts: BrowserShortcutStore
@@ -32,6 +32,7 @@ struct CrestApp: App {
         let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
             launchEnvironment
         )
+        let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
         presentsInstalledApplicationUI =
             BrowserLaunchIsolationPolicy.presentsInstalledApplicationUI(
                 launchEnvironment
@@ -209,12 +210,22 @@ struct CrestApp: App {
         _onboardingCoordinator = State(initialValue: BrowserOnboardingCoordinator())
         _chrome = State(
             initialValue: BrowserChromeState(
-                sidebarIsPresented: mainWindowState.sidebarIsPresented ?? true
+                sidebarIsPresented: mainWindowState.sidebarIsPresented ?? true,
+                utilityPresentation: BrowserUtilityPresentationState(
+                    defaults: utilityDefaults
+                )
             )
         )
         _transientBrowsing = State(initialValue: transientBrowsing)
         _mainWindowState = State(initialValue: mainWindowState)
         _privateBrowser = State(initialValue: privateBrowser)
+        _privateChrome = State(
+            initialValue: BrowserChromeState(
+                utilityPresentation: BrowserUtilityPresentationState(
+                    defaults: utilityDefaults
+                )
+            )
+        )
         _privateTransientBrowsing = State(initialValue: privateTransientBrowsing)
         _spaceAccess = State(initialValue: spaceAccess)
         _spaceSettingsPresentation = State(

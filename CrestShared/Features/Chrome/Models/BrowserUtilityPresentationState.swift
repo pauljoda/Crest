@@ -1,14 +1,33 @@
+import Foundation
 import Observation
 import SwiftUI
 
 @Observable
 @MainActor
 final class BrowserUtilityPresentationState {
+    static let selectedSurfaceDefaultsKey = "browser.utility.selected-surface"
+
     private(set) var surface: BrowserUtilitySurface?
     private(set) var isSwitcherExpanded = false
     private(set) var isSiteControlPresented = false
     private(set) var isSiteControlContextMenuPresented = false
     private(set) var triggerFrameInGlobal: CGRect?
+    @ObservationIgnored private let defaults: UserDefaults?
+    @ObservationIgnored private let persistenceKey: String
+    @ObservationIgnored private var lastSelectedSurface = BrowserUtilitySurface.archive
+
+    init(
+        defaults: UserDefaults? = nil,
+        persistenceKey: String = selectedSurfaceDefaultsKey
+    ) {
+        self.defaults = defaults
+        self.persistenceKey = persistenceKey
+        if let rawValue = defaults?.string(forKey: persistenceKey),
+            let persistedSurface = BrowserUtilitySurface(rawValue: rawValue)
+        {
+            lastSelectedSurface = persistedSurface
+        }
+    }
 
     var isSiteControlInteractionActive: Bool {
         isSiteControlPresented || isSiteControlContextMenuPresented
@@ -35,6 +54,8 @@ final class BrowserUtilityPresentationState {
 
     func present(_ surface: BrowserUtilitySurface) {
         self.surface = surface
+        lastSelectedSurface = surface
+        defaults?.set(surface.rawValue, forKey: persistenceKey)
         isSwitcherExpanded = true
     }
 
@@ -49,11 +70,11 @@ final class BrowserUtilityPresentationState {
         isSwitcherExpanded = false
     }
 
-    func toggleSwitcher(preferredSurface: BrowserUtilitySurface = .archive) {
+    func toggleSwitcher(hasNewDownloads: Bool = false) {
         if isSwitcherExpanded {
             dismiss()
         } else {
-            present(preferredSurface)
+            present(hasNewDownloads ? .downloads : lastSelectedSurface)
         }
     }
 
@@ -73,7 +94,7 @@ enum BrowserUtilityInteractionSurface: Equatable, Sendable {
     case control
 }
 
-enum BrowserUtilitySurface: CaseIterable, Equatable, Hashable, Identifiable, Sendable {
+enum BrowserUtilitySurface: String, CaseIterable, Equatable, Hashable, Identifiable, Sendable {
     case archive
     case history
     case downloads

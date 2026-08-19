@@ -656,7 +656,8 @@ final class BrowserUtilityListTests: XCTestCase {
 
     @MainActor
     func testHistoryUsesTheSharedSidebarUtilityPresentation() {
-        let chrome = BrowserChromeState()
+        let presentation = BrowserUtilityPresentationState()
+        let chrome = BrowserChromeState(utilityPresentation: presentation)
 
         chrome.presentHistory()
 
@@ -688,10 +689,40 @@ final class BrowserUtilityListTests: XCTestCase {
     func testCommonListTriggerCanRouteANewDownloadNotificationToDownloads() {
         let presentation = BrowserUtilityPresentationState()
 
-        presentation.toggleSwitcher(preferredSurface: .downloads)
+        presentation.toggleSwitcher(hasNewDownloads: true)
 
         XCTAssertTrue(presentation.isSwitcherExpanded)
         XCTAssertEqual(presentation.surface, .downloads)
+    }
+
+    @MainActor
+    func testCommonListTriggerRestoresTheLastSurfaceAcrossPresentationStates() throws {
+        let suiteName = "crest.tests.utility-presentation.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let first = BrowserUtilityPresentationState(defaults: defaults)
+
+        first.present(.history)
+        first.dismiss()
+
+        let restored = BrowserUtilityPresentationState(defaults: defaults)
+        restored.toggleSwitcher()
+
+        XCTAssertTrue(restored.isSwitcherExpanded)
+        XCTAssertEqual(restored.surface, .history)
+    }
+
+    func testUtilityFanStartsRevealingBeforeItsFirstSuspension() {
+        XCTAssertEqual(
+            BrowserUtilitySwitcherLayout.expansionSteps,
+            [
+                .reveal(.archive),
+                .wait(BrowserUtilitySwitcherLayout.staggerInterval),
+                .reveal(.history),
+                .wait(BrowserUtilitySwitcherLayout.staggerInterval),
+                .reveal(.downloads),
+            ]
+        )
     }
 
     func testDownloadNotificationUsesTheNewestActiveTransferProgress() throws {

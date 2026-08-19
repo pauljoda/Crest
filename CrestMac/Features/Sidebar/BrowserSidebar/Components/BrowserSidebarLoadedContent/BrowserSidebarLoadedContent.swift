@@ -64,9 +64,7 @@ struct BrowserSidebarLoadedContent: View {
                 commonListsAreExpanded: utilityPresentation.isSwitcherExpanded,
                 toggleCommonLists: {
                     utilityPresentation.toggleSwitcher(
-                        preferredSurface: newUtilityDownloads.isEmpty
-                            ? .archive
-                            : .downloads
+                        hasNewDownloads: !newUtilityDownloads.isEmpty
                     )
                 },
                 recordCommonListsTriggerFrame:

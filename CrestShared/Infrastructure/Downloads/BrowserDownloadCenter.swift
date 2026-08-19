@@ -59,6 +59,7 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var automaticDownloadSequences:
         [AutomaticDownloadScope: BrowserAutomaticDownloadSequence] = [:]
     @ObservationIgnored private var approvedRetryKeys: Set<ObjectIdentifier> = []
+    @ObservationIgnored private var userInitiatedOverrideKeys: Set<ObjectIdentifier> = []
     @ObservationIgnored private var retryContexts: [UUID: BrowserDownloadRetryContext] = [:]
     @ObservationIgnored private var retryLeases: [UUID: BrowserDownloadRetryLease] = [:]
     @ObservationIgnored private var authenticationSessions: [ObjectIdentifier: BrowserHTTPAuthenticationSession] = [:]
@@ -232,7 +233,8 @@ final class BrowserDownloadCenter: NSObject {
         in webView: WKWebView,
         profileID: UUID,
         spaceID: SpaceID,
-        spaceName: String
+        spaceName: String,
+        isUserInitiated: Bool? = nil
     ) {
         let requestedFilename = download.originalRequest?.url?.lastPathComponent
         let filename = requestedFilename.flatMap { $0.isEmpty ? nil : $0 } ?? "download"
@@ -253,7 +255,8 @@ final class BrowserDownloadCenter: NSObject {
             spaceID: spaceID,
             spaceName: spaceName,
             sourceWebView: webView,
-            isUserApprovedRetry: false
+            isUserApprovedRetry: false,
+            isUserInitiatedOverride: isUserInitiated
         )
     }
 
@@ -317,7 +320,8 @@ final class BrowserDownloadCenter: NSObject {
             spaceID: context.assignment.spaceID,
             spaceName: context.spaceName,
             sourceWebView: webView,
-            isUserApprovedRetry: true
+            isUserApprovedRetry: true,
+            isUserInitiatedOverride: nil
         )
         return true
     }
@@ -343,7 +347,8 @@ final class BrowserDownloadCenter: NSObject {
         spaceID: SpaceID,
         spaceName: String,
         sourceWebView: WKWebView,
-        isUserApprovedRetry: Bool
+        isUserApprovedRetry: Bool,
+        isUserInitiatedOverride: Bool?
     ) {
         let key = ObjectIdentifier(download)
         guard downloads[key] == nil else { return }
@@ -352,6 +357,9 @@ final class BrowserDownloadCenter: NSObject {
         itemIDs[key] = itemID
         if isUserApprovedRetry {
             approvedRetryKeys.insert(key)
+        }
+        if isUserInitiatedOverride == true {
+            userInitiatedOverrideKeys.insert(key)
         }
         spaceNames[key] = spaceName
         spaceIDs[key] = spaceID
@@ -428,6 +436,8 @@ final class BrowserDownloadCenter: NSObject {
             savedDecision = .denyPersistently
         }
         let automaticDownloadAction: BrowserAutomaticDownloadAction
+        let isUserInitiated = download.isUserInitiated
+            || userInitiatedOverrideKeys.contains(key)
         if let origin = sourceOrigins[key],
             let webViewID = sourceWebViewIDs[key],
             let spaceID = spaceIDs[key]
@@ -441,14 +451,14 @@ final class BrowserDownloadCenter: NSObject {
                 automaticDownloadSequences[scope]
                 ?? BrowserAutomaticDownloadSequence()
             automaticDownloadAction = sequence.action(
-                isUserInitiated: download.isUserInitiated,
+                isUserInitiated: isUserInitiated,
                 savedDecision: savedDecision,
                 isUserApprovedRetry: approvedRetryKeys.contains(key)
             )
             automaticDownloadSequences[scope] = sequence
         } else {
             automaticDownloadAction = BrowserAutomaticDownloadPolicy.action(
-                isUserInitiated: download.isUserInitiated,
+                isUserInitiated: isUserInitiated,
                 savedDecision: savedDecision,
                 isUserApprovedRetry: approvedRetryKeys.contains(key)
             )
@@ -477,7 +487,7 @@ final class BrowserDownloadCenter: NSObject {
             }
         }
         if assessment.requiresConfirmation(
-            isUserInitiated: download.isUserInitiated
+            isUserInitiated: isUserInitiated
         ) {
             let approved = await approveRiskyDownload(
                 assessment,
@@ -719,5 +729,6 @@ final class BrowserDownloadCenter: NSObject {
         sourceOrigins.removeValue(forKey: key)
         sourceWebViewIDs.removeValue(forKey: key)
         approvedRetryKeys.remove(key)
+        userInitiatedOverrideKeys.remove(key)
     }
 }

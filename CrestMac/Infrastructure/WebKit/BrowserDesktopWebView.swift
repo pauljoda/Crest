@@ -19,9 +19,15 @@ final class BrowserDesktopWebView: WKWebView {
     /// hit test of Crest's own.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
-        guard let destination = menuHost?.takeSplitViewLinkDestination() else {
-            return
+        guard let context = menuHost?.takeMenuContext() else { return }
+        if let imageDownloadURL = context.imageDownloadURL,
+            let item = BrowserDesktopWebViewMenuPolicy.downloadImageItem(in: menu)
+        {
+            item.target = self
+            item.action = #selector(downloadImage(_:))
+            item.representedObject = imageDownloadURL
         }
+        guard let destination = context.splitViewLinkDestination else { return }
         if let last = menu.items.last, !last.isSeparatorItem {
             menu.addItem(.separator())
         }
@@ -46,5 +52,20 @@ final class BrowserDesktopWebView: WKWebView {
     @objc private func openLinkInSplitView(_ sender: NSMenuItem) {
         guard let destination = sender.representedObject as? URL else { return }
         menuHost?.openLinkInSplitView(destination)
+    }
+
+    @objc private func downloadImage(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        menuHost?.downloadImage(from: url)
+    }
+}
+
+enum BrowserDesktopWebViewMenuPolicy {
+    static let downloadImageIdentifier = NSUserInterfaceItemIdentifier(
+        "WKMenuItemIdentifierDownloadImage"
+    )
+
+    static func downloadImageItem(in menu: NSMenu) -> NSMenuItem? {
+        menu.items.first { $0.identifier == downloadImageIdentifier }
     }
 }

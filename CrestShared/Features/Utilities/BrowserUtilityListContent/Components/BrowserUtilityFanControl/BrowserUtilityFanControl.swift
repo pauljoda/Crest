@@ -82,22 +82,22 @@ struct BrowserUtilityFanControl: View {
                 revealedSurfaces.removeAll()
                 isContainerVisible = true
             }
-            await Task.yield()
-
-            for (index, surface) in BrowserUtilitySwitcherLayout.destinations.enumerated() {
-                if index > 0 {
+            for step in BrowserUtilitySwitcherLayout.expansionSteps {
+                switch step {
+                case .wait(let delay):
                     try? await Task.sleep(
-                        for: .seconds(BrowserUtilitySwitcherLayout.staggerInterval)
+                        for: .seconds(delay)
                     )
-                }
-                guard !Task.isCancelled else { return }
-                withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.utilityFanReveal,
-                        reduceMotion: shouldReduceMotion
-                    )
-                ) {
-                    _ = revealedSurfaces.insert(surface)
+                case .reveal(let surface):
+                    guard !Task.isCancelled else { return }
+                    withAnimation(
+                        BrowserVisualAccessibilityPolicy.animation(
+                            CrestMotion.utilityFanReveal,
+                            reduceMotion: shouldReduceMotion
+                        )
+                    ) {
+                        _ = revealedSurfaces.insert(surface)
+                    }
                 }
             }
         } else {
