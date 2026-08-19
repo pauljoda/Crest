@@ -16,6 +16,8 @@ final class MobileBrowserNavigationState {
     private var transientSidebarDismissalTask: Task<Void, Never>?
     @ObservationIgnored
     private var transientSidebarDismissalIsPaused = false
+    @ObservationIgnored
+    private var lockedSpaceKeepsSidebarVisible = false
 
     init(
         regularSidebarIsPresented: Bool = true,
@@ -98,6 +100,39 @@ final class MobileBrowserNavigationState {
 
     func prepareForSpaceSwitch() {
         showTabViewer()
+    }
+
+    /// A lock is a privacy-state change inside the selected Space, not a new
+    /// navigation mode. Keep the sidebar presentation the user is already in:
+    /// a docked phone returns to its full-screen tab viewer, while a floating
+    /// or collapsed sidebar becomes a persistent floating lock surface over
+    /// the existing window.
+    func prepareForLockedSpace() {
+        lockedSpaceKeepsSidebarVisible = true
+        compactToolbarIsHidden = false
+
+        if presentation == .compact {
+            if compactShowsPage, regularSidebarPresentation != .docked {
+                cancelTransientSidebarDismissal()
+                regularSidebarPresentation = .floating
+            } else {
+                showTabViewer()
+            }
+            return
+        }
+
+        cancelTransientSidebarDismissal()
+        if regularSidebarPresentation == .collapsed {
+            regularSidebarPresentation = .floating
+        }
+    }
+
+    func finishLockedSpaceTransition() -> MobileBrowserSpaceSwitchDestination {
+        lockedSpaceKeepsSidebarVisible = false
+        return MobileBrowserSpaceSwitchPolicy.destinationAfterLeavingLockedSpace(
+            in: presentation,
+            sidebarPresentation: regularSidebarPresentation
+        )
     }
 
     func hideCompactToolbar() {
@@ -195,7 +230,8 @@ final class MobileBrowserNavigationState {
 
     private func scheduleTransientSidebarDismissal() {
         guard regularSidebarPresentation == .floating,
-            !transientSidebarDismissalIsPaused
+            !transientSidebarDismissalIsPaused,
+            !lockedSpaceKeepsSidebarVisible
         else { return }
         transientSidebarDismissalTask?.cancel()
         let delay = transientSidebarDismissalDelay

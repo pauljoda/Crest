@@ -311,6 +311,44 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertEqual(fixture.pages.activePage?.profileID, protectedSpace.profile.id)
     }
 
+    func testFloatingPhoneLockAndUnlockPreserveTheSidebarMode() async throws {
+        var protectedSpace = makeSpace(index: 51)
+        protectedSpace.accessPolicy = .deviceOwnerAuthentication
+        let authenticator = MobileRootDeviceAuthenticator()
+        let access = BrowserSpaceAccessController(authenticator: authenticator)
+        let initialUnlockSucceeded = await access.unlock(protectedSpace)
+        XCTAssertTrue(initialUnlockSucceeded)
+        let fixture = makeFixture(
+            spaces: [protectedSpace],
+            selectedSpaceID: protectedSpace.id,
+            startupBehavior: .lastActiveTab,
+            spaceAccess: access
+        )
+        fixture.model.presentationChanged(to: .compact)
+        await fixture.model.prepareBrowser()
+        fixture.model.activateSelectedTab()
+        fixture.navigation.completePagePresentation()
+        fixture.navigation.toggleCompactSidebar()
+        let unlocked = fixture.model.lockSnapshot(presentation: .compact)
+
+        access.lock(protectedSpace.id)
+        let locked = fixture.model.lockSnapshot(presentation: .compact)
+        fixture.model.synchronizeLockTransition(from: unlocked, to: locked)
+
+        XCTAssertNil(fixture.pages.activePage)
+        XCTAssertTrue(fixture.navigation.compactShowsPage)
+        XCTAssertEqual(fixture.navigation.regularSidebarPresentation, .floating)
+
+        let secondUnlockSucceeded = await access.unlock(protectedSpace)
+        XCTAssertTrue(secondUnlockSucceeded)
+        let unlockedAgain = fixture.model.lockSnapshot(presentation: .compact)
+        fixture.model.synchronizeLockTransition(from: locked, to: unlockedAgain)
+
+        XCTAssertEqual(fixture.pages.activePage?.spaceID, protectedSpace.id)
+        XCTAssertTrue(fixture.navigation.compactShowsPage)
+        XCTAssertEqual(fixture.navigation.regularSidebarPresentation, .floating)
+    }
+
     func testPaletteActionsRejectStaleProfilesAndSelectExactDestinations() throws {
         let source = makeSpace(index: 60)
         let destination = makeSpace(index: 70)
