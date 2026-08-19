@@ -2154,6 +2154,51 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    func testContentBridgeAddsCrestButtonBesideJapaneseStoreAction()
+        async throws
+    {
+        let configuration = WKWebViewConfiguration()
+        let proxy = BrowserChromeWebStoreContentBridge.install(
+            in: configuration.userContentController,
+            receive: { _ in }
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let navigation = ChromeWebStoreNavigationWaiter(webView: webView)
+        let request = URLRequest(
+            url: URL(
+                string: "https://chromewebstore.google.com/detail/google-translate/aapbdbdomjkkjkaonfhkkikfgjllcleb?hl=ja"
+            )!
+        )
+
+        try await navigation.load(
+            request,
+            responseHTML: """
+            <html>
+              <body>
+                <main>
+                  <section>
+                    <h1>Google 翻訳</h1>
+                    <button aria-label="共有">共有</button>
+                    <button disabled><span>Chrome に追加</span></button>
+                  </section>
+                </main>
+              </body>
+            </html>
+            """
+        )
+
+        let crestButtonExists = try await webView.evaluateJavaScript(
+            """
+            Boolean(document.querySelector(
+              'button:disabled + ' +
+              '[data-crest-chrome-web-store-button="aapbdbdomjkkjkaonfhkkikfgjllcleb"]'
+            ))
+            """
+        ) as? Bool
+        XCTAssertEqual(crestButtonExists, true)
+        withExtendedLifetime(proxy) {}
+    }
+
     func testInstallNavigationRequiresTheCurrentTrustedStoreItem() throws {
         let item = try XCTUnwrap(
             BrowserChromeWebStoreItem(
@@ -3375,6 +3420,19 @@ private final class ChromeWebStoreNavigationWaiter:
         try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             webView.load(request)
+        }
+    }
+
+    func load(_ request: URLRequest, responseHTML: String) async throws {
+        guard let webView else {
+            throw BrowserChromeWebStoreTestError.releasedWebView
+        }
+        try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            webView.loadSimulatedRequest(
+                request,
+                responseHTML: responseHTML
+            )
         }
     }
 

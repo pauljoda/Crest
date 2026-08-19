@@ -49,6 +49,13 @@ enum BrowserChromeWebStoreContentBridge {
           };
 
           const targetButton = () => {
+            const productHeader = document.querySelector("main h1")
+              ?.closest("section");
+            const storeAction = productHeader?.querySelector(
+              'button:disabled, [role="button"][aria-disabled="true"]'
+            );
+            if (storeAction) return storeAction;
+
             const candidates = Array.from(
               document.querySelectorAll('button, [role="button"]')
             );
