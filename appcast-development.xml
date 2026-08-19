@@ -6,106 +6,45 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.4.2</title>
-            <pubDate>Tue, 18 Aug 2026 16:52:03 +0000</pubDate>
+            <title>0.4.4</title>
+            <pubDate>Wed, 19 Aug 2026 13:30:59 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1035</sparkle:version>
-            <sparkle:shortVersionString>0.4.2</sparkle:shortVersionString>
+            <sparkle:version>1037</sparkle:version>
+            <sparkle:shortVersionString>0.4.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Crest development build
+            <description sparkle:format="markdown"><![CDATA[## Highlights
 
-[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.2-development-2026-08-18-986bee7-arm64.dmg)
+### New
 
-Built from [`986bee7`](https://github.com/pauljoda/Crest/commit/986bee77f3e4331c5ab0f619a225a6a8aa97d1b2).
+- Support translated Chrome Web Store actions
 
-Development builds are signed and notarized, but may be less reliable than stable releases.
+### Improved
 
-## Changes since the previous development build
+- Format software update release notes as structured Markdown
+- Automate the public Crest roadmap sync
+- Improve Crest browser experience
+- Preserve user-adjusted quick window geometry
 
-### fix(release): accept Xcode Cloud repository URL
+### Fixed
 
-[View commit `d17f0ef`](https://github.com/pauljoda/Crest/commit/d17f0efc301d629c7adc9434747038c14148dfa5)
+- Fix WebExtension window focus lifecycle
+- Fix SSO window lifecycle and permission defaults
+- Harden browser imports
+- Preserve locked sidebar presentation
 
-### Polish the public repository and Crest 0.5 roadmap (#10)
+---
 
-[View commit `f7fe0be`](https://github.com/pauljoda/Crest/commit/f7fe0be9dc147178ce0092ad1ba2c3d44619b653)
+Development builds contain the newest changes and may be less reliable than stable releases.
 
-### fix(release): stamp Xcode Cloud build number
-
-[View commit `a3dafaa`](https://github.com/pauljoda/Crest/commit/a3dafaa9e5581f77640ad9fba5c808f47c5a3d1b)
-
-### Add monthly sponsor recognition tiers (#11)
-
-## What changed
-
-- add a ranked public sponsor roll for Sponsor, Sustainer, and Supporter
-members
-- explain the recognition boundaries in the README and support guide
-- point the website and Help Center sponsorship links directly to the
-Ko-fi tiers
-- replace the README marketing tagline with a plain description of Crest
-
-## Why
-
-Ko-fi now offers simple recurring support without invented content
-perks. The only distinction between tiers is optional public
-recognition, and sponsorship does not buy access, endorsement, support
-priority, ownership, or roadmap influence.
-
-## Validation
-
-- `npm run build:website`
-- `python3 Scripts/Tests/test_product_site.py` — 24 passed
-- `Scripts/check-public-source.py`
-- `git diff --check`
-
-Signed-off-by: Paul Davis <pauldavis101@gmail.com>
-
-[View commit `c5ddb24`](https://github.com/pauljoda/Crest/commit/c5ddb24e3d321c151308565ba90404af24b03f15)
-
-### Fix tab sync deletion invariants (APP-249)
-
-[View commit `ba775bf`](https://github.com/pauljoda/Crest/commit/ba775bfe1819db9b2d0792f8f3687309078d8a5e)
-
-### fix: keep utility fan labels aligned
-
-[View commit `f679b01`](https://github.com/pauljoda/Crest/commit/f679b0168c6d464f3643affc76df0d4557933f59)
-
-### fix: unify macOS sidebar card interactions
-
-[View commit `02a8328`](https://github.com/pauljoda/Crest/commit/02a8328a690ce9d187fcf9c521c225e13bf90872)
-
-### fix: synchronize browser card motion
-
-[View commit `d68c409`](https://github.com/pauljoda/Crest/commit/d68c409c719847a4ee35de9500a5db0faa91f918)
-
-### fix: preserve sidebar contents after docking
-
-[View commit `33b7ca8`](https://github.com/pauljoda/Crest/commit/33b7ca8f206ace83f27490cdcac628b3301336f8)
-
-### fix: keep sidebar content mounted across docking
-
-[View commit `b6d2437`](https://github.com/pauljoda/Crest/commit/b6d2437436d5731b91130b005b8ac2b56a6b698e)
-
-### fix(web): add hosted location and notification flows
-
-[View commit `116cecc`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01)
-
-### Merge remote-tracking branch 'origin/main' into codex/xcode-cloud-build-number
-
-[View commit `0d0828d`](https://github.com/pauljoda/Crest/commit/0d0828d3d0acd0669385554ab89ee5143c12b73d)
-
-### test: allow private geolocation bridge
-
-[View commit `986bee7`](https://github.com/pauljoda/Crest/commit/986bee77f3e4331c5ab0f619a225a6a8aa97d1b2)
+[View all changes](https://github.com/pauljoda/Crest/compare/986bee77f3e4331c5ab0f619a225a6a8aa97d1b2...ef051f1506a4989ac00a7796f09cc9173671f9d7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.4-development-2026-08-19-ef051f1-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.2-development-2026-08-18-986bee7-arm64.dmg" length="7601438" type="application/octet-stream" sparkle:edSignature="KTtWBnPg7deKL4P6mtJueJjPr3wwbpmn9sGTKLsUYXgt+gnEBJVRhU36njwINGqGpD928GBWQd/3QQE/h5QSDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.4-development-2026-08-19-ef051f1-arm64.dmg" length="7615773" type="application/octet-stream" sparkle:edSignature="iVbOjnGCnKd0MWVTfFkku2/CcV/YAWF4CRxxLlO8KJeheb1xrKYOOQOiOsRj05SF2/pS9B05yw8VOCIyBs7XBQ=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: seQpwnXQbAggXpPooOQl3KasGS4ofSP8r7q0URO/9LVihNmrY7gcfe3ChcawKwR5wZBoOMZoRC8JQUfftwgtBg==
-length: 4665
+edSignature: qNSKWj8CGtLN2Ky861ktnyL+wmXGQt3rNaZcGxUZYOAGUXETEyyPTMYKU+O5HWrglRdUz3UZjoISYN0IevxACQ==
+length: 2187
 -->
