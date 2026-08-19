@@ -186,7 +186,7 @@ struct BrowserPasswordSettingsPane: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(
-                "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the save panel."
+                "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the \(layout.exportDestinationName)."
             )
         }
         .sheet(item: $credentialDetailRequest) { request in

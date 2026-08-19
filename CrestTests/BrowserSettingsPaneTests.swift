@@ -249,7 +249,33 @@ final class BrowserSettingsPaneTests: XCTestCase {
             "Touch exports from inside the sheet that owns the list."
         )
 
+        let sheet = BrowserPasswordSettingsLayout.mobileSheet
+        XCTAssertTrue(sheet.showsSavedPasswords)
+        XCTAssertTrue(sheet.showsExportAction)
+        XCTAssertTrue(
+            sheet.showsCredentialPreferences,
+            "The sidebar opens this sheet without passing through Settings, so the Space's preferences have to be reachable from inside it."
+        )
+        XCTAssertFalse(
+            sheet.showsManageAction,
+            "The sheet is the manager; it cannot offer a way into itself."
+        )
+
         XCTAssertNotEqual(mac, mobile)
+        XCTAssertNotEqual(mobile, sheet)
+    }
+
+    /// The warning before a plaintext export names where the file is about to be
+    /// written, and the two shells write it to different places.
+    func testPlaintextExportNamesEachShellsDestination() {
+        XCTAssertEqual(
+            BrowserPasswordSettingsLayout.macOSPage.exportDestinationName,
+            "save panel"
+        )
+        XCTAssertEqual(
+            BrowserPasswordSettingsLayout.mobileSheet.exportDestinationName,
+            "Files picker"
+        )
     }
 
     /// The pane's search runs over four fields, and both shells had written their own

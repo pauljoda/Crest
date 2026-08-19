@@ -1,34 +1,34 @@
 import SwiftUI
 
-/// The full-screen saved-password manager used by the touch settings shell.
+/// The touch shell's saved-password manager.
+///
+/// Everything this screen draws is now ``BrowserPasswordSettingsPane``; what stays
+/// here is the one thing only touch has — a sheet around the pane, with the search
+/// field its list is filtered by and the Done button that closes it. The desktop puts
+/// the same pane on a settings page and searches it from the window's own field.
 struct MobilePasswordSettingsView: View {
-    @State private var model: MobilePasswordSettingsModel
-    private let passkeyAccess: BrowserPasskeyAccessController
+    let browser: BrowserStore
+    let spaceAccess: BrowserSpaceAccessController
 
-    init(
-        browser: BrowserStore,
-        spaceAccess: BrowserSpaceAccessController,
-        passkeyAccess: BrowserPasskeyAccessController =
-            BrowserPasskeyAccessController()
-    ) {
-        _model = State(
-            initialValue: MobilePasswordSettingsModel(
-                browser: browser,
-                spaceAccess: spaceAccess
-            )
-        )
-        self.passkeyAccess = passkeyAccess
-    }
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
 
     var body: some View {
         NavigationStack {
-            MobilePasswordSettingsContent(
-                model: model,
-                passkeyAccess: passkeyAccess
+            BrowserPasswordSettingsPane(
+                browser: browser,
+                spaceAccess: spaceAccess,
+                layout: .mobileSheet,
+                searchText: $searchText
             )
-            .modifier(
-                MobilePasswordSettingsPresentationModifier(model: model)
-            )
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search accounts or sites")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", action: dismiss.callAsFunction)
+                }
+            }
         }
         .presentationDetents([.large])
     }
