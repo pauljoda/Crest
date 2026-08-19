@@ -6,158 +6,38 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.4.0</title>
-            <pubDate>Tue, 18 Aug 2026 09:00:44 +0000</pubDate>
+            <title>0.4.2</title>
+            <pubDate>Wed, 19 Aug 2026 09:00:22 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1034</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:version>1036</sparkle:version>
+            <sparkle:shortVersionString>0.4.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Crest nightly build
+            <description sparkle:format="markdown"><![CDATA[## Highlights
 
-[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.0-nightly-2026-08-18-c5ddb24-arm64.dmg)
+### Improved
 
-Built from [`c5ddb24`](https://github.com/pauljoda/Crest/commit/c5ddb24e3d321c151308565ba90404af24b03f15).
+- Format software update release notes as structured Markdown
+- Automate the public Crest roadmap sync
 
-Nightly builds are signed and notarized, but contain changes that have not yet reached a stable release.
+### Fixed
 
-## Changes since the previous nightly build
+- Fix tab sync deletion invariants
+- Keep utility fan labels aligned
+- Unify macOS sidebar card interactions
+- Synchronize browser card motion
+- Preserve sidebar contents after docking
+- Keep sidebar content mounted across docking
+- Add hosted location and notification flows
 
-### fix(browser): stabilize Peek and floating sidebar
+---
 
-[View commit `54cb03f`](https://github.com/pauljoda/Crest/commit/54cb03f20a9247b9820c7ee2067684c76f208a92)
+Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-### Streamline rolling release publication and release notes
-
-[View commit `6741cba`](https://github.com/pauljoda/Crest/commit/6741cba19910beffa3ecec1d66341171b3ae6bc7)
-
-### Dismiss transient surfaces when navigation becomes a download
-
-[View commit `8a89711`](https://github.com/pauljoda/Crest/commit/8a8971112afb22b6613ef66686539662fdd6f9fa)
-
-### fix: resolve tab grouping regressions
-
-[View commit `4322921`](https://github.com/pauljoda/Crest/commit/43229214c4e1a47db9f62ac01e028e7087005303)
-
-### fix: freeze sidebar geometry during drag
-
-[View commit `cd4da8f`](https://github.com/pauljoda/Crest/commit/cd4da8fc0fd1b0bb6f6b0aafeba22c0aa9a2904a)
-
-### fix: reveal selected tabs in collapsed folders
-
-[View commit `2edf4a3`](https://github.com/pauljoda/Crest/commit/2edf4a394ecde0086fe386d44d88dd758a6ccc35)
-
-### fix: reveal reloaded tabs in collapsed folders
-
-[View commit `7d3659c`](https://github.com/pauljoda/Crest/commit/7d3659c9f036c41ea5133e3a384795d1bdbedb01)
-
-### fix: reserve split-group destination space
-
-[View commit `6980e71`](https://github.com/pauljoda/Crest/commit/6980e71e21c7800d5354ab20421d5fdf5c91b3ec)
-
-### fix: separate mobile split tab groups
-
-[View commit `34f709c`](https://github.com/pauljoda/Crest/commit/34f709c7928ba05805fce733073833ceb808369f)
-
-### Restore Xcode scheme compatibility and localization metadata
-
-[View commit `f8e06d3`](https://github.com/pauljoda/Crest/commit/f8e06d31de4cd703ad529d90f1e04f4fd357129a)
-
-### fix(ci): restore sidebar presentation reference
-
-[View commit `3e67cd3`](https://github.com/pauljoda/Crest/commit/3e67cd3121568db872d8cc0a36610b4d468d6001)
-
-### fix: polish archive and download utilities
-
-[View commit `30bdae0`](https://github.com/pauljoda/Crest/commit/30bdae0f191c0940f1a2967d56e2837a0b70faa2)
-
-### fix: align sidebar badges and split groups
-
-[View commit `778dc69`](https://github.com/pauljoda/Crest/commit/778dc699597228a0825c9a2ec597a5650f5dcae8)
-
-### fix: align utility fan animation origin
-
-[View commit `3e0942a`](https://github.com/pauljoda/Crest/commit/3e0942a94fa8d8c0e55a5eb507a5bd8423e49ba2)
-
-### fix: center empty desktop address prompt
-
-[View commit `453c388`](https://github.com/pauljoda/Crest/commit/453c3886731ec9aeba8b396e1a21d5f960e3e9fa)
-
-### Preserve extension page state and harden release publishing
-
-[View commit `2c53ff5`](https://github.com/pauljoda/Crest/commit/2c53ff5357553dfb451957e65cb3fe858433f6ad)
-
-### feat: install extension packages from file
-
-[View commit `f612cf1`](https://github.com/pauljoda/Crest/commit/f612cf1bef21ee92030dd73581f80ae3b1151aff)
-
-### feat: import Safari custom extensions
-
-[View commit `f6c0f7d`](https://github.com/pauljoda/Crest/commit/f6c0f7d59938aa77de8da6c689d5918ba098fe9f)
-
-### chore: align version references to 0.4
-
-[View commit `63670dc`](https://github.com/pauljoda/Crest/commit/63670dceb7e27d24c5554eb611c256a6122e3ccc)
-
-### Update GitHub Sponsors username in FUNDING.yml
-
-[View commit `4cf71e8`](https://github.com/pauljoda/Crest/commit/4cf71e82701e075c22b5c0ba42ca035497dbea32)
-
-### chore(release): prepare 0.4.0
-
-Crest 0.4 adds Split View across Mac, iPhone, and iPad; expands standards-based extension support across Chrome, Firefox, and Safari-created packages; and establishes signed, notarized direct updates through Sparkle.
-
-It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, retention, and WebKit compatibility fixes collected in the 0.4.0 changelog.
-
-[View commit `25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f)
-
-### fix(release): validate Xcode Cloud archive version
-
-[View commit `3a5b322`](https://github.com/pauljoda/Crest/commit/3a5b32259276edb21db2dc2b95f3b59bb7f5b70c)
-
-### fix(release): accept Xcode Cloud repository URL
-
-[View commit `d17f0ef`](https://github.com/pauljoda/Crest/commit/d17f0efc301d629c7adc9434747038c14148dfa5)
-
-### Polish the public repository and Crest 0.5 roadmap (#10)
-
-[View commit `f7fe0be`](https://github.com/pauljoda/Crest/commit/f7fe0be9dc147178ce0092ad1ba2c3d44619b653)
-
-### fix(release): stamp Xcode Cloud build number
-
-[View commit `a3dafaa`](https://github.com/pauljoda/Crest/commit/a3dafaa9e5581f77640ad9fba5c808f47c5a3d1b)
-
-### Add monthly sponsor recognition tiers (#11)
-
-## What changed
-
-- add a ranked public sponsor roll for Sponsor, Sustainer, and Supporter
-members
-- explain the recognition boundaries in the README and support guide
-- point the website and Help Center sponsorship links directly to the
-Ko-fi tiers
-- replace the README marketing tagline with a plain description of Crest
-
-## Why
-
-Ko-fi now offers simple recurring support without invented content
-perks. The only distinction between tiers is optional public
-recognition, and sponsorship does not buy access, endorsement, support
-priority, ownership, or roadmap influence.
-
-## Validation
-
-- `npm run build:website`
-- `python3 Scripts/Tests/test_product_site.py` — 24 passed
-- `Scripts/check-public-source.py`
-- `git diff --check`
-
-Signed-off-by: Paul Davis <pauldavis101@gmail.com>
-
-[View commit `c5ddb24`](https://github.com/pauljoda/Crest/commit/c5ddb24e3d321c151308565ba90404af24b03f15)
+[View all changes](https://github.com/pauljoda/Crest/compare/c5ddb24e3d321c151308565ba90404af24b03f15...519fd259b7413e8cbf4c03004a8b7da077ad757c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.2-nightly-2026-08-19-519fd25-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.0-nightly-2026-08-18-c5ddb24-arm64.dmg" length="7525654" type="application/octet-stream" sparkle:edSignature="XBZyH8DQLQhaHSs+vq4D/CmVoaHkHdK898J++02AeWQSX7hkU8FCWa1s8pClccJRQYleyWm1FGJWkg7tA1ARAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.2-nightly-2026-08-19-519fd25-arm64.dmg" length="7625494" type="application/octet-stream" sparkle:edSignature="8yhRJbPR9dc+aWRf5qPovByr1cwpIZXk7ZExVKAzZjINOsBON/MryoiIYbRdeGx9XPYnMyKG5vNQ+FesvE1oCw=="/>
         </item>
         <item>
             <title>0.4.0</title>
@@ -190,6 +70,6 @@ It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, reten
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: oDQ6KJgCr1MN0Wb74ccCWddUGikVNTfautBaM6FxgwMvIkLLlyjpdA27+2i0Keg+z8NBMS1LhvU2AUKGyYDCBg==
-length: 8760
+edSignature: hgrZnYcBUNcLDXLuj6F82zK+mhTLQwpGrW/EleMwJjDT3qylrsdGgJKU5YjgrMBhiyrd5ZGmhFvhJkXC7YQ1AQ==
+length: 3833
 -->
