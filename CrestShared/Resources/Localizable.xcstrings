@@ -3065,6 +3065,9 @@
         }
       }
     },
+    "Choose at least one Space to import." : {
+
+    },
     "Choose Crest in Default Apps Settings, then return here and check the status." : {
       "localizations" : {
         "ar" : {
@@ -9846,6 +9849,9 @@
         }
       }
     },
+    "Protected capabilities ask first. Automatic pop-ups are blocked, and a site can download one file before asking to send more." : {
+
+    },
     "Protection" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10646,6 +10652,9 @@
           }
         }
       }
+    },
+    "Restores each site's default permission behavior" : {
+
     },
     "Retention is set separately for this Space. Crest checks when it opens, after sync, and every 15 minutes while active. Download cleanup removes Crest’s record only; downloaded files stay on disk." : {
       "localizations" : {
@@ -11624,6 +11633,7 @@
       }
     },
     "Sites will ask before using protected capabilities, opening pop-ups, or starting automatic downloads in this Space." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13139,7 +13149,11 @@
         }
       }
     },
+    "This session exceeds Crest’s Space, tab, folder, or text limits." : {
+
+    },
     "This session exceeds Crest’s tab, window, text, or decompression limits." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13568,9 +13582,6 @@
         }
       }
     },
-    "Undock Sidebar" : {
-
-    },
     "Unavailable in Crest" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13581,6 +13592,9 @@
           }
         }
       }
+    },
+    "Undock Sidebar" : {
+
     },
     "Unload %@" : {
       "localizations" : {
