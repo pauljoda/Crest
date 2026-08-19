@@ -1,7 +1,7 @@
 import Foundation
 import WebKit
 
-/// Reports the link under the cursor to the app before WebKit builds its
+/// Reports the link and image under the cursor to the app before WebKit builds its
 /// web-content context menu.
 ///
 /// macOS has no `contextMenuConfigurationForElement` — that delegate callback
@@ -52,27 +52,32 @@ enum BrowserLinkContextContentBridge {
 
           let sequence = 0;
 
-          const post = (href) => {
+          const post = (href, imageURL) => {
             try {
               webkit.messageHandlers.crestLinkContext.postMessage({
-                version: 1,
+                version: 2,
                 token: ++sequence,
-                href
+                href,
+                imageURL
               });
             } catch (_) {}
           };
 
-          const linkFromEvent = (event) => {
+          const elementFromEvent = (event, selector) => {
             const path = typeof event.composedPath === "function"
               ? event.composedPath()
               : [];
-            const composedLink = path.find((node) =>
-              node instanceof Element && node.matches?.("a[href], area[href]")
+            const composedElement = path.find((node) =>
+              node instanceof Element && node.matches?.(selector)
             );
-            if (composedLink) return composedLink;
+            if (composedElement) return composedElement;
             return event.target instanceof Element
-              ? event.target.closest("a[href], area[href]")
+              ? event.target.closest(selector)
               : null;
+          };
+
+          const linkFromEvent = (event) => {
+            return elementFromEvent(event, "a[href], area[href]");
           };
 
           const destination = (event) => {
@@ -97,9 +102,33 @@ enum BrowserLinkContextContentBridge {
             return resolved.href;
           };
 
+          const imageDestination = (event) => {
+            const image = elementFromEvent(
+              event,
+              "img, input[type='image'], svg image"
+            );
+            if (!image) return null;
+            const raw = image.currentSrc
+              || (typeof image.src === "string" ? image.src : null)
+              || image.href?.baseVal
+              || image.getAttribute("href")
+              || image.getAttribute("src");
+            if (!raw) return null;
+            let resolved;
+            try {
+              resolved = new URL(raw, image.baseURI || document.baseURI);
+            } catch (_) {
+              return null;
+            }
+            if (!["http:", "https:", "blob:", "data:"].includes(resolved.protocol)) {
+              return null;
+            }
+            return resolved.href.length <= 4096 ? resolved.href : null;
+          };
+
           globalThis.addEventListener("contextmenu", (event) => {
             if (!event.isTrusted) return;
-            post(destination(event));
+            post(destination(event), imageDestination(event));
           }, { capture: true, passive: true });
         })();
         """#

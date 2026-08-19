@@ -6,16 +6,23 @@ import Foundation
 /// right-click is still being handled, so every answer here is synchronous.
 @MainActor
 protocol BrowserDesktopWebViewMenuHost: AnyObject {
-    /// The link the right-click that is opening this menu landed on, when
-    /// "Open Link in Split View" applies to it.
+    /// The content the right-click that is opening this menu landed on.
     ///
-    /// Consumes the capture: nil means "no link, or nowhere to put one", and
+    /// Consumes the capture: nil means no fresh page report arrived, and
     /// the same report is never handed to a second menu.
-    func takeSplitViewLinkDestination() -> URL?
+    func takeMenuContext() -> BrowserDesktopWebViewMenuContext?
 
     /// Opens `url` as a new card beside the tab this page presents.
     func openLinkInSplitView(_ url: URL)
 
+    /// Starts a person-requested image transfer in this page's WebKit context.
+    func downloadImage(from url: URL)
+
     /// Drops a capture the closing menu never used.
     func discardSplitViewLinkCapture()
+}
+
+struct BrowserDesktopWebViewMenuContext: Equatable, Sendable {
+    let splitViewLinkDestination: URL?
+    let imageDownloadURL: URL?
 }

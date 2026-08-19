@@ -194,9 +194,7 @@ struct MobileBrowserSidebar: View {
     private func toggleUtilitySwitcher() {
         guard mode == .regularSidebar else { return }
         utilityPresentation.toggleSwitcher(
-            preferredSurface: selectedNewDownloads.isEmpty
-                ? .archive
-                : .downloads
+            hasNewDownloads: !selectedNewDownloads.isEmpty
         )
     }
 

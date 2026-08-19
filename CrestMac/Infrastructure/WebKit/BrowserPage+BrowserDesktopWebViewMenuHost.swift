@@ -8,12 +8,21 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
     /// the final say on whether the item appears at all: a pinned tab, a Start
     /// Page, and a group already at capacity each leave it out rather than
     /// showing a row that could not do anything.
-    func takeSplitViewLinkDestination() -> URL? {
-        guard let destination = linkContextCapture.takeLink(),
+    func takeMenuContext() -> BrowserDesktopWebViewMenuContext? {
+        guard let captured = linkContextCapture.take() else { return nil }
+        let splitViewDestination: URL?
+        if let destination = captured.linkURL,
             let context = navigationContext,
             splitLinkHost.canOpenLink(context.tabID, context.assignment)
-        else { return nil }
-        return destination
+        {
+            splitViewDestination = destination
+        } else {
+            splitViewDestination = nil
+        }
+        return BrowserDesktopWebViewMenuContext(
+            splitViewLinkDestination: splitViewDestination,
+            imageDownloadURL: captured.imageURL
+        )
     }
 
     func openLinkInSplitView(_ url: URL) {
@@ -21,6 +30,26 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
             BrowserExternalURLPolicy.accepts(url)
         else { return }
         splitLinkHost.openLink(url, context.tabID, context.assignment)
+    }
+
+    func downloadImage(from url: URL) {
+        let request = URLRequest(url: url)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let download = await webView.startDownload(using: request)
+            guard !Task.isCancelled else {
+                _ = await download.cancel()
+                return
+            }
+            downloadCenter.start(
+                download,
+                in: webView,
+                profileID: profileID,
+                spaceID: spaceID,
+                spaceName: spaceName,
+                isUserInitiated: true
+            )
+        }
     }
 
     func discardSplitViewLinkCapture() {

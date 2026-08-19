@@ -6,7 +6,7 @@ import SwiftUI
 final class BrowserChromeState {
     var columnVisibility: NavigationSplitViewVisibility
     private(set) var commandPaletteMode: BrowserCommandPaletteMode?
-    let utilityPresentation = BrowserUtilityPresentationState()
+    let utilityPresentation: BrowserUtilityPresentationState
     private(set) var addressFocusRequest = 0
     private(set) var urlCopyFeedbackRevision = 0
     private(set) var pageZoomFeedbackLabel = "100%"
@@ -16,8 +16,13 @@ final class BrowserChromeState {
         commandPaletteMode != nil
     }
 
-    init(sidebarIsPresented: Bool = true) {
+    init(
+        sidebarIsPresented: Bool = true,
+        utilityPresentation: BrowserUtilityPresentationState =
+            BrowserUtilityPresentationState()
+    ) {
         columnVisibility = sidebarIsPresented ? .all : .detailOnly
+        self.utilityPresentation = utilityPresentation
     }
 
     func hideSidebar() {
