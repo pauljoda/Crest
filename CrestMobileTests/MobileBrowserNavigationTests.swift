@@ -261,10 +261,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertFalse(navigation.compactToolbarIsHidden)
     }
 
-    /// The remaining caller of `prepareForSpaceSwitch()` is the lock transition,
-    /// not the toolbar swipe: as of 0.4 that swipe pages Split View cards and the
-    /// page surface stays exactly where it is. What this still gates is that
-    /// anything which *does* leave a rendered Space puts the page away first.
+    /// Toolbar swipes page Split View cards instead. A transition which really
+    /// leaves the rendered Space still puts the page away first.
     func testLeavingARenderedSpaceDismissesThePageBeforeTheSwitch() {
         let navigation = MobileBrowserNavigationState()
         navigation.adapt(to: .compact)
@@ -276,6 +274,75 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         XCTAssertFalse(navigation.compactShowsPage)
         XCTAssertFalse(navigation.compactToolbarIsHidden)
+    }
+
+    func testLockKeepsTheFloatingPhoneSidebarOverThePage() {
+        let navigation = MobileBrowserNavigationState()
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.completePagePresentation()
+        navigation.toggleCompactSidebar()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+        XCTAssertTrue(navigation.compactShowsPage)
+
+        navigation.prepareForLockedSpace()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+        XCTAssertTrue(navigation.compactShowsPage)
+        XCTAssertEqual(
+            navigation.finishLockedSpaceTransition(),
+            .selectedPage
+        )
+    }
+
+    func testLockRevealsACollapsedFloatingPhoneSidebar() {
+        let navigation = MobileBrowserNavigationState()
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.completePagePresentation()
+        navigation.toggleCompactSidebar()
+        navigation.hideRegularSidebar()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
+
+        navigation.prepareForLockedSpace()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+        XCTAssertTrue(navigation.compactShowsPage)
+    }
+
+    func testLockKeepsTheDockedPhoneInItsFullscreenTabViewer() {
+        let navigation = MobileBrowserNavigationState()
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.completePagePresentation()
+
+        navigation.prepareForLockedSpace()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .docked)
+        XCTAssertFalse(navigation.compactShowsPage)
+        XCTAssertEqual(
+            navigation.finishLockedSpaceTransition(),
+            .tabViewer
+        )
+    }
+
+    func testLockedFloatingSidebarDoesNotAutoDismiss() async throws {
+        let navigation = MobileBrowserNavigationState(
+            transientSidebarDismissalDelay: .milliseconds(10)
+        )
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.completePagePresentation()
+        navigation.toggleCompactSidebar()
+        navigation.prepareForLockedSpace()
+        navigation.handleRegularSidebarInteraction()
+
+        try await Task.sleep(for: .milliseconds(30))
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+        XCTAssertTrue(navigation.compactShowsPage)
     }
 
     func testDeactivatingMobilePagePresentationRetainsButStopsPresentingItsPage() throws {
@@ -422,16 +489,25 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertFalse(BrowserSpaceAccessPresentation.contentOverlay.showsSpaceMenu)
     }
 
-    func testCompactLeavingLockedSpaceStaysInTheTabViewer() {
+    func testLockedSpaceExitPreservesDockedAndFloatingSidebarModes() {
         XCTAssertEqual(
             MobileBrowserSpaceSwitchPolicy.destinationAfterLeavingLockedSpace(
-                in: .compact
+                in: .compact,
+                sidebarPresentation: .docked
             ),
             .tabViewer
         )
         XCTAssertEqual(
             MobileBrowserSpaceSwitchPolicy.destinationAfterLeavingLockedSpace(
-                in: .regular
+                in: .compact,
+                sidebarPresentation: .floating
+            ),
+            .selectedPage
+        )
+        XCTAssertEqual(
+            MobileBrowserSpaceSwitchPolicy.destinationAfterLeavingLockedSpace(
+                in: .regular,
+                sidebarPresentation: .docked
             ),
             .selectedPage
         )

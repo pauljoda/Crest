@@ -316,15 +316,13 @@ extension MobileBrowserRootModel {
         to current: MobileBrowserRootLockSnapshot
     ) {
         if current.isLocked {
-            navigation.prepareForSpaceSwitch()
+            navigation.prepareForLockedSpace()
             pages.deactivatePagePresentation()
             address = ""
             return
         }
         guard previous.isLocked, hasPreparedBrowser else { return }
-        switch MobileBrowserSpaceSwitchPolicy.destinationAfterLeavingLockedSpace(
-            in: current.presentation
-        ) {
+        switch navigation.finishLockedSpaceTransition() {
         case .tabViewer:
             navigation.prepareForSpaceSwitch()
             pages.deactivatePagePresentation()
