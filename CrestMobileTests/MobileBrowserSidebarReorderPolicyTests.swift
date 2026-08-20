@@ -90,6 +90,72 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         XCTAssertNil(fixture.state.resolvedTarget)
     }
 
+    /// The Space strip has to hold still for the whole of a touch lift, and a
+    /// touch lift is the one kind neither drag state ever hears about.
+    ///
+    /// `BrowserSpacePager` locked on `tabDragState`/`folderDragState`, which the
+    /// compact `.onDrag` path never populates — it stages straight into the
+    /// reorder state. So the pager stayed scrollable under every finger drag,
+    /// and carrying a row to the edge paged to another Space mid-lift: a move no
+    /// lifted tab can make, and one that swaps the rows its drop was aimed at.
+    ///
+    /// Staging has to count, not just promotion. The stretch between the two is
+    /// exactly when the finger is still travelling toward the edge.
+    func testTheSpaceStripLocksFromTheMomentALiftIsStaged() {
+        let fixture = ReorderStagingFixture()
+
+        XCTAssertFalse(fixture.state.hasLiftInFlight)
+        XCTAssertFalse(lockedPager(fixture.state))
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        XCTAssertTrue(
+            lockedPager(fixture.state),
+            "A staged lift must already own the horizontal axis."
+        )
+
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+        XCTAssertTrue(lockedPager(fixture.state), "And still while it moves.")
+
+        _ = fixture.state.end()
+        XCTAssertFalse(
+            lockedPager(fixture.state),
+            "The strip pages again once the drop has landed."
+        )
+    }
+
+    /// The lock reads three sources and any one of them is enough. The sidebar
+    /// lift is the one that was missing.
+    func testAnyLiftInFlightLocksTheSpaceStrip() {
+        let matrix: [(sidebar: Bool, tab: Bool, folder: Bool, locked: Bool)] = [
+            (sidebar: false, tab: false, folder: false, locked: false),
+            (sidebar: true, tab: false, folder: false, locked: true),
+            (sidebar: false, tab: true, folder: false, locked: true),
+            (sidebar: false, tab: false, folder: true, locked: true),
+        ]
+
+        for entry in matrix {
+            XCTAssertEqual(
+                BrowserSpacePagerPolicy.isInteractionLocked(
+                    hasSidebarLift: entry.sidebar,
+                    hasTabDrag: entry.tab,
+                    hasFolderDrag: entry.folder
+                ),
+                entry.locked,
+                "sidebar: \(entry.sidebar), tab: \(entry.tab), "
+                    + "folder: \(entry.folder)"
+            )
+        }
+    }
+
+    /// What the pager itself computes, from the one state a touch lift touches.
+    private func lockedPager(_ state: BrowserSidebarReorderState) -> Bool {
+        BrowserSpacePagerPolicy.isInteractionLocked(
+            hasSidebarLift: state.hasLiftInFlight,
+            hasTabDrag: false,
+            hasFolderDrag: false
+        )
+    }
+
     /// A menu that opens over a staged lift has to clear the stage.
     ///
     /// Staging happens in `.onDrag`'s provider, which UIKit calls while it is

@@ -28,8 +28,19 @@ struct BrowserSidebarSpacePager<Page: View>: View {
 
     /// A drag in flight owns the horizontal axis: paging under it would move
     /// the rows the drop is aimed at.
+    ///
+    /// The reorder state counts first, and used not to. The two drag states
+    /// answer for the pointer path, which is the only lift macOS had when this
+    /// lock was written; a touch lift runs entirely through the reorder state
+    /// and leaves both of them nil, so the pager stayed live under it. Dragging
+    /// a row to the edge of a touch shell then paged the strip and changed
+    /// Space mid-lift — a move no lifted tab can make, and one that swaps the
+    /// rows its drop was aimed at for another Space's.
     private var isInteractionLocked: Bool {
-        context.browser.tabDragState.item != nil
-            || context.browser.folderDragState.item != nil
+        BrowserSpacePagerPolicy.isInteractionLocked(
+            hasSidebarLift: context.browser.sidebarReorderState.hasLiftInFlight,
+            hasTabDrag: context.browser.tabDragState.item != nil,
+            hasFolderDrag: context.browser.folderDragState.item != nil
+        )
     }
 }

@@ -103,7 +103,15 @@ final class BrowserSidebarReorderState {
     /// row while nothing is in flight yet, and a press released without pulling
     /// never produces a session, so nothing would ever clear it. The stage is
     /// inert until the drop delegate reports a real position.
-    @ObservationIgnored
+    ///
+    /// Observed, unlike the rest of the staging bookkeeping, because the Space
+    /// pager has to stop paging from the moment the drag begins rather than
+    /// from the moment it resolves. Waiting for promotion is too late: the strip
+    /// is live for the whole first stretch of the drag, and reaching its edge
+    /// there pages to another Space mid-lift. Nothing else reads the stage, so
+    /// what this costs is one re-evaluation of the pager's `scrollDisabled` per
+    /// drag — a property change on an ancestor scroll view, not a rebuild of the
+    /// row the drag interaction is carrying.
     private var stagedLift: (item: BrowserSidebarReorderItem, section: BrowserSidebarReorderSection)?
 
     /// True for a moment after a lift, so the row that was just dragged does not
@@ -132,6 +140,17 @@ final class BrowserSidebarReorderState {
     @ObservationIgnored private var activationSuppressionTask: Task<Void, Never>?
 
     var isDragging: Bool { lift != nil }
+
+    /// Whether this state is carrying a lift at all — one the system drag has
+    /// staged and not yet promoted, or one already moving.
+    ///
+    /// Broader than `isDragging` on purpose. `isDragging` answers "is a row out
+    /// of its slot", which is what displacement and the drop indicator want.
+    /// This answers "is a drag under way", which is what anything that has to
+    /// hold still for the length of one wants — the Space pager above all, since
+    /// the stretch between staging and promotion is exactly when a finger is
+    /// still travelling toward the edge.
+    var hasLiftInFlight: Bool { lift != nil || stagedLift != nil }
 
     func isLifted(_ id: BrowserSidebarReorderItemID) -> Bool {
         lift?.item.id == id
