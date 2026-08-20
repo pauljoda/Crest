@@ -87,13 +87,20 @@ struct MobileBrowserSidebarSurface: View {
     /// What this shell can do: a finger is the primary input, a trackpad may
     /// still be attached, the sections draw their drop feedback on the rows, and
     /// only the placement that pushes a page has a transition to zoom with.
+    ///
+    /// Nothing here grows out of a row through a matched-geometry pairing. The
+    /// placement that pushes a page joins the row through the system's zoom
+    /// instead; the two that keep the page on screen the whole time join nothing
+    /// at all. Saying so is what keeps a partnerless anchor off the view the
+    /// reorder lift is dragged from.
     private var capabilities: BrowserInteractionCapabilities {
         BrowserInteractionCapabilities(
             supportsHover: true,
             supportsTouch: true,
             showsRowDropIndicators: true,
             reservesReorderSectionZones: true,
-            usesNativeNavigationTransition: usesNativeNavigationTransition
+            usesNativeNavigationTransition: usesNativeNavigationTransition,
+            pairsRowWithPromotedSurface: false
         )
     }
 

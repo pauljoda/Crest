@@ -150,17 +150,28 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .scrollingSegments : .compactStrip
     }
 
-    /// Whether a row anchors the page it opens with a matched-geometry
-    /// destination.
+    /// Whether a row anchors the surface that grows out of it with a
+    /// matched-geometry destination.
     ///
-    /// A shell that drives the system's navigation zoom registers the row as
-    /// that transition's source instead, under the same identity. Two anchors
-    /// on one identity are two answers to the same question, so the shell that
-    /// has the native transition is the one that skips the geometry pairing.
+    /// Two things have to be true, and neither implies the other. There must be
+    /// a pairing to join at all — `pairsRowWithPromotedSurface` — and the shell
+    /// must not already be joining it through the system's navigation zoom,
+    /// which registers the row as that transition's source under the same
+    /// identity. Two anchors on one identity are two answers to the same
+    /// question.
+    ///
+    /// Reading this as "anything but the native zoom" is what broke the compact
+    /// shell's reorder lift: its floating and regular placements have no pairing
+    /// *and* no native zoom, so every row was handed a partnerless geometry
+    /// anchor — a presentation transform sitting over the view
+    /// `BrowserPlatformTabDragSourceModifier` hands to the system drag
+    /// interaction. The tab viewer, which does use the native zoom, kept
+    /// lifting; those two placements stopped.
     static func usesMatchedGeometryPromotionDestination(
         _ capabilities: BrowserInteractionCapabilities
     ) -> Bool {
-        !capabilities.usesNativeNavigationTransition
+        capabilities.pairsRowWithPromotedSurface
+            && !capabilities.usesNativeNavigationTransition
     }
 
     /// The height a tab row may not fall below.

@@ -5,6 +5,175 @@ import XCTest
 
 @MainActor
 final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
+    /// The compact shell's lift is staged by `.onDrag` and promoted by the first
+    /// position the drop delegate reports — the three-piece contract iOS needs
+    /// because `UIContextMenuInteraction` cancels any gesture that competes with
+    /// it, so drag-and-drop is the only arbiter that can arm a lift on a row
+    /// that also carries a menu.
+    ///
+    /// A stage that never promotes is the exact shape of a row that cannot be
+    /// picked up: the provider runs, the row wiggles, and nothing lifts. Nothing
+    /// covered the promote step before this.
+    func testStagedLiftIsInertUntilTheFirstReportedPositionPromotesIt() {
+        let fixture = ReorderStagingFixture()
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+
+        XCTAssertFalse(
+            fixture.state.isDragging,
+            "Staging runs at the press, before any drag exists. Lifting there "
+                + "hides a row while nothing is in flight."
+        )
+        XCTAssertFalse(fixture.state.isLifted(fixture.item.id))
+        XCTAssertNil(fixture.state.resolvedTarget)
+
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+
+        XCTAssertTrue(
+            fixture.state.isLifted(fixture.item.id),
+            "The first position the drop delegate reports is the proof the "
+                + "system drag is genuinely in flight, and must promote the "
+                + "staged lift."
+        )
+        XCTAssertEqual(fixture.state.lift?.item, fixture.item)
+        XCTAssertEqual(fixture.state.lift?.section, fixture.section)
+        XCTAssertEqual(
+            fixture.state.lift?.rowSize,
+            fixture.draggedFrame.size,
+            "Promotion must adopt the frame the row registered, or the gap it "
+                + "leaves behind has no size."
+        )
+        XCTAssertEqual(
+            fixture.state.resolvedTarget?.section,
+            fixture.section,
+            "A promoted lift resolves a target from the same sample."
+        )
+    }
+
+    /// The commit path only exists on the far side of promotion: a drop that
+    /// lands while the lift is still staged has no item and no target to move.
+    func testPromotedLiftIsWhatMakesADropCommittable() {
+        let fixture = ReorderStagingFixture()
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        XCTAssertNil(
+            fixture.state.end(),
+            "A stage that never saw a position has nothing to commit."
+        )
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+
+        let drop = fixture.state.end()
+        XCTAssertEqual(drop?.item, fixture.item)
+        XCTAssertEqual(drop?.target.section, fixture.section)
+        XCTAssertFalse(
+            fixture.state.isDragging,
+            "Ending the drop clears the lift."
+        )
+    }
+
+    /// A drag session that ends without ever reaching the sidebar is cleared by
+    /// `BrowserMobileReorderSessionModifier`. The stage has to go with it, or a
+    /// later unrelated sample would resurrect a lift nobody asked for.
+    func testCancelClearsTheStageSoALaterSampleCannotResurrectIt() {
+        let fixture = ReorderStagingFixture()
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        fixture.state.cancel()
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+
+        XCTAssertFalse(
+            fixture.state.isDragging,
+            "A cancelled session leaves no stage behind to promote."
+        )
+        XCTAssertNil(fixture.state.resolvedTarget)
+    }
+
+    /// The compact shell puts the sidebar on screen three ways, and only one of
+    /// them pushes a page with the system's navigation zoom. None of the three
+    /// grows a surface out of a row through matched geometry, so the anchor a row
+    /// claims must come out the same for every placement.
+    ///
+    /// This is the regression: while the answer flipped with the placement, the
+    /// two placements without the native zoom handed every row a partnerless
+    /// matched-geometry anchor — a presentation transform over the very view
+    /// `.onDrag` lifts — and rows there could not be picked up at all, while the
+    /// tab viewer kept lifting. The reorder machinery was never involved.
+    func testNoCompactPlacementAnchorsARowWithMatchedGeometry() {
+        for usesNativeNavigationTransition in [true, false] {
+            let capabilities = BrowserInteractionCapabilities(
+                supportsHover: true,
+                supportsTouch: true,
+                showsRowDropIndicators: true,
+                reservesReorderSectionZones: true,
+                usesNativeNavigationTransition: usesNativeNavigationTransition,
+                pairsRowWithPromotedSurface: false
+            )
+
+            XCTAssertFalse(
+                BrowserSidebarInteractionPolicy
+                    .usesMatchedGeometryPromotionDestination(capabilities),
+                "native zoom: \(usesNativeNavigationTransition)"
+            )
+        }
+    }
+
+    /// Everything one staged lift needs: a measured row to lift, a neighbour to
+    /// aim at, and the section zone that answers for both.
+    @MainActor
+    private struct ReorderStagingFixture {
+        let state: BrowserSidebarReorderState
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let item: BrowserSidebarReorderItem
+        let draggedFrame = CGRect(x: 8, y: 110, width: 374, height: 44)
+        let neighbourFrame = CGRect(x: 8, y: 154, width: 374, height: 44)
+
+        var pointerOverNeighbour: CGPoint {
+            CGPoint(x: neighbourFrame.midX, y: neighbourFrame.midY)
+        }
+
+        init() {
+            state = BrowserSidebarReorderState()
+            let spaceID = SpaceID()
+            let profileID = UUID()
+            item = .tab(
+                BrowserTabDragItem(
+                    tabID: TabID(),
+                    spaceID: spaceID,
+                    profileID: profileID
+                )
+            )
+            state.register(
+                row: BrowserSidebarReorderRow(
+                    id: item.id,
+                    section: section,
+                    frame: draggedFrame
+                ),
+                owner: UUID()
+            )
+            state.register(
+                row: BrowserSidebarReorderRow(
+                    id: .tab(TabID()),
+                    section: section,
+                    frame: neighbourFrame
+                ),
+                owner: UUID()
+            )
+            state.register(
+                zone: BrowserSidebarReorderZone(
+                    target: .section(section),
+                    frame: draggedFrame.union(neighbourFrame)
+                        .insetBy(dx: -8, dy: -10)
+                ),
+                for: UUID()
+            )
+        }
+    }
+
     func testSplitGroupLiftClosesItsWholeMixedHeightSlot() {
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,

@@ -470,6 +470,47 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    /// Not having the native zoom is not the same as having a pairing. A shell
+    /// can have neither, and the whole matrix has to say so — reading the rule
+    /// as "anything but the native zoom" handed a partnerless matched-geometry
+    /// anchor to every row on the compact shell's floating and regular
+    /// placements, which is the view the system drag interaction lifts, and the
+    /// reorder lift stopped starting there while the tab viewer kept working.
+    func testARowAnchorsNothingWhereNoSurfaceGrowsOutOfIt() {
+        let matrix: [(pairs: Bool, native: Bool, anchorsWithGeometry: Bool)] = [
+            (pairs: true, native: false, anchorsWithGeometry: true),
+            (pairs: true, native: true, anchorsWithGeometry: false),
+            (pairs: false, native: false, anchorsWithGeometry: false),
+            (pairs: false, native: true, anchorsWithGeometry: false),
+        ]
+
+        for entry in matrix {
+            XCTAssertEqual(
+                BrowserSidebarInteractionPolicy
+                    .usesMatchedGeometryPromotionDestination(
+                        BrowserInteractionCapabilities(
+                            usesNativeNavigationTransition: entry.native,
+                            pairsRowWithPromotedSurface: entry.pairs
+                        )
+                    ),
+                entry.anchorsWithGeometry,
+                "pairs: \(entry.pairs), native zoom: \(entry.native)"
+            )
+        }
+    }
+
+    /// The windowed shell's own answer, spelled out rather than inherited: its
+    /// start page's palette rises out of the row that opened it, so its rows do
+    /// carry the matched-geometry end of that pairing.
+    func testTheWindowedShellStillPairsItsRowsWithTheSurfaceTheyGrow() {
+        XCTAssertTrue(BrowserInteractionCapabilities().pairsRowWithPromotedSurface)
+        XCTAssertTrue(
+            BrowserSidebarInteractionPolicy.usesMatchedGeometryPromotionDestination(
+                BrowserInteractionCapabilities()
+            )
+        )
+    }
+
     /// A trackpad beside a touchscreen must not shrink the target back down.
     func testAddingHoverToATouchShellKeepsTheTouchControl() {
         XCTAssertEqual(

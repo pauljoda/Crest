@@ -30,4 +30,18 @@ struct BrowserInteractionCapabilities: Equatable, Sendable {
     /// navigation transition. Per shell rather than per platform: a shell that
     /// never pushes a page has nothing to zoom into.
     var usesNativeNavigationTransition = false
+
+    /// Whether a surface in this shell grows out of a sidebar row through a
+    /// matched-geometry pairing — the windowed shell's start page, whose command
+    /// palette rises out of the row that opened it and registers the source end
+    /// of the pairing.
+    ///
+    /// Not the same question as the native zoom, and not its negation. A shell
+    /// can have neither: the compact shell pairs its pushed page with the row
+    /// through the system transition, and its other placements keep the page on
+    /// screen the whole time and pair nothing at all. Where nothing pairs, the
+    /// row must claim no anchor — an anchor is a presentation transform over the
+    /// very view the system drag interaction lifts, and one with no partner can
+    /// only cost.
+    var pairsRowWithPromotedSurface = true
 }
