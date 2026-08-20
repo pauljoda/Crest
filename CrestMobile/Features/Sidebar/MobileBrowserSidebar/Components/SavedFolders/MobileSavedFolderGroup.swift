@@ -88,16 +88,15 @@ struct MobileSavedFolderGroup: View {
                     switch item {
                     case .tab(let tab):
                         let followingTabID = followingTabIDs[tab.id]
-                        MobileSidebarTabRow(
+                        BrowserSidebarTabRow(
                             tab: tab,
-                            followingTabID: followingTabID,
-                            hasVisibleFollowingRow: followingTabID != nil,
                             spaceID: spaceID,
                             profileID: profileID,
                             isSelected: tab.id == selectedTabID,
                             canClose: false,
                             browser: browser,
                             spaceAccess: spaceAccess,
+                            capabilities: capabilities,
                             isLoaded: pages.containsResidentPage(for: tab.id),
                             unload: { tabID in
                                 pages.unloadPage(for: tabID, matching: assignment)
@@ -105,7 +104,8 @@ struct MobileSavedFolderGroup: View {
                             pullNewIcon: { pullNewIcon(tab.id) },
                             restoreSavedLocation: { restoreSavedLocation(tab.id) },
                             promotionNamespace: promotionNamespace,
-                            usesNativeNavigationTransition: usesNativeNavigationTransition,
+                            followingTabID: followingTabID,
+                            hasVisibleFollowingRow: followingTabID != nil,
                             select: selectTab
                         )
                         .padding(.leading, nestingInset)
@@ -135,22 +135,22 @@ struct MobileSavedFolderGroup: View {
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             } else if let keptTab = keptCollapsedTab {
-                MobileSidebarTabRow(
+                BrowserSidebarTabRow(
                     tab: keptTab,
-                    followingTabID: followingTabIDs[keptTab.id],
-                    hasVisibleFollowingRow: false,
                     spaceID: spaceID,
                     profileID: profileID,
                     isSelected: keptTab.id == selectedTabID,
                     canClose: false,
                     browser: browser,
                     spaceAccess: spaceAccess,
+                    capabilities: capabilities,
                     isLoaded: true,
                     unload: unloadKeptCollapsedTab,
                     pullNewIcon: { pullNewIcon(keptTab.id) },
                     restoreSavedLocation: { restoreSavedLocation(keptTab.id) },
                     promotionNamespace: promotionNamespace,
-                    usesNativeNavigationTransition: usesNativeNavigationTransition,
+                    followingTabID: followingTabIDs[keptTab.id],
+                    hasVisibleFollowingRow: false,
                     select: selectTab
                 )
                 .padding(.leading, nestingInset)
@@ -281,6 +281,19 @@ struct MobileSavedFolderGroup: View {
             folderID: childID,
             spaceID: assignment.spaceID,
             profileID: assignment.profileID
+        )
+    }
+
+    /// What this shell can do, until the shell itself hands it down: a finger
+    /// is the primary input, a trackpad may still be attached, and the group
+    /// draws its drop feedback on the rows.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities(
+            supportsHover: true,
+            supportsTouch: true,
+            showsRowDropIndicators: true,
+            reservesReorderSectionZones: true,
+            usesNativeNavigationTransition: usesNativeNavigationTransition
         )
     }
 

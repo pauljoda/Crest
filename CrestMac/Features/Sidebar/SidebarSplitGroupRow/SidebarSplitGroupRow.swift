@@ -4,7 +4,7 @@ import SwiftUI
 /// affordance and one ordinary tab row per member.
 ///
 /// The members are not a compact imitation of a tab row — they are
-/// `SidebarTabRow`, the same view the rest of the list draws, so a split reads
+/// `BrowserSidebarTabRow`, the same view the rest of the list draws, so a split reads
 /// as tabs that have been gathered rather than as a widget that replaced them.
 /// The container carries what belongs to the group — presented, dragged, and
 /// the two ways a split ends — and each row carries what belongs to its own

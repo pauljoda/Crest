@@ -50,6 +50,8 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(metrics.glyphSize, 12)
         XCTAssertEqual(metrics.glyphWeight, .regular)
         XCTAssertFalse(metrics.isAlwaysVisible)
+        XCTAssertEqual(metrics.restingCloseOpacity, 1)
+        XCTAssertTrue(metrics.usesChromeControlStyle)
     }
 
     /// Pins the numbers the compact sidebar rows draw today. They are literals
@@ -64,6 +66,112 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(metrics.glyphSize, 14)
         XCTAssertEqual(metrics.glyphWeight, .medium)
         XCTAssertTrue(metrics.isAlwaysVisible)
+        XCTAssertEqual(metrics.restingCloseOpacity, 0.65)
+        XCTAssertFalse(metrics.usesChromeControlStyle)
+    }
+
+    // MARK: - Revealing and dimming the trailing control
+
+    /// A pointer row hides its control at rest and shows it once the row can
+    /// say something about itself: the pointer is over it, or it is the
+    /// selected row. A touch row cannot hide anything, so every combination
+    /// answers the same way.
+    func testRevealMatrixFollowsTheShellRatherThanTheRow() {
+        let pointer = BrowserTabTrailingControlMetrics.pointer
+        XCTAssertFalse(pointer.isRevealed(isHovering: false, isSelected: false))
+        XCTAssertTrue(pointer.isRevealed(isHovering: true, isSelected: false))
+        XCTAssertTrue(pointer.isRevealed(isHovering: false, isSelected: true))
+
+        let touch = BrowserTabTrailingControlMetrics.touch
+        XCTAssertTrue(touch.isRevealed(isHovering: false, isSelected: false))
+        XCTAssertTrue(touch.isRevealed(isHovering: true, isSelected: false))
+        XCTAssertTrue(touch.isRevealed(isHovering: false, isSelected: true))
+    }
+
+    /// The exact opacities each shell draws a revealed close control at. A
+    /// pointer control has already been asked for by the time it appears, so
+    /// it never rests dim; a touch control is on every row at once and holds
+    /// the unselected ones back.
+    func testOnlyAnAlwaysVisibleCloseControlDimsOnAnUnselectedRow() {
+        XCTAssertEqual(
+            BrowserTabTrailingControlMetrics.pointer.closeOpacity(isSelected: false),
+            1
+        )
+        XCTAssertEqual(
+            BrowserTabTrailingControlMetrics.pointer.closeOpacity(isSelected: true),
+            1
+        )
+        XCTAssertEqual(
+            BrowserTabTrailingControlMetrics.touch.closeOpacity(isSelected: false),
+            0.65
+        )
+        XCTAssertEqual(
+            BrowserTabTrailingControlMetrics.touch.closeOpacity(isSelected: true),
+            1
+        )
+    }
+
+    // MARK: - Row layout
+
+    /// Pins the geometry each shell's rows draw today, so a change to either
+    /// profile fails here rather than quietly shifting every title in the
+    /// sidebar by a couple of points.
+    func testRowLayoutFollowsTheLeastPreciseInputTheShellAccepts() {
+        let pointer = BrowserSidebarInteractionPolicy.tabRowMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.contentSpacing, 0)
+        XCTAssertEqual(pointer.contentLeadingInset, 9)
+        XCTAssertEqual(pointer.contentTrailingInset, 9)
+        XCTAssertEqual(pointer.surfaceHorizontalInset, 8)
+        XCTAssertNil(pointer.faviconSlot)
+        XCTAssertTrue(pointer.fillsRowHeight)
+
+        let touch = BrowserSidebarInteractionPolicy.tabRowMetrics(
+            capabilities(hover: false, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.contentSpacing, 4)
+        XCTAssertEqual(touch.contentLeadingInset, 12)
+        XCTAssertEqual(touch.contentTrailingInset, 4)
+        XCTAssertEqual(touch.surfaceHorizontalInset, 8)
+        XCTAssertEqual(
+            touch.faviconSlot,
+            BrowserSidebarTabFaviconSlot(width: 20, glyphSize: 17, glyphWeight: .medium)
+        )
+        XCTAssertFalse(touch.fillsRowHeight)
+    }
+
+    /// A trackpad beside a touchscreen must not tighten the row back down.
+    func testAddingHoverToATouchShellKeepsTheTouchRowLayout() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.tabRowMetrics(
+                capabilities(hover: true, touch: true)
+            ),
+            BrowserSidebarInteractionPolicy.tabRowMetrics(
+                capabilities(hover: false, touch: true)
+            )
+        )
+    }
+
+    // MARK: - Promotion anchoring
+
+    /// The two anchors are alternatives, not a pair: a shell that zooms the
+    /// page in with the system's own transition registers the row there, and
+    /// a matched-geometry destination under the same identity would be a
+    /// second answer to the same question.
+    func testOnlyAShellWithoutTheNativeZoomAnchorsWithMatchedGeometry() {
+        XCTAssertTrue(
+            BrowserSidebarInteractionPolicy.usesMatchedGeometryPromotionDestination(
+                BrowserInteractionCapabilities()
+            )
+        )
+        XCTAssertFalse(
+            BrowserSidebarInteractionPolicy.usesMatchedGeometryPromotionDestination(
+                BrowserInteractionCapabilities(usesNativeNavigationTransition: true)
+            )
+        )
     }
 
     /// A trackpad beside a touchscreen must not shrink the target back down.

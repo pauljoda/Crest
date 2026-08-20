@@ -14,11 +14,12 @@ struct MobileSidebarSplitGroupMemberLine: View {
 
     var body: some View {
         HStack(spacing: MobileSidebarSplitGroupRowMetrics.memberContentSpacing) {
-            MobileSidebarTabActivationButton(
+            BrowserSidebarTabActivationButton(
                 tab: member,
                 profileID: configuration.profileID,
                 isSelected: configuration.isFocused(member),
                 isLoaded: configuration.isLoaded(member.id),
+                metrics: .touch,
                 restoreSavedLocation: nil,
                 select: { configuration.activate(member) }
             )

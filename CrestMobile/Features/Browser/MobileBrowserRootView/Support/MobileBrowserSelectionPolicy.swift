@@ -50,9 +50,10 @@ enum MobileTabPromotionPolicy {
         _ tab: BrowserTab,
         selectedTabID: TabID?
     ) -> Bool {
-        tab.id == selectedTabID
-            && !tab.isStartPage
-            && supports(tab.placement)
+        BrowserTabPromotionSourcePolicy.isPromotionSource(
+            tab,
+            isSelected: tab.id == selectedTabID
+        ) && supports(tab.placement)
     }
 
     static func target(

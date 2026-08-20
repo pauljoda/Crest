@@ -7,7 +7,7 @@ struct SavedFolderTabRow: View {
     let unload: (TabID) -> Void
 
     var body: some View {
-        SidebarTabRow(
+        BrowserSidebarTabRow(
             tab: tab,
             spaceID: configuration.spaceID,
             profileID: configuration.profileID,
@@ -15,9 +15,7 @@ struct SavedFolderTabRow: View {
             canClose: false,
             browser: configuration.browser,
             spaceAccess: configuration.spaceAccess,
-            presentSelectedPage: {
-                configuration.pages.select(session: configuration.browser.session)
-            },
+            capabilities: BrowserInteractionCapabilities(),
             isLoaded: isLoaded,
             unload: unload,
             pullNewIcon: {
@@ -25,8 +23,21 @@ struct SavedFolderTabRow: View {
             },
             restoreSavedLocation: {
                 configuration.tabActions.restoreSavedLocation(for: tab.id)
-            }
+            },
+            select: activate
         )
         .padding(.leading, configuration.rowLeadingInset)
+    }
+
+    /// Selection and presentation in the one order that works: the page a
+    /// shell brings on screen is whichever one the session now points at.
+    private func activate(_ tabID: TabID) {
+        BrowserTabActivationPolicy.activate(
+            tabID,
+            selectTab: configuration.browser.selectTab,
+            presentPage: {
+                configuration.pages.select(session: configuration.browser.session)
+            }
+        )
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @MainActor
-enum SidebarTabRowPreviewFixture {
+enum BrowserSidebarTabRowPreviewFixture {
     static let spaceID = SpaceID(rawValue: uuid(0x71))
     static let profileID = uuid(0x72)
     static let tabID = TabID(rawValue: uuid(0x73))
@@ -9,8 +9,10 @@ enum SidebarTabRowPreviewFixture {
 
     static func configuration(
         placement: TabPlacement = .current,
+        capabilities: BrowserInteractionCapabilities =
+            BrowserInteractionCapabilities(),
         isSplitGroupMember: Bool = false
-    ) -> SidebarTabRowConfiguration {
+    ) -> BrowserSidebarTabRowConfiguration {
         let tab = BrowserTab(
             id: tabID,
             title: "Example",
@@ -41,7 +43,7 @@ enum SidebarTabRowPreviewFixture {
         let spaceAccess = BrowserSpaceAccessController(
             authenticator: BrowserPreviewAuthenticator(result: true)
         )
-        return SidebarTabRowConfiguration(
+        return BrowserSidebarTabRowConfiguration(
             tab: tab,
             spaceID: spaceID,
             profileID: profileID,
@@ -49,33 +51,40 @@ enum SidebarTabRowPreviewFixture {
             canClose: true,
             browser: browser,
             spaceAccess: spaceAccess,
-            presentSelectedPage: {},
+            capabilities: capabilities,
             isLoaded: true,
             unload: { _ in },
             pullNewIcon: {},
             restoreSavedLocation: {},
             promotionNamespace: nil,
-            isSplitGroupMember: isSplitGroupMember
+            isSplitGroupMember: isSplitGroupMember,
+            isReorderSource: !isSplitGroupMember,
+            followingTabID: nil,
+            hasVisibleFollowingRow: false,
+            select: { _ in }
         )
     }
 
     static func interaction(
         isHovering: Binding<Bool>,
         isDropTargeted: Binding<Bool>,
+        dropTargetHeight: Binding<CGFloat>,
         isRenaming: Bool = false,
         draftTitle: Binding<String>,
         isTitleFocused: FocusState<Bool>.Binding
-    ) -> SidebarTabRowInteractionContext {
-        SidebarTabRowInteractionContext(
+    ) -> BrowserSidebarTabRowInteractionContext {
+        BrowserSidebarTabRowInteractionContext(
             isHovering: isHovering,
             isDropTargeted: isDropTargeted,
+            dropTargetHeight: dropTargetHeight,
             isRenaming: isRenaming,
             draftTitle: draftTitle,
             isTitleFocused: isTitleFocused,
+            activate: {},
             beginRenaming: {},
             commitTitle: {},
             cancelTitleEditing: {},
-            dismissFromMiddleClick: {}
+            dismissFromAuxiliaryClick: {}
         )
     }
 

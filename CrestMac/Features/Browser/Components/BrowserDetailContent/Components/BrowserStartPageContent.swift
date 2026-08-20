@@ -27,7 +27,7 @@ struct BrowserStartPageContent: View {
                 selectTab: selectStartPageTab,
                 openURL: openStartPageURL,
                 promotionNamespace: tabPromotionNamespace,
-                promotionID: promotionID(for: tab.id),
+                promotionID: BrowserTabPromotionID.value(for: tab.id),
                 isCommandPaletteObscured: isCommandPalettePresented
             )
         } else {
@@ -78,9 +78,5 @@ struct BrowserStartPageContent: View {
             in: browser,
             accessController: spaceAccess
         )
-    }
-
-    private func promotionID(for tabID: TabID) -> String {
-        "crest-start-page-promotion-\(tabID)"
     }
 }

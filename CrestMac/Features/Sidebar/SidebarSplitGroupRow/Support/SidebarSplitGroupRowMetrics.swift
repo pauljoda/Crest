@@ -9,9 +9,10 @@ import CoreGraphics
 /// the slim strip above them that names the group.
 enum SidebarSplitGroupRowMetrics {
     /// The container's inset from the sidebar edge, matching the inset
-    /// `SidebarTabRow` gives its own surface so a group lines up in the same
-    /// column as the tabs above and below it.
-    static let rowHorizontalInset = SidebarTabRowMetrics.surfaceHorizontalInset
+    /// `BrowserSidebarTabRow` gives its own surface so a group lines up in the
+    /// same column as the tabs above and below it.
+    static let rowHorizontalInset =
+        BrowserSidebarTabRowMetrics.pointer.surfaceHorizontalInset
 
     /// Half the visible gutter between neighboring grouped surfaces. This
     /// mirrors the mobile row so two adjacent Split Views remain distinct.

@@ -51,16 +51,15 @@ struct MobileSavedTabsDropSection: View {
                 switch item {
                 case .tab(let tab):
                     let followingTabID = followingTabIDs[tab.id]
-                    MobileSidebarTabRow(
+                    BrowserSidebarTabRow(
                         tab: tab,
-                        followingTabID: followingTabID,
-                        hasVisibleFollowingRow: followingTabID != nil,
                         spaceID: space.id,
                         profileID: space.profile.id,
                         isSelected: tab.id == space.selectedTabID,
                         canClose: false,
                         browser: browser,
                         spaceAccess: spaceAccess,
+                        capabilities: capabilities,
                         isLoaded: pages.containsResidentPage(for: tab.id),
                         unload: { tabID in
                             pages.unloadPage(for: tabID, matching: assignment)
@@ -68,7 +67,8 @@ struct MobileSavedTabsDropSection: View {
                         pullNewIcon: { pullNewIcon(tab.id) },
                         restoreSavedLocation: { restoreSavedLocation(tab.id) },
                         promotionNamespace: tabPromotionNamespace,
-                        usesNativeNavigationTransition: usesNativeNavigationTransition,
+                        followingTabID: followingTabID,
+                        hasVisibleFollowingRow: followingTabID != nil,
                         select: selectTab
                     )
                     .id(tab.id)
@@ -169,6 +169,19 @@ struct MobileSavedTabsDropSection: View {
             to: .saved,
             before: tabID,
             matching: assignment
+        )
+    }
+
+    /// What this shell can do, until the shell itself hands it down: a finger
+    /// is the primary input, a trackpad may still be attached, and the section
+    /// draws its drop feedback on the rows.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities(
+            supportsHover: true,
+            supportsTouch: true,
+            showsRowDropIndicators: true,
+            reservesReorderSectionZones: true,
+            usesNativeNavigationTransition: usesNativeNavigationTransition
         )
     }
 

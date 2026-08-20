@@ -40,7 +40,7 @@ struct CurrentTabsDropSection: View {
                 ForEach(items) { item in
                     switch item {
                     case .tab(let tab):
-                        SidebarTabRow(
+                        BrowserSidebarTabRow(
                             tab: tab,
                             spaceID: space.id,
                             profileID: space.profile.id,
@@ -48,15 +48,14 @@ struct CurrentTabsDropSection: View {
                             canClose: true,
                             browser: browser,
                             spaceAccess: spaceAccess,
-                            presentSelectedPage: {
-                                pages.select(session: browser.session)
-                            },
+                            capabilities: capabilities,
                             isLoaded: pages.containsResidentPage(for: tab.id),
                             unload: { tabID in
                                 pages.unloadPage(for: tabID, matching: assignment)
                             },
                             pullNewIcon: { tabActions.pullNewIcon(for: tab.id) },
-                            promotionNamespace: tabPromotionNamespace
+                            promotionNamespace: tabPromotionNamespace,
+                            select: activate
                         )
                     case .splitGroup(let groupID, let members):
                         SidebarSplitGroupRow(
@@ -101,6 +100,20 @@ struct CurrentTabsDropSection: View {
             state: browser.sidebarReorderState
         )
         .accessibilityHint("Drop a tab here to make it a current tab")
+    }
+
+    /// Selection and presentation in the one order that works: the page a
+    /// shell brings on screen is whichever one the session now points at.
+    private func activate(_ tabID: TabID) {
+        BrowserTabActivationPolicy.activate(
+            tabID,
+            selectTab: browser.selectTab,
+            presentPage: { pages.select(session: browser.session) }
+        )
+    }
+
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
     }
 
     private var assignment: BrowserSpaceRuntimeAssignment {

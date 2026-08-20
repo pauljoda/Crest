@@ -32,6 +32,30 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// The layout a tab row draws itself with.
+    ///
+    /// Touch decides this for the same reason it decides the trailing control:
+    /// the insets, the favicon column, and the height behaviour all follow
+    /// from the least precise input the shell accepts.
+    static func tabRowMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSidebarTabRowMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
+    /// Whether a row anchors the page it opens with a matched-geometry
+    /// destination.
+    ///
+    /// A shell that drives the system's navigation zoom registers the row as
+    /// that transition's source instead, under the same identity. Two anchors
+    /// on one identity are two answers to the same question, so the shell that
+    /// has the native transition is the one that skips the geometry pairing.
+    static func usesMatchedGeometryPromotionDestination(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> Bool {
+        !capabilities.usesNativeNavigationTransition
+    }
+
     /// The height a tab row may not fall below.
     ///
     /// The accessibility bump is keyed on touch, not on the text size alone: a
@@ -80,6 +104,23 @@ struct BrowserTabTrailingControlMetrics: Equatable, Sendable {
     /// Whether the control stays on screen regardless of hover and selection.
     let isAlwaysVisible: Bool
 
+    /// The opacity a visible close control rests at on a row that is not
+    /// selected.
+    ///
+    /// A shell that hides the control until it is asked for has already made
+    /// the control deliberate by the time it is drawn, so it draws at full
+    /// strength. A shell that cannot hide it has an xmark on every row at all
+    /// times instead, and holding the unselected ones back is what keeps the
+    /// list reading as titles rather than as a column of close buttons.
+    let restingCloseOpacity: CGFloat
+
+    /// Whether the control wears the chrome's hover-and-press treatment.
+    ///
+    /// That treatment is a response to a pointer resting on the control, which
+    /// is exactly what a touch shell has no way to show; there the button is
+    /// drawn plain and the press is the system's own.
+    let usesChromeControlStyle: Bool
+
     /// A pointer shell: the chrome control size, a light glyph, and a control
     /// that waits for hover or selection before it appears.
     ///
@@ -93,7 +134,9 @@ struct BrowserTabTrailingControlMetrics: Equatable, Sendable {
         ),
         glyphSize: 12,
         glyphWeight: .regular,
-        isAlwaysVisible: false
+        isAlwaysVisible: false,
+        restingCloseOpacity: 1,
+        usesChromeControlStyle: true
     )
 
     /// A touch shell: a full 44pt target and a heavier glyph to read at that
@@ -102,6 +145,23 @@ struct BrowserTabTrailingControlMetrics: Equatable, Sendable {
         controlSize: CGSize(width: 44, height: 44),
         glyphSize: 14,
         glyphWeight: .medium,
-        isAlwaysVisible: true
+        isAlwaysVisible: true,
+        restingCloseOpacity: 0.65,
+        usesChromeControlStyle: false
     )
+
+    /// Whether the control is drawn at all, given what the row can tell the
+    /// reader about itself right now.
+    ///
+    /// Selection counts alongside hover because the selected row is the one a
+    /// reader is most likely to want to close, and it is the one row a pointer
+    /// shell can reveal the control on without a pointer being there.
+    func isRevealed(isHovering: Bool, isSelected: Bool) -> Bool {
+        isAlwaysVisible || isHovering || isSelected
+    }
+
+    /// The opacity a revealed close control draws at.
+    func closeOpacity(isSelected: Bool) -> CGFloat {
+        isSelected ? 1 : restingCloseOpacity
+    }
 }

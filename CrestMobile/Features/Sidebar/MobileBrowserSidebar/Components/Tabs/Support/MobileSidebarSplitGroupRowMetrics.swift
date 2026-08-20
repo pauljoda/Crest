@@ -41,8 +41,8 @@ enum MobileSidebarSplitGroupRowMetrics {
 
     static let memberContentSpacing: CGFloat = 4
 
-    /// The row's own inset from the sidebar edge, matching `MobileSidebarTabRow`
-    /// so groups and tabs line up in the same column.
+    /// The row's own inset from the sidebar edge, matching
+    /// `BrowserSidebarTabRow` so groups and tabs line up in the same column.
     static let rowHorizontalInset: CGFloat = 8
 
     /// Half the visible gutter between neighboring grouped surfaces. Keeping
