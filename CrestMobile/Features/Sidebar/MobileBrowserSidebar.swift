@@ -145,8 +145,8 @@ struct MobileBrowserSidebar: View {
         utilityCoordinator.actions
     }
 
-    private var utilityCoordinator: MobileBrowserSidebarUtilityCoordinator {
-        MobileBrowserSidebarUtilityCoordinator(
+    private var utilityCoordinator: BrowserSidebarUtilityCoordinator {
+        BrowserSidebarUtilityCoordinator(
             browser: browser,
             pages: pages,
             spaceAccess: spaceAccess,

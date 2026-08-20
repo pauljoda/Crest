@@ -3,9 +3,14 @@ import XCTest
 
 @testable import CrestMobile
 
+/// The compact shell's binding of the shared utility coordinator. The guards
+/// themselves belong to `BrowserSidebarUtilityCoordinatorTests`; what is tested
+/// here is only where this shell sends an action once a guard lets it through.
 @MainActor
 final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
-    func testExactSelectedAssignmentRestoresArchiveAndOpensHistory() throws {
+    /// The compact shell has one page, so history is routed through the shell
+    /// rather than opened as a second tab in place.
+    func testHistoryIsRoutedThroughTheShellInsteadOfOpeningATab() throws {
         let context = makeContext()
         var selectedTabs: [TabID] = []
         var openedURLs: [URL] = []
@@ -24,69 +29,48 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
         XCTAssertFalse(
             try XCTUnwrap(
                 context.browser.session.space(id: context.source.id)
-            ).archivedTabs.contains(where: { $0.id == context.archived.id })
+            ).tabs.contains(where: { $0.url == context.history.url })
         )
     }
 
-    func testCapturedActionsRejectSelectionProfileAndLockChanges() throws {
-        try assertActionsAreRejected { context in
-            context.browser.selectSpace(context.destination.id)
-        }
-        try assertActionsAreRejected { context in
-            self.replaceProfile(of: context.source, in: context.browser)
-        }
-        try assertActionsAreRejected(
-            context: makeContext(isProtected: true),
-            mutation: { _ in }
-        )
-    }
-
-    func testCapturedActionsRejectDeletingSpace() throws {
+    /// Finished files leave through the share sheet or the Files app, so those
+    /// are the destinations the download surface offers.
+    func testDownloadDestinationsAreTheCompactShellsExportRoutes() {
         let context = makeContext()
-        XCTAssertTrue(context.browser.family.beginDeletingSpace(context.source.id))
-        defer { context.browser.family.finishDeletingSpace(context.source.id) }
-
-        try assertActionsAreRejected(context: context, mutation: { _ in })
-    }
-
-    private func assertActionsAreRejected(
-        context: Context? = nil,
-        mutation: (Context) -> Void,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws {
-        let context = context ?? makeContext()
-        var selectedTabs: [TabID] = []
-        var openedURLs: [URL] = []
         let coordinator = makeCoordinator(
             context,
-            selectTab: { selectedTabs.append($0) },
-            openURL: { openedURLs.append($0) }
+            selectTab: { _ in },
+            openURL: { _ in }
+        )
+
+        XCTAssertEqual(coordinator.actions.downloadDestinations, [.share, .files])
+    }
+
+    /// Clearing a record goes through the store rather than straight to the
+    /// download center, which is the only difference from the windowed shell.
+    func testClearingADownloadGoesThroughThePageStore() {
+        let context = makeContext()
+        let coordinator = makeCoordinator(
+            context,
+            selectTab: { _ in },
+            openURL: { _ in }
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: context.source)
-        mutation(context)
 
-        coordinator.actions.restoreArchivedTab(context.archived.id, assignment)
-        coordinator.actions.openHistoryEntry(context.history, assignment)
-
-        XCTAssertTrue(selectedTabs.isEmpty, file: file, line: line)
-        XCTAssertTrue(openedURLs.isEmpty, file: file, line: line)
-        XCTAssertEqual(
-            try XCTUnwrap(
-                context.browser.session.space(id: context.source.id)
-            ).archivedTabs.map(\.id),
-            [context.archived.id],
-            file: file,
-            line: line
+        coordinator.actions.performDownloadAction(
+            .clear(context.downloadItemID),
+            assignment
         )
+
+        XCTAssertTrue(context.pages.downloadCenter.items.isEmpty)
     }
 
     private func makeCoordinator(
         _ context: Context,
         selectTab: @escaping (TabID) -> Void,
         openURL: @escaping (URL) -> Void
-    ) -> MobileBrowserSidebarUtilityCoordinator {
-        MobileBrowserSidebarUtilityCoordinator(
+    ) -> BrowserSidebarUtilityCoordinator {
+        BrowserSidebarUtilityCoordinator(
             browser: context.browser,
             pages: context.pages,
             spaceAccess: context.access,
@@ -95,7 +79,7 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
         )
     }
 
-    private func makeContext(isProtected: Bool = false) -> Context {
+    private func makeContext() -> Context {
         let selectedTab = BrowserTab(
             id: TabID(rawValue: Self.uuid(1)),
             title: "Selected",
@@ -131,7 +115,6 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
             tabs: [selectedTab],
             archivedTabs: [archived],
             history: [history],
-            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open,
             selectedTabID: selectedTab.id
         )
         let destination = BrowserSpace(
@@ -152,48 +135,25 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
+        var ledger = BrowserDownloadLedger()
+        let downloadItemID = ledger.begin(
+            profileID: source.profile.id,
+            filename: "Crest.ipa",
+            createdAt: Date(timeIntervalSince1970: 1_700_000_004)
+        )
         return Context(
             browser: browser,
             pages: MobileBrowserPageStore(
-                usesEphemeralWebsiteDataStores: true
+                usesEphemeralWebsiteDataStores: true,
+                downloadLedger: ledger
             ),
+            downloadItemID: downloadItemID,
             access: BrowserSpaceAccessController(
                 authenticator: AcceptingAuthenticator()
             ),
             source: source,
-            destination: destination,
             archived: archived,
             history: history
-        )
-    }
-
-    private func replaceProfile(of space: BrowserSpace, in browser: BrowserStore) {
-        guard
-            let index = browser.session.spaces.firstIndex(where: {
-                $0.id == space.id
-            })
-        else {
-            XCTFail("Expected the captured Space.")
-            return
-        }
-        let current = browser.session.spaces[index]
-        browser.session.spaces[index] = BrowserSpace(
-            id: current.id,
-            profile: BrowsingProfile(id: Self.uuid(7)),
-            name: current.name,
-            symbol: current.symbol,
-            accent: current.accent,
-            branding: current.branding,
-            folders: current.folders,
-            tabs: current.tabs,
-            archivedTabs: current.archivedTabs,
-            history: current.history,
-            browsingPreferences: current.browsingPreferences,
-            credentialPreferences: current.credentialPreferences,
-            accessPolicy: current.accessPolicy,
-            isSavedTabsExpanded: current.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: current.savedTabsExpansionModifiedAt,
-            selectedTabID: current.selectedTabID
         )
     }
 
@@ -208,9 +168,9 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
     private struct Context {
         let browser: BrowserStore
         let pages: MobileBrowserPageStore
+        let downloadItemID: UUID
         let access: BrowserSpaceAccessController
         let source: BrowserSpace
-        let destination: BrowserSpace
         let archived: ArchivedTab
         let history: BrowserHistoryEntry
     }

@@ -66,15 +66,33 @@ struct SavedFolderGroupConfiguration {
         )
     }
 
-    var tabActions: BrowserSidebarTabActions {
-        BrowserSidebarTabActions(
-            assignment: BrowserSpaceRuntimeAssignment(
-                spaceID: spaceID,
-                profileID: profileID
-            ),
+    /// Replaces one of the folder's tabs' favicons with whatever its page
+    /// reports now. The pull is a round trip to the page, so the row hands it
+    /// off and the action re-checks ownership when the answer comes back.
+    func pullNewIcon(for tabID: TabID) {
+        let actions = BrowserSidebarTabActions(
+            assignment: assignment,
             browser: browser,
             pages: pages,
             spaceAccess: spaceAccess
+        )
+        Task {
+            await actions.pullNewIcon(for: tabID)
+        }
+    }
+
+    /// Sends one of the folder's tabs back to the location it was saved at.
+    func restoreSavedLocation(for tabID: TabID) {
+        BrowserSavedLocationRestoreAction(
+            browser: browser,
+            pages: pages,
+            spaceAccess: spaceAccess
+        ).perform(
+            BrowserTabRuntimeAssignment(
+                tabID: tabID,
+                spaceID: spaceID,
+                profileID: profileID
+            )
         )
     }
 

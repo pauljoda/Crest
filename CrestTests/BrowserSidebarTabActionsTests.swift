@@ -1,116 +1,233 @@
+import Foundation
 import XCTest
 
 @testable import Crest
 
+/// The shared row actions, driven through the closure seams both shells bind.
+/// The compact shell's own binding is covered by
+/// `MobileBrowserSidebarTabActionsTests`.
 @MainActor
 final class BrowserSidebarTabActionsTests: XCTestCase {
-    func testStaleSavedLocationActionCannotNavigateTheSelectedSpace() throws {
-        let savedURL = try XCTUnwrap(URL(string: "https://example.com/saved"))
-        let currentURL = try XCTUnwrap(URL(string: "https://example.com/current"))
-        let sourceTab = BrowserTab(
-            id: TabID(
-                rawValue: UUID(
-                    uuid: (
-                        0x53, 0x49, 0x44, 0x45, 0x42, 0x41, 0x52, 0x41,
-                        0x43, 0x54, 0x49, 0x4F, 0x4E, 0x00, 0x00, 0x01
-                    )
-                )
-            ),
-            title: "Source",
-            url: currentURL,
-            savedURL: savedURL,
-            placement: .pinned
+    func testFaviconPullCannotWriteAfterProfileReplacementDuringAwait() async throws {
+        let context = makeContext()
+        let expectedData = Data("replacement-race".utf8)
+        let action = makeActions(context) { _, _ in
+            context.browser.session.spaces[0] = self.replacingProfile(
+                in: context.space
+            )
+            return (expectedData, nil)
+        }
+
+        let didPullIcon = await action.pullNewIcon(for: context.tab.id)
+        XCTAssertFalse(didPullIcon)
+        XCTAssertNil(
+            try XCTUnwrap(context.browser.session.space(id: context.space.id))
+                .tabs.first(where: { $0.id == context.tab.id })?
+                .faviconData
         )
-        let source = BrowserSpace(
-            id: SpaceID(
-                rawValue: UUID(
-                    uuid: (
-                        0x53, 0x49, 0x44, 0x45, 0x42, 0x41, 0x52, 0x41,
-                        0x43, 0x54, 0x49, 0x4F, 0x4E, 0x00, 0x00, 0x02
-                    )
-                )
-            ),
-            profile: BrowsingProfile(
-                id: UUID(
-                    uuid: (
-                        0x53, 0x49, 0x44, 0x45, 0x42, 0x41, 0x52, 0x41,
-                        0x43, 0x54, 0x49, 0x4F, 0x4E, 0x00, 0x00, 0x03
-                    )
-                )
-            ),
-            name: "Source",
-            symbol: "briefcase.fill",
-            accent: .indigo,
-            folders: [],
-            tabs: [sourceTab],
-            selectedTabID: sourceTab.id
+    }
+
+    func testFaviconPullCannotWriteAfterProtectedSpaceRelocksDuringAwait() async throws {
+        let context = makeContext(isProtected: true)
+        let didUnlockSpace = await context.access.unlock(context.space)
+        XCTAssertTrue(didUnlockSpace)
+        let action = makeActions(context) { _, _ in
+            context.access.lock(context.space.id)
+            return (Data("relocked".utf8), nil)
+        }
+
+        let didPullIcon = await action.pullNewIcon(for: context.tab.id)
+        XCTAssertFalse(didPullIcon)
+        XCTAssertNil(
+            try XCTUnwrap(context.browser.selectedSpace)
+                .tabs.first(where: { $0.id == context.tab.id })?
+                .faviconData
         )
-        let destinationTab = BrowserTab.startPage(
-            id: TabID(
-                rawValue: UUID(
-                    uuid: (
-                        0x53, 0x49, 0x44, 0x45, 0x42, 0x41, 0x52, 0x41,
-                        0x43, 0x54, 0x49, 0x4F, 0x4E, 0x00, 0x00, 0x04
-                    )
-                )
-            ),
+    }
+
+    func testExactAssignmentAcceptsPulledFavicon() async throws {
+        let context = makeContext()
+        let expectedData = Data("exact-favicon".utf8)
+        let expectedAccent = BrowserTabIconAccent(
+            red: 0.2,
+            green: 0.4,
+            blue: 0.6
+        )
+        let action = makeActions(context) { _, _ in
+            (expectedData, expectedAccent)
+        }
+
+        let didPullIcon = await action.pullNewIcon(for: context.tab.id)
+        XCTAssertTrue(didPullIcon)
+        let tab = try XCTUnwrap(
+            context.browser.selectedSpace?.tabs.first(where: {
+                $0.id == context.tab.id
+            })
+        )
+        XCTAssertEqual(tab.faviconData, expectedData)
+        XCTAssertEqual(tab.iconAccent, expectedAccent)
+    }
+
+    /// Clearing archives the Space's current tabs and then, once, tells the page
+    /// layer to catch up — the pool it left behind is holding cards for tabs
+    /// that no longer exist.
+    func testClearingCurrentTabsArchivesThemAndSyncsThePageLayer() throws {
+        let context = makeContext()
+        var syncCount = 0
+        let action = makeActions(
+            context,
+            syncPagesAfterMutation: { syncCount += 1 },
+            pullFavicon: { _, _ in nil }
+        )
+
+        XCTAssertTrue(action.clearCurrentTabs())
+
+        let space = try XCTUnwrap(
+            context.browser.session.space(id: context.space.id)
+        )
+        XCTAssertFalse(space.tabs.contains(where: { $0.placement == .current }))
+        XCTAssertTrue(space.tabs.contains(where: { $0.id == context.tab.id }))
+        XCTAssertEqual(syncCount, 1)
+    }
+
+    /// A clear captured before the reader moved on finds nothing to clear, and
+    /// leaves the page layer alone rather than reconciling against a Space it
+    /// no longer speaks for.
+    func testClearingCurrentTabsIsRefusedAfterTheSelectionMoves() throws {
+        let context = makeContext()
+        var syncCount = 0
+        let action = makeActions(
+            context,
+            syncPagesAfterMutation: { syncCount += 1 },
+            pullFavicon: { _, _ in nil }
+        )
+        context.browser.selectSpace(context.otherSpace.id)
+
+        XCTAssertFalse(action.clearCurrentTabs())
+
+        XCTAssertTrue(
+            try XCTUnwrap(context.browser.session.space(id: context.space.id))
+                .tabs.contains(where: { $0.placement == .current })
+        )
+        XCTAssertEqual(syncCount, 0)
+    }
+
+    private func makeActions(
+        _ context: Context,
+        syncPagesAfterMutation: @escaping @MainActor () -> Void = {},
+        pullFavicon:
+            @escaping @MainActor (
+                TabID,
+                BrowserSpaceRuntimeAssignment
+            ) async -> (data: Data, iconAccent: BrowserTabIconAccent?)?
+    ) -> BrowserSidebarTabActions {
+        BrowserSidebarTabActions(
+            assignment: context.assignment,
+            browser: context.browser,
+            spaceAccess: context.access,
+            syncPagesAfterMutation: syncPagesAfterMutation,
+            pullFavicon: pullFavicon
+        )
+    }
+
+    private func makeContext(isProtected: Bool = false) -> Context {
+        let tab = BrowserTab(
+            id: TabID(rawValue: Self.uuid(1)),
+            title: "Exact tab",
+            url: URL(string: "https://sidebar.crest.test"),
+            placement: .saved
+        )
+        let currentTab = BrowserTab(
+            id: TabID(rawValue: Self.uuid(5)),
+            title: "Current tab",
+            url: URL(string: "https://sidebar.crest.test/current"),
+            placement: .current,
             lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
-        let destination = BrowserSpace(
-            id: SpaceID(
-                rawValue: UUID(
-                    uuid: (
-                        0x53, 0x49, 0x45, 0x45, 0x42, 0x41, 0x52, 0x41,
-                        0x43, 0x54, 0x49, 0x4F, 0x4E, 0x00, 0x00, 0x05
-                    )
-                )
-            ),
-            profile: BrowsingProfile(
-                id: UUID(
-                    uuid: (
-                        0x53, 0x49, 0x44, 0x45, 0x42, 0x41, 0x52, 0x41,
-                        0x43, 0x54, 0x49, 0x4F, 0x4E, 0x00, 0x00, 0x06
-                    )
-                )
-            ),
-            name: "Destination",
-            symbol: "house.fill",
-            accent: .orange,
+        let space = BrowserSpace(
+            id: SpaceID(rawValue: Self.uuid(2)),
+            profile: BrowsingProfile(id: Self.uuid(3)),
+            name: "Exact Space",
+            symbol: "sidebar.left",
+            accent: .indigo,
             folders: [],
-            tabs: [destinationTab],
-            selectedTabID: destinationTab.id
+            tabs: [tab, currentTab],
+            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open,
+            selectedTabID: currentTab.id
         )
-        let browser = BrowserStore(
-            session: BrowserSession(
-                spaces: [source, destination],
-                selectedSpaceID: destination.id
+        let otherSpace = BrowserSpace(
+            id: SpaceID(rawValue: Self.uuid(6)),
+            profile: BrowsingProfile(id: Self.uuid(7)),
+            name: "Other Space",
+            symbol: "square.grid.2x2",
+            accent: .rose,
+            folders: [],
+            tabs: [],
+            selectedTabID: nil
+        )
+        return Context(
+            browser: BrowserStore(
+                session: BrowserSession(
+                    spaces: [space, otherSpace],
+                    selectedSpaceID: space.id
+                ),
+                persistence: InMemoryBrowserSessionPersistence(),
+                browsingMode: .privateBrowsing
             ),
-            persistence: InMemoryBrowserSessionPersistence(),
-            browsingMode: .privateBrowsing
+            access: BrowserSpaceAccessController(
+                authenticator: AcceptingAuthenticator()
+            ),
+            space: space,
+            otherSpace: otherSpace,
+            tab: tab
         )
-        let pages = BrowserPagePool(
-            browsingMode: .privateBrowsing,
-            usesEphemeralWebsiteDataStores: true,
-            extensionControllerPool: BrowserExtensionControllerPool(),
-            permissionCenter: BrowserSitePermissionCenter()
+    }
+
+    private func replacingProfile(in space: BrowserSpace) -> BrowserSpace {
+        BrowserSpace(
+            id: space.id,
+            profile: BrowsingProfile(id: Self.uuid(4)),
+            name: space.name,
+            symbol: space.symbol,
+            accent: space.accent,
+            branding: space.branding,
+            folders: space.folders,
+            tabs: space.tabs,
+            archivedTabs: space.archivedTabs,
+            history: space.history,
+            browsingPreferences: space.browsingPreferences,
+            credentialPreferences: space.credentialPreferences,
+            accessPolicy: space.accessPolicy,
+            isSavedTabsExpanded: space.isSavedTabsExpanded,
+            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
+            selectedTabID: space.selectedTabID
         )
-        let actions = BrowserSidebarTabActions(
-            assignment: BrowserSpaceRuntimeAssignment(space: source),
-            browser: browser,
-            pages: pages,
-            spaceAccess: BrowserSpaceAccessController(
-                authenticator: BrowserPreviewAuthenticator(result: true)
+    }
+
+    private static func uuid(_ finalByte: UInt8) -> UUID {
+        UUID(
+            uuid: (
+                0x53, 0x49, 0x44, 0x45, 0x42, 0x41, 0x52, 0x49,
+                0x43, 0x4F, 0x4E, 0x53, 0x00, 0x00, 0x00, finalByte
             )
         )
+    }
 
-        actions.restoreSavedLocation(for: sourceTab.id)
+    private struct Context {
+        let browser: BrowserStore
+        let access: BrowserSpaceAccessController
+        let space: BrowserSpace
+        let otherSpace: BrowserSpace
+        let tab: BrowserTab
 
-        XCTAssertEqual(
-            browser.session.space(id: source.id)?.tabs.first?.url,
-            currentURL
-        )
-        XCTAssertEqual(browser.session.selectedSpaceID, destination.id)
-        XCTAssertEqual(browser.selectedTab?.id, destinationTab.id)
-        XCTAssertNil(pages.activePage)
+        var assignment: BrowserSpaceRuntimeAssignment {
+            BrowserSpaceRuntimeAssignment(space: space)
+        }
+    }
+
+    private final class AcceptingAuthenticator: BrowserDeviceAuthenticating {
+        func authenticate(reason _: String) async throws -> Bool {
+            true
+        }
     }
 }

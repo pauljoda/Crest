@@ -3,45 +3,20 @@ import XCTest
 
 @testable import CrestMobile
 
+/// The compact shell's binding of the shared row actions. The guards belong to
+/// `BrowserSidebarTabActionsTests`; what is tested here is only what this shell
+/// binds them to — the store's favicon pull, and a page layer with nothing to
+/// reconcile after a tab-list mutation.
 @MainActor
 final class MobileBrowserSidebarTabActionsTests: XCTestCase {
-    func testFaviconPullCannotWriteAfterProfileReplacementDuringAwait() async throws {
+    /// A tab holding no page has no favicon to report, and the store says so
+    /// rather than leaving the row to write something stale.
+    func testFaviconPullThroughTheStoreReportsNothingForATabWithNoPage() async throws {
         let context = makeContext()
-        let expectedData = Data("replacement-race".utf8)
-        let action = MobileBrowserSidebarTabActions(
-            assignment: context.assignment,
-            browser: context.browser,
-            spaceAccess: context.access
-        ) { _, _ in
-            context.browser.session.spaces[0] = self.replacingProfile(
-                in: context.space
-            )
-            return (expectedData, nil)
-        }
+        let action = makeActions(context)
 
         let didPullIcon = await action.pullNewIcon(for: context.tab.id)
-        XCTAssertFalse(didPullIcon)
-        XCTAssertNil(
-            try XCTUnwrap(context.browser.session.space(id: context.space.id))
-                .tabs.first(where: { $0.id == context.tab.id })?
-                .faviconData
-        )
-    }
 
-    func testFaviconPullCannotWriteAfterProtectedSpaceRelocksDuringAwait() async throws {
-        let context = makeContext(isProtected: true)
-        let didUnlockSpace = await context.access.unlock(context.space)
-        XCTAssertTrue(didUnlockSpace)
-        let action = MobileBrowserSidebarTabActions(
-            assignment: context.assignment,
-            browser: context.browser,
-            spaceAccess: context.access
-        ) { _, _ in
-            context.access.lock(context.space.id)
-            return (Data("relocked".utf8), nil)
-        }
-
-        let didPullIcon = await action.pullNewIcon(for: context.tab.id)
         XCTAssertFalse(didPullIcon)
         XCTAssertNil(
             try XCTUnwrap(context.browser.selectedSpace)
@@ -50,39 +25,36 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
         )
     }
 
-    func testExactAssignmentAcceptsPulledFavicon() async throws {
+    /// The compact shell's single page follows the session on its own, so a
+    /// clear goes through with nothing to reconcile behind it.
+    func testClearingCurrentTabsNeedsNoPageReconciliation() throws {
         let context = makeContext()
-        let expectedData = Data("exact-favicon".utf8)
-        let expectedAccent = BrowserTabIconAccent(
-            red: 0.2,
-            green: 0.4,
-            blue: 0.6
-        )
-        let action = MobileBrowserSidebarTabActions(
-            assignment: context.assignment,
-            browser: context.browser,
-            spaceAccess: context.access
-        ) { _, _ in
-            (expectedData, expectedAccent)
-        }
+        let action = makeActions(context)
 
-        let didPullIcon = await action.pullNewIcon(for: context.tab.id)
-        XCTAssertTrue(didPullIcon)
-        let tab = try XCTUnwrap(
-            context.browser.selectedSpace?.tabs.first(where: {
-                $0.id == context.tab.id
-            })
+        XCTAssertTrue(action.clearCurrentTabs())
+
+        XCTAssertFalse(
+            try XCTUnwrap(context.browser.selectedSpace)
+                .tabs.contains(where: { $0.placement == .current })
         )
-        XCTAssertEqual(tab.faviconData, expectedData)
-        XCTAssertEqual(tab.iconAccent, expectedAccent)
     }
 
-    private func makeContext(isProtected: Bool = false) -> Context {
+    private func makeActions(_ context: Context) -> BrowserSidebarTabActions {
+        BrowserSidebarTabActions(
+            assignment: BrowserSpaceRuntimeAssignment(space: context.space),
+            browser: context.browser,
+            pages: context.pages,
+            spaceAccess: context.access
+        )
+    }
+
+    private func makeContext() -> Context {
         let tab = BrowserTab(
             id: TabID(rawValue: Self.uuid(1)),
-            title: "Exact tab",
+            title: "Current tab",
             url: URL(string: "https://sidebar.crest.test"),
-            placement: .saved
+            placement: .current,
+            lastActivatedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let space = BrowserSpace(
             id: SpaceID(rawValue: Self.uuid(2)),
@@ -92,7 +64,6 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
             accent: .indigo,
             folders: [],
             tabs: [tab],
-            accessPolicy: isProtected ? .deviceOwnerAuthentication : .open,
             selectedTabID: tab.id
         )
         return Context(
@@ -104,32 +75,12 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
                 persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             ),
+            pages: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true),
             access: BrowserSpaceAccessController(
                 authenticator: AcceptingAuthenticator()
             ),
             space: space,
             tab: tab
-        )
-    }
-
-    private func replacingProfile(in space: BrowserSpace) -> BrowserSpace {
-        BrowserSpace(
-            id: space.id,
-            profile: BrowsingProfile(id: Self.uuid(4)),
-            name: space.name,
-            symbol: space.symbol,
-            accent: space.accent,
-            branding: space.branding,
-            folders: space.folders,
-            tabs: space.tabs,
-            archivedTabs: space.archivedTabs,
-            history: space.history,
-            browsingPreferences: space.browsingPreferences,
-            credentialPreferences: space.credentialPreferences,
-            accessPolicy: space.accessPolicy,
-            isSavedTabsExpanded: space.isSavedTabsExpanded,
-            savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
-            selectedTabID: space.selectedTabID
         )
     }
 
@@ -144,13 +95,10 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
 
     private struct Context {
         let browser: BrowserStore
+        let pages: MobileBrowserPageStore
         let access: BrowserSpaceAccessController
         let space: BrowserSpace
         let tab: BrowserTab
-
-        var assignment: BrowserSpaceRuntimeAssignment {
-            BrowserSpaceRuntimeAssignment(space: space)
-        }
     }
 
     private final class AcceptingAuthenticator: BrowserDeviceAuthenticating {

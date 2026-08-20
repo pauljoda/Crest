@@ -63,12 +63,14 @@ struct PinnedTabsDropSection: View {
                         )
                     },
                     pullNewIcon: { runtimeAssignment in
-                        tabActions.pullNewIcon(for: runtimeAssignment.tabID)
+                        pullNewIcon(runtimeAssignment.tabID)
                     },
                     restoreSavedLocation: { runtimeAssignment in
-                        tabActions.restoreSavedLocation(
-                            for: runtimeAssignment.tabID
-                        )
+                        BrowserSavedLocationRestoreAction(
+                            browser: browser,
+                            pages: pages,
+                            spaceAccess: spaceAccess
+                        ).perform(runtimeAssignment)
                     },
                     siteThemeAccent: pages.siteThemeIconAccent(matching:)
                 )
@@ -84,6 +86,13 @@ struct PinnedTabsDropSection: View {
             state: browser.sidebarReorderState
         )
         .accessibilityHint("Drop a tab here to pin it")
+    }
+
+    private func pullNewIcon(_ tabID: TabID) {
+        let actions = tabActions
+        Task {
+            await actions.pullNewIcon(for: tabID)
+        }
     }
 
     private var assignment: BrowserSpaceRuntimeAssignment {

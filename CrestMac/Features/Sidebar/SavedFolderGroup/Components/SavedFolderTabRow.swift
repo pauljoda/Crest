@@ -19,10 +19,10 @@ struct SavedFolderTabRow: View {
             isLoaded: isLoaded,
             unload: unload,
             pullNewIcon: {
-                configuration.tabActions.pullNewIcon(for: tab.id)
+                configuration.pullNewIcon(for: tab.id)
             },
             restoreSavedLocation: {
-                configuration.tabActions.restoreSavedLocation(for: tab.id)
+                configuration.restoreSavedLocation(for: tab.id)
             },
             select: activate
         )

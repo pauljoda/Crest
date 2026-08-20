@@ -83,9 +83,9 @@ struct SavedTabsDropSection: View {
                             unload: { tabID in
                                 pages.unloadPage(for: tabID, matching: assignment)
                             },
-                            pullNewIcon: { tabActions.pullNewIcon(for: tab.id) },
+                            pullNewIcon: { pullNewIcon(tab.id) },
                             restoreSavedLocation: {
-                                tabActions.restoreSavedLocation(for: tab.id)
+                                restoreSavedLocation(tab.id)
                             },
                             select: activate
                         )
@@ -105,10 +105,10 @@ struct SavedTabsDropSection: View {
                                 pages.unloadPage(for: tabID, matching: assignment)
                             },
                             pullNewIcon: { tabID in
-                                tabActions.pullNewIcon(for: tabID)
+                                pullNewIcon(tabID)
                             },
                             restoreSavedLocation: { tabID in
-                                tabActions.restoreSavedLocation(for: tabID)
+                                restoreSavedLocation(tabID)
                             },
                             select: activate
                         )
@@ -142,6 +142,27 @@ struct SavedTabsDropSection: View {
             state: browser.sidebarReorderState
         )
         .accessibilityHint("Drop a tab here to save it")
+    }
+
+    private func pullNewIcon(_ tabID: TabID) {
+        let actions = tabActions
+        Task {
+            await actions.pullNewIcon(for: tabID)
+        }
+    }
+
+    private func restoreSavedLocation(_ tabID: TabID) {
+        BrowserSavedLocationRestoreAction(
+            browser: browser,
+            pages: pages,
+            spaceAccess: spaceAccess
+        ).perform(
+            BrowserTabRuntimeAssignment(
+                tabID: tabID,
+                spaceID: space.id,
+                profileID: space.profile.id
+            )
+        )
     }
 
     /// Selection and presentation in the one order that works: the page a

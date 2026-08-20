@@ -1,12 +1,20 @@
 import Foundation
 
+/// The archive, history, and downloads actions the sidebar's utility surfaces
+/// perform, behind the one access guard they all share.
+///
+/// Every action re-reads the session at call time and refuses unless the Space
+/// the caller named is still the selected, unlocked one it owns — the surfaces
+/// hand out captured closures, and a Space can be reselected, relocked, deleted,
+/// or have its profile replaced between the capture and the tap. Only the last
+/// step of each action differs between the shells; that step comes from
+/// `BrowserSidebarUtilityPlatformActions`.
 @MainActor
-struct MobileBrowserSidebarUtilityCoordinator {
+struct BrowserSidebarUtilityCoordinator {
     let browser: BrowserStore
-    let pages: MobileBrowserPageStore
+    let downloadCenter: BrowserDownloadCenter
     let spaceAccess: BrowserSpaceAccessController
-    let selectTab: (TabID) -> Void
-    let openURL: (URL) -> Void
+    let platformActions: BrowserSidebarUtilityPlatformActions
 
     var selectedDownloads: [BrowserDownloadItem] {
         guard let selectedSpace = browser.selectedSpace,
@@ -16,14 +24,14 @@ struct MobileBrowserSidebarUtilityCoordinator {
                 accessController: spaceAccess
             )
         else { return [] }
-        return pages.downloadCenter.items(for: space.profile.id)
+        return downloadCenter.items(for: space.profile.id)
     }
 
     var actions: BrowserUtilityListActions {
         BrowserUtilityListActions(
             restoreArchivedTab: restoreArchivedTab,
             openHistoryEntry: openHistoryEntry,
-            downloadDestinations: [.share, .files],
+            downloadDestinations: platformActions.downloadDestinations,
             performDownloadAction: performDownloadAction
         )
     }
@@ -37,7 +45,7 @@ struct MobileBrowserSidebarUtilityCoordinator {
                 accessController: spaceAccess
             )
         else { return }
-        pages.downloadCenter.acknowledgeItems(for: space.profile.id)
+        downloadCenter.acknowledgeItems(for: space.profile.id)
     }
 
     private func restoreArchivedTab(
@@ -52,7 +60,7 @@ struct MobileBrowserSidebarUtilityCoordinator {
             ) != nil,
             browser.restoreArchivedTab(tabID, matching: assignment)
         else { return }
-        selectTab(tabID)
+        platformActions.selectRestoredTab(tabID)
     }
 
     private func openHistoryEntry(
@@ -66,32 +74,28 @@ struct MobileBrowserSidebarUtilityCoordinator {
                 accessController: spaceAccess
             ) != nil
         else { return }
-        openURL(entry.url)
+        platformActions.openHistoryEntry(entry.url, assignment)
     }
 
     private func performDownloadAction(
         _ action: BrowserUtilityDownloadAction,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) {
-        guard downloadItem(for: action, matching: assignment) != nil else {
+        guard let item = downloadItem(for: action, matching: assignment) else {
             return
         }
         switch action {
-        case .open(let itemID, let destination):
-            switch destination {
-            case .share:
-                pages.exportDownload(itemID, to: .share)
-            case .files:
-                pages.exportDownload(itemID, to: .files)
-            case .open, .revealInFinder:
-                break
-            }
+        case .open(_, let destination):
+            platformActions.openFinishedDownload(item, destination)
         case .retry(let itemID):
             Task {
+                // The ownership the guard above proved is a moment old by the
+                // time this runs, and the retry itself keeps checking as it
+                // goes, because a download outlives the tap that asked for it.
                 guard downloadItem(for: action, matching: assignment) != nil else {
                     return
                 }
-                await pages.downloadCenter.retryAutomaticDownload(
+                await downloadCenter.retryAutomaticDownload(
                     itemID,
                     matching: assignment
                 ) { expectedAssignment in
@@ -103,9 +107,9 @@ struct MobileBrowserSidebarUtilityCoordinator {
                 }
             }
         case .cancel(let itemID):
-            pages.cancelDownload(itemID)
+            platformActions.cancelDownload(itemID)
         case .clear(let itemID):
-            pages.clearDownload(itemID)
+            platformActions.clearDownload(itemID)
         }
     }
 
@@ -118,7 +122,7 @@ struct MobileBrowserSidebarUtilityCoordinator {
             matching: assignment,
             in: browser,
             accessController: spaceAccess,
-            itemsForProfile: pages.downloadCenter.items(for:)
+            itemsForProfile: downloadCenter.items(for:)
         )
     }
 }

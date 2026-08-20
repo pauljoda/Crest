@@ -191,7 +191,7 @@ struct MobileSavedTabsDropSection: View {
     }
 
     private func pullNewIcon(_ tabID: TabID) {
-        let actions = MobileBrowserSidebarTabActions(
+        let actions = BrowserSidebarTabActions(
             assignment: assignment,
             browser: browser,
             pages: pages,

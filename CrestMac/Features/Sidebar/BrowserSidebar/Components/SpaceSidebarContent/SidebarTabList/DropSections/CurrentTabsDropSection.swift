@@ -53,7 +53,7 @@ struct CurrentTabsDropSection: View {
                             unload: { tabID in
                                 pages.unloadPage(for: tabID, matching: assignment)
                             },
-                            pullNewIcon: { tabActions.pullNewIcon(for: tab.id) },
+                            pullNewIcon: { pullNewIcon(tab.id) },
                             promotionNamespace: tabPromotionNamespace,
                             select: activate
                         )
@@ -73,7 +73,7 @@ struct CurrentTabsDropSection: View {
                                 pages.unloadPage(for: tabID, matching: assignment)
                             },
                             pullNewIcon: { tabID in
-                                tabActions.pullNewIcon(for: tabID)
+                                pullNewIcon(tabID)
                             },
                             select: activate
                         )
@@ -99,6 +99,13 @@ struct CurrentTabsDropSection: View {
             state: browser.sidebarReorderState
         )
         .accessibilityHint("Drop a tab here to make it a current tab")
+    }
+
+    private func pullNewIcon(_ tabID: TabID) {
+        let actions = tabActions
+        Task {
+            await actions.pullNewIcon(for: tabID)
+        }
     }
 
     /// Selection and presentation in the one order that works: the page a

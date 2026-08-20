@@ -26,10 +26,10 @@ struct SavedFolderSplitGroupRow: View {
                 )
             },
             pullNewIcon: { tabID in
-                configuration.tabActions.pullNewIcon(for: tabID)
+                configuration.pullNewIcon(for: tabID)
             },
             restoreSavedLocation: { tabID in
-                configuration.tabActions.restoreSavedLocation(for: tabID)
+                configuration.restoreSavedLocation(for: tabID)
             },
             select: activate
         )
