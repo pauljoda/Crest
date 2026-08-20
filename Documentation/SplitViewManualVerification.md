@@ -124,6 +124,42 @@ created.
    commands appear in the command launcher.
 4. Column fractions persist per window and survive relaunch.
 
+### Drag to split by finger
+
+The macOS **Drag to split** scenarios above are the specification; everything in
+them applies here except the pointer-only ones (2, 3, and 9). What follows is
+what only touch can go wrong at.
+
+5. Crossing the boundary: with the sidebar docked, long-press a tab row until it
+   lifts, then carry it right onto the page. A placeholder column opens under
+   the finger. Before this landed the finger went dark the moment it left the
+   sidebar, so this is the scenario that fails loudest if the content area's
+   drop feed is not being reached.
+6. Over live web content: repeat scenario 5 with the card showing a loaded page
+   rather than a Start Page, and again on a page with a text field and on a page
+   that handles its own drags (a canvas app, a rich-text editor). The
+   placeholder must still follow the finger, and the release must still land the
+   card — the page must not take the drop.
+7. Lone tab: with one tab on show, carry a row over the leading half of the page
+   and then the trailing half. The layout switches to a one-card row for the
+   drag, and the placeholder swaps sides. Releasing creates the split in that
+   order.
+8. Leaving and returning: carry the row onto the page, back over the sidebar,
+   and out again. The placeholder goes and comes back; the columns layout stays
+   open the whole time and the live page never reloads or blanks.
+9. The Space strip holds still: carry a row onto the page and travel to the far
+   edges of the window. The Space strip must not page, and the Space on show
+   must not change.
+10. Release outside everything — over the status bar, or by lifting the finger
+    while over a refusing target. The row returns to its slot, the columns
+    layout stands down, and the page takes touches again immediately.
+11. Undocked sidebar: repeat 5 and 7 with the sidebar floating over the page.
+    Runs and the seams between them still win over the page behind them, and the
+    page still answers past the sidebar's own column.
+12. Tap-through after a drag: once a drag has ended, an ordinary tap, a link
+    tap, and a text selection on the page all work as before. Nothing invisible
+    is left over the page.
+
 ## Sync across devices
 
 1. Create a three-tab group on the Mac. The iPhone shows the stacked row; tap

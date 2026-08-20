@@ -1,6 +1,12 @@
 import SwiftUI
 
-/// The iPadOS content area when it is presenting more than one card.
+/// The iPadOS content area when it is laying its pages out as a row of cards.
+///
+/// Usually that means a group of more than one member. It also means a lone tab
+/// with a drag in flight over it: the row is what a drop placeholder can open
+/// beside, so `MobileRegularPageSurface` switches to it for the length of the
+/// drag and this surface draws a one-card row without treating it as a special
+/// case — the same thing `BrowserSplitColumnsView` does for macOS.
 ///
 /// The regular half of `MobileRegularPageSurface`'s branch, and the iPad's use of
 /// the very same `BrowserSplitColumnsView` macOS lays out — which is the point of
@@ -17,6 +23,9 @@ struct MobileSplitColumnsPageSurface: View {
     let space: BrowserSpace
     let members: [BrowserTab]
     let adjoinsLeadingSidebar: Bool
+    /// The slot a drag out of the sidebar would drop a card into.
+    /// `MobileRegularPageSurface` owns the decision; the row only draws it.
+    let placeholderIndex: Int?
 
     var body: some View {
         BrowserSplitColumnsView(
@@ -26,7 +35,7 @@ struct MobileSplitColumnsPageSurface: View {
                 adjoinsLeadingSidebar: adjoinsLeadingSidebar
             ),
             accent: space.branding.primaryColor.color,
-            placeholderIndex: nil,
+            placeholderIndex: placeholderIndex,
             // "Fancy Move" is a pointer gesture: ⇧⌘-held mouse-down, and a
             // card that follows a cursor. iPadOS reorders its cards from the
             // member menu instead, so the row here is never carrying one.
@@ -48,6 +57,15 @@ struct MobileSplitColumnsPageSurface: View {
                         model.navigation.handleRegularPageInteraction()
                     },
                     requestFocus: { model.focusSplitCard(member.id) }
+                )
+                // Where this card sits, in the space a drag resolves in, so a
+                // tab dropped on the row lands in the slot the finger is
+                // actually over. The Space rides along because the registry
+                // outlives the presentation that filled it.
+                .browserSplitDropCardFrame(
+                    tabID: member.id,
+                    assignment: BrowserSpaceRuntimeAssignment(space: space),
+                    state: model.browser.sidebarReorderState
                 )
             }
         )

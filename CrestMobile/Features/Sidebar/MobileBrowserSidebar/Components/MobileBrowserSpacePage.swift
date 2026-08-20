@@ -85,7 +85,7 @@ struct MobileBrowserSpacePage: View {
             }
         }
         .modifier(
-            MobileBrowserSidebarReorderDropFeed(
+            MobileBrowserReorderDropFeed(
                 browser: browser,
                 spaceAccess: spaceAccess
             )
