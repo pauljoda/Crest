@@ -1,15 +1,20 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-struct MobileCurrentTabsEndDropTarget: View {
+/// The landing band the current run keeps at its end.
+///
+/// A finger cannot aim at the seam between two rows that touch, so a shell that
+/// draws its drop feedback on the rows themselves keeps a band of its own after
+/// the last one. It is also the band a cleared list draws its insertion line
+/// in: with no rows left it sits directly below the new-tab row, where the
+/// first current tab would appear.
+struct BrowserCurrentTabsEndDropTarget: View {
     let tabs: [BrowserTab]
     let browser: BrowserStore
-    @Binding var isTargeted: Bool
-    let move: (BrowserTabDragItem, TabID?) -> Bool
+    let capabilities: BrowserInteractionCapabilities
 
     var body: some View {
         Color.clear
-            .frame(height: MobileSidebarDropTargetPolicy.sectionEndTargetHeight)
+            .frame(height: bandHeight)
             .contentShape(.rect)
             .overlay(alignment: .top) {
                 if BrowserTabRowIndicatorOwnershipPolicy.showsSectionEndIndicator(
@@ -18,11 +23,16 @@ struct MobileCurrentTabsEndDropTarget: View {
                     BrowserTabDropIndicator(
                         location: dropLocation,
                         dragState: browser.tabDragState,
-                        isTargeted: isTargeted
+                        isTargeted: false
                     )
                 }
             }
             .accessibilityHidden(true)
+    }
+
+    private var bandHeight: CGFloat {
+        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
+            .sectionEndBandHeight
     }
 
     private var dropLocation: BrowserTabDropLocation {

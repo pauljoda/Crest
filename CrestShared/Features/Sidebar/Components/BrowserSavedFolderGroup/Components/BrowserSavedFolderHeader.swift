@@ -27,8 +27,7 @@ struct BrowserSavedFolderHeader: View {
         )
         .crestHoverSurface(
             isSelected: BrowserFolderRowPresentationPolicy.showsDropHighlight(
-                isTargeted: interaction.isDropTargeted.wrappedValue,
-                isTabDragging: configuration.browser.tabDragState.item != nil
+                for: configuration.nestingLift
             ),
             cornerRadius: CrestLayout.sidebarControlCornerRadius
         )
@@ -46,45 +45,16 @@ struct BrowserSavedFolderHeader: View {
                 != configuration.folderRuntimeAssignment
                 && configuration.isCurrentAndUnlocked
         )
-        .modifier(
-            BrowserSavedFolderHeaderDropFeedback(
-                configuration: configuration,
-                isTargeted: interaction.isDropTargeted.wrappedValue
+        // The one thing a section's zone cannot say: that releasing *here* files
+        // the lifted folder inside this one rather than beside it. The seam
+        // above the header is already drawn by the row's own reorder indicator,
+        // on every shell, so the header carries only the nesting answer.
+        .overlay {
+            BrowserFolderNestDropHighlight(
+                isTargeted: BrowserFolderRowPresentationPolicy.showsNestOutline(
+                    for: configuration.nestingLift
+                )
             )
-        )
-    }
-}
-
-/// What a folder being dragged over this header says about where it would
-/// land.
-///
-/// The two answers are alternatives, not layers. Where the shell draws its
-/// insertion lines on the rows themselves, a folder header carries the line
-/// for the seam above it, matching the tab rows in the same list. Where the
-/// section's zone carries insertion instead, the header is free to say the one
-/// thing a zone cannot: that releasing *here* files the folder inside this one.
-private struct BrowserSavedFolderHeaderDropFeedback: ViewModifier {
-    let configuration: BrowserSavedFolderGroupConfiguration
-    let isTargeted: Bool
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if configuration.capabilities.showsRowDropIndicators {
-            content.overlay(alignment: .bottom) {
-                BrowserFolderDropIndicator(
-                    location: configuration.folderDropLocation,
-                    dragState: configuration.browser.folderDragState,
-                    isTargeted: isTargeted
-                )
-            }
-        } else {
-            content.overlay {
-                BrowserFolderNestDropHighlight(
-                    location: configuration.folderInsideDropLocation,
-                    dragState: configuration.browser.folderDragState,
-                    isTargeted: isTargeted
-                )
-            }
         }
     }
 }

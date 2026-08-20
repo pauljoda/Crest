@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// One Space's browsing sidebar on the windowed shell: the address band, the
+/// pinned grid, the Space header, and the scrolling tab list.
+///
+/// Everything here is composition and binding. The sections and the list are the
+/// shared ones; what this shell adds is its own address band, the pinned
+/// extension strip's seam, the scrolling chrome, and the page-facing closures
+/// only a windowed card pool can answer.
 struct SpaceSidebarBrowsingContent: View {
     let space: BrowserSpace
     let tabSections: BrowserTabSections
@@ -25,78 +32,44 @@ struct SpaceSidebarBrowsingContent: View {
     let editSpace: () -> Void
     let createSpace: () -> Void
 
-    private var selectedTab: BrowserTab? {
-        guard let selectedTabID = space.selectedTabID else { return nil }
-        return space.tabs.first { $0.id == selectedTabID }
-    }
-
-    private var displayedAddress: Binding<String> {
-        isSelected
-            ? $address
-            : .constant(selectedTab?.url?.absoluteString ?? "")
-    }
-
-    private var displayedEditing: Binding<Bool> {
-        isSelected ? $isAddressEditing : .constant(false)
-    }
-
-    private var hasPinnedExtensionActions: Bool {
-        pages.extensionControllerPool.toolbarActions(
-            in: space.id,
-            tabID: space.selectedTabID
-        )
-        .contains(where: \.isPinned)
-    }
+    /// The clear-current-tabs control appears while a pointer rests anywhere
+    /// over the list, so the state belongs to the whole scrolling region rather
+    /// than to the seam that draws it.
+    @State private var isHoveringTabList = false
 
     var body: some View {
-        BrowserSidebarAddressField(configuration: addressConfiguration) {
-            if let siteControl {
-                BrowserAddressSecurityButton(
-                    page: siteControl.page,
-                    isSecure: isSecure
-                )
-            }
-        } trailingAccessory: {
-            if let siteControl {
-                BrowserSiteControlButton(configuration: siteControl)
-            }
-        }
-        .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
-        .padding(
-            .bottom,
-            BrowserPinnedExtensionStripLayoutPolicy.addressBottomInset(
-                hasPinnedExtensions: hasPinnedExtensionActions
-            )
+        SpaceSidebarAddressBand(
+            space: space,
+            pages: pages,
+            isSelected: isSelected,
+            capabilities: capabilities,
+            address: $address,
+            isAddressEditing: $isAddressEditing,
+            addressFocusRequest: addressFocusRequest,
+            activateAddress: activateAddress,
+            submitAddress: submitAddress,
+            commandSurfaceNamespace: commandSurfaceNamespace,
+            showExtensions: showExtensions,
+            siteControlPresentationChanged: siteControlPresentationChanged,
+            siteControlContextMenuPresentationChanged:
+                siteControlContextMenuPresentationChanged,
+            hasPinnedExtensionActions: hasPinnedExtensionActions
         )
 
-        BrowserPinnedExtensionStrip(
-            spaceID: space.id,
-            selectedTabID: space.selectedTabID,
-            extensionControllerPool: pages.extensionControllerPool
-        )
-
-        PinnedTabsDropSection(
+        BrowserPinnedTabsDropSection(
             space: space,
             tabSections: tabSections,
             browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
+            spaceAccess: spaceAccess,
+            pageAccess: pageAccess,
+            tabActions: tabActions,
+            capabilities: capabilities,
+            restoreSavedLocation: restoreSavedLocation,
+            select: activate
         )
         .padding(.horizontal, CrestSpacing.small)
-        .padding(
-            .top,
-            tabSections.pinnedTabs.isEmpty
-                ? 0
-                : BrowserPinnedExtensionStripLayoutPolicy.pinnedTabsTopInset(
-                    hasPinnedExtensions: hasPinnedExtensionActions
-                )
-        )
-        .padding(
-            .bottom,
-            tabSections.pinnedTabs.isEmpty
-                ? 0
-                : BrowserSidebarMetrics.pinnedTabsBottomInset
-        )
+        .padding(.top, pinnedTabsTopInset)
+        .padding(.bottom, pinnedTabsBottomInset)
 
         BrowserSpaceHeader(
             space: space,
@@ -112,37 +85,30 @@ struct SpaceSidebarBrowsingContent: View {
             )
         )
 
-        SidebarTabList(
-            space: space,
-            tabSections: tabSections,
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess,
-            openNewTab: openNewTab,
-            isSavedTabsExpanded: isSavedTabsExpanded,
-            editingFolderRequest: $editingFolderRequest,
-            tabPromotionNamespace: tabPromotionNamespace,
-            editSpace: editSpace,
-            createSpace: createSpace
-        )
-    }
-
-    private var addressConfiguration: BrowserSidebarAddressFieldConfiguration {
-        BrowserSidebarAddressFieldConfiguration(
-            text: displayedAddress,
-            isEditing: displayedEditing,
-            focusRequest: addressFocusRequest,
-            isSecure: isSecure,
-            progress: isSelected ? pages.activePage?.estimatedProgress ?? 0 : 0,
-            isLoading: isSelected && pages.activePage?.isLoading == true,
-            hasResidentPage: isSelected && pages.activePage != nil,
-            hasActiveSite: siteControl != nil,
-            capabilities: capabilities,
-            activate: activateAddress,
-            submit: submitAddress,
-            morphNamespace: commandSurfaceNamespace,
-            morphID: "crest-address-command-\(space.id)"
-        )
+        SpaceSidebarTabListScroll(browser: browser) {
+            BrowserSidebarBackgroundInteractionView(
+                editSpace: editSpace,
+                createSpace: createSpace
+            )
+        } content: {
+            BrowserSidebarTabList(
+                space: space,
+                tabSections: tabSections,
+                browser: browser,
+                spaceAccess: spaceAccess,
+                pageAccess: pageAccess,
+                tabActions: tabActions,
+                capabilities: capabilities,
+                isSavedTabsExpanded: isSavedTabsExpanded,
+                promotionNamespace: tabPromotionNamespace,
+                showsClearAction: isHoveringTabList,
+                restoreSavedLocation: restoreSavedLocation,
+                select: activate,
+                openNewTab: openNewTab,
+                editingFolderRequest: $editingFolderRequest
+            )
+        }
+        .onHover { isHoveringTabList = $0 }
     }
 
     /// What this shell can do, until the shell itself hands it down: a pointer
@@ -151,30 +117,61 @@ struct SpaceSidebarBrowsingContent: View {
         BrowserInteractionCapabilities()
     }
 
-    private var isSecure: Bool {
-        isSelected
-            ? pages.activePage?.hasOnlySecureContent == true
-            : selectedTab?.url?.scheme?.lowercased() == "https"
+    private var pageAccess: BrowserSidebarPageAccess {
+        BrowserSidebarPageAccess(pages: pages, browser: browser)
     }
 
-    private var siteControl: BrowserSiteControlConfiguration? {
-        guard isSelected,
-            let page = pages.activePage,
-            page.displayURL != nil,
-            page.spaceID == space.id
-        else {
-            return nil
-        }
-        return BrowserSiteControlConfiguration(
-            page: page,
-            space: space,
-            selectedTabID: space.selectedTabID,
-            extensionControllerPool: pages.extensionControllerPool,
-            permissionCenter: pages.permissionCenter,
-            manageExtensions: showExtensions,
-            presentationChanged: siteControlPresentationChanged,
-            contextMenuPresentationChanged:
-                siteControlContextMenuPresentationChanged
+    private var tabActions: BrowserSidebarTabActions {
+        BrowserSidebarTabActions(
+            assignment: BrowserSpaceRuntimeAssignment(space: space),
+            browser: browser,
+            pages: pages,
+            spaceAccess: spaceAccess
         )
+    }
+
+    /// Selection and presentation in the one order that works: the page a
+    /// shell brings on screen is whichever one the session now points at.
+    private func activate(_ tabID: TabID) {
+        BrowserTabActivationPolicy.activate(
+            tabID,
+            selectTab: browser.selectTab,
+            presentPage: { pages.select(session: browser.session) }
+        )
+    }
+
+    private func restoreSavedLocation(_ tabID: TabID) {
+        BrowserSavedLocationRestoreAction(
+            browser: browser,
+            pages: pages,
+            spaceAccess: spaceAccess
+        ).perform(
+            BrowserTabRuntimeAssignment(
+                tabID: tabID,
+                spaceID: space.id,
+                profileID: space.profile.id
+            )
+        )
+    }
+
+    private var hasPinnedExtensionActions: Bool {
+        pages.extensionControllerPool.toolbarActions(
+            in: space.id,
+            tabID: space.selectedTabID
+        )
+        .contains(where: \.isPinned)
+    }
+
+    private var pinnedTabsTopInset: CGFloat {
+        guard !tabSections.pinnedTabs.isEmpty else { return 0 }
+        return BrowserPinnedExtensionStripLayoutPolicy.pinnedTabsTopInset(
+            hasPinnedExtensions: hasPinnedExtensionActions
+        )
+    }
+
+    private var pinnedTabsBottomInset: CGFloat {
+        tabSections.pinnedTabs.isEmpty
+            ? 0
+            : BrowserSidebarMetrics.pinnedTabsBottomInset
     }
 }

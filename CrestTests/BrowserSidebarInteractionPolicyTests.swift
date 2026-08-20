@@ -647,6 +647,128 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - New-tab row metrics
+
+    /// Pins the numbers each shell's new-tab row draws today. The two are not
+    /// variations on one row: a pointer row is an exact 40pt band with a hover
+    /// surface inside an 8pt margin and its label inset 9pt further in, and a
+    /// touch row has no surface, keeps the whole 18pt inset as the label's own
+    /// margin, and grows from a 44pt floor instead of holding a fixed height.
+    func testTheNewTabRowResolvesEachShellsExactGeometry() {
+        let pointer = BrowserSidebarInteractionPolicy.newTabRowMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.labelHorizontalInset, 9)
+        XCTAssertEqual(pointer.rowHorizontalInset, 8)
+        XCTAssertTrue(pointer.usesFixedHeight)
+        XCTAssertTrue(pointer.showsHoverSurface)
+        XCTAssertTrue(pointer.showsShortcutTooltip)
+
+        let touch = BrowserSidebarInteractionPolicy.newTabRowMetrics(
+            capabilities(hover: true, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.labelHorizontalInset, 0)
+        XCTAssertEqual(touch.rowHorizontalInset, 18)
+        XCTAssertFalse(touch.usesFixedHeight)
+        XCTAssertFalse(touch.showsHoverSurface)
+        XCTAssertFalse(touch.showsShortcutTooltip)
+
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.newTabRowMetrics(
+                capabilities(hover: false, touch: true)
+            ),
+            .touch
+        )
+    }
+
+    /// The row's height comes from the same floor the tab rows use, so the
+    /// new-tab row and the first tab below it never sit on different rhythms —
+    /// including once the reader has chosen an accessibility text size.
+    func testTheNewTabRowSharesTheRowHeightFloor() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.rowMinHeight(
+                capabilities(hover: true, touch: true),
+                dynamicTypeSize: .accessibility1
+            ),
+            BrowserSidebarInteractionPolicy.accessibilityTouchRowHeight
+        )
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.rowMinHeight(
+                capabilities(hover: true, touch: true),
+                dynamicTypeSize: .large
+            ),
+            CrestLayout.sidebarRowHeight
+        )
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.rowMinHeight(
+                capabilities(hover: true, touch: false),
+                dynamicTypeSize: .accessibility1
+            ),
+            CrestLayout.sidebarRowHeight
+        )
+    }
+
+    // MARK: - Tab list furniture metrics
+
+    /// Pins the seam and the landing band. Only a pointer shell carries the
+    /// clear control, because the control waits for a pointer to arrive before
+    /// it appears, and the band a finger has to land in is more than twice the
+    /// height a pointer's insertion line needs.
+    func testTheTabListResolvesEachShellsSeamAndLandingBand() {
+        let pointer = BrowserSidebarInteractionPolicy.tabListMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.dividerHorizontalInset, 12)
+        XCTAssertEqual(pointer.dividerVerticalInset, 3)
+        XCTAssertEqual(pointer.clearActionOcclusionWidth, 52)
+        XCTAssertTrue(pointer.carriesClearAction)
+        XCTAssertEqual(pointer.sectionEndBandHeight, 12)
+
+        let touch = BrowserSidebarInteractionPolicy.tabListMetrics(
+            capabilities(hover: true, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.dividerHorizontalInset, 16)
+        XCTAssertEqual(touch.dividerVerticalInset, 5)
+        XCTAssertEqual(touch.clearActionOcclusionWidth, 0)
+        XCTAssertFalse(touch.carriesClearAction)
+        XCTAssertEqual(touch.sectionEndBandHeight, 28)
+    }
+
+    /// The seam gives up the clear control wherever a finger is an input, for
+    /// the same reason every other hover-revealed control does: nothing a touch
+    /// shell can do would ever reveal it.
+    func testATouchShellGivesUpTheClearAction() {
+        for hover in [true, false] {
+            let shell = capabilities(hover: hover, touch: true)
+            XCTAssertFalse(
+                BrowserSidebarInteractionPolicy.tabListMetrics(shell)
+                    .carriesClearAction,
+                "hover: \(hover)"
+            )
+            XCTAssertFalse(
+                BrowserSidebarInteractionPolicy.revealsRowControlsOnHoverOnly(
+                    shell
+                ),
+                "hover: \(hover)"
+            )
+        }
+
+        let pointer = capabilities(hover: true, touch: false)
+        XCTAssertTrue(
+            BrowserSidebarInteractionPolicy.tabListMetrics(pointer)
+                .carriesClearAction
+        )
+        XCTAssertTrue(
+            BrowserSidebarInteractionPolicy.revealsRowControlsOnHoverOnly(
+                pointer
+            )
+        )
+    }
+
     // MARK: - Fixtures
 
     private func capabilities(

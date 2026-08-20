@@ -111,25 +111,57 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    func testMobileFolderRowHighlightsOnlyForATabDrop() {
+    /// A folder header answers the lift that would land inside it, and the two
+    /// answers are alternatives rather than layers: a tab is about to become one
+    /// of the folder's rows, so it previews as a row's own selection, while a
+    /// folder is about to nest and gets the outline. Nothing lifted, or a lift
+    /// aimed elsewhere, draws neither.
+    func testAFolderHeaderPreviewsTheLiftItWouldTake() {
+        let tab = BrowserSidebarReorderItem.tab(
+            BrowserTabDragItem(
+                tabID: TabID(),
+                spaceID: SpaceID(),
+                profileID: UUID()
+            )
+        )
+        let folder = BrowserSidebarReorderItem.folder(
+            BrowserFolderDragItem(
+                folderID: FolderID(),
+                spaceID: SpaceID(),
+                profileID: UUID()
+            )
+        )
+        let group = BrowserSidebarReorderItem.splitGroup(
+            BrowserSplitGroupDragItem(
+                groupID: SplitGroupID(),
+                spaceID: SpaceID(),
+                profileID: UUID(),
+                memberTabIDs: [TabID(), TabID()]
+            )
+        )
+
         XCTAssertTrue(
-            BrowserFolderRowPresentationPolicy.showsDropHighlight(
-                isTargeted: true,
-                isTabDragging: true
-            )
+            BrowserFolderRowPresentationPolicy.showsDropHighlight(for: tab)
         )
         XCTAssertFalse(
-            BrowserFolderRowPresentationPolicy.showsDropHighlight(
-                isTargeted: true,
-                isTabDragging: false
-            )
+            BrowserFolderRowPresentationPolicy.showsNestOutline(for: tab)
+        )
+
+        XCTAssertTrue(
+            BrowserFolderRowPresentationPolicy.showsNestOutline(for: folder)
         )
         XCTAssertFalse(
-            BrowserFolderRowPresentationPolicy.showsDropHighlight(
-                isTargeted: false,
-                isTabDragging: true
-            )
+            BrowserFolderRowPresentationPolicy.showsDropHighlight(for: folder)
         )
+
+        for lift in [group, nil] {
+            XCTAssertFalse(
+                BrowserFolderRowPresentationPolicy.showsDropHighlight(for: lift)
+            )
+            XCTAssertFalse(
+                BrowserFolderRowPresentationPolicy.showsNestOutline(for: lift)
+            )
+        }
     }
 
     func testCollapsedFolderKeepsTheTabThatWasVisibleWhenItCollapsed() {

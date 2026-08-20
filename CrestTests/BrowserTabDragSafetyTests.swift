@@ -607,6 +607,89 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// A collapsed folder is the one target whose meaning a section's zone
+    /// cannot express — release lands the item *inside* it, not beside it — so
+    /// the row has to say so while the lift is still in flight. The reorder
+    /// state is the only thing that knows, and this is the pairing the folder
+    /// header's highlight is drawn from.
+    func testACollapsedFolderReportsItselfAsTheNestingTargetWhileLifted() {
+        let context = makeSplitContext()
+        let state = context.browser.sidebarReorderState
+        let folderID = FolderID()
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let rowFrame = CGRect(x: 8, y: 154, width: 374, height: 44)
+        let folderFrame = CGRect(x: 8, y: 300, width: 374, height: 44)
+
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(context.outsider.id),
+                section: section,
+                frame: rowFrame
+            ),
+            owner: UUID()
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(section),
+                frame: CGRect(x: 0, y: 100, width: 390, height: 120)
+            ),
+            for: UUID()
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .folder(folderID),
+                frame: BrowserSidebarReorderPolicy.nestingFrame(
+                    for: folderFrame
+                )
+            ),
+            for: UUID()
+        )
+
+        XCTAssertFalse(
+            state.isTargetedFolder(folderID),
+            "Nothing is lifted, so nothing can be aimed at the folder."
+        )
+
+        let item = BrowserTabDragItem(
+            tabID: context.outsider.id,
+            spaceID: context.space.id,
+            profileID: context.space.profile.id
+        )
+        state.begin(
+            item: .tab(item),
+            section: section,
+            at: CGPoint(x: rowFrame.midX, y: rowFrame.midY)
+        )
+        state.update(pointer: CGPoint(x: rowFrame.midX, y: rowFrame.midY))
+        XCTAssertFalse(state.isTargetedFolder(folderID))
+
+        state.update(
+            pointer: CGPoint(x: folderFrame.midX, y: folderFrame.midY)
+        )
+        XCTAssertEqual(
+            state.resolvedTarget?.kind,
+            .intoFolder(folderID)
+        )
+        XCTAssertTrue(state.isTargetedFolder(folderID))
+        // The lift's own kind is what the header reads to choose between the
+        // row highlight and the nesting outline.
+        XCTAssertEqual(state.lift?.item, .tab(item))
+        XCTAssertTrue(
+            BrowserFolderRowPresentationPolicy.showsDropHighlight(
+                for: state.lift?.item
+            )
+        )
+
+        _ = state.end()
+        XCTAssertFalse(
+            state.isTargetedFolder(folderID),
+            "A settled list must not keep drawing the last target."
+        )
+    }
+
     /// The `.onDrag` provider hands the session a JSON payload. It never leaves
     /// Crest, but it does have to survive the round trip the provider encodes.
     func testTheSplitGroupDragPayloadRoundTripsAsJSON() throws {

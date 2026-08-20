@@ -35,7 +35,6 @@ struct BrowserSavedFolderGroup: View {
     @Binding var isExpanded: Bool
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isDropTargeted = false
     @State private var draftTitle = ""
     @State private var colorRequest: BrowserFolderRuntimeAssignment?
     @State private var deletionRequest: BrowserFolderRuntimeAssignment?
@@ -67,7 +66,6 @@ struct BrowserSavedFolderGroup: View {
         BrowserSavedFolderGroupInteractionContext(
             isExpanded: $isExpanded,
             editingFolderRequest: $editingFolderRequest,
-            isDropTargeted: $isDropTargeted,
             draftTitle: $draftTitle,
             isChoosingColor: colorPresentation,
             isConfirmingDeletion: deletionPresentation,

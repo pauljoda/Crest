@@ -1,27 +1,36 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-struct MobilePinnedTabsDropSection: View {
+/// The Space's pinned tabs as one drop section, on every shell.
+///
+/// What differs between a pointer shell and a touch one is read from
+/// `BrowserSidebarInteractionPolicy` rather than from which target compiled the
+/// file. What the two shells genuinely cannot share — where a page lives, what
+/// opening a tab means to the host, how a tab gets home — arrives as the page
+/// seam and a handful of closures the host binds.
+struct BrowserPinnedTabsDropSection: View {
     let space: BrowserSpace
     let tabSections: BrowserTabSections
     let browser: BrowserStore
-    let pages: MobileBrowserPageStore
     let spaceAccess: BrowserSpaceAccessController
-    let selectTab: (TabID) -> Void
-    let tabPromotionNamespace: Namespace.ID
-    let usesNativeNavigationTransition: Bool
-
-    @State private var isDropTargeted = false
-
-    private var dropLocation: BrowserTabDropLocation {
-        .init(placement: .pinned, folderID: nil, beforeTabID: nil)
-    }
+    let pageAccess: BrowserSidebarPageAccess
+    let tabActions: BrowserSidebarTabActions
+    let capabilities: BrowserInteractionCapabilities
+    var promotionNamespace: Namespace.ID? = nil
+    /// How a pinned tab gets back to the page it was saved from. The two shells
+    /// answer that differently, so the host binds it.
+    let restoreSavedLocation: (TabID) -> Void
+    /// What opening a pinned tab means to the host. The section decides
+    /// *whether*; the host decides what appears.
+    let select: (TabID) -> Void
 
     var body: some View {
         Group {
             if tabSections.pinnedTabs.isEmpty {
+                // A grid nobody has filled still takes a drop, and without a
+                // band of its own it has no region to aim at and nowhere to
+                // draw its insertion line.
                 Color.clear
-                    .frame(height: MobileSidebarDropTargetPolicy.sectionEndTargetHeight)
+                    .frame(height: metrics.sectionEndBandHeight)
                     .contentShape(.rect)
                     .accessibilityHidden(true)
             } else {
@@ -31,24 +40,22 @@ struct MobilePinnedTabsDropSection: View {
                     selectedTabID: space.selectedTabID,
                     select: { runtimeAssignment in
                         guard isCurrentAndUnlocked else { return }
-                        selectTab(runtimeAssignment.tabID)
+                        select(runtimeAssignment.tabID)
                     },
                     moveTab: move,
                     dragState: browser.tabDragState,
                     browser: browser,
                     spaceAccess: spaceAccess,
-                    isLoaded: pages.containsResidentPage(matching:),
+                    isLoaded: pageAccess.containsResidentPageMatching,
                     unload: { runtimeAssignment in
-                        pages.unloadPage(
-                            for: runtimeAssignment.tabID,
-                            matching: assignment
-                        )
+                        pageAccess.unloadPage(runtimeAssignment.tabID, assignment)
                     },
                     pullNewIcon: { pullNewIcon($0.tabID) },
                     restoreSavedLocation: { restoreSavedLocation($0.tabID) },
-                    siteThemeAccent: pages.siteThemeIconAccent(matching:),
-                    promotionNamespace: tabPromotionNamespace,
-                    usesNativeNavigationTransition: usesNativeNavigationTransition
+                    siteThemeAccent: pageAccess.siteThemeIconAccent,
+                    promotionNamespace: promotionNamespace,
+                    usesNativeNavigationTransition:
+                        capabilities.usesNativeNavigationTransition
                 )
             }
         }
@@ -67,7 +74,14 @@ struct MobilePinnedTabsDropSection: View {
         .accessibilityHint("Drop a tab here to pin it")
     }
 
-    private func move(_ item: BrowserTabDragItem, before tabID: TabID?) -> Bool {
+    private var metrics: BrowserSidebarTabListMetrics {
+        BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
+    }
+
+    private func move(
+        _ item: BrowserTabDragItem,
+        before tabID: TabID?
+    ) -> Bool {
         guard isCurrentAndUnlocked else { return false }
         return BrowserTabDragAction(
             browser: browser,
@@ -81,30 +95,10 @@ struct MobilePinnedTabsDropSection: View {
     }
 
     private func pullNewIcon(_ tabID: TabID) {
-        let actions = BrowserSidebarTabActions(
-            assignment: assignment,
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
-        )
+        let actions = tabActions
         Task {
             await actions.pullNewIcon(for: tabID)
         }
-    }
-
-    private func restoreSavedLocation(_ tabID: TabID) {
-        guard isCurrentAndUnlocked else { return }
-        MobileSavedLocationRestoreAction(
-            browser: browser,
-            pages: pages,
-            selectTab: selectTab
-        ).perform(
-            BrowserTabRuntimeAssignment(
-                tabID: tabID,
-                spaceID: space.id,
-                profileID: space.profile.id
-            )
-        )
     }
 
     private var assignment: BrowserSpaceRuntimeAssignment {

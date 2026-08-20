@@ -1,12 +1,16 @@
 import SwiftUI
 
+/// The outline a collapsed folder wears while releasing would file the lifted
+/// item inside it.
+///
+/// Whether that is what release means is resolved by
+/// `BrowserSidebarReorderState` from the measured geometry, so this view takes
+/// the answer rather than re-deriving it from a drag session.
 struct BrowserFolderNestDropHighlight: View {
-    let location: BrowserFolderDropLocation
-    let dragState: BrowserFolderDragState
     let isTargeted: Bool
 
     var body: some View {
-        if isTargeted, dragState.dropLocation == location {
+        if isTargeted {
             RoundedRectangle(
                 cornerRadius: CrestLayout.sidebarControlCornerRadius,
                 style: .continuous

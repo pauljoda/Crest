@@ -80,21 +80,18 @@ struct BrowserSavedFolderGroupConfiguration {
         ) != nil
     }
 
-    /// Where a folder dropped against this one lands: beside it, under the
-    /// same parent.
-    var folderDropLocation: BrowserFolderDropLocation {
-        BrowserFolderDropLocation(
-            parentID: folder.parentID,
-            beforeSiblingID: folder.id
-        )
-    }
-
-    /// Where a folder dropped *onto* this one lands: inside it.
-    var folderInsideDropLocation: BrowserFolderDropLocation {
-        BrowserFolderDropLocation(
-            parentID: folder.id,
-            beforeSiblingID: nil
-        )
+    /// What releasing the lift in flight would file inside this folder, if
+    /// anything would.
+    ///
+    /// The reorder state resolves the target from the measured geometry — a
+    /// collapsed folder registers the middle band of its row as a nesting zone —
+    /// so the folder only has to draw the answer. Nothing but a tab or a folder
+    /// can appear here: a split group moves as one block and refuses folder
+    /// zones outright.
+    var nestingLift: BrowserSidebarReorderItem? {
+        let state = browser.sidebarReorderState
+        guard state.isTargetedFolder(folder.id) else { return nil }
+        return state.lift?.item
     }
 
     func isLoaded(_ tabID: TabID) -> Bool {

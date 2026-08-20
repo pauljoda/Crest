@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// One Space's sidebar on the compact shell: the pinned grid, the Space header,
+/// and the scrolling tab list.
+///
+/// Everything here is composition and binding. The sections and the list are the
+/// shared ones; what this shell adds is its own scrolling chrome, the drop feed
+/// that covers the whole sidebar, and the page-facing closures only a single
+/// compact page can answer.
 struct MobileBrowserSpacePage: View {
     let space: BrowserSpace
     let browser: BrowserStore
@@ -15,25 +22,24 @@ struct MobileBrowserSpacePage: View {
     let closePrivateBrowsing: () -> Void
     let compactPageIsFullyPresented: Bool
 
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.openWindow) private var openWindow
     @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
-
-    @State private var reorderOrigin = CGPoint.zero
 
     var body: some View {
         let tabSections = space.tabSections
 
         VStack(spacing: 0) {
-            MobilePinnedTabsDropSection(
+            BrowserPinnedTabsDropSection(
                 space: space,
                 tabSections: tabSections,
                 browser: browser,
-                pages: pages,
                 spaceAccess: spaceAccess,
-                selectTab: selectTab,
-                tabPromotionNamespace: tabPromotionNamespace,
-                usesNativeNavigationTransition: mode == .compactTabViewer
+                pageAccess: pageAccess,
+                tabActions: tabActions,
+                capabilities: capabilities,
+                promotionNamespace: tabPromotionNamespace,
+                restoreSavedLocation: restoreSavedLocation,
+                select: selectTab
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -55,95 +61,33 @@ struct MobileBrowserSpacePage: View {
                 )
             )
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    // Keep the compact destination laid out beneath the expanded
-                    // surface. Do the same for the selected tab,
-                    // using an eager stack so the in-place morph always has a
-                    // real resting frame instead of materializing offscreen.
-                    VStack(spacing: 0) {
-                        if space.isSavedTabsExpanded {
-                            MobileSavedTabsDropSection(
-                                space: space,
-                                tabSections: tabSections,
-                                browser: browser,
-                                pages: pages,
-                                spaceAccess: spaceAccess,
-                                selectTab: selectTab,
-                                editingFolderRequest: $editingFolderRequest,
-                                tabPromotionNamespace: tabPromotionNamespace,
-                                usesNativeNavigationTransition: mode == .compactTabViewer
-                            )
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
-
-                        Divider()
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 5)
-
-                        MobileCurrentTabsDropSection(
-                            space: space,
-                            tabs: tabSections.sidebarCurrentTabs,
-                            browser: browser,
-                            pages: pages,
-                            spaceAccess: spaceAccess,
-                            selectTab: selectTab,
-                            openNewTab: openNewTab,
-                            tabPromotionNamespace: tabPromotionNamespace,
-                            usesNativeNavigationTransition: mode == .compactTabViewer
-                        )
-                    }
-                    .padding(.bottom, 8)
-                }
-                .scrollClipDisabled(
-                    !BrowserSidebarReorderVisuals.clipsScrollableRegion(
-                        clipsWhenIdle: BrowserSidebarScrollLayoutPolicy
-                            .clipsScrollableRegion,
-                        isDragging: browser.sidebarReorderState.isDragging
-                    )
+            MobileBrowserSpaceTabListScroll(
+                space: space,
+                browser: browser,
+                compactPageIsFullyPresented: compactPageIsFullyPresented
+            ) {
+                BrowserSidebarTabList(
+                    space: space,
+                    tabSections: tabSections,
+                    browser: browser,
+                    spaceAccess: spaceAccess,
+                    pageAccess: pageAccess,
+                    tabActions: tabActions,
+                    capabilities: capabilities,
+                    isSavedTabsExpanded: space.isSavedTabsExpanded,
+                    promotionNamespace: tabPromotionNamespace,
+                    savedPromotionNamespace: tabPromotionNamespace,
+                    restoreSavedLocation: restoreSavedLocation,
+                    select: selectTab,
+                    openNewTab: openNewTabIfAvailable,
+                    editingFolderRequest: $editingFolderRequest
                 )
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        BrowserAddressFocusDismissal.dismiss()
-                    }
-                )
-                .accessibilityLabel("Saved and current tabs")
-                .accessibilityIdentifier(
-                    BrowserSpaceAccessibilityID.tabs(space.id)
-                )
-                .onChange(of: selectedPromotionTarget) { previous, current in
-                    guard
-                        MobileTabPromotionPolicy.shouldPreposition(
-                            previous: previous,
-                            current: current,
-                            compactPageIsFullyPresented: compactPageIsFullyPresented
-                        ), let current
-                    else { return }
-
-                    var transaction = Transaction(animation: nil)
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        proxy.scrollTo(current.tabID, anchor: .center)
-                    }
-                }
             }
         }
-        // Covers the whole sidebar — pinned strip included — because the pinned
-        // grid sits outside the scrolling list. A feed attached to the list alone
-        // never sees the pointer over pinned, so a tab could not be dropped there.
-        .onGeometryChange(for: CGRect.self) { proxy in
-            proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
-        } action: { frame in
-            reorderOrigin = frame.origin
-        }
-        .onDrop(
-            of: [.json],
-            delegate: BrowserSidebarReorderDropDelegate(
-                reorder: BrowserSidebarReorderContext(
-                    browser: browser,
-                    spaceAccess: spaceAccess
-                ),
-                origin: reorderOrigin
+        .modifier(
+            MobileBrowserSidebarReorderDropFeed(
+                browser: browser,
+                spaceAccess: spaceAccess
             )
         )
         .accessibilityElement(children: .contain)
@@ -154,9 +98,9 @@ struct MobileBrowserSpacePage: View {
     }
 
     /// What this shell can do, until the shell itself hands it down: a finger
-    /// is the primary input, a trackpad may still be attached, and the tab
-    /// viewer is the mode that zooms a page in with the system's own
-    /// transition.
+    /// is the primary input, a trackpad may still be attached, the sections
+    /// draw their drop feedback on the rows, and the tab viewer is the mode that
+    /// zooms a page in with the system's own transition.
     private var capabilities: BrowserInteractionCapabilities {
         BrowserInteractionCapabilities(
             supportsHover: true,
@@ -167,15 +111,36 @@ struct MobileBrowserSpacePage: View {
         )
     }
 
-    private var selectedTab: BrowserTab? {
-        guard let selectedTabID = space.selectedTabID else { return nil }
-        return space.tabs.first { $0.id == selectedTabID }
+    private var pageAccess: BrowserSidebarPageAccess {
+        BrowserSidebarPageAccess(pages: pages, browser: browser)
     }
 
-    private var selectedPromotionTarget: MobileTabPromotionTarget? {
-        MobileTabPromotionPolicy.target(
-            for: selectedTab,
-            selectedTabID: space.selectedTabID
+    private var tabActions: BrowserSidebarTabActions {
+        BrowserSidebarTabActions(
+            assignment: assignment,
+            browser: browser,
+            pages: pages,
+            spaceAccess: spaceAccess
+        )
+    }
+
+    private func openNewTabIfAvailable() {
+        guard isCurrentAndUnlocked else { return }
+        openNewTab()
+    }
+
+    private func restoreSavedLocation(_ tabID: TabID) {
+        guard isCurrentAndUnlocked else { return }
+        MobileSavedLocationRestoreAction(
+            browser: browser,
+            pages: pages,
+            selectTab: selectTab
+        ).perform(
+            BrowserTabRuntimeAssignment(
+                tabID: tabID,
+                spaceID: space.id,
+                profileID: space.profile.id
+            )
         )
     }
 

@@ -66,6 +66,31 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// The geometry the sidebar's new-tab row draws itself with.
+    ///
+    /// Touch decides this like it decides the rows below it: the row is a hit
+    /// target, its height has to be able to grow with the label, and the hover
+    /// surface a pointer shell rests under it is not a treatment a finger can
+    /// ask for.
+    static func newTabRowMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSidebarNewTabRowMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
+    /// The geometry the tab list's own furniture draws itself with — the seam
+    /// between the saved and current runs, and the band an empty run keeps for
+    /// a drop.
+    ///
+    /// Touch decides this too. The seam carries a control that only a pointer
+    /// can reveal, and the band has to be big enough for the least precise
+    /// input the shell accepts to land in.
+    static func tabListMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSidebarTabListMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
     /// The geometry the sidebar's address field draws itself with.
     ///
     /// Touch decides this like it decides the rows: the field is a hit target

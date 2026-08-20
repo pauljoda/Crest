@@ -1610,7 +1610,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertFalse(MobileSidebarDropTargetPolicy.acceptsDropsOnScrollBackground)
         XCTAssertTrue(MobileSidebarDropTargetPolicy.usesDedicatedSectionEndTargets)
         XCTAssertGreaterThanOrEqual(
-            MobileSidebarDropTargetPolicy.sectionEndTargetHeight,
+            BrowserSidebarTabListMetrics.touch.sectionEndBandHeight,
             22
         )
     }

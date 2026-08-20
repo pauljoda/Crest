@@ -6,7 +6,6 @@ import SwiftUI
 struct BrowserSavedFolderGroupInteractionContext {
     let isExpanded: Binding<Bool>
     let editingFolderRequest: Binding<BrowserFolderRuntimeAssignment?>
-    let isDropTargeted: Binding<Bool>
     let draftTitle: Binding<String>
     let isChoosingColor: Binding<Bool>
     let isConfirmingDeletion: Binding<Bool>
