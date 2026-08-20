@@ -225,6 +225,85 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - Split group container layout
+
+    /// Pins the container geometry each shell's grouped rows draw today, which
+    /// is what two forks of this row used to disagree about. The corner radius
+    /// is asserted against the member rows' own radius plus the container
+    /// padding, because the two have to stay concentric: a focused member's
+    /// corners are drawn one padding inside the container's.
+    func testSplitGroupContainerGeometryFollowsTheShell() {
+        let pointer = BrowserSidebarInteractionPolicy.splitGroupRowMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.rowVerticalInset, 2)
+        XCTAssertEqual(pointer.containerPadding, 4)
+        XCTAssertEqual(pointer.containerCornerRadius, 12)
+        XCTAssertEqual(pointer.memberSpacing, 0)
+        XCTAssertEqual(pointer.headerHeight, 20)
+        XCTAssertEqual(pointer.headerGlyphSize, 10)
+        XCTAssertEqual(pointer.headerSpacing, 4)
+
+        let touch = BrowserSidebarInteractionPolicy.splitGroupRowMetrics(
+            capabilities(hover: false, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.rowVerticalInset, 2)
+        XCTAssertEqual(touch.containerPadding, 4)
+        XCTAssertEqual(touch.containerCornerRadius, 12)
+        XCTAssertEqual(touch.memberSpacing, 2)
+        XCTAssertEqual(touch.headerHeight, 22)
+        XCTAssertEqual(touch.headerGlyphSize, 11)
+        XCTAssertEqual(touch.headerSpacing, 4)
+    }
+
+    /// The container and the rows inside it are concentric on both shells, so
+    /// a focused member's corners stay parallel to the group's own.
+    func testSplitGroupContainerStaysConcentricWithItsMemberRows() {
+        for metrics in [
+            BrowserSidebarSplitGroupRowMetrics.pointer,
+            BrowserSidebarSplitGroupRowMetrics.touch,
+        ] {
+            XCTAssertEqual(
+                metrics.containerCornerRadius - metrics.containerPadding,
+                CrestLayout.sidebarControlCornerRadius
+            )
+        }
+    }
+
+    /// The two insets the container borrows rather than chooses. A group has
+    /// to start in the same column as the loose tabs above and below it, and
+    /// its count glyph has to sit in the same column as the favicons of the
+    /// members underneath — so both come from the tab row profile the same
+    /// capabilities resolve, not from a number of the container's own.
+    func testSplitGroupBorrowsItsEdgeAndHeaderInsetsFromTheTabRow() {
+        for shell in [
+            capabilities(hover: true, touch: false),
+            capabilities(hover: false, touch: true),
+            capabilities(hover: true, touch: true),
+        ] {
+            let tabRow = BrowserSidebarInteractionPolicy.tabRowMetrics(shell)
+            XCTAssertEqual(tabRow.surfaceHorizontalInset, 8)
+            XCTAssertEqual(
+                tabRow.contentLeadingInset,
+                shell.supportsTouch ? 12 : 9
+            )
+        }
+    }
+
+    /// A trackpad beside a touchscreen must not tighten the group back down.
+    func testAddingHoverToATouchShellKeepsTheTouchSplitGroupContainer() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.splitGroupRowMetrics(
+                capabilities(hover: true, touch: true)
+            ),
+            BrowserSidebarInteractionPolicy.splitGroupRowMetrics(
+                capabilities(hover: false, touch: true)
+            )
+        )
+    }
+
     // MARK: - Split group members
 
     func testOnlyATouchShellKeepsSplitMembersAtFullRowHeight() {
@@ -242,6 +321,33 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
             BrowserSidebarInteractionPolicy.splitMembersUseFullRowHeight(
                 capabilities(hover: true, touch: false)
             )
+        )
+    }
+
+    /// A member is a real tab row, so it would otherwise draw the insertion
+    /// lines its shell asks every row for. It must not: the container owns both
+    /// anchors for the run, and a member drawing its own would double the line
+    /// above the first member and light one up under every member at once for a
+    /// drop aimed at the end of the section.
+    @MainActor
+    func testAGroupedMemberLeavesTheInsertionLinesToItsContainer() {
+        let shell = BrowserInteractionCapabilities(
+            supportsHover: true,
+            supportsTouch: true,
+            showsRowDropIndicators: true
+        )
+
+        XCTAssertTrue(
+            BrowserSidebarTabRowPreviewFixture.configuration(
+                capabilities: shell,
+                isSplitGroupMember: false
+            ).showsDropIndicators
+        )
+        XCTAssertFalse(
+            BrowserSidebarTabRowPreviewFixture.configuration(
+                capabilities: shell,
+                isSplitGroupMember: true
+            ).showsDropIndicators
         )
     }
 

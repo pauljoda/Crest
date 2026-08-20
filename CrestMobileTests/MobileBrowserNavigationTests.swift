@@ -1629,7 +1629,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testSplitGroupRowsKeepAStandardSmallGutterBetweenSurfaces() {
         XCTAssertEqual(
-            MobileSidebarSplitGroupRowMetrics.rowVerticalInset * 2,
+            BrowserSidebarSplitGroupRowMetrics.touch.rowVerticalInset * 2,
             CrestSpacing.extraSmall
         )
     }

@@ -76,20 +76,25 @@ struct MobileSavedTabsDropSection: View {
                     let followingTabID = members.last.flatMap {
                         followingTabIDs[$0.id]
                     }
-                    MobileSidebarSplitGroupRow(
+                    BrowserSidebarSplitGroupRow(
                         groupID: groupID,
                         members: members,
-                        followingTabID: followingTabID,
-                        hasVisibleFollowingRow: followingTabID != nil,
                         spaceID: space.id,
                         profileID: space.profile.id,
                         selectedTabID: space.selectedTabID,
                         canClose: false,
                         browser: browser,
                         spaceAccess: spaceAccess,
+                        capabilities: capabilities,
                         isLoaded: { pages.containsResidentPage(for: $0) },
+                        unload: { tabID in
+                            pages.unloadPage(for: tabID, matching: assignment)
+                        },
+                        pullNewIcon: pullNewIcon,
+                        restoreSavedLocation: restoreSavedLocation,
                         promotionNamespace: tabPromotionNamespace,
-                        usesNativeNavigationTransition: usesNativeNavigationTransition,
+                        followingTabID: followingTabID,
+                        hasVisibleFollowingRow: followingTabID != nil,
                         select: selectTab
                     )
                 }

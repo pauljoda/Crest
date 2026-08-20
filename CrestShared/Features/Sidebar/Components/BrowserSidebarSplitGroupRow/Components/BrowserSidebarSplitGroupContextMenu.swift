@@ -2,12 +2,12 @@ import SwiftUI
 
 /// The menu for the group as a whole: the two ways a split ends.
 ///
-/// The same two actions the macOS group row offers, because a split created on
-/// one device has to be undoable on the other. Drag-to-split has no mobile
-/// counterpart in this release, so this menu — reached from the group's count
-/// affordance — is how a phone manages a group at all.
-struct MobileSidebarSplitGroupContextMenu: View {
-    let configuration: MobileSidebarSplitGroupRowConfiguration
+/// Everything that belongs to one pane rather than to the run — moving a member
+/// along the carousel, taking it out of the split, and every ordinary tab
+/// action beside them — is on the member row's own menu, so there is one place
+/// that owns tab organization and one that owns the group.
+struct BrowserSidebarSplitGroupContextMenu: View {
+    let configuration: BrowserSidebarSplitGroupRowConfiguration
 
     var body: some View {
         Button("Separate All Tabs", systemImage: "rectangle.split.2x1.slash") {

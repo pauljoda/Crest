@@ -43,6 +43,17 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// The layout a stacked split-group row draws its container with.
+    ///
+    /// Touch decides this for the same reason it decides the tab row: the
+    /// grouped surface has to hold rows a finger can tell apart, and the
+    /// header above them has to be legible at the same distance.
+    static func splitGroupRowMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSidebarSplitGroupRowMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
     /// Whether a row anchors the page it opens with a matched-geometry
     /// destination.
     ///

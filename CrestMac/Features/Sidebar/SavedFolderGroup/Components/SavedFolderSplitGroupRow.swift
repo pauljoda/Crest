@@ -8,7 +8,7 @@ struct SavedFolderSplitGroupRow: View {
     let members: [BrowserTab]
 
     var body: some View {
-        SidebarSplitGroupRow(
+        BrowserSidebarSplitGroupRow(
             groupID: groupID,
             members: members,
             spaceID: configuration.spaceID,
@@ -17,9 +17,7 @@ struct SavedFolderSplitGroupRow: View {
             canClose: false,
             browser: configuration.browser,
             spaceAccess: configuration.spaceAccess,
-            presentSelectedPage: {
-                configuration.pages.select(session: configuration.browser.session)
-            },
+            capabilities: BrowserInteractionCapabilities(),
             isLoaded: { configuration.pages.containsResidentPage(for: $0) },
             unload: { tabID in
                 configuration.pages.unloadPage(
@@ -32,8 +30,21 @@ struct SavedFolderSplitGroupRow: View {
             },
             restoreSavedLocation: { tabID in
                 configuration.tabActions.restoreSavedLocation(for: tabID)
-            }
+            },
+            select: activate
         )
         .padding(.leading, configuration.rowLeadingInset)
+    }
+
+    /// Selection and presentation in the one order that works: the page a
+    /// shell brings on screen is whichever one the session now points at.
+    private func activate(_ tabID: TabID) {
+        BrowserTabActivationPolicy.activate(
+            tabID,
+            selectTab: configuration.browser.selectTab,
+            presentPage: {
+                configuration.pages.select(session: configuration.browser.session)
+            }
+        )
     }
 }

@@ -49,6 +49,17 @@ struct BrowserSidebarTabRowConfiguration {
         isSplitGroupMember ? 0 : metrics.surfaceHorizontalInset
     }
 
+    /// Whether this row draws its own insertion lines.
+    ///
+    /// A grouped member never does, whatever the shell can show. The container
+    /// is one row to the list and owns both anchors for the whole run, and a
+    /// member drawing its own would double the line above the first member and
+    /// light one up under *every* member for a drop aimed at the end of the
+    /// section — neither of which is a place a tab can actually land.
+    var showsDropIndicators: Bool {
+        capabilities.showsRowDropIndicators && !isSplitGroupMember
+    }
+
     /// The identity this row shares with the surface its page grows out of.
     var promotionID: String {
         BrowserTabPromotionID.value(for: tab.id)

@@ -1,30 +1,26 @@
 import SwiftUI
 
-/// The insertion lines a row draws while a tab is being dragged over the list.
+/// The insertion lines a group draws while a tab is being dragged over the
+/// list.
 ///
-/// Only shells that put the feedback on the rows themselves apply these; where
-/// the section's own zone carries the whole answer — or where the row is a
-/// split group's member and its container owns the run's anchors — the row
-/// stays quiet and this modifier steps aside entirely.
-struct BrowserSidebarTabRowDropIndicators: ViewModifier {
-    let configuration: BrowserSidebarTabRowConfiguration
-    let isDropTargeted: Bool
-    @Binding var dropTargetHeight: CGFloat
+/// The container owns both of them for the whole run, because the group is one
+/// row to the list: the line above lands in front of the first member and the
+/// line below skips past the last, so a drop can never be aimed between two
+/// panes of a split. Only shells that put the feedback on the rows themselves
+/// apply these; where the section's own zone carries the whole answer, the
+/// group stays quiet and this modifier steps aside entirely.
+struct BrowserSidebarSplitGroupRowDropIndicators: ViewModifier {
+    let configuration: BrowserSidebarSplitGroupRowConfiguration
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if configuration.showsDropIndicators {
+        if configuration.capabilities.showsRowDropIndicators {
             content
-                .onGeometryChange(for: CGFloat.self) { proxy in
-                    proxy.size.height
-                } action: { newHeight in
-                    dropTargetHeight = newHeight
-                }
                 .overlay(alignment: .top) {
                     BrowserTabDropIndicator(
                         location: configuration.beforeDropLocation,
                         dragState: configuration.browser.tabDragState,
-                        isTargeted: isDropTargeted
+                        isTargeted: false
                     )
                 }
                 .overlay(alignment: .bottom) { trailingIndicator }
@@ -43,7 +39,7 @@ struct BrowserSidebarTabRowDropIndicators: ViewModifier {
             BrowserTabDropIndicator(
                 location: configuration.afterDropLocation,
                 dragState: configuration.browser.tabDragState,
-                isTargeted: isDropTargeted
+                isTargeted: false
             )
         }
     }

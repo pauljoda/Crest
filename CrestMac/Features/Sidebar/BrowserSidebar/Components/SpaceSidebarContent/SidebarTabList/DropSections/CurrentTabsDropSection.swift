@@ -58,7 +58,7 @@ struct CurrentTabsDropSection: View {
                             select: activate
                         )
                     case .splitGroup(let groupID, let members):
-                        SidebarSplitGroupRow(
+                        BrowserSidebarSplitGroupRow(
                             groupID: groupID,
                             members: members,
                             spaceID: space.id,
@@ -67,16 +67,15 @@ struct CurrentTabsDropSection: View {
                             canClose: true,
                             browser: browser,
                             spaceAccess: spaceAccess,
-                            presentSelectedPage: {
-                                pages.select(session: browser.session)
-                            },
+                            capabilities: capabilities,
                             isLoaded: { pages.containsResidentPage(for: $0) },
                             unload: { tabID in
                                 pages.unloadPage(for: tabID, matching: assignment)
                             },
                             pullNewIcon: { tabID in
                                 tabActions.pullNewIcon(for: tabID)
-                            }
+                            },
+                            select: activate
                         )
                     }
                 }

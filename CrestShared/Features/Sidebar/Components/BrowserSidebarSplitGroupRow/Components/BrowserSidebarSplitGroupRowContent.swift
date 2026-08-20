@@ -4,16 +4,16 @@ import SwiftUI
 ///
 /// A member is a `BrowserSidebarTabRow` — the same view the tab list draws
 /// everywhere else, at the same height, with the same favicon, title, hover,
-/// trailing control, and selection accent. Only two things change, both of
-/// them the container's doing: the row drops its edge inset because the
+/// trailing control, menu, and selection accent. Only two things change, both
+/// of them the container's doing: the row drops its edge inset because the
 /// container's padding already places it, and it stops being a reorder source
 /// because the container drags the whole run as one block.
-struct SidebarSplitGroupRowContent: View {
-    let configuration: SidebarSplitGroupRowConfiguration
+struct BrowserSidebarSplitGroupRowContent: View {
+    let configuration: BrowserSidebarSplitGroupRowConfiguration
 
     var body: some View {
-        VStack(spacing: 0) {
-            SidebarSplitGroupHeader(memberCount: configuration.members.count)
+        VStack(spacing: configuration.metrics.memberSpacing) {
+            BrowserSidebarSplitGroupHeader(configuration: configuration)
 
             ForEach(configuration.members) { member in
                 BrowserSidebarTabRow(
@@ -24,29 +24,25 @@ struct SidebarSplitGroupRowContent: View {
                     canClose: configuration.canClose,
                     browser: configuration.browser,
                     spaceAccess: configuration.spaceAccess,
-                    capabilities: BrowserInteractionCapabilities(),
+                    capabilities: configuration.capabilities,
                     isLoaded: configuration.isLoaded(member.id),
                     unload: configuration.unload,
                     pullNewIcon: configuration.pullNewIcon(for: member),
                     restoreSavedLocation: configuration.restoreSavedLocation(
                         for: member
                     ),
+                    promotionNamespace: configuration.promotionNamespace,
                     isSplitGroupMember: true,
                     isReorderSource: false,
-                    select: activate
+                    select: configuration.select
                 )
+                // Each member keeps its own identity: selecting one
+                // prepositions the sidebar's scroll onto the row the page will
+                // zoom from, and a group whose rows shared one identity would
+                // scroll to the wrong place — or to nowhere at all.
+                .id(member.id)
             }
         }
-        .padding(SidebarSplitGroupRowMetrics.containerPadding)
-    }
-
-    /// Selection and presentation in the one order that works: the page a
-    /// shell brings on screen is whichever one the session now points at.
-    private func activate(_ tabID: TabID) {
-        BrowserTabActivationPolicy.activate(
-            tabID,
-            selectTab: configuration.browser.selectTab,
-            presentPage: configuration.presentSelectedPage
-        )
+        .padding(configuration.metrics.containerPadding)
     }
 }
