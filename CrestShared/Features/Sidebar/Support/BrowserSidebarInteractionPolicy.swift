@@ -88,6 +88,43 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// The layout the Space header draws itself with.
+    ///
+    /// Touch decides this for the same reason it decides the tab row: the
+    /// icon, the disclosure chevron, and the actions menu all have to answer
+    /// to the least precise input the shell accepts, and a menu sized for a
+    /// finger is also the one whose row can no longer be a fixed band.
+    static func spaceHeaderMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSpaceHeaderMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
+    /// The geometry one Space's segment in the switcher draws itself with.
+    ///
+    /// Touch decides this like everything else the reader has to aim at: the
+    /// crest is the target, so it is sized for the least precise input the
+    /// shell accepts.
+    static func spacePickerMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSpacePickerMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
+    /// How the Space switcher lays its Spaces out.
+    ///
+    /// Touch decides the arrangement rather than the styling, because the two
+    /// arrangements answer different questions. Segments a finger can hit stop
+    /// fitting side by side after a handful of Spaces, so a touch shell needs
+    /// a track that scrolls and centres the selection. A pointer shell keeps
+    /// every Space on screen at once and spends the room it saves on the
+    /// accessories that flank the strip.
+    static func spaceSwitcherArrangement(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSpaceSwitcherArrangement {
+        capabilities.supportsTouch ? .scrollingSegments : .compactStrip
+    }
+
     /// Whether a row anchors the page it opens with a matched-geometry
     /// destination.
     ///

@@ -98,15 +98,18 @@ struct SpaceSidebarBrowsingContent: View {
                 : BrowserSidebarMetrics.pinnedTabsBottomInset
         )
 
-        SpaceHeader(
+        BrowserSpaceHeader(
             space: space,
             isPrivateBrowsing: browser.isPrivateBrowsing,
             isSavedTabsExpanded: $isSavedTabsExpanded,
-            openNewTab: openNewTab,
-            createFolder: beginCreatingFolder,
-            showHistory: showHistory,
-            showExtensions: showExtensions,
-            cleanup: browser.cleanupCurrentTabs
+            capabilities: capabilities,
+            actions: BrowserSpaceHeaderActions(
+                openNewTab: openNewTab,
+                createFolder: beginCreatingFolder,
+                showHistory: showHistory,
+                showExtensions: showExtensions,
+                cleanup: browser.cleanupCurrentTabs
+            )
         )
 
         SidebarTabList(

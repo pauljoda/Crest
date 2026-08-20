@@ -313,6 +313,144 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - Space header layout
+
+    /// Pins the geometry each shell's Space header draws today, which is what
+    /// two forks of this header used to disagree about. The actions target is
+    /// asserted as a literal on both sides: the suite is hosted on macOS,
+    /// where the platform hit target is 28, and neither 24 nor 44 may follow
+    /// it.
+    func testSpaceHeaderGeometryFollowsTheLeastPreciseInputTheShellAccepts() {
+        let pointer = BrowserSidebarInteractionPolicy.spaceHeaderMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.disclosureGlyphSize, 9)
+        XCTAssertEqual(pointer.iconSize, 20)
+        XCTAssertEqual(pointer.actionsControlSize, 24)
+        XCTAssertNil(pointer.actionsGlyph)
+        XCTAssertTrue(pointer.fillsRowHeight)
+        XCTAssertFalse(pointer.expandsActionsHitArea)
+
+        let touch = BrowserSidebarInteractionPolicy.spaceHeaderMetrics(
+            capabilities(hover: false, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.disclosureGlyphSize, 10)
+        XCTAssertEqual(touch.iconSize, 22)
+        XCTAssertEqual(touch.actionsControlSize, 44)
+        XCTAssertEqual(
+            touch.actionsGlyph,
+            BrowserSpaceHeaderActionsGlyph(size: 17, weight: .medium)
+        )
+        XCTAssertFalse(touch.fillsRowHeight)
+        XCTAssertTrue(touch.expandsActionsHitArea)
+    }
+
+    /// Only a header held to one exact height stretches its title to fill it.
+    /// Everywhere else the ceiling comes from the pinned-chrome policy, which
+    /// leaves the row at its intrinsic height so a long name can wrap rather
+    /// than clip.
+    func testOnlyAFixedBandHeaderStretchesItsTitleToTheRowHeight() {
+        XCTAssertEqual(BrowserSpaceHeaderMetrics.pointer.contentMaxHeight, .infinity)
+        XCTAssertEqual(
+            BrowserSpaceHeaderMetrics.touch.contentMaxHeight,
+            BrowserSidebarScrollLayoutPolicy.fixedSpaceHeaderMaxHeight
+        )
+    }
+
+    /// A trackpad beside a touchscreen must not shrink the header's menu back
+    /// down to a pointer target.
+    func testAddingHoverToATouchShellKeepsTheTouchSpaceHeader() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.spaceHeaderMetrics(
+                capabilities(hover: true, touch: true)
+            ),
+            BrowserSidebarInteractionPolicy.spaceHeaderMetrics(
+                capabilities(hover: false, touch: true)
+            )
+        )
+    }
+
+    // MARK: - Space switcher
+
+    /// The arrangement, not the styling, is what the two switchers disagreed
+    /// about. Segments a finger can hit stop fitting side by side after a
+    /// handful of Spaces, so a touch shell scrolls; a pointer shell keeps them
+    /// all on screen and spends the room on its accessories.
+    func testTheSpaceSwitcherScrollsExactlyWhereTheShellAcceptsTouch() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.spaceSwitcherArrangement(
+                capabilities(hover: true, touch: false)
+            ),
+            .compactStrip
+        )
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.spaceSwitcherArrangement(
+                capabilities(hover: false, touch: true)
+            ),
+            .scrollingSegments
+        )
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.spaceSwitcherArrangement(
+                capabilities(hover: true, touch: true)
+            ),
+            .scrollingSegments
+        )
+    }
+
+    /// Pins the crest geometry each shell's segments draw today.
+    func testSpacePickerSegmentsAreSizedForTheAimTheShellAccepts() {
+        let pointer = BrowserSidebarInteractionPolicy.spacePickerMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.iconSize, 24)
+        XCTAssertEqual(pointer.lockSize, 6)
+        XCTAssertEqual(pointer.iconPadding, 0)
+
+        let touch = BrowserSidebarInteractionPolicy.spacePickerMetrics(
+            capabilities(hover: false, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.iconSize, 30)
+        XCTAssertEqual(touch.lockSize, 7)
+        XCTAssertEqual(touch.iconPadding, 4)
+    }
+
+    /// A pointer crest has to fit inside the compact picker's own segment, or
+    /// the strip stops being compact. A touch crest plus its clearance is what
+    /// defines the scrolling track's step instead, so it must not exceed it.
+    func testEachSegmentFitsTheTrackItsArrangementDrawsItIn() {
+        let pointer = BrowserSpacePickerMetrics.pointer
+        XCTAssertLessThanOrEqual(
+            pointer.iconSize + 2 * pointer.iconPadding,
+            BrowserSpaceSwitcherLayout.segmentWidth
+        )
+        XCTAssertLessThanOrEqual(
+            pointer.iconSize + 2 * pointer.iconPadding,
+            BrowserSpaceSwitcherLayout.segmentHeight
+        )
+
+        let touch = BrowserSpacePickerMetrics.touch
+        XCTAssertLessThanOrEqual(
+            touch.iconSize + 2 * touch.iconPadding,
+            BrowserSpaceSwitcherLayout.scrollingSegmentExtent
+        )
+    }
+
+    /// A trackpad beside a touchscreen must not shrink the crest back down.
+    func testAddingHoverToATouchShellKeepsTheTouchSpaceSegment() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.spacePickerMetrics(
+                capabilities(hover: true, touch: true)
+            ),
+            BrowserSidebarInteractionPolicy.spacePickerMetrics(
+                capabilities(hover: false, touch: true)
+            )
+        )
+    }
+
     // MARK: - Promotion anchoring
 
     /// The two anchors are alternatives, not a pair: a shell that zooms the

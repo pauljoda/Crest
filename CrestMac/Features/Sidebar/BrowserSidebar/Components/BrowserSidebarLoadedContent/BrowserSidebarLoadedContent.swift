@@ -54,21 +54,12 @@ struct BrowserSidebarLoadedContent: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
 
-            SpaceSwitcher(
+            BrowserSpaceSwitcher(
                 browser: browser,
-                pages: pages,
-                spaceAccess: spaceAccess,
+                downloadCenter: pages.downloadCenter,
+                capabilities: capabilities,
                 selectSpace: actions.selectSpace,
-                sidebarToggleAction: sidebarToggleAction,
-                toggleSidebar: toggleSidebar,
-                commonListsAreExpanded: utilityPresentation.isSwitcherExpanded,
-                toggleCommonLists: {
-                    utilityPresentation.toggleSwitcher(
-                        hasNewDownloads: !newUtilityDownloads.isEmpty
-                    )
-                },
-                recordCommonListsTriggerFrame:
-                    utilityPresentation.recordTriggerFrame
+                accessories: switcherAccessories
             )
             .environment(
                 \.colorScheme,
@@ -79,6 +70,28 @@ struct BrowserSidebarLoadedContent: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(browser.selectedSpace?.name ?? "Browser") Space")
+    }
+
+    private var switcherAccessories: BrowserSpaceSwitcherAccessories {
+        BrowserSpaceSwitcherAccessories(
+            sidebarToggle: BrowserSpaceSwitcherSidebarToggle(
+                action: sidebarToggleAction,
+                toggle: toggleSidebar
+            ),
+            commonLists: BrowserSpaceSwitcherCommonLists(
+                isExpanded: utilityPresentation.isSwitcherExpanded,
+                toggle: {
+                    utilityPresentation.toggleSwitcher(
+                        hasNewDownloads: !newUtilityDownloads.isEmpty
+                    )
+                },
+                recordTriggerFrame: utilityPresentation.recordTriggerFrame
+            )
+        )
+    }
+
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
     }
 
     private var newUtilityDownloads: [BrowserDownloadItem] {

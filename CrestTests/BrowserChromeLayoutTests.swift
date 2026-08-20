@@ -1249,6 +1249,30 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(BrowserSpaceSwitcherLayout.trailingUtility, .commonLists)
         XCTAssertEqual(BrowserSpaceSwitcherLayout.utilityButtonSize, 32)
         XCTAssertFalse(BrowserSpaceSwitcherLayout.showsSpaceCreation)
+        XCTAssertEqual(BrowserSpaceSwitcherLayout.compactStripHeight, 50)
+        XCTAssertEqual(
+            BrowserSpaceSwitcherLayout.compactStripHorizontalInset,
+            12
+        )
+        XCTAssertEqual(BrowserSpaceSwitcherLayout.compactStripSpacing, 2)
+    }
+
+    /// The scrolling track's step and its segment are the same number on
+    /// purpose: a flick that crosses one segment has to land on exactly one
+    /// Space, and a threshold below the step is what keeps a nudge from
+    /// counting as a move.
+    func testScrollingSpaceTrackStepsBySegmentsRatherThanByOffset() {
+        XCTAssertEqual(BrowserSpaceSwitcherLayout.scrollingSegmentExtent, 52)
+        XCTAssertEqual(BrowserSpaceSwitcherLayout.scrollingStepThreshold, 12)
+        XCTAssertLessThan(
+            BrowserSpaceSwitcherLayout.scrollingStepThreshold,
+            BrowserSpaceSwitcherLayout.scrollingSegmentExtent
+        )
+        XCTAssertEqual(
+            BrowserSpaceSwitcherLayout.scrollingTrackHorizontalInset,
+            12
+        )
+        XCTAssertEqual(BrowserSpaceSwitcherLayout.scrollingTrackTopInset, 6)
     }
 
     func testEveryOnboardingStepFollowsTheSystemAppearance() {

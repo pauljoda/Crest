@@ -16,6 +16,7 @@ struct MobileBrowserSpacePage: View {
     let compactPageIsFullyPresented: Bool
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.openWindow) private var openWindow
     @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
 
     @State private var reorderOrigin = CGPoint.zero
@@ -37,17 +38,21 @@ struct MobileBrowserSpacePage: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
 
-            MobileSpaceHeader(
+            BrowserSpaceHeader(
                 space: space,
                 isPrivateBrowsing: browser.isPrivateBrowsing,
                 isSavedTabsExpanded: savedTabsExpansionBinding,
-                openNewTab: openNewTab,
-                createFolder: beginCreatingFolder,
-                showHistory: showHistory,
-                showPasswords: showPasswords,
-                showSettings: showSettings,
-                closePrivateBrowsing: closePrivateBrowsing,
-                cleanup: browser.cleanupCurrentTabs
+                capabilities: capabilities,
+                actions: BrowserSpaceHeaderActions(
+                    openNewTab: openNewTab,
+                    openNewWindow: { openWindow(value: BrowserWindowID()) },
+                    createFolder: beginCreatingFolder,
+                    showHistory: showHistory,
+                    showPasswords: showPasswords,
+                    closePrivateBrowsing: closePrivateBrowsing,
+                    showSettings: showSettings,
+                    cleanup: browser.cleanupCurrentTabs
+                )
             )
 
             ScrollViewReader { proxy in
@@ -146,6 +151,20 @@ struct MobileBrowserSpacePage: View {
             BrowserSpaceAccessibilityID.sidebar(space.id)
         )
         .accessibilityLabel("\(space.name) Space sidebar")
+    }
+
+    /// What this shell can do, until the shell itself hands it down: a finger
+    /// is the primary input, a trackpad may still be attached, and the tab
+    /// viewer is the mode that zooms a page in with the system's own
+    /// transition.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities(
+            supportsHover: true,
+            supportsTouch: true,
+            showsRowDropIndicators: true,
+            reservesReorderSectionZones: true,
+            usesNativeNavigationTransition: mode == .compactTabViewer
+        )
     }
 
     private var selectedTab: BrowserTab? {
