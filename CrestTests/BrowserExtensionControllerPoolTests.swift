@@ -251,21 +251,28 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             window.close()
         }
 
+        // The product gives a cold background three seconds before it presents
+        // nothing at all, a deadline that answers to how long a click stays
+        // remembered rather than to how busy the machine is. What this test
+        // claims is the order of the two steps, so it hands the warm-up room a
+        // loaded machine can still meet: a deadline that expires here presents no
+        // popup, and no amount of waiting afterwards would find one.
+        pool.tabWindowCoordinator.popupBackgroundWarmUpDeadline = .seconds(8)
+        // AppKit announces the presentation itself, so wait for that rather than
+        // sleeping out the warm-up and then polling `popupPopover`: every access
+        // to that property preloads the popup document this ordering exists to
+        // hold back until the background can answer it.
+        let presented = expectation(
+            forNotification: NSPopover.didShowNotification,
+            object: nil
+        )
+
         pool.perform(
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
 
-        // Do not inspect `popupPopover` while the background is warming: that
-        // property access is itself enough to preload the popup document.
-        try await Task.sleep(
-            for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
-                + .milliseconds(100)
-        )
-
-        for _ in 0..<400 where action.action.popupPopover?.isShown != true {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        await fulfillment(of: [presented], timeout: 10)
         XCTAssertEqual(
             action.action.popupPopover?.isShown,
             true,

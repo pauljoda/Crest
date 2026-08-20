@@ -1,6 +1,6 @@
 import AppKit
-import os
 import WebKit
+import os
 
 private let browserExtensionPopupLog = Logger(
     subsystem: ProductIdentity.serviceNamespace,
@@ -21,7 +21,10 @@ extension BrowserExtensionTabWindowCoordinator:
             anchor: anchor
         )
         pendingActionPopupRequests[key] = request
-        BrowserExtensionPopupBackgroundWarmUp(context: context).prepare {
+        BrowserExtensionPopupBackgroundWarmUp(
+            context: context,
+            deadline: popupBackgroundWarmUpDeadline
+        ).prepare {
             [weak self, weak context] outcome in
             guard let self, let context,
                 self.pendingActionPopupRequests[key]?.id == request.id

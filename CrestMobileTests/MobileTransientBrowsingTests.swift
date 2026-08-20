@@ -408,32 +408,44 @@ final class MobileTransientBrowsingTests: XCTestCase {
             ),
             trigger: .longPress
         )
+        let waits = LinkPeekPressWaits()
         let coordinator = MobileLinkPeekPressCoordinator(
             previewDelay: .milliseconds(10),
-            minimumDuration: .milliseconds(80)
+            minimumDuration: .milliseconds(80),
+            wait: waits.wait
         )
-        let staged = expectation(description: "Link reaches its lifted state")
-        let cancelled = expectation(description: "Lifted link settles when released")
+        var stagedRequest: BrowserPeekRequest?
         var openedRequest: BrowserPeekRequest?
         var cancelledRequestID: UUID?
 
         coordinator.begin(
             request: request,
-            stage: { _ in staged.fulfill() },
+            stage: { stagedRequest = $0 },
             commit: { openedRequest = $0 },
-            cancelStaged: { requestID in
-                cancelledRequestID = requestID
-                cancelled.fulfill()
-            }
+            cancelStaged: { cancelledRequestID = $0 }
         )
-        await fulfillment(of: [staged], timeout: 1)
-        coordinator.end()
-        await fulfillment(of: [cancelled], timeout: 1)
-        try await Task.sleep(for: .milliseconds(120))
 
+        // Ending the lift wait runs the stage step, and the press then asks for
+        // the wait that would commit it. That second request is what says the
+        // link is lifted and not yet open, so the release below lands between the
+        // two states without having to beat a timer to them.
+        await waits.waitUntilRequestCount(1)
+        waits.elapse(0)
+        await waits.waitUntilRequestCount(2)
+        XCTAssertEqual(stagedRequest, request)
+        XCTAssertEqual(
+            waits.requestedDurations,
+            [.milliseconds(10), .milliseconds(70)]
+        )
+
+        coordinator.end()
+
+        // Opening is unreachable while the commit wait is still held, so a
+        // released link that settled here can never open afterwards.
         XCTAssertNil(openedRequest)
         XCTAssertEqual(cancelledRequestID, request.id)
         XCTAssertFalse(coordinator.hasCommittedPress)
+        waits.cancelHeldWaits()
     }
 
     func testPrivateLongPressPeekKeepsItsEphemeralSpaceWhenPromoted() throws {
@@ -570,5 +582,59 @@ final class MobileTransientBrowsingTests: XCTestCase {
         coordinator.cancelStagedPeek(id: second.id)
         XCTAssertNil(coordinator.peekRequest)
         XCTAssertNil(coordinator.peekPresentationPhase)
+    }
+}
+
+/// The two waits one press performs, ended when the test says so.
+///
+/// The release used to race the press's own commit timer: the test had 70ms
+/// between the lift and the commit to call `end()`, and on a saturated machine it
+/// arrived after the commit it was meant to precede — the settle never happened,
+/// and the expectation waiting for it timed out. Holding the waits instead takes
+/// the clock out of the test: every step is signalled by the press itself.
+@MainActor
+private final class LinkPeekPressWaits {
+    private(set) var requestedDurations: [Duration] = []
+    private var heldWaits: [CheckedContinuation<Void, any Error>?] = []
+    private var requestWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+
+    func wait(_ duration: Duration) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            requestedDurations.append(duration)
+            heldWaits.append(continuation)
+            announceRequest()
+        }
+    }
+
+    /// Suspends until the press has asked for its `count`-th wait.
+    func waitUntilRequestCount(_ count: Int) async {
+        guard requestedDurations.count < count else { return }
+        await withCheckedContinuation { continuation in
+            requestWaiters.append((count, continuation))
+        }
+    }
+
+    /// Ends the wait at `index`, as if its duration had run out.
+    func elapse(_ index: Int) {
+        heldWaits[index]?.resume()
+        heldWaits[index] = nil
+    }
+
+    /// Fails every wait still held the way a cancelled `Task.sleep` fails, so a
+    /// press the test released leaves no continuation behind.
+    func cancelHeldWaits() {
+        for index in heldWaits.indices {
+            heldWaits[index]?.resume(throwing: CancellationError())
+            heldWaits[index] = nil
+        }
+    }
+
+    private func announceRequest() {
+        let requestedCount = requestedDurations.count
+        let readyWaiters = requestWaiters.filter { $0.count <= requestedCount }
+        requestWaiters.removeAll { $0.count <= requestedCount }
+        for waiter in readyWaiters {
+            waiter.continuation.resume()
+        }
     }
 }

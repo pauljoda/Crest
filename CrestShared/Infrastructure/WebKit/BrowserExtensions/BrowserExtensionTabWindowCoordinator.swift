@@ -23,6 +23,13 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
         var pendingActionPopupRequests: [ObjectIdentifier: BrowserExtensionActionPopupRequest] = [:]
+        /// How long a popup request gives its extension's background content
+        /// before presenting nothing at all.
+        ///
+        /// The product value answers to how long a click stays remembered. A test
+        /// that has to see the presentation itself raises it, so a cold WebKit
+        /// background on a loaded machine cannot cost it the popup.
+        var popupBackgroundWarmUpDeadline = BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
     #endif
     var actionDidUpdate: (() -> Void)?
     private var isHostWindowFocused = true

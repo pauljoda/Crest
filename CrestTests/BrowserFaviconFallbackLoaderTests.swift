@@ -128,7 +128,12 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
             )
         )
         let manifestData = Data(
-            #"{"icons":[{"src":"./Legacy.png","type":"image/png","sizes":"512x512"},{"src":"./Entra-Icon.svg","type":"image/svg+xml","sizes":"any"}]}"#.utf8
+            #"""
+            {"icons":[
+                {"src":"./Legacy.png","type":"image/png","sizes":"512x512"},
+                {"src":"./Entra-Icon.svg","type":"image/svg+xml","sizes":"any"}
+            ]}
+            """#.utf8
         )
         let manifestIcons = BrowserFaviconCapture.manifestIconURLs(
             from: manifestData,
@@ -249,27 +254,50 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
         XCTAssertEqual(requestCount, 2)
     }
 
+    /// A download that starts and finishes only when the test says so.
+    ///
+    /// Both directions are signalled rather than polled. Waiting for a start by
+    /// yielding a fixed number of times made this test depend on how much CPU the
+    /// machine had spare: under a concurrent build the loader's detached, utility
+    /// priority download had not begun within the budget and the test failed on a
+    /// machine where nothing was wrong. A continuation resumed by the download
+    /// itself has no budget to run out of — if the download never starts, the test
+    /// hangs and XCTest reports that instead of blaming the wrong thing.
     private actor ControlledDownloader {
         private var continuations: [CheckedContinuation<Data?, Never>] = []
+        private var startWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
 
         var requestCount: Int { continuations.count }
 
         func download(_ url: URL) async -> Data? {
             await withCheckedContinuation { continuation in
                 continuations.append(continuation)
+                announceStart()
             }
         }
 
+        /// Suspends until `expectedCount` downloads have started. Returns `true`
+        /// once they have, so the caller can assert on the fact rather than
+        /// assume it.
         func waitForRequestCount(_ expectedCount: Int) async -> Bool {
-            for _ in 0..<10_000 {
-                if continuations.count >= expectedCount { return true }
-                await Task.yield()
+            guard continuations.count < expectedCount else { return true }
+            await withCheckedContinuation { continuation in
+                startWaiters.append((expectedCount, continuation))
             }
-            return false
+            return true
         }
 
         func completeRequest(at index: Int, with data: Data?) {
             continuations[index].resume(returning: data)
+        }
+
+        private func announceStart() {
+            let startedCount = continuations.count
+            let readyWaiters = startWaiters.filter { $0.count <= startedCount }
+            startWaiters.removeAll { $0.count <= startedCount }
+            for waiter in readyWaiters {
+                waiter.continuation.resume()
+            }
         }
     }
 
