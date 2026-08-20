@@ -582,6 +582,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             splitCardFrame: CGRect(x: 260, y: 0, width: 900, height: 600),
             for: TabID(),
+            in: assignment,
             owner: UUID()
         )
         state.register(
@@ -627,6 +628,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             splitCardFrame: CGRect(x: 260, y: 0, width: 900, height: 600),
             for: tabID,
+            in: assignment,
             owner: UUID()
         )
         state.update(pointer: CGPoint(x: 700, y: 300))

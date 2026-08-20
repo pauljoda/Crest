@@ -62,7 +62,9 @@ final class BrowserSidebarReorderState {
     /// This registry is also the session state acceptance reads. How many cards
     /// are on show is whether the group is at capacity, and whether the dragged
     /// tab is among them is whether it is already presented — the same way
-    /// `hasRoom` counts registered rows rather than asking the session.
+    /// `hasRoom` counts registered rows rather than asking the session. And for
+    /// the same reason as `hasRoom`, a count is only ever taken of one Space's
+    /// own cards: see `SplitCard.space`.
     @ObservationIgnored
     private var splitCards: [TabID: SplitCard] = [:]
 
@@ -73,6 +75,26 @@ final class BrowserSidebarReorderState {
     /// `onDisappear` after the arriving one has measured itself.
     private struct SplitCard {
         let owner: UUID
+
+        /// The Space whose presentation this card stands in.
+        ///
+        /// A card outlives the presentation that put it there. The content area
+        /// shows one Space at a time, and switching Space replaces every card in
+        /// it — but the arriving cards measure themselves before SwiftUI runs the
+        /// departing ones' `onDisappear`, which is the same ordering the owner
+        /// stamp above exists for. For a moment, and longer while the change is
+        /// animating, the registry holds both Spaces' cards. The registry is
+        /// keyed by tab and two Spaces share no tabs, so nothing collides and
+        /// nothing is overwritten: they simply add up.
+        ///
+        /// Which is why the card has to say whose it is. Counted together, a pair
+        /// of two-card splits reaches `BrowserSplitGroupPolicy.maximumMembers`
+        /// and the drag is refused a split that has room to spare — in silence,
+        /// since a refused target means no placeholder, no insertion line, and no
+        /// reason given — and the index a drop does resolve is counted against
+        /// cards from a Space the pointer is not over.
+        let space: BrowserSpaceRuntimeAssignment
+
         let frame: CGRect
     }
 
@@ -160,11 +182,16 @@ final class BrowserSidebarReorderState {
         zones[id] = nil
     }
 
-    /// Records where one presented card is. The drop placeholder never
-    /// registers: the index resolved against the cards has to stay put while
-    /// the placeholder it opens shifts them.
-    func register(splitCardFrame frame: CGRect, for tabID: TabID, owner: UUID) {
-        splitCards[tabID] = SplitCard(owner: owner, frame: frame)
+    /// Records where one presented card is, and which Space is presenting it. The
+    /// drop placeholder never registers: the index resolved against the cards has
+    /// to stay put while the placeholder it opens shifts them.
+    func register(
+        splitCardFrame frame: CGRect,
+        for tabID: TabID,
+        in space: BrowserSpaceRuntimeAssignment,
+        owner: UUID
+    ) {
+        splitCards[tabID] = SplitCard(owner: owner, space: space, frame: frame)
     }
 
     func removeSplitCardFrame(for tabID: TabID, owner: UUID) {
@@ -552,11 +579,7 @@ final class BrowserSidebarReorderState {
             )
 
         case .splitContent(let assignment):
-            resolvedTarget = splitInsertTarget(
-                assignment,
-                in: zone.frame,
-                for: lift
-            )
+            resolvedTarget = splitInsertTarget(assignment, for: lift)
             if resolvedTarget != nil { hasEnteredSplitContent = true }
         }
     }
@@ -568,23 +591,34 @@ final class BrowserSidebarReorderState {
     /// than none at all. The zone has already established that this is a tab
     /// from this Space; what is left is what the presented cards themselves say.
     ///
-    /// Only the cards inside `contentFrame` are consulted. Windows share one
-    /// reorder state, and two of them showing the same Space register two full
-    /// sets of cards at different places on screen; counting them together
-    /// would put the drop at the wrong index and report a two-card split as
-    /// full. The zone the pointer resolved to is exactly one window's content
-    /// area, so it is also the frame that says which cards this drag is between.
+    /// Only `assignment`'s own cards are consulted — the Space the content area
+    /// under the pointer is presenting. The registry holds more than that: a
+    /// Space change replaces every card in the content area, and the arriving
+    /// cards measure themselves before the departing ones disappear, so both
+    /// Spaces' cards are registered together for as long as the change takes to
+    /// animate. See `SplitCard.space` for what counting them together does.
+    ///
+    /// Geometry used to stand in for this, by consulting only the cards whose
+    /// centre lay inside the resolved zone's frame. It cannot: the content area
+    /// does not move an inch when the Space in it changes, so both Spaces' cards
+    /// sit inside the very same rectangle. Nor was the case it was written for —
+    /// two windows onto one session, showing the same Space at different places
+    /// on screen — one a rectangle could have separated, because the frames it
+    /// compares are measured in SwiftUI's `.global` space, which is the window's
+    /// own and identical between two windows of a size. That case cannot reach
+    /// here at all, in fact: this registry is keyed by tab, so a second window
+    /// showing the same Space registers the same tabs and overwrites rather than
+    /// adds — a card's registry identity is its tab, not its window, exactly as
+    /// a row's is its item. What containment did still do was drop a genuine card
+    /// whose centre had drifted out of the content area while the row animated,
+    /// which undercounts a full group into looking as though it had room.
     private func splitInsertTarget(
         _ assignment: BrowserSpaceRuntimeAssignment,
-        in contentFrame: CGRect,
         for lift: Lift
     ) -> BrowserSidebarReorderTarget? {
         guard case .tab(let item) = lift.item else { return nil }
         let cards = splitCards.filter {
-            !$0.value.frame.isEmpty
-                && contentFrame.contains(
-                    CGPoint(x: $0.value.frame.midX, y: $0.value.frame.midY)
-                )
+            $0.value.space == assignment && !$0.value.frame.isEmpty
         }
         guard
             // Nothing is presented — a locked Space, or a window with no

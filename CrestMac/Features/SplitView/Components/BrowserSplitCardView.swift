@@ -80,6 +80,7 @@ struct BrowserSplitCardView: View {
         }
         .browserSplitDropCardFrame(
             tabID: tab.id,
+            assignment: BrowserSpaceRuntimeAssignment(space: space),
             state: browser.sidebarReorderState
         )
     }

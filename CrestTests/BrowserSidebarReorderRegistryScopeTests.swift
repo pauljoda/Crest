@@ -87,6 +87,104 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
             "Nothing resolved, so the lift holds the row shape it started as."
         )
     }
+
+    // MARK: - Presented cards
+
+    /// A drag into the content area joins the cards of the Space that content
+    /// area is presenting, and counts no others against the group's capacity.
+    ///
+    /// Two Spaces have cards registered because one content area presents one
+    /// Space at a time and its cards outlive the presentation: the arriving
+    /// cards measure themselves before SwiftUI runs the departing ones'
+    /// `onDisappear`, so a Space change leaves both sets in the registry for as
+    /// long as it takes to animate. Two two-card splits is
+    /// `BrowserSplitGroupPolicy.maximumMembers` exactly, so counted together the
+    /// group is full and the drag is refused a split that has two slots free —
+    /// refused in silence, since no resolved target means no placeholder, no
+    /// insertion line, and no reason given.
+    ///
+    /// Geometry cannot separate them. Both Spaces lay their cards out in the
+    /// same content area, and the content area does not move an inch when the
+    /// Space in it changes, so the two sets occupy the very same rectangles.
+    func testAnotherSpacesCardsCannotFillThisDragsSplit() {
+        let fixture = SplitCardRegistryFixture(
+            ownCardCount: 2,
+            foreignCardCount: 2
+        )
+        let state = fixture.browser.sidebarReorderState
+        fixture.register(in: state)
+
+        fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
+
+        XCTAssertEqual(
+            state.resolvedTarget?.kind,
+            .splitInsert(assignment: fixture.ownSpace, index: 1),
+            "Two cards on show leave two slots free, whatever the Space this "
+                + "window has just left still has registered."
+        )
+        XCTAssertEqual(
+            state.liftTargetShape,
+            .webpageCard,
+            "A resolved card slot morphs the lift into the card it will be."
+        )
+        XCTAssertTrue(
+            state.hasEnteredSplitContent,
+            "A resolved card slot is what opens the columns layout."
+        )
+    }
+
+    /// Nor can it push the slot along. One card fewer keeps the pair under the
+    /// cap, so the count no longer hides what the ordering does: the Space left
+    /// behind was showing a single full-width page, whose midpoint the pointer
+    /// has passed, and counting it would put the drop after the card it is
+    /// actually standing on rather than before it.
+    func testAnotherSpacesCardsCannotPushThisDropsSlotAlong() {
+        let fixture = SplitCardRegistryFixture(
+            ownCardCount: 2,
+            foreignCardCount: 1
+        )
+        let state = fixture.browser.sidebarReorderState
+        fixture.register(in: state)
+
+        fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
+
+        XCTAssertEqual(
+            state.resolvedTarget?.kind,
+            .splitInsert(assignment: fixture.ownSpace, index: 1),
+            "The pointer is in the second card's leading half, so the drop "
+                + "goes between the two — not past them both at index 2."
+        )
+    }
+
+    /// The cap still bites where it is meant to. Scoping the count must not
+    /// become a way of ignoring it: a group already holding this Space's own
+    /// maximum has nowhere to put another card, so the drag resolves nothing
+    /// rather than opening a slot the release would decline.
+    func testAGroupFullOfThisSpacesOwnCardsStillRefusesAnIncomingTab() {
+        let fixture = SplitCardRegistryFixture(
+            ownCardCount: BrowserSplitGroupPolicy.maximumMembers,
+            foreignCardCount: 1
+        )
+        let state = fixture.browser.sidebarReorderState
+        fixture.register(in: state)
+
+        fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
+
+        XCTAssertNil(
+            state.resolvedTarget,
+            "A group at the cap has to refuse the drop instead of promising a "
+                + "slot the commit would decline."
+        )
+        XCTAssertEqual(
+            state.liftTargetShape,
+            .row,
+            "Nothing resolved, so the lift holds the row shape it started as."
+        )
+        XCTAssertFalse(
+            state.hasEnteredSplitContent,
+            "And the columns layout stays shut."
+        )
+    }
 }
 
 // MARK: - Fixture
@@ -269,6 +367,180 @@ private struct ReorderRegistryFixture {
             ),
             section: currentSection,
             at: CGPoint(x: joinerRow.midX, y: joinerRow.midY)
+        )
+        state.update(pointer: pointer)
+    }
+}
+
+// MARK: - Split card fixture
+
+/// Where a 1160-point window puts its web-content area, once a 260-point sidebar
+/// has taken the leading edge.
+private let splitContentZone = CGRect(x: 260, y: 60, width: 900, height: 600)
+
+/// The sidebar row the dragged tab is lifted out of, in that window's sidebar.
+private let splitJoinerRow = CGRect(x: 8, y: 200, width: 240, height: 40)
+
+/// Where a content area presenting `count` cards puts them: equal widths filling
+/// the area, with the row's own gap between them.
+///
+/// Both Spaces use this, because both of them are presenting into the same
+/// window. That is the point — a Space change swaps what the content area holds
+/// without moving the content area, so the Space left behind measured its cards
+/// against the very rectangle the Space now on show is measuring against.
+private func splitCardFrames(count: Int) -> [CGRect] {
+    guard count > 0 else { return [] }
+    let gap = BrowserSplitLayoutMetrics.interCardGap
+    let width =
+        (splitContentZone.width - gap * CGFloat(count - 1)) / CGFloat(count)
+    return (0..<count).map { index in
+        CGRect(
+            x: splitContentZone.minX + (width + gap) * CGFloat(index),
+            y: splitContentZone.minY,
+            width: width,
+            height: splitContentZone.height
+        )
+    }
+}
+
+/// One window's content area holding two Spaces' cards at once: the Space it is
+/// presenting, and the Space it has just left, whose cards are registered at the
+/// same rectangles until SwiftUI runs their disappearance.
+@MainActor
+private struct SplitCardRegistryFixture {
+    let browser: BrowserStore
+    let ownCards: [BrowserTab]
+    let foreignCards: [BrowserTab]
+    let joiner: BrowserTab
+
+    private let ownCardCount: Int
+    private let foreignCardCount: Int
+    private let ownSpaceID = SpaceID(rawValue: uuid(0x05))
+    private let ownProfileID = uuid(0x06)
+    private let foreignSpaceID = SpaceID(rawValue: uuid(0x07))
+    private let foreignProfileID = uuid(0x08)
+
+    init(ownCardCount: Int, foreignCardCount: Int) {
+        self.ownCardCount = ownCardCount
+        self.foreignCardCount = foreignCardCount
+        ownCards = (0..<ownCardCount).map { index in
+            makeTab(
+                id: TabID(rawValue: uuid(UInt8(0x60 + index))),
+                title: "Own Card \(index)",
+                placement: .current
+            )
+        }
+        foreignCards = (0..<foreignCardCount).map { index in
+            makeTab(
+                id: TabID(rawValue: uuid(UInt8(0x70 + index))),
+                title: "Foreign Card \(index)",
+                placement: .current
+            )
+        }
+        joiner = makeTab(
+            id: TabID(rawValue: uuid(0x6F)),
+            title: "Joiner",
+            placement: .current
+        )
+        let own = makeSpace(
+            id: ownSpaceID,
+            profileID: ownProfileID,
+            name: "Presenting",
+            tabs: ownCards + [joiner]
+        )
+        let foreign = makeSpace(
+            id: foreignSpaceID,
+            profileID: foreignProfileID,
+            name: "Just Left",
+            tabs: foreignCards
+        )
+        browser = BrowserStore(
+            session: BrowserSession(
+                spaces: [own, foreign],
+                selectedSpaceID: own.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence(),
+            browsingMode: .privateBrowsing
+        )
+    }
+
+    var ownSpace: BrowserSpaceRuntimeAssignment {
+        BrowserSpaceRuntimeAssignment(
+            spaceID: ownSpaceID,
+            profileID: ownProfileID
+        )
+    }
+
+    var foreignSpace: BrowserSpaceRuntimeAssignment {
+        BrowserSpaceRuntimeAssignment(
+            spaceID: foreignSpaceID,
+            profileID: foreignProfileID
+        )
+    }
+
+    /// A point in the leading half of the second card on show, so the drop
+    /// belongs between the first two cards and nowhere else.
+    var pointerInSecondOwnCard: CGPoint {
+        let card = splitCardFrames(count: ownCardCount)[1]
+        return CGPoint(x: card.minX + card.width / 4, y: card.midY)
+    }
+
+    /// Registers the content area as this Space's drop zone, then both Spaces'
+    /// cards over it.
+    func register(in state: BrowserSidebarReorderState) {
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .splitContent(ownSpace),
+                frame: splitContentZone
+            ),
+            for: UUID()
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(joiner.id),
+                space: ownSpace,
+                section: currentSection,
+                frame: splitJoinerRow
+            ),
+            owner: UUID()
+        )
+
+        for (tab, frame) in zip(ownCards, splitCardFrames(count: ownCardCount)) {
+            state.register(
+                splitCardFrame: frame,
+                for: tab.id,
+                in: ownSpace,
+                owner: UUID()
+            )
+        }
+        for (tab, frame) in zip(
+            foreignCards,
+            splitCardFrames(count: foreignCardCount)
+        ) {
+            state.register(
+                splitCardFrame: frame,
+                for: tab.id,
+                in: foreignSpace,
+                owner: UUID()
+            )
+        }
+    }
+
+    /// Lifts the tab out of its sidebar row and holds the pointer at `pointer`.
+    func liftTheJoiner(
+        in state: BrowserSidebarReorderState,
+        to pointer: CGPoint
+    ) {
+        state.begin(
+            item: .tab(
+                BrowserTabDragItem(
+                    tabID: joiner.id,
+                    spaceID: ownSpaceID,
+                    profileID: ownProfileID
+                )
+            ),
+            section: currentSection,
+            at: CGPoint(x: splitJoinerRow.midX, y: splitJoinerRow.midY)
         )
         state.update(pointer: pointer)
     }

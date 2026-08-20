@@ -370,22 +370,22 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         state.cancel()
     }
 
-    /// Windows share one reorder state. A second window's cards must not be
-    /// counted into the drop the pointer is making in this one, or the index
-    /// would be off and a two-card split would report itself full.
-    func testASecondWindowsCardsAreNotCountedIntoThisDrop() {
+    /// One content area presents one Space, but its cards outlive the
+    /// presentation: the Space just switched away from still has cards in the
+    /// registry, at the very rectangle the new Space now occupies. They must not
+    /// be counted into the drop the pointer is making, or the index would be off
+    /// and a two-card split would report itself full.
+    ///
+    /// The frames deliberately match the live ones. Nothing about the content
+    /// area moves when the Space in it changes, so there is no geometry here to
+    /// tell the two apart — the Space each card names is the only thing that can.
+    func testAnotherSpacesCardsAreNotCountedIntoThisDrop() {
         let state = Self.stateWithCards(count: 2)
-        // A second window to the left of this one, presenting the same Space
-        // with the same two cards.
-        for index in 0..<2 {
+        for frame in Self.presentedCardFrames(count: 2) {
             state.register(
-                splitCardFrame: CGRect(
-                    x: -1_200 + CGFloat(index) * 500,
-                    y: 0,
-                    width: 446,
-                    height: 600
-                ),
+                splitCardFrame: frame,
                 for: TabID(),
+                in: Self.otherAssignment,
                 owner: UUID()
             )
         }
@@ -400,7 +400,7 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         XCTAssertEqual(
             state.resolvedTarget?.kind,
             .splitInsert(assignment: Self.assignment, index: 1),
-            "The other window's two cards would have pushed this to index 3."
+            "The other Space's two cards would have filled the group outright."
         )
         state.cancel()
     }
@@ -414,8 +414,18 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         let arriving = UUID()
         let frame = CGRect(x: 0, y: 0, width: 900, height: 600)
 
-        state.register(splitCardFrame: frame, for: tabID, owner: departing)
-        state.register(splitCardFrame: frame, for: tabID, owner: arriving)
+        state.register(
+            splitCardFrame: frame,
+            for: tabID,
+            in: Self.assignment,
+            owner: departing
+        )
+        state.register(
+            splitCardFrame: frame,
+            for: tabID,
+            in: Self.assignment,
+            owner: arriving
+        )
         state.removeSplitCardFrame(for: tabID, owner: departing)
 
         XCTAssertEqual(state.orderedSplitCardFrames, [frame])
@@ -452,6 +462,13 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
     private static let assignment = BrowserSpaceRuntimeAssignment(
         spaceID: SpaceID(rawValue: uuid(1)),
         profileID: uuid(2)
+    )
+
+    /// A Space this window is not presenting: the one it switched away from, or
+    /// the one it is switching to while the change animates.
+    private static let otherAssignment = BrowserSpaceRuntimeAssignment(
+        spaceID: SpaceID(rawValue: uuid(3)),
+        profileID: uuid(4)
     )
 
     private static let contentFrame = CGRect(
@@ -491,6 +508,23 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         )
     }
 
+    /// Where a content area presenting `count` cards puts them: equal widths
+    /// filling `contentFrame`, with the row's own gap between them.
+    private static func presentedCardFrames(count: Int) -> [CGRect] {
+        guard count > 0 else { return [] }
+        let gap = BrowserSplitLayoutMetrics.interCardGap
+        let width =
+            (contentFrame.width - gap * CGFloat(count - 1)) / CGFloat(count)
+        return (0..<count).map { index in
+            CGRect(
+                x: contentFrame.minX + (width + gap) * CGFloat(index),
+                y: contentFrame.minY,
+                width: width,
+                height: contentFrame.height
+            )
+        }
+    }
+
     /// A state whose content zone spans `contentFrame` and holds `count` cards
     /// of equal width inside it.
     private static func stateWithCards(
@@ -505,20 +539,11 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
             ),
             for: UUID()
         )
-        guard count > 0 else { return state }
-
-        let gap = BrowserSplitLayoutMetrics.interCardGap
-        let width =
-            (contentFrame.width - gap * CGFloat(count - 1)) / CGFloat(count)
-        for index in 0..<count {
+        for (index, frame) in presentedCardFrames(count: count).enumerated() {
             state.register(
-                splitCardFrame: CGRect(
-                    x: contentFrame.minX + (width + gap) * CGFloat(index),
-                    y: contentFrame.minY,
-                    width: width,
-                    height: contentFrame.height
-                ),
+                splitCardFrame: frame,
                 for: index == 0 ? (firstTabID ?? TabID()) : TabID(),
+                in: assignment,
                 owner: UUID()
             )
         }

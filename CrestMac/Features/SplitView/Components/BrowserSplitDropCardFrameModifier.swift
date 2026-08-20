@@ -11,7 +11,15 @@ import SwiftUI
 /// a tab dragged onto the very tab it already shows is recognised and refused.
 ///
 /// A `nil` tab registers nothing: a locked Space shows its access gate rather
-/// than a page, and there is no card there to join.
+/// than a page, and there is no card there to join. `assignment` is `nil` in the
+/// same breath — both are read off the one presentation, so there is no card
+/// without a Space presenting it.
+///
+/// The Space is registered alongside the frame because a card outlives the
+/// presentation that put it there, and the content area shows one Space at a
+/// time: switching Space leaves the Space just left still holding cards in the
+/// registry, at the very rectangle the new one now occupies. What the drag makes
+/// of that is `BrowserSidebarReorderState.SplitCard.space`.
 ///
 /// Registration is owner-stamped because the two layouts swap places mid-drag
 /// and SwiftUI runs the departing view's `onDisappear` after the arriving one
@@ -20,6 +28,7 @@ import SwiftUI
 /// vanish under the pointer.
 struct BrowserSplitDropCardFrameModifier: ViewModifier {
     let tabID: TabID?
+    let assignment: BrowserSpaceRuntimeAssignment?
     let state: BrowserSidebarReorderState
 
     @State private var identity = UUID()
@@ -39,6 +48,9 @@ struct BrowserSplitDropCardFrameModifier: ViewModifier {
             .onChange(of: tabID) { _, _ in
                 register()
             }
+            .onChange(of: assignment) { _, _ in
+                register()
+            }
             .onDisappear {
                 unregister()
             }
@@ -49,8 +61,13 @@ struct BrowserSplitDropCardFrameModifier: ViewModifier {
             state.removeSplitCardFrame(for: registeredTabID, owner: identity)
             self.registeredTabID = nil
         }
-        guard let tabID, !frame.isEmpty else { return }
-        state.register(splitCardFrame: frame, for: tabID, owner: identity)
+        guard let tabID, let assignment, !frame.isEmpty else { return }
+        state.register(
+            splitCardFrame: frame,
+            for: tabID,
+            in: assignment,
+            owner: identity
+        )
         registeredTabID = tabID
     }
 

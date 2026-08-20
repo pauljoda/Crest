@@ -134,6 +134,9 @@ struct BrowserRootPageSurface: View {
             // is on is which side of it the new card lands.
             .browserSplitDropCardFrame(
                 tabID: singleCardTabID,
+                assignment: presentingSpace.map(
+                    BrowserSpaceRuntimeAssignment.init(space:)
+                ),
                 state: model.browser.sidebarReorderState
             )
         }
