@@ -150,6 +150,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             state.register(
                 row: BrowserSidebarReorderRow(
                     id: item.id,
+                    space: item.spaceAssignment,
                     section: section,
                     frame: draggedFrame
                 ),
@@ -158,6 +159,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             state.register(
                 row: BrowserSidebarReorderRow(
                     id: .tab(TabID()),
+                    space: item.spaceAssignment,
                     section: section,
                     frame: neighbourFrame
                 ),
