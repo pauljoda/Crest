@@ -1,8 +1,3 @@
-#if os(macOS)
-import AppKit
-#else
-import UIKit
-#endif
 import SwiftUI
 
 struct BrowserFloatingSidebarCardBackground: View {
@@ -39,10 +34,6 @@ struct BrowserFloatingSidebarCardBackground: View {
     }
 
     private var platformBackground: Color {
-#if os(macOS)
-        Color(nsColor: .windowBackgroundColor)
-#else
-        Color(uiColor: .secondarySystemBackground)
-#endif
+        BrowserPlatformFloatingSidebarCardStyle.backgroundColor
     }
 }
