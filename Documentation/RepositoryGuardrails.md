@@ -81,6 +81,8 @@ Tests lock behavior whose regression would break a user workflow, persistence or
 
 Share content, policies, and behavior across platforms while keeping macOS and mobile shells, framework delegates, and system adapters explicit in their platform roots.
 
+UI components are canonical in `CrestShared` and read what their environment can do from `BrowserInteractionCapabilities` — independent bits like touch and hover, never a device or platform identity — with sizing and reveal rules derived in policies such as `BrowserSidebarInteractionPolicy`, and container width and Dynamic Type staying environmental. A platform tree may add a UI file only for a genuine platform seam: an AppKit/UIKit gesture or system adapter, a scene or presentation shell, a `BrowserPlatform*` same-name pair, or a port binding to a platform store. It may not fork a shared component's behavior; a divergence belongs in a capability bit, an explicit shell input, an optional closure on an actions value, or an accessory slot — chosen in that order of preference, and unified outright when the difference is harmless. This is a review rule, not a script: source-topology tests stay forbidden.
+
 ## Isolated validation sessions
 
 Every fixture, forced-onboarding, setup, showcase, credential test, SwiftUI Preview, or automated app launch must use Crest's isolated launch graph. Set `CREST_ISOLATED_SESSION=1` for validation launches even when another fixture flag already implies isolation.
