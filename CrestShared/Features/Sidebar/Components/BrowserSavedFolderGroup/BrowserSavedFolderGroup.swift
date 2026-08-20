@@ -1,14 +1,36 @@
 import SwiftUI
 
-struct SavedFolderGroup: View {
+/// One saved folder in the sidebar — its header and the rows it holds — on
+/// every shell.
+///
+/// The group owns the state a folder has to keep between events: whether its
+/// title is being edited, which deferred action a menu asked for, and which
+/// tab a collapsed folder is still showing. Everything a part needs to draw
+/// arrives as `BrowserSavedFolderGroupConfiguration`; everything a part may do
+/// arrives as `BrowserSavedFolderGroupInteractionContext`.
+///
+/// A folder's menu actions outlive the menu that asked for them, so each is
+/// held as the folder it was asked for rather than as a bare flag, and every
+/// one of them is re-checked against the live session before it runs. A Space
+/// can be reselected, relocked, or have the folder deleted out from under an
+/// open colour popover, and a request that can no longer be honoured is
+/// dropped instead of landing on whatever took its place.
+struct BrowserSavedFolderGroup: View {
     let node: BrowserFolderNode
     let tabs: [BrowserTab]
     let spaceID: SpaceID
     let profileID: UUID
     let selectedTabID: TabID?
     let browser: BrowserStore
-    let pages: BrowserPagePool
+    let pageAccess: BrowserSidebarPageAccess
     let spaceAccess: BrowserSpaceAccessController
+    let capabilities: BrowserInteractionCapabilities
+    var promotionNamespace: Namespace.ID? = nil
+    var pullNewIcon: ((TabID) -> Void)? = nil
+    var restoreSavedLocation: ((TabID) -> Void)? = nil
+    /// What opening one of the folder's tabs means to the host. The group
+    /// decides *whether* and *which*; the host decides what appears.
+    let select: (TabID) -> Void
 
     @Binding var isExpanded: Bool
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
@@ -23,21 +45,26 @@ struct SavedFolderGroup: View {
 
     private var folder: SavedFolder { node.folder }
 
-    private var configuration: SavedFolderGroupConfiguration {
-        SavedFolderGroupConfiguration(
+    private var configuration: BrowserSavedFolderGroupConfiguration {
+        BrowserSavedFolderGroupConfiguration(
             node: node,
             tabs: tabs,
             spaceID: spaceID,
             profileID: profileID,
             selectedTabID: selectedTabID,
             browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
+            pageAccess: pageAccess,
+            spaceAccess: spaceAccess,
+            capabilities: capabilities,
+            promotionNamespace: promotionNamespace,
+            pullNewIcon: pullNewIcon,
+            restoreSavedLocation: restoreSavedLocation,
+            select: select
         )
     }
 
-    private var interaction: SavedFolderGroupInteractionContext {
-        SavedFolderGroupInteractionContext(
+    private var interaction: BrowserSavedFolderGroupInteractionContext {
+        BrowserSavedFolderGroupInteractionContext(
             isExpanded: $isExpanded,
             editingFolderRequest: $editingFolderRequest,
             isDropTargeted: $isDropTargeted,
@@ -59,7 +86,7 @@ struct SavedFolderGroup: View {
     }
 
     var body: some View {
-        SavedFolderGroupSurface(
+        BrowserSavedFolderGroupSurface(
             configuration: configuration,
             interaction: interaction
         )
@@ -76,6 +103,9 @@ struct SavedFolderGroup: View {
             .folder(folder.id),
             state: browser.sidebarReorderState,
             isActive: !isExpanded
+        )
+        .modifier(
+            BrowserSavedFolderReorderReservation(configuration: configuration)
         )
         .onChange(of: configuration.folderRuntimeAssignment) { _, _ in
             clearUnavailableDeferredActions()
@@ -106,7 +136,7 @@ struct SavedFolderGroup: View {
     private func unloadKeptCollapsedTab(_ tabID: TabID) {
         guard configuration.isCurrentAndUnlocked else { return }
         collapsedTabVisibility.tabDidUnload(tabID)
-        pages.unloadPage(for: tabID, matching: configuration.assignment)
+        configuration.unload(tabID)
     }
 
     private func beginRenaming() {
@@ -250,6 +280,27 @@ struct SavedFolderGroup: View {
             !isDeferredAssignmentAvailable(request)
         {
             deletionRequest = nil
+        }
+    }
+}
+
+/// The landing slot a folder's tab run keeps open at its end.
+///
+/// A finger cannot aim at the seam between two rows that touch, so a shell
+/// that reserves those places gets a zone of its own here. Where the seam is
+/// aimable the reservation would only add an empty band nothing lands in.
+private struct BrowserSavedFolderReorderReservation: ViewModifier {
+    let configuration: BrowserSavedFolderGroupConfiguration
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if configuration.capabilities.reservesReorderSectionZones {
+            content.browserSidebarReorderSectionReservation(
+                .tabs(placement: .saved, folderID: configuration.folder.id),
+                state: configuration.browser.sidebarReorderState
+            )
+        } else {
+            content
         }
     }
 }

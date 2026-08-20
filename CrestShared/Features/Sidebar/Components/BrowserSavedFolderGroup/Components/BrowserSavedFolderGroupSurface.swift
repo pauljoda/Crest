@@ -1,19 +1,31 @@
 import SwiftUI
 
-struct SavedFolderGroupSurface: View {
-    let configuration: SavedFolderGroupConfiguration
-    let interaction: SavedFolderGroupInteractionContext
+/// The folder as one thing: its header, the rows it holds, the menu that acts
+/// on it, and the two presentations that menu can raise.
+struct BrowserSavedFolderGroupSurface: View {
+    let configuration: BrowserSavedFolderGroupConfiguration
+    let interaction: BrowserSavedFolderGroupInteractionContext
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var folder: SavedFolder { configuration.folder }
 
+    private var dragItem: BrowserFolderDragItem {
+        BrowserFolderDragItem(
+            folderID: folder.id,
+            spaceID: configuration.spaceID,
+            profileID: configuration.profileID
+        )
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            SavedFolderHeader(
+            BrowserSavedFolderHeader(
                 configuration: configuration,
                 interaction: interaction
             )
 
-            SavedFolderTabRows(
+            BrowserSavedFolderTabRows(
                 configuration: configuration,
                 interaction: interaction
             )
@@ -34,12 +46,26 @@ struct SavedFolderGroupSurface: View {
                 }
             )
             .tint(.primary)
+            // A long press opens this menu out of the same gesture that would
+            // otherwise lift the folder. Telling the drag state the menu has
+            // the press is what keeps the two from both claiming it.
+            .onAppear {
+                configuration.browser.folderDragState.contextMenuDidOpen(
+                    for: dragItem
+                )
+            }
+            .onDisappear {
+                configuration.browser.folderDragState.contextMenuDidClose(
+                    for: dragItem
+                )
+            }
         }
         .popover(
             isPresented: interaction.isChoosingColor,
             arrowEdge: .trailing
         ) {
             BrowserFolderColorPicker(color: interaction.folderColor)
+                .presentationCompactAdaptation(.sheet)
         }
         .confirmationDialog(
             "Delete \(folder.title)?",
@@ -53,6 +79,13 @@ struct SavedFolderGroupSurface: View {
         } message: {
             Text("Its tabs stay saved, and any nested folders move up one level.")
         }
+        .animation(
+            BrowserVisualAccessibilityPolicy.animation(
+                CrestMotion.collection,
+                reduceMotion: reduceMotion
+            ),
+            value: configuration.tabs.map(\.id)
+        )
         .onAppear(perform: interaction.beginTitleEditingIfNeeded)
         .onChange(
             of: interaction.isExpanded.wrappedValue,
@@ -71,8 +104,7 @@ struct SavedFolderGroupSurface: View {
                 folderTabIDs: configuration.tabs.map(\.id)
             )
         }
-        .onChange(of: configuration.pages.residencyRevision, initial: true) {
-            _, _ in
+        .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
             interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
                 isExpanded: interaction.isExpanded.wrappedValue,
                 selectedTabID: configuration.selectedTabID,

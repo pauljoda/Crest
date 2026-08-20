@@ -29,18 +29,20 @@ struct MobileSavedTabsDropSection: View {
 
         VStack(spacing: 0) {
             ForEach(folderNodes) { node in
-                MobileSavedFolderGroup(
+                BrowserSavedFolderGroup(
                     node: node,
                     tabs: tabSections.savedTabs(in: node.id),
                     spaceID: space.id,
                     profileID: space.profile.id,
                     selectedTabID: space.selectedTabID,
                     browser: browser,
-                    pages: pages,
+                    pageAccess: pageAccess,
                     spaceAccess: spaceAccess,
-                    selectTab: selectTab,
+                    capabilities: capabilities,
                     promotionNamespace: tabPromotionNamespace,
-                    usesNativeNavigationTransition: usesNativeNavigationTransition,
+                    pullNewIcon: pullNewIcon,
+                    restoreSavedLocation: restoreSavedLocation,
+                    select: selectTab,
                     isExpanded: expansionBinding(for: node.id),
                     editingFolderRequest: $editingFolderRequest
                 )
@@ -188,6 +190,10 @@ struct MobileSavedTabsDropSection: View {
             reservesReorderSectionZones: true,
             usesNativeNavigationTransition: usesNativeNavigationTransition
         )
+    }
+
+    private var pageAccess: BrowserSidebarPageAccess {
+        BrowserSidebarPageAccess(pages: pages, browser: browser)
     }
 
     private func pullNewIcon(_ tabID: TabID) {

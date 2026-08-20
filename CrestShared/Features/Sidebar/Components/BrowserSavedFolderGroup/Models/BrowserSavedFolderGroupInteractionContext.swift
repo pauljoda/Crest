@@ -1,6 +1,9 @@
 import SwiftUI
 
-struct SavedFolderGroupInteractionContext {
+/// The state a saved folder group keeps between events, and the moves its
+/// parts may make, handed down together so a component reads only what it
+/// needs to draw.
+struct BrowserSavedFolderGroupInteractionContext {
     let isExpanded: Binding<Bool>
     let editingFolderRequest: Binding<BrowserFolderRuntimeAssignment?>
     let isDropTargeted: Binding<Bool>

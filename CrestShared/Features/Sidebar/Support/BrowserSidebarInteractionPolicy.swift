@@ -54,6 +54,18 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// The layout a saved folder's header draws itself with.
+    ///
+    /// Touch decides this for the same reason it decides the tab row: the
+    /// symbol column, the trailing inset, and the height behaviour all follow
+    /// from the least precise input the shell accepts, and the header has to
+    /// sit in the same column as the rows it opens onto.
+    static func savedFolderHeaderMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSavedFolderHeaderMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
     /// Whether a row anchors the page it opens with a matched-geometry
     /// destination.
     ///

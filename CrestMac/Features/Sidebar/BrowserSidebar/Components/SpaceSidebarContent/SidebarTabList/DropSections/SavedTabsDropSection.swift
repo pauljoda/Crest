@@ -17,6 +17,10 @@ struct SavedTabsDropSection: View {
         )
     }
 
+    private var pageAccess: BrowserSidebarPageAccess {
+        BrowserSidebarPageAccess(pages: pages, browser: browser)
+    }
+
     private var tabActions: BrowserSidebarTabActions {
         BrowserSidebarTabActions(
             assignment: BrowserSpaceRuntimeAssignment(space: space),
@@ -47,15 +51,19 @@ struct SavedTabsDropSection: View {
 
         VStack(spacing: 0) {
             ForEach(folderNodes) { node in
-                SavedFolderGroup(
+                BrowserSavedFolderGroup(
                     node: node,
                     tabs: tabSections.savedTabs(in: node.id),
                     spaceID: space.id,
                     profileID: space.profile.id,
                     selectedTabID: space.selectedTabID,
                     browser: browser,
-                    pages: pages,
+                    pageAccess: pageAccess,
                     spaceAccess: spaceAccess,
+                    capabilities: capabilities,
+                    pullNewIcon: pullNewIcon,
+                    restoreSavedLocation: restoreSavedLocation,
+                    select: activate,
                     isExpanded: expansionBinding(for: node.id),
                     editingFolderRequest: $editingFolderRequest
                 )

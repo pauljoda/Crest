@@ -1617,13 +1617,32 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testRootFoldersAlignWithRootSavedTabs() {
         XCTAssertEqual(
-            MobileSidebarRowLayoutPolicy.folderLeadingInset(depth: 0),
-            MobileSidebarRowLayoutPolicy.rootContentLeadingInset
+            BrowserSavedFolderLayout.headerLeadingInset(
+                depth: 0,
+                tabRowMetrics: .touch
+            ),
+            BrowserSidebarTabRowMetrics.touch.contentLeadingInset
         )
         XCTAssertEqual(
-            MobileSidebarRowLayoutPolicy.folderLeadingInset(depth: 1),
-            MobileSidebarRowLayoutPolicy.rootContentLeadingInset
-                + MobileSidebarRowLayoutPolicy.folderNestingIndent
+            BrowserSavedFolderLayout.headerLeadingInset(
+                depth: 1,
+                tabRowMetrics: .touch
+            ),
+            BrowserSidebarTabRowMetrics.touch.contentLeadingInset
+                + BrowserSavedFolderLayout.nestingIndent
+        )
+    }
+
+    /// A folder's own rows step in one indent past the folder, and a nested
+    /// folder's header lands in the same column as the rows above it.
+    func testFolderRowsStepInOneIndentPastTheirFolder() {
+        XCTAssertEqual(
+            BrowserSavedFolderLayout.rowLeadingInset(depth: 0),
+            BrowserSavedFolderLayout.nestingIndent
+        )
+        XCTAssertEqual(
+            BrowserSavedFolderLayout.rowLeadingInset(depth: 1),
+            BrowserSavedFolderLayout.nestingIndent * 2
         )
     }
 
