@@ -6,38 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.4.2</title>
-            <pubDate>Wed, 19 Aug 2026 09:00:22 +0000</pubDate>
+            <title>0.4.5</title>
+            <pubDate>Thu, 20 Aug 2026 09:01:51 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1036</sparkle:version>
-            <sparkle:shortVersionString>0.4.2</sparkle:shortVersionString>
+            <sparkle:version>1038</sparkle:version>
+            <sparkle:shortVersionString>0.4.5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Support translated Chrome Web Store actions
+
 ### Improved
 
-- Format software update release notes as structured Markdown
-- Automate the public Crest roadmap sync
+- Improve Crest browser experience
+- Preserve user-adjusted quick window geometry
+- Sync public roadmap from Linear
+- Cleanup
 
 ### Fixed
 
-- Fix tab sync deletion invariants
-- Keep utility fan labels aligned
-- Unify macOS sidebar card interactions
-- Synchronize browser card motion
-- Preserve sidebar contents after docking
-- Keep sidebar content mounted across docking
-- Add hosted location and notification flows
+- Fix WebExtension window focus lifecycle
+- Fix SSO window lifecycle and permission defaults
+- Harden browser imports
+- Preserve locked sidebar presentation
+- Fix APP-250 download and utility flows
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c5ddb24e3d321c151308565ba90404af24b03f15...519fd259b7413e8cbf4c03004a8b7da077ad757c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.2-nightly-2026-08-19-519fd25-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/519fd259b7413e8cbf4c03004a8b7da077ad757c...6c1c9568e2aa2ed0c5a0016acc49685e0b75737d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.5-nightly-2026-08-20-6c1c956-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.2-nightly-2026-08-19-519fd25-arm64.dmg" length="7625494" type="application/octet-stream" sparkle:edSignature="8yhRJbPR9dc+aWRf5qPovByr1cwpIZXk7ZExVKAzZjINOsBON/MryoiIYbRdeGx9XPYnMyKG5vNQ+FesvE1oCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.4.5-nightly-2026-08-20-6c1c956-arm64.dmg" length="7624981" type="application/octet-stream" sparkle:edSignature="nA+gzmxzw+QOn65udXcOcB8X1mqYVSfj/IBNEx982a5AiOuarAvXDeJhOGiMLcn0MeUo/9d4c8jvYUcXB9XtDQ=="/>
         </item>
         <item>
             <title>0.4.0</title>
@@ -70,6 +74,6 @@ It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, reten
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: hgrZnYcBUNcLDXLuj6F82zK+mhTLQwpGrW/EleMwJjDT3qylrsdGgJKU5YjgrMBhiyrd5ZGmhFvhJkXC7YQ1AQ==
-length: 3833
+edSignature: 2f9hBKo0vab3SSB6rdhnRGq06ONgctZSIZ19t8DJs0ONYpkXYra3iT5EFE+CN7Ef9c6VmTzhBi5GQdcrk+mpCg==
+length: 3834
 -->
