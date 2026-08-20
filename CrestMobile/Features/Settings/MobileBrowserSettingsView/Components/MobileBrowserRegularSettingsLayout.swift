@@ -16,7 +16,7 @@ struct MobileBrowserRegularSettingsLayout: View {
             )
             .navigationTitle("Settings")
         } detail: {
-            MobileBrowserSettingsDestinationView(
+            MobileBrowserSettingsDestinationPage(
                 destination: selection,
                 browser: browser,
                 pages: pages,

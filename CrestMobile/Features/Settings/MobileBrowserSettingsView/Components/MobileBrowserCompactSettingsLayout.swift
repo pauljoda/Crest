@@ -21,7 +21,7 @@ struct MobileBrowserCompactSettingsLayout: View {
             .searchable(text: $searchText, prompt: "Search settings")
             .navigationDestination(for: BrowserSettingsDestination.self) {
                 destination in
-                MobileBrowserSettingsDestinationView(
+                MobileBrowserSettingsDestinationPage(
                     destination: destination,
                     browser: browser,
                     pages: pages,

@@ -43,7 +43,7 @@ struct BrowserSettingsView: View {
                     max: BrowserSettingsVisualPolicy.sidebarMaximumWidth
                 )
         } detail: {
-            BrowserSettingsDestinationView(
+            BrowserSettingsDestinationPage(
                 destination: navigation.selection,
                 browser: browser,
                 pages: pages,
