@@ -6,6 +6,7 @@ struct SpaceSidebarContent: View {
     let browser: BrowserStore
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
+    let capabilities: BrowserInteractionCapabilities
     @Binding var address: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
@@ -66,6 +67,7 @@ struct SpaceSidebarContent: View {
                         browser: browser,
                         pages: pages,
                         spaceAccess: spaceAccess,
+                        capabilities: capabilities,
                         isSelected: isSelected,
                         address: $address,
                         isAddressEditing: $isAddressEditing,
@@ -90,12 +92,6 @@ struct SpaceSidebarContent: View {
                 }
             }
         }
-    }
-
-    /// What this shell can do, until the shell itself hands it down: a pointer
-    /// rests over the chrome and nothing is aimed at with a finger.
-    private var capabilities: BrowserInteractionCapabilities {
-        BrowserInteractionCapabilities()
     }
 
     private func beginCreatingFolder() {

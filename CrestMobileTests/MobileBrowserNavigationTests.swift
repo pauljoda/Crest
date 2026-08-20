@@ -24,14 +24,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileSidebarUsesSpaceForegroundAcrossLayouts() {
         XCTAssertTrue(
-            MobileBrowserSidebarAppearancePolicy.usesSpaceForeground(
-                for: .compactTabViewer
-            )
-        )
-        XCTAssertTrue(
-            MobileBrowserSidebarAppearancePolicy.usesSpaceForeground(
-                for: .regularSidebar
-            )
+            MobileBrowserSidebarAppearancePolicy.usesSpaceForeground(),
+            "Every compact placement reads its foreground from the Space's branding, so no placement may opt out."
         )
     }
 
@@ -467,14 +461,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertTrue(MobileRegularBrowserBackdropPolicy.extendsBehindTopSafeArea)
         XCTAssertFalse(
             MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                for: .regularSidebar,
+                showsPageBackdrop: false,
                 isPaging: false,
                 isSelected: true
             )
         )
         XCTAssertTrue(
             MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                for: .compactTabViewer,
+                showsPageBackdrop: true,
                 isPaging: false,
                 isSelected: true
             )
@@ -531,14 +525,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(settled.cornerRadius, 0)
         XCTAssertTrue(
             MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                for: .compactTabViewer,
+                showsPageBackdrop: true,
                 isPaging: false,
                 isSelected: true
             )
         )
         XCTAssertTrue(
             MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                for: .compactTabViewer,
+                showsPageBackdrop: true,
                 isPaging: false,
                 isSelected: false
             )
@@ -551,7 +545,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(paging.cornerRadius, 0)
         XCTAssertTrue(
             MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                for: .compactTabViewer,
+                showsPageBackdrop: true,
                 isPaging: true,
                 isSelected: true
             )
@@ -847,7 +841,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         XCTAssertEqual(
             MobileBrowserSidebarBottomChromePolicy.placement(
-                for: .compactTabViewer,
+                reservesInset: true,
                 isVisible: true
             ),
             .inlineSafeAreaInset,
@@ -855,7 +849,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             MobileBrowserSidebarBottomChromePolicy.placement(
-                for: .compactTabViewer,
+                reservesInset: true,
                 isVisible: false
             ),
             .inlineSafeAreaInset,
@@ -863,14 +857,14 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             MobileBrowserSidebarBottomChromePolicy.content(
-                for: .compactTabViewer,
+                reservesInset: true,
                 isVisible: true
             ),
             .actions
         )
         XCTAssertEqual(
             MobileBrowserSidebarBottomChromePolicy.content(
-                for: .compactTabViewer,
+                reservesInset: true,
                 isVisible: false
             ),
             .reservedSpace,
@@ -878,11 +872,27 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
         XCTAssertEqual(
             MobileBrowserSidebarBottomChromePolicy.placement(
-                for: .regularSidebar,
+                reservesInset: false,
                 isVisible: true
             ),
             .inlineSafeAreaInset,
             "iPad Space actions must not create a window-wide bottom safe-area bar."
+        )
+        XCTAssertEqual(
+            MobileBrowserSidebarBottomChromePolicy.placement(
+                reservesInset: false,
+                isVisible: false
+            ),
+            .hidden,
+            "A placement that does not reserve the inset drops it once its controls are gone."
+        )
+        XCTAssertEqual(
+            MobileBrowserSidebarBottomChromePolicy.content(
+                reservesInset: false,
+                isVisible: false
+            ),
+            .actions,
+            "Only a reserved inset stands in for absent controls; elsewhere the chrome is simply not placed."
         )
     }
 

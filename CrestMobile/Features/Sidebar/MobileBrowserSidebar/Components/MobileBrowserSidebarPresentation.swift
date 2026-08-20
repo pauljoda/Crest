@@ -54,37 +54,6 @@ struct MobileBrowserSidebarPresentation<Content: View>: View {
                     dataDeleter: configuration.dataDeleter
                 )
             }
-            .confirmationDialog(
-                clearHistoryTitle,
-                isPresented: clearHistoryConfirmationIsPresented,
-                titleVisibility: .visible,
-                presenting: configuration.clearHistoryConfirmation.wrappedValue
-            ) { confirmation in
-                Button("Clear History", role: .destructive) {
-                    configuration.clearHistoryConfirmation.wrappedValue = nil
-                    BrowserSidebarSpacePresentationPolicy.clearHistory(
-                        confirmation,
-                        in: configuration.browser,
-                        accessController: configuration.spaceAccess
-                    )
-                }
-            } message: { _ in
-                Text("History in other Spaces is not affected.")
-            }
-            .onChange(of: configuration.utilityPresentation.surface) {
-                previous,
-                current in
-                if previous != current {
-                    configuration.utilitySearchText.wrappedValue = ""
-                    configuration.utilityFilter.wrappedValue = .all
-                }
-                configuration.acknowledgeDownloads(current)
-            }
-            .onChange(of: configuration.selectedDownloadIDs) {
-                configuration.acknowledgeDownloads(
-                    configuration.utilityPresentation.surface
-                )
-            }
             .onChange(of: configuration.selectedSpaceAssignment) {
                 _,
                 assignment in
@@ -93,27 +62,5 @@ struct MobileBrowserSidebarPresentation<Content: View>: View {
                 else { return }
                 configuration.presentedSpaceSheet.wrappedValue = nil
             }
-            .onChange(of: configuration.clearHistoryConfirmationIsLive) {
-                _,
-                isLive in
-                guard !isLive else { return }
-                configuration.clearHistoryConfirmation.wrappedValue = nil
-            }
-    }
-
-    private var clearHistoryTitle: String {
-        configuration.clearHistoryConfirmation.wrappedValue.map {
-            "Clear history for \($0.spaceName)?"
-        } ?? "Clear history?"
-    }
-
-    private var clearHistoryConfirmationIsPresented: Binding<Bool> {
-        Binding {
-            configuration.clearHistoryConfirmationIsLive
-        } set: { isPresented in
-            if !isPresented {
-                configuration.clearHistoryConfirmation.wrappedValue = nil
-            }
-        }
     }
 }

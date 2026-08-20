@@ -33,28 +33,28 @@ struct MobileBrowserSidebarBottomChrome: View {
         }
         .padding(
             .bottom,
-            configuration.mode == .regularSidebar
-                && !configuration.sidebarIsDocked
-                ? MobileBrowserRootLayout.floatingSidebarBottomChromeInset
-                : 0
+            configuration.sidebarIsDocked
+                ? 0
+                : MobileBrowserRootLayout.floatingSidebarBottomChromeInset
         )
     }
 
     @ViewBuilder
     private var actions: some View {
         switch MobileBrowserSidebarBottomChromePolicy.content(
-            for: configuration.mode,
-            isVisible: isVisible
+            reservesInset: configuration.reservesBottomChromeInset,
+            isVisible: configuration.showsBottomSpaceSwitcher
         ) {
         case .actions:
             if BrowserSidebarAccessPolicy.showsSelectedSpaceActions(
-                in: configuration.browser,
-                accessController: configuration.spaceAccess
+                in: configuration.context.browser,
+                accessController: configuration.context.spaceAccess
             ) {
                 MobileSpaceActions(
-                    browser: configuration.browser,
+                    browser: configuration.context.browser,
                     pages: configuration.pages,
-                    mode: configuration.mode,
+                    utilityPresentationStyle:
+                        configuration.utilityPresentationStyle,
                     configuration: configuration.spaceActionsConfiguration
                 )
                 .transition(.opacity)
@@ -72,13 +72,8 @@ struct MobileBrowserSidebarBottomChrome: View {
             .accessibilityHidden(true)
     }
 
-    private var isVisible: Bool {
-        configuration.mode == .regularSidebar
-            || configuration.showsBottomSpaceSwitcher
-    }
-
     private var sidebarToggleTitle: LocalizedStringKey {
-        if configuration.mode == .compactTabViewer {
+        if configuration.sidebarToggleUndocks {
             return "Undock Sidebar"
         }
         return configuration.sidebarIsDocked

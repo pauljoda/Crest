@@ -1,9 +1,14 @@
 import SwiftUI
 
+/// The windowed shell's sidebar layout: a clipped Space pager with the Space
+/// switcher resting under it.
+///
+/// Everything about *what* the sidebar does comes down from `BrowserSidebar`
+/// through the context. What this view owns is the arrangement, the switcher's
+/// accessories, and the page body only a windowed card pool can answer for.
 struct BrowserSidebarLoadedContent: View {
-    let browser: BrowserStore
+    let context: BrowserSidebarContext
     let pages: BrowserPagePool
-    let spaceAccess: BrowserSpaceAccessController
     @Binding var address: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
@@ -14,28 +19,15 @@ struct BrowserSidebarLoadedContent: View {
     let toggleSidebar: () -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
-    let utilityPresentation: BrowserUtilityPresentationState
-    @Binding var utilitySearchText: String
-    @Binding var utilityFilter: BrowserUtilityListFilter
-    let utilityActions: BrowserUtilityListActions
-    let actions: BrowserSidebarInteractionActions
 
     var body: some View {
         VStack(spacing: 0) {
-            BrowserSpacePager(
-                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
-                selectedSpaceID: browser.session.selectedSpaceID,
-                isInteractionLocked: browser.tabDragState.item != nil
-                    || browser.folderDragState.item != nil,
-                selectSpace: actions.selectSpace,
-                settledSpace: actions.settleSpaceSelection
-            ) { space, isSelected in
+            BrowserSidebarSpacePager(context: context) { space, isSelected in
                 BrowserSidebarSpacePage(
                     space: space,
                     isSelected: isSelected,
-                    browser: browser,
+                    context: context,
                     pages: pages,
-                    spaceAccess: spaceAccess,
                     address: $address,
                     isAddressEditing: $isAddressEditing,
                     addressFocusRequest: addressFocusRequest,
@@ -43,33 +35,30 @@ struct BrowserSidebarLoadedContent: View {
                     submitAddress: submitAddress,
                     openNewTab: openNewTab,
                     commandSurfaceNamespace: commandSurfaceNamespace,
-                    tabPromotionNamespace: tabPromotionNamespace,
-                    utilityPresentation: utilityPresentation,
-                    utilitySearchText: $utilitySearchText,
-                    utilityFilter: $utilityFilter,
-                    utilityActions: utilityActions,
-                    actions: actions
+                    tabPromotionNamespace: tabPromotionNamespace
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
 
             BrowserSpaceSwitcher(
-                browser: browser,
-                downloadCenter: pages.downloadCenter,
-                capabilities: capabilities,
-                selectSpace: actions.selectSpace,
+                browser: context.browser,
+                downloadCenter: context.pageAccess.downloadCenter,
+                capabilities: context.capabilities,
+                selectSpace: context.selectSpace,
                 accessories: switcherAccessories
             )
             .environment(
                 \.colorScheme,
-                browser.selectedSpace.map {
+                context.browser.selectedSpace.map {
                     BrowserSpaceForegroundPolicy.colorScheme(for: $0.branding)
                 } ?? .dark
             )
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(browser.selectedSpace?.name ?? "Browser") Space")
+        .accessibilityLabel(
+            "\(context.browser.selectedSpace?.name ?? "Browser") Space"
+        )
     }
 
     private var switcherAccessories: BrowserSpaceSwitcherAccessories {
@@ -79,23 +68,51 @@ struct BrowserSidebarLoadedContent: View {
                 toggle: toggleSidebar
             ),
             commonLists: BrowserSpaceSwitcherCommonLists(
-                isExpanded: utilityPresentation.isSwitcherExpanded,
-                toggle: {
-                    utilityPresentation.toggleSwitcher(
-                        hasNewDownloads: !newUtilityDownloads.isEmpty
-                    )
-                },
-                recordTriggerFrame: utilityPresentation.recordTriggerFrame
+                isExpanded: context.utilityPresentation.isSwitcherExpanded,
+                toggle: context.toggleUtilitySwitcher,
+                recordTriggerFrame:
+                    context.utilityPresentation.recordTriggerFrame
             )
         )
     }
+}
 
-    private var capabilities: BrowserInteractionCapabilities {
-        BrowserInteractionCapabilities()
+#Preview("Browser Sidebar — Tabs") {
+    @Previewable @State var address = "https://developer.apple.com"
+    @Previewable @State var isAddressEditing = false
+    @Previewable @Namespace var commandSurfaceNamespace
+    @Previewable @Namespace var tabPromotionNamespace
+    let browser = BrowserSidebarPreviewFixture.makeBrowser()
+    let pages = BrowserSidebarPreviewFixture.makePages()
+    let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
+    BrowserSidebar(
+        browser: browser,
+        pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser),
+        spaceAccess: spaceAccess,
+        capabilities: BrowserInteractionCapabilities(),
+        utilityCoordinator: BrowserSidebarUtilityCoordinator(
+            browser: browser,
+            pages: pages,
+            spaceAccess: spaceAccess
+        ),
+        utilityPresentation:
+            BrowserSidebarPreviewFixture.makeUtilityPresentation(),
+        chromeActions: BrowserSidebarPreviewFixture.makeChromeActions()
+    ) { context in
+        BrowserSidebarLoadedContent(
+            context: context,
+            pages: pages,
+            address: $address,
+            isAddressEditing: $isAddressEditing,
+            addressFocusRequest: 0,
+            activateAddress: { isAddressEditing = true },
+            submitAddress: {},
+            openNewTab: {},
+            sidebarToggleAction: .hide,
+            toggleSidebar: {},
+            commandSurfaceNamespace: commandSurfaceNamespace,
+            tabPromotionNamespace: tabPromotionNamespace
+        )
     }
-
-    private var newUtilityDownloads: [BrowserDownloadItem] {
-        guard let profileID = browser.selectedSpace?.profile.id else { return [] }
-        return pages.downloadCenter.unacknowledgedItems(for: profileID)
-    }
+    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 680)
 }

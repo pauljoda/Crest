@@ -5,20 +5,13 @@ struct MobileBrowserSidebarPager: View {
 
     var body: some View {
         ZStack {
-            if configuration.mode == .compactTabViewer {
+            if configuration.showsPageBackdrop {
                 Color(uiColor: .systemBackground)
                     .ignoresSafeArea()
             }
 
-            BrowserSpacePager(
-                spaces: BrowserSidebarAccessPolicy.availableSpaces(
-                    in: configuration.browser
-                ),
-                selectedSpaceID: configuration.browser.session.selectedSpaceID,
-                isInteractionLocked: configuration.browser.tabDragState.item != nil
-                    || configuration.browser.folderDragState.item != nil,
-                selectSpace: configuration.selectSpace,
-                settledSpace: configuration.settleSpaceSelection
+            BrowserSidebarSpacePager(
+                context: configuration.context
             ) { space, isSelected in
                 MobileBrowserSidebarSpaceSurface(
                     configuration: configuration,

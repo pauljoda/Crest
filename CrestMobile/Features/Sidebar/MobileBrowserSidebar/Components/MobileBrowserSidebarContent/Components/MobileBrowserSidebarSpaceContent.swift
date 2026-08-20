@@ -6,24 +6,21 @@ struct MobileBrowserSidebarSpaceContent: View {
     let isSelected: Bool
 
     var body: some View {
-        if configuration.mode == .regularSidebar,
-            let utilitySurface = configuration.utilityPresentation.surface
+        if configuration.utilityPresentationStyle == .inline,
+            let utilitySurface = configuration.context.utilityPresentation.surface
         {
             if isSelected {
                 BrowserUtilityListContent(
                     surface: utilitySurface,
                     space: space,
-                    downloads: configuration.pages.downloadCenter.items(
-                        for: space.profile.id
-                    ),
-                    searchText: configuration.utilitySearchText.wrappedValue,
-                    filter: configuration.utilityFilter.wrappedValue,
-                    actions: configuration.utilityActions,
-                    dismissOnBlankSpace: {
-                        configuration.utilityPresentation.handleInteraction(
-                            .sidebarBlankSpace
-                        )
-                    }
+                    downloads: configuration.context.pageAccess.downloadCenter
+                        .items(for: space.profile.id),
+                    searchText: configuration.context.utilitySearchText
+                        .wrappedValue,
+                    filter: configuration.context.utilityFilter.wrappedValue,
+                    actions: configuration.context.utilityActions,
+                    dismissOnBlankSpace:
+                        configuration.context.dismissUtilityOnBlankSpace
                 )
             } else {
                 Color.clear
@@ -31,20 +28,28 @@ struct MobileBrowserSidebarSpaceContent: View {
         } else {
             MobileBrowserSpacePage(
                 space: space,
-                browser: configuration.browser,
+                browser: configuration.context.browser,
                 pages: configuration.pages,
-                spaceAccess: configuration.spaceAccess,
-                mode: configuration.mode,
+                spaceAccess: configuration.context.spaceAccess,
+                capabilities: configuration.context.capabilities,
                 tabPromotionNamespace: configuration.tabPromotionNamespace,
                 selectTab: configuration.selectTab,
                 openNewTab: configuration.openNewTab,
-                showHistory: configuration.showHistory,
-                showPasswords: configuration.showPasswords,
-                showSettings: configuration.showSettings,
+                showHistory: configuration.context.chromeActions.presentHistory,
+                showPasswords: showPasswords,
+                showSettings: showSettings,
                 closePrivateBrowsing: configuration.closePrivateBrowsing,
                 compactPageIsFullyPresented:
                     configuration.compactPageIsFullyPresented
             )
         }
+    }
+
+    private func showPasswords() {
+        configuration.context.chromeActions.presentPasswords?()
+    }
+
+    private func showSettings() {
+        configuration.context.chromeActions.presentSpaceSettings(space)
     }
 }

@@ -1,26 +1,26 @@
 import Foundation
 
 enum MobileBrowserSidebarBottomChromePolicy {
+    /// Where the bottom chrome sits.
+    ///
+    /// A shell that reserves the inset keeps it whether or not its controls are
+    /// on screen. That leaves the selected matched tab destination at the same
+    /// resting position throughout page presentation and return.
     static func placement(
-        for mode: MobileBrowserSidebarMode,
+        reservesInset: Bool,
         isVisible: Bool
     ) -> MobileBrowserSidebarBottomChromePlacement {
-        return switch mode {
-        case .compactTabViewer:
-            // Keep the inset in the compact owner while its controls are
-            // absent. That leaves the selected matched tab destination at the
-            // same resting position throughout page presentation and return.
-            .inlineSafeAreaInset
-        case .regularSidebar:
-            isVisible ? .inlineSafeAreaInset : .hidden
+        if reservesInset {
+            return .inlineSafeAreaInset
         }
+        return isVisible ? .inlineSafeAreaInset : .hidden
     }
 
     static func content(
-        for mode: MobileBrowserSidebarMode,
+        reservesInset: Bool,
         isVisible: Bool
     ) -> MobileBrowserSidebarBottomChromeContent {
-        if mode == .compactTabViewer, !isVisible {
+        if reservesInset, !isVisible {
             return .reservedSpace
         }
         return .actions

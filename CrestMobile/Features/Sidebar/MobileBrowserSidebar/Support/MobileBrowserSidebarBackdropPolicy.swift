@@ -22,12 +22,17 @@ enum MobileBrowserSidebarBackdropPolicy {
         true
     }
 
+    /// Whether one Space's page draws its branded ground.
+    ///
+    /// The shell says whether it paints its own ground at all; paging state and
+    /// selection stay in the signature because a single full-bleed layer is a
+    /// choice this policy makes rather than one its callers should assume.
     static func showsPageBackdrop(
-        for mode: MobileBrowserSidebarMode,
+        showsPageBackdrop: Bool,
         isPaging _: Bool,
         isSelected _: Bool
     ) -> Bool {
-        mode == .compactTabViewer
+        showsPageBackdrop
     }
 
     static func branding(for space: BrowserSpace) -> BrowserSpaceBranding {

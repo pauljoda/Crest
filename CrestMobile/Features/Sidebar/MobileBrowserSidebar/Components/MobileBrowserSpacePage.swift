@@ -12,7 +12,7 @@ struct MobileBrowserSpacePage: View {
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
     let spaceAccess: BrowserSpaceAccessController
-    let mode: MobileBrowserSidebarMode
+    let capabilities: BrowserInteractionCapabilities
     let tabPromotionNamespace: Namespace.ID
     let selectTab: (TabID) -> Void
     let openNewTab: () -> Void
@@ -95,20 +95,6 @@ struct MobileBrowserSpacePage: View {
             BrowserSpaceAccessibilityID.sidebar(space.id)
         )
         .accessibilityLabel("\(space.name) Space sidebar")
-    }
-
-    /// What this shell can do, until the shell itself hands it down: a finger
-    /// is the primary input, a trackpad may still be attached, the sections
-    /// draw their drop feedback on the rows, and the tab viewer is the mode that
-    /// zooms a page in with the system's own transition.
-    private var capabilities: BrowserInteractionCapabilities {
-        BrowserInteractionCapabilities(
-            supportsHover: true,
-            supportsTouch: true,
-            showsRowDropIndicators: true,
-            reservesReorderSectionZones: true,
-            usesNativeNavigationTransition: mode == .compactTabViewer
-        )
     }
 
     private var pageAccess: BrowserSidebarPageAccess {

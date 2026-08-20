@@ -14,9 +14,8 @@ struct MobileBrowserSidebarBottomChromeLayout<Content: View>: View {
 
     var body: some View {
         switch MobileBrowserSidebarBottomChromePolicy.placement(
-            for: configuration.mode,
-            isVisible: configuration.mode == .regularSidebar
-                || configuration.showsBottomSpaceSwitcher
+            reservesInset: configuration.reservesBottomChromeInset,
+            isVisible: configuration.showsBottomSpaceSwitcher
         ) {
         case .hidden:
             content

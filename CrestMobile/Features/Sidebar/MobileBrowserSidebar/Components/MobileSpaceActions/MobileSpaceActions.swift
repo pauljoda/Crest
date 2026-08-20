@@ -3,7 +3,7 @@ import SwiftUI
 struct MobileSpaceActions: View {
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
-    let mode: MobileBrowserSidebarMode
+    let utilityPresentationStyle: MobileBrowserSidebarUtilityPresentationStyle
     let configuration: MobileSpaceActionsConfiguration
 
     var body: some View {
@@ -14,7 +14,7 @@ struct MobileSpaceActions: View {
                 action: configuration.togglePrivateBrowsing
             )
             MobileSpaceArchiveButton(
-                mode: mode,
+                utilityPresentationStyle: utilityPresentationStyle,
                 archivedTabCount: browser.selectedSpace?.archivedTabs.count ?? 0,
                 commonListsAreExpanded: configuration.commonListsAreExpanded,
                 downloads: downloads,
@@ -24,7 +24,7 @@ struct MobileSpaceActions: View {
                 toggleCommonLists: configuration.toggleCommonLists,
                 recordCommonListsTriggerFrame: configuration.recordCommonListsTriggerFrame
             )
-            if mode == .compactTabViewer {
+            if utilityPresentationStyle == .sheet {
                 MobileSpaceDownloadsButton(
                     downloads: downloads,
                     newDownloads: newDownloads,

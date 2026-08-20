@@ -3,9 +3,8 @@ import SwiftUI
 struct BrowserSidebarSpacePage: View {
     let space: BrowserSpace
     let isSelected: Bool
-    let browser: BrowserStore
+    let context: BrowserSidebarContext
     let pages: BrowserPagePool
-    let spaceAccess: BrowserSpaceAccessController
     @Binding var address: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
@@ -14,48 +13,46 @@ struct BrowserSidebarSpacePage: View {
     let openNewTab: () -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
-    let utilityPresentation: BrowserUtilityPresentationState
-    @Binding var utilitySearchText: String
-    @Binding var utilityFilter: BrowserUtilityListFilter
-    let utilityActions: BrowserUtilityListActions
-    let actions: BrowserSidebarInteractionActions
 
     private var isLocked: Bool {
-        spaceAccess.isLocked(space)
+        context.spaceAccess.isLocked(space)
     }
 
     var body: some View {
         SpaceSidebarContent(
             space: space,
             isSelected: isSelected,
-            browser: browser,
+            browser: context.browser,
             pages: pages,
-            spaceAccess: spaceAccess,
+            spaceAccess: context.spaceAccess,
+            capabilities: context.capabilities,
             address: $address,
             isAddressEditing: $isAddressEditing,
             addressFocusRequest: addressFocusRequest,
             activateAddress: activateAddress,
             submitAddress: submitAddress,
             openNewTab: openNewTab,
-            showHistory: { utilityPresentation.present(.history) },
-            showExtensions: { actions.presentExtensions(space) },
+            showHistory: context.chromeActions.presentHistory,
+            showExtensions: showExtensions,
             siteControlPresentationChanged: {
-                utilityPresentation.setSiteControlPresented($0)
+                context.utilityPresentation.setSiteControlPresented($0)
             },
             siteControlContextMenuPresentationChanged: {
-                utilityPresentation.setSiteControlContextMenuPresented($0)
+                context.utilityPresentation.setSiteControlContextMenuPresented($0)
             },
             commandSurfaceNamespace: commandSurfaceNamespace,
             tabPromotionNamespace: tabPromotionNamespace,
-            editSpace: { actions.presentSpaceSettings(space) },
-            createSpace: actions.createSpace,
-            utilitySurface: utilityPresentation.surface,
-            utilitySearchText: $utilitySearchText,
-            utilityFilter: $utilityFilter,
-            utilityDownloads: pages.downloadCenter.items(for: space.profile.id),
-            utilityActions: utilityActions,
-            dismissUtilityOnBlankSpace: actions.dismissUtilityOnBlankSpace,
-            clearHistory: { actions.confirmClearHistory(space) }
+            editSpace: { context.chromeActions.presentSpaceSettings(space) },
+            createSpace: createSpace,
+            utilitySurface: context.utilityPresentation.surface,
+            utilitySearchText: context.utilitySearchText,
+            utilityFilter: context.utilityFilter,
+            utilityDownloads: context.pageAccess.downloadCenter.items(
+                for: space.profile.id
+            ),
+            utilityActions: context.utilityActions,
+            dismissUtilityOnBlankSpace: context.dismissUtilityOnBlankSpace,
+            clearHistory: { context.confirmClearHistory(space) }
         )
         .environment(
             \.colorScheme,
@@ -71,5 +68,13 @@ struct BrowserSidebarSpacePage: View {
         .accessibilityHidden(!isSelected || isLocked)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(space.name) Space")
+    }
+
+    private func showExtensions() {
+        context.chromeActions.presentExtensions?(space)
+    }
+
+    private func createSpace() {
+        context.chromeActions.createSpace?()
     }
 }

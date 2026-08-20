@@ -4,19 +4,19 @@ struct MobileBrowserSidebarTopChrome: View {
     let configuration: MobileBrowserSidebarContentConfiguration
 
     var body: some View {
-        if configuration.mode == .regularSidebar {
+        if configuration.utilityPresentationStyle == .inline {
             BrowserSidebarNavigationControls(
                 port: BrowserSidebarNavigationPort(
                     pageActions: selectedPageActions
                 ),
-                capabilities: capabilities,
+                capabilities: configuration.context.capabilities,
                 hidesUnavailableForwardControl: true
             ) {
                 if let pageActions = selectedPageActions,
                     pageActions.isAvailable
                 {
                     MobilePageActionsMenu(
-                        browser: configuration.browser,
+                        browser: configuration.context.browser,
                         pages: pageActions,
                         systemImage: "ellipsis.circle"
                     )
@@ -32,14 +32,16 @@ struct MobileBrowserSidebarTopChrome: View {
                 }
             }
 
-            if let utilitySurface = configuration.utilityPresentation.surface {
+            if let utilitySurface = configuration.context.utilityPresentation
+                .surface
+            {
                 BrowserUtilitySearchToolbar(
                     surface: utilitySurface,
-                    searchText: configuration.utilitySearchText,
-                    filter: configuration.utilityFilter,
+                    searchText: configuration.context.utilitySearchText,
+                    filter: configuration.context.utilityFilter,
                     morphNamespace: configuration.compactChromeNamespace,
                     morphID: morphID,
-                    clearHistory: configuration.confirmClearHistory
+                    clearHistory: confirmClearHistory
                 )
                 .padding(.horizontal, 12)
                 .padding(.bottom, 4)
@@ -53,7 +55,7 @@ struct MobileBrowserSidebarTopChrome: View {
                             !configuration.isAddressEditing.wrappedValue
                         {
                             MobilePageActionsContent(
-                                browser: configuration.browser,
+                                browser: configuration.context.browser,
                                 pages: pageActions
                             )
                             .tint(.primary)
@@ -65,13 +67,12 @@ struct MobileBrowserSidebarTopChrome: View {
             }
         }
 
-        if configuration.mode == .compactTabViewer,
-            configuration.showsCompactAddressBar
-        {
+        if configuration.showsCompactAddressBar {
             GlassEffectContainer(spacing: 0) {
                 MobileCompactNewTabPrompt(
                     namespace: configuration.compactChromeNamespace,
-                    geometryID: configuration.browser.session.selectedSpaceID,
+                    geometryID: configuration.context.browser.session
+                        .selectedSpaceID,
                     transitionEnded: configuration.compactTransitionEnded,
                     openNewTab: configuration.openNewTab
                 )
@@ -92,7 +93,7 @@ struct MobileBrowserSidebarTopChrome: View {
             progress: selectedPageActions?.activePage?.estimatedProgress ?? 0,
             isLoading: selectedPageActions?.activePage?.isLoading == true,
             hasResidentPage: false,
-            capabilities: capabilities,
+            capabilities: configuration.context.capabilities,
             activate: configuration.activateAddress,
             submit: configuration.submitAddress,
             morphNamespace: configuration.compactChromeNamespace,
@@ -100,27 +101,28 @@ struct MobileBrowserSidebarTopChrome: View {
         )
     }
 
-    /// What this shell can do, until the shell itself hands it down: a finger
-    /// is the primary input and a trackpad may still be attached.
-    private var capabilities: BrowserInteractionCapabilities {
-        BrowserInteractionCapabilities(
-            supportsHover: true,
-            supportsTouch: true
-        )
-    }
-
     private var selectedPageActions: MobileSelectedPageActionPort? {
         MobileSelectedPageActionPort(
-            browser: configuration.browser,
+            browser: configuration.context.browser,
             pages: configuration.pages
         )
     }
 
     private var displayedURL: URL? {
-        selectedPageActions?.activeURL ?? configuration.browser.selectedTab?.url
+        selectedPageActions?.activeURL
+            ?? configuration.context.browser.selectedTab?.url
     }
 
     private var morphID: String {
-        "crest-address-command-\(configuration.browser.session.selectedSpaceID)"
+        "crest-address-command-\(configuration.context.browser.session.selectedSpaceID)"
+    }
+
+    /// The toolbar sits above the pager, so the Space it clears is the selected
+    /// one. The root refuses the request unless that Space is still reachable.
+    private func confirmClearHistory() {
+        guard let space = configuration.context.browser.selectedSpace else {
+            return
+        }
+        configuration.context.confirmClearHistory(space)
     }
 }

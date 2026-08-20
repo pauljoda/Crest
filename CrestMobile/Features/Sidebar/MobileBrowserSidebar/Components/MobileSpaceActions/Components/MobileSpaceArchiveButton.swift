@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MobileSpaceArchiveButton: View {
-    let mode: MobileBrowserSidebarMode
+    let utilityPresentationStyle: MobileBrowserSidebarUtilityPresentationStyle
     let archivedTabCount: Int
     let commonListsAreExpanded: Bool
     let downloads: [BrowserDownloadItem]
@@ -14,21 +14,19 @@ struct MobileSpaceArchiveButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(
-            action: mode == .regularSidebar ? toggleCommonLists : showArchive
-        ) {
+        Button(action: presentsInline ? toggleCommonLists : showArchive) {
             MobileSpaceUtilityButtonLabel(systemImage: "archivebox")
         }
         .symbolVariant(
-            mode == .regularSidebar && commonListsAreExpanded ? .fill : .none
+            presentsInline && commonListsAreExpanded ? .fill : .none
         )
         .foregroundStyle(.primary)
         .symbolEffect(
             .bounce,
-            value: reduceMotion ? nil : regularSidebarNotificationID
+            value: reduceMotion ? nil : inlineNotificationID
         )
         .overlay(alignment: .topTrailing) {
-            if mode == .regularSidebar, !newDownloads.isEmpty {
+            if presentsInline, !newDownloads.isEmpty {
                 BrowserUtilityNotificationBadge(
                     count: newDownloads.count,
                     tint: downloads.contains(where: { $0.state.needsAttention })
@@ -46,11 +44,11 @@ struct MobileSpaceArchiveButton: View {
         }
         .zIndex(newDownloads.isEmpty ? 0 : 1)
         .accessibilityLabel(
-            mode == .regularSidebar ? "Archive, History, and Downloads" : "Archive"
+            presentsInline ? "Archive, History, and Downloads" : "Archive"
         )
         .accessibilityValue(accessibilityValue)
         .accessibilityIdentifier(
-            mode == .regularSidebar ? "common-lists-button" : "archive-button"
+            presentsInline ? "common-lists-button" : "archive-button"
         )
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
@@ -59,8 +57,15 @@ struct MobileSpaceArchiveButton: View {
         }
     }
 
+    /// Where the lists come up inline, this control is the switcher for all
+    /// three of them; where they come up as sheets, it opens the archive alone
+    /// and downloads get a control of their own beside it.
+    private var presentsInline: Bool {
+        utilityPresentationStyle == .inline
+    }
+
     private var accessibilityValue: String {
-        if mode == .regularSidebar {
+        if presentsInline {
             let state = commonListsAreExpanded ? "Expanded" : "Collapsed"
             guard !newDownloads.isEmpty else { return state }
             return "\(state), \(newDownloads.count) new downloads"
@@ -72,7 +77,7 @@ struct MobileSpaceArchiveButton: View {
         )
     }
 
-    private var regularSidebarNotificationID: UUID? {
-        mode == .regularSidebar ? newDownloads.first?.id : nil
+    private var inlineNotificationID: UUID? {
+        presentsInline ? newDownloads.first?.id : nil
     }
 }

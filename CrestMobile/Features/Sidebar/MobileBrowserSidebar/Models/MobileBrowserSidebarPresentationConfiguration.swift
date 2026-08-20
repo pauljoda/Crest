@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// What the compact shell puts *over* its sidebar: the three sheets it owns and
+/// the foreground the selected Space's branding asks for.
+///
+/// The sidebar's own confirmation and its utility bookkeeping moved into the
+/// shared root; what is left is presentation this shell alone has, so the state
+/// behind it lives in the shell that presents it.
 struct MobileBrowserSidebarPresentationConfiguration {
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
@@ -9,14 +15,7 @@ struct MobileBrowserSidebarPresentationConfiguration {
     let showsPasswords: Binding<Bool>
     let showsSettings: Binding<Bool>
     let presentedSpaceSheet: Binding<MobileBrowserSidebarSpaceSheet?>
-    let clearHistoryConfirmation: Binding<BrowserSidebarClearHistoryConfirmation?>
-    let utilitySearchText: Binding<String>
-    let utilityFilter: Binding<BrowserUtilityListFilter>
-    let utilityPresentation: BrowserUtilityPresentationState
-    let selectedDownloadIDs: [UUID]
     let selectedSpaceAssignment: BrowserSpaceRuntimeAssignment?
-    let clearHistoryConfirmationIsLive: Bool
     let selectTab: (TabID) -> Void
     let openURL: (URL) -> Void
-    let acknowledgeDownloads: (BrowserUtilitySurface?) -> Void
 }

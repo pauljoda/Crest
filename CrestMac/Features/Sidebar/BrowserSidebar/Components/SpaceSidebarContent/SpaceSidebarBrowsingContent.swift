@@ -13,6 +13,7 @@ struct SpaceSidebarBrowsingContent: View {
     let browser: BrowserStore
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
+    let capabilities: BrowserInteractionCapabilities
     let isSelected: Bool
     @Binding var address: String
     @Binding var isAddressEditing: Bool
@@ -109,12 +110,6 @@ struct SpaceSidebarBrowsingContent: View {
             )
         }
         .onHover { isHoveringTabList = $0 }
-    }
-
-    /// What this shell can do, until the shell itself hands it down: a pointer
-    /// rests over the chrome and nothing is aimed at with a finger.
-    private var capabilities: BrowserInteractionCapabilities {
-        BrowserInteractionCapabilities()
     }
 
     private var pageAccess: BrowserSidebarPageAccess {

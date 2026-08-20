@@ -1,5 +1,11 @@
 import Foundation
 
+/// One Space with a little of everything, plus inert stand-ins for the ports the
+/// sidebar reaches the rest of the app through.
+///
+/// Every identity and date is fixed, and the ports are closures that answer
+/// without touching a page store, the filesystem, or the network — which is what
+/// lets a preview of the sidebar render the same way twice.
 enum BrowserSidebarPreviewFixture {
     static let folderID = FolderID(rawValue: uuid(0x31))
     static let spaceID = SpaceID(rawValue: uuid(0x21))
@@ -64,14 +70,6 @@ enum BrowserSidebarPreviewFixture {
     }
 
     @MainActor
-    static func makePages() -> BrowserPagePool {
-        BrowserPagePool(
-            browsingMode: .privateBrowsing,
-            usesEphemeralWebsiteDataStores: true
-        )
-    }
-
-    @MainActor
     static func makeSpaceAccess() -> BrowserSpaceAccessController {
         BrowserSpaceAccessController(
             authenticator: BrowserPreviewAuthenticator(result: true)
@@ -89,31 +87,60 @@ enum BrowserSidebarPreviewFixture {
         return presentation
     }
 
+    /// A page seam that reports no resident pages and refuses every command.
+    ///
+    /// The closure port makes this trivial: there is no page store to stand up,
+    /// so a preview of the sidebar draws the unloaded state of every row without
+    /// a WebKit host anywhere in the picture.
     @MainActor
-    static func makeInteractionActions() -> BrowserSidebarInteractionActions {
-        BrowserSidebarInteractionActions(
-            selectSpace: { _ in },
-            settleSpaceSelection: { _ in },
-            presentExtensions: { _ in },
-            presentSpaceSettings: { _ in },
-            createSpace: {},
-            dismissUtilityOnBlankSpace: {},
-            confirmClearHistory: { _ in },
-            handleAuxiliaryMouseAction: { _ in }
+    static func makePageAccess(
+        downloadCenter: BrowserDownloadCenter = BrowserDownloadCenter()
+    ) -> BrowserSidebarPageAccess {
+        BrowserSidebarPageAccess(
+            containsResidentPage: { _ in false },
+            containsResidentPageMatching: { _ in false },
+            siteThemeIconAccent: { _ in nil },
+            residencyRevision: { 0 },
+            selectPages: {},
+            deactivatePagePresentation: {},
+            unloadPage: { _, _ in },
+            pullFavicon: { _, _ in nil },
+            downloadCenter: downloadCenter
         )
     }
 
     @MainActor
-    static func makeUtilityActions(
+    static func makeUtilityCoordinator(
         browser: BrowserStore,
-        pages: BrowserPagePool,
-        spaceAccess: BrowserSpaceAccessController
-    ) -> BrowserUtilityListActions {
+        spaceAccess: BrowserSpaceAccessController,
+        downloadCenter: BrowserDownloadCenter = BrowserDownloadCenter()
+    ) -> BrowserSidebarUtilityCoordinator {
         BrowserSidebarUtilityCoordinator(
             browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
-        ).actions
+            downloadCenter: downloadCenter,
+            spaceAccess: spaceAccess,
+            platformActions: BrowserSidebarUtilityPlatformActions(
+                downloadDestinations: [],
+                openHistoryEntry: { _, _ in },
+                selectRestoredTab: { _ in },
+                openFinishedDownload: { _, _ in },
+                cancelDownload: { _ in },
+                clearDownload: { _ in }
+            )
+        )
+    }
+
+    @MainActor
+    static func makeChromeActions() -> BrowserSidebarChromeActions {
+        BrowserSidebarChromeActions(
+            presentSpaceSettings: { _ in },
+            presentHistory: {},
+            presentExtensions: { _ in },
+            presentPasswords: {},
+            presentArchive: {},
+            presentDownloads: {},
+            createSpace: {}
+        )
     }
 
     private static func tab(
