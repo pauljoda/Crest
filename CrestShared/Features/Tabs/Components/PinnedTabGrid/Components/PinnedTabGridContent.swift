@@ -17,7 +17,7 @@ struct PinnedTabGridContent: View {
         _ in nil
     }
     var promotionNamespace: Namespace.ID? = nil
-    var usesNativeNavigationTransition = false
+    var capabilities = BrowserInteractionCapabilities()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isTrailingDropTargeted = false
@@ -39,7 +39,7 @@ struct PinnedTabGridContent: View {
         restoreSavedLocation = grid.restoreSavedLocation
         siteThemeAccent = grid.siteThemeAccent
         promotionNamespace = grid.promotionNamespace
-        usesNativeNavigationTransition = grid.usesNativeNavigationTransition
+        capabilities = grid.capabilities
     }
 
     private var reorderContext: BrowserSidebarReorderContext? {
@@ -81,8 +81,11 @@ struct PinnedTabGridContent: View {
                 .browserPinnedTabPromotionDestination(
                     id: BrowserTabPromotionID.value(for: tab.id),
                     in: promotionNamespace,
-                    usesNativeNavigationTransition: usesNativeNavigationTransition,
-                    isTransitionSource: tab.id == selectedTabID
+                    anchor: BrowserPinnedTabPromotionPolicy.anchor(
+                        hasNamespace: promotionNamespace != nil,
+                        isTransitionSource: tab.id == selectedTabID,
+                        capabilities: capabilities
+                    )
                 )
                 .accessibilityLabel(tab.displayTitle)
                 .accessibilityValue(

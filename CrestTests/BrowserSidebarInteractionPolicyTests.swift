@@ -511,6 +511,128 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - The anchor a pinned tile claims
+
+    /// A pinned tile is a drag source too, and it reaches the same modifier by a
+    /// different route — its own helper rather than the row's pairing of
+    /// destination and platform source. That route kept reading the rule as
+    /// "anything but the native zoom" long after the row's stopped, so the whole
+    /// matrix has to say what a tile claims, not just the row.
+    ///
+    /// The native-zoom arm is deliberately narrower than the geometry arm: only
+    /// the tile the page is actually zooming out of is that transition's source.
+    func testAPinnedTileClaimsAnAnchorOnlyWhereThereIsOneToPairWith() {
+        let matrix:
+            [(
+                pairs: Bool, native: Bool, isSource: Bool,
+                anchor: BrowserPinnedTabPromotionAnchor
+            )] = [
+                // A windowed shell: a surface really does rise out of the tile.
+                (
+                    pairs: true, native: false, isSource: true,
+                    anchor: .matchedGeometryDestination
+                ),
+                (
+                    pairs: true, native: false, isSource: false,
+                    anchor: .matchedGeometryDestination
+                ),
+                // The native zoom is the pairing, and only for its own source.
+                (
+                    pairs: false, native: true, isSource: true,
+                    anchor: .navigationZoomSource
+                ),
+                (
+                    pairs: false, native: true, isSource: false,
+                    anchor: .none
+                ),
+                // The compact shell's docked and floating sidebars: no pairing
+                // and no zoom. This row is the regression.
+                (
+                    pairs: false, native: false, isSource: true,
+                    anchor: .none
+                ),
+                (
+                    pairs: false, native: false, isSource: false,
+                    anchor: .none
+                ),
+            ]
+
+        for entry in matrix {
+            XCTAssertEqual(
+                BrowserPinnedTabPromotionPolicy.anchor(
+                    hasNamespace: true,
+                    isTransitionSource: entry.isSource,
+                    capabilities: BrowserInteractionCapabilities(
+                        usesNativeNavigationTransition: entry.native,
+                        pairsRowWithPromotedSurface: entry.pairs
+                    )
+                ),
+                entry.anchor,
+                "pairs: \(entry.pairs), native zoom: \(entry.native), "
+                    + "source: \(entry.isSource)"
+            )
+        }
+    }
+
+    /// Negative control for the same rule: with the pairing requirement defeated
+    /// — the rule read as the bare negation of the native zoom, which is how the
+    /// tile's helper read it — the compact shell's docked sidebar hands every
+    /// tile a matched-geometry anchor with nothing on the other end of it.
+    ///
+    /// That anchor is a presentation transform over the exact view the system
+    /// drag interaction lifts, which is why a pinned tab could be picked up on
+    /// iPad and dropped nowhere at all.
+    func testDefeatingThePairingRequirementRestoresThePartnerlessTileAnchor() {
+        let compactDockedSidebar = BrowserInteractionCapabilities(
+            supportsHover: true,
+            supportsTouch: true,
+            showsRowDropIndicators: true,
+            reservesReorderSectionZones: true,
+            usesNativeNavigationTransition: false,
+            pairsRowWithPromotedSurface: false
+        )
+
+        XCTAssertEqual(
+            BrowserPinnedTabPromotionPolicy.anchor(
+                hasNamespace: true,
+                isTransitionSource: false,
+                capabilities: compactDockedSidebar
+            ),
+            .none,
+            "The live rule must leave the drag source untransformed."
+        )
+
+        let defeated = !compactDockedSidebar.usesNativeNavigationTransition
+        XCTAssertTrue(
+            defeated,
+            "The rule this replaced would have anchored here, which is the "
+                + "defect: no pairing exists, so the anchor has no partner."
+        )
+    }
+
+    /// A tile with no namespace to anchor in claims nothing, whatever the shell
+    /// can do. This is the windowed sidebar's own case — it grows no surface out
+    /// of a tile and passes no namespace — and it is why the Mac never saw the
+    /// defect the compact shell did.
+    func testAPinnedTileWithNoNamespaceClaimsNothing() {
+        for pairs in [true, false] {
+            for native in [true, false] {
+                XCTAssertEqual(
+                    BrowserPinnedTabPromotionPolicy.anchor(
+                        hasNamespace: false,
+                        isTransitionSource: true,
+                        capabilities: BrowserInteractionCapabilities(
+                            usesNativeNavigationTransition: native,
+                            pairsRowWithPromotedSurface: pairs
+                        )
+                    ),
+                    .none,
+                    "pairs: \(pairs), native zoom: \(native)"
+                )
+            }
+        }
+    }
+
     /// A trackpad beside a touchscreen must not shrink the target back down.
     func testAddingHoverToATouchShellKeepsTheTouchControl() {
         XCTAssertEqual(

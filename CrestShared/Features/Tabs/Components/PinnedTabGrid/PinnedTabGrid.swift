@@ -17,7 +17,11 @@ struct PinnedTabGrid: View {
         _ in nil
     }
     var promotionNamespace: Namespace.ID? = nil
-    var usesNativeNavigationTransition = false
+    /// What the hosting shell can do. The grid reads one thing from it: which
+    /// promotion anchor — if any — a tile may claim, which is a presentation
+    /// transform over the view the drag interaction lifts. See
+    /// `BrowserPinnedTabPromotionPolicy`.
+    var capabilities = BrowserInteractionCapabilities()
 
     var body: some View {
         PinnedTabGridContent(grid: self)

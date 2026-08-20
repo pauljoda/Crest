@@ -54,8 +54,7 @@ struct BrowserPinnedTabsDropSection: View {
                     restoreSavedLocation: { restoreSavedLocation($0.tabID) },
                     siteThemeAccent: pageAccess.siteThemeIconAccent,
                     promotionNamespace: promotionNamespace,
-                    usesNativeNavigationTransition:
-                        capabilities.usesNativeNavigationTransition
+                    capabilities: capabilities
                 )
             }
         }
