@@ -607,6 +607,120 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    /// Pinning by drag is a lift that resolves the pinned grid: the pointer
+    /// entering the grid is what opens the tile slot and morphs the preview into
+    /// a tile, and nothing else in the drag reaches that state. Only a split
+    /// group is refused there — see
+    /// `testSplitGroupDropsRefusePinnedFolderAndSpaceTargets`.
+    func testAPlainTabLiftedFromTheCurrentRunCanTargetThePinnedGrid() {
+        let firstPin = Self.makeTab(
+            id: Self.tabID(60),
+            title: "First Pin",
+            placement: .pinned
+        )
+        let secondPin = Self.makeTab(
+            id: Self.tabID(61),
+            title: "Second Pin",
+            placement: .pinned
+        )
+        let current = Self.makeTab(
+            id: Self.tabID(62),
+            title: "Current",
+            placement: .current
+        )
+        let space = Self.makeSpace(
+            id: Self.spaceID(63),
+            profileID: Self.uuid(64),
+            name: "Pinning",
+            tabs: [firstPin, secondPin, current]
+        )
+        let browser = Self.makeBrowser(
+            spaces: [space],
+            selectedSpaceID: space.id
+        )
+        let state = browser.sidebarReorderState
+        let pinned = BrowserSidebarReorderSection.tabs(
+            placement: .pinned,
+            folderID: nil
+        )
+        let currentSection = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let firstTile = CGRect(x: 8, y: 60, width: 88, height: 64)
+        let secondTile = CGRect(x: 100, y: 60, width: 88, height: 64)
+        let currentRow = CGRect(x: 8, y: 260, width: 374, height: 44)
+
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(firstPin.id),
+                section: pinned,
+                frame: firstTile
+            ),
+            owner: UUID()
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(secondPin.id),
+                section: pinned,
+                frame: secondTile
+            ),
+            owner: UUID()
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(current.id),
+                section: currentSection,
+                frame: currentRow
+            ),
+            owner: UUID()
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(pinned),
+                frame: CGRect(x: 8, y: 60, width: 374, height: 64)
+            ),
+            for: UUID()
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(currentSection),
+                frame: CGRect(x: 8, y: 240, width: 374, height: 300)
+            ),
+            for: UUID()
+        )
+
+        state.begin(
+            item: .tab(
+                BrowserTabDragItem(
+                    tabID: current.id,
+                    spaceID: space.id,
+                    profileID: space.profile.id
+                )
+            ),
+            section: currentSection,
+            at: CGPoint(x: currentRow.midX, y: currentRow.midY)
+        )
+        state.update(
+            pointer: CGPoint(x: secondTile.midX, y: secondTile.midY)
+        )
+
+        XCTAssertEqual(
+            state.resolvedTarget?.kind,
+            .insert(
+                section: pinned,
+                beforeID: .tab(secondPin.id),
+                index: 1
+            ),
+            "A tab held over the pinned grid must resolve a pinned insertion."
+        )
+        XCTAssertEqual(
+            state.liftTargetShape,
+            .pinnedTile,
+            "The lift morphs into what release would make of it."
+        )
+    }
+
     /// A collapsed folder is the one target whose meaning a section's zone
     /// cannot express — release lands the item *inside* it, not beside it — so
     /// the row has to say so while the lift is still in flight. The reorder

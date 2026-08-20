@@ -34,6 +34,16 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         }
     }
 
+    /// Whether this is the window's content area — the one zone a sidebar can be
+    /// drawn on top of, and the only one whose frame says nothing about what the
+    /// pointer is aiming at while it is.
+    var isContentArea: Bool {
+        switch target {
+        case .splitContent: true
+        case .section, .folder, .space: false
+        }
+    }
+
     /// Breaks ties between zones of equal specificity: a run nested inside
     /// another wins even when the two measure the same rectangle. Only sections
     /// nest; every other target is a leaf.

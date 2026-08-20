@@ -5667,6 +5667,7 @@
       }
     },
     "Export Passwords" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -8086,6 +8087,9 @@
         }
       }
     },
+    "Moves all current tabs to Archive" : {
+
+    },
     "Moving the pointer over a card makes it the card the address bar, Find, and keyboard shortcuts speak for. Clicking a card always focuses it, whether or not this is on. Focus never moves while you are typing in the address bar." : {
       "localizations" : {
         "ar" : {
@@ -8420,6 +8424,9 @@
         }
       }
     },
+    "No Earlier Pages" : {
+
+    },
     "No Extensions" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8470,6 +8477,9 @@
           }
         }
       }
+    },
+    "No Later Pages" : {
+
     },
     "No match" : {
       "localizations" : {
@@ -8725,6 +8735,7 @@
       }
     },
     "Only account and site metadata is shown here. Password values stay in the selected Space’s Data Protection Keychain and never enter Crest session or CloudKit records." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9282,6 +9293,7 @@
       }
     },
     "Passwords in" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12675,7 +12687,11 @@
         }
       }
     },
+    "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the %@." : {
+
+    },
     "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the Files picker." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12686,6 +12702,7 @@
       }
     },
     "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the save panel." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13946,6 +13963,7 @@
       }
     },
     "Updating this Space’s saved passwords…" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

@@ -211,6 +211,86 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         )
     }
 
+    /// The seam between two runs belongs to the sidebar, not to the page behind
+    /// it.
+    ///
+    /// A sidebar wraps its runs tightly, so aiming at one means aiming into the
+    /// space beside it — that is how a list is appended to, and it is the only
+    /// way to reach the pinned grid, which sits above the scrolling list and is
+    /// a band a dozen points tall until a first tab is pinned. A floating
+    /// sidebar is drawn on top of the content area, so containment alone hands
+    /// every one of those seams to the page: the run stops answering, and when
+    /// the content area declines the drop the drag resolves nowhere at all.
+    func testASeamBetweenRunsOutranksTheContentAreaBehindIt() {
+        let pinned = BrowserSidebarReorderSection.tabs(
+            placement: .pinned,
+            folderID: nil
+        )
+        let current = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let zones = [
+            // A floating sidebar is drawn on top of the page, so the content
+            // area's zone spans the whole window rather than starting beside
+            // the sidebar.
+            BrowserSidebarReorderZone(
+                target: .splitContent(Self.assignment),
+                frame: CGRect(x: 0, y: 0, width: 1_160, height: 1_000)
+            ),
+            // An unfilled grid: a band, with the address field above it.
+            BrowserSidebarReorderZone(
+                target: .section(pinned),
+                frame: CGRect(x: 8, y: 96, width: 264, height: 12)
+            ),
+            BrowserSidebarReorderZone(
+                target: .section(current),
+                frame: CGRect(x: 0, y: 240, width: 280, height: 300)
+            ),
+        ]
+
+        XCTAssertEqual(
+            BrowserSidebarReorderPolicy.zone(
+                at: CGPoint(x: 140, y: 60),
+                in: zones,
+                accepting: Self.tabItem(in: Self.assignment)
+            )?
+            .target,
+            .section(pinned),
+            "Above the grid, the grid is what the pointer is aiming at."
+        )
+        XCTAssertEqual(
+            BrowserSidebarReorderPolicy.zone(
+                at: CGPoint(x: 140, y: 200),
+                in: zones,
+                accepting: Self.tabItem(in: Self.assignment)
+            )?
+            .target,
+            .section(current),
+            "Below the grid, the nearer run wins on the same terms."
+        )
+        XCTAssertEqual(
+            BrowserSidebarReorderPolicy.zone(
+                at: CGPoint(x: 600, y: 60),
+                in: zones,
+                accepting: Self.tabItem(in: Self.assignment)
+            )?
+            .target,
+            .splitContent(Self.assignment),
+            "Past the sidebar's own column no run answers, and the page does."
+        )
+        XCTAssertEqual(
+            BrowserSidebarReorderPolicy.zone(
+                at: CGPoint(x: 140, y: 800),
+                in: zones,
+                accepting: Self.tabItem(in: Self.assignment)
+            )?
+            .target,
+            .splitContent(Self.assignment),
+            "Nor does a run answer from further than its slop reaches."
+        )
+    }
+
     // MARK: - Acceptance: what the presented cards refuse
 
     /// A resolved target and the slot it names, from cards the state measured.

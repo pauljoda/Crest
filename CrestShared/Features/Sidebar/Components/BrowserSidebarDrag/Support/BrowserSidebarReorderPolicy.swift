@@ -53,10 +53,24 @@ enum BrowserSidebarReorderPolicy {
     ) -> BrowserSidebarReorderZone? {
         let usable = zones.filter { accepts(item: item, in: $0) }
         let containing = usable.filter { $0.frame.contains(point) }
-        if let best = containing.max(by: isLessSpecific) {
-            return best
+        let innermost = containing.max(by: isLessSpecific)
+        if let innermost, !innermost.isContentArea {
+            return innermost
         }
-        return nearestSection(to: point, in: usable)
+        // Containing the pointer is not enough for the content area to own it.
+        // A floating sidebar is drawn on top of that zone, so the whole card —
+        // including every seam its own layout leaves between the runs, and the
+        // furniture above them — sits inside it. Ranking by specificity alone
+        // hands those seams to the page: the pinned grid stops being reachable
+        // from anywhere but its exact rectangle, which for a grid nobody has
+        // filled is a band a few points tall, and a drag that the content area
+        // then declines resolves nowhere at all.
+        //
+        // So a run the pointer is aiming at is offered first, on the same terms
+        // as anywhere else in the sidebar — its own column, within the slop that
+        // lets a list be appended to. Past the sidebar no run answers, and the
+        // page is what is left.
+        return nearestSection(to: point, in: usable) ?? innermost
     }
 
     /// A section only takes its own kind of row. Nested groups register a section
