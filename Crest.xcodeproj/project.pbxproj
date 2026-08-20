@@ -4435,6 +4435,7 @@
 		67980995EC10A67B6193DF7D /* BrowserPeekScrim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPeekScrim.swift; sourceTree = "<group>"; };
 		679F5D7CF8A664E194F09F7B /* BrowserSpaceCrestVocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSpaceCrestVocabulary.swift; sourceTree = "<group>"; };
 		67B84A83166EBCE32E510CAE /* BrowserLocalExtensionInstallPhase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserLocalExtensionInstallPhase.swift; sourceTree = "<group>"; };
+		67BF5492FEE82BBAAB6FE082 /* Crest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Crest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		67D3B46ECF619E54C3827F43 /* BrowserExtensionServiceClientID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserExtensionServiceClientID.swift; sourceTree = "<group>"; };
 		67D6C2F630645278D01D871E /* BrowserSitePermission+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BrowserSitePermission+Presentation.swift"; sourceTree = "<group>"; };
 		67F9397EAE0D4C95ADE741FF /* CrestSpaceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrestSpaceIdentity.swift; sourceTree = "<group>"; };
@@ -4537,7 +4538,6 @@
 		732D36E0727AC433077A2208 /* BrowserSafariWebExtensionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSafariWebExtensionModels.swift; sourceTree = "<group>"; };
 		734CA75EEC13317EFE94C254 /* BrowserSavedFolderGroupConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSavedFolderGroupConfiguration.swift; sourceTree = "<group>"; };
 		7358C223B20B61ABFAC5AA2B /* BrowserManualSetupAddedTabList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserManualSetupAddedTabList.swift; sourceTree = "<group>"; };
-		739CFCDDBBC59A52AB99C0D1 /* CrestMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CrestMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		73C0752362EED110781C6D9E /* BrowserPeekUnavailableSpaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPeekUnavailableSpaceView.swift; sourceTree = "<group>"; };
 		73C076DD51D21D3D1DC85E45 /* BrowserGeolocationScriptMessageProxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserGeolocationScriptMessageProxy.swift; sourceTree = "<group>"; };
 		7401ECF6BC8023F86B0DF3E1 /* BrowserChromeWebStorePreparingContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserChromeWebStorePreparingContent.swift; sourceTree = "<group>"; };
@@ -10167,7 +10167,7 @@
 			isa = PBXGroup;
 			children = (
 				704AE3B14AA8297313BFB555 /* Crest.app */,
-				739CFCDDBBC59A52AB99C0D1 /* CrestMobile.app */,
+				67BF5492FEE82BBAAB6FE082 /* Crest.app */,
 				835DEEB0339090006060D73C /* CrestMobileTests.xctest */,
 				0A34E8049B785BD0FD697D24 /* CrestTests.xctest */,
 			);
@@ -14960,7 +14960,7 @@
 			packageProductDependencies = (
 			);
 			productName = CrestMobile;
-			productReference = 739CFCDDBBC59A52AB99C0D1 /* CrestMobile.app */;
+			productReference = 67BF5492FEE82BBAAB6FE082 /* Crest.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -14983,12 +14983,10 @@
 					ADA9BA9F3D6E69D3F8FBB95C = {
 						DevelopmentTeam = 3U2R97HLXF;
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.iCloud\": [\"enabled\": 1], \"com.apple.Push\": [\"enabled\": 1]]";
 					};
 					E7D659FB7197EB7B4A7EA254 = {
 						DevelopmentTeam = 3U2R97HLXF;
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.BackgroundModes\": [\"enabled\": 1], \"com.apple.iCloud\": [\"enabled\": 1], \"com.apple.Push\": [\"enabled\": 1]]";
 					};
 				};
 			};

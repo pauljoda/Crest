@@ -35,16 +35,14 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle.git
     exactVersion: 2.9.5
+# App capabilities are declared by the entitlements files (iCloud, CloudKit,
+# push) and Info.plist UIBackgroundModes. The legacy TargetAttributes
+# SystemCapabilities blocks duplicated that, serialized in nondeterministic
+# dictionary order, and churned project.pbxproj on every generate.
 targets:
   Crest:
     type: application
     platform: macOS
-    attributes:
-      SystemCapabilities:
-        com.apple.iCloud:
-          enabled: 1
-        com.apple.Push:
-          enabled: 1
     sources:
       - path: CrestShared
         excludes:
@@ -90,14 +88,10 @@ targets:
   CrestMobile:
     type: application
     platform: iOS
-    attributes:
-      SystemCapabilities:
-        com.apple.BackgroundModes:
-          enabled: 1
-        com.apple.iCloud:
-          enabled: 1
-        com.apple.Push:
-          enabled: 1
+    # Scheme BuildableName is derived from productName, not the PRODUCT_NAME
+    # build setting. Keep both as Crest so `xcodegen generate` reproduces the
+    # committed schemes instead of emitting CrestMobile.app.
+    productName: Crest
     sources:
       - path: CrestShared
         excludes:
