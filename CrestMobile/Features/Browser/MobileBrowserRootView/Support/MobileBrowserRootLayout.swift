@@ -29,15 +29,6 @@ enum MobileBrowserChromeLayout {
     static let historyDividerHeight: CGFloat = 18
     static let historyDividerOpacity = 0.24
     static let historyCapsuleHorizontalPadding: CGFloat = 2
-
-    static let regularStartPageSpacing: CGFloat = 28
-    static let regularStartPagePadding: CGFloat = 40
-    static let regularStartPageMaximumWidth: CGFloat = 820
-    static let compactStartPageSpacing: CGFloat = 22
-    static let compactStartPagePadding: CGFloat = 24
-    static let compactStartPageMaximumWidth: CGFloat = 620
-    static let startPageMarkSize: CGFloat = 48
-    static let privateNoticeSpacing: CGFloat = 6
 }
 
 /// Geometry and timing owned by the mobile browser composition shell.

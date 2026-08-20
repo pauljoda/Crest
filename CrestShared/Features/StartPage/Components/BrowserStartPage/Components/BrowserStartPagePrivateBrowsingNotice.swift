@@ -1,13 +1,17 @@
 import SwiftUI
 
-struct BrowserPrivateBrowsingNotice: View {
+/// What a private session tells the reader it is not keeping.
+struct BrowserStartPagePrivateBrowsingNotice: View {
+    let spacing: CGFloat
+
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: spacing) {
             Label(
                 "Private Browsing",
                 systemImage: BrowserPrivateBrowsingAppearance.symbol
             )
             .font(.headline)
+            .foregroundStyle(.primary)
             Text(
                 "Crest does not save this session or use Crest Passwords. Website data stays in memory only."
             )

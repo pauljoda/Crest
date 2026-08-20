@@ -26,9 +26,12 @@ struct BrowserStartPageContent: View {
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectStartPageTab,
                 openURL: openStartPageURL,
-                promotionNamespace: tabPromotionNamespace,
-                promotionID: BrowserTabPromotionID.value(for: tab.id),
-                isCommandPaletteObscured: isCommandPalettePresented
+                isCommandPaletteObscured: isCommandPalettePresented,
+                layout: .macOSPage,
+                promotion: BrowserStartPagePromotion(
+                    namespace: tabPromotionNamespace,
+                    id: BrowserTabPromotionID.value(for: tab.id)
+                )
             )
         } else {
             BrowserUnloadedPageSurface()

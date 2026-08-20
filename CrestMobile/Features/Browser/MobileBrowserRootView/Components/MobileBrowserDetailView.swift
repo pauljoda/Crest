@@ -59,17 +59,21 @@ struct MobileBrowserDetailView: View {
                     unloadedPageSurface
                 case .startPage:
                     if browser.selectedTab != nil {
-                        MobileBrowserStartPage(
+                        BrowserStartPage(
                             space: browser.selectedSpace,
                             isPrivateBrowsing: browser.isPrivateBrowsing,
-                            address: $address,
-                            focusRequest: addressFocusRequest,
-                            usesCommandPalette: !isCompact,
+                            selectedTabID: browser.selectedSpace?.selectedTabID,
                             isSourceAvailable: isPaletteSourceAvailable,
                             selectTab: selectStartPageTab,
                             openURL: openStartPageURL,
-                            isCommandPaletteObscured: isCommandPalettePresented
+                            isCommandPaletteObscured: isCommandPalettePresented,
+                            layout: isCompact ? .mobileCompactPage : .mobileRegularPage,
+                            focusRequest: addressFocusRequest,
+                            headerColorScheme: startPageHeaderColorScheme
                         )
+                        .onChange(of: isCompact, initial: true) { _, compact in
+                            if compact { address = "" }
+                        }
                     } else {
                         unloadedPageSurface
                     }
@@ -281,6 +285,21 @@ struct MobileBrowserDetailView: View {
     private var selectionPresentation: BrowserPagePresentationSelection {
         guard let tab = browser.selectedTab else { return .none }
         return tab.isStartPage ? .startPage : .webPage
+    }
+
+    /// The appearance the start page's header reads its text tone from.
+    ///
+    /// Touch draws that header over the Space's branding, so the text follows
+    /// the branding rather than the system appearance. Without a Space there is
+    /// no brand to follow and the header inherits the environment's appearance.
+    private var startPageHeaderColorScheme: ColorScheme? {
+        guard
+            MobileStartPageAppearancePolicy.foregroundTone(
+                usesCommandPalette: !isCompact
+            ) == .onBrand,
+            let space = browser.selectedSpace
+        else { return nil }
+        return BrowserSpaceForegroundPolicy.colorScheme(for: space.branding)
     }
 
     private var unloadedPageSurface: some View {
