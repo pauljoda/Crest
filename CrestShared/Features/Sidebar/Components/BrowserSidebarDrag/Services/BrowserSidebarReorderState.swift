@@ -251,6 +251,24 @@ final class BrowserSidebarReorderState {
         hasEnteredSplitContent = false
     }
 
+    /// Gives up a lift because something else took the touch that was carrying
+    /// it — on a touch shell, the row's own context menu.
+    ///
+    /// Nothing else can end that lift. A touch lift is staged when `.onDrag`'s
+    /// provider runs and promoted by the first position the drop delegate
+    /// reports, and both of those belong to a system drag session; a menu that
+    /// wins the press leaves the session either never begun or cancelled before
+    /// it reports a phase, so `BrowserMobileReorderSessionModifier` hears
+    /// nothing and no drop ever lands. Left alone the lift stays live for good —
+    /// neighbours frozen at the offsets they stepped aside to, and the lifted
+    /// row invisible in the slot it came from, under an open menu.
+    ///
+    /// Safe when there is nothing to give up: a lift that was only staged clears
+    /// without suppressing the row's activation, because no drag ever happened.
+    func yieldToCompetingInteraction() {
+        cancel()
+    }
+
     private func suppressActivation() {
         isSuppressingActivation = true
         activationSuppressionTask?.cancel()

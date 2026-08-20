@@ -53,6 +53,11 @@ struct BrowserSavedFolderGroupSurface: View {
                 configuration.browser.folderDragState.contextMenuDidOpen(
                     for: dragItem
                 )
+                // And the reorder state, which is where a touch lift lives and
+                // which no drag session will report back to once the menu has
+                // the press. See `yieldToCompetingInteraction`.
+                configuration.browser.sidebarReorderState
+                    .yieldToCompetingInteraction()
             }
             .onDisappear {
                 configuration.browser.folderDragState.contextMenuDidClose(

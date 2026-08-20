@@ -11,6 +11,18 @@ enum MobileBrowserChromeLayout {
     static let collapsedSidebarGestureDistance: CGFloat = 10
     static let collapsedSidebarControlPadding: CGFloat = 10
 
+    /// How far a finger travels before it counts as interacting with a
+    /// transient sidebar and holds the dismissal timer open.
+    ///
+    /// It may not be zero. The keep-alive rides a `simultaneousGesture` over the
+    /// whole sidebar, rows included, and a zero-distance drag begins on
+    /// touch-down — before `UIDragInteraction`'s long press has had a chance to
+    /// settle into the lift a row's reorder depends on. The threshold is the
+    /// same order as the slop UIKit already allows that press, so the keep-alive
+    /// still catches a scroll and can no longer take the touch away from a lift
+    /// that has not started yet.
+    static let transientSidebarKeepAliveDistance: CGFloat = 10
+
     static let findItemSpacing: CGFloat = 6
     static let findLeadingPadding: CGFloat = 14
     static let findTrailingPadding: CGFloat = 4

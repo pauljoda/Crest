@@ -90,6 +90,60 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         XCTAssertNil(fixture.state.resolvedTarget)
     }
 
+    /// A menu that opens over a staged lift has to clear the stage.
+    ///
+    /// Staging happens in `.onDrag`'s provider, which UIKit calls while it is
+    /// still deciding between the drag and the menu. When the menu wins there is
+    /// no session left to report a phase, so nothing else will ever clear it —
+    /// and a stage left behind is promoted by the next position any later drag
+    /// reports over the sidebar, lifting a row nobody picked up.
+    func testAMenuOpeningOverAStagedLiftClearsIt() {
+        let fixture = ReorderStagingFixture()
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        fixture.state.yieldToCompetingInteraction()
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+
+        XCTAssertFalse(
+            fixture.state.isDragging,
+            "A stage the menu took over must not promote on a later sample."
+        )
+        XCTAssertNil(fixture.state.resolvedTarget)
+        XCTAssertFalse(
+            fixture.state.suppressesActivation,
+            "No drag ever happened, so the row stays openable."
+        )
+    }
+
+    /// The same interruption after the lift has promoted, which is the state the
+    /// reader can actually see: the lifted row is hidden in its slot and its
+    /// neighbours are held aside at their displaced offsets. Nothing restores
+    /// them unless the menu says so.
+    func testAMenuOpeningOverAPromotedLiftPutsTheRowsBack() {
+        let fixture = ReorderStagingFixture()
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+        XCTAssertTrue(fixture.state.isLifted(fixture.item.id))
+
+        fixture.state.yieldToCompetingInteraction()
+
+        XCTAssertFalse(
+            fixture.state.isLifted(fixture.item.id),
+            "The lifted row has to come back rather than stay invisible."
+        )
+        XCTAssertEqual(
+            fixture.state.displacement(for: fixture.neighbourID),
+            .zero,
+            "Neighbours have to close the gap rather than stay offset."
+        )
+        XCTAssertNil(fixture.state.resolvedTarget)
+        XCTAssertTrue(
+            fixture.state.suppressesActivation,
+            "A lift did happen, so the release must not also open the tab."
+        )
+    }
+
     /// The compact shell puts the sidebar on screen three ways, and only one of
     /// them pushes a page with the system's navigation zoom. None of the three
     /// grows a surface out of a row through matched geometry, so the anchor a row
@@ -129,6 +183,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             folderID: nil
         )
         let item: BrowserSidebarReorderItem
+        let neighbourID: BrowserSidebarReorderItemID
         let draggedFrame = CGRect(x: 8, y: 110, width: 374, height: 44)
         let neighbourFrame = CGRect(x: 8, y: 154, width: 374, height: 44)
 
@@ -156,9 +211,10 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
                 ),
                 owner: UUID()
             )
+            neighbourID = .tab(TabID())
             state.register(
                 row: BrowserSidebarReorderRow(
-                    id: .tab(TabID()),
+                    id: neighbourID,
                     space: item.spaceAssignment,
                     section: section,
                     frame: neighbourFrame

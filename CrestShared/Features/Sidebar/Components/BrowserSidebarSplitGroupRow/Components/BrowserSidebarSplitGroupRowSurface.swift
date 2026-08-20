@@ -45,6 +45,13 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                     configuration: configuration
                 )
                 .tint(.primary)
+                // A group lifts as one block through the same touch path its
+                // rows do, and the menu that wins the press leaves no session
+                // to report the lift ended. See `yieldToCompetingInteraction`.
+                .onAppear {
+                    configuration.browser.sidebarReorderState
+                        .yieldToCompetingInteraction()
+                }
             }
     }
 

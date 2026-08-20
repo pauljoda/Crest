@@ -146,8 +146,13 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         navigation.handleRegularSidebarInteraction()
                     }
                 )
+                // Never zero: this rides over the rows, and a drag that begins
+                // on touch-down takes the press the reorder lift needs.
                 .simultaneousGesture(
-                    DragGesture(minimumDistance: 0).onChanged { _ in
+                    DragGesture(
+                        minimumDistance: MobileBrowserChromeLayout
+                            .transientSidebarKeepAliveDistance
+                    ).onChanged { _ in
                         navigation.handleRegularSidebarInteraction()
                     }
                 ),
@@ -253,8 +258,14 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.handleRegularSidebarInteraction()
                         }
                     )
+                    // Never zero: this rides over the rows, and a drag that
+                    // begins on touch-down takes the press the reorder lift
+                    // needs.
                     .simultaneousGesture(
-                        DragGesture(minimumDistance: 0).onChanged { _ in
+                        DragGesture(
+                            minimumDistance: MobileBrowserChromeLayout
+                                .transientSidebarKeepAliveDistance
+                        ).onChanged { _ in
                             navigation.handleRegularSidebarInteraction()
                         }
                     ),

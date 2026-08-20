@@ -114,6 +114,12 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             configuration.browser.tabDragState.contextMenuDidOpen(
                 for: configuration.runtimeAssignment
             )
+            // Both states, because the two lifts are different machines: the
+            // pointer drag reports through `tabDragState`, and the touch lift
+            // through the reorder state, which has no session left to hear
+            // from once this menu has the press.
+            configuration.browser.sidebarReorderState
+                .yieldToCompetingInteraction()
         }
         .onDisappear {
             configuration.browser.tabDragState.contextMenuDidClose(
