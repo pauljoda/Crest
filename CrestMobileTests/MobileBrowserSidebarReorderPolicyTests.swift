@@ -180,19 +180,26 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             folderID: nil
         )
         let groupID = SplitGroupID()
+        let space = BrowserSpaceRuntimeAssignment(
+            spaceID: SpaceID(),
+            profileID: UUID()
+        )
         let rows = [
             BrowserSidebarReorderRow(
                 id: .tab(TabID()),
+                space: space,
                 section: section,
                 frame: CGRect(x: 8, y: 110, width: 374, height: 44)
             ),
             BrowserSidebarReorderRow(
                 id: .splitGroup(groupID),
+                space: space,
                 section: section,
                 frame: CGRect(x: 8, y: 154, width: 374, height: 120)
             ),
             BrowserSidebarReorderRow(
                 id: .tab(TabID()),
+                space: space,
                 section: section,
                 frame: CGRect(x: 8, y: 274, width: 374, height: 44)
             ),
@@ -262,6 +269,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .splitGroup(groupID),
+                space: item.spaceAssignment,
                 section: source,
                 frame: groupFrame
             ),
@@ -270,6 +278,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(TabID()),
+                space: item.spaceAssignment,
                 section: destination,
                 frame: destinationFrame
             ),

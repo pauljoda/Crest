@@ -53,6 +53,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 state.register(
                     row: BrowserSidebarReorderRow(
                         id: item.id,
+                        space: item.spaceAssignment,
                         section: section,
                         frame: frame
                     ),

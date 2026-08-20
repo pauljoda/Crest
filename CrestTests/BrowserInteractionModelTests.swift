@@ -587,6 +587,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(tabID),
+                space: assignment,
                 section: .tabs(placement: .current, folderID: nil),
                 frame: CGRect(x: 0, y: 200, width: 240, height: 40)
             ),
@@ -710,14 +711,24 @@ final class BrowserInteractionModelTests: XCTestCase {
 
     private func reorderRow(
         _ id: BrowserSidebarReorderItemID,
+        in space: BrowserSpaceRuntimeAssignment,
         section: BrowserSidebarReorderSection,
         _ frame: CGRect
     ) -> BrowserSidebarReorderRow {
-        BrowserSidebarReorderRow(id: id, section: section, frame: frame)
+        BrowserSidebarReorderRow(
+            id: id,
+            space: space,
+            section: section,
+            frame: frame
+        )
     }
 
     /// A list insertion lands wherever the pointer has passed a row's midpoint.
     func testListInsertionIndexTracksRowMidpoints() {
+        let space = BrowserSpaceRuntimeAssignment(
+            spaceID: SpaceID(),
+            profileID: UUID()
+        )
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
             folderID: nil
@@ -726,6 +737,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         let rows = ids.enumerated().map { index, id in
             reorderRow(
                 id,
+                in: space,
                 section: section,
                 CGRect(x: 0, y: CGFloat(index) * 40, width: 200, height: 40)
             )
@@ -762,6 +774,10 @@ final class BrowserInteractionModelTests: XCTestCase {
     /// axes at once made every cell on the line count as passed, which made
     /// leftward moves impossible.
     func testGridInsertionAllowsMovingLeftWithinALine() {
+        let space = BrowserSpaceRuntimeAssignment(
+            spaceID: SpaceID(),
+            profileID: UUID()
+        )
         let section = BrowserSidebarReorderSection.tabs(
             placement: .pinned,
             folderID: nil
@@ -770,6 +786,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         let rows = ids.enumerated().map { index, id in
             reorderRow(
                 id,
+                in: space,
                 section: section,
                 CGRect(x: CGFloat(index) * 100, y: 0, width: 90, height: 40)
             )
@@ -983,6 +1000,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             state.register(
                 row: reorderRow(
                     id,
+                    in: assignment,
                     section: folderSection,
                     CGRect(
                         x: 0,
@@ -997,6 +1015,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             row: reorderRow(
                 unfiled,
+                in: assignment,
                 section: .tabs(placement: .saved, folderID: nil),
                 CGRect(x: 0, y: 190, width: 200, height: 40)
             ),
@@ -1005,6 +1024,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             row: reorderRow(
                 lifted,
+                in: assignment,
                 section: .tabs(placement: .current, folderID: nil),
                 CGRect(x: 0, y: 260, width: 200, height: 40)
             ),
@@ -1079,6 +1099,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         sidebar.state.register(
             row: reorderRow(
                 sidebar.saved[1],
+                in: sidebar.assignment,
                 section: .tabs(placement: .saved, folderID: nil),
                 CGRect(x: 0, y: 140, width: 200, height: 40)
             ),
@@ -1129,7 +1150,9 @@ final class BrowserInteractionModelTests: XCTestCase {
         let saved = (0..<3).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
         let current = (0..<2).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
 
-        private let assignment = BrowserSpaceRuntimeAssignment(
+        /// The Space every row here belongs to. Readable from outside because a
+        /// row registration has to say which Space's run it stands in.
+        let assignment = BrowserSpaceRuntimeAssignment(
             spaceID: SpaceID(),
             profileID: UUID()
         )
@@ -1208,6 +1231,7 @@ final class BrowserInteractionModelTests: XCTestCase {
                 state.register(
                     row: BrowserSidebarReorderRow(
                         id: id,
+                        space: assignment,
                         section: section,
                         frame: frame(index)
                     ),
@@ -1397,6 +1421,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             row: reorderRow(
                 lifted,
+                in: assignment,
                 section: saved,
                 CGRect(x: 0, y: 100, width: 200, height: 40)
             ),
@@ -1609,6 +1634,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             state.register(
                 row: BrowserSidebarReorderRow(
                     id: id,
+                    space: assignment,
                     section: section,
                     frame: frame
                 ),
@@ -1798,6 +1824,7 @@ final class BrowserInteractionModelTests: XCTestCase {
         state.register(
             row: reorderRow(
                 item.id,
+                in: item.spaceAssignment,
                 section: section,
                 CGRect(x: 8, y: 110, width: 374, height: 120)
             ),

@@ -131,10 +131,21 @@ final class BrowserSidebarReorderState {
         rows[id] = nil
     }
 
-    /// Every row currently on show, in no particular order. The policy sorts
-    /// them into each section's reading order.
-    private var registeredRows: [BrowserSidebarReorderRow] {
-        rows.values.map(\.row)
+    /// Every row currently on show in one Space's sidebar, in no particular
+    /// order. The policy sorts them into each section's reading order.
+    ///
+    /// Scoped to a Space because the registry is not: one state serves every
+    /// sidebar its store puts on screen, and several of them register rows at
+    /// once — a second window onto the same session, or the pages either side
+    /// of a Space pager's visible one, which stay alive so a swipe can already
+    /// show them. A section identity is only a placement, so those rows arrive
+    /// in the same bucket as this drag's own. Every caller here is resolving
+    /// one lift, and a lift orders itself among the rows of the Space it came
+    /// from — see `BrowserSidebarReorderRow.space`.
+    private func registeredRows(
+        in space: BrowserSpaceRuntimeAssignment
+    ) -> [BrowserSidebarReorderRow] {
+        rows.values.map(\.row).filter { $0.space == space }
     }
 
     /// Zones are keyed by the registering view, not by target: the mobile space
@@ -332,8 +343,11 @@ final class BrowserSidebarReorderState {
     ) -> BrowserSidebarReorderIndicator? {
         guard let lift,
             resolvedTarget?.section == section,
-            BrowserSidebarReorderPolicy.rows(in: section, from: registeredRows)
-                .allSatisfy({ $0.id == lift.item.id })
+            BrowserSidebarReorderPolicy.rows(
+                in: section,
+                from: registeredRows(in: lift.item.spaceAssignment)
+            )
+            .allSatisfy({ $0.id == lift.item.id })
         else { return nil }
         return BrowserSidebarReorderIndicator(
             side: .before,
@@ -433,7 +447,7 @@ final class BrowserSidebarReorderState {
 
         let ordered = BrowserSidebarReorderPolicy.rows(
             in: section,
-            from: registeredRows
+            from: registeredRows(in: lift.item.spaceAssignment)
         )
         let candidates = ordered.filter { $0.id != lift.item.id }
         guard let candidateIndex = candidates.firstIndex(where: { $0.id == id })
@@ -489,8 +503,10 @@ final class BrowserSidebarReorderState {
         case .section(let section):
             let ordered = BrowserSidebarReorderPolicy.rows(
                 in: section,
-                from: registeredRows
+                from: registeredRows(in: lift.item.spaceAssignment)
             )
+            // This Space's own rows, so a capped run is judged by what is in
+            // it rather than by what every sidebar on screen adds up to.
             let existingCount = ordered.filter { $0.id != lift.item.id }.count
             guard
                 BrowserSidebarReorderPolicy.hasRoom(

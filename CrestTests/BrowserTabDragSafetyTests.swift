@@ -422,6 +422,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .splitGroup(context.groupID),
+                space: context.assignment,
                 section: section,
                 frame: groupFrame
             ),
@@ -430,6 +431,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(context.outsider.id),
+                space: context.assignment,
                 section: section,
                 frame: outsiderFrame
             ),
@@ -499,6 +501,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: leading,
+                space: context.assignment,
                 section: section,
                 frame: CGRect(x: 8, y: 110, width: 374, height: 44)
             ),
@@ -507,6 +510,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .splitGroup(context.groupID),
+                space: context.assignment,
                 section: section,
                 frame: groupFrame
             ),
@@ -515,6 +519,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: trailing,
+                space: context.assignment,
                 section: section,
                 frame: CGRect(x: 8, y: 274, width: 374, height: 44)
             ),
@@ -557,6 +562,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .splitGroup(context.groupID),
+                space: context.assignment,
                 section: section,
                 frame: groupFrame
             ),
@@ -565,6 +571,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(context.outsider.id),
+                space: context.assignment,
                 section: section,
                 frame: trailingFrame
             ),
@@ -594,6 +601,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(context.outsider.id),
+                space: context.assignment,
                 section: section,
                 frame: trailingFrame.offsetBy(dx: 0, dy: -groupFrame.height)
             ),
@@ -654,6 +662,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(firstPin.id),
+                space: BrowserSpaceRuntimeAssignment(space: space),
                 section: pinned,
                 frame: firstTile
             ),
@@ -662,6 +671,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(secondPin.id),
+                space: BrowserSpaceRuntimeAssignment(space: space),
                 section: pinned,
                 frame: secondTile
             ),
@@ -670,6 +680,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(current.id),
+                space: BrowserSpaceRuntimeAssignment(space: space),
                 section: currentSection,
                 frame: currentRow
             ),
@@ -740,6 +751,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         state.register(
             row: BrowserSidebarReorderRow(
                 id: .tab(context.outsider.id),
+                space: context.assignment,
                 section: section,
                 frame: rowFrame
             ),
