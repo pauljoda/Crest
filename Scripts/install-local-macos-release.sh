@@ -117,14 +117,17 @@ codesign -d --entitlements :- "$built_application_path" \
   'Print :com.apple.developer.icloud-container-environment' \
   "$exported_entitlements")" == "Production" ]]
 
-if pgrep -x Crest >/dev/null 2>&1; then
+# Match only the installed app's own binary: simulators host processes that
+# are also named Crest, and those must never block a desktop install.
+installed_crest_pattern="^${application_path}/Contents/MacOS/Crest"
+if pgrep -f "$installed_crest_pattern" >/dev/null 2>&1; then
   osascript -e 'tell application "Crest" to quit'
   for _ in {1..100}; do
-    pgrep -x Crest >/dev/null 2>&1 || break
+    pgrep -f "$installed_crest_pattern" >/dev/null 2>&1 || break
     sleep 0.1
   done
 fi
-if pgrep -x Crest >/dev/null 2>&1; then
+if pgrep -f "$installed_crest_pattern" >/dev/null 2>&1; then
   print -u2 "Crest did not quit; the existing application was not replaced."
   exit 1
 fi
