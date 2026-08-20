@@ -32,9 +32,12 @@ struct SpaceSidebarContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SidebarNavigationControls(
-                browser: browser,
-                pages: pages
+            BrowserSidebarNavigationControls(
+                port: BrowserSidebarNavigationPort(
+                    pages: pages,
+                    browser: browser
+                ),
+                capabilities: capabilities
             )
 
             Group {
@@ -87,6 +90,12 @@ struct SpaceSidebarContent: View {
                 }
             }
         }
+    }
+
+    /// What this shell can do, until the shell itself hands it down: a pointer
+    /// rests over the chrome and nothing is aimed at with a finger.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
     }
 
     private func beginCreatingFolder() {

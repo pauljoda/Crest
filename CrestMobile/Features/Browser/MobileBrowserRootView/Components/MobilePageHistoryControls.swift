@@ -69,7 +69,7 @@ struct MobilePageHistoryControls: View {
             action: pageActions.goBack
         )
         .contextMenu {
-            MobileNavigationHistoryMenu(
+            BrowserNavigationHistoryMenu(
                 items: pageActions.backHistory,
                 emptyTitle: "No Earlier Pages",
                 action: pageActions.goBack(to:)
@@ -88,7 +88,7 @@ struct MobilePageHistoryControls: View {
             action: pageActions.goForward
         )
         .contextMenu {
-            MobileNavigationHistoryMenu(
+            BrowserNavigationHistoryMenu(
                 items: pageActions.forwardHistory,
                 emptyTitle: "No Later Pages",
                 action: pageActions.goForward(to:)

@@ -49,22 +49,18 @@ struct SpaceSidebarBrowsingContent: View {
     }
 
     var body: some View {
-        SidebarAddressField(
-            text: displayedAddress,
-            isEditing: displayedEditing,
-            focusRequest: addressFocusRequest,
-            isSecure: isSelected
-                ? pages.activePage?.hasOnlySecureContent == true
-                : selectedTab?.url?.scheme?.lowercased() == "https",
-            progress: isSelected ? pages.activePage?.estimatedProgress ?? 0 : 0,
-            isLoading: isSelected && pages.activePage?.isLoading == true,
-            hasResidentPage: isSelected && pages.activePage != nil,
-            activate: activateAddress,
-            submit: submitAddress,
-            morphNamespace: commandSurfaceNamespace,
-            morphID: "crest-address-command-\(space.id)",
-            siteControl: siteControl
-        )
+        BrowserSidebarAddressField(configuration: addressConfiguration) {
+            if let siteControl {
+                BrowserAddressSecurityButton(
+                    page: siteControl.page,
+                    isSecure: isSecure
+                )
+            }
+        } trailingAccessory: {
+            if let siteControl {
+                BrowserSiteControlButton(configuration: siteControl)
+            }
+        }
         .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
         .padding(
             .bottom,
@@ -126,6 +122,36 @@ struct SpaceSidebarBrowsingContent: View {
             editSpace: editSpace,
             createSpace: createSpace
         )
+    }
+
+    private var addressConfiguration: BrowserSidebarAddressFieldConfiguration {
+        BrowserSidebarAddressFieldConfiguration(
+            text: displayedAddress,
+            isEditing: displayedEditing,
+            focusRequest: addressFocusRequest,
+            isSecure: isSecure,
+            progress: isSelected ? pages.activePage?.estimatedProgress ?? 0 : 0,
+            isLoading: isSelected && pages.activePage?.isLoading == true,
+            hasResidentPage: isSelected && pages.activePage != nil,
+            hasActiveSite: siteControl != nil,
+            capabilities: capabilities,
+            activate: activateAddress,
+            submit: submitAddress,
+            morphNamespace: commandSurfaceNamespace,
+            morphID: "crest-address-command-\(space.id)"
+        )
+    }
+
+    /// What this shell can do, until the shell itself hands it down: a pointer
+    /// rests over the chrome and nothing is aimed at with a finger.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
+    }
+
+    private var isSecure: Bool {
+        isSelected
+            ? pages.activePage?.hasOnlySecureContent == true
+            : selectedTab?.url?.scheme?.lowercased() == "https"
     }
 
     private var siteControl: BrowserSiteControlConfiguration? {

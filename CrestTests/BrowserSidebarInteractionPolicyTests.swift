@@ -155,6 +155,164 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - Address field layout
+
+    /// Pins the geometry each shell's address field draws today, which is what
+    /// two forks of the field used to disagree about. The corner radius is
+    /// asserted against the same token on both sides on purpose: the two forks
+    /// spelled it differently — one through the chrome layout, one through the
+    /// sidebar control token — and they have always resolved to one number.
+    func testAddressFieldGeometryFollowsTheShell() {
+        let pointer = BrowserSidebarInteractionPolicy.addressFieldMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.contentSpacing, 7)
+        XCTAssertEqual(pointer.horizontalPadding, 9)
+        XCTAssertEqual(pointer.height, 36)
+        XCTAssertFalse(pointer.growsWithContent)
+        XCTAssertEqual(pointer.cornerRadius, CrestRadius.compact)
+        XCTAssertEqual(pointer.editingRingWidth, 0.5)
+        XCTAssertEqual(pointer.leadingGlyphSlot, 28)
+
+        let touch = BrowserSidebarInteractionPolicy.addressFieldMetrics(
+            capabilities(hover: false, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.contentSpacing, 8)
+        XCTAssertEqual(touch.horizontalPadding, 12)
+        XCTAssertEqual(touch.height, 44)
+        XCTAssertTrue(touch.growsWithContent)
+        XCTAssertEqual(touch.cornerRadius, CrestRadius.compact)
+        XCTAssertEqual(touch.editingRingWidth, 1)
+        XCTAssertNil(touch.leadingGlyphSlot)
+    }
+
+    /// Only a touch shell enlarges the clear control, because only there is it
+    /// aimed at with a finger. A pointer shell names no font at all rather than
+    /// naming the inherited one, so the control keeps whatever the field is
+    /// drawn in.
+    func testOnlyATouchShellSizesTheClearControlForAFinger() {
+        XCTAssertNil(
+            BrowserSidebarInteractionPolicy.addressFieldMetrics(
+                capabilities(hover: true, touch: false)
+            ).clearControlFont
+        )
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.addressFieldMetrics(
+                capabilities(hover: false, touch: true)
+            ).clearControlFont,
+            .system(size: 15, weight: .medium)
+        )
+    }
+
+    /// Only a touch shell lets the field grow past its resting band. The
+    /// windowed sidebar's chrome strip has to stay one unchanging height no
+    /// matter how large the reader's text is.
+    func testOnlyATouchAddressFieldGrowsPastItsRestingBand() {
+        XCTAssertFalse(
+            BrowserSidebarInteractionPolicy.addressFieldMetrics(
+                capabilities(hover: true, touch: false)
+            ).growsWithContent
+        )
+        XCTAssertTrue(
+            BrowserSidebarInteractionPolicy.addressFieldMetrics(
+                capabilities(hover: false, touch: true)
+            ).growsWithContent
+        )
+    }
+
+    /// A trackpad beside a touchscreen must not tighten the field back down.
+    func testAddingHoverToATouchShellKeepsTheTouchAddressField() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.addressFieldMetrics(
+                capabilities(hover: true, touch: true)
+            ),
+            BrowserSidebarInteractionPolicy.addressFieldMetrics(
+                capabilities(hover: false, touch: true)
+            )
+        )
+    }
+
+    /// The leading glyph and the site control it gives way to occupy the same
+    /// square on the pointer shell, which is what keeps the address from
+    /// shifting sideways as the two swap.
+    func testThePointerLeadingGlyphReservesTheSiteControlSquare() {
+        XCTAssertEqual(
+            BrowserSidebarAddressFieldMetrics.pointer.leadingGlyphSlot,
+            BrowserAddressSecurityControlPolicy.controlSize
+        )
+    }
+
+    // MARK: - Navigation strip layout
+
+    /// Pins the geometry each shell's back, forward, and reload strip draws
+    /// today, which is the other thing two forks of the strip used to disagree
+    /// about.
+    func testNavigationStripGeometryFollowsTheShell() {
+        let pointer = BrowserSidebarInteractionPolicy.navigationControlMetrics(
+            capabilities(hover: true, touch: false)
+        )
+        XCTAssertEqual(pointer, .pointer)
+        XCTAssertEqual(pointer.controlSpacing, 1)
+        XCTAssertEqual(pointer.leadingSpacerMinimum, 8)
+        XCTAssertEqual(pointer.controlSize, CGSize(width: 30, height: 30))
+        XCTAssertEqual(
+            pointer.reloadMenuControlSize,
+            CGSize(width: 18, height: 30)
+        )
+        XCTAssertEqual(pointer.reloadSymbolPointSize, 15)
+        XCTAssertEqual(pointer.leadingInset, 0)
+        XCTAssertEqual(pointer.trailingInset, 12)
+        XCTAssertEqual(pointer.barHeight, 48)
+        XCTAssertFalse(pointer.growsWithContent)
+        XCTAssertEqual(pointer.accessibilityVerticalPadding, 0)
+
+        let touch = BrowserSidebarInteractionPolicy.navigationControlMetrics(
+            capabilities(hover: false, touch: true)
+        )
+        XCTAssertEqual(touch, .touch)
+        XCTAssertEqual(touch.controlSpacing, 2)
+        XCTAssertEqual(touch.leadingSpacerMinimum, 0)
+        XCTAssertEqual(touch.controlSize, CGSize(width: 44, height: 44))
+        XCTAssertEqual(
+            touch.reloadMenuControlSize,
+            CGSize(width: 28, height: 44)
+        )
+        XCTAssertEqual(touch.reloadSymbolPointSize, 14)
+        XCTAssertEqual(touch.leadingInset, 14)
+        XCTAssertEqual(touch.trailingInset, 14)
+        XCTAssertEqual(touch.barHeight, 48)
+        XCTAssertTrue(touch.growsWithContent)
+        XCTAssertEqual(touch.accessibilityVerticalPadding, 8)
+    }
+
+    /// The two shells draw the chevrons at different sizes and weights. Pinned
+    /// here because the strip reads them from the profile rather than naming
+    /// them, and a swap would be silent.
+    func testNavigationChevronsAreSizedForTheShellTheyAreAimedAtWith() {
+        XCTAssertEqual(
+            BrowserSidebarNavigationControlMetrics.pointer.historySymbolFont,
+            .system(size: 15, weight: .regular)
+        )
+        XCTAssertEqual(
+            BrowserSidebarNavigationControlMetrics.touch.historySymbolFont,
+            .system(size: 17, weight: .medium)
+        )
+    }
+
+    /// A trackpad beside a touchscreen must not tighten the strip back down.
+    func testAddingHoverToATouchShellKeepsTheTouchNavigationStrip() {
+        XCTAssertEqual(
+            BrowserSidebarInteractionPolicy.navigationControlMetrics(
+                capabilities(hover: true, touch: true)
+            ),
+            BrowserSidebarInteractionPolicy.navigationControlMetrics(
+                capabilities(hover: false, touch: true)
+            )
+        )
+    }
+
     // MARK: - Promotion anchoring
 
     /// The two anchors are alternatives, not a pair: a shell that zooms the

@@ -66,6 +66,28 @@ enum BrowserSidebarInteractionPolicy {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// The geometry the sidebar's address field draws itself with.
+    ///
+    /// Touch decides this like it decides the rows: the field is a hit target
+    /// before it is a label, so its band, its gutter, and the controls inside
+    /// it are all sized for the least precise input the shell accepts.
+    static func addressFieldMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSidebarAddressFieldMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
+    /// The geometry the sidebar's navigation strip draws itself with.
+    ///
+    /// Touch decides this too. The back, forward, and reload controls sit
+    /// shoulder to shoulder, so the least precise input the shell accepts is
+    /// what sets both their targets and the gaps between them.
+    static func navigationControlMetrics(
+        _ capabilities: BrowserInteractionCapabilities
+    ) -> BrowserSidebarNavigationControlMetrics {
+        capabilities.supportsTouch ? .touch : .pointer
+    }
+
     /// Whether a row anchors the page it opens with a matched-geometry
     /// destination.
     ///
