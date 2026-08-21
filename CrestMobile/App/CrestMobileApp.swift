@@ -8,6 +8,7 @@ struct CrestMobileApp: App {
     @State private var onboardingCoordinator: BrowserOnboardingCoordinator
     @State private var pages: MobileBrowserPageStore
     @State private var spaceAccess: BrowserSpaceAccessController
+    @State private var shortcuts: BrowserShortcutStore
     private let permissionCenter: BrowserSitePermissionCenter
     private let pageStoreRegistry: MobileBrowserPageStoreRegistry
     private let tabStateArchive: (any BrowserTabStateArchiving)?
@@ -106,6 +107,14 @@ struct CrestMobileApp: App {
         _onboardingCoordinator = State(initialValue: onboardingCoordinator)
         _pages = State(initialValue: pages)
         _spaceAccess = State(initialValue: spaceAccess)
+        // A hardware keyboard on iPad reads the same rebindable command table
+        // the Mac menu bar does, composed exactly the way the Mac composes it.
+        _shortcuts = State(
+            initialValue: BrowserShortcutStore.launch(
+                usesIsolatedLaunch: usesIsolatedLaunch,
+                reset: shouldReset
+            )
+        )
         self.permissionCenter = permissionCenter
         pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
         self.tabStateArchive = tabStateArchive
@@ -167,7 +176,7 @@ struct CrestMobileApp: App {
             BrowserWindowID()
         }
         .commands {
-            MobileBrowserCommands()
+            MobileBrowserCommands(shortcuts: shortcuts)
         }
     }
 }

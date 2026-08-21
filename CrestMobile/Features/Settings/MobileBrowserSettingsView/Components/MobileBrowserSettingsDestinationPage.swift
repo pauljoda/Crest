@@ -3,9 +3,10 @@ import SwiftUI
 /// Touch's settings detail: the shared router's pane as it comes, with the
 /// sheet the password manager lives in hung off it.
 ///
-/// Touch has no extensions surface and no rebindable command table, so it hands
-/// the router neither an extension controller pool nor a shortcut store; those
-/// two destinations stay out of its list and resolve to nothing here.
+/// Touch has no extensions surface, and its hardware-keyboard bindings read the
+/// shared shortcut store without offering an editor for it, so it hands the
+/// router neither an extension controller pool nor a shortcut store; those two
+/// destinations stay out of its list and resolve to nothing here.
 struct MobileBrowserSettingsDestinationPage: View {
     let destination: BrowserSettingsDestination
     let browser: BrowserStore

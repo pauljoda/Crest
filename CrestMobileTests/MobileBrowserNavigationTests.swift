@@ -48,17 +48,6 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
-    func testHardwareKeyboardStopLoadingUsesTheDesktopDefault() {
-        XCTAssertEqual(
-            MobileBrowserKeyboardShortcut.stopLoadingKey,
-            KeyEquivalent(".")
-        )
-        XCTAssertEqual(
-            MobileBrowserKeyboardShortcut.stopLoadingModifiers,
-            .command
-        )
-    }
-
     func testReducedTransparencyUsesOpaqueAtmosphereAndStrongerScrims() {
         XCTAssertEqual(
             BrowserVisualAccessibilityPolicy.atmosphereOpacity(
