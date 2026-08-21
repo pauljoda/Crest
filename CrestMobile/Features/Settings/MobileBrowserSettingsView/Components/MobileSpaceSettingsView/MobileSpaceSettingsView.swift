@@ -6,7 +6,6 @@ struct MobileSpaceSettingsView: View {
     let dataDeleter: any BrowserSpaceDataDeleting
 
     @State private var selectedSpaceID: SpaceID?
-    @State private var updatingAccessPolicy = false
 
     var body: some View {
         BrowserSettingsPane(.spaces) {
@@ -20,14 +19,15 @@ struct MobileSpaceSettingsView: View {
                     browser: browser,
                     space: space
                 )
-                MobileSpaceBrowsingSection(browser: browser, space: space)
-                MobilePrivateSpaceSettingsSection(
-                    requiresAuthentication: requiresAuthentication(in: space),
-                    isUpdating: updatingAccessPolicy
-                )
-                BrowserSpaceDeletionSection(
+
+                // Touch takes the shared superset without downloads — the
+                // system owns where a download lands here — and without the
+                // Crest Passwords toggles, which this shell offers in its own
+                // Passwords pane.
+                BrowserSpaceSettingsSections(
                     browser: browser,
-                    spaceID: space.id,
+                    space: space,
+                    spaceAccess: spaceAccess,
                     dataDeleter: dataDeleter
                 )
             } else if let space {
@@ -51,33 +51,5 @@ struct MobileSpaceSettingsView: View {
             in: browser.liveSpace(space),
             accessController: spaceAccess
         )
-    }
-
-    private func requiresAuthentication(in space: BrowserSpace) -> Binding<Bool> {
-        Binding {
-            browser.liveSpace(space).accessPolicy.requiresAuthentication
-        } set: { isRequired in
-            Task { await updateAccessPolicy(isRequired: isRequired, in: space) }
-        }
-    }
-
-    private func updateAccessPolicy(
-        isRequired: Bool,
-        in space: BrowserSpace
-    ) async {
-        updatingAccessPolicy = true
-        defer { updatingAccessPolicy = false }
-        let currentSpace = browser.liveSpace(space)
-
-        if !isRequired {
-            guard await spaceAccess.unlock(currentSpace) else { return }
-        }
-        browser.updateSpaceAccessPolicy(
-            isRequired ? .deviceOwnerAuthentication : .open,
-            in: space.id
-        )
-        if isRequired {
-            spaceAccess.lock(space.id)
-        }
     }
 }

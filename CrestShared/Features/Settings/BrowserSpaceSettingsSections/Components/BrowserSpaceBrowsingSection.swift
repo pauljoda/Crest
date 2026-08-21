@@ -1,6 +1,13 @@
 import SwiftUI
 
-struct MobileSpaceBrowsingSection: View {
+/// A Space's search engine and its current-tab cleanup policy.
+///
+/// Both shells had written this section out separately, and the copies agreed
+/// on every control and differed only in whether the footnote named the Space —
+/// and in whether the cleanup button read the live Space or the stale value the
+/// view was handed. Both now read live, which is what
+/// ``BrowserStore/liveSpace(_:)`` exists for.
+struct BrowserSpaceBrowsingSection: View {
     let browser: BrowserStore
     let space: BrowserSpace
 
@@ -36,11 +43,20 @@ struct MobileSpaceBrowsingSection: View {
             Button("Clean Up Eligible Tabs Now", systemImage: "archivebox") {
                 browser.cleanupCurrentTabs(in: space.id)
             }
-            .disabled(space.browsingPreferences.currentTabCleanupPolicy == .never)
+            .disabled(
+                currentSpace.browsingPreferences.currentTabCleanupPolicy
+                    == .never
+            )
 
-            Text("Eligible tabs remain recoverable from Archive.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(
+                "This policy applies only to \(currentSpace.name). Eligible tabs remain recoverable from Archive."
+            )
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
+    }
+
+    private var currentSpace: BrowserSpace {
+        browser.liveSpace(space)
     }
 }

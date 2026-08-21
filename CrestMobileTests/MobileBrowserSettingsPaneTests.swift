@@ -250,4 +250,95 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
             XCTAssertEqual(Double(blue), Double(brand.blue), accuracy: 0.01)
         }
     }
+
+    /// Touch takes the Space settings superset by passing nothing extra, so the
+    /// default capabilities have to be exactly the compact shell's list. A
+    /// section that started rendering here because someone flipped a default
+    /// would put a folder chooser on a device with nowhere to chase it to.
+    func testDefaultSpaceSettingsCapabilitiesAreTheTouchSubset() {
+        let capabilities = BrowserSpaceSettingsCapabilities()
+
+        XCTAssertNil(capabilities.downloads)
+        XCTAssertFalse(capabilities.editsCrestPasswords)
+    }
+
+    /// The superset is shared source, so every section the windowed shell asks
+    /// for has to resolve in this target too — including the two that only it
+    /// passes. This is what keeps the fork from growing back: a section that
+    /// compiled only against AppKit would fail here rather than in review.
+    func testSharedSpaceSettingsSectionsResolveForBothShellsSubsets() throws {
+        let browser = BrowserStore.preview()
+        let spaceAccess = BrowserSpaceAccessController()
+        let dataDeleter = InertSpaceDataDeleter()
+        let space = try XCTUnwrap(browser.session.spaces.first)
+
+        XCTAssertNotNil(
+            BrowserSpaceSettingsSections(
+                browser: browser,
+                space: space,
+                spaceAccess: spaceAccess,
+                dataDeleter: dataDeleter
+            ).body
+        )
+
+        var asksWhereToSave = false
+        let windowed = BrowserSpaceSettingsCapabilities(
+            downloads: BrowserSpaceDownloadSettings(
+                asksWhereToSave: Binding(
+                    get: { asksWhereToSave },
+                    set: { asksWhereToSave = $0 }
+                ),
+                directoryName: "Downloads",
+                usesCustomDirectory: false,
+                errorMessage: nil,
+                explanation: "Downloads land here.",
+                chooseDirectory: {},
+                resetDirectory: {}
+            ),
+            editsCrestPasswords: true
+        )
+
+        XCTAssertNotNil(windowed.downloads)
+        XCTAssertTrue(windowed.editsCrestPasswords)
+        XCTAssertNotNil(
+            BrowserSpaceSettingsSections(
+                browser: browser,
+                space: space,
+                spaceAccess: spaceAccess,
+                dataDeleter: dataDeleter,
+                capabilities: windowed
+            ).body
+        )
+    }
+
+    /// Each section the superset composes has to stand on its own, because the
+    /// shells reach for them individually as their panes grow.
+    func testEverySharedSpaceSettingsSectionComposesAgainstAStore() throws {
+        let browser = BrowserStore.preview()
+        let spaceAccess = BrowserSpaceAccessController()
+        let space = try XCTUnwrap(browser.session.spaces.first)
+
+        XCTAssertNotNil(
+            BrowserSpaceBrowsingSection(browser: browser, space: space).body
+        )
+        XCTAssertNotNil(
+            BrowserSpaceAccessPolicySection(
+                browser: browser,
+                space: space,
+                spaceAccess: spaceAccess
+            ).body
+        )
+        XCTAssertNotNil(
+            BrowserSpaceCredentialSyncSection(
+                browser: browser,
+                space: space
+            ).body
+        )
+    }
+}
+
+/// A deleter for composition checks, which never reach the delete button.
+@MainActor
+private final class InertSpaceDataDeleter: BrowserSpaceDataDeleting {
+    func deleteData(for space: BrowserSpace) async throws {}
 }
