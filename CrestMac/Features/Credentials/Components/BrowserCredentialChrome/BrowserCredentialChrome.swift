@@ -24,12 +24,33 @@ struct BrowserCredentialChrome: View {
             )
             .transition(.move(edge: .top).combined(with: .opacity))
         case .suggestions(let request):
-            BrowserCredentialSuggestionPanel(
+            BrowserCredentialSuggestionPrompt(
                 request: request,
-                page: page,
-                browser: browser
+                port: fillPort,
+                browser: browser,
+                capabilities: capabilities
             )
             .transition(.move(edge: .top).combined(with: .opacity))
         }
+    }
+
+    /// The four things a fill prompt asks, bound to this chrome's page.
+    private var fillPort: BrowserCredentialFillPort {
+        BrowserCredentialFillPort(
+            spaceID: page.spaceID,
+            fill: { credential, requestID in
+                try await page.fillCredential(credential, for: requestID)
+            },
+            fillGeneratedPassword: { password, requestID in
+                try await page.fillGeneratedPassword(password, for: requestID)
+            },
+            dismiss: page.dismissCredentialFillRequest
+        )
+    }
+
+    /// What this shell can do: a pointer rests over the chrome and nothing is
+    /// aimed at with a finger.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
     }
 }

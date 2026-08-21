@@ -1,6 +1,7 @@
 import SwiftUI
 
-enum MobileCredentialPromptHeaderKind {
+/// Which fill prompt a header opens.
+enum BrowserCredentialPromptHeaderKind {
     case strongPassword
     case suggestions
 

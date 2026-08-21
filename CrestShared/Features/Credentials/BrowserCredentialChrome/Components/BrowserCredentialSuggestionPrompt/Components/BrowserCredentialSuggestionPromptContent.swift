@@ -1,35 +1,44 @@
 import SwiftUI
 
-struct MobileCredentialSuggestionPromptContent: View {
+struct BrowserCredentialSuggestionPromptContent: View {
     let request: BrowserCredentialFillRequest
     let space: BrowserSpace?
     let model: BrowserCredentialSuggestionModel
     let fillErrorMessage: String?
+    let metrics: BrowserCredentialPromptMetrics
     let dismiss: () -> Void
     let fill: (CredentialDescriptor) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            MobileCredentialPromptHeader(
+        VStack(
+            alignment: .leading,
+            spacing: BrowserCredentialPromptMetrics.contentSpacing
+        ) {
+            BrowserCredentialPromptHeader(
                 kind: .suggestions,
                 request: request,
                 space: space,
                 dismiss: dismiss
             )
             if request.isCrossOriginFrame {
-                MobileCredentialCrossOriginNotice(
+                BrowserCredentialCrossOriginNotice(
                     message: "Embedded sign-in from \(request.topLevelOrigin.description)"
                 )
             }
-            MobileCredentialSuggestionState(
+            BrowserCredentialSuggestionState(
                 isLoading: model.isLoading,
                 suggestions: model.suggestions,
+                metrics: metrics,
                 fill: fill
             )
-            MobileCredentialSuggestionFeedback(
-                hasLoadFailed: model.hasFailed,
-                fillErrorMessage: fillErrorMessage
-            )
+            if model.hasFailed {
+                BrowserCredentialPromptError(
+                    "Crest couldn’t read this Space’s passwords."
+                )
+            }
+            if let fillErrorMessage {
+                BrowserCredentialPromptError(verbatim: fillErrorMessage)
+            }
         }
     }
 }

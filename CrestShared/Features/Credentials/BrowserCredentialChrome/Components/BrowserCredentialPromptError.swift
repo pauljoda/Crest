@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct MobileCredentialPromptError: View {
+/// A credential prompt's failure line.
+struct BrowserCredentialPromptError: View {
     let message: Text
 
     init(_ message: LocalizedStringKey) {

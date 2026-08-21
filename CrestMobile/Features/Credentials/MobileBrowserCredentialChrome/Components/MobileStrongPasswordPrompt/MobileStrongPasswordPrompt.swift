@@ -4,13 +4,16 @@ struct MobileStrongPasswordPrompt: View {
     let request: BrowserCredentialFillRequest
     let page: MobileBrowserPage
     let browser: BrowserStore
+    let capabilities: BrowserInteractionCapabilities
 
     @State private var model = BrowserStrongPasswordOperationModel()
 
     var body: some View {
-        MobileCredentialPromptSurface(
-            accessibilityLabel: "Strong password for \(spaceName)",
-            accessibilityIdentifier: "crest-strong-password"
+        BrowserCredentialPromptSurface(
+            accessibilityLabel: Text("Strong password for \(spaceName)"),
+            accessibilityIdentifier: "crest-strong-password",
+            width: metrics.fillPromptWidth,
+            metrics: metrics
         ) {
             MobileStrongPasswordPromptContent(
                 request: request,
@@ -20,6 +23,10 @@ struct MobileStrongPasswordPrompt: View {
                 generateAndFill: generateAndFill
             )
         }
+    }
+
+    private var metrics: BrowserCredentialPromptMetrics {
+        BrowserCredentialPromptMetrics.resolve(capabilities)
     }
 
     private var space: BrowserSpace? {

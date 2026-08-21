@@ -1,6 +1,8 @@
 import SwiftUI
 
-struct MobileCredentialCrossOriginNotice: View {
+/// Says out loud that the form the prompt is about belongs to an embedded frame
+/// rather than to the site in the address field.
+struct BrowserCredentialCrossOriginNotice: View {
     let message: LocalizedStringKey
 
     var body: some View {

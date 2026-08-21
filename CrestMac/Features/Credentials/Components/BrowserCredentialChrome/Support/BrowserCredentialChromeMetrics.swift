@@ -2,7 +2,6 @@ import CoreGraphics
 
 enum BrowserCredentialChromeMetrics {
     static let strongPasswordSpacing: CGFloat = 10
-    static let suggestionSpacing = CrestSpacing.small
     static let headerSpacing = CrestSpacing.small
     static let headerTextSpacing: CGFloat = 1
     static let headerSpacerLength = CrestSpacing.medium
@@ -14,7 +13,4 @@ enum BrowserCredentialChromeMetrics {
     static let shadowOpacity = CrestOpacity.controlShadow
     static let shadowRadius: CGFloat = 14
     static let shadowY: CGFloat = 6
-    static let suggestionRowSpacing = CrestSpacing.small
-    static let suggestionRowSpacerLength: CGFloat = 10
-    static let suggestionRowPadding: CGFloat = 5
 }
