@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "entries": {
+    "2026-08-21-explicit-release-notes": {
+      "category": "internal",
+      "message": "Adopt the explicit release-note catalog for rolling publications"
+    }
+  }
+}
