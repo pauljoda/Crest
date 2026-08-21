@@ -132,7 +132,16 @@ struct MobileBrowserDetailView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if let page {
-                MobileBrowserCredentialChrome(page: page, browser: browser)
+                BrowserCredentialChrome(
+                    presentation: BrowserCredentialChromePresentation.resolve(
+                        saveCandidate: page.credentialSaveCandidate,
+                        fillRequest: page.credentialFillRequest
+                    ),
+                    fillPort: credentialFillPort(for: page),
+                    savePort: credentialSavePort(for: page),
+                    browser: browser,
+                    capabilities: capabilities
+                )
             }
         }
         .overlay(alignment: .bottom) {
@@ -230,8 +239,46 @@ struct MobileBrowserDetailView: View {
         )
     }
 
-    /// What this shell can do, as far as the find bar is concerned: the bar is
-    /// aimed at with a finger, whichever placement it is drawn in.
+    /// The four things a credential fill prompt asks, bound to the page it is
+    /// over.
+    private func credentialFillPort(
+        for page: MobileBrowserPage
+    ) -> BrowserCredentialFillPort {
+        BrowserCredentialFillPort(
+            spaceID: page.spaceID,
+            fill: { credential, requestID in
+                try await page.fillCredential(credential, for: requestID)
+            },
+            fillGeneratedPassword: { password, requestID in
+                try await page.fillGeneratedPassword(password, for: requestID)
+            },
+            dismiss: page.dismissCredentialFillRequest
+        )
+    }
+
+    /// What the save prompt asks of the page it is over. This shell can hand a
+    /// saved password on to the system's Passwords app, anchored on the window
+    /// the page is living in at the moment the offer is made.
+    private func credentialSavePort(
+        for page: MobileBrowserPage
+    ) -> BrowserCredentialSavePort {
+        BrowserCredentialSavePort(
+            spaceID: page.spaceID,
+            presentedCandidateID: { page.credentialSaveCandidate?.id },
+            dismiss: page.dismissCredentialSaveCandidate,
+            offerToSystemPasswords: { candidate, title in
+                try await BrowserSystemPasswordWriteThroughSystem.offer(
+                    candidate: candidate,
+                    title: title,
+                    anchor: page.webView.window
+                )
+            }
+        )
+    }
+
+    /// What this shell can do, as far as the find bar and the credential
+    /// prompts are concerned: they are aimed at with a finger, whichever
+    /// placement they are drawn in.
     private var capabilities: BrowserInteractionCapabilities {
         BrowserInteractionCapabilities(supportsTouch: true)
     }

@@ -31,8 +31,10 @@ struct BrowserWebPageSurface: View {
                     saveCandidate: page.credentialSaveCandidate,
                     fillRequest: page.credentialFillRequest
                 ),
-                page: page,
-                browser: browser
+                fillPort: credentialFillPort,
+                savePort: credentialSavePort,
+                browser: browser,
+                capabilities: capabilities
             )
             .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
 
@@ -56,6 +58,32 @@ struct BrowserWebPageSurface: View {
             },
             matchState: { page.findMatchState },
             dismiss: page.dismissFind
+        )
+    }
+
+    /// The four things a credential fill prompt asks, bound to this surface's
+    /// page.
+    private var credentialFillPort: BrowserCredentialFillPort {
+        BrowserCredentialFillPort(
+            spaceID: page.spaceID,
+            fill: { credential, requestID in
+                try await page.fillCredential(credential, for: requestID)
+            },
+            fillGeneratedPassword: { password, requestID in
+                try await page.fillGeneratedPassword(password, for: requestID)
+            },
+            dismiss: page.dismissCredentialFillRequest
+        )
+    }
+
+    /// What the save prompt asks of this surface's page. This shell makes no
+    /// offer to the system's Passwords app, so it binds none.
+    private var credentialSavePort: BrowserCredentialSavePort {
+        BrowserCredentialSavePort(
+            spaceID: page.spaceID,
+            presentedCandidateID: { page.credentialSaveCandidate?.id },
+            dismiss: page.dismissCredentialSaveCandidate,
+            offerToSystemPasswords: nil
         )
     }
 

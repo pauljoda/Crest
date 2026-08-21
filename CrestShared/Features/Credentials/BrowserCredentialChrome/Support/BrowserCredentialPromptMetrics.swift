@@ -22,6 +22,16 @@ enum BrowserCredentialPromptSurfaceStyle: Equatable, Sendable {
     case band
 }
 
+/// Where a shell puts the save prompt's two actions.
+enum BrowserCredentialSaveActionPlacement: Equatable, Sendable {
+    /// In the row that opens the prompt, after the title.
+    case besideTitle
+
+    /// On a row of their own under everything else, where each one can be a
+    /// full target and a large text size can stack them.
+    case belowContent
+}
+
 /// The drawn geometry of the credential prompts, resolved once per shell rather
 /// than spelled out by each fork of a prompt.
 ///
@@ -65,6 +75,25 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
     /// whole band on it; a pointer shell leaves it the width of its label.
     let actionMaximumWidth: CGFloat?
 
+    /// The width the save prompt claims. It carries a title, a destination, and
+    /// two actions, so it is given more room than a fill prompt.
+    let savePromptWidth: BrowserCredentialPromptWidth
+
+    /// Where the save prompt's actions go.
+    let saveActionPlacement: BrowserCredentialSaveActionPlacement
+
+    /// The frame the save prompt's spinner claims while it stands in for the
+    /// commit action, or `nil` where it keeps the size its control size gives
+    /// it. A touch shell holds the target open so the row does not resize.
+    let saveBusyIndicatorSize: CGFloat?
+
+    /// Whether the destination line spells iCloud sync out beside the Space or
+    /// folds it into the one sentence.
+    let destinationPresentation: BrowserCredentialPromptDestinationPresentation
+
+    /// How the cross-origin warning names the credential it is about.
+    let saveCrossOriginSubject: BrowserCredentialPromptCrossOriginSubject
+
     /// A pointer shell: a fixed-width panel floating over the page, rows sized
     /// by their content, and a list that grows the panel.
     static let pointer = BrowserCredentialPromptMetrics(
@@ -77,7 +106,12 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionRowMinimumHeight: nil,
         suggestionStateMinimumHeight: nil,
         actionMinimumWidth: 44,
-        actionMaximumWidth: nil
+        actionMaximumWidth: nil,
+        savePromptWidth: .bounded(560),
+        saveActionPlacement: .besideTitle,
+        saveBusyIndicatorSize: nil,
+        destinationPresentation: .separateSyncStatus,
+        saveCrossOriginSubject: .definiteCredential
     )
 
     /// A touch shell: a band across the top of the page, full 44pt targets, and
@@ -97,7 +131,12 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionRowMinimumHeight: 44,
         suggestionStateMinimumHeight: 44,
         actionMinimumWidth: nil,
-        actionMaximumWidth: .infinity
+        actionMaximumWidth: .infinity,
+        savePromptWidth: .flexible,
+        saveActionPlacement: .belowContent,
+        saveBusyIndicatorSize: 44,
+        destinationPresentation: .combinedStatus,
+        saveCrossOriginSubject: .currentCredential
     )
 
     /// The profile a shell draws its credential prompts with.
@@ -120,6 +159,10 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
     /// needing more room from its neighbours than a list of accounts does.
     static let strongPasswordContentSpacing: CGFloat = 10
 
+    /// The gap the save prompt keeps between its title, its destination, its
+    /// warnings, and its actions.
+    static let savePromptContentSpacing: CGFloat = 9
+
     /// The gap between the header's symbol, its titles, and its close control.
     static let headerSpacing: CGFloat = 9
 
@@ -128,6 +171,19 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
 
     /// The least room kept between a header's titles and its close control.
     static let headerSpacerLength = CrestSpacing.small
+
+    /// The least room kept between the save prompt's title and the actions a
+    /// pointer shell draws beside it.
+    static let saveHeaderSpacerLength = CrestSpacing.large
+
+    /// The gap between the save prompt's two actions.
+    static let saveActionSpacing = CrestSpacing.small
+
+    /// The gap between the destination line's parts.
+    static let destinationSpacing: CGFloat = 6
+
+    /// The Space crest drawn on the destination line.
+    static let destinationIconSize: CGFloat = 16
 
     /// The frame a prompt's own controls claim.
     static let controlHitTarget: CGFloat = 44
