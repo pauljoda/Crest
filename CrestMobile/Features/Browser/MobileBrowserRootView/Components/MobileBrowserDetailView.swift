@@ -125,11 +125,7 @@ struct MobileBrowserDetailView: View {
                 }
             }
         }
-        .onGeometryChange(for: EdgeInsets.self) { proxy in
-            proxy.safeAreaInsets
-        } action: { insets in
-            resolvedSafeAreaInsets = insets
-        }
+        .background(safeAreaProbe)
         .safeAreaInset(edge: .top, spacing: 0) {
             if let page {
                 BrowserCredentialChrome(
@@ -226,6 +222,27 @@ struct MobileBrowserDetailView: View {
             ),
             value: compactToolbarIsHidden
         )
+    }
+
+    /// What the page area's safe area is, measured clear of the keyboard.
+    ///
+    /// The probe ignores the keyboard region deliberately. SwiftUI spells
+    /// keyboard avoidance as a safe area, so a probe that read it would report
+    /// the keyboard's height as page chrome, and `MobileBrowserWebHostView`
+    /// would inset the page by it a second time — on top of the shortening
+    /// SwiftUI has already done — leaving the page laid out in a fraction of
+    /// the web view with a dead band beneath it. What the page owes the
+    /// keyboard is already paid by the layout; what it owes the window is what
+    /// this measures.
+    private var safeAreaProbe: some View {
+        Color.clear
+            .onGeometryChange(for: EdgeInsets.self) { proxy in
+                proxy.safeAreaInsets
+            } action: { insets in
+                resolvedSafeAreaInsets = insets
+            }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .accessibilityHidden(true)
     }
 
     /// The three questions the find bar asks, bound to the page it is over.
