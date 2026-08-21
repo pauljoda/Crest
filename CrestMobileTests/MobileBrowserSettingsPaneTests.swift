@@ -192,6 +192,22 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
         )
     }
 
+    func testMobileSettingsNeverOffersTheWebKitFeatureFlagsDestination() {
+        XCTAssertFalse(
+            BrowserPlatformSettingsDestinationCatalog.isAvailable(.featureFlags)
+        )
+        XCTAssertFalse(
+            BrowserPlatformSettingsDestinationCatalog.cases.contains(.featureFlags)
+        )
+        XCTAssertFalse(
+            BrowserSettingsDestination.featureFlags.isAvailableOnCurrentPlatform
+        )
+        XCTAssertFalse(
+            BrowserSettingsDestination.platformCases.contains(.featureFlags),
+            "WebKit's private feature registry is a macOS-only settings surface."
+        )
+    }
+
     /// The tile grows with the reader's text size on touch. macOS does not; the
     /// desktop half of this pair lives in `BrowserSettingsPaneTests`.
     func testMobileHeaderTileFollowsDynamicType() {

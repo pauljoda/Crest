@@ -26,7 +26,7 @@ struct BrowserSettingsPageLayout: Equatable {
     ) -> BrowserSettingsPageLayout {
         switch destination {
         case .spaces: .fullBleed
-        case .shortcuts: .selfScrolling
+        case .shortcuts, .featureFlags: .selfScrolling
         case .general, .links, .sync, .privacy, .passwords, .extensions,
             .advanced:
             .readable

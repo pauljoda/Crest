@@ -33,6 +33,9 @@ enum BrowserPageConfiguration {
         // Resident background tabs stay alive for instant host swaps, while
         // WebKit suspends their JavaScript and layout when detached from a window.
         preferences.inactiveSchedulingPolicy = .suspend
+        #if os(macOS)
+            BrowserWebKitFeatureFlagStore.active.apply(to: preferences)
+        #endif
 
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore =

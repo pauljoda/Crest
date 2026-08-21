@@ -5,8 +5,10 @@ enum BrowserPlatformSettingsDestinationCatalog {
     static func isAvailable(
         _ destination: BrowserSettingsDestination
     ) -> Bool {
-        // Extensions are a macOS-only feature, and keyboard shortcuts have no
-        // mobile surface to bind.
-        destination != .extensions && destination != .shortcuts
+        // Extensions and WebKit's private feature registry are macOS-only
+        // surfaces, and keyboard shortcuts have no mobile command table to bind.
+        destination != .extensions
+            && destination != .featureFlags
+            && destination != .shortcuts
     }
 }

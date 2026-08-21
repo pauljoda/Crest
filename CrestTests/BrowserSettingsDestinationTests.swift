@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Crest
 
 final class BrowserSettingsDestinationTests: XCTestCase {
@@ -16,7 +17,8 @@ final class BrowserSettingsDestinationTests: XCTestCase {
                 "privacy",
                 "passwords",
                 "extensions",
-                "advanced"
+                "featureFlags",
+                "advanced",
             ],
             """
             Settings identifiers derive from these raw values \
@@ -47,7 +49,8 @@ final class BrowserSettingsDestinationTests: XCTestCase {
                 .privacy,
                 .passwords,
                 .extensions,
-                .advanced
+                .featureFlags,
+                .advanced,
             ]
         )
     }
@@ -77,7 +80,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
             BrowserSettingsDestination.platformCases,
             BrowserSettingsDestination.allCases
         )
-        XCTAssertEqual(BrowserSettingsDestination.platformCases.count, 9)
+        XCTAssertEqual(BrowserSettingsDestination.platformCases.count, 10)
     }
 
 }

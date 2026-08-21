@@ -32,6 +32,9 @@ struct CrestApp: App {
         let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
             launchEnvironment
         )
+        BrowserWebKitFeatureFlagStore.configureForLaunch(
+            usesIsolatedLaunch: usesIsolatedLaunch
+        )
         let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
         presentsInstalledApplicationUI =
             BrowserLaunchIsolationPolicy.presentsInstalledApplicationUI(

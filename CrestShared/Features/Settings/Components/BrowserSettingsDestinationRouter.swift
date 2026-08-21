@@ -97,6 +97,8 @@ struct BrowserSettingsDestinationRouter: View {
                     requestRevision: requestRevision
                 )
             }
+        case .featureFlags:
+            BrowserPlatformWebKitFeatureFlagSettingsPane()
         case .advanced:
             BrowserAdvancedSettingsPane(
                 browser: browser,

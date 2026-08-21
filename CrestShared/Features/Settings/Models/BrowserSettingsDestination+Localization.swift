@@ -11,6 +11,7 @@ extension BrowserSettingsDestination {
         case .privacy: "Privacy & Permissions"
         case .passwords: "Passwords"
         case .extensions: "Extensions"
+        case .featureFlags: "Feature Flags"
         case .advanced: "Advanced"
         }
     }
@@ -36,6 +37,7 @@ extension BrowserSettingsDestination {
         case .privacy: "Site access and data"
         case .passwords: "Credentials and autofill"
         case .extensions: "Space-specific add-ons"
+        case .featureFlags: "WebKit experiments"
         case .advanced: "Import, export, and runtime"
         }
     }
@@ -62,6 +64,8 @@ extension BrowserSettingsDestination {
             "credentials autofill iCloud Keychain passkeys synchronization"
         case .extensions:
             "WebExtension add-ons permissions storage"
+        case .featureFlags:
+            "WebKit experimental preview testable developer stable runtime flags features"
         case .advanced:
             "import export backup portability data records"
         }
