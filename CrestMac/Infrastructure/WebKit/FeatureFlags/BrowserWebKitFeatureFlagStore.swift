@@ -6,13 +6,11 @@ import WebKit
 final class BrowserWebKitFeatureFlagStore {
     nonisolated static let preferPageRenderingUpdatesNear60FPSKey =
         "PreferPageRenderingUpdatesNear60FPSEnabled"
-    nonisolated static let scrollAnimatorKey = "ScrollAnimatorEnabled"
 
     private static let performanceDefaults: [String: BrowserWebKitFeatureFlagOverride] = [
         // This WebKit feature is phrased as a 60 FPS preference, so disabling
         // it lets page rendering follow a higher-refresh-rate display.
-        preferPageRenderingUpdatesNear60FPSKey: .disabled,
-        scrollAnimatorKey: .enabled,
+        preferPageRenderingUpdatesNear60FPSKey: .disabled
     ]
 
     static private(set) var active = BrowserWebKitFeatureFlagStore(
@@ -78,10 +76,6 @@ final class BrowserWebKitFeatureFlagStore {
         ] != nil
     }
 
-    var canConfigureSmoothScroll: Bool {
-        crestDefaultOverrides[Self.scrollAnimatorKey] != nil
-    }
-
     var allows120FPS: Bool {
         get {
             overrides[
@@ -92,16 +86,6 @@ final class BrowserWebKitFeatureFlagStore {
             setPerformanceOverride(
                 newValue ? .disabled : .enabled,
                 forKey: Self.preferPageRenderingUpdatesNear60FPSKey
-            )
-        }
-    }
-
-    var usesSmoothScroll: Bool {
-        get { overrides[Self.scrollAnimatorKey] == .enabled }
-        set {
-            setPerformanceOverride(
-                newValue ? .enabled : .disabled,
-                forKey: Self.scrollAnimatorKey
             )
         }
     }

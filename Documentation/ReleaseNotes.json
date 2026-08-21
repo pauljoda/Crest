@@ -4,6 +4,10 @@
     "2026-08-21-explicit-release-notes": {
       "category": "internal",
       "message": "Adopt the explicit release-note catalog for rolling publications"
+    },
+    "2026-08-21-webkit-performance-defaults": {
+      "category": "improved",
+      "message": "Allow pages to use high-refresh-rate displays by default while keeping experimental scroll animation optional"
     }
   }
 }

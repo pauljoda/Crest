@@ -100,22 +100,6 @@ private struct BrowserWebKitPerformanceSettings: View {
                         identifier: "webkit-performance-allow-120-fps"
                     )
                 }
-
-                if store.canConfigureAllow120FPS
-                    && store.canConfigureSmoothScroll
-                {
-                    Divider()
-                }
-
-                if store.canConfigureSmoothScroll {
-                    performanceToggle(
-                        "Smooth Scroll",
-                        description:
-                            "Use WebKit’s scroll animator for supported scrolling on macOS.",
-                        isOn: $store.usesSmoothScroll,
-                        identifier: "webkit-performance-smooth-scroll"
-                    )
-                }
             }
             .padding(CrestSpacing.extraSmall)
         } label: {
