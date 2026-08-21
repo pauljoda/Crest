@@ -24,7 +24,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             if presentation == .regular,
                 MobileRegularBrowserBackdropPolicy.rootOwnsAtmosphere
             {
-                MobileBrowserWindowAtmosphere(space: browser.selectedSpace)
+                BrowserWindowAtmosphere(space: browser.selectedSpace)
                     .ignoresSafeArea(
                         .all,
                         edges: MobileRegularBrowserBackdropPolicy.atmosphereSafeAreaEdges

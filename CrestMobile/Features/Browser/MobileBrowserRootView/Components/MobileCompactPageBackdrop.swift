@@ -20,7 +20,7 @@ struct MobileCompactPageBackdrop: View {
             )
             .ignoresSafeArea()
         } else {
-            MobileBrowserWindowAtmosphere(space: space)
+            BrowserWindowAtmosphere(space: space)
                 .ignoresSafeArea()
         }
     }

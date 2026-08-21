@@ -36,7 +36,7 @@ struct MobileCompactBrowserSurface<
                     page
                 } else {
                     ZStack {
-                        MobileBrowserWindowAtmosphere(space: space)
+                        BrowserWindowAtmosphere(space: space)
                             .ignoresSafeArea()
 
                         GeometryReader { proxy in
