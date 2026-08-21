@@ -27,6 +27,9 @@ the live status for each issue.
 - [ ] [Investigate Google Drive pages that remain blurred](https://github.com/pauljoda/Crest/issues/26)
 - [ ] [Restore navigation history when reopening archived tabs](https://github.com/pauljoda/Crest/issues/30)
 - [ ] [Keep native window controls reachable in full screen](https://github.com/pauljoda/Crest/issues/31)
+- [ ] [Improve download progress and access](https://github.com/pauljoda/Crest/issues/34)
+- [ ] [Keep split-view groups visible in collapsed folders](https://github.com/pauljoda/Crest/issues/35)
+- [ ] [Preserve navigation when content blocking redirects](https://github.com/pauljoda/Crest/issues/36)
 
 #### Completed
 
@@ -41,6 +44,7 @@ the live status for each issue.
 - [x] [Preserve sign-in return flows in new browser windows](https://github.com/pauljoda/Crest/issues/25) — [`0c5d61c6`](https://github.com/pauljoda/Crest/commit/0c5d61c6f770a398859e8c8dd5de55f03aad250b)
 - [x] [Show the Crest install action on localized Chrome Web Store pages](https://github.com/pauljoda/Crest/issues/27) — [`d62a26b7`](https://github.com/pauljoda/Crest/commit/d62a26b764d2cd387119c2eb7c2080498e890229)
 - [x] [Make browser-import setup respect selections and source access](https://github.com/pauljoda/Crest/issues/28) — [`8c9d0f78`](https://github.com/pauljoda/Crest/commit/8c9d0f782b1e7cbbccd74f64cc1dfe4aeabd0b96)
+- [x] [Expose native WebKit feature flags in macOS Settings](https://github.com/pauljoda/Crest/issues/37) — [`6a672260`](https://github.com/pauljoda/Crest/commit/6a6722600a378942afb381adaab6d7f9f6d1ac9f)
 
 <!-- crest-roadmap-sync:end -->
 
