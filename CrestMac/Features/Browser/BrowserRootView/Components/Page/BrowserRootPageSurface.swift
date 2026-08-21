@@ -17,13 +17,6 @@ struct BrowserRootPageSurface: View {
         } ?? false
     }
 
-    private var usesTransparentInnerSurface: Bool {
-        BrowserPageSurfacePolicy.usesTransparentInnerSurface(
-            isStartPage: model.browser.selectedTab?.isStartPage == true,
-            hasActivePage: hasActivePage
-        )
-    }
-
     private var pageSurfacePresentation: BrowserPageSurfacePresentation {
         let selectedSpace = model.browser.selectedSpace
         return BrowserPageSurfaceBranchPolicy.resolve(
@@ -62,17 +55,18 @@ struct BrowserRootPageSurface: View {
                 tabPromotionNamespace: tabPromotionNamespace
             )
         } else {
-            BrowserRootContentSurface(
-                cornerRadius: BrowserChromeLayout.pageCornerRadius,
-                seamWidth: BrowserChromeLayout.pageBrandSeamWidth,
-                frameInsets: BrowserChromeLayout.pageFrameInsets(
-                    adjoinsLeadingSidebar:
-                        model.sidebarPresentation.reservesSidebarWidth
-                ),
-                usesTransparentInnerSurface: usesTransparentInnerSurface,
-                showsFallbackBorder: model.browser.selectedSpace == nil
-            ) {
-                Group {
+            BrowserRootDetailSurface(
+                adjoinsLeadingSidebar:
+                    model.sidebarPresentation.reservesSidebarWidth,
+                usesBorderlessFrame: false,
+                isStartPage: model.browser.selectedTab?.isStartPage == true,
+                hasActivePage: hasActivePage,
+                hasSelectedSpace: model.browser.selectedSpace != nil,
+                handleWebContentInteraction: {
+                    model.chrome.utilityPresentation
+                        .handleInteraction(.webContent)
+                },
+                content: Group {
                     if let space = model.browser.selectedSpace,
                         model.spaceAccess.isLocked(space)
                     {
@@ -100,11 +94,6 @@ struct BrowserRootPageSurface: View {
                                 model.chrome.isCommandPalettePresented
                         )
                     }
-                }
-            }
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    model.chrome.utilityPresentation.handleInteraction(.webContent)
                 }
             )
             // The lone tab on show is a card as far as a drag is concerned: it

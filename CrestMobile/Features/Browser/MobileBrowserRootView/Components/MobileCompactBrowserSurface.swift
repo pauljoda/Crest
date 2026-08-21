@@ -66,7 +66,7 @@ struct MobileCompactBrowserSurface<
         if usesBorderlessFloatingPageFrame {
             page
         } else {
-            MobileRegularDetailSurface(
+            BrowserRootDetailSurface(
                 adjoinsLeadingSidebar: false,
                 usesBorderlessFrame: false,
                 isStartPage: isStartPage,

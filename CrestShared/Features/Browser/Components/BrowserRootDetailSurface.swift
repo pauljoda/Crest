@@ -1,6 +1,18 @@
 import SwiftUI
 
-struct MobileRegularDetailSurface<Content: View>: View {
+/// The single-surface half of a content area's branch: one page inside the root
+/// frame, wherever the branch did not open a row of cards.
+///
+/// It exists so the two shells cannot assemble that frame differently. Every
+/// argument `BrowserRootContentSurface` takes is a decision — the corner radius,
+/// the brand seam, the page insets, whether the interior shows the Space's
+/// atmosphere through it — and all of them belong to the page surface rather
+/// than to a platform. The tap that stands the utility fan down rides along
+/// because it is a property of the surface, not of what is drawn in it.
+///
+/// A borderless frame is the compact shell's placement, where the page runs to
+/// the device edges and there is no frame left to draw.
+struct BrowserRootDetailSurface<Content: View>: View {
     let adjoinsLeadingSidebar: Bool
     let usesBorderlessFrame: Bool
     let isStartPage: Bool

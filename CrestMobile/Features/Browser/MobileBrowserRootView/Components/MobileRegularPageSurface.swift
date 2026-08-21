@@ -4,7 +4,7 @@ import SwiftUI
 /// the single rounded page surface.
 ///
 /// The branch itself is `BrowserPageSurfaceBranchPolicy`'s, shared with macOS. It
-/// is *applied* here rather than inside `MobileRegularDetailSurface` because the
+/// is *applied* here rather than inside `BrowserRootDetailSurface` because the
 /// columns view *replaces* that surface instead of living inside it: it applies
 /// the outer page insets itself and wraps each card in its own
 /// `BrowserRootContentSurface`, so nesting the two would draw a bordered, shadowed
@@ -77,7 +77,7 @@ struct MobileRegularPageSurface: View {
                 placeholderIndex: placeholderIndex
             )
         } else {
-            MobileRegularDetailSurface(
+            BrowserRootDetailSurface(
                 adjoinsLeadingSidebar: adjoinsLeadingSidebar,
                 usesBorderlessFrame: usesCollapsedSidebarBorderlessFrame,
                 isStartPage: model.browser.selectedTab?.isStartPage == true,
