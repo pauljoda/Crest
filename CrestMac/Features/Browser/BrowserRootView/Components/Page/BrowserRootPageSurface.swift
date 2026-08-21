@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// The macOS content area, and the one place that decides between real columns
+/// and the single rounded page surface.
+///
+/// The branch is `BrowserPageSurfaceBranchPolicy`'s rather than this view's, so
+/// iPadOS opens and closes its columns on exactly the same conditions. What is
+/// left here is macOS's half: which surface draws the answer, and what the
+/// pointer may do to it.
 struct BrowserRootPageSurface: View {
     let model: BrowserRootModel
     let tabPromotionNamespace: Namespace.ID
@@ -17,70 +24,41 @@ struct BrowserRootPageSurface: View {
         )
     }
 
-    /// The Space whose cards this window is showing, or `nil` when there are
-    /// none to show. A locked Space presents its access gate instead of pages,
-    /// so it counts as none: the page pool has already dropped every card, and
-    /// nothing may be dropped into a Space that has not been unlocked.
-    private var presentingSpace: BrowserSpace? {
-        guard let space = model.browser.selectedSpace,
-            !model.spaceAccess.isLocked(space)
-        else { return nil }
-        return space
-    }
-
-    /// The slot a drag in flight would drop a card into, for this Space.
-    private var splitInsertIndex: Int? {
-        guard let space = presentingSpace,
-            case .splitInsert(let assignment, let index) =
-                model.browser.sidebarReorderState.resolvedTarget?.kind,
-            assignment.spaceID == space.id
-        else { return nil }
-        return index
-    }
-
-    /// The cards to lay out as columns, or `nil` for the single-surface path.
-    ///
-    /// Two things open the columns layout. A group of more than one member is
-    /// the obvious one. The other is a drag that has reached the content area:
-    /// a window presenting a single tab has to become a one-card row before it
-    /// can show a drop placeholder beside that tab, and it stays one for the
-    /// rest of the drag rather than following the pointer back and forth —
-    /// every flip between the two layouts hands the live web view to a
-    /// different host, and the placeholder coming and going inside the columns
-    /// layout is only a width change.
-    private var splitMembers: [BrowserTab]? {
-        guard presentingSpace != nil else { return nil }
-        let members = model.presentedSplitMembers
-        guard !members.isEmpty,
-            members.count > 1 || isColumnsLayoutHeldOpenByDrag
-        else { return nil }
-        return members
-    }
-
-    /// Whether a drag that has already reached the content area is keeping the
-    /// columns layout open around a single presented tab.
-    private var isColumnsLayoutHeldOpenByDrag: Bool {
-        model.browser.sidebarReorderState.hasEnteredSplitContent
+    private var pageSurfacePresentation: BrowserPageSurfacePresentation {
+        let selectedSpace = model.browser.selectedSpace
+        return BrowserPageSurfaceBranchPolicy.resolve(
+            selectedSpace: selectedSpace,
+            isSelectedSpaceLocked: selectedSpace.map {
+                model.spaceAccess.isLocked($0)
+            } ?? false,
+            selectedTabID: model.browser.selectedTab?.id,
+            hasEnteredSplitContent:
+                model.browser.sidebarReorderState.hasEnteredSplitContent,
+            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget
+        )
     }
 
     var body: some View {
-        surface
+        let presentation = pageSurfacePresentation
+        return surface(presentation)
             .browserSplitContentDropZone(
-                assignment: presentingSpace.map(
-                    BrowserSpaceRuntimeAssignment.init(space:)
-                ),
+                assignment: presentation.dropAssignment,
                 state: model.browser.sidebarReorderState
             )
     }
 
     @ViewBuilder
-    private var surface: some View {
-        if let space = presentingSpace, let members = splitMembers {
+    private func surface(
+        _ presentation: BrowserPageSurfacePresentation
+    ) -> some View {
+        if case .columns(let space, let members, let placeholderIndex) =
+            presentation
+        {
             BrowserSplitPageSurface(
                 model: model,
                 space: space,
                 members: members,
-                placeholderIndex: splitInsertIndex,
+                placeholderIndex: placeholderIndex,
                 tabPromotionNamespace: tabPromotionNamespace
             )
         } else {
@@ -133,18 +111,10 @@ struct BrowserRootPageSurface: View {
             // is what a dropped tab would join, and the side of it the pointer
             // is on is which side of it the new card lands.
             .browserSplitDropCardFrame(
-                tabID: singleCardTabID,
-                assignment: presentingSpace.map(
-                    BrowserSpaceRuntimeAssignment.init(space:)
-                ),
+                tabID: presentation.singleCardTabID,
+                assignment: presentation.dropAssignment,
                 state: model.browser.sidebarReorderState
             )
         }
-    }
-
-    /// The tab the single surface is showing, when there is one to drop beside.
-    private var singleCardTabID: TabID? {
-        guard presentingSpace != nil else { return nil }
-        return model.browser.selectedTab?.id
     }
 }
