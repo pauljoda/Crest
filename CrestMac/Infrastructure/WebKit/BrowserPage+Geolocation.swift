@@ -1,23 +1,8 @@
-import WebKit
-
 extension BrowserPage {
-    func receiveGeolocationMessage(_ message: WKScriptMessage) {
-        if let sourceWebView = message.webView, sourceWebView !== webView {
-            host?.routeGeolocationMessage(message)
-            return
-        }
-        geolocationCoordinator?.receive(message)
-    }
-
+    /// Re-reads the stored main-frame decision after the Site Settings popover
+    /// changes it. Only macOS can edit a live page's permission while that page
+    /// stays on screen, so this has no mobile counterpart.
     func synchronizeGeolocationPermission() {
         geolocationCoordinator?.synchronizeMainFramePermission()
-    }
-
-    func beginGeolocationNavigation() {
-        geolocationCoordinator?.beginNavigation()
-    }
-
-    func removeGeolocationRequests() {
-        geolocationCoordinator?.cancelAll()
     }
 }

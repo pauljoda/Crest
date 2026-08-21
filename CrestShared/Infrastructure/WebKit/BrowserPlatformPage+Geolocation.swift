@@ -1,6 +1,6 @@
 import WebKit
 
-extension MobileBrowserPage {
+extension BrowserPlatformPage {
     func receiveGeolocationMessage(_ message: WKScriptMessage) {
         if let sourceWebView = message.webView, sourceWebView !== webView {
             host?.routeGeolocationMessage(message)
