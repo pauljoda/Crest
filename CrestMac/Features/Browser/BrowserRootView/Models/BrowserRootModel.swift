@@ -5,6 +5,9 @@ import SwiftUI
 @Observable
 @MainActor
 final class BrowserRootModel {
+    /// Waits out one stretch of a sidebar morph. See ``sidebarMorphWait``.
+    typealias SidebarMorphWait = @MainActor (Duration) async throws -> Void
+
     let browser: BrowserStore
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
@@ -24,7 +27,22 @@ final class BrowserRootModel {
     private(set) var isSidebarApproachingDock = false
     private(set) var isSidebarSurfaceHovered = false
     private var sidebarMorphRevision = 0
-    @ObservationIgnored private var sidebarMorphTask: Task<Void, Never>?
+    /// The sidebar morph currently in flight, if any.
+    ///
+    /// Held so a second toggle can cancel the first, and readable so a caller
+    /// that has to see the settled sidebar — a test driving
+    /// ``sidebarMorphWait`` — can suspend until the last step has run instead
+    /// of guessing how long that takes.
+    @ObservationIgnored private(set) var sidebarMorphTask: Task<Void, Never>?
+    /// Waits out one stretch of a sidebar morph.
+    ///
+    /// The phases of a morph are paced to the animations they start, so this
+    /// sleeps. A test that has to observe a phase the sidebar only passes
+    /// through supplies its own instead: it decides when each stretch ends
+    /// rather than trying to look in between two timers a busy machine can run
+    /// down late.
+    @ObservationIgnored
+    var sidebarMorphWait: SidebarMorphWait = { try await Task.sleep(for: $0) }
     var isWindowFocused = true
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Pointer-rate column widths for the presented split, seeded from this
@@ -345,8 +363,8 @@ extension BrowserRootModel {
                 self.isFloatingSidebarPresented = true
                 self.chrome.hideSidebar()
             }
-            try? await Task.sleep(
-                for: CrestMotion.sidebarMorphCompletionDelay
+            try? await self.sidebarMorphWait(
+                CrestMotion.sidebarMorphCompletionDelay
             )
             guard !Task.isCancelled,
                 self.finishSidebarMorph(revision),
@@ -384,8 +402,8 @@ extension BrowserRootModel {
                 ) {
                     self.isSidebarApproachingDock = true
                 }
-                try? await Task.sleep(
-                    for: CrestMotion.sidebarDockApproachCompletionDelay
+                try? await self.sidebarMorphWait(
+                    CrestMotion.sidebarDockApproachCompletionDelay
                 )
                 guard !Task.isCancelled,
                     self.sidebarMorphRevision == revision
@@ -399,8 +417,8 @@ extension BrowserRootModel {
                     self.isFloatingSidebarPresented = false
                     self.chrome.showSidebar()
                 }
-                try? await Task.sleep(
-                    for: CrestMotion.sidebarDockAttachmentCompletionDelay
+                try? await self.sidebarMorphWait(
+                    CrestMotion.sidebarDockAttachmentCompletionDelay
                 )
                 guard !Task.isCancelled,
                     self.sidebarMorphRevision == revision

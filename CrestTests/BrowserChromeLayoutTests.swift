@@ -965,12 +965,25 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     @MainActor
     func testDockingSidebarMakesRoomBeforeAttachingItsCard() async throws {
+        let waits = SidebarMorphWaits()
         let model = BrowserRootPreviewFixture.makeModel(state: .collapsed)
+        model.sidebarMorphWait = waits.wait
 
         model.presentFloatingSidebar(reduceMotion: true)
         model.toggleSidebar(reduceMotion: false)
-        try await Task.sleep(for: .milliseconds(10))
+        let morph = try XCTUnwrap(model.sidebarMorphTask)
 
+        // A dock runs in two stretches, and the morph asks for each one at the
+        // moment it reaches it. Waiting for the first request is what says the
+        // page row has started making room — the phase below is read off the
+        // morph's own progress rather than caught in the gap between two
+        // sleeps, which is what a loaded machine used to close before the test
+        // could look.
+        await waits.waitUntilRequestCount(1)
+        XCTAssertEqual(
+            waits.requestedDurations,
+            [CrestMotion.sidebarDockApproachCompletionDelay]
+        )
         XCTAssertEqual(model.sidebarPresentation, .floating)
         XCTAssertTrue(model.isSidebarApproachingDock)
         XCTAssertTrue(model.isSidebarMorphing)
@@ -982,13 +995,22 @@ final class BrowserChromeLayoutTests: XCTestCase {
             289
         )
 
-        try await Task.sleep(for: .milliseconds(230))
+        waits.elapse(0)
+        await waits.waitUntilRequestCount(2)
 
+        XCTAssertEqual(
+            waits.requestedDurations,
+            [
+                CrestMotion.sidebarDockApproachCompletionDelay,
+                CrestMotion.sidebarDockAttachmentCompletionDelay,
+            ]
+        )
         XCTAssertEqual(model.sidebarPresentation, .docked)
         XCTAssertTrue(model.isSidebarApproachingDock)
         XCTAssertTrue(model.isSidebarMorphing)
 
-        try await Task.sleep(for: .milliseconds(170))
+        waits.elapse(1)
+        await morph.value
 
         XCTAssertEqual(model.sidebarPresentation, .docked)
         XCTAssertFalse(model.isSidebarApproachingDock)
@@ -2467,4 +2489,49 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(expanded.controlsOpacity, 1)
     }
 
+}
+
+/// The stretches one sidebar morph waits out, ended when the test says so.
+///
+/// The docking test used to sleep 10ms and expect to find the sidebar mid
+/// approach. On a saturated machine that sleep overran the 220ms approach it
+/// was meant to land inside, and the phase it asserted had already passed.
+/// Holding the morph's own waits takes the clock out of the test: every phase
+/// is entered because the test ended the stretch before it.
+@MainActor
+private final class SidebarMorphWaits {
+    private(set) var requestedDurations: [Duration] = []
+    private var heldWaits: [CheckedContinuation<Void, any Error>?] = []
+    private var requestWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+
+    func wait(_ duration: Duration) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            requestedDurations.append(duration)
+            heldWaits.append(continuation)
+            announceRequest()
+        }
+    }
+
+    /// Suspends until the morph has asked for its `count`-th stretch.
+    func waitUntilRequestCount(_ count: Int) async {
+        guard requestedDurations.count < count else { return }
+        await withCheckedContinuation { continuation in
+            requestWaiters.append((count, continuation))
+        }
+    }
+
+    /// Ends the stretch at `index`, as if its duration had run out.
+    func elapse(_ index: Int) {
+        heldWaits[index]?.resume()
+        heldWaits[index] = nil
+    }
+
+    private func announceRequest() {
+        let requestedCount = requestedDurations.count
+        let readyWaiters = requestWaiters.filter { $0.count <= requestedCount }
+        requestWaiters.removeAll { $0.count <= requestedCount }
+        for waiter in readyWaiters {
+            waiter.continuation.resume()
+        }
+    }
 }
