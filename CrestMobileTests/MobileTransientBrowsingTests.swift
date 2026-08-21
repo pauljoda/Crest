@@ -367,21 +367,19 @@ final class MobileTransientBrowsingTests: XCTestCase {
             ),
             trigger: .longPress
         )
+        let waits = LinkPeekPressWaits()
         let coordinator = MobileLinkPeekPressCoordinator(
             previewDelay: .milliseconds(10),
-            minimumDuration: .milliseconds(30)
+            minimumDuration: .milliseconds(30),
+            wait: waits.wait
         )
-        let staged = expectation(description: "The held link lifts before Peek commits")
         let opened = expectation(description: "Peek opens while the press remains active")
         var stagedRequest: BrowserPeekRequest?
         var openedRequest: BrowserPeekRequest?
 
         coordinator.begin(
             request: request,
-            stage: { request in
-                stagedRequest = request
-                staged.fulfill()
-            },
+            stage: { stagedRequest = $0 },
             commit: { request in
                 openedRequest = request
                 opened.fulfill()
@@ -389,8 +387,27 @@ final class MobileTransientBrowsingTests: XCTestCase {
             cancelStaged: { _ in XCTFail("A committed press must not cancel") }
         )
 
-        await fulfillment(of: [staged, opened], timeout: 1, enforceOrder: true)
+        // The press asks for the lift wait before it stages anything, so the
+        // order this test claims is read off the press's own steps rather than
+        // off two timers a loaded machine can run down late: nothing is lifted
+        // while the first wait is held, and ending it leaves the press asking
+        // for the wait that would commit.
+        await waits.waitUntilRequestCount(1)
+        XCTAssertNil(stagedRequest)
+        waits.elapse(0)
+        await waits.waitUntilRequestCount(2)
+        XCTAssertEqual(
+            waits.requestedDurations,
+            [.milliseconds(10), .milliseconds(20)]
+        )
         XCTAssertEqual(stagedRequest, request)
+        XCTAssertNil(openedRequest)
+        XCTAssertFalse(coordinator.hasCommittedPress)
+
+        // Committing is unreachable until the second wait ends, so the finger is
+        // still down when Peek opens no matter how long the step itself takes.
+        waits.elapse(1)
+        await fulfillment(of: [opened], timeout: 10)
         XCTAssertEqual(openedRequest, request)
         XCTAssertTrue(coordinator.hasCommittedPress)
 
