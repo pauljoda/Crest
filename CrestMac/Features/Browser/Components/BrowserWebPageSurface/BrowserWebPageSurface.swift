@@ -11,7 +11,7 @@ struct BrowserWebPageSurface: View {
                 .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
 
             if page.isFindPresented {
-                BrowserFindBar(page: page)
+                BrowserFindBar(port: findPort, capabilities: capabilities)
                     .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
                     .frame(
                         maxWidth: .infinity,
@@ -46,5 +46,22 @@ struct BrowserWebPageSurface: View {
                     .zIndex(BrowserWebPageSurfaceMetrics.feedbackZIndex)
             }
         }
+    }
+
+    /// The three questions the find bar asks, bound to this surface's page.
+    private var findPort: BrowserFindPort {
+        BrowserFindPort(
+            find: { query, direction in
+                page.find(query, direction: direction)
+            },
+            matchState: { page.findMatchState },
+            dismiss: page.dismissFind
+        )
+    }
+
+    /// What this shell can do: a pointer rests over the chrome and nothing is
+    /// aimed at with a finger.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
     }
 }

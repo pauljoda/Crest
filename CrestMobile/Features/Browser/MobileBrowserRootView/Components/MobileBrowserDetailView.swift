@@ -168,36 +168,39 @@ struct MobileBrowserDetailView: View {
         }
         .overlay(alignment: isCompact ? .bottom : .topTrailing) {
             if let page, page.isFindPresented {
-                MobileBrowserFindBar(page: page)
-                    .frame(
-                        maxWidth: isCompact
-                            ? .infinity
-                            : MobileBrowserChromeLayout.regularFindMaximumWidth
-                    )
-                    .padding(
-                        .horizontal,
-                        isCompact
-                            ? MobileBrowserChromeLayout.compactFindHorizontalPadding
-                            : MobileBrowserChromeLayout.regularFindHorizontalPadding
-                    )
-                    .padding(
-                        .top,
-                        isCompact ? 0 : MobileBrowserChromeLayout.regularFindTopPadding
-                    )
-                    .padding(
-                        .bottom,
-                        isCompact && showsCompactToolbar
-                            ? compactBottomChromeHeight
-                                + MobileBrowserChromeLayout.compactFindToolbarGap
-                            : MobileBrowserChromeLayout.findFallbackBottomPadding
-                    )
-                    .zIndex(2)
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .move(edge: isCompact ? .bottom : .top)
-                                .combined(with: .opacity)
-                    )
+                BrowserFindBar(
+                    port: findPort(for: page),
+                    capabilities: capabilities
+                )
+                .frame(
+                    maxWidth: isCompact
+                        ? .infinity
+                        : MobileBrowserChromeLayout.regularFindMaximumWidth
+                )
+                .padding(
+                    .horizontal,
+                    isCompact
+                        ? MobileBrowserChromeLayout.compactFindHorizontalPadding
+                        : MobileBrowserChromeLayout.regularFindHorizontalPadding
+                )
+                .padding(
+                    .top,
+                    isCompact ? 0 : MobileBrowserChromeLayout.regularFindTopPadding
+                )
+                .padding(
+                    .bottom,
+                    isCompact && showsCompactToolbar
+                        ? compactBottomChromeHeight
+                            + MobileBrowserChromeLayout.compactFindToolbarGap
+                        : MobileBrowserChromeLayout.findFallbackBottomPadding
+                )
+                .zIndex(2)
+                .transition(
+                    reduceMotion
+                        ? .opacity
+                        : .move(edge: isCompact ? .bottom : .top)
+                            .combined(with: .opacity)
+                )
             }
         }
         .animation(
@@ -214,6 +217,23 @@ struct MobileBrowserDetailView: View {
             ),
             value: compactToolbarIsHidden
         )
+    }
+
+    /// The three questions the find bar asks, bound to the page it is over.
+    private func findPort(for page: MobileBrowserPage) -> BrowserFindPort {
+        BrowserFindPort(
+            find: { query, direction in
+                page.find(query, direction: direction)
+            },
+            matchState: { page.findMatchState },
+            dismiss: page.dismissFind
+        )
+    }
+
+    /// What this shell can do, as far as the find bar is concerned: the bar is
+    /// aimed at with a finger, whichever placement it is drawn in.
+    private var capabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities(supportsTouch: true)
     }
 
     /// The one viewport both paths render with.

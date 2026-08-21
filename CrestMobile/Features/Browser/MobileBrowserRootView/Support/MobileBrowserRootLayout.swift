@@ -23,14 +23,8 @@ enum MobileBrowserChromeLayout {
     /// that has not started yet.
     static let transientSidebarKeepAliveDistance: CGFloat = 10
 
-    static let findItemSpacing: CGFloat = 6
-    static let findLeadingPadding: CGFloat = 14
-    static let findTrailingPadding: CGFloat = 4
-    static let findStatusWidth: CGFloat = 24
-    static let findButtonWidth: CGFloat = 40
-    static let findShadowOpacity = 0.14
-    static let findShadowRadius: CGFloat = 12
-    static let findShadowOffset: CGFloat = 5
+    /// Where the find bar is placed. What it is made of now comes from the
+    /// shared `BrowserFindBarMetrics` touch profile.
     static let regularFindMaximumWidth: CGFloat = 440
     static let compactFindHorizontalPadding: CGFloat = 10
     static let regularFindHorizontalPadding: CGFloat = 12
