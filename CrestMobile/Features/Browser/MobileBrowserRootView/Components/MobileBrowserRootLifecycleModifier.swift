@@ -43,9 +43,13 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
                 await model.prepareBrowser()
             }
             .modifier(
-                MobileBrowserRootSelectionObserver(
+                BrowserRootSelectionObserver(
                     selection: model.selectionSnapshot,
                     lock: model.lockSnapshot(presentation: presentation),
+                    // A Space already locked when the shell appears still needs
+                    // its locked arrangement — the tab viewer rather than a
+                    // page — so the first evaluation counts as a transition.
+                    evaluatesLockInitially: true,
                     selectionChanged: synchronizeSelection,
                     lockChanged: model.synchronizeLockTransition
                 )

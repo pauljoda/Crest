@@ -198,6 +198,16 @@ extension BrowserRootModel {
 // MARK: - Navigation
 
 extension BrowserRootModel {
+    /// What the root observer watches for a selection change. A Space change
+    /// and a tab change want different work, so both halves travel together
+    /// and the transition is read off the pair.
+    var selectionSnapshot: BrowserRootSelectionSnapshot {
+        BrowserRootSelectionSnapshot(
+            tabID: browser.selectedTab?.id,
+            spaceID: browser.session.selectedSpaceID
+        )
+    }
+
     var selectedSpaceIsLocked: Bool {
         guard let space = browser.selectedSpace else { return false }
         return spaceAccess.isLocked(space)

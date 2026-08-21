@@ -36,14 +36,16 @@ struct BrowserRootLifecycleModifier: ViewModifier {
             }
             .modifier(
                 BrowserRootSelectionObserver(
-                    selectedTabID: model.browser.selectedTab?.id,
-                    selectedSpaceID: model.browser.session.selectedSpaceID,
-                    selectedSpaceIsLocked: model.selectedSpaceIsLocked,
-                    tabSelectionChanged:
-                        model.synchronizeAfterSelectionChange,
-                    spaceSelectionChanged:
-                        model.synchronizeAfterSpaceChange,
-                    lockChanged: model.synchronizeAfterLockChange
+                    selection: model.selectionSnapshot,
+                    lock: model.selectedSpaceIsLocked,
+                    // A window with no locked-Space arrangement of its own has
+                    // nothing to do about a lock that is already up when it
+                    // appears; `prepareBrowser` settles that case.
+                    evaluatesLockInitially: false,
+                    selectionChanged: synchronizeSelection,
+                    lockChanged: { _, _ in
+                        model.synchronizeAfterLockChange()
+                    }
                 )
             )
 
@@ -139,5 +141,20 @@ struct BrowserRootLifecycleModifier: ViewModifier {
                     windowID: model.windowState?.id
                 )
             )
+    }
+
+    /// A Space change and a tab change are different work, so the transition is
+    /// split here rather than inside the observer: moving Space resets the
+    /// address field and leaves the page swap to the content selection policy,
+    /// while a tab change performs it.
+    private func synchronizeSelection(
+        _ previous: BrowserRootSelectionSnapshot,
+        _ current: BrowserRootSelectionSnapshot
+    ) {
+        if previous.spaceID != current.spaceID {
+            model.synchronizeAfterSpaceChange()
+        } else if previous.tabID != current.tabID {
+            model.synchronizeAfterSelectionChange()
+        }
     }
 }
