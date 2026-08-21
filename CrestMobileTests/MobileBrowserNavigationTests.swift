@@ -1240,7 +1240,13 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         XCTAssertTrue(page.webView.allowsBackForwardNavigationGestures)
         XCTAssertEqual(
-            MobileBrowserChromeLayout.collapsedSidebarRevealWidth,
+            BrowserCollapsedSidebarRevealMetrics.resolve(
+                BrowserInteractionCapabilities(supportsTouch: true)
+            ),
+            .touch
+        )
+        XCTAssertEqual(
+            BrowserCollapsedSidebarRevealMetrics.touch.width,
             26,
             "Only the extreme leading edge is reserved for revealing the sidebar; the rest of the page remains WebKit navigation territory."
         )

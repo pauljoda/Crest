@@ -11,7 +11,8 @@ struct BrowserRootShellControls: View {
     var body: some View {
         switch model.sidebarPresentation {
         case .collapsed:
-            CollapsedSidebarRevealControl(
+            BrowserCollapsedSidebarRevealControl(
+                capabilities: BrowserInteractionCapabilities(),
                 showSidebar: {
                     model.presentFloatingSidebar(reduceMotion: reduceMotion)
                 }

@@ -7,8 +7,6 @@ enum MobileBrowserChromeLayout {
     static let compactToolbarVerticalPadding: CGFloat = 6
     static let compactToolbarSymbolSize: CGFloat = 16
 
-    static let collapsedSidebarRevealWidth: CGFloat = 26
-    static let collapsedSidebarGestureDistance: CGFloat = 10
     static let collapsedSidebarControlPadding: CGFloat = 10
 
     /// How far a finger travels before it counts as interacting with a

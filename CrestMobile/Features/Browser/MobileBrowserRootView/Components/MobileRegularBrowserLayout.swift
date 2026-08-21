@@ -42,8 +42,13 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
             }
 
             if effectivePresentation == .collapsed {
-                MobileCollapsedSidebarRevealControl(showSidebar: showSidebar)
-                    .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
+                BrowserCollapsedSidebarRevealControl(
+                    capabilities: BrowserInteractionCapabilities(
+                        supportsTouch: true
+                    ),
+                    showSidebar: showSidebar
+                )
+                .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
             } else if effectivePresentation == .docked {
                 BrowserSidebarResizeHandle(
                     width: $preferredSidebarWidth,

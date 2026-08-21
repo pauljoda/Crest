@@ -3,7 +3,6 @@ import CoreGraphics
 enum BrowserRootMetrics {
     static let utilityFanAdditionalEdgeOffset: CGFloat = 12
     static let sidebarResizeHandleOffset: CGFloat = 8
-    static let collapsedSidebarRevealWidth: CGFloat = 14
     static let floatingSidebarBorderWidth: CGFloat = 0.75
     static let floatingSidebarBorderOpacity = 0.2
     static let floatingSidebarShadowRadius: CGFloat = 28
