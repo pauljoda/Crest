@@ -82,7 +82,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
     @ObservationIgnored private var reconciledContentBlockingPolicies: [SpaceID: BrowserContentBlockingPolicy]?
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
-    @ObservationIgnored private var transientLeases: [UUID: WeakMobileBrowserTransientPageLease] = [:]
+    @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
     @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
     /// Where unloaded tabs leave their WebKit session state. Always nil for a
@@ -735,7 +735,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
             userActivity: onUserActivity,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation
         )
-        transientLeases[lease.id] = WeakMobileBrowserTransientPageLease(lease)
+        transientLeases[lease.id] = WeakBrowserTransientPageLease(lease)
         return lease
     }
 
