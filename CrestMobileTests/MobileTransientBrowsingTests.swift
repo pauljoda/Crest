@@ -356,6 +356,98 @@ final class MobileTransientBrowsingTests: XCTestCase {
         XCTAssertFalse(MobileBrowserTransientChromePolicy.rendersHistoryControls)
     }
 
+    func testOnlyTheHandheldCardIsThrownAwayAndTheLargeOneKeepsItsScrim() {
+        XCTAssertTrue(BrowserTransientCardArrangement.sheet.allowsDragDismissal)
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.canvas.allowsDragDismissal
+        )
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.pointer.allowsDragDismissal
+        )
+
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.sheet.allowsScrimDismissal
+        )
+        XCTAssertTrue(
+            BrowserTransientCardArrangement.canvas.allowsScrimDismissal
+        )
+    }
+
+    func testOnlyAClearDownwardThrowCarriesTheTransientCard() {
+        XCTAssertEqual(
+            BrowserTransientDragDismissalPolicy.minimumDragDistance,
+            12
+        )
+        XCTAssertEqual(BrowserTransientDragDismissalPolicy.releaseDistance, 120)
+
+        XCTAssertTrue(
+            BrowserTransientDragDismissalPolicy.carriesCard(
+                translation: CGSize(width: 10, height: 40)
+            )
+        )
+        XCTAssertFalse(
+            BrowserTransientDragDismissalPolicy.carriesCard(
+                translation: CGSize(width: 0, height: -80)
+            ),
+            "Pulling the bar upwards must never begin a dismissal."
+        )
+        XCTAssertFalse(
+            BrowserTransientDragDismissalPolicy.carriesCard(
+                translation: CGSize(width: 90, height: 40)
+            ),
+            "A sideways reach across the bar is not a throw downwards."
+        )
+        XCTAssertFalse(
+            BrowserTransientDragDismissalPolicy.carriesCard(
+                translation: CGSize(width: 40, height: 40)
+            ),
+            "A diagonal with no dominant axis is not a throw downwards."
+        )
+
+        XCTAssertEqual(
+            BrowserTransientDragDismissalPolicy.dismissalOffset(
+                for: CGSize(width: 0, height: 30)
+            ),
+            30
+        )
+        XCTAssertEqual(
+            BrowserTransientDragDismissalPolicy.dismissalOffset(
+                for: CGSize(width: 0, height: -30)
+            ),
+            0,
+            "A drag that wandered back above its start leaves the card home."
+        )
+    }
+
+    func testATransientCardTheDragNeverCarriedIsNeverClosedByTheThrowItPredicts() {
+        XCTAssertTrue(
+            BrowserTransientDragDismissalPolicy.closesCard(
+                predictedEndTranslation: CGSize(width: 0, height: 120.5),
+                wasCarryingCard: true
+            )
+        )
+        XCTAssertFalse(
+            BrowserTransientDragDismissalPolicy.closesCard(
+                predictedEndTranslation: CGSize(width: 0, height: 120),
+                wasCarryingCard: true
+            ),
+            "The release distance is the last throw that is still caught."
+        )
+        XCTAssertFalse(
+            BrowserTransientDragDismissalPolicy.closesCard(
+                predictedEndTranslation: CGSize(width: 0, height: 400),
+                wasCarryingCard: false
+            ),
+            "A flick the card never followed must not dismiss it."
+        )
+        XCTAssertFalse(
+            BrowserTransientDragDismissalPolicy.closesCard(
+                predictedEndTranslation: CGSize(width: 0, height: -400),
+                wasCarryingCard: true
+            )
+        )
+    }
+
     func testLinkPeekPressCommitsBeforeTheFingerIsReleased() async throws {
         let request = BrowserPeekRequest(
             url: try XCTUnwrap(URL(string: "https://webkit.org/peek")),

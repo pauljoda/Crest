@@ -28,9 +28,10 @@ enum BrowserTransientCardArrangement: Equatable, Sendable {
     /// window geometry policy and dismissed with the pointer or a key.
     case pointer
 
-    /// A card filling a handheld screen's safe area, dragged downwards to
-    /// dismiss. Its scrim is under a thumb the whole time, so tapping it must
-    /// not close anything.
+    /// A card filling a handheld screen's safe area, pushed away by dragging
+    /// down from the control bar beneath it. Its scrim is under a thumb the
+    /// whole time, so tapping it must not close anything, and the card itself
+    /// is all web page, so dragging that must not close anything either.
     case sheet
 
     /// A card floating at a fraction of a large touch screen, with room left
@@ -65,6 +66,10 @@ extension BrowserTransientCardArrangement {
 
     var allowsScrimDismissal: Bool { self != .sheet }
 
+    /// Whether the card can be thrown away with a thumb. Only where the scrim
+    /// cannot be tapped, and only from the control bar —
+    /// `BrowserTransientDragDismissalPolicy` says why the page itself is left
+    /// alone.
     var allowsDragDismissal: Bool { self == .sheet }
 }
 

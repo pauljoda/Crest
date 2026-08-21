@@ -4,8 +4,9 @@ import SwiftUI
 ///
 /// One stack serves every arrangement: the arrangement decides which side of
 /// the card the controls sit on, how large the card is allowed to be, and
-/// whether a thumb can push the whole thing away. Everything an arrangement
-/// does not use resolves to identity, so all three walk the same chain.
+/// whether a thumb on the control bar can push the whole thing away. Everything
+/// an arrangement does not use resolves to identity, so all three walk the same
+/// chain.
 struct BrowserTransientCardStack<WebContent: View>: View {
     let state: BrowserTransientPresentationState
     let pageStatus: BrowserTransientPageStatus
@@ -32,13 +33,7 @@ struct BrowserTransientCardStack<WebContent: View>: View {
             }
         }
         .padding(arrangement.contentInsets(safeAreaInsets: safeAreaInsets))
-        .modifier(
-            BrowserTransientDragDismissal(
-                state: state,
-                dismissalOffset: $dismissalOffset,
-                dismiss: actions.dismiss
-            )
-        )
+        .modifier(BrowserTransientDragTransform(state: state))
         .modifier(BrowserTransientContentRegion(region: contentRegion))
     }
 
@@ -56,6 +51,13 @@ struct BrowserTransientCardStack<WebContent: View>: View {
             openInSpace: actions.promote
         )
         .modifier(BrowserTransientControlBarWidth(arrangement: arrangement))
+        .modifier(
+            BrowserTransientDragDismissal(
+                state: state,
+                dismissalOffset: $dismissalOffset,
+                dismiss: actions.dismiss
+            )
+        )
         .opacity(state.controlsOpacity)
         .allowsHitTesting(state.isCardExpanded)
     }
@@ -142,18 +144,42 @@ private struct BrowserTransientControlBarWidth: ViewModifier {
 
 // MARK: - Pushing the card away
 
-/// Lets a thumb carry the card downwards and decides, on release, whether the
-/// throw was meant to close it or to be caught and settled back.
-private struct BrowserTransientDragDismissal: ViewModifier {
+/// Carries the whole assembly — card, controls, and all — as far down the
+/// screen as the drag on its control bar has taken it. Identity wherever the
+/// arrangement has no drag dismissal.
+private struct BrowserTransientDragTransform: ViewModifier {
     let state: BrowserTransientPresentationState
-    @Binding var dismissalOffset: CGFloat
-    let dismiss: () -> Void
 
     func body(content: Content) -> some View {
         if state.arrangement.allowsDragDismissal {
             content
                 .offset(y: state.dragOffset)
                 .scaleEffect(state.dragScale, anchor: .bottom)
+        } else {
+            content
+        }
+    }
+}
+
+/// Lets a thumb on the control bar carry the card downwards and decides, on
+/// release, whether the throw was meant to close it or to be caught and settled
+/// back.
+///
+/// The gesture sits on the bar rather than on the whole assembly because the
+/// card's other half is a live web page that answers downward drags itself;
+/// `BrowserTransientDragDismissalPolicy` carries that reasoning. The bar's own
+/// padding is included in the grab area, so the strip beneath the card is a
+/// target of its full width rather than only where a control is drawn.
+private struct BrowserTransientDragDismissal: ViewModifier {
+    let state: BrowserTransientPresentationState
+    @Binding var dismissalOffset: CGFloat
+    let dismiss: () -> Void
+    @State private var isCarryingCard = false
+
+    func body(content: Content) -> some View {
+        if state.arrangement.allowsDragDismissal {
+            content
+                .contentShape(.rect)
                 .simultaneousGesture(dismissGesture)
         } else {
             content
@@ -161,26 +187,40 @@ private struct BrowserTransientDragDismissal: ViewModifier {
     }
 
     private var dismissGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onChanged { value in
-                guard value.translation.height > 0,
-                    abs(value.translation.height) > abs(value.translation.width)
-                else { return }
-                dismissalOffset = value.translation.height
+        DragGesture(
+            minimumDistance: BrowserTransientDragDismissalPolicy
+                .minimumDragDistance
+        )
+        .onChanged { value in
+            guard
+                BrowserTransientDragDismissalPolicy.carriesCard(
+                    translation: value.translation
+                )
+            else { return }
+            isCarryingCard = true
+            dismissalOffset =
+                BrowserTransientDragDismissalPolicy.dismissalOffset(
+                    for: value.translation
+                )
+        }
+        .onEnded { value in
+            let closesCard = BrowserTransientDragDismissalPolicy.closesCard(
+                predictedEndTranslation: value.predictedEndTranslation,
+                wasCarryingCard: isCarryingCard
+            )
+            isCarryingCard = false
+            guard !closesCard else {
+                dismiss()
+                return
             }
-            .onEnded { value in
-                guard value.predictedEndTranslation.height <= 120 else {
-                    dismiss()
-                    return
-                }
-                withAnimation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.peekDragSettlement,
-                        reduceMotion: state.reduceMotion
-                    )
-                ) {
-                    dismissalOffset = 0
-                }
+            withAnimation(
+                BrowserVisualAccessibilityPolicy.animation(
+                    CrestMotion.peekDragSettlement,
+                    reduceMotion: state.reduceMotion
+                )
+            ) {
+                dismissalOffset = 0
             }
+        }
     }
 }
