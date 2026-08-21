@@ -25,6 +25,7 @@ jobs:
         run: |
           git diff --check
           Scripts/check-public-source.py
+          python3 Scripts/release_note_catalog.py
           Scripts/audit-licenses.py
 
   app:

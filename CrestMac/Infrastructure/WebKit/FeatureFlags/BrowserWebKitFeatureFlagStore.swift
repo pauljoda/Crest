@@ -4,6 +4,17 @@ import WebKit
 @MainActor
 @Observable
 final class BrowserWebKitFeatureFlagStore {
+    nonisolated static let preferPageRenderingUpdatesNear60FPSKey =
+        "PreferPageRenderingUpdatesNear60FPSEnabled"
+    nonisolated static let scrollAnimatorKey = "ScrollAnimatorEnabled"
+
+    private static let performanceDefaults: [String: BrowserWebKitFeatureFlagOverride] = [
+        // This WebKit feature is phrased as a 60 FPS preference, so disabling
+        // it lets page rendering follow a higher-refresh-rate display.
+        preferPageRenderingUpdatesNear60FPSKey: .disabled,
+        scrollAnimatorKey: .enabled,
+    ]
+
     static private(set) var active = BrowserWebKitFeatureFlagStore(
         registry: BrowserWebKitFeatureFlagRegistry(),
         persistence: InMemoryBrowserWebKitFeatureFlagPersistence()
@@ -14,6 +25,9 @@ final class BrowserWebKitFeatureFlagStore {
 
     private(set) var overrides: [String: BrowserWebKitFeatureFlagOverride]
     private(set) var requiresRestart = false
+
+    @ObservationIgnored
+    private let crestDefaultOverrides: [String: BrowserWebKitFeatureFlagOverride]
 
     @ObservationIgnored
     private let registry: any BrowserWebKitFeatureFlagRegistryProviding
@@ -28,7 +42,13 @@ final class BrowserWebKitFeatureFlagStore {
         self.persistence = persistence
         features = registry.features
         availabilityFailure = registry.availabilityFailure
-        overrides = persistence.load()
+        let availableKeys = Set(features.map(\.key))
+        crestDefaultOverrides = Self.performanceDefaults.filter {
+            availableKeys.contains($0.key)
+        }
+        overrides = crestDefaultOverrides.merging(persistence.load()) {
+            _, persistedOverride in persistedOverride
+        }
     }
 
     static func configureForLaunch(usesIsolatedLaunch: Bool) {
@@ -41,12 +61,49 @@ final class BrowserWebKitFeatureFlagStore {
     }
 
     var hasOverrides: Bool {
-        !overrides.isEmpty
+        overrides != crestDefaultOverrides
     }
 
     var activeOverrideCount: Int {
         let availableKeys = Set(features.map(\.key))
-        return overrides.keys.lazy.filter(availableKeys.contains).count
+        return overrides.lazy.filter { key, override in
+            availableKeys.contains(key)
+                && self.crestDefaultOverrides[key] != override
+        }.count
+    }
+
+    var canConfigureAllow120FPS: Bool {
+        crestDefaultOverrides[
+            Self.preferPageRenderingUpdatesNear60FPSKey
+        ] != nil
+    }
+
+    var canConfigureSmoothScroll: Bool {
+        crestDefaultOverrides[Self.scrollAnimatorKey] != nil
+    }
+
+    var allows120FPS: Bool {
+        get {
+            overrides[
+                Self.preferPageRenderingUpdatesNear60FPSKey
+            ] == .disabled
+        }
+        set {
+            setPerformanceOverride(
+                newValue ? .disabled : .enabled,
+                forKey: Self.preferPageRenderingUpdatesNear60FPSKey
+            )
+        }
+    }
+
+    var usesSmoothScroll: Bool {
+        get { overrides[Self.scrollAnimatorKey] == .enabled }
+        set {
+            setPerformanceOverride(
+                newValue ? .enabled : .disabled,
+                forKey: Self.scrollAnimatorKey
+            )
+        }
     }
 
     var availableStatuses: [BrowserWebKitFeatureStatus] {
@@ -69,14 +126,15 @@ final class BrowserWebKitFeatureFlagStore {
         _ override: BrowserWebKitFeatureFlagOverride?,
         for flag: BrowserWebKitFeatureFlag
     ) {
-        guard overrides[flag.key] != override else { return }
-        overrides[flag.key] = override
+        let resolvedOverride = override ?? crestDefaultOverrides[flag.key]
+        guard overrides[flag.key] != resolvedOverride else { return }
+        overrides[flag.key] = resolvedOverride
         persistChange()
     }
 
     func resetAll() {
-        guard !overrides.isEmpty else { return }
-        overrides = [:]
+        guard overrides != crestDefaultOverrides else { return }
+        overrides = crestDefaultOverrides
         persistChange()
     }
 
@@ -87,5 +145,19 @@ final class BrowserWebKitFeatureFlagStore {
     private func persistChange() {
         persistence.save(overrides)
         requiresRestart = true
+    }
+
+    private func setPerformanceOverride(
+        _ override: BrowserWebKitFeatureFlagOverride,
+        forKey key: String
+    ) {
+        guard
+            crestDefaultOverrides[key] != nil,
+            overrides[key] != override
+        else {
+            return
+        }
+        overrides[key] = override
+        persistChange()
     }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate user-facing release notes directly from Crest's commit history."""
+"""Generate user-facing release notes from Crest's explicit change catalog."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ import pathlib
 import re
 import subprocess
 import urllib.parse
+
+from release_note_catalog import CATALOG_PATH, ReleaseNoteEntry, parse_catalog
 
 
 CHANNEL_DESCRIPTIONS = {
@@ -113,6 +115,55 @@ def git(repository_root: pathlib.Path, *arguments: str) -> str:
     return result.stdout.strip()
 
 
+def git_result(
+    repository_root: pathlib.Path,
+    *arguments: str,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(repository_root), *arguments],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def is_ancestor(
+    repository_root: pathlib.Path,
+    possible_ancestor: str,
+    current_commit: str,
+) -> bool:
+    result = git_result(
+        repository_root,
+        "merge-base",
+        "--is-ancestor",
+        possible_ancestor,
+        current_commit,
+    )
+    if result.returncode in (0, 1):
+        return result.returncode == 0
+    result.check_returncode()
+    return False
+
+
+def tree_equivalent_ancestor(
+    repository_root: pathlib.Path,
+    previous_commit: str,
+    current_commit: str,
+) -> str | None:
+    previous_tree = git(repository_root, "rev-parse", f"{previous_commit}^{{tree}}")
+    history = git(
+        repository_root,
+        "log",
+        "--format=%H%x09%T",
+        current_commit,
+    ).splitlines()
+    for history_entry in history:
+        commit, tree = history_entry.split("\t", maxsplit=1)
+        if tree == previous_tree:
+            return commit
+    return None
+
+
 def commit_range(
     repository_root: pathlib.Path,
     current_ref: str,
@@ -123,28 +174,62 @@ def commit_range(
         return current_commit, [current_commit]
 
     previous_commit = git(repository_root, "rev-parse", f"{previous_ref}^{{commit}}")
-    subprocess.run(
-        [
-            "git",
-            "-C",
-            str(repository_root),
-            "merge-base",
-            "--is-ancestor",
-            previous_commit,
-            current_commit,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    if is_ancestor(repository_root, previous_commit, current_commit):
+        revision_range = f"{previous_commit}..{current_commit}"
+        range_options: tuple[str, ...] = ()
+    elif equivalent_commit := tree_equivalent_ancestor(
+        repository_root,
+        previous_commit,
+        current_commit,
+    ):
+        revision_range = f"{equivalent_commit}..{current_commit}"
+        range_options = ()
+    else:
+        revision_range = f"{previous_commit}...{current_commit}"
+        range_options = ("--right-only", "--cherry-pick")
+
     commits = git(
         repository_root,
         "rev-list",
         "--reverse",
         "--no-merges",
-        f"{previous_commit}..{current_commit}",
+        *range_options,
+        revision_range,
     ).splitlines()
     return current_commit, commits
+
+
+def catalog_at_ref(
+    repository_root: pathlib.Path,
+    reference: str,
+) -> dict[str, ReleaseNoteEntry] | None:
+    result = git_result(repository_root, "show", f"{reference}:{CATALOG_PATH}")
+    if result.returncode != 0:
+        return None
+    return parse_catalog(result.stdout, f"{reference}:{CATALOG_PATH}")
+
+
+def catalog_changes(
+    repository_root: pathlib.Path,
+    current_commit: str,
+    previous_ref: str | None,
+) -> list[ReleaseNoteChange] | None:
+    current_entries = catalog_at_ref(repository_root, current_commit)
+    if current_entries is None:
+        return None
+
+    if previous_ref is None:
+        previous_entries = catalog_at_ref(repository_root, f"{current_commit}^")
+    else:
+        previous_entries = catalog_at_ref(repository_root, previous_ref)
+    if previous_entries is None:
+        return None
+
+    return [
+        ReleaseNoteChange(entry.category, entry.message)
+        for identifier, entry in current_entries.items()
+        if identifier not in previous_entries and entry.category != "internal"
+    ]
 
 
 def release_note_change(subject: str) -> ReleaseNoteChange | None:
@@ -203,29 +288,38 @@ def release_notes(
     previous_ref: str | None,
     asset_name: str,
 ) -> str:
-    current_commit, commits = commit_range(repository_root, current_ref, previous_ref)
+    current_commit = git(repository_root, "rev-parse", f"{current_ref}^{{commit}}")
+    changes = catalog_changes(repository_root, current_commit, previous_ref)
+    if changes is None:
+        _, commits = commit_range(repository_root, current_commit, previous_ref)
+        changes = [
+            change
+            for commit in commits
+            if (
+                change := release_note_change(
+                    git(repository_root, "show", "-s", "--format=%s", commit)
+                )
+            )
+        ]
+
     repository_url = f"{server_url.rstrip('/')}/{repository}"
     download_url = (
         f"{repository_url}/releases/download/"
         f"{urllib.parse.quote(release_tag, safe='.-_')}/"
         f"{urllib.parse.quote(asset_name, safe='.-_')}"
     )
-    changes = [
-        change
-        for commit in commits
-        if (
-            change := release_note_change(
-                git(repository_root, "show", "-s", "--format=%s", commit)
-            )
-        )
-    ]
     visible_changes = changes[-MAX_HIGHLIGHTS:]
-    details_url = (
-        f"{repository_url}/compare/{previous_ref}...{current_commit}"
-        if previous_ref is not None
-        else f"{repository_url}/commit/{current_commit}"
+    has_linear_history = previous_ref is not None and is_ancestor(
+        repository_root,
+        git(repository_root, "rev-parse", f"{previous_ref}^{{commit}}"),
+        current_commit,
     )
-    details_label = "View all changes" if previous_ref is not None else "View source"
+    if has_linear_history:
+        details_url = f"{repository_url}/compare/{previous_ref}...{current_commit}"
+        details_label = "View all changes"
+    else:
+        details_url = f"{repository_url}/commit/{current_commit}"
+        details_label = "View source"
 
     lines = ["## Highlights", ""]
     if len(changes) > len(visible_changes):

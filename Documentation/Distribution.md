@@ -51,14 +51,22 @@ notarizing, creating a release, or advancing an appcast. After the first
 successful rolling nightly publication, the workflow removes the superseded
 date-stamped nightly releases and tags.
 
-Release notes come directly from Git history, but present it as product copy
-rather than a raw log. The generator groups user-facing commits into New,
-Improved, and Fixed highlights; removes conventional-commit prefixes, pull
-request and tracker references, merge commits, internal release/CI work,
-bodies, and per-commit hashes; and limits long ranges to the 12 most recent
-highlights. A single comparison link keeps the complete history available. The
-same concise notes appear on GitHub and as structured Markdown in Sparkle's
-update interface.
+Release notes come from the explicit `Documentation/ReleaseNotes.json` catalog.
+Every product or architecture commit adds a stable entry ID, category, and
+purpose-written message. The generator compares the catalog stored in the last
+signed publication with the current catalog, groups new public entries into
+New, Improved, and Fixed highlights, omits `internal` entries, and limits long
+ranges to the 12 most recent highlights. Because entry identity is independent
+of commit hashes, rebases and other history rewrites do not repeat published
+copy or block a nightly. The same concise notes appear on GitHub and as
+structured Markdown in Sparkle's update interface.
+
+For a channel whose last publication predates the catalog, the generator uses a
+one-time compatibility path through Git history. Linear histories use the
+ordinary commit range; rewritten histories first locate an exact tree-equivalent
+published boundary and otherwise use patch equivalence to omit recreated
+commits. Once that channel publishes a catalog-bearing build, later notes depend
+only on catalog snapshots.
 
 ## Publication order
 
@@ -110,7 +118,8 @@ the old signing path retained long enough to update installed copies safely.
 
 Before publishing a stable tag:
 
-1. confirm `CHANGELOG.md` and the marketing version are ready;
+1. confirm `CHANGELOG.md`, `Documentation/ReleaseNotes.json`, and the marketing
+   version are ready;
 2. confirm the main-branch validation and Pages workflows are green;
 3. confirm the production environment contains all seven release secrets;
 4. create and push the exact version tag;

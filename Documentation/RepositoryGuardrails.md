@@ -36,6 +36,25 @@ Changing release lines uses `Scripts/set-version.sh --release X.Y.Z` and remains
 an explicit release-and-tag decision. Neither path changes
 `CURRENT_PROJECT_VERSION`; Xcode Cloud owns distributed build numbers.
 
+## Explicit release-note entries
+
+`Documentation/ReleaseNotes.json` is the machine-readable source for GitHub and
+Sparkle release copy. Its `entries` object maps a stable lowercase kebab-case ID
+to exactly one category and message. `new`, `improved`, and `fixed` entries are
+public; `internal` records a commit that should not be announced. Messages state
+the user outcome directly and do not inherit commit wording.
+
+The IDs, rather than commit hashes, survive rebases and history rewrites. Never
+reuse, reorder, or delete an ID; append new entries so catalog order remains
+release order. Existing copy may be refined for a channel that has not published
+it yet, but every product or architecture commit adds at least one new entry.
+`Scripts/check-version.sh --fix-commit` validates the staged catalog and rejects
+a patch bump without a new entry. Validate the working catalog directly with:
+
+```sh
+python3 Scripts/release_note_catalog.py
+```
+
 ## Architecture and Xcode 27 compatibility
 
 Run:
@@ -100,6 +119,8 @@ python3 -m unittest \
   Scripts.Tests.test_repository_guardrails \
   Scripts.Tests.test_direct_distribution_contract \
   Scripts.Tests.test_public_source_contract \
+  Scripts.Tests.test_release_note_catalog \
+  Scripts.Tests.test_release_notes \
   Scripts.Tests.test_vertical_feature_contract \
   Scripts.Tests.test_version_contract \
   Scripts.Tests.test_product_site

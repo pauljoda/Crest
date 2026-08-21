@@ -109,6 +109,104 @@ final class BrowserWebKitFeatureFlagTests: XCTestCase {
         XCTAssertTrue(persistence.overrides.isEmpty)
     }
 
+    func testPerformanceFlagsDefaultOnAndApplyTheirInverseWebKitStates() {
+        let registry = StubBrowserWebKitFeatureFlagRegistry(
+            features: [.preferNear60FPS, .scrollAnimator]
+        )
+        let persistence = InMemoryBrowserWebKitFeatureFlagPersistence()
+        let store = BrowserWebKitFeatureFlagStore(
+            registry: registry,
+            persistence: persistence
+        )
+
+        XCTAssertTrue(store.allows120FPS)
+        XCTAssertTrue(store.usesSmoothScroll)
+        XCTAssertFalse(store.hasOverrides)
+        XCTAssertEqual(store.activeOverrideCount, 0)
+
+        store.apply(to: WKPreferences())
+
+        XCTAssertEqual(
+            registry.appliedOverrides,
+            [
+                BrowserWebKitFeatureFlagStore
+                    .preferPageRenderingUpdatesNear60FPSKey: .disabled,
+                BrowserWebKitFeatureFlagStore.scrollAnimatorKey: .enabled,
+            ]
+        )
+    }
+
+    func testPerformanceSettingsPersistAndRawOverridesStayInSync() {
+        let registry = StubBrowserWebKitFeatureFlagRegistry(
+            features: [.preferNear60FPS, .scrollAnimator]
+        )
+        let persistence = InMemoryBrowserWebKitFeatureFlagPersistence()
+        let store = BrowserWebKitFeatureFlagStore(
+            registry: registry,
+            persistence: persistence
+        )
+
+        store.allows120FPS = false
+        store.usesSmoothScroll = false
+
+        XCTAssertFalse(store.allows120FPS)
+        XCTAssertFalse(store.usesSmoothScroll)
+        XCTAssertEqual(store.activeOverrideCount, 2)
+        XCTAssertEqual(
+            persistence.overrides,
+            [
+                BrowserWebKitFeatureFlagStore
+                    .preferPageRenderingUpdatesNear60FPSKey: .enabled,
+                BrowserWebKitFeatureFlagStore.scrollAnimatorKey: .disabled,
+            ]
+        )
+
+        store.setOverride(.disabled, for: .preferNear60FPS)
+        store.setOverride(.enabled, for: .scrollAnimator)
+
+        XCTAssertTrue(store.allows120FPS)
+        XCTAssertTrue(store.usesSmoothScroll)
+        XCTAssertFalse(store.hasOverrides)
+
+        store.setOverride(nil, for: .preferNear60FPS)
+        store.setOverride(nil, for: .scrollAnimator)
+
+        XCTAssertTrue(store.allows120FPS)
+        XCTAssertTrue(store.usesSmoothScroll)
+    }
+
+    func testResetAllRestoresCrestPerformanceDefaults() {
+        let registry = StubBrowserWebKitFeatureFlagRegistry(
+            features: [.preferNear60FPS, .scrollAnimator, .preview]
+        )
+        let persistence = InMemoryBrowserWebKitFeatureFlagPersistence(
+            overrides: [
+                BrowserWebKitFeatureFlagStore
+                    .preferPageRenderingUpdatesNear60FPSKey: .enabled,
+                BrowserWebKitFeatureFlagStore.scrollAnimatorKey: .disabled,
+                BrowserWebKitFeatureFlag.preview.key: .enabled,
+            ]
+        )
+        let store = BrowserWebKitFeatureFlagStore(
+            registry: registry,
+            persistence: persistence
+        )
+
+        store.resetAll()
+
+        XCTAssertTrue(store.allows120FPS)
+        XCTAssertTrue(store.usesSmoothScroll)
+        XCTAssertFalse(store.hasOverrides)
+        XCTAssertEqual(
+            persistence.overrides,
+            [
+                BrowserWebKitFeatureFlagStore
+                    .preferPageRenderingUpdatesNear60FPSKey: .disabled,
+                BrowserWebKitFeatureFlagStore.scrollAnimatorKey: .enabled,
+            ]
+        )
+    }
+
     func testFilterCombinesSearchStatusCategoryAndChangedState() {
         let flags: [BrowserWebKitFeatureFlag] = [
             .preview, .stable, .media,
@@ -185,6 +283,25 @@ extension BrowserWebKitFeatureFlag {
         details: "Enable media testing",
         status: BrowserWebKitFeatureStatus(rawValue: 4),
         category: BrowserWebKitFeatureCategory(rawValue: 7),
+        defaultValue: false
+    )
+
+    fileprivate static let preferNear60FPS = BrowserWebKitFeatureFlag(
+        key: BrowserWebKitFeatureFlagStore
+            .preferPageRenderingUpdatesNear60FPSKey,
+        name: "Prefer Page Rendering Updates Near 60 FPS",
+        details: "Prefer page rendering updates near 60 FPS",
+        status: BrowserWebKitFeatureStatus(rawValue: 6),
+        category: BrowserWebKitFeatureCategory(rawValue: 3),
+        defaultValue: true
+    )
+
+    fileprivate static let scrollAnimator = BrowserWebKitFeatureFlag(
+        key: BrowserWebKitFeatureFlagStore.scrollAnimatorKey,
+        name: "Scroll Animator",
+        details: "Use the WebKit scroll animator",
+        status: BrowserWebKitFeatureStatus(rawValue: 6),
+        category: BrowserWebKitFeatureCategory(rawValue: 3),
         defaultValue: false
     )
 }

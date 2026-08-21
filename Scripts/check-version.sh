@@ -25,9 +25,12 @@ project_file="$repository_root/project.yml"
 project_bundle="$repository_root/Crest.xcodeproj"
 mac_plist="$repository_root/CrestMac/Configuration/Crest-Info.plist"
 mobile_plist="$repository_root/CrestMobile/Configuration/CrestMobile-Info.plist"
+release_note_catalog_check="$script_root/Scripts/release_note_catalog.py"
 
 [[ -f "$version_file" ]] || fail "Config/Version.xcconfig is missing."
 [[ -f "$project_file" ]] || fail "project.yml is missing."
+[[ -f "$release_note_catalog_check" ]] \
+  || fail "Scripts/release_note_catalog.py is missing."
 
 setting_count="$({ grep -Evc '^[[:space:]]*(//.*|#.*)?$' "$version_file" || true; } | tr -d '[:space:]')"
 [[ "$setting_count" == "1" ]] \
@@ -70,6 +73,12 @@ if [[ "$mode" == "--fix-commit" ]]; then
     || fail "A fix commit must increment the patch version without changing the release line."
   (( staged_parts[3] > head_parts[3] )) \
     || fail "A fix commit must increment the patch version."
+
+  python3 "$release_note_catalog_check" \
+    --repository-root "$repository_root" \
+    --require-staged-entry
+else
+  python3 "$release_note_catalog_check" --repository-root "$repository_root"
 fi
 
 for plist in "$mac_plist" "$mobile_plist"; do

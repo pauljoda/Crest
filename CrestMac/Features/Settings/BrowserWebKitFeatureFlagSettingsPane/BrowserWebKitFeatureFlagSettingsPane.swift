@@ -28,13 +28,15 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
             }
         } message: {
             Text(
-                "Crest will stop overriding WebKit and use the defaults supplied by macOS."
+                "Crest will restore its performance defaults and stop overriding every other WebKit feature."
             )
         }
     }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+            BrowserWebKitPerformanceSettings(store: store)
+
             Text(
                 "Crest reads this catalog from the WebKit framework installed on this Mac. Feature availability and defaults may change when macOS updates."
             )
@@ -80,5 +82,61 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
         let visibleCount = groups.reduce(0) { $0 + $1.flags.count }
         let overrideCount = store.activeOverrideCount
         return "Showing \(visibleCount) of \(store.features.count) flags · \(overrideCount) changed"
+    }
+}
+
+private struct BrowserWebKitPerformanceSettings: View {
+    @Bindable var store: BrowserWebKitFeatureFlagStore
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+                if store.canConfigureAllow120FPS {
+                    performanceToggle(
+                        "Allow 120 FPS",
+                        description:
+                            "Let pages use the full refresh rate on ProMotion and other high-refresh-rate displays.",
+                        isOn: $store.allows120FPS,
+                        identifier: "webkit-performance-allow-120-fps"
+                    )
+                }
+
+                if store.canConfigureAllow120FPS
+                    && store.canConfigureSmoothScroll
+                {
+                    Divider()
+                }
+
+                if store.canConfigureSmoothScroll {
+                    performanceToggle(
+                        "Smooth Scroll",
+                        description:
+                            "Use WebKit’s scroll animator for supported scrolling on macOS.",
+                        isOn: $store.usesSmoothScroll,
+                        identifier: "webkit-performance-smooth-scroll"
+                    )
+                }
+            }
+            .padding(CrestSpacing.extraSmall)
+        } label: {
+            Label("Performance", systemImage: "gauge.with.dots.needle.67percent")
+        }
+        .accessibilityIdentifier("webkit-performance-settings")
+    }
+
+    private func performanceToggle(
+        _ title: LocalizedStringKey,
+        description: LocalizedStringKey,
+        isOn: Binding<Bool>,
+        identifier: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+            Toggle(title, isOn: isOn)
+                .accessibilityIdentifier(identifier)
+            Text(description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

@@ -71,12 +71,21 @@ Changing the major or minor release line is a separate release decision. Use
 been explicitly approved. Xcode Cloud continues to own distributed integer
 build numbers while the repository keeps build `1` as its local fallback.
 
-Every user-visible or architecture-significant work commit updates the
-`Unreleased` section of `CHANGELOG.md` in plain language. Keep commits focused
-and use a Conventional Commit subject such as `refactor(settings): adopt native
-split navigation`. A fix commit includes its patch bump and changelog entry in
-that same commit. Release commits freeze `Unreleased` under an ISO date and
-receive an annotated `vX.Y.Z` tag. Do not invent historical release tags.
+Every user-visible or architecture-significant work commit adds a new entry to
+`Documentation/ReleaseNotes.json`. The stable lowercase kebab-case ID is the
+entry's identity across rebases and history rewrites; never reuse, reorder, or
+delete one, and append new entries at the end. Choose `new`, `improved`, or
+`fixed` for public notes and write the message as a concise user-facing outcome.
+Use `internal` to record architecture, release, or tooling work that should not
+appear to users. The fix-commit check requires the new staged entry alongside
+the patch bump.
+
+Keep commits focused and use a Conventional Commit subject such as
+`refactor(settings): adopt native split navigation`. Commit subjects remain
+useful development history, but rolling release copy comes from the explicit
+catalog. `CHANGELOG.md` remains the curated stable-release history. Release
+commits freeze its `Unreleased` section under an ISO date and receive an
+annotated `vX.Y.Z` tag. Do not invent historical release tags.
 
 ## Developer Certificate of Origin
 

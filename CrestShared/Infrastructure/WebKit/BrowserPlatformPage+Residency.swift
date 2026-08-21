@@ -1,6 +1,6 @@
 import WebKit
 
-extension BrowserPage {
+extension BrowserPlatformPage {
     func residencyDecision(isSelected: Bool) async -> BrowserPageResidencyDecision {
         let playbackState = await withCheckedContinuation { continuation in
             webView.requestMediaPlaybackState { state in

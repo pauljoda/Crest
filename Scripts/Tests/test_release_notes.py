@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import pathlib
 import subprocess
 import tempfile
@@ -38,6 +39,199 @@ class ReleaseNotesTests(unittest.TestCase):
             arguments.extend(["-m", body])
         self.run_git(repository, *arguments)
         return self.run_git(repository, "rev-parse", "HEAD")
+
+    def write_catalog(
+        self,
+        repository: pathlib.Path,
+        entries: dict[str, dict[str, str]],
+    ) -> None:
+        catalog = repository / "Documentation" / "ReleaseNotes.json"
+        catalog.parent.mkdir(parents=True, exist_ok=True)
+        catalog.write_text(
+            json.dumps(
+                {"schemaVersion": 1, "entries": entries},
+                indent=2,
+            )
+            + "\n"
+        )
+        self.run_git(repository, "add", str(catalog.relative_to(repository)))
+
+    def generate_notes(
+        self,
+        repository: pathlib.Path,
+        current_commit: str,
+        previous_commit: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        arguments = [
+            "python3",
+            str(RELEASE_NOTES_SCRIPT),
+            "--repository-root",
+            str(repository),
+            "--repository",
+            "pauljoda/Crest",
+            "--channel",
+            "nightly",
+            "--current-ref",
+            current_commit,
+            "--asset-name",
+            "Installer-Crest-nightly-test-arm64.dmg",
+        ]
+        if previous_commit is not None:
+            arguments.extend(["--previous-ref", previous_commit])
+        return subprocess.run(
+            arguments,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_catalog_controls_public_categories_and_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "tests@crestbrowser.com")
+
+            entries = {
+                "existing-change": {
+                    "category": "fixed",
+                    "message": "Keep existing behavior reliable",
+                }
+            }
+            self.write_catalog(repository, entries)
+            previous_commit = self.commit(repository, "fix: misleading old subject")
+
+            entries |= {
+                "profiles": {
+                    "category": "new",
+                    "message": "Create separate browsing profiles for different contexts",
+                },
+                "tab-switching": {
+                    "category": "improved",
+                    "message": "Switch between large tab collections more smoothly",
+                },
+                "navigation": {
+                    "category": "fixed",
+                    "message": "Keep navigation controls in sync with the active page",
+                },
+                "release-plumbing": {
+                    "category": "internal",
+                    "message": "Adopt the structured release-note catalog",
+                },
+            }
+            self.write_catalog(repository, entries)
+            current_commit = self.commit(repository, "chore: wording that must stay private")
+
+            result = self.generate_notes(repository, current_commit, previous_commit)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("### New", result.stdout)
+            self.assertIn("- Create separate browsing profiles for different contexts", result.stdout)
+            self.assertIn("### Improved", result.stdout)
+            self.assertIn("- Switch between large tab collections more smoothly", result.stdout)
+            self.assertIn("### Fixed", result.stdout)
+            self.assertIn("- Keep navigation controls in sync with the active page", result.stdout)
+            self.assertNotIn("Keep existing behavior reliable", result.stdout)
+            self.assertNotIn("structured release-note catalog", result.stdout)
+            self.assertNotIn("wording that must stay private", result.stdout)
+
+    def test_catalog_diff_survives_rewritten_commit_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "tests@crestbrowser.com")
+
+            baseline_entries = {
+                "existing-change": {
+                    "category": "fixed",
+                    "message": "Keep existing behavior reliable",
+                }
+            }
+            self.write_catalog(repository, baseline_entries)
+            base_commit = self.commit(repository, "Repository baseline")
+
+            published_entries = baseline_entries | {
+                "published-change": {
+                    "category": "new",
+                    "message": "Open a second page beside the first",
+                }
+            }
+            self.write_catalog(repository, published_entries)
+            previous_commit = self.commit(repository, "feat: old-history split view")
+
+            self.run_git(repository, "checkout", "-b", "rewritten", base_commit)
+            self.write_catalog(repository, published_entries)
+            self.commit(repository, "feat: rewritten split view")
+
+            current_entries = published_entries | {
+                "current-change": {
+                    "category": "fixed",
+                    "message": "Keep dragged tabs attached to the pointer",
+                }
+            }
+            self.write_catalog(repository, current_entries)
+            current_commit = self.commit(repository, "fix: current drag behavior")
+
+            result = self.generate_notes(repository, current_commit, previous_commit)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("- Keep dragged tabs attached to the pointer", result.stdout)
+            self.assertNotIn("Open a second page beside the first", result.stdout)
+            self.assertNotIn("old-history split view", result.stdout)
+
+    def test_legacy_fallback_ignores_patch_equivalent_rewritten_commits(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "tests@crestbrowser.com")
+
+            base_commit = self.commit(repository, "Repository baseline")
+            previous_commit = self.commit(repository, "fix: keep tabs visible")
+
+            self.run_git(repository, "checkout", "-b", "rewritten", base_commit)
+            self.commit(
+                repository,
+                "fix: keep tabs visible",
+                "Equivalent change recreated by a history rewrite.",
+            )
+            current_commit = self.commit(repository, "feat: add vertical tabs")
+
+            result = self.generate_notes(repository, current_commit, previous_commit)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("- Add vertical tabs", result.stdout)
+            self.assertNotIn("Keep tabs visible", result.stdout)
+
+    def test_legacy_fallback_prefers_an_exact_tree_equivalent_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "tests@crestbrowser.com")
+
+            base_commit = self.commit(repository, "Repository baseline")
+            self.commit(repository, "fix: first published change")
+            previous_commit = self.commit(repository, "fix: second published change")
+            published_tree = self.run_git(repository, "show", "HEAD:tracked.txt")
+
+            self.run_git(repository, "checkout", "-b", "rewritten", base_commit)
+            (repository / "tracked.txt").write_text(f"{published_tree}\n")
+            self.run_git(repository, "add", "tracked.txt")
+            self.run_git(repository, "commit", "-m", "Combine published changes")
+            rewritten_boundary = self.run_git(repository, "rev-parse", "HEAD")
+            self.assertEqual(
+                self.run_git(repository, "rev-parse", f"{previous_commit}^{{tree}}"),
+                self.run_git(repository, "rev-parse", f"{rewritten_boundary}^{{tree}}"),
+            )
+            current_commit = self.commit(repository, "feat: add tab groups")
+
+            result = self.generate_notes(repository, current_commit, previous_commit)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("- Add tab groups", result.stdout)
+            self.assertNotIn("Combine published changes", result.stdout)
 
     def test_notes_group_user_facing_changes_and_hide_internal_commit_noise(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

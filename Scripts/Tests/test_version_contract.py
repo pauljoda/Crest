@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import shutil
@@ -25,6 +26,7 @@ class VersionContractTests(unittest.TestCase):
             "Config/Version.xcconfig",
             "CrestMac/Configuration/Crest-Info.plist",
             "CrestMobile/Configuration/CrestMobile-Info.plist",
+            "Documentation/ReleaseNotes.json",
             "project.yml",
         ):
             source = REPOSITORY_ROOT / relative_path
@@ -99,6 +101,20 @@ class VersionContractTests(unittest.TestCase):
     def stage_version(self) -> None:
         subprocess.run(
             ["git", "add", "Config/Version.xcconfig"],
+            cwd=self.fixture_root,
+            check=True,
+        )
+
+    def stage_release_note(self, identifier: str = "fixture-change") -> None:
+        catalog_path = self.fixture_root / "Documentation" / "ReleaseNotes.json"
+        catalog = json.loads(catalog_path.read_text())
+        catalog["entries"][identifier] = {
+            "category": "fixed",
+            "message": "Keep the fixture behavior reliable",
+        }
+        catalog_path.write_text(json.dumps(catalog, indent=2) + "\n")
+        subprocess.run(
+            ["git", "add", "Documentation/ReleaseNotes.json"],
             cwd=self.fixture_root,
             check=True,
         )
@@ -203,6 +219,7 @@ class VersionContractTests(unittest.TestCase):
     def test_fix_commit_check_accepts_a_staged_patch_bump(self) -> None:
         self.write_version(self.two_fix_version)
         self.stage_version()
+        self.stage_release_note()
 
         result = self.run_check("--fix-commit")
 
@@ -210,6 +227,15 @@ class VersionContractTests(unittest.TestCase):
         self.assertIn(
             f"{self.current_version} to {self.two_fix_version}", result.stdout
         )
+
+    def test_fix_commit_check_rejects_a_missing_staged_release_note(self) -> None:
+        self.write_version(self.next_patch_version)
+        self.stage_version()
+
+        result = self.run_check("--fix-commit")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("stage at least one new release-note entry", result.stderr)
 
     def test_fix_commit_check_rejects_a_new_release_line(self) -> None:
         self.write_version(self.next_release_line)
