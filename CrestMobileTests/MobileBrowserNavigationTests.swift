@@ -3348,6 +3348,11 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         page.presentFind()
         XCTAssertTrue(page.isFindPresented)
+        let firstFocusRequest = page.findFocusRequest
+
+        // Asking again while the bar is already up still asks for the field.
+        page.presentFind()
+        XCTAssertNotEqual(page.findFocusRequest, firstFocusRequest)
 
         page.find("needle")
         try await waitUntil { page.findMatchState != .searching }

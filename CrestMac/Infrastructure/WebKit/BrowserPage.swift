@@ -34,6 +34,7 @@ final class BrowserPage: NSObject {
     var webContentFailureMessage: String?
     var isFindPresented: Bool { findSession.isPresented }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
+    var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = 1
     var readerModeState = BrowserReaderModeState.unavailable
     private(set) var isContentBlockingActive = false

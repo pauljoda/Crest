@@ -2,15 +2,16 @@
 ///
 /// The two shells reach different pages — one a pooled windowed page, the other
 /// the compact shell's single resident page — but the bar only ever asks the
-/// same three questions, and both pages already answer them with identical
+/// same four questions, and both pages already answer them with identical
 /// signatures. They live here as closures rather than behind a protocol, for
 /// the same reason `BrowserSidebarNavigationPort`'s do: there is no third
 /// implementation to swap in, only two concrete pages, each bound where its
 /// shell presents the bar.
 ///
-/// `matchState` reads through its page at call time rather than carrying a
-/// snapshot, so Observation still tracks it — the result the bar draws has to
-/// change when WebKit answers.
+/// `matchState` and `focusRequest` read through their page at call time rather
+/// than carrying a snapshot, so Observation still tracks them — the result the
+/// bar draws has to change when WebKit answers, and the field has to be asked
+/// for again when the page is.
 ///
 /// None of the closures carries an isolation annotation, exactly like
 /// `BrowserSidebarNavigationPort`: annotating them `@MainActor` would also make
@@ -24,6 +25,11 @@ struct BrowserFindPort {
 
     /// What the page can say about the search right now.
     let matchState: () -> BrowserFindMatchState
+
+    /// How many times the page has been asked for find. Every ask is a request
+    /// for the query field, including the ones made while the bar is already
+    /// on screen.
+    let focusRequest: () -> Int
 
     /// Closes the bar and clears the page's highlight.
     let dismiss: () -> Void

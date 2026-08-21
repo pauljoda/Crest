@@ -50,13 +50,14 @@ struct BrowserWebPageSurface: View {
         }
     }
 
-    /// The three questions the find bar asks, bound to this surface's page.
+    /// The four questions the find bar asks, bound to this surface's page.
     private var findPort: BrowserFindPort {
         BrowserFindPort(
             find: { query, direction in
                 page.find(query, direction: direction)
             },
             matchState: { page.findMatchState },
+            focusRequest: { page.findFocusRequest },
             dismiss: page.dismissFind
         )
     }

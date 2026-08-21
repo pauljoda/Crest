@@ -15,6 +15,20 @@ final class BrowserFindSessionTests: XCTestCase {
         XCTAssertTrue(session.isPresented)
     }
 
+    func testEveryPresentationAsksForTheQueryFieldAgain() {
+        let session = BrowserFindSession()
+
+        session.present(hasLoadedPage: false)
+        XCTAssertEqual(session.focusRequest, 0)
+
+        session.present(hasLoadedPage: true)
+        let first = session.focusRequest
+
+        session.present(hasLoadedPage: true)
+        XCTAssertTrue(session.isPresented)
+        XCTAssertNotEqual(session.focusRequest, first)
+    }
+
     func testSearchConfiguresNativeFindAndPublishesItsResult() throws {
         let executor = BrowserFindExecutorSpy()
         let session = BrowserFindSession()

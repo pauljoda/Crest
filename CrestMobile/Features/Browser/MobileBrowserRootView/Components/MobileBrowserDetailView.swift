@@ -245,13 +245,14 @@ struct MobileBrowserDetailView: View {
             .accessibilityHidden(true)
     }
 
-    /// The three questions the find bar asks, bound to the page it is over.
+    /// The four questions the find bar asks, bound to the page it is over.
     private func findPort(for page: MobileBrowserPage) -> BrowserFindPort {
         BrowserFindPort(
             find: { query, direction in
                 page.find(query, direction: direction)
             },
             matchState: { page.findMatchState },
+            focusRequest: { page.findFocusRequest },
             dismiss: page.dismissFind
         )
     }
