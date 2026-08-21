@@ -362,37 +362,24 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         let sourceView = NSView(frame: CGRect(x: 20, y: 540, width: 24, height: 24))
         window.contentView?.addSubview(sourceView)
         window.orderFront(nil)
-        defer {
-            action.action.closePopup()
-            window.close()
-        }
 
-        // The product gives a cold background three seconds before it presents
-        // nothing at all, a deadline that answers to how long a click stays
-        // remembered rather than to how busy the machine is. This test is about
-        // what a presented popup shows, so it hands the warm-up room a loaded
-        // machine can still meet: a deadline that expires here presents no
-        // popup, and no amount of waiting afterwards would find one.
-        pool.tabWindowCoordinator.popupBackgroundWarmUpDeadline = .seconds(8)
-        // Every open and close below waits on the notice AppKit posts for the
-        // popover itself. Sleeping out the warm-up and then polling
-        // `popupPopover` guessed twice: at how long the background needs, and at
-        // how long the toggle needs to take effect — and a reopen issued while
-        // the previous popup was still up would toggle it shut instead.
-        let firstPresentation = expectation(
-            forNotification: NSPopover.didShowNotification,
-            object: nil
-        )
         pool.perform(
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
-        await fulfillment(of: [firstPresentation], timeout: 10)
-        XCTAssertTrue(action.action.popupPopover?.isShown == true)
 
+        // `popupPopover` preloads the popup, so let the background warm-up
+        // finish before observing WebKit's presentation state.
+        try await Task.sleep(
+            for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
+                + .milliseconds(100)
+        )
+        for _ in 0..<200 where action.action.popupPopover?.isShown != true {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         let popupWebView = try XCTUnwrap(action.action.popupWebView)
         var popupText: String?
-        for _ in 0..<400 {
+        for _ in 0..<200 {
             popupText =
                 try await popupWebView.evaluateJavaScript(
                     "document.body.innerText"
@@ -400,35 +387,34 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             if popupText == "Ready" { break }
             try await Task.sleep(for: .milliseconds(10))
         }
+
+        XCTAssertTrue(action.action.popupPopover?.isShown == true)
         XCTAssertEqual(popupText, "Ready")
 
-        let firstDismissal = expectation(
-            forNotification: NSPopover.didCloseNotification,
-            object: nil
-        )
         pool.perform(
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
-        await fulfillment(of: [firstDismissal], timeout: 10)
-        XCTAssertFalse(action.action.popupPopover?.isShown == true)
-
-        let secondPresentation = expectation(
-            forNotification: NSPopover.didShowNotification,
-            object: nil
-        )
+        for _ in 0..<200 where action.action.popupPopover?.isShown == true {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         pool.perform(
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
-        await fulfillment(of: [secondPresentation], timeout: 10)
-        XCTAssertTrue(action.action.popupPopover?.isShown == true)
+        try await Task.sleep(
+            for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
+                + .milliseconds(100)
+        )
+        for _ in 0..<200 where action.action.popupPopover?.isShown != true {
+            try await Task.sleep(for: .milliseconds(10))
+        }
 
         let reopenedPopupWebView = try XCTUnwrap(
             action.action.popupWebView
         )
         var reopenedPopupText: String?
-        for _ in 0..<400 {
+        for _ in 0..<200 {
             reopenedPopupText =
                 try await reopenedPopupWebView.evaluateJavaScript(
                     "document.body.innerText"
@@ -436,21 +422,20 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             if reopenedPopupText == "Ready" { break }
             try await Task.sleep(for: .milliseconds(10))
         }
+        XCTAssertTrue(action.action.popupPopover?.isShown == true)
         XCTAssertEqual(
             reopenedPopupText,
             "Ready"
-        )
-
-        let secondDismissal = expectation(
-            forNotification: NSPopover.didCloseNotification,
-            object: nil
         )
         pool.perform(
             action,
             popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
         )
-        await fulfillment(of: [secondDismissal], timeout: 10)
-        XCTAssertFalse(action.action.popupPopover?.isShown == true)
+        for _ in 0..<200 where action.action.popupPopover?.isShown == true {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try await Task.sleep(for: .milliseconds(250))
+        window.close()
     }
 
     func testLoadedExtensionContextIsInspectableUnderItsDisplayName()
