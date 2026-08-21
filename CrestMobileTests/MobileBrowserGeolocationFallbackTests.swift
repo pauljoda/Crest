@@ -1,3 +1,4 @@
+import Foundation
 import WebKit
 import XCTest
 
@@ -42,6 +43,14 @@ final class MobileBrowserGeolocationBridgeTests: XCTestCase {
             URLRequest(url: url),
             responseHTML: "<!doctype html><title>Location fixture</title>"
         )
+        // Every step below runs script in the fixture, and script asked of a
+        // page that has not finished loading is answered by whichever document
+        // is still standing — or not answered at all while WebKit swaps one for
+        // the other. The page reports its own navigations, so gate on that
+        // rather than letting the first question double as the load wait.
+        try await waitUntil("the location fixture to finish loading") {
+            page.completedNavigationCount == 1
+        }
         try await waitUntil("the mobile geolocation bridge") {
             try await self.permissionState(in: page.webView) == "granted"
         }
@@ -58,12 +67,18 @@ final class MobileBrowserGeolocationBridgeTests: XCTestCase {
             in: nil,
             contentWorld: .page
         )
-        try await waitUntil("the mobile native current-location request") {
-            service.requests.count == 1
-        }
+        // The service is what the bridge reaches, so let it say when it was
+        // reached instead of polling for it: the arrival is signalled, and no
+        // budget has to cover how long a saturated machine needs to carry one
+        // message out of the page.
+        await service.waitUntilRequestCount(1)
         let request = try XCTUnwrap(service.requests.first?.value)
         request(.success(Self.position))
 
+        // Nothing on this side can signal the page's own callback running, so
+        // this one still polls. What it waits for is WebKit scheduling script in
+        // an already-loaded document — the shortest step in the test — under the
+        // same budget every other WebKit-backed mobile suite gives one.
         try await waitUntil("the mobile page location callback") {
             try await self.doubleResult(
                 in: page.webView,
@@ -101,9 +116,15 @@ final class MobileBrowserGeolocationBridgeTests: XCTestCase {
         ) as? Double
     }
 
+    /// Polls `condition` until it holds, and stops the test when it never does.
+    ///
+    /// Eight seconds is what every other WebKit-backed mobile suite here gives a
+    /// page, and giving up throws rather than merely recording a failure: a
+    /// fixture that never loaded cannot answer the questions that follow either,
+    /// and asking them anyway buries the one failure that explains the run.
     private func waitUntil(
         _ description: String,
-        timeout: Duration = .seconds(5),
+        timeout: Duration = .seconds(8),
         condition: () async throws -> Bool
     ) async throws {
         let deadline = ContinuousClock.now.advanced(by: timeout)
@@ -112,7 +133,14 @@ final class MobileBrowserGeolocationBridgeTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(25))
         }
         XCTFail("Timed out waiting for \(description).")
+        throw MobileGeolocationWaitTimeout(subject: description)
     }
+}
+
+private struct MobileGeolocationWaitTimeout: LocalizedError {
+    let subject: String
+
+    var errorDescription: String? { "Timed out waiting for \(subject)." }
 }
 
 @MainActor
@@ -124,6 +152,8 @@ private final class TestMobileBrowserGeolocationService: BrowserGeolocationServi
 
     var requests: [String: Receive] = [:]
 
+    private var requestWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
+
     func currentAuthorization() -> BrowserGeolocationSystemAuthorization { .authorized }
 
     func requestAuthorization() async -> BrowserGeolocationSystemAuthorization { .authorized }
@@ -134,6 +164,7 @@ private final class TestMobileBrowserGeolocationService: BrowserGeolocationServi
         receive: @escaping Receive
     ) {
         requests[identifier] = receive
+        announceRequest()
     }
 
     func startWatchingPosition(
@@ -142,6 +173,24 @@ private final class TestMobileBrowserGeolocationService: BrowserGeolocationServi
         receive: @escaping Receive
     ) {
         requests[identifier] = receive
+        announceRequest()
+    }
+
+    /// Suspends until the bridge has made its `count`-th native request.
+    func waitUntilRequestCount(_ count: Int) async {
+        guard requests.count < count else { return }
+        await withCheckedContinuation { continuation in
+            requestWaiters.append((count, continuation))
+        }
+    }
+
+    private func announceRequest() {
+        let arrivedCount = requests.count
+        let readyWaiters = requestWaiters.filter { $0.count <= arrivedCount }
+        requestWaiters.removeAll { $0.count <= arrivedCount }
+        for waiter in readyWaiters {
+            waiter.continuation.resume()
+        }
     }
 
     func cancel(identifier: String) { requests.removeValue(forKey: identifier) }
