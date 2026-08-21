@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct MobileTransientBrowsingRequestOverlay: View {
+    /// Above the browser's own chrome, which a transient overlay always covers.
+    private static let overlayLayer: Double = 20
+
     let presentation: MobileTransientBrowsingPresentation?
     let browser: BrowserStore
     let pages: MobileBrowserPageStore?
@@ -21,13 +24,13 @@ struct MobileTransientBrowsingRequestOverlay: View {
                 didPromote: didPromote
             )
             .id(presentation.request.renderIdentity)
-            .zIndex(MobileBrowserTransientLayout.overlayLayer)
+            .zIndex(Self.overlayLayer)
         } else if let presentation {
             MobileTransientBrowsingPreviewSurface(
                 request: presentation.request
             )
             .id(presentation.request.renderIdentity)
-            .zIndex(MobileBrowserTransientLayout.overlayLayer)
+            .zIndex(Self.overlayLayer)
         }
     }
 }

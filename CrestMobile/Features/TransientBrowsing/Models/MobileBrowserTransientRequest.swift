@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 enum MobileBrowserTransientRequest: Identifiable, Equatable {
     case peek(BrowserPeekRequest)
@@ -55,6 +55,31 @@ enum MobileBrowserTransientRequest: Identifiable, Equatable {
     var isQuickWindow: Bool {
         if case .quickWindow = self { return true }
         return false
+    }
+
+    /// What this shell calls the shared overlay presenting this request.
+    ///
+    /// One card serves both, so the words are the only thing that separates a
+    /// Peek from a Quick Window here. The restore button stays neutral because
+    /// what it brings back is the page, under either name.
+    var overlayVocabulary: BrowserTransientOverlayVocabulary {
+        BrowserTransientOverlayVocabulary(
+            closeAccessibilityLabel: isQuickWindow
+                ? "Close Quick Window"
+                : "Close Peek",
+            closeHelp: isQuickWindow
+                ? "Close Quick Window (Esc or ⌘W)"
+                : "Close Peek (Esc or ⌘W)",
+            loadingTitle: isQuickWindow
+                ? "Opening Quick Window…"
+                : "Opening Peek…",
+            releasedTitle: isQuickWindow
+                ? "Quick Window Released"
+                : "Peek Released",
+            releasedDescription:
+                "Crest released this temporary page to reduce memory use.",
+            restoreTitle: "Reload Page"
+        )
     }
 
     var renderIdentity: MobileBrowserTransientRenderIdentity {

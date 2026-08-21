@@ -12,13 +12,17 @@ struct MobileBrowserTransientUnlockedContent: View {
     @State private var isCardExpanded = false
 
     var body: some View {
-        MobileBrowserTransientSurface(
-            model: model,
+        BrowserTransientSurface(
             state: presentationState,
-            dismissalOffset: $dismissalOffset,
-            dismiss: dismiss,
-            promote: promote
-        )
+            pageStatus: pageStatus,
+            spaces: model.availableSpaces,
+            selectedSpaceID: model.request.spaceID,
+            vocabulary: model.request.overlayVocabulary,
+            actions: actions,
+            dismissalOffset: $dismissalOffset
+        ) {
+            webContent
+        }
         .task(id: presentationPhase) {
             await updatePresentation()
         }
@@ -51,8 +55,19 @@ struct MobileBrowserTransientUnlockedContent: View {
         .accessibilityIdentifier(model.request.accessibilityIdentifier)
     }
 
-    private var presentationState: MobileBrowserTransientPresentationState {
-        MobileBrowserTransientPresentationState(
+    /// This shell's own web view, handed to the shared card. The page is a
+    /// mobile type, so it never crosses into the shared surface.
+    @ViewBuilder
+    private var webContent: some View {
+        if let page = model.page {
+            MobileBrowserWebView(page: page)
+                .id(page.tabID)
+        }
+    }
+
+    private var presentationState: BrowserTransientPresentationState {
+        BrowserTransientPresentationState(
+            arrangement: .current,
             dismissalOffset: dismissalOffset,
             isCardVisible: isCardVisible,
             isCardExpanded: isCardExpanded,
@@ -60,6 +75,22 @@ struct MobileBrowserTransientUnlockedContent: View {
             reduceTransparency: reduceTransparency,
             presentationPhase: presentationPhase,
             sourcePresentation: model.request.sourcePresentation
+        )
+    }
+
+    private var pageStatus: BrowserTransientPageStatus {
+        BrowserTransientPageStatus(
+            hasPage: model.page != nil,
+            wasReleasedForMemoryPressure:
+                model.pageLease?.wasReleasedForMemoryPressure == true
+        )
+    }
+
+    private var actions: BrowserTransientCardActions {
+        BrowserTransientCardActions(
+            dismiss: dismiss,
+            promote: promote,
+            restore: model.restorePage
         )
     }
 

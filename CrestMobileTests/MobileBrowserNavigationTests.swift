@@ -2107,7 +2107,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
     }
 
     func testTransientCardsStayInsideTheSafeAreaInEveryDirection() {
-        let insets = MobileBrowserTransientLayout.cardInsets(
+        let insets = BrowserTransientCardLayout.cardInsets(
             safeAreaInsets: EdgeInsets(top: 59, leading: 6, bottom: 34, trailing: 3),
             minimumHorizontal: 8,
             minimumVertical: 6
@@ -2130,7 +2130,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             label: "Peek destination"
         )
 
-        let transform = MobileBrowserTransientLayout.sourceCardTransform(for: source)
+        let transform = BrowserTransientCardLayout.sourceCardTransform(for: source)
 
         XCTAssertEqual(transform.anchor.x, 0.21, accuracy: 0.000_001)
         XCTAssertEqual(transform.anchor.y, 0.31, accuracy: 0.000_001)
@@ -2143,12 +2143,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
     }
 
     func testPeekCloseAndSpaceControlsShareOneMinimumHitHeight() {
-        XCTAssertEqual(
-            MobileBrowserTransientLayout.controlHeight,
-            BrowserPeekChromePolicy.controlHeight
-        )
         XCTAssertGreaterThanOrEqual(
-            MobileBrowserTransientLayout.controlHeight,
+            BrowserPeekChromePolicy.controlHeight,
             44
         )
     }

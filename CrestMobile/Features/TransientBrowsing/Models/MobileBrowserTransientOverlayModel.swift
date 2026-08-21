@@ -66,10 +66,12 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     var availableSpaces: [BrowserSpace] {
-        browser.session.spaces.filter {
-            !browser.deletingSpaceIDs.contains($0.id)
-                && ($0.id == request.spaceID || !spaceAccess.isLocked($0))
-        }
+        BrowserTransientSessionPolicy.availableSpaces(
+            in: browser.session.spaces,
+            deletingSpaceIDs: browser.deletingSpaceIDs,
+            requestSpaceID: request.spaceID,
+            isLocked: spaceAccess.isLocked
+        )
     }
 
     var activityRevision: Int {
@@ -82,21 +84,27 @@ final class MobileBrowserTransientOverlayModel {
 
     @discardableResult
     func preparePage(isActive: Bool) -> Bool {
-        guard isCurrentRequest else {
+        let space: BrowserSpace
+        switch sourceDisposition {
+        case .notPresented:
             releasePageRetainingQuickWindowSnapshot()
             return false
-        }
-        guard let space else {
+        case .sourceMissing:
             dismissUnavailableRequest()
             return false
-        }
-        guard !spaceAccess.isLocked(space) else {
+        case .sourceLocked:
             setSourceLocked(true)
             return false
+        case .usable(let usableSpace):
+            space = usableSpace
         }
         if let pageLease,
-            pageLease.assignment == request.spaceAssignment,
-            pageLease.page != nil || pageLease.wasReleasedForMemoryPressure
+            BrowserTransientSessionPolicy.reusesLease(
+                leaseAssignment: pageLease.assignment,
+                requestAssignment: request.spaceAssignment,
+                leaseCanBeReused: pageLease.page != nil
+                    || pageLease.wasReleasedForMemoryPressure
+            )
         {
             pageLease.setActive(isActive)
             return true
@@ -122,17 +130,18 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     func setActive(_ isActive: Bool) {
-        guard isCurrentRequest else {
+        switch sourceDisposition {
+        case .notPresented:
             releasePageRetainingQuickWindowSnapshot()
             return
-        }
-        guard let space = browser.space(matching: request.spaceAssignment) else {
+        case .sourceMissing:
             dismissUnavailableRequest()
             return
-        }
-        guard !spaceAccess.isLocked(space) else {
+        case .sourceLocked:
             setSourceLocked(true)
             return
+        case .usable:
+            break
         }
         pageLease?.setActive(isActive)
         guard isActive else { return }
@@ -188,16 +197,17 @@ final class MobileBrowserTransientOverlayModel {
             return
         }
         guard let pageLease else { return }
-        guard let space = browser.space(matching: pageLease.assignment) else {
+        switch disposition(ofSpaceMatching: pageLease.assignment) {
+        case .notPresented:
+            releasePageRetainingQuickWindowSnapshot()
+        case .sourceMissing:
             dismissUnavailableRequest()
-            return
-        }
-        guard !spaceAccess.isLocked(space) else {
+        case .sourceLocked:
             setSourceLocked(true)
-            return
+        case .usable:
+            resetNavigationRecording()
+            pageLease.restore()
         }
-        resetNavigationRecording()
-        pageLease.restore()
     }
 
     @discardableResult
@@ -208,25 +218,30 @@ final class MobileBrowserTransientOverlayModel {
             let pageLease,
             let page = pageLease.page,
             pageLease.assignment == request.spaceAssignment,
-            let sourceSpace = browser.space(matching: request.spaceAssignment),
-            !spaceAccess.isLocked(sourceSpace),
-            let destinationSpace = browser.space(
-                matching: destinationAssignment
+            let promotion = BrowserTransientSessionPolicy.promotionSpaces(
+                source: browser.space(matching: request.spaceAssignment),
+                destination: browser.space(matching: destinationAssignment),
+                isLocked: spaceAccess.isLocked
             ),
-            !spaceAccess.isLocked(destinationSpace),
             let url = page.url ?? Optional(request.url),
             let tabID = browser.openNewTab(
                 url: url,
-                matching: BrowserSpaceRuntimeAssignment(space: destinationSpace)
+                matching: BrowserSpaceRuntimeAssignment(
+                    space: promotion.destination
+                )
             ),
             let currentDestination = browser.space(
-                matching: BrowserSpaceRuntimeAssignment(space: destinationSpace)
+                matching: BrowserSpaceRuntimeAssignment(
+                    space: promotion.destination
+                )
             )
         else { return false }
 
         let adoptedLivePage =
-            pageLease.assignment
-            == BrowserSpaceRuntimeAssignment(space: currentDestination)
+            BrowserTransientSessionPolicy.adoptsLivePage(
+                leaseAssignment: pageLease.assignment,
+                destination: currentDestination
+            )
             && pages.adoptTransientPage(
                 pageLease,
                 as: tabID,
@@ -363,6 +378,20 @@ final class MobileBrowserTransientOverlayModel {
         case .quickWindow(let quickWindowRequest):
             coordinator.isPresentingQuickWindow(quickWindowRequest)
         }
+    }
+
+    private var sourceDisposition: BrowserTransientLeaseDisposition {
+        disposition(ofSpaceMatching: request.spaceAssignment)
+    }
+
+    private func disposition(
+        ofSpaceMatching assignment: BrowserSpaceRuntimeAssignment
+    ) -> BrowserTransientLeaseDisposition {
+        BrowserTransientSessionPolicy.disposition(
+            isPresentingRequest: isCurrentRequest,
+            space: browser.space(matching: assignment),
+            isLocked: spaceAccess.isLocked
+        )
     }
 
     private func resetNavigationRecording() {

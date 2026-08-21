@@ -6,11 +6,14 @@ struct MobileBrowserTransientOverlaySurface: View {
     let spaceAccess: BrowserSpaceAccessController
 
     var body: some View {
-        MobileBrowserTransientOverlayContent(
+        BrowserTransientOverlayContent(
             requestID: model.request.id,
             space: model.space,
             spaces: model.availableSpaces,
             spaceAccess: spaceAccess,
+            // The overlay is the whole screen here, so a Space disappearing
+            // under it leaves nothing to explain the loss against.
+            unavailableSpacePresentation: .immediateDismissal,
             selectSpace: model.selectLockedSpace,
             dismissUnavailable: model.dismissUnavailableRequest
         ) {

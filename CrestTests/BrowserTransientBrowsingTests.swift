@@ -676,4 +676,173 @@ final class BrowserTransientBrowsingTests: XCTestCase {
                 == replacement.archivedTabs
         )
     }
+
+    // MARK: - The shared lease ladder
+
+    func testTransientLeaseDispositionAnswersInLadderOrder() {
+        let open = makePolicySpace(name: "Work")
+        var locked = makePolicySpace(name: "Private")
+        locked.accessPolicy = .deviceOwnerAuthentication
+        let access = makeAccessController()
+
+        XCTAssertEqual(
+            BrowserTransientSessionPolicy.disposition(
+                isPresentingRequest: false,
+                space: locked,
+                isLocked: access.isLocked
+            ),
+            .notPresented
+        )
+        XCTAssertEqual(
+            BrowserTransientSessionPolicy.disposition(
+                isPresentingRequest: true,
+                space: nil,
+                isLocked: access.isLocked
+            ),
+            .sourceMissing
+        )
+        XCTAssertEqual(
+            BrowserTransientSessionPolicy.disposition(
+                isPresentingRequest: true,
+                space: locked,
+                isLocked: access.isLocked
+            ),
+            .sourceLocked
+        )
+        XCTAssertEqual(
+            BrowserTransientSessionPolicy.disposition(
+                isPresentingRequest: true,
+                space: open,
+                isLocked: access.isLocked
+            ),
+            .usable(open)
+        )
+    }
+
+    func testTransientPromotionListsLiveSpacesAndTheRequestsOwnLockedSpace() {
+        var lockedSource = makePolicySpace(name: "Source")
+        lockedSource.accessPolicy = .deviceOwnerAuthentication
+        var lockedOther = makePolicySpace(name: "Private")
+        lockedOther.accessPolicy = .deviceOwnerAuthentication
+        let open = makePolicySpace(name: "Work")
+        let deleting = makePolicySpace(name: "Going")
+        let access = makeAccessController()
+
+        let offered = BrowserTransientSessionPolicy.availableSpaces(
+            in: [lockedSource, lockedOther, open, deleting],
+            deletingSpaceIDs: [deleting.id],
+            requestSpaceID: lockedSource.id,
+            isLocked: access.isLocked
+        )
+
+        XCTAssertEqual(offered.map(\.id), [lockedSource.id, open.id])
+    }
+
+    func testTransientPromotionRefusesAGoneOrLockedEnd() {
+        let source = makePolicySpace(name: "Source")
+        let destination = makePolicySpace(name: "Destination")
+        var locked = makePolicySpace(name: "Private")
+        locked.accessPolicy = .deviceOwnerAuthentication
+        let access = makeAccessController()
+
+        XCTAssertNil(
+            BrowserTransientSessionPolicy.promotionSpaces(
+                source: nil,
+                destination: destination,
+                isLocked: access.isLocked
+            )
+        )
+        XCTAssertNil(
+            BrowserTransientSessionPolicy.promotionSpaces(
+                source: source,
+                destination: nil,
+                isLocked: access.isLocked
+            )
+        )
+        XCTAssertNil(
+            BrowserTransientSessionPolicy.promotionSpaces(
+                source: locked,
+                destination: destination,
+                isLocked: access.isLocked
+            )
+        )
+        XCTAssertNil(
+            BrowserTransientSessionPolicy.promotionSpaces(
+                source: source,
+                destination: locked,
+                isLocked: access.isLocked
+            )
+        )
+        XCTAssertEqual(
+            BrowserTransientSessionPolicy.promotionSpaces(
+                source: source,
+                destination: destination,
+                isLocked: access.isLocked
+            ),
+            BrowserTransientPromotionSpaces(
+                source: source,
+                destination: destination
+            )
+        )
+    }
+
+    func testTransientLeaseIsAdoptedAndReusedOnlyBySpaceItAlreadyBelongsTo() {
+        let space = makePolicySpace(name: "Source")
+        let other = makePolicySpace(name: "Destination")
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+
+        XCTAssertTrue(
+            BrowserTransientSessionPolicy.adoptsLivePage(
+                leaseAssignment: assignment,
+                destination: space
+            )
+        )
+        XCTAssertFalse(
+            BrowserTransientSessionPolicy.adoptsLivePage(
+                leaseAssignment: assignment,
+                destination: other
+            )
+        )
+        XCTAssertTrue(
+            BrowserTransientSessionPolicy.reusesLease(
+                leaseAssignment: assignment,
+                requestAssignment: assignment,
+                leaseCanBeReused: true
+            )
+        )
+        XCTAssertFalse(
+            BrowserTransientSessionPolicy.reusesLease(
+                leaseAssignment: assignment,
+                requestAssignment: assignment,
+                leaseCanBeReused: false
+            )
+        )
+        XCTAssertFalse(
+            BrowserTransientSessionPolicy.reusesLease(
+                leaseAssignment: assignment,
+                requestAssignment: BrowserSpaceRuntimeAssignment(space: other),
+                leaseCanBeReused: true
+            )
+        )
+    }
+
+    private func makePolicySpace(name: String) -> BrowserSpace {
+        let tab = BrowserTab.startPage()
+        return BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: name,
+            symbol: "circle",
+            accent: .indigo,
+            folders: [],
+            tabs: [tab],
+            selectedTabID: tab.id
+        )
+    }
+
+    private func makeAccessController() -> BrowserSpaceAccessController {
+        BrowserSpaceAccessController(
+            authenticator: BrowserPreviewAuthenticator(result: true)
+        )
+    }
 }

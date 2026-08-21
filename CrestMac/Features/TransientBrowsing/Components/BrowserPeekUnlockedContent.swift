@@ -26,12 +26,19 @@ struct BrowserPeekUnlockedContent: View {
     @State private var isInitialWebContentRevealed = false
 
     var body: some View {
-        BrowserPeekSurface(
-            model: model,
-            state: surfaceState,
-            dismiss: dismiss,
-            promote: promote
-        )
+        BrowserTransientSurface(
+            state: presentationState,
+            pageStatus: pageStatus,
+            spaces: model.availableSpaces,
+            selectedSpaceID: model.request.spaceID,
+            vocabulary: BrowserPeekVocabulary.overlay,
+            actions: actions,
+            // A pointer overlay is dismissed with a click or a key, never
+            // carried away, so nothing ever moves this.
+            dismissalOffset: .constant(0)
+        ) {
+            webContent
+        }
         .modifier(taskLifecycle)
         .modifier(
             BrowserPeekInputLifecycleModifier(
@@ -44,17 +51,59 @@ struct BrowserPeekUnlockedContent: View {
         .accessibilityLabel("Peek from \(model.request.sourceTitle)")
     }
 
-    private var surfaceState: BrowserPeekSurfaceState {
-        BrowserPeekSurfaceState(
+    /// The window's own web content, handed to the shared card. The page and
+    /// the pool that owns it are macOS types, so they never cross into the
+    /// shared surface.
+    @ViewBuilder
+    private var webContent: some View {
+        if let page = model.page, let pages = model.pages {
+            BrowserWebContentView(
+                page: page,
+                browser: model.browser,
+                pages: pages
+            )
+        }
+    }
+
+    private var presentationState: BrowserTransientPresentationState {
+        BrowserTransientPresentationState(
+            arrangement: .pointer,
             reservedLeadingWidth: reservedLeadingWidth,
             layoutDirection: layoutDirection,
             isCardVisible: isCardVisible,
             isCardExpanded: isCardExpanded,
-            isInitialWebContentRevealed: isInitialWebContentRevealed,
             reduceMotion: reduceMotion,
             reduceTransparency: reduceTransparency,
             sourcePresentation: .resolved(model.request.sourcePresentation)
         )
+    }
+
+    private var pageStatus: BrowserTransientPageStatus {
+        BrowserTransientPageStatus(
+            hasPage: model.page != nil && model.pages != nil,
+            wasReleasedForMemoryPressure:
+                model.pageLease?.wasReleasedForMemoryPressure == true,
+            initialLoadingCoverLabel: showsInitialLoadingSurface
+                ? BrowserPeekVocabulary.initialLoadingCoverLabel
+                : nil
+        )
+    }
+
+    private var actions: BrowserTransientCardActions {
+        BrowserTransientCardActions(
+            dismiss: dismiss,
+            promote: promote,
+            restore: model.restorePage
+        )
+    }
+
+    /// Whether the card still has to cover a page that has been handed a URL
+    /// but has painted nothing. A page that failed has its own thing to say.
+    private var showsInitialLoadingSurface: Bool {
+        guard let page = model.page else { return false }
+        return !isInitialWebContentRevealed
+            && page.navigationFailure == nil
+            && page.webContentFailureMessage == nil
     }
 
     private var taskLifecycle: BrowserPeekTaskLifecycleModifier {

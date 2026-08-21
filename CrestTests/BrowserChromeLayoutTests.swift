@@ -2316,4 +2316,155 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(BrowserSettingsControlPolicy.privacyShowsProtectionSummaryOnly)
     }
 
+    // MARK: - One transient card, three rooms
+
+    func testTransientCardArrangementsKeepEachShellsOwnReach() {
+        XCTAssertTrue(
+            BrowserTransientCardArrangement.pointer.placesControlsAboveCard
+        )
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.sheet.placesControlsAboveCard
+        )
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.canvas.placesControlsAboveCard
+        )
+
+        XCTAssertTrue(
+            BrowserTransientCardArrangement.pointer.allowsScrimDismissal
+        )
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.sheet.allowsScrimDismissal
+        )
+        XCTAssertTrue(
+            BrowserTransientCardArrangement.canvas.allowsScrimDismissal
+        )
+
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.pointer.allowsDragDismissal
+        )
+        XCTAssertTrue(BrowserTransientCardArrangement.sheet.allowsDragDismissal)
+        XCTAssertFalse(
+            BrowserTransientCardArrangement.canvas.allowsDragDismissal
+        )
+
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.pointer.entranceTarget,
+            .pageCard
+        )
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.sheet.entranceTarget,
+            .assembly
+        )
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.canvas.entranceTarget,
+            .assembly
+        )
+
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.pointer.cardCornerRadius,
+            15
+        )
+        XCTAssertEqual(BrowserTransientCardArrangement.sheet.cardCornerRadius, 24)
+        XCTAssertEqual(BrowserTransientCardArrangement.canvas.cardCornerRadius, 15)
+    }
+
+    func testTransientCardSizesFollowTheRoomEachArrangementIsGiven() {
+        let container = CGSize(width: 2_000, height: 1_000)
+
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.pointer.contentFrame(
+                in: container,
+                reservedLeadingWidth: 400,
+                layoutDirection: .leftToRight
+            ),
+            CGRect(x: 400, y: 0, width: 1_600, height: 1_000)
+        )
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.pointer.cardSize(
+                in: CGSize(width: 1_600, height: 1_000)
+            ),
+            CGSize(width: 1_280, height: 800)
+        )
+
+        XCTAssertNil(
+            BrowserTransientCardArrangement.sheet.contentFrame(
+                in: container,
+                reservedLeadingWidth: 400,
+                layoutDirection: .leftToRight
+            )
+        )
+        XCTAssertNil(BrowserTransientCardArrangement.sheet.cardSize(in: container))
+
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.canvas.cardSize(
+                in: CGSize(width: 1_000, height: 800)
+            ),
+            CGSize(width: 760, height: 624)
+        )
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.canvas.cardSize(
+                in: CGSize(width: 400, height: 400)
+            ),
+            CGSize(width: 600, height: 430)
+        )
+        XCTAssertEqual(
+            BrowserTransientCardArrangement.canvas.cardSize(
+                in: CGSize(width: 4_000, height: 4_000)
+            ),
+            CGSize(width: 1_180, height: 820)
+        )
+    }
+
+    func testTransientEntranceGrowsOnlyTheLayerItsArrangementNames() {
+        let source = BrowserPeekSourcePresentation(
+            normalizedMinX: 0.1,
+            normalizedMinY: 0.2,
+            normalizedWidth: 0.3,
+            normalizedHeight: 0.1,
+            normalizedTouchX: 0.25,
+            normalizedTouchY: 0.35,
+            label: "Reference"
+        )
+
+        let pointer = BrowserTransientPresentationState(
+            arrangement: .pointer,
+            isCardVisible: false,
+            isCardExpanded: false,
+            reduceMotion: false,
+            reduceTransparency: false,
+            sourcePresentation: source
+        )
+        XCTAssertEqual(pointer.opacity(for: .pageCard), 0)
+        XCTAssertEqual(pointer.opacity(for: .assembly), 1)
+        XCTAssertEqual(pointer.scale(for: .assembly), CGSize(width: 1, height: 1))
+        XCTAssertEqual(pointer.dragOffset, 0)
+        XCTAssertEqual(pointer.dragScale, 1)
+        XCTAssertEqual(pointer.scrimOpacity, 0)
+
+        let sheet = BrowserTransientPresentationState(
+            arrangement: .sheet,
+            isCardVisible: true,
+            isCardExpanded: false,
+            reduceMotion: false,
+            reduceTransparency: false,
+            sourcePresentation: source
+        )
+        XCTAssertEqual(sheet.opacity(for: .pageCard), 1)
+        XCTAssertEqual(sheet.opacity(for: .assembly), 1)
+        XCTAssertEqual(sheet.scale(for: .pageCard), CGSize(width: 1, height: 1))
+        XCTAssertEqual(sheet.scale(for: .assembly), CGSize(width: 0.3, height: 0.1))
+        XCTAssertEqual(sheet.scrimOpacity, 0.34, accuracy: 0.000_001)
+
+        let expanded = BrowserTransientPresentationState(
+            arrangement: .pointer,
+            isCardVisible: true,
+            isCardExpanded: true,
+            reduceMotion: false,
+            reduceTransparency: false,
+            sourcePresentation: source
+        )
+        XCTAssertEqual(expanded.scale(for: .pageCard), CGSize(width: 1, height: 1))
+        XCTAssertEqual(expanded.controlsOpacity, 1)
+    }
+
 }

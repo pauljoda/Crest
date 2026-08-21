@@ -43,9 +43,14 @@ struct BrowserPeekOverlay: View {
     }
 
     var body: some View {
-        BrowserPeekOverlayContent(
-            model: model,
-            spaceAccess: spaceAccess
+        BrowserTransientOverlayContent(
+            requestID: model.request.id,
+            space: model.space,
+            spaces: model.availableSpaces,
+            spaceAccess: spaceAccess,
+            unavailableSpacePresentation: BrowserPeekVocabulary.unavailableSpace,
+            selectSpace: model.selectLockedSpace,
+            dismissUnavailable: model.dismissUnavailableRequest
         ) {
             BrowserPeekUnlockedContent(
                 model: model,
