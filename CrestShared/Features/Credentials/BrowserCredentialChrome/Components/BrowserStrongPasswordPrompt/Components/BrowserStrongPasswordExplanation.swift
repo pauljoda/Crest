@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct MobileStrongPasswordExplanation: View {
+/// What the offer actually does, and where the password ends up.
+struct BrowserStrongPasswordExplanation: View {
     let spaceName: String
 
     var body: some View {

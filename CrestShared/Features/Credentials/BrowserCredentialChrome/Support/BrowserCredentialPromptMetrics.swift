@@ -57,6 +57,14 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
     /// resize as the vault answers, or `nil` where they size to their text.
     let suggestionStateMinimumHeight: CGFloat?
 
+    /// The least width a prompt's own action claims, or `nil` where the action
+    /// is already given the whole prompt to fill.
+    let actionMinimumWidth: CGFloat?
+
+    /// The most width a prompt's own action may claim. A touch shell spends the
+    /// whole band on it; a pointer shell leaves it the width of its label.
+    let actionMaximumWidth: CGFloat?
+
     /// A pointer shell: a fixed-width panel floating over the page, rows sized
     /// by their content, and a list that grows the panel.
     static let pointer = BrowserCredentialPromptMetrics(
@@ -67,7 +75,9 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionListMaximumHeight: nil,
         suggestionRowVerticalPadding: 5,
         suggestionRowMinimumHeight: nil,
-        suggestionStateMinimumHeight: nil
+        suggestionStateMinimumHeight: nil,
+        actionMinimumWidth: 44,
+        actionMaximumWidth: nil
     )
 
     /// A touch shell: a band across the top of the page, full 44pt targets, and
@@ -85,7 +95,9 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionListMaximumHeight: 176,
         suggestionRowVerticalPadding: 0,
         suggestionRowMinimumHeight: 44,
-        suggestionStateMinimumHeight: 44
+        suggestionStateMinimumHeight: 44,
+        actionMinimumWidth: nil,
+        actionMaximumWidth: .infinity
     )
 
     /// The profile a shell draws its credential prompts with.
@@ -103,6 +115,10 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
 
     /// The gap between the prompt's stacked parts.
     static let contentSpacing = CrestSpacing.small
+
+    /// The gap the strong-password prompt keeps instead, its explanation
+    /// needing more room from its neighbours than a list of accounts does.
+    static let strongPasswordContentSpacing: CGFloat = 10
 
     /// The gap between the header's symbol, its titles, and its close control.
     static let headerSpacing: CGFloat = 9

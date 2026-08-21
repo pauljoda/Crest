@@ -1,8 +1,15 @@
 import SwiftUI
 
-struct MobileStrongPasswordPrompt: View {
+/// The offer to invent a password for the form asking for a new one.
+///
+/// Everything the prompt needs from the page arrives through
+/// `BrowserCredentialFillPort`, everything about how big it is comes from
+/// `BrowserCredentialPromptMetrics`, and the surface under it is the one thing
+/// a shell dresses differently. So both shells share this prompt rather than a
+/// resemblance.
+struct BrowserStrongPasswordPrompt: View {
     let request: BrowserCredentialFillRequest
-    let page: MobileBrowserPage
+    let port: BrowserCredentialFillPort
     let browser: BrowserStore
     let capabilities: BrowserInteractionCapabilities
 
@@ -15,11 +22,12 @@ struct MobileStrongPasswordPrompt: View {
             width: metrics.fillPromptWidth,
             metrics: metrics
         ) {
-            MobileStrongPasswordPromptContent(
+            BrowserStrongPasswordPromptContent(
                 request: request,
                 space: space,
                 model: model,
-                dismiss: page.dismissCredentialFillRequest,
+                metrics: metrics,
+                dismiss: port.dismiss,
                 generateAndFill: generateAndFill
             )
         }
@@ -30,7 +38,7 @@ struct MobileStrongPasswordPrompt: View {
     }
 
     private var space: BrowserSpace? {
-        browser.session.space(id: page.spaceID)
+        browser.session.space(id: port.spaceID)
     }
 
     private var spaceName: String {
@@ -40,7 +48,7 @@ struct MobileStrongPasswordPrompt: View {
     private func generateAndFill() {
         Task { @MainActor in
             await model.generateAndFill { password in
-                try await page.fillGeneratedPassword(password, for: request.id)
+                try await port.fillGeneratedPassword(password, request.id)
             }
         }
     }

@@ -12,9 +12,9 @@ struct MobileBrowserCredentialChrome: View {
             MobileCredentialSavePrompt(candidate: candidate, page: page, browser: browser)
                 .transition(.move(edge: .top).combined(with: .opacity))
         case .strongPassword(let request):
-            MobileStrongPasswordPrompt(
+            BrowserStrongPasswordPrompt(
                 request: request,
-                page: page,
+                port: fillPort,
                 browser: browser,
                 capabilities: capabilities
             )

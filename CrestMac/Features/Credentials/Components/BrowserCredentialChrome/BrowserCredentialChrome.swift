@@ -17,10 +17,11 @@ struct BrowserCredentialChrome: View {
             )
             .transition(.move(edge: .top).combined(with: .opacity))
         case .strongPassword(let request):
-            BrowserStrongPasswordPanel(
+            BrowserStrongPasswordPrompt(
                 request: request,
-                page: page,
-                browser: browser
+                port: fillPort,
+                browser: browser,
+                capabilities: capabilities
             )
             .transition(.move(edge: .top).combined(with: .opacity))
         case .suggestions(let request):

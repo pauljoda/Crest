@@ -1,14 +1,18 @@
 import SwiftUI
 
-struct MobileStrongPasswordPromptContent: View {
+struct BrowserStrongPasswordPromptContent: View {
     let request: BrowserCredentialFillRequest
     let space: BrowserSpace?
     let model: BrowserStrongPasswordOperationModel
+    let metrics: BrowserCredentialPromptMetrics
     let dismiss: () -> Void
     let generateAndFill: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(
+            alignment: .leading,
+            spacing: BrowserCredentialPromptMetrics.strongPasswordContentSpacing
+        ) {
             BrowserCredentialPromptHeader(
                 kind: .strongPassword,
                 request: request,
@@ -20,12 +24,13 @@ struct MobileStrongPasswordPromptContent: View {
                     message: "Embedded password form from \(request.topLevelOrigin.description)"
                 )
             }
-            MobileStrongPasswordExplanation(
+            BrowserStrongPasswordExplanation(
                 spaceName: space?.name ?? "this Space"
             )
-            MobileStrongPasswordActionButton(
+            BrowserStrongPasswordActionButton(
                 isWorking: model.isWorking,
                 tint: space?.accent.color ?? .accentColor,
+                metrics: metrics,
                 action: generateAndFill
             )
             if model.hasFailed {
