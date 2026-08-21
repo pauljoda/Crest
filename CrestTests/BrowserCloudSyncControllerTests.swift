@@ -52,7 +52,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(controller.phase, .disabled)
     }
 
-    func testAvailableAccountStartsTransportAndRecordsSuccessfulActivity() async throws {
+    func testAvailableAccountStartsAutomaticTransportWithoutForcingAManualSync() async throws {
         let workflow = TestBrowserCloudSyncWorkflowGateway()
         let preferences = TestBrowserCloudSyncPreferences()
         let remote = TestBrowserCloudSyncRemoteService(accountState: .available)
@@ -70,12 +70,12 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(controller.accountState, .available)
         XCTAssertEqual(controller.phase, .ready)
         XCTAssertNotNil(controller.lastAttemptAt)
-        XCTAssertNotNil(controller.lastSuccessAt)
+        XCTAssertNil(controller.lastSuccessAt)
         let transport = try XCTUnwrap(factory.transports.first)
         let startCount = await transport.startCount
         let syncCount = await transport.syncCount
         XCTAssertEqual(startCount, 1)
-        XCTAssertEqual(syncCount, 1)
+        XCTAssertEqual(syncCount, 0)
 
         await transport.emit(.fetched(recordCount: 4))
         await transport.emit(.uploaded(recordCount: 3))
@@ -83,6 +83,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
 
         XCTAssertEqual(controller.lastFetchedRecordCount, 4)
         XCTAssertEqual(controller.lastUploadedRecordCount, 3)
+        XCTAssertNotNil(controller.lastSuccessAt)
         let notifyCount = await transport.notifyCount
         XCTAssertEqual(notifyCount, 1)
     }
@@ -353,10 +354,55 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         )
 
         await controller.start()
+        await controller.syncNow()
 
         XCTAssertNil(controller.lastSuccessAt)
         XCTAssertNotEqual(controller.phase, .ready)
         XCTAssertNotNil(controller.errorDescription)
+    }
+
+    func testAnExistingTransportFailureIsNotRetriedByTheController() async throws {
+        let factory = TestBrowserCloudSyncTransportFactory(
+            syncFailure: TestBrowserCloudSyncRemoteService.TestFailure.unavailable
+        )
+        let controller = BrowserCloudSyncController(
+            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            configuration: testConfiguration,
+            preferences: TestBrowserCloudSyncPreferences(),
+            remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
+            transportFactory: factory,
+            retryDelay: .milliseconds(1)
+        )
+        await controller.start()
+        let transport = try XCTUnwrap(factory.transports.first)
+
+        await controller.syncNow()
+        try? await Task.sleep(for: .milliseconds(30))
+
+        let syncCount = await transport.syncCount
+        XCTAssertEqual(syncCount, 1)
+        XCTAssertNotEqual(controller.phase, .ready)
+    }
+
+    func testAutomaticActivityClearsARecoveredTransientFailure() async throws {
+        let factory = TestBrowserCloudSyncTransportFactory()
+        let controller = BrowserCloudSyncController(
+            workflow: TestBrowserCloudSyncWorkflowGateway(),
+            configuration: testConfiguration,
+            preferences: TestBrowserCloudSyncPreferences(),
+            remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
+            transportFactory: factory
+        )
+        await controller.start()
+        let transport = try XCTUnwrap(factory.transports.first)
+        await transport.emit(.failed("iCloud is temporarily unavailable."))
+
+        await transport.emit(.uploaded(recordCount: 2))
+
+        XCTAssertEqual(controller.phase, .ready)
+        XCTAssertNil(controller.errorDescription)
+        XCTAssertEqual(controller.lastUploadedRecordCount, 2)
+        XCTAssertNotNil(controller.lastSuccessAt)
     }
 
     func testSkippedRecordsAndRemovedCloudDataReachTheDiagnostics() async throws {
@@ -514,6 +560,14 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
         XCTAssertEqual(
             service.message(for: CKError(.permissionFailure)),
             "This build is not permitted to use Crest’s iCloud container."
+        )
+        XCTAssertEqual(
+            service.message(for: CKError(.serviceUnavailable)),
+            "iCloud is temporarily unavailable. Crest will retry automatically."
+        )
+        XCTAssertEqual(
+            service.message(for: CKError(.requestRateLimited)),
+            "iCloud is temporarily busy. Crest will retry automatically."
         )
     }
 
@@ -754,5 +808,9 @@ private actor TestBrowserCloudSyncTransport: BrowserCloudSyncTransport {
 
     func emit(_ activity: BrowserCloudSyncActivity) async {
         await activityHandler(activity)
+    }
+
+    func emit(_ status: BrowserCloudSyncStatus) async {
+        await statusHandler(status)
     }
 }

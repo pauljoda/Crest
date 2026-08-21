@@ -178,7 +178,11 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
 
             let resolved = try BrowserSyncMergeResolver.resolve(local, remote)
             byID[remote.id] = resolved
-            if resolved != remote {
+            // If the local copy wins unchanged, preserve its existing pending
+            // state. A fetch can race the matching upload and return the stale
+            // server copy; re-inserting an already acknowledged local version
+            // here turns that one race into an endless upload/fetch loop.
+            if resolved != local, resolved != remote {
                 pendingRecordIDs.insert(resolved.id)
             }
         }

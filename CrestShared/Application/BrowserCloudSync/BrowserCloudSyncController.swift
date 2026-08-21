@@ -125,7 +125,7 @@ final class BrowserCloudSyncController {
                 )
                 return
             }
-            try await startTransportAndSync(
+            try await startTransport(
                 using: transportFactory,
                 generation: generation
             )
@@ -255,7 +255,7 @@ final class BrowserCloudSyncController {
             try workflow.replaceLocalWithCloud(remote)
         }
         try preferences.resetTransportState()
-        try await startTransportAndSync(
+        try await startTransport(
             using: transportFactory,
             generation: generation
         )
@@ -271,7 +271,10 @@ final class BrowserCloudSyncController {
         try preferences.resetTransportState()
     }
 
-    private func startTransportAndSync(
+    /// Starts CKSyncEngine and lets its system scheduler perform the routine
+    /// fetch/send cycle. `syncNow()` is reserved for the explicit button so two
+    /// schedulers cannot drive overlapping work at launch.
+    private func startTransport(
         using transportFactory: any BrowserCloudSyncTransportFactory,
         generation: Int
     ) async throws {
@@ -291,15 +294,6 @@ final class BrowserCloudSyncController {
                 return
             }
         }
-        phase = .syncing
-        try await transport?.syncNow()
-        guard isCurrentStart(generation) else { return }
-        guard !accountRestartRequested else { return }
-        guard conflict == nil else {
-            phase = .needsReconciliation
-            return
-        }
-        recordSuccess()
     }
 
     private func resolve(usesCloud: Bool) async {
@@ -328,7 +322,7 @@ final class BrowserCloudSyncController {
             )
             transport = nil
             conflict = nil
-            try await startTransportAndSync(
+            try await startTransport(
                 using: transportFactory,
                 generation: generation
             )
@@ -347,6 +341,7 @@ final class BrowserCloudSyncController {
             phase = .syncing
         case .idle:
             phase = .ready
+            clearRecoveredFailureIfNeeded()
         case .pausedForAccountConfirmation:
             phase = .needsReconciliation
         case .failed(let message):
@@ -360,9 +355,11 @@ final class BrowserCloudSyncController {
         case .fetched(let recordCount):
             lastFetchedRecordCount = recordCount
             lastSuccessAt = .now
+            clearRecoveredFailureIfNeeded()
         case .uploaded(let recordCount):
             lastUploadedRecordCount = recordCount
             lastSuccessAt = .now
+            clearRecoveredFailureIfNeeded()
         case .accountChanged:
             transport = nil
             conflict = nil
@@ -379,6 +376,17 @@ final class BrowserCloudSyncController {
 
     private func recordSuccess() {
         lastSuccessAt = .now
+        phase = .ready
+        errorDescription = nil
+        retryAttempts = 0
+        cancelRetry()
+    }
+
+    /// CKSyncEngine retries transient CloudKit failures through the system
+    /// scheduler. Activity arriving outside an explicit `syncNow()` proves that
+    /// automatic retry recovered, so the earlier error must not remain sticky.
+    private func clearRecoveredFailureIfNeeded() {
+        guard !isRunning, errorDescription != nil else { return }
         phase = .ready
         errorDescription = nil
         retryAttempts = 0
@@ -404,6 +412,7 @@ final class BrowserCloudSyncController {
             conflict == nil,
             !isRunning,
             !accountRestartRequested,
+            transport == nil,
             remoteService != nil,
             transportFactory != nil,
             retryTask == nil,

@@ -608,6 +608,54 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertFalse(journal.pendingRecordIDs.contains(spaceRecordID))
     }
 
+    /// A fetch can finish with the server copy from immediately before the
+    /// matching upload. Resolving that stale copy back to the acknowledged
+    /// local version must not turn the same upload into pending work again.
+    func testAStaleFetchedCopyDoesNotRequeueAnAcknowledgedLocalVersion() throws {
+        let session = oneSpaceSession()
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(204))
+        try journal.stage(session: session, at: fixedDate(100))
+        let local = try XCTUnwrap(journal.records.first)
+        journal.markUploaded([local.id: local.version])
+        let stale = BrowserSyncRecord(
+            id: local.id,
+            spaceID: local.spaceID,
+            version: BrowserSyncVersion(
+                logicalClock: 0,
+                deviceID: fixedUUID(205)
+            ),
+            payload: local.payload,
+            tombstone: local.tombstone
+        )
+
+        try journal.merge([stale])
+
+        XCTAssertEqual(journal.records.first { $0.id == local.id }, local)
+        XCTAssertFalse(journal.pendingRecordIDs.contains(local.id))
+    }
+
+    func testAStaleFetchedCopyKeepsAnUnacknowledgedLocalVersionPending() throws {
+        let session = oneSpaceSession()
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(206))
+        try journal.stage(session: session, at: fixedDate(100))
+        let local = try XCTUnwrap(journal.records.first)
+        let stale = BrowserSyncRecord(
+            id: local.id,
+            spaceID: local.spaceID,
+            version: BrowserSyncVersion(
+                logicalClock: 0,
+                deviceID: fixedUUID(207)
+            ),
+            payload: local.payload,
+            tombstone: local.tombstone
+        )
+
+        try journal.merge([stale])
+
+        XCTAssertEqual(journal.records.first { $0.id == local.id }, local)
+        XCTAssertTrue(journal.pendingRecordIDs.contains(local.id))
+    }
+
     func testHostileMaximumLogicalClockFailsClosedInsteadOfOverflowing() throws {
         let session = oneSpaceSession()
         let space = try XCTUnwrap(session.selectedSpace)

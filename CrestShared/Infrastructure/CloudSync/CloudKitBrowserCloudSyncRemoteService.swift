@@ -46,6 +46,10 @@ actor CloudKitBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
             return "Sign in to iCloud to sync Crest."
         case .networkUnavailable, .networkFailure:
             return "Crest can’t reach iCloud right now."
+        case .serviceUnavailable:
+            return "iCloud is temporarily unavailable. Crest will retry automatically."
+        case .requestRateLimited:
+            return "iCloud is temporarily busy. Crest will retry automatically."
         case .quotaExceeded:
             return "Your iCloud storage is full."
         case .permissionFailure:
