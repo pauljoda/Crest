@@ -33,11 +33,13 @@ stable or nightly entries:
 
 `https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml`
 
-The `updates` branch is workflow-owned. It contains only the appcasts and a
-short README. Stable binaries remain immutable GitHub Release assets. Nightly
-and development builds each reuse one rolling prerelease, retain only the
-current build's assets, and prefix the filenames with `Installer-`, `Checksum-`,
-or `Debug-Symbols-` so their purpose is visible before GitHub truncates the
+The `updates` branch is workflow-owned. It contains the appcasts, a short
+README, and `release-note-publication.json`, whose independent stable, nightly,
+and development cursors record the last successfully published catalog entry.
+Stable binaries remain immutable GitHub Release assets. Nightly and development
+builds each reuse one rolling prerelease, retain only the current build's
+assets, and prefix the filenames with `Installer-`, `Checksum-`, or
+`Debug-Symbols-` so their purpose is visible before GitHub truncates the
 remaining name. Every filename still carries the version and, for rolling
 builds, the UTC date and source commit, so Sparkle never advances to an
 overwritten binary. GitHub Packages is not part of the desktop distribution
@@ -53,20 +55,15 @@ date-stamped nightly releases and tags.
 
 Release notes come from the explicit `Documentation/ReleaseNotes.json` catalog.
 Every product or architecture commit adds a stable entry ID, category, and
-purpose-written message. The generator compares the catalog stored in the last
-signed publication with the current catalog, groups new public entries into
-New, Improved, and Fixed highlights, omits `internal` entries, and limits long
-ranges to the 12 most recent highlights. Because entry identity is independent
+purpose-written message. The generator reads the selected channel's cursor,
+groups the later public entries into New, Improved, and Fixed highlights, omits
+`internal` entries, and limits long ranges to the 12 most recent highlights.
+The catalog's immutable publication baselines bootstrap the current Crest 0.4.0
+stable, 0.4.4 development, and 0.4.5 nightly positions until the workflow writes
+the live cursor file. Because entry identity and cursor position are independent
 of commit hashes, rebases and other history rewrites do not repeat published
 copy or block a nightly. The same concise notes appear on GitHub and as
 structured Markdown in Sparkle's update interface.
-
-For a channel whose last publication predates the catalog, the generator uses a
-one-time compatibility path through Git history. Linear histories use the
-ordinary commit range; rewritten histories first locate an exact tree-equivalent
-published boundary and otherwise use patch equivalence to omit recreated
-commits. Once that channel publishes a catalog-bearing build, later notes depend
-only on catalog snapshots.
 
 ## Publication order
 
@@ -82,10 +79,14 @@ The production workflow intentionally publishes from the inside out:
 6. create, sign, notarize, staple, and Gatekeeper-check the disk image;
 7. publish the build-provenance attestation, then reconcile and digest-verify
    the disk image, checksum, and dSYM;
-8. sign and publish the Sparkle appcast after the release assets exist.
+8. sign the Sparkle appcast, advance only that channel's release-note cursor,
+   and publish both in one `updates` branch commit after the release assets
+   exist.
 
-If any signing or notarization step fails, no appcast is advanced. An update
-therefore never points at an absent or unverified disk image.
+If any signing, notarization, appcast, or branch-push step fails, neither the
+appcast nor its release-note cursor advances. An update therefore never points
+at an absent or unverified disk image, and the next successful attempt retains
+all unpublished release-note entries.
 
 Rolling publication is safe to repeat after an interrupted GitHub request. The
 workflow reuses matching uploaded assets, removes only incomplete or mismatched
@@ -93,7 +94,7 @@ assets for the target build, and retries each replacement with state
 verification. The prior complete build remains downloadable until the new
 signed appcast has been pushed. Only then does the workflow prune superseded
 assets. If a failure advances the rolling tag but not the appcast, the next run
-still builds release notes from the last completed appcast entry.
+still builds release notes from the last successfully published channel cursor.
 
 ## GitHub production environment
 

@@ -54,6 +54,24 @@ class DirectDistributionContractTests(unittest.TestCase):
         self.assertIn("local attempt delay exit_code", workflow)
         self.assertNotIn("local attempt delay status", workflow)
 
+    def test_release_note_cursor_advances_atomically_with_the_signed_appcast(self) -> None:
+        workflow = RELEASE_WORKFLOW.read_text()
+
+        self.assertIn("release_note_marker:", workflow)
+        self.assertIn('release_note_state_filename="release-note-publication.json"', workflow)
+        self.assertIn('--previous-entry "$RELEASE_NOTE_MARKER"', workflow)
+        self.assertIn("release_note_publication.py advance", workflow)
+        self.assertIn(
+            'git -C "$updates_checkout" add "$appcast_filename" README.md '
+            '"$release_note_state_filename"',
+            workflow,
+        )
+        self.assertEqual(workflow.count("release_note_publication.py advance"), 1)
+        self.assertLess(
+            workflow.index("release_note_publication.py advance"),
+            workflow.index('git -C "$updates_checkout" push origin HEAD:updates'),
+        )
+
     def test_release_build_number_survives_the_public_repository_epoch(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
 

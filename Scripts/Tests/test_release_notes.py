@@ -61,6 +61,7 @@ class ReleaseNotesTests(unittest.TestCase):
         repository: pathlib.Path,
         current_commit: str,
         previous_commit: str | None = None,
+        previous_entry: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         arguments = [
             "python3",
@@ -78,6 +79,8 @@ class ReleaseNotesTests(unittest.TestCase):
         ]
         if previous_commit is not None:
             arguments.extend(["--previous-ref", previous_commit])
+        if previous_entry is not None:
+            arguments.extend(["--previous-entry", previous_entry])
         return subprocess.run(
             arguments,
             check=False,
@@ -134,6 +137,54 @@ class ReleaseNotesTests(unittest.TestCase):
             self.assertNotIn("Keep existing behavior reliable", result.stdout)
             self.assertNotIn("structured release-note catalog", result.stdout)
             self.assertNotIn("wording that must stay private", result.stdout)
+
+    def test_catalog_cursor_selects_entries_after_its_channel_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "tests@crestbrowser.com")
+
+            self.write_catalog(
+                repository,
+                {
+                    "stable-boundary": {
+                        "category": "internal",
+                        "message": "Record the stable publication boundary",
+                    },
+                    "development-change": {
+                        "category": "new",
+                        "message": "Open links in a compact preview",
+                    },
+                    "nightly-boundary": {
+                        "category": "internal",
+                        "message": "Record the nightly publication boundary",
+                    },
+                    "current-fix": {
+                        "category": "fixed",
+                        "message": "Keep pinned tabs safe during iCloud Sync",
+                    },
+                },
+            )
+            current_commit = self.commit(repository, "fix: private implementation subject")
+
+            nightly = self.generate_notes(
+                repository,
+                current_commit,
+                previous_entry="nightly-boundary",
+            )
+            stable = self.generate_notes(
+                repository,
+                current_commit,
+                previous_entry="stable-boundary",
+            )
+
+            self.assertEqual(nightly.returncode, 0, nightly.stderr)
+            self.assertNotIn("Open links in a compact preview", nightly.stdout)
+            self.assertIn("Keep pinned tabs safe during iCloud Sync", nightly.stdout)
+            self.assertEqual(stable.returncode, 0, stable.stderr)
+            self.assertIn("Open links in a compact preview", stable.stdout)
+            self.assertIn("Keep pinned tabs safe during iCloud Sync", stable.stdout)
 
     def test_catalog_diff_survives_rewritten_commit_history(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

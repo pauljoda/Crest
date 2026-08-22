@@ -86,10 +86,11 @@ nightly channel is an explicit choice in General Settings.
 
 GitHub Actions builds every public release, verifies its Developer ID signature
 and notarization, publishes provenance and checksums, then updates the signed
-`updates` branch appcast only after the immutable release assets exist. Public
-downloads live in GitHub Releases rather than GitHub Packages. See the
-[distribution runbook](Documentation/Distribution.md) for the channel,
-credential, publication, and verification contracts.
+`updates` branch appcast and that channel's release-note cursor together only
+after the immutable release assets exist. Public downloads live in GitHub
+Releases rather than GitHub Packages. See the [distribution
+runbook](Documentation/Distribution.md) for the channel, credential,
+publication, and verification contracts.
 
 ## Validate a change
 

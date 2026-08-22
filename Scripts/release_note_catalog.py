@@ -14,8 +14,10 @@ from typing import Optional
 
 
 CATALOG_PATH = "Documentation/ReleaseNotes.json"
-SCHEMA_VERSION = 1
+LEGACY_SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SUPPORTED_CATEGORIES = ("new", "improved", "fixed", "internal")
+PUBLICATION_CHANNELS = ("stable", "development", "nightly")
 ENTRY_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
@@ -30,6 +32,13 @@ class ReleaseNoteEntry:
     message: str
 
 
+@dataclass(frozen=True)
+class ReleaseNoteCatalog:
+    schema_version: int
+    publication_baselines: dict[str, str]
+    entries: dict[str, ReleaseNoteEntry]
+
+
 def unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     value: dict[str, object] = {}
     for key, item in pairs:
@@ -39,7 +48,7 @@ def unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     return value
 
 
-def parse_catalog(contents: str, source: str) -> dict[str, ReleaseNoteEntry]:
+def parse_catalog_document(contents: str, source: str) -> ReleaseNoteCatalog:
     try:
         document = json.loads(contents, object_pairs_hook=unique_json_object)
     except (json.JSONDecodeError, CatalogValidationError) as error:
@@ -47,13 +56,19 @@ def parse_catalog(contents: str, source: str) -> dict[str, ReleaseNoteEntry]:
 
     if not isinstance(document, dict):
         raise CatalogValidationError(f"{source}: catalog root must be an object")
-    if set(document) != {"schemaVersion", "entries"}:
+    schema_version = document.get("schemaVersion")
+    if schema_version == LEGACY_SCHEMA_VERSION:
+        required_fields = {"schemaVersion", "entries"}
+    elif schema_version == SCHEMA_VERSION:
+        required_fields = {"schemaVersion", "publicationBaselines", "entries"}
+    else:
         raise CatalogValidationError(
-            f"{source}: catalog must contain only schemaVersion and entries"
+            f"{source}: schemaVersion must be {LEGACY_SCHEMA_VERSION} or {SCHEMA_VERSION}"
         )
-    if document["schemaVersion"] != SCHEMA_VERSION:
+    if set(document) != required_fields:
+        required = ", ".join(required_fields)
         raise CatalogValidationError(
-            f"{source}: schemaVersion must be {SCHEMA_VERSION}"
+            f"{source}: schemaVersion {schema_version} catalog must contain only {required}"
         )
 
     raw_entries = document["entries"]
@@ -87,7 +102,30 @@ def parse_catalog(contents: str, source: str) -> dict[str, ReleaseNoteEntry]:
             )
         entries[identifier] = ReleaseNoteEntry(identifier, category, message)
 
-    return entries
+    publication_baselines: dict[str, str] = {}
+    if schema_version == SCHEMA_VERSION:
+        raw_baselines = document["publicationBaselines"]
+        if not isinstance(raw_baselines, dict) or set(raw_baselines) != set(
+            PUBLICATION_CHANNELS
+        ):
+            channels = ", ".join(PUBLICATION_CHANNELS)
+            raise CatalogValidationError(
+                f"{source}: publicationBaselines must contain exactly {channels}"
+            )
+        for channel in PUBLICATION_CHANNELS:
+            marker = raw_baselines[channel]
+            if not isinstance(marker, str) or marker not in entries:
+                raise CatalogValidationError(
+                    f"{source}: {channel} publication baseline '{marker}' "
+                    "must identify a catalog entry"
+                )
+            publication_baselines[channel] = marker
+
+    return ReleaseNoteCatalog(schema_version, publication_baselines, entries)
+
+
+def parse_catalog(contents: str, source: str) -> dict[str, ReleaseNoteEntry]:
+    return parse_catalog_document(contents, source).entries
 
 
 def git_file(repository_root: pathlib.Path, object_name: str) -> Optional[str]:
@@ -103,29 +141,35 @@ def git_file(repository_root: pathlib.Path, object_name: str) -> Optional[str]:
 
 
 def working_catalog(repository_root: pathlib.Path) -> dict[str, ReleaseNoteEntry]:
+    return working_catalog_document(repository_root).entries
+
+
+def working_catalog_document(repository_root: pathlib.Path) -> ReleaseNoteCatalog:
     catalog_path = repository_root / CATALOG_PATH
     if not catalog_path.is_file():
         raise CatalogValidationError(f"{CATALOG_PATH} is missing")
-    return parse_catalog(catalog_path.read_text(), CATALOG_PATH)
+    return parse_catalog_document(catalog_path.read_text(), CATALOG_PATH)
 
 
-def staged_catalog(repository_root: pathlib.Path) -> dict[str, ReleaseNoteEntry]:
+def staged_catalog(repository_root: pathlib.Path) -> ReleaseNoteCatalog:
     contents = git_file(repository_root, f":{CATALOG_PATH}")
     if contents is None:
         raise CatalogValidationError(f"stage {CATALOG_PATH} with the current commit")
-    return parse_catalog(contents, f"staged {CATALOG_PATH}")
+    return parse_catalog_document(contents, f"staged {CATALOG_PATH}")
 
 
-def head_catalog(repository_root: pathlib.Path) -> dict[str, ReleaseNoteEntry]:
+def head_catalog(repository_root: pathlib.Path) -> ReleaseNoteCatalog:
     contents = git_file(repository_root, f"HEAD:{CATALOG_PATH}")
     if contents is None:
-        return {}
-    return parse_catalog(contents, f"HEAD {CATALOG_PATH}")
+        return ReleaseNoteCatalog(LEGACY_SCHEMA_VERSION, {}, {})
+    return parse_catalog_document(contents, f"HEAD {CATALOG_PATH}")
 
 
 def validate_staged_entry(repository_root: pathlib.Path) -> tuple[str, ...]:
-    previous_entries = head_catalog(repository_root)
-    current_entries = staged_catalog(repository_root)
+    previous_catalog = head_catalog(repository_root)
+    current_catalog = staged_catalog(repository_root)
+    previous_entries = previous_catalog.entries
+    current_entries = current_catalog.entries
     deleted_entries = tuple(sorted(previous_entries.keys() - current_entries.keys()))
     if deleted_entries:
         deleted = ", ".join(deleted_entries)
@@ -133,14 +177,34 @@ def validate_staged_entry(repository_root: pathlib.Path) -> tuple[str, ...]:
             f"catalog commits must not delete release-note entries: {deleted}"
         )
 
+    rewritten_entries = tuple(
+        identifier
+        for identifier, entry in previous_entries.items()
+        if current_entries.get(identifier) != entry
+    )
+    if rewritten_entries:
+        rewritten = ", ".join(rewritten_entries)
+        raise CatalogValidationError(
+            f"catalog commits must not rewrite release-note entries: {rewritten}"
+        )
+
+    if current_catalog.schema_version < previous_catalog.schema_version:
+        raise CatalogValidationError("catalog commits must not downgrade schemaVersion")
+
     previous_order = tuple(previous_entries)
     current_order = tuple(current_entries)
-    if current_order[: len(previous_order)] != previous_order:
+    is_version_two_migration = (
+        previous_catalog.schema_version == LEGACY_SCHEMA_VERSION
+        and current_catalog.schema_version == SCHEMA_VERSION
+    )
+    if not is_version_two_migration and current_order[: len(previous_order)] != previous_order:
         raise CatalogValidationError(
             "append new release-note entries after the existing catalog order"
         )
 
-    added_entries = tuple(sorted(current_entries.keys() - previous_entries.keys()))
+    added_entries = tuple(
+        identifier for identifier in current_entries if identifier not in previous_entries
+    )
     if not added_entries:
         raise CatalogValidationError(
             f"stage at least one new release-note entry in {CATALOG_PATH}"

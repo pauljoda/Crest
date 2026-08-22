@@ -10,7 +10,12 @@ import re
 import subprocess
 import urllib.parse
 
-from release_note_catalog import CATALOG_PATH, ReleaseNoteEntry, parse_catalog
+from release_note_catalog import (
+    CATALOG_PATH,
+    CatalogValidationError,
+    ReleaseNoteEntry,
+    parse_catalog,
+)
 
 
 CHANNEL_DESCRIPTIONS = {
@@ -213,10 +218,26 @@ def catalog_changes(
     repository_root: pathlib.Path,
     current_commit: str,
     previous_ref: str | None,
+    previous_entry: str | None,
 ) -> list[ReleaseNoteChange] | None:
     current_entries = catalog_at_ref(repository_root, current_commit)
     if current_entries is None:
         return None
+
+    if previous_entry is not None:
+        if previous_entry not in current_entries:
+            raise CatalogValidationError(
+                f"release-note cursor '{previous_entry}' is not in the current catalog"
+            )
+        include_entry = False
+        changes: list[ReleaseNoteChange] = []
+        for identifier, entry in current_entries.items():
+            if identifier == previous_entry:
+                include_entry = True
+                continue
+            if include_entry and entry.category != "internal":
+                changes.append(ReleaseNoteChange(entry.category, entry.message))
+        return changes
 
     if previous_ref is None:
         previous_entries = catalog_at_ref(repository_root, f"{current_commit}^")
@@ -286,10 +307,16 @@ def release_notes(
     release_tag: str,
     current_ref: str,
     previous_ref: str | None,
+    previous_entry: str | None,
     asset_name: str,
 ) -> str:
     current_commit = git(repository_root, "rev-parse", f"{current_ref}^{{commit}}")
-    changes = catalog_changes(repository_root, current_commit, previous_ref)
+    changes = catalog_changes(
+        repository_root,
+        current_commit,
+        previous_ref,
+        previous_entry,
+    )
     if changes is None:
         _, commits = commit_range(repository_root, current_commit, previous_ref)
         changes = [
@@ -356,6 +383,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--release-tag")
     parser.add_argument("--current-ref", required=True)
     parser.add_argument("--previous-ref")
+    parser.add_argument("--previous-entry")
     parser.add_argument("--asset-name", required=True)
     return parser.parse_args()
 
@@ -371,6 +399,7 @@ def main() -> None:
             release_tag=arguments.release_tag or arguments.channel,
             current_ref=arguments.current_ref,
             previous_ref=arguments.previous_ref,
+            previous_entry=arguments.previous_entry,
             asset_name=arguments.asset_name,
         ),
         end="",

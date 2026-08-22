@@ -38,6 +38,7 @@ jobs:
       channel: ${{ steps.release.outputs.channel }}
       marketing_version: ${{ steps.release.outputs.marketing_version }}
       previous_commit: ${{ steps.release.outputs.previous_commit }}
+      release_note_marker: ${{ steps.release.outputs.release_note_marker }}
       release_tag: ${{ steps.release.outputs.release_tag }}
       release_title: ${{ steps.release.outputs.release_title }}
       should_publish: ${{ steps.release.outputs.should_publish }}
@@ -112,6 +113,24 @@ jobs:
 
           previous_commit=""
           previous_tag=""
+          release_note_state_filename="release-note-publication.json"
+          previous_release_note_state="$RUNNER_TEMP/${release_note_state_filename}"
+          retry_github git fetch origin updates
+          release_note_state_arguments=(
+            marker
+            --catalog Documentation/ReleaseNotes.json
+            --channel "$channel"
+          )
+          if git cat-file -e "FETCH_HEAD:${release_note_state_filename}" 2>/dev/null; then
+            git show "FETCH_HEAD:${release_note_state_filename}" \
+              > "$previous_release_note_state"
+            release_note_state_arguments+=(--state "$previous_release_note_state")
+          fi
+          release_note_marker="$(
+            python3 Scripts/release_note_publication.py \
+              "${release_note_state_arguments[@]}"
+          )"
+
           if [[ "$channel" == "stable" ]]; then
             releases="$(
               retry_github gh api \
@@ -128,7 +147,6 @@ jobs:
               appcast_filename="appcast.xml"
             fi
             previous_appcast="$RUNNER_TEMP/crest-previous-${appcast_filename}"
-            retry_github git fetch origin updates
             if git cat-file -e "FETCH_HEAD:${appcast_filename}" 2>/dev/null; then
               git show "FETCH_HEAD:${appcast_filename}" > "$previous_appcast"
               published_commit_prefix="$(
@@ -182,6 +200,7 @@ jobs:
             printf 'channel=%s\n' "$channel"
             printf 'marketing_version=%s\n' "$marketing_version"
             printf 'previous_commit=%s\n' "$previous_commit"
+            printf 'release_note_marker=%s\n' "$release_note_marker"
             printf 'release_tag=%s\n' "$release_tag"
             printf 'release_title=%s\n' "$release_title"
             printf 'should_publish=%s\n' "$should_publish"
@@ -372,6 +391,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIOUS_COMMIT: ${{ needs.preflight.outputs.previous_commit }}
+          RELEASE_NOTE_MARKER: ${{ needs.preflight.outputs.release_note_marker }}
           RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
           RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
           RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
@@ -438,6 +458,7 @@ jobs:
             --channel "$RELEASE_CHANNEL"
             --release-tag "$RELEASE_TAG"
             --current-ref "$GITHUB_SHA"
+            --previous-entry "$RELEASE_NOTE_MARKER"
             --asset-name "$installer_name"
           )
           if [[ -n "$PREVIOUS_COMMIT" ]]; then
@@ -526,6 +547,7 @@ jobs:
           checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"
           symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"
           release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"
+          release_note_state_filename="release-note-publication.json"
           mkdir -p "$sparkle_root" "$feed_source" "$updates_checkout"
           if [[ "$RELEASE_CHANNEL" == "development" ]]; then
             appcast_filename=appcast-development.xml
@@ -599,7 +621,12 @@ jobs:
             '' \
             'This branch is written by the production release workflow. Its signed stable, nightly, and development appcasts point only to notarized assets in GitHub Releases.' \
             > "$updates_checkout/README.md"
-          git -C "$updates_checkout" add "$appcast_filename" README.md
+          python3 Scripts/release_note_publication.py advance \
+            --catalog Documentation/ReleaseNotes.json \
+            --state "$updates_checkout/$release_note_state_filename" \
+            --channel "$RELEASE_CHANNEL" \
+            --output "$updates_checkout/$release_note_state_filename"
+          git -C "$updates_checkout" add "$appcast_filename" README.md "$release_note_state_filename"
           git -C "$updates_checkout" config user.name "github-actions[bot]"
           git -C "$updates_checkout" config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"

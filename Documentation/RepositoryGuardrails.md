@@ -45,11 +45,15 @@ public; `internal` records a commit that should not be announced. Messages state
 the user outcome directly and do not inherit commit wording.
 
 The IDs, rather than commit hashes, survive rebases and history rewrites. Never
-reuse, reorder, or delete an ID; append new entries so catalog order remains
-release order. Existing copy may be refined for a channel that has not published
-it yet, but every product or architecture commit adds at least one new entry.
-`Scripts/check-version.sh --fix-commit` validates the staged catalog and rejects
-a patch bump without a new entry. Validate the working catalog directly with:
+reuse, rewrite, reorder, or delete an ID; append new entries so catalog order
+remains release order. The schema 2 `publicationBaselines` are immutable
+bootstrap cursors for the currently published stable, nightly, and development
+builds. Successful publications keep the live per-channel cursors in the
+workflow-owned `updates` branch and advance only the selected channel in the
+same commit as its signed appcast. Every product or architecture commit adds at
+least one new entry. `Scripts/check-version.sh --fix-commit` validates the staged
+catalog and rejects a patch bump without a new entry. Validate the working
+catalog directly with:
 
 ```sh
 python3 Scripts/release_note_catalog.py
