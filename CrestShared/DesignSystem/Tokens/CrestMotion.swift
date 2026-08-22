@@ -97,8 +97,6 @@ enum CrestMotion {
     static let contentStateTransition: TimeInterval = 0.22
     /// Presenting transient confirmation feedback in browser chrome.
     static let feedbackPresentationTransition: TimeInterval = 0.22
-    /// Settling Peek after an interactive vertical drag.
-    static let peekDragSettlementTransition: TimeInterval = 0.30
     /// Dismissing a Peek card back into browser chrome.
     static let peekDismissalTransition: TimeInterval = 0.22
     /// Revealing one destination in the utility fan.
@@ -178,9 +176,6 @@ enum CrestMotion {
     static var contentState: Animation { .snappy(duration: contentStateTransition) }
     static var feedbackPresentation: Animation {
         .snappy(duration: feedbackPresentationTransition)
-    }
-    static var peekDragSettlement: Animation {
-        .snappy(duration: peekDragSettlementTransition)
     }
     static var peekDismissal: Animation { .snappy(duration: peekDismissalTransition) }
     static var utilityFanReveal: Animation {

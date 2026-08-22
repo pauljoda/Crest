@@ -2,11 +2,11 @@ import SwiftUI
 
 /// The dimmed ground a transient overlay's card floats on.
 ///
-/// Where there is room around the card the scrim is also the way out of it, so
-/// it is a button. On a handheld screen the card fills the safe area and the
-/// scrim is only whatever shows past its corners — a target a thumb finds by
-/// accident — so there it is decoration and the drag gesture dismisses
-/// instead.
+/// The scrim is also the way out of the card, so it is a button. How much of it
+/// shows is the arrangement's business: a floating card leaves generous ground
+/// around itself, a handheld card leaves only the strip past its safe-area
+/// insets. Either way a tap that lands outside the card is a tap that meant to
+/// leave it.
 struct BrowserTransientScrim: View {
     let opacity: Double
     let allowsDismissal: Bool

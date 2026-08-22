@@ -7,7 +7,6 @@ struct MobileBrowserTransientUnlockedContent: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
-    @State private var dismissalOffset: CGFloat = 0
     @State private var isCardVisible = false
     @State private var isCardExpanded = false
 
@@ -18,8 +17,7 @@ struct MobileBrowserTransientUnlockedContent: View {
             spaces: model.availableSpaces,
             selectedSpaceID: model.request.spaceID,
             vocabulary: model.request.overlayVocabulary,
-            actions: actions,
-            dismissalOffset: $dismissalOffset
+            actions: actions
         ) {
             webContent
         }
@@ -68,7 +66,6 @@ struct MobileBrowserTransientUnlockedContent: View {
     private var presentationState: BrowserTransientPresentationState {
         BrowserTransientPresentationState(
             arrangement: .current,
-            dismissalOffset: dismissalOffset,
             isCardVisible: isCardVisible,
             isCardExpanded: isCardExpanded,
             reduceMotion: reduceMotion,

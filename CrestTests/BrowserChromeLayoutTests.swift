@@ -2354,19 +2354,11 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(
             BrowserTransientCardArrangement.pointer.allowsScrimDismissal
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             BrowserTransientCardArrangement.sheet.allowsScrimDismissal
         )
         XCTAssertTrue(
             BrowserTransientCardArrangement.canvas.allowsScrimDismissal
-        )
-
-        XCTAssertFalse(
-            BrowserTransientCardArrangement.pointer.allowsDragDismissal
-        )
-        XCTAssertTrue(BrowserTransientCardArrangement.sheet.allowsDragDismissal)
-        XCTAssertFalse(
-            BrowserTransientCardArrangement.canvas.allowsDragDismissal
         )
 
         XCTAssertEqual(
@@ -2459,8 +2451,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(pointer.opacity(for: .pageCard), 0)
         XCTAssertEqual(pointer.opacity(for: .assembly), 1)
         XCTAssertEqual(pointer.scale(for: .assembly), CGSize(width: 1, height: 1))
-        XCTAssertEqual(pointer.dragOffset, 0)
-        XCTAssertEqual(pointer.dragScale, 1)
         XCTAssertEqual(pointer.scrimOpacity, 0)
 
         let sheet = BrowserTransientPresentationState(

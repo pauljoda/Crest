@@ -15,8 +15,8 @@ enum BrowserTransientEntranceTarget: Equatable, Sendable {
 /// not the same everywhere. A pointer overlay stands inside a window whose
 /// leading chrome the person can still see and reach, so it keeps clear of
 /// that chrome and hangs its controls above the card. A handheld overlay owns
-/// the whole screen, fills the safe area, and is pushed away with a thumb. A
-/// large touch screen has the room to float a card at a fraction of its size
+/// the whole screen and fills the safe area, with its controls under a thumb.
+/// A large touch screen has the room to float a card at a fraction of its size
 /// with the controls beneath it.
 ///
 /// The arrangement names those three rooms so one surface can lay itself out
@@ -28,10 +28,9 @@ enum BrowserTransientCardArrangement: Equatable, Sendable {
     /// window geometry policy and dismissed with the pointer or a key.
     case pointer
 
-    /// A card filling a handheld screen's safe area, pushed away by dragging
-    /// down from the control bar beneath it. Its scrim is under a thumb the
-    /// whole time, so tapping it must not close anything, and the card itself
-    /// is all web page, so dragging that must not close anything either.
+    /// A card filling a handheld screen's safe area, closed with the control
+    /// bar beneath it or by tapping the ground its insets leave showing. The
+    /// card itself is all web page, so every gesture over it stays WebKit's.
     case sheet
 
     /// A card floating at a fraction of a large touch screen, with room left
@@ -64,13 +63,15 @@ extension BrowserTransientCardArrangement {
 
     var controlBarPadding: CGFloat { self == .sheet ? 10 : 0 }
 
-    var allowsScrimDismissal: Bool { self != .sheet }
-
-    /// Whether the card can be thrown away with a thumb. Only where the scrim
-    /// cannot be tapped, and only from the control bar —
-    /// `BrowserTransientDragDismissalPolicy` says why the page itself is left
-    /// alone.
-    var allowsDragDismissal: Bool { self == .sheet }
+    /// Whether tapping the ground the card stands on closes it.
+    ///
+    /// Every room answers a tap outside the card. A pointer window and a large
+    /// touch screen leave generous ground around it. A handheld leaves only the
+    /// strip its safe-area insets hold back, which is narrow but reliable, and
+    /// on that screen it is the way out beside the close button: a handheld
+    /// card's control bar sits at the bottom edge, where a downward drag is the
+    /// system's own Reachability gesture rather than the card's.
+    var allowsScrimDismissal: Bool { true }
 }
 
 // MARK: - Geometry

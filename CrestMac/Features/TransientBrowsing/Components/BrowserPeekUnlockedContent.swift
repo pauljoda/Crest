@@ -32,10 +32,7 @@ struct BrowserPeekUnlockedContent: View {
             spaces: model.availableSpaces,
             selectedSpaceID: model.request.spaceID,
             vocabulary: BrowserPeekVocabulary.overlay,
-            actions: actions,
-            // A pointer overlay is dismissed with a click or a key, never
-            // carried away, so nothing ever moves this.
-            dismissalOffset: .constant(0)
+            actions: actions
         ) {
             webContent
         }

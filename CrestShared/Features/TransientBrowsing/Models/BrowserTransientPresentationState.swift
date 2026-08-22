@@ -3,7 +3,7 @@ import SwiftUI
 /// Everything a transient overlay's surface needs to draw one frame of itself.
 ///
 /// The shell owns the state that changes — whether the card has appeared, how
-/// far a thumb has dragged it, what the person's accessibility settings ask
+/// far into its entrance it is, what the person's accessibility settings ask
 /// for — and hands it over as a value. The derivations below are the same on
 /// every shell; the arrangement decides which of them are live and which
 /// resolve to identity, so both shells run one chain rather than two.
@@ -13,9 +13,6 @@ struct BrowserTransientPresentationState {
     /// the overlay owns the whole screen.
     var reservedLeadingWidth: CGFloat = 0
     var layoutDirection: LayoutDirection = .leftToRight
-    /// How far a thumb has pushed the card down. Zero wherever the arrangement
-    /// has no drag dismissal.
-    var dismissalOffset: CGFloat = 0
     let isCardVisible: Bool
     let isCardExpanded: Bool
     let reduceMotion: Bool
@@ -48,34 +45,14 @@ struct BrowserTransientPresentationState {
         isCardExpanded ? 1 : 0
     }
 
-    // MARK: - Being pushed away
-
-    /// How far the card follows a thumb, honouring reduced motion. Identity
-    /// wherever the arrangement has no drag dismissal.
-    var dragOffset: CGFloat {
-        BrowserVisualAccessibilityPolicy.spatialOffset(
-            dismissalOffset,
-            reduceMotion: reduceMotion
-        )
-    }
-
-    /// The slight shrink that reads as the card receding under a drag.
-    var dragScale: CGFloat {
-        BrowserVisualAccessibilityPolicy.spatialScale(
-            1 - min(dismissalOffset / 4_000, 0.045),
-            reduceMotion: reduceMotion
-        )
-    }
-
     // MARK: - The scrim behind it
 
-    /// The scrim fades out as the card is thrown away, and rests dimmer while
-    /// the overlay is only staged behind a press.
+    /// The scrim rests dimmer while the overlay is only staged behind a press,
+    /// and is absent until the card itself is on screen.
     var scrimOpacity: Double {
-        let progress = min(Double(dismissalOffset / 280), 1)
         let restingOpacity = presentationPhase == .staged ? 0.08 : 0.34
         return BrowserVisualAccessibilityPolicy.scrimOpacity(
-            restingOpacity * (1 - progress) * (isCardVisible ? 1 : 0),
+            restingOpacity * (isCardVisible ? 1 : 0),
             reduceTransparency: reduceTransparency
         )
     }

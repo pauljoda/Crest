@@ -15,7 +15,6 @@ struct BrowserTransientSurface<WebContent: View>: View {
     let selectedSpaceID: SpaceID
     let vocabulary: BrowserTransientOverlayVocabulary
     let actions: BrowserTransientCardActions
-    @Binding var dismissalOffset: CGFloat
     @ViewBuilder let webContent: () -> WebContent
 
     var body: some View {
@@ -35,7 +34,6 @@ struct BrowserTransientSurface<WebContent: View>: View {
                     availableSize: proxy.size,
                     safeAreaInsets: proxy.safeAreaInsets,
                     actions: actions,
-                    dismissalOffset: $dismissalOffset,
                     webContent: webContent
                 )
                 .scaleEffect(
