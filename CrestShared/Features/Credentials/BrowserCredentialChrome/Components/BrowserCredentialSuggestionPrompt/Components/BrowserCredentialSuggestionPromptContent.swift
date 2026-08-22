@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserCredentialSuggestionPromptContent: View {
     let request: BrowserCredentialFillRequest
     let space: BrowserSpace?
+    let siteIconData: Data?
     let model: BrowserCredentialSuggestionModel
     let fillErrorMessage: String?
     let metrics: BrowserCredentialPromptMetrics
@@ -18,6 +19,8 @@ struct BrowserCredentialSuggestionPromptContent: View {
                 kind: .suggestions,
                 request: request,
                 space: space,
+                siteIconData: siteIconData,
+                metrics: metrics,
                 dismiss: dismiss
             )
             if request.isCrossOriginFrame {

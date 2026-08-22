@@ -52,6 +52,13 @@ enum BrowserCredentialContentBridge {
                   if (!root) return false;
                   captureFormInteraction(root, true);
                   return true;
+                },
+                focusForTesting(selector) {
+                  const input = document.querySelector(selector);
+                  if (!(input instanceof HTMLInputElement) || input.type !== "password") {
+                    return false;
+                  }
+                  return reportFocus(input);
                 }
             """#
     #else
@@ -69,6 +76,8 @@ enum BrowserCredentialContentBridge {
           const observersByRoot = new WeakMap();
           let nextID = 1;
           let pendingSubmission = false;
+          let trackedField = null;
+          let trackedFieldRect = null;
           let lastSubmissionFingerprint = "";
           let lastSubmissionTime = 0;
           let lastUsernameFingerprint = "";
@@ -85,6 +94,46 @@ enum BrowserCredentialContentBridge {
             if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
             const rect = element.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0;
+          };
+
+          // Where the field sits in this frame's own viewport, in CSS pixels.
+          // The host turns that into its own points; it is the only side that
+          // knows the page's zoom, and the only side that knows whether this
+          // frame is the one the prompt may be anchored inside.
+          const rectOf = (element) => {
+            const rect = element.getBoundingClientRect();
+            if (!(rect.width > 0) || !(rect.height > 0)) return null;
+            const values = [rect.left, rect.top, rect.width, rect.height];
+            if (!values.every(Number.isFinite)) return null;
+            return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+          };
+
+          const rectsDiffer = (left, right) => !left || !right
+            || Math.abs(left.x - right.x) >= 0.5
+            || Math.abs(left.y - right.y) >= 0.5
+            || Math.abs(left.width - right.width) >= 0.5
+            || Math.abs(left.height - right.height) >= 0.5;
+
+          // WebKit already delivers scroll events at most once per rendering
+          // update, so the change gate below is the whole of the throttling:
+          // a page that scrolls without moving the field posts nothing.
+          const reportFieldGeometry = () => {
+            if (!trackedField) return;
+            const input = trackedField.input.deref();
+            if (!input || !input.isConnected || !isVisible(input)) {
+              trackedField = null;
+              trackedFieldRect = null;
+              return;
+            }
+            const rect = rectOf(input);
+            if (!rect || !rectsDiffer(rect, trackedFieldRect)) return;
+            trackedFieldRect = rect;
+            post({
+              event: "fieldGeometry",
+              trusted: false,
+              formID: trackedField.formID,
+              fieldRect: rect
+            });
           };
 
           const rootFor = (element) => {
@@ -277,6 +326,27 @@ enum BrowserCredentialContentBridge {
             observersByRoot.set(root, observer);
           };
 
+          // Raising the prompt, and starting to follow the field it points at.
+          // The listener and the testing hook go through here together so the
+          // hook cannot drift away from the path a real focus takes.
+          const reportFocus = (input) => {
+            const root = rootFor(input);
+            const fields = snapshot(root, input);
+            if (!fields) return false;
+            const rect = rectOf(input);
+            trackedField = rect ? { input: new WeakRef(input), formID: fields.formID } : null;
+            trackedFieldRect = rect;
+            post({
+              event: "focus",
+              trusted: true,
+              formID: fields.formID,
+              username: fields.username || undefined,
+              passwordKind: fields.passwordKind,
+              fieldRect: rect || undefined
+            });
+            return true;
+          };
+
           const setInputValue = (input, value) => {
             const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
             if (setter) setter.call(input, value); else input.value = value;
@@ -319,17 +389,23 @@ enum BrowserCredentialContentBridge {
           document.addEventListener("focusin", (event) => {
             const input = passwordInputFromEvent(event);
             if (!event.isTrusted || !input) return;
-            const root = rootFor(input);
-            const fields = snapshot(root, input);
-            if (!fields) return;
-            post({
-              event: "focus",
-              trusted: true,
-              formID: fields.formID,
-              username: fields.username || undefined,
-              passwordKind: fields.passwordKind
-            });
+            reportFocus(input);
           }, true);
+
+          // The prompt is anchored under the focused field, so it stops
+          // following once the page moves focus somewhere else. Focus leaving
+          // the document altogether is the person reaching for the prompt
+          // itself, which is exactly when it must keep following.
+          document.addEventListener("focusout", (event) => {
+            if (!trackedField || trackedField.input.deref() !== event.target) return;
+            if (event.relatedTarget instanceof Element) {
+              trackedField = null;
+              trackedFieldRect = null;
+            }
+          }, true);
+
+          addEventListener("scroll", reportFieldGeometry, { capture: true, passive: true });
+          addEventListener("resize", reportFieldGeometry, { passive: true });
 
           document.addEventListener("submit", (event) => {
             captureFormInteraction(event.target, event.isTrusted);

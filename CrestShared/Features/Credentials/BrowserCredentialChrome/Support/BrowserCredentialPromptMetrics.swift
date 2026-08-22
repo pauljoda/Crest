@@ -11,6 +11,16 @@ enum BrowserCredentialPromptWidth: Equatable, Sendable {
 
     /// Whatever the container gives it.
     case flexible
+
+    /// The most width this allows, where it names one at all.
+    var boundedWidth: CGFloat? {
+        switch self {
+        case .fixed(let width), .bounded(let width):
+            width
+        case .flexible:
+            nil
+        }
+    }
 }
 
 /// The surface a shell draws a credential prompt on.
@@ -20,6 +30,17 @@ enum BrowserCredentialPromptSurfaceStyle: Equatable, Sendable {
 
     /// A band across the width of the content, closed by a divider.
     case band
+}
+
+/// How a shell says a site holds nothing it can offer.
+enum BrowserCredentialSuggestionEmptyStatePresentation: Equatable, Sendable {
+    /// A short line beside a quiet glyph. A panel that has nothing to offer
+    /// should read as a remark, not as a form.
+    case compact
+
+    /// The full sentence, on a row sized like the account rows it stands in
+    /// for, so a band does not change height as the vault answers.
+    case sentence
 }
 
 /// Where a shell puts the save prompt's two actions.
@@ -47,7 +68,28 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
     let verticalPadding: CGFloat
 
     /// The width a fill prompt — suggestions or strong password — claims.
-    let fillPromptWidth: BrowserCredentialPromptWidth
+    ///
+    /// The one profile value a shell narrows after resolving it: an anchored
+    /// panel takes the width of the field it points at, inside the bounds this
+    /// profile already set. Nothing else about a resolved profile moves.
+    var fillPromptWidth: BrowserCredentialPromptWidth
+
+    /// Whether a fill prompt is drawn under the field that asked for it rather
+    /// than in the place the shell keeps for chrome.
+    ///
+    /// A pointer can put a panel anywhere and read it where it lands. A touch
+    /// shell cannot: a band under a field is a band under the keyboard, or
+    /// under the thumb holding the phone.
+    let anchorsFillPromptToField: Bool
+
+    /// The least width an anchored fill prompt claims, whatever the field's own
+    /// width, or `nil` where the shell never anchors. A search-sized login box
+    /// is still a panel with a title, an origin, and a way out.
+    let anchoredFillPromptMinimumWidth: CGFloat?
+
+    /// The room a floating prompt keeps between itself and the edges of the
+    /// page it floats over. A band meets both edges, so it keeps none.
+    let chromeInset: CGFloat
 
     /// The band the saved-password list is kept inside, or `nil` where the list
     /// simply grows the prompt.
@@ -66,6 +108,29 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
     /// The height the loading and empty states claim, so the prompt does not
     /// resize as the vault answers, or `nil` where they size to their text.
     let suggestionStateMinimumHeight: CGFloat?
+
+    /// How the prompt says a site has nothing saved for it.
+    let suggestionEmptyStatePresentation: BrowserCredentialSuggestionEmptyStatePresentation
+
+    /// The corner a suggestion row's resting highlight is drawn with, or `nil`
+    /// where rows draw none. Only a shell whose pointer can rest over a row
+    /// without committing to it has a resting state to draw.
+    let suggestionRowHighlightCornerRadius: CGFloat?
+
+    /// How far a row's highlight reaches past the text it is behind. The rows
+    /// keep the prompt's own margin, so the highlight is bled back outwards
+    /// rather than the text being pushed in.
+    let suggestionRowHighlightBleed: CGFloat
+
+    /// Whether an account row files its login under the name it was saved
+    /// with. A band's rows are one line tall so that every one of them is a
+    /// reachable target; a panel has the room to say which account is which.
+    let suggestionRowShowsAccountDetail: Bool
+
+    /// The frame the header's close control claims. A finger needs the full
+    /// target; a pointer needs a control the size of the rest of the chrome,
+    /// and a 44pt one only pushes the title row apart.
+    let closeControlSize: CGFloat
 
     /// The least width a prompt's own action claims, or `nil` where the action
     /// is already given the whole prompt to fill.
@@ -101,10 +166,18 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         horizontalPadding: CrestSpacing.medium,
         verticalPadding: CrestSpacing.medium,
         fillPromptWidth: .fixed(360),
+        anchorsFillPromptToField: true,
+        anchoredFillPromptMinimumWidth: 264,
+        chromeInset: CrestSpacing.medium,
         suggestionListMaximumHeight: nil,
         suggestionRowVerticalPadding: 5,
         suggestionRowMinimumHeight: nil,
         suggestionStateMinimumHeight: nil,
+        suggestionEmptyStatePresentation: .compact,
+        suggestionRowHighlightCornerRadius: CrestRadius.compact,
+        suggestionRowHighlightBleed: 6,
+        suggestionRowShowsAccountDetail: true,
+        closeControlSize: 28,
         actionMinimumWidth: 44,
         actionMaximumWidth: nil,
         savePromptWidth: .bounded(560),
@@ -126,10 +199,18 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         horizontalPadding: CrestSpacing.large,
         verticalPadding: CrestSpacing.medium,
         fillPromptWidth: .flexible,
+        anchorsFillPromptToField: false,
+        anchoredFillPromptMinimumWidth: nil,
+        chromeInset: 0,
         suggestionListMaximumHeight: 176,
         suggestionRowVerticalPadding: 0,
         suggestionRowMinimumHeight: 44,
         suggestionStateMinimumHeight: 44,
+        suggestionEmptyStatePresentation: .sentence,
+        suggestionRowHighlightCornerRadius: nil,
+        suggestionRowHighlightBleed: 0,
+        suggestionRowShowsAccountDetail: false,
+        closeControlSize: 44,
         actionMinimumWidth: nil,
         actionMaximumWidth: .infinity,
         savePromptWidth: .flexible,
@@ -150,7 +231,41 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         capabilities.supportsTouch ? .touch : .pointer
     }
 
+    /// This profile with its fill prompts narrowed to an anchored width.
+    ///
+    /// The width is the only thing the field decides. Everything else about a
+    /// prompt under a login box is what the shell already said a prompt is.
+    func narrowingFillPrompt(to width: CGFloat) -> BrowserCredentialPromptMetrics {
+        var narrowed = self
+        narrowed.fillPromptWidth = .fixed(width)
+        return narrowed
+    }
+
     // MARK: - Anatomy both shells agree on
+
+    /// The gap between the field and the panel pointing at it. Close enough to
+    /// read as attached to the field, far enough that the panel's shadow is
+    /// still a shadow rather than a smudge on the input's border.
+    static let fieldAnchorGap: CGFloat = 5
+
+    /// The identity mark a fill prompt's header opens with: the site's own
+    /// icon where the page has one, and the Space's key where it does not.
+    static let headerIdentitySize: CGFloat = 28
+    static let headerIdentityIconSize: CGFloat = 16
+    static let headerIdentitySymbolSize: CGFloat = 13
+    static let headerIdentityCornerRadius = CrestRadius.compact
+    static let headerIdentityTintOpacity = 0.14
+
+    /// The account glyph a suggestion row is filed under.
+    static let suggestionRowIconSize: CGFloat = 17
+
+    /// The gap between an account's name and the login beneath it.
+    static let suggestionRowTextSpacing: CGFloat = 1
+
+    /// The glyph the compact empty state is filed under, sized to sit on the
+    /// same line as the remark rather than above it.
+    static let suggestionEmptySymbolSize: CGFloat = 12
+    static let suggestionEmptySpacing = CrestSpacing.extraSmall
 
     /// The gap between the prompt's stacked parts.
     static let contentSpacing = CrestSpacing.small

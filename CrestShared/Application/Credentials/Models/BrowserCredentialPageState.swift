@@ -15,6 +15,12 @@ final class BrowserCredentialPageState<FillTarget> {
     private(set) var saveCandidate: BrowserCredentialSaveCandidate?
 
     @ObservationIgnored private var fillTargets: [UUID: FillTarget] = [:]
+
+    /// The form the live request's field belongs to, kept here rather than on
+    /// the request itself: a later geometry report has to prove it is about the
+    /// same field before it may move the prompt, and the form's ID is the only
+    /// name both sides of the bridge agree on.
+    @ObservationIgnored private var fillFormID: String?
     @ObservationIgnored private var pendingUsernameHint: BrowserCredentialUsernameHint?
     @ObservationIgnored private var usernameExpirationTask: Task<Void, Never>?
     @ObservationIgnored private var pendingSaveCandidate: BrowserCredentialSaveCandidate?
@@ -52,7 +58,7 @@ final class BrowserCredentialPageState<FillTarget> {
                 BrowserCredentialCapturePolicy.accepts(
                     frameOrigin: frameOrigin,
                     topLevelOrigin: topLevelOrigin
-                ), message.formID != nil,
+                ), let formID = message.formID,
                 let fillTarget
             else {
                 return
@@ -69,13 +75,29 @@ final class BrowserCredentialPageState<FillTarget> {
                 ),
                 passwordKind: passwordKind,
                 isCrossOriginFrame: frameOrigin != topLevelOrigin,
-                requestedAt: .now
+                requestedAt: .now,
+                fieldRect: isMainFrame ? message.fieldRect : nil
             )
             if let previousRequest = fillRequest {
                 fillTargets[previousRequest.id] = nil
             }
             fillTargets[request.id] = fillTarget
+            fillFormID = formID
             fillRequest = request
+
+        case .fieldGeometry:
+            guard isMainFrame,
+                let request = fillRequest,
+                request.fieldRect != nil,
+                let formID = message.formID,
+                formID == fillFormID,
+                request.origin == frameOrigin,
+                let fieldRect = message.fieldRect,
+                fieldRect != request.fieldRect
+            else {
+                return
+            }
+            fillRequest = request.following(fieldRect)
 
         case .submit:
             guard
@@ -187,6 +209,7 @@ final class BrowserCredentialPageState<FillTarget> {
     }
 
     func dismissFillRequest() {
+        fillFormID = nil
         guard let request = fillRequest else { return }
         fillTargets[request.id] = nil
         fillRequest = nil

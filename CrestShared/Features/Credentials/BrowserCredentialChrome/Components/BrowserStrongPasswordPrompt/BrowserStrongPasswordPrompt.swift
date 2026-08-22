@@ -11,7 +11,7 @@ struct BrowserStrongPasswordPrompt: View {
     let request: BrowserCredentialFillRequest
     let port: BrowserCredentialFillPort
     let browser: BrowserStore
-    let capabilities: BrowserInteractionCapabilities
+    let metrics: BrowserCredentialPromptMetrics
 
     @State private var model = BrowserStrongPasswordOperationModel()
 
@@ -25,16 +25,13 @@ struct BrowserStrongPasswordPrompt: View {
             BrowserStrongPasswordPromptContent(
                 request: request,
                 space: space,
+                siteIconData: port.siteIconData,
                 model: model,
                 metrics: metrics,
                 dismiss: port.dismiss,
                 generateAndFill: generateAndFill
             )
         }
-    }
-
-    private var metrics: BrowserCredentialPromptMetrics {
-        BrowserCredentialPromptMetrics.resolve(capabilities)
     }
 
     private var space: BrowserSpace? {

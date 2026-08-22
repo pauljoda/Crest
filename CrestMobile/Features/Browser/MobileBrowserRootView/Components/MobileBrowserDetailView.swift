@@ -264,6 +264,8 @@ struct MobileBrowserDetailView: View {
     ) -> BrowserCredentialFillPort {
         BrowserCredentialFillPort(
             spaceID: page.spaceID,
+            contentScale: page.pageZoom,
+            siteIconData: page.faviconData,
             fill: { credential, requestID in
                 try await page.fillCredential(credential, for: requestID)
             },

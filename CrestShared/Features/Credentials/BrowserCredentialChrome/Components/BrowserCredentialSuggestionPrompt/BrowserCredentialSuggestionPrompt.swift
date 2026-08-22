@@ -11,7 +11,7 @@ struct BrowserCredentialSuggestionPrompt: View {
     let request: BrowserCredentialFillRequest
     let port: BrowserCredentialFillPort
     let browser: BrowserStore
-    let capabilities: BrowserInteractionCapabilities
+    let metrics: BrowserCredentialPromptMetrics
 
     @State private var model = BrowserCredentialSuggestionModel()
     @State private var fillErrorMessage: String?
@@ -26,6 +26,7 @@ struct BrowserCredentialSuggestionPrompt: View {
             BrowserCredentialSuggestionPromptContent(
                 request: request,
                 space: space,
+                siteIconData: port.siteIconData,
                 model: model,
                 fillErrorMessage: fillErrorMessage,
                 metrics: metrics,
@@ -38,10 +39,6 @@ struct BrowserCredentialSuggestionPrompt: View {
             await model.load(request, in: port.spaceID, using: browser)
         }
         .onDisappear(perform: model.cancel)
-    }
-
-    private var metrics: BrowserCredentialPromptMetrics {
-        BrowserCredentialPromptMetrics.resolve(capabilities)
     }
 
     private var space: BrowserSpace? {

@@ -19,4 +19,16 @@ enum BrowserCredentialChromePresentation: Equatable {
             return .strongPassword(fillRequest)
         }
     }
+
+    /// The field request behind this prompt, where there is one. A save prompt
+    /// answers a form that has already been submitted, so it has no field left
+    /// to point at.
+    var fillRequest: BrowserCredentialFillRequest? {
+        switch self {
+        case .none, .save:
+            nil
+        case .strongPassword(let request), .suggestions(let request):
+            request
+        }
+    }
 }

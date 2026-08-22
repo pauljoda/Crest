@@ -36,7 +36,6 @@ struct BrowserWebPageSurface: View {
                 browser: browser,
                 capabilities: capabilities
             )
-            .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
 
             if page.isRegionCapturePresented {
                 BrowserRegionCaptureOverlay(page: page)
@@ -62,11 +61,17 @@ struct BrowserWebPageSurface: View {
         )
     }
 
-    /// The four things a credential fill prompt asks, bound to this surface's
-    /// page.
+    /// What a credential fill prompt asks of this surface's page.
+    ///
+    /// The zoom is carried because this shell anchors the prompt under the
+    /// field that raised it, and the page reports that field in its own CSS
+    /// pixels. The chrome is a sibling of the web view inside one box, so the
+    /// zoom is the only thing between the two.
     private var credentialFillPort: BrowserCredentialFillPort {
         BrowserCredentialFillPort(
             spaceID: page.spaceID,
+            contentScale: page.pageZoom,
+            siteIconData: page.faviconData,
             fill: { credential, requestID in
                 try await page.fillCredential(credential, for: requestID)
             },

@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserStrongPasswordPromptContent: View {
     let request: BrowserCredentialFillRequest
     let space: BrowserSpace?
+    let siteIconData: Data?
     let model: BrowserStrongPasswordOperationModel
     let metrics: BrowserCredentialPromptMetrics
     let dismiss: () -> Void
@@ -17,6 +18,8 @@ struct BrowserStrongPasswordPromptContent: View {
                 kind: .strongPassword,
                 request: request,
                 space: space,
+                siteIconData: siteIconData,
+                metrics: metrics,
                 dismiss: dismiss
             )
             if request.isCrossOriginFrame {

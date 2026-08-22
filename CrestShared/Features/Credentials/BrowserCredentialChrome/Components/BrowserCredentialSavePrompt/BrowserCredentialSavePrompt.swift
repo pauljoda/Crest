@@ -11,7 +11,7 @@ struct BrowserCredentialSavePrompt: View {
     let candidate: BrowserCredentialSaveCandidate
     let port: BrowserCredentialSavePort
     let browser: BrowserStore
-    let capabilities: BrowserInteractionCapabilities
+    let metrics: BrowserCredentialPromptMetrics
 
     @State private var model = BrowserCredentialSavePromptModel()
 
@@ -36,10 +36,6 @@ struct BrowserCredentialSavePrompt: View {
         .task(id: candidate.id) {
             await prepare()
         }
-    }
-
-    private var metrics: BrowserCredentialPromptMetrics {
-        BrowserCredentialPromptMetrics.resolve(capabilities)
     }
 
     private var space: BrowserSpace? {

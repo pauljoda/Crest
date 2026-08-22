@@ -17,12 +17,13 @@ struct BrowserCredentialSuggestionList: View {
             }
             .frame(maxHeight: maximumHeight)
         } else {
-            VStack(
-                alignment: .leading,
-                spacing: BrowserCredentialPromptMetrics.contentSpacing
-            ) {
+            VStack(alignment: .leading, spacing: 0) {
                 rows
             }
+            // The rows pad themselves out so their highlight reaches past the
+            // text; the list pulls that back so the text still lines up with
+            // everything above it.
+            .padding(.horizontal, -metrics.suggestionRowHighlightBleed)
         }
     }
 

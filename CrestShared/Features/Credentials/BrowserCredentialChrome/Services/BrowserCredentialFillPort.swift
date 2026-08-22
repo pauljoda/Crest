@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// Everything the credential fill prompts need from the page layer, and nothing
@@ -23,6 +24,15 @@ struct BrowserCredentialFillPort {
     /// The Space this page belongs to — the vault a prompt reads and the
     /// identity it names.
     let spaceID: SpaceID
+
+    /// How one of the page's CSS pixels maps to a point in this shell — the
+    /// page's zoom, and the only thing standing between a rect the page
+    /// reported and the place a panel is drawn.
+    let contentScale: CGFloat
+
+    /// The page's own icon, where it has loaded one. A prompt shows it beside
+    /// the origin it is about, so the site is recognised before it is read.
+    let siteIconData: Data?
 
     /// Puts a saved credential into the form the request came from. Throws
     /// where the form moved on before the fill could land.
