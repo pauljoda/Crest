@@ -47,6 +47,40 @@ enum MobileCompactChromeTransitionPolicy {
     }
 }
 
+/// Routes the compact chrome's upward swipe.
+///
+/// The gesture has one meaning — bring the sidebar up — and the sidebar has
+/// three placements. A narrow phone's docked sidebar *is* the full-screen tab
+/// viewer, so the swipe has always ended there and still does; the two undocked
+/// placements own that same sidebar over a page that stays on screen, and the
+/// swipe belongs to them the same way.
+///
+/// Reaching this toolbar undocked takes a Split View.
+/// `MobileSidebarPageFramePolicy.showsCompactToolbar` puts the compact toolbar
+/// up for a docked sidebar *or* a presented split, so a floating or collapsed
+/// sidebar only has a toolbar to swipe while a group is on show. Sending the
+/// swipe to the full-screen viewer from there took the window out of its split
+/// and re-docked the sidebar in one move — two placement changes the finger
+/// never asked for, and no way back to either except by undoing both by hand.
+///
+/// Keyed on the placement rather than on the split, because that is the rule
+/// itself rather than the one case that exposes it: the sidebar comes up where
+/// the window already keeps it. Answering the split directly would say the same
+/// thing today and stop being true the moment anything else puts this toolbar on
+/// screen undocked.
+enum MobileCompactSidebarRevealPolicy {
+    static func destination(
+        sidebarPresentation: BrowserSidebarPresentation
+    ) -> MobileCompactSidebarRevealDestination {
+        switch sidebarPresentation {
+        case .docked:
+            .tabViewer
+        case .floating, .collapsed:
+            .floatingSidebar
+        }
+    }
+}
+
 /// Routes the compact toolbar's horizontal swipe.
 ///
 /// One gesture, one owner. `BrowserSpaceSwipePolicy` still decides whether a

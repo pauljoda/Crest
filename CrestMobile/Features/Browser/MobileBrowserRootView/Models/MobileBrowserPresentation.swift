@@ -19,6 +19,15 @@ enum MobileCompactPagePresentationPhase: Equatable {
     case page
 }
 
+/// Where the compact chrome's upward reveal puts the sidebar.
+enum MobileCompactSidebarRevealDestination: CaseIterable, Equatable, Sendable {
+    /// The full-screen tab viewer, which on a narrow phone *is* the docked
+    /// sidebar. The page it was swiped from is left behind.
+    case tabViewer
+    /// The sidebar floating over the page, which stays on screen underneath it.
+    case floatingSidebar
+}
+
 enum MobileStartPageForegroundTone: Equatable, Sendable {
     case onBrand
 }

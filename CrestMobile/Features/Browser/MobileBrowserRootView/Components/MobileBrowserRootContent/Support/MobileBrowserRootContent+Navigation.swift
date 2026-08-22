@@ -88,9 +88,29 @@ extension MobileBrowserRootContent {
         isAddressEditing = false
         switch compactTransition {
         case .revealTabViewer:
-            showTabViewer()
+            revealSidebarFromCompactChrome()
         case .revealPage:
             model.activateSelectedTab()
+        }
+    }
+
+    /// Brings the sidebar up from the compact chrome's upward swipe, in the
+    /// placement this window already keeps it in.
+    ///
+    /// `MobileCompactSidebarRevealPolicy` carries the reasoning. The short of it
+    /// is that the full-screen viewer is the docked sidebar, so a docked window
+    /// goes on landing there, while an undocked one — which only has this
+    /// toolbar to swipe because a split is on show — floats the sidebar over the
+    /// split instead of dropping the split to reach it.
+    func revealSidebarFromCompactChrome() {
+        switch MobileCompactSidebarRevealPolicy.destination(
+            sidebarPresentation: navigation.regularSidebarPresentation
+        ) {
+        case .tabViewer:
+            showTabViewer()
+        case .floatingSidebar:
+            dismissAddressFocus()
+            showRegularSidebar()
         }
     }
 

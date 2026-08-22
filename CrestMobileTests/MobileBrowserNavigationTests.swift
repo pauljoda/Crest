@@ -2255,6 +2255,121 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.id, firstSpace.id)
     }
 
+    // MARK: - Upward reveal routing
+
+    func testUpwardRevealLandsOnThePlacementTheWindowAlreadyKeepsTheSidebarIn() {
+        XCTAssertEqual(
+            MobileCompactSidebarRevealPolicy.destination(
+                sidebarPresentation: .docked
+            ),
+            .tabViewer,
+            """
+            A narrow phone's docked sidebar is the full-screen tab viewer, so \
+            the swipe still lands exactly where it always has.
+            """
+        )
+        XCTAssertEqual(
+            MobileCompactSidebarRevealPolicy.destination(
+                sidebarPresentation: .collapsed
+            ),
+            .floatingSidebar
+        )
+        XCTAssertEqual(
+            MobileCompactSidebarRevealPolicy.destination(
+                sidebarPresentation: .floating
+            ),
+            .floatingSidebar,
+            """
+            Already floating: the swipe re-asserts the placement rather than \
+            promoting it to a viewer the window never asked for.
+            """
+        )
+        XCTAssertEqual(
+            Set(
+                [BrowserSidebarPresentation.docked, .floating, .collapsed].map {
+                    MobileCompactSidebarRevealPolicy.destination(
+                        sidebarPresentation: $0
+                    )
+                }
+            ),
+            Set(MobileCompactSidebarRevealDestination.allCases),
+            "Every destination is reachable from some placement."
+        )
+    }
+
+    /// The undocked placements only ever have this toolbar to swipe because a
+    /// split is on show, so the reveal must never be the thing that drops one.
+    func testUpwardRevealNeverDropsTheSplitThatPutTheToolbarOnScreen() {
+        for presentation in [BrowserSidebarPresentation.floating, .collapsed] {
+            XCTAssertTrue(
+                MobileSidebarPageFramePolicy.showsCompactToolbar(
+                    sidebarPresentation: presentation,
+                    presentsSplitView: true
+                ),
+                "A split is what puts the compact toolbar up when undocked."
+            )
+            XCTAssertFalse(
+                MobileSidebarPageFramePolicy.showsCompactToolbar(
+                    sidebarPresentation: presentation,
+                    presentsSplitView: false
+                ),
+                "Without a split there is no undocked toolbar to swipe."
+            )
+            XCTAssertEqual(
+                MobileCompactSidebarRevealPolicy.destination(
+                    sidebarPresentation: presentation
+                ),
+                .floatingSidebar,
+                """
+                Landing on the viewer here would drop the split and re-dock the \
+                sidebar in one move — two placement changes the finger never \
+                asked for.
+                """
+            )
+        }
+    }
+
+    func testRevealingTheFloatingSidebarKeepsTheCompactPageAndItsSplitOnScreen() {
+        let navigation = MobileBrowserNavigationState()
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.completePagePresentation()
+        navigation.hideRegularSidebar()
+
+        XCTAssertEqual(
+            MobileCompactSidebarRevealPolicy.destination(
+                sidebarPresentation: navigation.regularSidebarPresentation
+            ),
+            .floatingSidebar
+        )
+        navigation.showRegularSidebar()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+        XCTAssertTrue(
+            navigation.compactShowsPage,
+            "The page — and the split composed on it — stays presented."
+        )
+    }
+
+    func testRevealingFromADockedSidebarStillEntersTheFullScreenTabViewer() {
+        let navigation = MobileBrowserNavigationState()
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.completePagePresentation()
+
+        XCTAssertEqual(navigation.regularSidebarPresentation, .docked)
+        XCTAssertEqual(
+            MobileCompactSidebarRevealPolicy.destination(
+                sidebarPresentation: navigation.regularSidebarPresentation
+            ),
+            .tabViewer
+        )
+        navigation.showTabViewer()
+
+        XCTAssertFalse(navigation.compactShowsPage)
+        XCTAssertEqual(navigation.regularSidebarPresentation, .docked)
+    }
+
     // MARK: - Toolbar swipe routing
 
     func testToolbarSwipeRoutesToCardsInsideASplitAndNowhereOutsideOne() {
