@@ -114,6 +114,20 @@ final class BrowserSidebarReorderState {
     /// row the drag interaction is carrying.
     private var stagedLift: (item: BrowserSidebarReorderItem, section: BrowserSidebarReorderSection)?
 
+    /// Writes off a stage no drag ever came back for. See
+    /// `BrowserSidebarReorderPolicy.stagedLiftExpiration`.
+    @ObservationIgnored private var stagedLiftExpirationTask: Task<Void, Never>?
+
+    /// How long this state waits before writing off an unpromoted stage.
+    @ObservationIgnored private let stagedLiftExpiration: Duration
+
+    init(
+        stagedLiftExpiration: Duration = BrowserSidebarReorderPolicy
+            .stagedLiftExpiration
+    ) {
+        self.stagedLiftExpiration = stagedLiftExpiration
+    }
+
     /// True for a moment after a lift, so the row that was just dragged does not
     /// also fire its own tap. The lift and the row's button recognise
     /// simultaneously — deliberately, or the button would suppress the lift — so
@@ -238,6 +252,30 @@ final class BrowserSidebarReorderState {
         section: BrowserSidebarReorderSection
     ) {
         stagedLift = (item, section)
+        armStagedLiftExpiration()
+    }
+
+    /// Starts the clock on the stage just recorded, replacing any earlier one.
+    ///
+    /// Only ever collects a stage that is still a stage. A promotion, a drop,
+    /// and a cancel all cancel this first, and the guard is what covers the
+    /// remaining race: a task already resumed when one of them lands would
+    /// otherwise clear the lift they just recorded.
+    private func armStagedLiftExpiration() {
+        stagedLiftExpirationTask?.cancel()
+        let delay = stagedLiftExpiration
+        stagedLiftExpirationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self else { return }
+            stagedLiftExpirationTask = nil
+            guard lift == nil else { return }
+            stagedLift = nil
+        }
+    }
+
+    private func cancelStagedLiftExpiration() {
+        stagedLiftExpirationTask?.cancel()
+        stagedLiftExpirationTask = nil
     }
 
     func begin(
@@ -256,6 +294,7 @@ final class BrowserSidebarReorderState {
             )
         )
         stagedLift = nil
+        cancelStagedLiftExpiration()
         hasEnteredSplitContent = false
         self.pointer = pointer
         resolveTarget()
@@ -282,6 +321,7 @@ final class BrowserSidebarReorderState {
             if lift != nil { suppressActivation() }
             lift = nil
             stagedLift = nil
+            cancelStagedLiftExpiration()
             resolvedTarget = nil
             hasEnteredSplitContent = false
         }
@@ -293,6 +333,7 @@ final class BrowserSidebarReorderState {
         if lift != nil { suppressActivation() }
         lift = nil
         stagedLift = nil
+        cancelStagedLiftExpiration()
         resolvedTarget = nil
         hasEnteredSplitContent = false
     }

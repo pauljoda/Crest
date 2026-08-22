@@ -143,6 +143,92 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         )
     }
 
+    /// A stage nothing ever came back for must not lock the strip for good.
+    ///
+    /// The stage is cleared by the promotion that lifts it, the drop that ends
+    /// it, or a context menu taking the press. On a runtime without
+    /// `onDragSessionUpdated` — the deployment target is iOS 26.1, and
+    /// `BrowserMobileReorderSessionModifier` compiles away to its content below
+    /// iOS 27 — a press that produces neither a session nor a menu is cleared by
+    /// nothing at all. `hasLiftInFlight` then stayed true for the life of the
+    /// process, and the Space pager reads exactly that: horizontal paging died
+    /// in every sidebar on screen at once, in the floating sidebar and the
+    /// full-screen tab viewer alike, with no lifted row to explain it.
+    func testAStageNoDragClaimsStopsLockingTheSpaceStrip() async throws {
+        let fixture = ReorderStagingFixture(
+            stagedLiftExpiration: .milliseconds(10)
+        )
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        XCTAssertTrue(lockedPager(fixture.state))
+
+        try await Task.sleep(for: .milliseconds(60))
+
+        XCTAssertFalse(
+            fixture.state.hasLiftInFlight,
+            "An unpromoted stage is written off rather than held for good."
+        )
+        XCTAssertFalse(
+            lockedPager(fixture.state),
+            "And the strip pages again once it is."
+        )
+        XCTAssertFalse(
+            fixture.state.suppressesActivation,
+            "No drag ever happened, so the row stays openable."
+        )
+    }
+
+    /// The backstop must never collect a stage that a drag did claim.
+    func testAPromotedLiftOutlivesTheStageExpiry() async throws {
+        let fixture = ReorderStagingFixture(
+            stagedLiftExpiration: .milliseconds(10)
+        )
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+
+        try await Task.sleep(for: .milliseconds(60))
+
+        XCTAssertTrue(
+            fixture.state.isLifted(fixture.item.id),
+            "A promoted lift is a live drag and is never written off."
+        )
+        XCTAssertTrue(
+            lockedPager(fixture.state),
+            "So the strip keeps holding still under it."
+        )
+
+        let drop = fixture.state.end()
+        XCTAssertEqual(
+            drop?.item,
+            fixture.item,
+            "And the drop still commits what it was carrying."
+        )
+    }
+
+    /// Re-staging restarts the clock rather than inheriting the old one.
+    func testEachStageGetsItsOwnExpiry() async throws {
+        let fixture = ReorderStagingFixture(
+            stagedLiftExpiration: .milliseconds(40)
+        )
+
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        try await Task.sleep(for: .milliseconds(25))
+        fixture.state.stage(item: fixture.item, section: fixture.section)
+        try await Task.sleep(for: .milliseconds(25))
+
+        XCTAssertTrue(
+            fixture.state.hasLiftInFlight,
+            "The second stage is 25ms old and must still be waiting."
+        )
+
+        fixture.state.update(pointer: fixture.pointerOverNeighbour)
+        XCTAssertTrue(
+            fixture.state.isLifted(fixture.item.id),
+            "And is still there to be promoted."
+        )
+    }
+
     /// The lock reads three sources and any one of them is enough. The sidebar
     /// lift is the one that was missing.
     func testAnyLiftInFlightLocksTheSpaceStrip() {
@@ -327,8 +413,13 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             CGPoint(x: neighbourFrame.midX, y: neighbourFrame.midY)
         }
 
-        init() {
-            state = BrowserSidebarReorderState()
+        init(
+            stagedLiftExpiration: Duration = BrowserSidebarReorderPolicy
+                .stagedLiftExpiration
+        ) {
+            state = BrowserSidebarReorderState(
+                stagedLiftExpiration: stagedLiftExpiration
+            )
             let spaceID = SpaceID()
             let profileID = UUID()
             item = .tab(
