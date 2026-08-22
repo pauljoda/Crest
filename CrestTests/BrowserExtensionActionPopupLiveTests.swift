@@ -235,6 +235,44 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         }
     }
 
+    func testLiveRaindropPopupRendersItsSignedOutState() async throws {
+        try skipUnlessLiveRunRequested()
+        let candidate = try await mozillaCandidate(slug: "raindropio")
+        let outcome = try await popupOutcome(
+            candidate: candidate,
+            extensionID:
+                "jid0-adyhmvsP91nUO8pRv0Mn2VKeB84@jetpack",
+            activeTabURL: try XCTUnwrap(
+                URL(string: "https://addons.mozilla.org/")
+            ),
+            viaRestoration: false,
+            viaPopover: true,
+            warmsPopupBeforeMeasurement: false,
+            permissionProbeURL: try XCTUnwrap(
+                URL(string: "https://api.raindrop.io/v1/user")
+            )
+        )
+
+        XCTAssertTrue(
+            outcome.permissionProbeStatus.map {
+                [
+                    WKWebExtensionContext.PermissionStatus.grantedImplicitly,
+                    .grantedExplicitly,
+                ].contains($0)
+            } == true,
+            "Raindrop's reviewed API host was not granted at installation."
+        )
+        XCTAssertFalse(
+            outcome.renderedText.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty,
+            """
+            Raindrop rendered a blank action popup. Host calls: \
+            \(outcome.hostCalls). Runtime errors: \(outcome.contextErrors)
+            """
+        )
+    }
+
     func testLiveOnePasswordPopupCompletesItsBackgroundHandshake() async throws {
         try skipUnlessLiveRunRequested()
         let candidate = try await candidate(
@@ -311,10 +349,15 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         }
     }
 
+    private enum LiveCandidate {
+        case chrome(BrowserChromeWebStoreCandidate)
+        case mozilla(BrowserMozillaAddonsCandidate)
+    }
+
     private func candidate(
         extensionID: String,
         slug: String
-    ) async throws -> BrowserChromeWebStoreCandidate {
+    ) async throws -> LiveCandidate {
         let item = try XCTUnwrap(
             BrowserChromeWebStoreItem(
                 url: URL(
@@ -328,9 +371,25 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         // compatibility gate would block password managers before any popup
         // exists to test. These live tests cover the popup lifecycle, not
         // the capability gate, so they run as the entitled release build.
-        return try await BrowserChromeWebStoreProvider(
-            nativeMessagingCapability: .available
-        ).candidate(for: item)
+        return .chrome(
+            try await BrowserChromeWebStoreProvider(
+                nativeMessagingCapability: .available
+            ).candidate(for: item)
+        )
+    }
+
+    private func mozillaCandidate(slug: String) async throws -> LiveCandidate {
+        let item = try XCTUnwrap(
+            BrowserMozillaAddonsItem(
+                url: URL(
+                    string:
+                        "https://addons.mozilla.org/en-US/firefox/addon/\(slug)/"
+                )!
+            )
+        )
+        return .mozilla(
+            try await BrowserMozillaAddonsProvider().candidate(for: item)
+        )
     }
 
     private struct PopupOutcome {
@@ -339,16 +398,19 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         var renderedText: String
         var hostCalls: [String]
         var contextErrors: [String]
+        var permissionProbeStatus: WKWebExtensionContext.PermissionStatus?
     }
 
     private func popupOutcome(
-        candidate: BrowserChromeWebStoreCandidate,
+        candidate: LiveCandidate,
         extensionID: String,
         activeTabURL: URL,
         viaRestoration: Bool,
         viaPopover: Bool = false,
         idleSecondsBeforePresenting: Int = 0,
-        usesEphemeralWebKitStorage: Bool = true
+        usesEphemeralWebKitStorage: Bool = true,
+        warmsPopupBeforeMeasurement: Bool = true,
+        permissionProbeURL: URL? = nil
     ) async throws -> PopupOutcome {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -434,7 +496,18 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             _ = try? await pool.deleteData(for: space)
             try? await WKWebsiteDataStore.remove(forIdentifier: profile.id)
         }
-        _ = try await pool.installChromeWebStoreExtension(candidate, in: space)
+        switch candidate {
+        case .chrome(let candidate):
+            _ = try await pool.installChromeWebStoreExtension(
+                candidate,
+                in: space
+            )
+        case .mozilla(let candidate):
+            _ = try await pool.installMozillaAddonsExtension(
+                candidate,
+                in: space
+            )
+        }
 
         if viaRestoration {
             // Stand in for a relaunch: every runtime object is replaced and
@@ -448,6 +521,9 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         let context = try XCTUnwrap(
             pool.loadedContext(extensionID: extensionID, in: space.id)
         )
+        let permissionProbeStatus = permissionProbeURL.map {
+            context.permissionStatus(for: $0)
+        }
         context.isInspectable = true
         await load(activeTabURL, in: webView)
         if idleSecondsBeforePresenting > 0 {
@@ -461,7 +537,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 readyMilliseconds: nil,
                 renderedText: "",
                 hostCalls: [],
-                contextErrors: Self.errorDescriptions(context.errors)
+                contextErrors: Self.errorDescriptions(context.errors),
+                permissionProbeStatus: permissionProbeStatus
             )
             await cleanUpPersistentStorage()
             return outcome
@@ -494,7 +571,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             // An idle run measures the very first presentation, so it must not
             // be preceded by the close-and-reopen warmup that would restart the
             // background before the measured open.
-            let warmupPresentations = idleSecondsBeforePresenting > 0 ? 0 : 2
+            let warmupPresentations = warmsPopupBeforeMeasurement ? 2 : 0
             for _ in 0..<warmupPresentations {
                 pool.perform(toolbarAction, popupAnchor: anchor)
                 try? await Task.sleep(
@@ -520,7 +597,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 readyMilliseconds: nil,
                 renderedText: "",
                 hostCalls: [],
-                contextErrors: Self.errorDescriptions(context.errors)
+                contextErrors: Self.errorDescriptions(context.errors),
+                permissionProbeStatus: permissionProbeStatus
             )
             await cleanUpPersistentStorage()
             return outcome
@@ -564,13 +642,13 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 in: nil,
                 contentWorld: .page
             )) as? String).map(Self.decode) ?? []
-
         let outcome = PopupOutcome(
             presentsPopup: presentsPopup,
             readyMilliseconds: readyMilliseconds,
             renderedText: renderedText,
             hostCalls: hostCalls,
-            contextErrors: Self.errorDescriptions(context.errors)
+            contextErrors: Self.errorDescriptions(context.errors),
+            permissionProbeStatus: permissionProbeStatus
         )
         await cleanUpPersistentStorage()
         return outcome

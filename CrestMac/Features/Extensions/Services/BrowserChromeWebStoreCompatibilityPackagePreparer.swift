@@ -1,5 +1,76 @@
 import CryptoKit
 import Foundation
+import WebKit
+
+enum BrowserWebExtensionManifestCompatibilityPolicy {
+    @MainActor
+    static func displayErrors(
+        for webExtension: WKWebExtension
+    ) -> [String] {
+        webExtension.errors.compactMap { reportedError in
+            let error = reportedError as NSError
+            guard !isValidEmptyActionCommandWarning(
+                error,
+                manifest: webExtension.manifest
+            ) else {
+                return nil
+            }
+            return error.localizedDescription
+        }.sorted()
+    }
+
+    static func normalizeCommandsForWebKit(
+        in manifest: inout [String: Any]
+    ) {
+        guard var commands = manifest["commands"] as? [String: Any]
+        else { return }
+
+        // WebKit uses the cross-version action command name. Preserve the
+        // extension-facing manifest in the generated runtime, while presenting
+        // the equivalent modern spelling to WKWebExtension.
+        for legacyName in [
+            "_execute_browser_action",
+            "_execute_page_action",
+        ] {
+            guard let legacyCommand = commands.removeValue(forKey: legacyName)
+            else { continue }
+            if commands["_execute_action"] == nil {
+                commands["_execute_action"] = legacyCommand
+            }
+        }
+
+        // `_execute_action` is a reserved command whose description and
+        // shortcut are both optional. WebKit reports the legal empty form as
+        // invalid and ignores it at runtime, so omit only that inert reserved
+        // entry from WebKit's copy. `runtime.getManifest()` continues to return
+        // the untouched extension-authored manifest.
+        if let actionCommand = commands["_execute_action"] as? [String: Any],
+            actionCommand.isEmpty
+        {
+            commands.removeValue(forKey: "_execute_action")
+        }
+        manifest["commands"] = commands
+    }
+
+    private static func isValidEmptyActionCommandWarning(
+        _ error: NSError,
+        manifest: [String: Any]
+    ) -> Bool {
+        guard
+            error.domain == WKWebExtension.errorDomain,
+            error.code == WKWebExtension.Error.invalidManifestEntry.rawValue,
+            let commands = manifest["commands"] as? [String: Any],
+            let actionCommand = commands["_execute_action"]
+                as? [String: Any],
+            actionCommand.isEmpty
+        else {
+            return false
+        }
+        let description = error.localizedDescription.lowercased()
+        return description.contains("empty or invalid command")
+            && description.contains("commands")
+    }
+}
 
 struct BrowserWebExtensionCompatibilityPackagePreparer {
     private static let legacyBackgroundPreludePattern =
@@ -342,23 +413,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     private static func normalizeManifestForWebKit(
         _ manifest: inout [String: Any]
     ) {
-        guard var commands = manifest["commands"] as? [String: Any]
-        else { return }
-
-        // WebKit uses the cross-version action command name. Preserve the
-        // extension-facing manifest in the generated runtime, while presenting
-        // the equivalent modern spelling to WKWebExtension.
-        for legacyName in [
-            "_execute_browser_action",
-            "_execute_page_action",
-        ] {
-            guard let legacyCommand = commands.removeValue(forKey: legacyName)
-            else { continue }
-            if commands["_execute_action"] == nil {
-                commands["_execute_action"] = legacyCommand
-            }
-        }
-        manifest["commands"] = commands
+        BrowserWebExtensionManifestCompatibilityPolicy
+            .normalizeCommandsForWebKit(in: &manifest)
     }
 
     private func installExtensionPageCompatibility(
@@ -920,6 +976,185 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         : namespaceFacade(nativeMenus, {}, overlays);
                     normalizedMenuNamespaces.set(nativeMenus, normalized);
                     normalizedMenuNamespaces.set(normalized, normalized);
+                    return normalized;
+                };
+                const isManifestOrigin = (value) =>
+                    value === "<all_urls>"
+                    || (typeof value === "string" && value.includes("://"));
+                const requiredPermissionNames = new Set();
+                const requiredOriginPatterns = new Set(
+                    Array.isArray(declaredManifest.host_permissions)
+                        ? declaredManifest.host_permissions
+                        : []
+                );
+                for (const permission of (
+                    Array.isArray(declaredManifest.permissions)
+                        ? declaredManifest.permissions
+                        : []
+                )) {
+                    if (isManifestOrigin(permission)) {
+                        requiredOriginPatterns.add(permission);
+                    } else {
+                        requiredPermissionNames.add(permission);
+                    }
+                }
+                const permissionRequestRemovesRequiredAccess = (request) => {
+                    if (!request || typeof request !== "object") return false;
+                    return (
+                        Array.isArray(request.permissions)
+                        && request.permissions.some((permission) =>
+                            requiredPermissionNames.has(permission)
+                        )
+                    ) || (
+                        Array.isArray(request.origins)
+                        && request.origins.some((origin) =>
+                            requiredOriginPatterns.has(origin)
+                        )
+                    );
+                };
+                const nativePermissionBoolean = (
+                    nativePermissions,
+                    nativeMethod,
+                    request
+                ) => new Promise((resolve) => {
+                    let settled = false;
+                    const settle = (value) => {
+                        if (settled) return;
+                        settled = true;
+                        globalThis.clearTimeout(timeout);
+                        resolve(Boolean(value));
+                    };
+                    // WebKit can start these operations without completing
+                    // their callback or promise. Permissions are local state,
+                    // so a bounded false result is safer than holding an
+                    // extension's startup forever or issuing a destructive
+                    // follow-up against state it never confirmed.
+                    const timeout = globalThis.setTimeout(
+                        () => settle(false),
+                        250
+                    );
+                    if (typeof nativeMethod !== "function") {
+                        settle(false);
+                        return;
+                    }
+                    let returned;
+                    try {
+                        returned = Reflect.apply(
+                            nativeMethod,
+                            nativePermissions,
+                            [request, (value) => settle(value)]
+                        );
+                    } catch {
+                        settle(false);
+                        return;
+                    }
+                    if (returned?.then instanceof Function) {
+                        returned.then(
+                            (value) => settle(value),
+                            () => settle(false)
+                        );
+                    } else if (returned !== undefined) {
+                        settle(returned);
+                    }
+                });
+                const permissionCallbackOrPromise = (args, operation) => {
+                    const callback = args.at(-1);
+                    if (typeof callback === "function") {
+                        operation.then(
+                            (value) => callback(value),
+                            () => callback(false)
+                        );
+                        return undefined;
+                    }
+                    return operation;
+                };
+                const normalizedPermissionNamespaces = new WeakMap();
+                const normalizePermissionsNamespace = (nativePermissions) => {
+                    if (!nativePermissions) return nativePermissions;
+                    if (normalizedPermissionNamespaces.has(nativePermissions)) {
+                        return normalizedPermissionNamespaces.get(
+                            nativePermissions
+                        );
+                    }
+
+                    let nativeContains;
+                    let nativeRemove;
+                    try {
+                        nativeContains = nativePermissions.contains;
+                        nativeRemove = nativePermissions.remove;
+                    } catch {}
+                    if (
+                        typeof nativeContains !== "function"
+                        || typeof nativeRemove !== "function"
+                    ) {
+                        normalizedPermissionNamespaces.set(
+                            nativePermissions,
+                            nativePermissions
+                        );
+                        return nativePermissions;
+                    }
+
+                    const containsOperation = (request) =>
+                        nativePermissionBoolean(
+                            nativePermissions,
+                            nativeContains,
+                            request
+                        );
+                    const contains = (...args) => permissionCallbackOrPromise(
+                        args,
+                        containsOperation(args[0])
+                    );
+                    const remove = (...args) => {
+                        const request = args[0];
+                        const operation = permissionRequestRemovesRequiredAccess(
+                            request
+                        )
+                            ? Promise.resolve(false)
+                            : containsOperation(request).then((isGranted) => {
+                                if (!isGranted) return false;
+                                return nativePermissionBoolean(
+                                    nativePermissions,
+                                    nativeRemove,
+                                    request
+                                );
+                            });
+                        return permissionCallbackOrPromise(args, operation);
+                    };
+                    const overlays = new Map([
+                        ["contains", contains],
+                        ["remove", remove]
+                    ]);
+                    for (const [methodName, method] of overlays) {
+                        let descriptor;
+                        try {
+                            descriptor = Reflect.getOwnPropertyDescriptor(
+                                nativePermissions,
+                                methodName
+                            );
+                            Object.defineProperty(
+                                nativePermissions,
+                                methodName,
+                                {
+                                    value: method,
+                                    configurable: true,
+                                    enumerable: descriptor?.enumerable ?? true
+                                }
+                            );
+                        } catch {}
+                        try {
+                            if (nativePermissions[methodName] === method) {
+                                overlays.delete(methodName);
+                            }
+                        } catch {}
+                    }
+                    const normalized = overlays.size === 0
+                        ? nativePermissions
+                        : namespaceFacade(nativePermissions, {}, overlays);
+                    normalizedPermissionNamespaces.set(
+                        nativePermissions,
+                        normalized
+                    );
+                    normalizedPermissionNamespaces.set(normalized, normalized);
                     return normalized;
                 };
                 const requestCapability = (
@@ -1641,6 +1876,28 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             } catch {}
                         }
                     }
+                    let nativePermissions;
+                    try {
+                        nativePermissions = nativeRoot.permissions;
+                    } catch {}
+                    const normalizedPermissions =
+                        normalizePermissionsNamespace(nativePermissions);
+                    if (
+                        normalizedPermissions
+                        && normalizedPermissions !== nativePermissions
+                    ) {
+                        try {
+                            Object.defineProperty(nativeRoot, "permissions", {
+                                value: normalizedPermissions,
+                                configurable: true,
+                                enumerable: true
+                            });
+                        } catch {
+                            try {
+                                nativeRoot.permissions = normalizedPermissions;
+                            } catch {}
+                        }
+                    }
                     const { runtime: runtimeFallback, ...fallbacks } =
                         fallbacksFor(nativeRoot);
                     installFallbacks(nativeRoot, fallbacks);
@@ -1914,6 +2171,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (normalizedMenus !== nativeMenus) {
                             overlays.set(property, normalizedMenus);
                         }
+                    }
+                    const nativePermissions = currentNamespace("permissions");
+                    const normalizedPermissions =
+                        normalizePermissionsNamespace(nativePermissions);
+                    if (normalizedPermissions !== nativePermissions) {
+                        overlays.set("permissions", normalizedPermissions);
                     }
                     const nativeRuntime = currentNamespace("runtime");
                     if (

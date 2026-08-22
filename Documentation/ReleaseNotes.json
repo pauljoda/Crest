@@ -225,6 +225,10 @@
     "2026-08-22-channel-publication-cursors": {
       "category": "internal",
       "message": "Track successful release-note publication independently for stable, nightly, and development channels"
+    },
+    "2026-08-22-webextension-permission-settlement": {
+      "category": "fixed",
+      "message": "Open Firefox extensions reliably when WebKit leaves permission checks unfinished"
     }
   }
 }

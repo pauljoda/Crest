@@ -411,7 +411,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let commands = try XCTUnwrap(
             updated["commands"] as? [String: [String: Any]]
         )
-        XCTAssertNotNil(commands["_execute_action"])
+        XCTAssertNil(commands["_execute_action"])
         XCTAssertNil(commands["_execute_browser_action"])
         XCTAssertEqual(
             commands["open-dashboard"]?["description"] as? String,
@@ -795,6 +795,180 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
 
         _ = try await WKWebView().evaluateJavaScript(source)
+    }
+
+    func testManifestDiagnosticsHideOnlyTheValidEmptyActionCommandWarning()
+        async throws
+    {
+        let fileManager = FileManager.default
+        for (commandName, shouldExposeWarning) in [
+            ("_execute_action", false),
+            ("save-page", true),
+        ] {
+            let root = fileManager.temporaryDirectory.appending(
+                path:
+                    "crest-webextension-command-diagnostic-"
+                    + UUID().uuidString,
+                directoryHint: .isDirectory
+            )
+            defer { try? fileManager.removeItem(at: root) }
+            try fileManager.createDirectory(
+                at: root,
+                withIntermediateDirectories: true
+            )
+            try JSONSerialization.data(
+                withJSONObject: [
+                    "manifest_version": 3,
+                    "name": "Command Diagnostic Fixture",
+                    "version": "1.0",
+                    "commands": [commandName: [:]],
+                ] as [String: Any]
+            ).write(to: root.appending(path: "manifest.json"))
+
+            let webExtension = try await WKWebExtension(
+                resourceBaseURL: root
+            )
+            let rawWarnings = webExtension.errors.map(
+                \.localizedDescription
+            )
+            let displayedWarnings =
+                BrowserWebExtensionManifestCompatibilityPolicy
+                .displayErrors(for: webExtension)
+            let rawHasCommandWarning = rawWarnings.contains { warning in
+                warning.lowercased().contains("empty or invalid command")
+            }
+            let displayedHasCommandWarning = displayedWarnings.contains {
+                warning in
+                warning.lowercased().contains("empty or invalid command")
+            }
+
+            XCTAssertTrue(rawHasCommandWarning)
+            XCTAssertEqual(
+                displayedHasCommandWarning,
+                shouldExposeWarning,
+                "Only the reserved empty action command is valid."
+            )
+        }
+    }
+
+    func testPermissionsCompatibilitySettlesMissingNativeRepliesAndProtectsRequiredAccess()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-permissions-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Permissions Fixture",
+            "version": "1.0",
+            "permissions": ["contextMenus", "storage"],
+            "host_permissions": ["*://api.example.test/*"],
+            "optional_permissions": ["tabs"],
+            "optional_host_permissions": ["*://*/*"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["contextMenus", "storage"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            let nativeContainsCalls = 0;
+            let nativeRemoveCalls = 0;
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; }
+                    },
+                    permissions: {
+                        contains() {
+                            nativeContainsCalls += 1;
+                            return new Promise(() => {});
+                        },
+                        remove() {
+                            nativeRemoveCalls += 1;
+                            return new Promise(() => {});
+                        }
+                    }
+                }
+            });
+            \(source)
+            let callbackContains;
+            const callbackFinished = new Promise((resolve) => {
+                browser.permissions.contains(
+                    { origins: ["http://a.example/"] },
+                    (value) => {
+                        callbackContains = value;
+                        resolve();
+                    }
+                );
+            });
+            const promiseContains = browser.permissions.contains({
+                permissions: ["tabs"],
+                origins: ["*://*/*"]
+            });
+            await callbackFinished;
+            const optionalContains = await promiseContains;
+            const optionalRemoved = await browser.permissions.remove({
+                permissions: ["tabs"],
+                origins: ["*://*/*"]
+            });
+            const requiredRemoved = await browser.permissions.remove({
+                origins: ["*://api.example.test/*"]
+            });
+            return JSON.stringify({
+                callbackContains,
+                optionalContains,
+                optionalRemoved,
+                requiredRemoved,
+                nativeContainsCalls,
+                nativeRemoveCalls
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(result["callbackContains"] as? Bool, false)
+        XCTAssertEqual(result["optionalContains"] as? Bool, false)
+        XCTAssertEqual(result["optionalRemoved"] as? Bool, false)
+        XCTAssertEqual(result["requiredRemoved"] as? Bool, false)
+        XCTAssertEqual(result["nativeContainsCalls"] as? Int, 3)
+        XCTAssertEqual(result["nativeRemoveCalls"] as? Int, 0)
     }
 
     func testPrivacySettingsReportEffectiveUncontrollableValuesWithoutRejecting()

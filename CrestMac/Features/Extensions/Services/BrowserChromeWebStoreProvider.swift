@@ -72,9 +72,8 @@ final class BrowserChromeWebStoreProvider {
             requestedHosts: webExtension.allRequestedMatchPatterns
                 .map(\.string)
                 .sorted(),
-            errors: webExtension.errors
-                .map(\.localizedDescription)
-                .sorted(),
+            errors: BrowserWebExtensionManifestCompatibilityPolicy
+                .displayErrors(for: webExtension),
             iconPayload: BrowserExtensionIconPayloadFactory.production
                 .payload(
                     for: pngData(
