@@ -105,7 +105,9 @@ extension BrowserSession {
         at date: Date = .now
     ) -> Bool {
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
-            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID })
+            let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: {
+                $0.id == tabID && $0.placement == .current
+            })
         else {
             return false
         }

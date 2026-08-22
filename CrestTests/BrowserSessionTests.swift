@@ -183,27 +183,23 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertTrue(session.space(id: personal.id)?.contains(openedID) == true)
     }
 
-    func testExtensionCloseArchivesPinnedTabAndRepairsSelection() throws {
+    func testExtensionCloseCannotRemovePinnedTab() throws {
         var session = BrowserSession.preview
         let space = try XCTUnwrap(session.selectedSpace)
         let pinned = try XCTUnwrap(space.pinnedTabs.first)
-        let fallbackID = try XCTUnwrap(
-            space.tabs.first(where: { $0.id != pinned.id })?.id
-        )
         XCTAssertTrue(session.activateTab(pinned.id, in: space.id))
 
-        XCTAssertTrue(
+        XCTAssertFalse(
             session.closeExtensionTab(
                 pinned.id,
-                in: space.id,
-                fallbackTabID: fallbackID
+                in: space.id
             )
         )
 
         let updated = try XCTUnwrap(session.space(id: space.id))
-        XCTAssertFalse(updated.contains(pinned.id))
-        XCTAssertEqual(updated.archivedTabs.last?.id, pinned.id)
-        XCTAssertEqual(updated.selectedTabID, fallbackID)
+        XCTAssertTrue(updated.contains(pinned.id))
+        XCTAssertFalse(updated.archivedTabs.contains { $0.id == pinned.id })
+        XCTAssertEqual(updated.selectedTabID, pinned.id)
     }
 
     func testNewCurrentTabsUseArcsStableNewestFirstOrder() throws {

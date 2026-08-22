@@ -12,6 +12,10 @@
     "2026-08-21-icloud-sync-feedback-loop": {
       "category": "fixed",
       "message": "Prevent iCloud Sync from re-uploading acknowledged browsing records and repeatedly triggering throttling"
+    },
+    "2026-08-21-protected-tab-deletion-authority": {
+      "category": "fixed",
+      "message": "Keep pinned and saved tabs safe unless a deliberate deletion is confirmed"
     }
   }
 }

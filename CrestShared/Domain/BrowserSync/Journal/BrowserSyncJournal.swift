@@ -405,6 +405,10 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         }
         if let archiveReason = archivedTabReasonsByID[tab.id] {
             if archiveReason.isExplicitDeletion { return .explicitDelete }
+            // Closing and cleanup apply only to current tabs. If a stale
+            // session or partial merge archives a pinned/saved tab as merely
+            // closed, that is not deletion authority for the protected record.
+            guard tab.placement == .current else { return nil }
             if archiveReason == .autoCleanup { return .retention }
             return .superseded
         }

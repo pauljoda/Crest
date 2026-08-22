@@ -739,6 +739,46 @@ final class BrowserSyncTests: XCTestCase {
 
     }
 
+    func testOrdinaryArchiveCannotTombstoneAPinnedOrSavedTab() throws {
+        for placement in [TabPlacement.pinned, .saved] {
+            var session = oneSpaceSession()
+            session.spaces[0].tabs[0].placement = placement
+            let protectedTab = try XCTUnwrap(session.selectedSpace?.tabs.first)
+            var journal = BrowserSyncJournal(deviceID: fixedUUID(303))
+            try journal.stage(session: session, at: fixedDate(100))
+            journal.markUploaded(journal.pendingRecordIDs)
+            session.spaces[0].tabs.removeAll { $0.id == protectedTab.id }
+            session.spaces[0].archivedTabs.append(
+                ArchivedTab(
+                    tab: protectedTab,
+                    archivedAt: fixedDate(200),
+                    reason: .synced
+                )
+            )
+
+            try journal.stage(
+                session: session,
+                deletionReason: .superseded,
+                at: fixedDate(200)
+            )
+
+            let record = try XCTUnwrap(
+                journal.records.first {
+                    $0.id
+                        == BrowserSyncRecordID(
+                            kind: .tab,
+                            value: protectedTab.id.rawValue
+                        )
+                }
+            )
+            guard case .tab(let retained)? = record.payload else {
+                return XCTFail("Expected the protected tab record to remain live")
+            }
+            XCTAssertEqual(retained.placement, placement)
+            XCTAssertNil(record.tombstone)
+        }
+    }
+
     func testAContainerWithoutExplicitRemovalIntentIsNeverTombstoned() throws {
         var session = oneSpaceSession()
         let folder = SavedFolder(title: "Retained", symbol: "folder")
@@ -1504,12 +1544,66 @@ final class BrowserSyncTests: XCTestCase {
             )
         )
         var journal = BrowserSyncJournal(deviceID: fixedUUID(1_184))
-        try journal.merge([tabRecord, deletionAudit])
+        try journal.merge([
+            spaceRecord(space, clock: 1),
+            tabRecord,
+            deletionAudit,
+        ])
 
         let materialized = try journal.materializedSession(applyingTo: session)
 
         XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).contains(tab.id))
         XCTAssertTrue(try XCTUnwrap(materialized.selectedSpace).archivedTabs.isEmpty)
+    }
+
+    func testOrdinaryRemoteArchiveCannotReplaceAPinnedOrSavedTab() throws {
+        for placement in [TabPlacement.pinned, .saved] {
+            var session = oneSpaceSession()
+            session.spaces[0].tabs[0].placement = placement
+            let space = try XCTUnwrap(session.selectedSpace)
+            let tab = try XCTUnwrap(space.tabs.first)
+            let tabRecord = BrowserSyncRecord.save(
+                .tab(syncTab(tab, spaceID: space.id)),
+                version: BrowserSyncVersion(
+                    logicalClock: 10,
+                    deviceID: fixedUUID(1_187)
+                )
+            )
+            var archivedTab = syncTab(tab, spaceID: space.id)
+            archivedTab.placement = .current
+            archivedTab.savedURL = nil
+            archivedTab.folderID = nil
+            let ordinaryArchive = BrowserSyncRecord.save(
+                .archive(
+                    BrowserSyncArchive(
+                        tab: archivedTab,
+                        archivedAt: fixedDate(500),
+                        reason: .closed
+                    )
+                ),
+                version: BrowserSyncVersion(
+                    logicalClock: 20,
+                    deviceID: fixedUUID(1_188)
+                )
+            )
+            var journal = BrowserSyncJournal(deviceID: fixedUUID(1_189))
+            try journal.merge([
+                spaceRecord(space, clock: 1),
+                tabRecord,
+                ordinaryArchive,
+            ])
+
+            let materialized = try journal.materializedSession(
+                applyingTo: session
+            )
+
+            let resolvedSpace = try XCTUnwrap(materialized.selectedSpace)
+            XCTAssertEqual(
+                resolvedSpace.tabs.first { $0.id == tab.id }?.placement,
+                placement
+            )
+            XCTAssertFalse(resolvedSpace.archivedTabs.contains { $0.id == tab.id })
+        }
     }
 
     func testExplicitRemoteDeleteMovesTheLocalTabIntoDeletionArchive() throws {

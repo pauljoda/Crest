@@ -20,7 +20,12 @@ enum BrowserSyncRecordReconciler {
             else { continue }
 
             let activeTabWins: Bool
-            if archive.reason.isExplicitDeletion {
+            if tab.placement != .current {
+                // A routine close/archive is not proof that somebody deleted a
+                // pinned or saved tab. Only its explicit tab tombstone may
+                // remove protected content; until then the live record wins.
+                activeTabWins = true
+            } else if archive.reason.isExplicitDeletion {
                 // The archive is only the deletion's audit trail. It cannot
                 // remove the live tab before the explicit tab tombstone arrives
                 // in what may be a later CloudKit batch.
