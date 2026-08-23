@@ -1,7 +1,7 @@
 import Foundation
 
 enum BrowserExtensionExternalNavigationPolicy {
-    static func shouldOpenInBrowserTab(
+    static func shouldReplaceCurrentTabRuntime(
         currentURL: URL?,
         destinationURL: URL?,
         isTopLevel: Bool,

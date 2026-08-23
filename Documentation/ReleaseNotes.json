@@ -237,6 +237,10 @@
     "2026-08-23-fullscreen-sidebar-controls": {
       "category": "fixed",
       "message": "Keep Mac window controls and collapsed-sidebar reveal available in fullscreen"
+    },
+    "2026-08-23-navigation-continuity": {
+      "category": "fixed",
+      "message": "Restore back and forward history with archived tabs, and keep extension actions and blocking pages attached to the intended tab and destination"
     }
   }
 }

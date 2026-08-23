@@ -4,6 +4,7 @@
   "description": "Auditable test extension for validating Space isolation.",
   "version": "1.0.0",
   "permissions": [
+    "activeTab",
     "storage"
   ],
   "host_permissions": [

@@ -355,6 +355,18 @@ extension BrowserExtensionControllerPool {
         )
     }
 
+    func replaceExtensionPageNavigation(
+        _ url: URL,
+        tabID: TabID,
+        spaceID: SpaceID
+    ) -> Bool {
+        tabWindowCoordinator.replaceExtensionPageNavigation(
+            url,
+            tabID: tabID,
+            spaceID: spaceID
+        )
+    }
+
     func extensions(
         in spaceID: SpaceID
     ) -> [BrowserExtensionSummary] {

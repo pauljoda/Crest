@@ -1360,6 +1360,34 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(adapter.title(for: context), tab.title)
     }
 
+    func testAdapterRevealsSensitiveMetadataForAnActiveTabActionGesture()
+        async throws
+    {
+        let browser = BrowserStore.preview()
+        let pool = BrowserExtensionControllerPool()
+        pool.connect(browser: browser, pageProvider: PageProviderSpy())
+        let work = browser.session.spaces[0]
+        let context = try await pool.loadExtension(
+            at: fixtureURL,
+            extensionID: extensionID,
+            in: work
+        )
+        let tab = try XCTUnwrap(work.tabs.first(where: { $0.url != nil }))
+        let adapter = try XCTUnwrap(pool.extensionTab(tab.id, in: work.id))
+
+        XCTAssertTrue(
+            context.webExtension.requestedPermissions.contains(.activeTab)
+        )
+        XCTAssertNil(adapter.url(for: context))
+        XCTAssertNil(adapter.title(for: context))
+
+        context.userGesturePerformed(in: adapter)
+
+        XCTAssertTrue(context.hasActiveUserGesture(in: adapter))
+        XCTAssertEqual(adapter.url(for: context), tab.url)
+        XCTAssertEqual(adapter.title(for: context), tab.title)
+    }
+
     func testAdapterRevealsItsOwnExtensionPageWithoutTabsPermission() async throws {
         let browser = BrowserStore.preview()
         let pool = BrowserExtensionControllerPool()
@@ -1506,21 +1534,38 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(standardPage.pendingNavigationURL, webURL)
     }
 
-    func testExtensionPageRoutesExternalNavigationIntoStandardBrowserTab()
+    func testExtensionPageReplacesItsRuntimeInTheExistingTabWithHistoryIntact()
         async throws
     {
-        let browser = BrowserStore.preview()
+        let tab = BrowserTab(
+            title: "Routing",
+            url: nil,
+            placement: .current
+        )
+        let space = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Routing",
+            symbol: "arrow.trianglehead.swap",
+            accent: .indigo,
+            folders: [],
+            tabs: [tab],
+            selectedTabID: tab.id
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
         let pool = BrowserExtensionControllerPool()
         var openedURL: URL?
-        var openedSpaceID: SpaceID?
-        var selectedNewTab = false
         let pages = BrowserPagePool(
             monitorsMemoryPressure: false,
             extensionControllerPool: pool,
             openModifiedLink: { url, spaceID, selecting in
                 openedURL = url
-                openedSpaceID = spaceID
-                selectedNewTab = selecting
                 browser.openNewTab(
                     url: url,
                     in: spaceID,
@@ -1529,15 +1574,48 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             }
         )
         pool.connect(browser: browser, pageProvider: pages)
-        let space = try XCTUnwrap(browser.session.selectedSpace)
-        _ = try await pool.loadExtension(
+        let context = try await pool.loadExtension(
             at: fixtureURL,
             extensionID: extensionID,
             in: space
         )
-        pool.openOptionsPage(extensionID: extensionID, in: space.id)
-        let extensionTabID = try XCTUnwrap(browser.session.selectedTab?.id)
+        pages.select(session: browser.session)
+        let standardPage = try XCTUnwrap(pages.activePage)
+        let firstURL = try XCTUnwrap(
+            URL(string: "https://example.com/extension-routing-first")
+        )
+        let secondURL = try XCTUnwrap(
+            URL(string: "https://example.com/extension-routing-second")
+        )
+        try await load(firstURL, in: standardPage)
+        try await load(secondURL, in: standardPage)
+        browser.updateSelectedTabFromPage(url: secondURL, title: "Second")
+        let adapter = try XCTUnwrap(
+            pool.extensionTab(tab.id, in: space.id)
+        )
+        let extensionURL = try XCTUnwrap(context.optionsPageURL)
+        var extensionLoadError: Error?
+
+        adapter.loadURL(extensionURL, for: context) {
+            extensionLoadError = $0
+        }
+
+        XCTAssertNil(extensionLoadError)
+        XCTAssertEqual(browser.session.selectedTab?.id, tab.id)
         let extensionPage = try XCTUnwrap(pages.activePage)
+        XCTAssertFalse(extensionPage === standardPage)
+        XCTAssertTrue(pages.canGoBack)
+        XCTAssertEqual(pages.backHistory.first?.url, secondURL)
+
+        pages.goBack()
+
+        XCTAssertTrue(pages.activePage === standardPage)
+        XCTAssertEqual(pages.activePage?.webView.url, secondURL)
+        XCTAssertTrue(pages.canGoForward)
+
+        pages.goForward()
+
+        XCTAssertTrue(pages.activePage === extensionPage)
         let destinationURL = try XCTUnwrap(
             URL(string: "https://example.com/crest-extension-location")
         )
@@ -1553,23 +1631,23 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
 
         _ = try await extensionPage.webView.callAsyncJavaScript(
             """
-            window.location.href = destinationURL;
+            window.location.replace(destinationURL);
             return true;
             """,
             arguments: ["destinationURL": destinationURL.absoluteString],
             in: nil,
             contentWorld: .page
         )
-        for _ in 0..<400 where openedURL != destinationURL {
+        for _ in 0..<400 where pages.activePage !== standardPage {
             try await Task.sleep(for: .milliseconds(25))
         }
 
         XCTAssertNil(extensionPage.navigationFailure)
-        XCTAssertEqual(openedURL, destinationURL)
-        XCTAssertEqual(openedSpaceID, space.id)
-        XCTAssertTrue(selectedNewTab)
+        XCTAssertNil(openedURL)
         XCTAssertEqual(browser.session.selectedTab?.url, destinationURL)
-        XCTAssertNotEqual(browser.session.selectedTab?.id, extensionTabID)
+        XCTAssertEqual(browser.session.selectedTab?.id, tab.id)
+        XCTAssertTrue(pages.activePage === standardPage)
+        XCTAssertTrue(standardPage.canGoBack)
         XCTAssertTrue(
             ["crest-extension", "webkit-extension"].contains(
                 try XCTUnwrap(extensionPage.webView.url?.scheme)
@@ -1610,7 +1688,10 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertTrue(pool.loadedContext(extensionID: extensionID, in: work.id) === workContext)
         XCTAssertEqual(pool.extensions(in: work.id).map(\.displayName), ["Crest Space Probe"])
         XCTAssertEqual(pool.extensions(in: personal.id).map(\.displayName), ["Crest Space Probe"])
-        XCTAssertEqual(pool.extensions(in: work.id).first?.requestedPermissions, ["storage"])
+        XCTAssertEqual(
+            pool.extensions(in: work.id).first?.requestedPermissions,
+            ["activeTab", "storage"]
+        )
         XCTAssertEqual(
             pool.extensions(in: work.id).first?.requestedHosts,
             ["https://extension-probe.crest.test/*"]
@@ -2713,6 +2794,23 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
 
         XCTFail("The MV3 content script did not expose its Space-local state.")
         throw BrowserExtensionFixtureError.injectionTimedOut
+    }
+
+    private func load(_ url: URL, in page: BrowserPage) async throws {
+        page.webView.frame = CGRect(x: 0, y: 0, width: 640, height: 480)
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: url),
+            responseHTML: "<!doctype html><html><body>\(url.path)</body></html>"
+        )
+        for attempt in 0..<200 {
+            if page.webView.url == url, !page.webView.isLoading {
+                return
+            }
+            if attempt < 199 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        XCTFail("Timed out loading \(url).")
     }
 }
 

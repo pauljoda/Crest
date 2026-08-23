@@ -332,7 +332,20 @@ extension BrowserExtensionTabWindowCoordinator {
         state: BrowserExtensionTabState,
         context: WKWebExtensionContext
     ) -> Bool {
-        if context.hasPermission(.tabs, in: adapter) {
+        // `tabs` is a context-wide permission. Asking WebKit whether it is
+        // granted "in" this tab makes WebKit resolve the tab URL, which calls
+        // this adapter again and can recurse until the process exhausts its
+        // stack.
+        if context.hasPermission(.tabs) {
+            return true
+        }
+        if context.webExtension.requestedPermissions.contains(.activeTab),
+            context.hasActiveUserGesture(in: adapter)
+        {
+            // WebKit records the gesture but does not include its temporary
+            // activeTab grant in `hasAccess(to:in:)` on every supported OS.
+            // Project the same grant into the adapter so action popups can read
+            // the URL/title they were explicitly invoked for.
             return true
         }
         // A tab with no URL is Crest's Start Page. There is no host to match
@@ -574,6 +587,32 @@ extension BrowserExtensionTabWindowCoordinator {
             completionHandler(nil)
             return
         }
+        completeLoad(
+            url,
+            tabID: tabID,
+            spaceID: spaceID,
+            completionHandler: completionHandler
+        )
+    }
+
+    func replaceExtensionPageNavigation(
+        _ url: URL,
+        tabID: TabID,
+        spaceID: SpaceID
+    ) -> Bool {
+        var didLoad = false
+        completeLoad(url, tabID: tabID, spaceID: spaceID) { error in
+            didLoad = error == nil
+        }
+        return didLoad
+    }
+
+    private func completeLoad(
+        _ url: URL,
+        tabID: TabID,
+        spaceID: SpaceID,
+        completionHandler: @escaping (Error?) -> Void
+    ) {
         guard let browser,
             browser.loadExtensionURL(url, in: tabID, spaceID: spaceID)
         else {

@@ -66,7 +66,7 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             "A missing target frame is a new window, not this page's main frame."
         )
         XCTAssertFalse(
-            BrowserExtensionExternalNavigationPolicy.shouldOpenInBrowserTab(
+            BrowserExtensionExternalNavigationPolicy.shouldReplaceCurrentTabRuntime(
                 currentURL: extensionURL,
                 destinationURL: destinationURL,
                 isTopLevel: page.isTopLevelNavigation(newWindowAction),
@@ -75,13 +75,13 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
             "A target=\"_blank\" link on an extension page must not be cancelled and reloaded in place."
         )
         XCTAssertTrue(
-            BrowserExtensionExternalNavigationPolicy.shouldOpenInBrowserTab(
+            BrowserExtensionExternalNavigationPolicy.shouldReplaceCurrentTabRuntime(
                 currentURL: extensionURL,
                 destinationURL: destinationURL,
                 isTopLevel: true,
                 isAppInitiated: false
             ),
-            "A genuine top-level navigation away from an extension page still opens a browser tab."
+            "A top-level navigation away from an extension page replaces that runtime in its existing tab."
         )
     }
 

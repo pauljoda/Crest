@@ -564,6 +564,25 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
                 }
                 return nil
             })
+        let archivedAssignments = Dictionary(
+            uniqueKeysWithValues: session.spaces.flatMap { space in
+                space.archivedTabs.map { archivedTab in
+                    (archivedTab.id, BrowserSpaceRuntimeAssignment(space: space))
+                }
+            }
+        )
+        for tabID in invalidTabIDs {
+            guard let page = pagesByTabID[tabID],
+                let assignment = archivedAssignments[tabID],
+                assignment.spaceID == page.spaceID,
+                assignment.profileID == page.profileID
+            else { continue }
+            // Closing removes the tab from the live runtime assignments before
+            // reconciliation. Capture its WebKit stack while the page still
+            // exists; releasing first leaves both restore paths with only the
+            // tab's final URL.
+            archiveTabState(for: tabID)
+        }
         releasePages(for: invalidTabIDs)
         for (tabID, page) in pagesByTabID {
             guard let resident = tabsByID[tabID],

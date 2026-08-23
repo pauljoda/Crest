@@ -135,7 +135,7 @@ extension BrowserPage: WKNavigationDelegate {
             return
         }
         if BrowserExtensionExternalNavigationPolicy
-            .shouldOpenInBrowserTab(
+            .shouldReplaceCurrentTabRuntime(
                 currentURL: webView.url,
                 destinationURL: navigationAction.request.url,
                 isTopLevel: isTopLevelNavigation(navigationAction),
@@ -143,7 +143,7 @@ extension BrowserPage: WKNavigationDelegate {
             ), let destinationURL = navigationAction.request.url
         {
             decisionHandler(.cancel)
-            openModifiedLink(destinationURL, spaceID, true)
+            host?.replaceExtensionPageNavigation(self, with: destinationURL)
             return
         }
         if navigationAction.targetFrame?.isMainFrame == true {

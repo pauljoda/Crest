@@ -57,6 +57,11 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     /// after a `WKWebView` is created, and keeping the prior page alive avoids
     /// discarding forms, media, and other in-page state during the swap.
     @ObservationIgnored private var suspendedPagesByTabID: [TabID: [BrowserPage]] = [:]
+    /// WebKit cannot share a back/forward list between ordinary and extension
+    /// configurations. These two links make the configuration boundary behave
+    /// like one tab-level history entry in each direction.
+    @ObservationIgnored private var runtimeBackPagesByTabID: [TabID: BrowserPage] = [:]
+    @ObservationIgnored private var runtimeForwardPagesByTabID: [TabID: BrowserPage] = [:]
     @ObservationIgnored private var inactiveSinceByTabID: [TabID: Date] = [:]
     @ObservationIgnored private var ephemeralDataStores: [UUID: WKWebsiteDataStore] = [:]
     @ObservationIgnored private let residencyDecisionProvider: ResidencyDecisionProvider
@@ -266,11 +271,21 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         // An unloaded background tab keeps the URL in the session and receives
         // the right configuration when it is next presented. Only a resident
         // tab has a live WebKit runtime to navigate now.
-        guard pages[tabID] != nil,
+        guard let currentPage = pages[tabID],
             let space = session.space(id: spaceID),
             let tab = space.tabs.first(where: { $0.id == tabID })
         else { return }
-        page(for: tab, space: space).load(url)
+        let replacesExtensionRuntime =
+            currentPage.extensionBaseURL != nil
+            && extensionControllerPool.extensionPageConfiguration(
+                for: url,
+                in: spaceID
+            ) == nil
+        let destinationPage = page(for: tab, space: space)
+        if replacesExtensionRuntime {
+            clearRuntimeNavigation(for: tabID)
+        }
+        destinationPage.load(url)
     }
 
     func extensionReaderModeState(
@@ -353,19 +368,31 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     }
 
     var canGoBack: Bool {
-        activePage?.canGoBack == true
+        guard let activeTabID else { return false }
+        return activePage?.canGoBack == true
+            || runtimeBackPagesByTabID[activeTabID] != nil
     }
 
     var canGoForward: Bool {
-        activePage?.canGoForward == true
+        guard let activeTabID else { return false }
+        return activePage?.canGoForward == true
+            || runtimeForwardPagesByTabID[activeTabID] != nil
     }
 
     var backHistory: [BrowserNavigationHistoryItem] {
-        activePage?.backHistory ?? []
+        runtimeHistory(
+            local: activePage?.backHistory ?? [],
+            crossingTo: activeTabID.flatMap { runtimeBackPagesByTabID[$0] },
+            continuation: \BrowserPage.backHistory
+        )
     }
 
     var forwardHistory: [BrowserNavigationHistoryItem] {
-        activePage?.forwardHistory ?? []
+        runtimeHistory(
+            local: activePage?.forwardHistory ?? [],
+            crossingTo: activeTabID.flatMap { runtimeForwardPagesByTabID[$0] },
+            continuation: \BrowserPage.forwardHistory
+        )
     }
 
     var hasActivePage: Bool {
@@ -646,6 +673,25 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
                 }
                 return nil
             })
+        let archivedAssignments = Dictionary(
+            uniqueKeysWithValues: session.spaces.flatMap { space in
+                space.archivedTabs.map { archivedTab in
+                    (archivedTab.id, BrowserSpaceRuntimeAssignment(space: space))
+                }
+            }
+        )
+        for tabID in invalidTabIDs {
+            guard let page = pages[tabID],
+                let assignment = archivedAssignments[tabID],
+                assignment.spaceID == page.spaceID,
+                assignment.profileID == page.profileID
+            else { continue }
+            // Closing removes the tab from the live runtime assignments before
+            // reconciliation. Capture its WebKit stack while the page still
+            // exists; releasing first leaves both restore paths with only the
+            // tab's final URL.
+            archiveTabState(for: tabID)
+        }
         releasePages(for: invalidTabIDs)
         for (tabID, page) in pages {
             guard let resident = tabsByID[tabID],
@@ -1089,20 +1135,73 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         page.receiveGeolocationMessage(message)
     }
 
+    func replaceExtensionPageNavigation(
+        _ page: BrowserPage,
+        with destinationURL: URL
+    ) {
+        guard let tabID = tabID(for: page),
+            pages[tabID] === page,
+            page.extensionBaseURL != nil
+        else { return }
+        _ = extensionControllerPool.replaceExtensionPageNavigation(
+            destinationURL,
+            tabID: tabID,
+            spaceID: page.spaceID
+        )
+    }
+
     func goBack() {
-        activePage?.goBack()
+        guard let activeTabID, let page = activePage else { return }
+        if page.canGoBack {
+            page.goBack()
+            return
+        }
+        crossRuntimeHistoryBackward(for: activeTabID)
     }
 
     func goForward() {
-        activePage?.goForward()
+        guard let activeTabID, let page = activePage else { return }
+        if page.canGoForward {
+            page.goForward()
+            return
+        }
+        crossRuntimeHistoryForward(for: activeTabID)
     }
 
     func goBack(to item: BrowserNavigationHistoryItem) {
-        activePage?.goBack(toDepth: item.depth)
+        guard let activeTabID, let page = activePage else { return }
+        let localCount = page.backHistory.count
+        guard item.depth > localCount else {
+            page.goBack(toDepth: item.depth)
+            return
+        }
+        guard
+            let destinationPage = crossRuntimeHistoryBackward(
+                for: activeTabID
+            )
+        else { return }
+        let destinationDepth = item.depth - localCount - 1
+        if destinationDepth > 0 {
+            destinationPage.goBack(toDepth: destinationDepth)
+        }
     }
 
     func goForward(to item: BrowserNavigationHistoryItem) {
-        activePage?.goForward(toDepth: item.depth)
+        guard let activeTabID, let page = activePage else { return }
+        let localCount = page.forwardHistory.count
+        guard item.depth > localCount else {
+            page.goForward(toDepth: item.depth)
+            return
+        }
+        guard
+            let destinationPage = crossRuntimeHistoryForward(
+                for: activeTabID
+            )
+        else { return }
+        let destinationDepth = item.depth - localCount - 1
+        if destinationDepth > 0 {
+            destinationPage.goForward(toDepth: destinationDepth)
+        }
     }
 
     func unloadPage(for tabID: TabID) {
@@ -1382,6 +1481,12 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
                 extensionConfiguration: extensionConfiguration
             )
         }
+        if currentPage.extensionBaseURL == nil,
+            replacement.extensionBaseURL != nil
+        {
+            runtimeBackPagesByTabID[tabID] = currentPage
+            runtimeForwardPagesByTabID[tabID] = nil
+        }
         suspendedPages.append(currentPage)
         suspendedPagesByTabID[tabID] = suspendedPages
         pages[tabID] = replacement
@@ -1470,9 +1575,90 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     }
 
     private func releaseSuspendedPages(for tabID: TabID) {
+        clearRuntimeNavigation(for: tabID)
         for page in suspendedPagesByTabID.removeValue(forKey: tabID) ?? [] {
             page.prepareForSpaceDeletion()
         }
+    }
+
+    private func clearRuntimeNavigation(for tabID: TabID) {
+        runtimeBackPagesByTabID[tabID] = nil
+        runtimeForwardPagesByTabID[tabID] = nil
+    }
+
+    private func runtimeHistory(
+        local: [BrowserNavigationHistoryItem],
+        crossingTo page: BrowserPage?,
+        continuation: KeyPath<BrowserPage, [BrowserNavigationHistoryItem]>
+    ) -> [BrowserNavigationHistoryItem] {
+        guard let page,
+            let url = page.url ?? page.webView.url
+        else { return local }
+        var history = local
+        history.append(
+            BrowserNavigationHistoryItem(
+                depth: history.count + 1,
+                title: page.title.isEmpty ? url.absoluteString : page.title,
+                url: url
+            )
+        )
+        history.append(
+            contentsOf: page[keyPath: continuation].map { item in
+                BrowserNavigationHistoryItem(
+                    depth: history.count + item.depth,
+                    title: item.title,
+                    url: item.url
+                )
+            }
+        )
+        return history
+    }
+
+    @discardableResult
+    private func crossRuntimeHistoryBackward(for tabID: TabID) -> BrowserPage? {
+        guard let destinationPage = runtimeBackPagesByTabID[tabID],
+            let currentPage = swapActiveRuntime(
+                for: tabID,
+                to: destinationPage
+            )
+        else { return nil }
+        runtimeBackPagesByTabID[tabID] = nil
+        runtimeForwardPagesByTabID[tabID] = currentPage
+        residencyRevision &+= 1
+        return destinationPage
+    }
+
+    @discardableResult
+    private func crossRuntimeHistoryForward(for tabID: TabID) -> BrowserPage? {
+        guard let destinationPage = runtimeForwardPagesByTabID[tabID],
+            let currentPage = swapActiveRuntime(
+                for: tabID,
+                to: destinationPage
+            )
+        else { return nil }
+        runtimeForwardPagesByTabID[tabID] = nil
+        runtimeBackPagesByTabID[tabID] = currentPage
+        residencyRevision &+= 1
+        return destinationPage
+    }
+
+    /// Swaps one retained configuration back into the live tab without loading
+    /// either page. The caller owns the history direction and observation bump.
+    private func swapActiveRuntime(
+        for tabID: TabID,
+        to destinationPage: BrowserPage
+    ) -> BrowserPage? {
+        guard let currentPage = pages[tabID],
+            var suspendedPages = suspendedPagesByTabID[tabID],
+            let index = suspendedPages.firstIndex(where: {
+                $0 === destinationPage
+            })
+        else { return nil }
+        suspendedPages.remove(at: index)
+        suspendedPages.append(currentPage)
+        suspendedPagesByTabID[tabID] = suspendedPages
+        pages[tabID] = destinationPage
+        return currentPage
     }
 
     private func contentRuleLists(for space: BrowserSpace) -> [WKContentRuleList] {

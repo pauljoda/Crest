@@ -11,6 +11,13 @@ import os
 /// the page itself defers teardown requests until that callback has unwound.
 @MainActor
 protocol BrowserPageHosting: AnyObject {
+    /// Replaces an extension document with its top-level web destination in
+    /// the same browser tab and ordinary WebKit runtime.
+    func replaceExtensionPageNavigation(
+        _ page: BrowserPage,
+        with destinationURL: URL
+    )
+
     /// Adopts the web view WebKit pre-made for a popup into a new selected tab,
     /// or returns nil when this opener cannot host one.
     func adoptPopupWebView(

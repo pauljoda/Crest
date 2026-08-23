@@ -1684,6 +1684,79 @@ final class BrowserPagePoolTests: XCTestCase {
         )
     }
 
+    func testClosingAResidentTabArchivesItsHistoryBeforeReconciliationReleasesIt()
+        async throws
+    {
+        let archive = try makeTabStateArchive()
+        let firstURL = try XCTUnwrap(
+            URL(string: "https://state.crest.test/close-first")
+        )
+        let secondURL = try XCTUnwrap(
+            URL(string: "https://state.crest.test/close-second")
+        )
+        let stateful = BrowserTab(
+            title: "Stateful",
+            url: nil,
+            placement: .current
+        )
+        let fallback = BrowserTab(
+            title: "Fallback",
+            url: nil,
+            placement: .current
+        )
+        let space = makeSpace(
+            tabs: [stateful, fallback],
+            selectedTabID: stateful.id
+        )
+        var session = BrowserSession(
+            spaces: [space],
+            selectedSpaceID: space.id
+        )
+        let pool = BrowserPagePool(
+            usesEphemeralWebsiteDataStores: false,
+            tabStateArchive: archive
+        )
+
+        pool.select(session: session)
+        let originalPage = try XCTUnwrap(pool.activePage)
+        try await load(firstURL, in: originalPage)
+        try await load(secondURL, in: originalPage)
+        XCTAssertTrue(
+            session.updateTab(
+                url: secondURL,
+                title: "Second",
+                tabID: stateful.id,
+                in: space.id
+            )
+        )
+
+        session.closeTab(stateful.id, fallbackTabID: fallback.id)
+        pool.reconcile(session: session)
+        await pool.flushPendingTabStateWrites()
+
+        XCTAssertFalse(pool.containsResidentPage(for: stateful.id))
+        XCTAssertNotNil(
+            archive.archivedState(
+                profileID: space.profile.id,
+                tabID: stateful.id
+            ),
+            "Closing must write the resident interaction state before the session sweep releases the page."
+        )
+
+        session.restoreArchivedTab(stateful.id)
+        pool.select(session: session)
+        let restoredPage = try XCTUnwrap(pool.activePage)
+
+        XCTAssertFalse(restoredPage === originalPage)
+        XCTAssertEqual(restoredPage.webView.url, secondURL)
+        XCTAssertEqual(
+            restoredPage.webView.backForwardList.backList.map(\.url),
+            [firstURL]
+        )
+
+        pool.reconcile(validTabIDs: [])
+    }
+
     func testStateWebKitRefusesFallsBackToAnOrdinaryLoad() async throws {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))

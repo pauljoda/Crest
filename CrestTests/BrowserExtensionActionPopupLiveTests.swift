@@ -238,13 +238,14 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
     func testLiveRaindropPopupRendersItsSignedOutState() async throws {
         try skipUnlessLiveRunRequested()
         let candidate = try await mozillaCandidate(slug: "raindropio")
+        let activeTabURL = try XCTUnwrap(
+            URL(string: "https://addons.mozilla.org/")
+        )
         let outcome = try await popupOutcome(
             candidate: candidate,
             extensionID:
                 "jid0-adyhmvsP91nUO8pRv0Mn2VKeB84@jetpack",
-            activeTabURL: try XCTUnwrap(
-                URL(string: "https://addons.mozilla.org/")
-            ),
+            activeTabURL: activeTabURL,
             viaRestoration: false,
             viaPopover: true,
             warmsPopupBeforeMeasurement: false,
@@ -269,6 +270,17 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             """
             Raindrop rendered a blank action popup. Host calls: \
             \(outcome.hostCalls). Runtime errors: \(outcome.contextErrors)
+            """
+        )
+        XCTAssertTrue(
+            outcome.hostCalls.contains {
+                $0.contains("tabs.query")
+                    && $0.contains(activeTabURL.absoluteString)
+            },
+            """
+            Raindrop's activeTab action gesture did not expose the active page \
+            URL. Host calls: \(outcome.hostCalls). Runtime errors: \
+            \(outcome.contextErrors)
             """
         )
     }
