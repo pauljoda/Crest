@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Crest
 
 final class BrowserPageZoomPolicyTests: XCTestCase {
@@ -174,6 +175,15 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
         XCTAssertEqual(BrowserPageZoomPolicy.percentageLabel(for: 1.25), "125%")
     }
 
+    func testDefaultZoomNormalizationUsesTheCommandLevels() {
+        XCTAssertEqual(BrowserPageZoomPolicy.defaultLevel, 1)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.1), 0.5)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.7), 0.67)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(1.2), 1.25)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(9), 3)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(.nan), 1)
+    }
+
     func testPDFExportFilenameUsesTitleThenHostAndRemovesUnsafePathCharacters() {
         XCTAssertEqual(
             BrowserPageExportPolicy.pdfFilename(
@@ -221,6 +231,50 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
 }
 
 @MainActor
+final class BrowserDefaultPageZoomStoreTests: XCTestCase {
+    func testUserDefaultsPersistenceSurvivesStoreRecreation() throws {
+        let suiteName = "BrowserDefaultPageZoomStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let first = BrowserDefaultPageZoomStore(
+            persistence: UserDefaultsBrowserDefaultPageZoomPersistence(
+                defaults: defaults
+            )
+        )
+        XCTAssertEqual(first.defaultZoom, 1)
+
+        first.defaultZoom = 1.25
+
+        let restored = BrowserDefaultPageZoomStore(
+            persistence: UserDefaultsBrowserDefaultPageZoomPersistence(
+                defaults: defaults
+            )
+        )
+        XCTAssertEqual(restored.defaultZoom, 1.25)
+    }
+
+    func testInvalidPersistedAndSliderValuesClampToSupportedLevels() {
+        let persistence = InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.2)
+        let store = BrowserDefaultPageZoomStore(persistence: persistence)
+
+        XCTAssertEqual(store.defaultZoom, 1.25)
+        XCTAssertEqual(persistence.load(), 1.25)
+
+        store.defaultZoomLevelIndex = -100
+        XCTAssertEqual(store.defaultZoom, 0.5)
+
+        store.defaultZoomLevelIndex = 100
+        XCTAssertEqual(store.defaultZoom, 3)
+
+        store.defaultZoom = .infinity
+        XCTAssertEqual(store.defaultZoom, 1)
+        XCTAssertEqual(persistence.load(), 1)
+    }
+}
+
+@MainActor
 final class BrowserPageActionsTests: XCTestCase {
     func testPagePoolRoutesZoomOnlyToTheActivePage() {
         let first = BrowserTab(title: "First", url: URL(string: "https://first.example"), placement: .current)
@@ -239,6 +293,77 @@ final class BrowserPageActionsTests: XCTestCase {
         XCTAssertEqual(pool.activePage?.pageZoom, 0.9)
         XCTAssertEqual(pool.activePage?.webView.pageZoom, 0.9)
         XCTAssertEqual(pool.pageZoomLabel, "90%")
+    }
+
+    func testDefaultZoomFollowsResidentAndRecreatedPageLifecycles() throws {
+        let preferences = BrowserDefaultPageZoomStore(
+            persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.25)
+        )
+        let first = BrowserTab(
+            title: "First",
+            url: URL(string: "about:blank"),
+            placement: .current
+        )
+        let second = BrowserTab(
+            title: "Second",
+            url: URL(string: "about:blank"),
+            placement: .current
+        )
+        let space = makeSpace(
+            tabs: [first, second],
+            selectedTabID: first.id
+        )
+        let pool = BrowserPagePool(pageZoomPreferences: preferences)
+
+        pool.select(tab: first, space: space)
+        let firstPage = try XCTUnwrap(pool.activePage)
+        XCTAssertEqual(firstPage.pageZoom, 1.25)
+        XCTAssertEqual(firstPage.webView.pageZoom, 1.25)
+
+        pool.select(tab: second, space: space)
+        let secondPage = try XCTUnwrap(pool.activePage)
+        XCTAssertEqual(secondPage.pageZoom, 1.25)
+        pool.select(tab: first, space: space)
+
+        preferences.defaultZoom = 1.5
+        XCTAssertEqual(firstPage.pageZoom, 1.5)
+        XCTAssertEqual(
+            secondPage.pageZoom,
+            1.5,
+            "Inactive resident pages must adopt the new global baseline."
+        )
+
+        pool.zoomIn()
+        XCTAssertEqual(firstPage.pageZoom, 1.75)
+        firstPage.load(
+            try XCTUnwrap(URL(string: "about:blank#navigated"))
+        )
+        XCTAssertEqual(
+            firstPage.pageZoom,
+            1.75,
+            "A page-local zoom override survives navigation in the same page."
+        )
+
+        preferences.defaultZoom = 2
+        XCTAssertEqual(
+            firstPage.pageZoom,
+            1.75,
+            "Changing the baseline must not discard a temporary page override."
+        )
+        XCTAssertEqual(secondPage.pageZoom, 2)
+        pool.resetZoom()
+        XCTAssertEqual(firstPage.pageZoom, 2)
+
+        pool.select(tab: second, space: space)
+        XCTAssertTrue(pool.activePage === secondPage)
+        XCTAssertEqual(secondPage.pageZoom, 2)
+        pool.zoomOut()
+        XCTAssertEqual(secondPage.pageZoom, 1.75)
+
+        pool.unloadPage(for: second.id)
+        pool.select(tab: second, space: space)
+        XCTAssertEqual(pool.activePage?.pageZoom, 2)
+        XCTAssertFalse(pool.activePage === secondPage)
     }
 
     func testFindPresentationRequiresALoadedPageURL() {
@@ -448,9 +573,10 @@ final class BrowserPageActionsTests: XCTestCase {
 
         XCTAssertEqual(page.readerModeState, .available)
         XCTAssertFalse(restoredSnapshot.isActive)
-        let originalArticleExists = try await page.webView.evaluateJavaScript(
-            "document.querySelector('article') !== null"
-        ) as? Bool
+        let originalArticleExists =
+            try await page.webView.evaluateJavaScript(
+                "document.querySelector('article') !== null"
+            ) as? Bool
         XCTAssertEqual(originalArticleExists, true)
     }
 

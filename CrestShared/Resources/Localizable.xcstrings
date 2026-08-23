@@ -2782,6 +2782,7 @@
       }
     },
     "browser startup default Space transparency sidebar interface" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -2790,6 +2791,9 @@
           }
         }
       }
+    },
+    "browser startup default Space transparency sidebar interface page zoom percentage" : {
+
     },
     "Browsing" : {
       "localizations" : {
@@ -4738,6 +4742,9 @@
           }
         }
       }
+    },
+    "Default page zoom" : {
+
     },
     "Default Space" : {
       "localizations" : {
@@ -9171,6 +9178,9 @@
         }
       }
     },
+    "Page zoom" : {
+
+    },
     "Page zoom (label)" : {
       "localizations" : {
         "ar" : {
@@ -9180,6 +9190,9 @@
           }
         }
       }
+    },
+    "Pages using the default update immediately. Page Zoom commands temporarily override it while you navigate; Actual Size returns to this value, and recreated pages start here." : {
+
     },
     "Pale" : {
       "localizations" : {
@@ -10627,6 +10640,9 @@
           }
         }
       }
+    },
+    "Reset to 100%" : {
+
     },
     "Resize Sidebar" : {
       "localizations" : {

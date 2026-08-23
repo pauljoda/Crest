@@ -7,7 +7,11 @@ import os
 
 @Observable
 @MainActor
-final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
+final class BrowserPagePool:
+    BrowserSpaceDataDeleting,
+    BrowserPageHosting,
+    BrowserDefaultPageZoomObserving
+{
     @ObservationIgnored private static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
         category: "WebKitLifecycle"
@@ -68,6 +72,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
     @ObservationIgnored private var memoryPressureReleaseTask: Task<Void, Never>?
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
     @ObservationIgnored private let usesEphemeralWebsiteDataStores: Bool
+    @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let chromeWebStoreProvider: BrowserChromeWebStoreProvider
     @ObservationIgnored private let mozillaAddonsProvider: BrowserMozillaAddonsProvider
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
@@ -106,6 +111,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchIsolationPolicy.requiresIsolation(.current),
+        pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         extensionControllerPool: BrowserExtensionControllerPool = BrowserExtensionControllerPool(),
         chromeWebStoreProvider: BrowserChromeWebStoreProvider =
             BrowserChromeWebStoreProvider(),
@@ -142,6 +148,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         self.browsingMode = browsingMode
         self.usesEphemeralWebsiteDataStores =
             usesEphemeralWebsiteDataStores || browsingMode.isPrivate
+        self.pageZoomPreferences = pageZoomPreferences
         self.tabStateArchive =
             self.usesEphemeralWebsiteDataStores
             ? nil
@@ -192,6 +199,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         if monitorsMemoryPressure {
             installMemoryPressureSource()
         }
+        pageZoomPreferences.register(self)
     }
 
     deinit {
@@ -1327,6 +1335,21 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
         activePage?.resetZoom() == true
     }
 
+    func defaultPageZoomDidChange(to zoom: CGFloat) {
+        var visited: Set<ObjectIdentifier> = []
+        let retainedPages =
+            Array(pages.values)
+            + suspendedPagesByTabID.values.flatMap { $0 }
+            + Array(runtimeBackPagesByTabID.values)
+            + Array(runtimeForwardPagesByTabID.values)
+            + Array(transientExtensionPages.values)
+            + transientLeases.values.compactMap { $0.value?.page }
+        for page in retainedPages
+        where visited.insert(ObjectIdentifier(page)).inserted {
+            page.applyDefaultPageZoom(zoom)
+        }
+    }
+
     @discardableResult
     func copyPageLink() -> Bool {
         activePage?.copyPageLink() == true
@@ -1535,6 +1558,7 @@ final class BrowserPagePool: BrowserSpaceDataDeleting, BrowserPageHosting {
             allowsCredentialAccess: !browsingMode.isPrivate,
             isCredentialAccessEnabled:
                 space.credentialPreferences.isEnabled,
+            defaultPageZoom: pageZoomPreferences.defaultZoom,
             allowsChromeWebStoreExtensions: !browsingMode.isPrivate,
             prepareChromeWebStoreExtension: {
                 [chromeWebStoreProvider] item in

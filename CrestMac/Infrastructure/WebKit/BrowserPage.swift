@@ -35,7 +35,7 @@ final class BrowserPage: NSObject {
     var isFindPresented: Bool { findSession.isPresented }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
-    private(set) var pageZoom: CGFloat = 1
+    private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     var readerModeState = BrowserReaderModeState.unavailable
     private(set) var isContentBlockingActive = false
     private(set) var developerPanel: BrowserDeveloperPanel?
@@ -74,6 +74,8 @@ final class BrowserPage: NSObject {
     /// twice on it throws, and removing one would strip it from the opener.
     @ObservationIgnored private let ownsUserContentController: Bool
     @ObservationIgnored private let supportsCredentialAccess: Bool
+    @ObservationIgnored private var defaultPageZoom: CGFloat
+    @ObservationIgnored private var hasTemporaryPageZoomOverride = false
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
@@ -189,6 +191,7 @@ final class BrowserPage: NSObject {
         ownsUserContentController: Bool = true,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
+        defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
         allowsChromeWebStoreExtensions: Bool = false,
         prepareChromeWebStoreExtension:
             @escaping @MainActor (BrowserChromeWebStoreItem) async throws
@@ -248,6 +251,11 @@ final class BrowserPage: NSObject {
         self.isCredentialAccessEnabled =
             allowsCredentialAccess
             && isCredentialAccessEnabled
+        let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
+            defaultPageZoom
+        )
+        self.defaultPageZoom = normalizedDefaultPageZoom
+        pageZoom = normalizedDefaultPageZoom
         self.prepareChromeWebStoreExtension =
             prepareChromeWebStoreExtension
         self.installChromeWebStoreExtension =
@@ -317,6 +325,12 @@ final class BrowserPage: NSObject {
         super.init()
 
         desktopWebView.menuHost = self
+        if !BrowserPageZoomPolicy.levelsMatch(
+            normalizedDefaultPageZoom,
+            BrowserPageZoomPolicy.defaultLevel
+        ) {
+            webView.pageZoom = normalizedDefaultPageZoom
+        }
         webView.isInspectable = true
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -916,17 +930,35 @@ final class BrowserPage: NSObject {
 
     @discardableResult
     func zoomIn() -> Bool {
-        setPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
+        setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
     }
 
     @discardableResult
     func zoomOut() -> Bool {
-        setPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
+        setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
     }
 
     @discardableResult
     func resetZoom() -> Bool {
-        setPageZoom(1)
+        hasTemporaryPageZoomOverride = false
+        return setPageZoom(defaultPageZoom)
+    }
+
+    /// Updates this page's global baseline without discarding a temporary zoom
+    /// chosen through the page commands. A manually zoomed page rejoins the
+    /// baseline when Reset is used, when recreation makes a new page, or when
+    /// the newly selected default already equals its temporary value.
+    @discardableResult
+    func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
+        let normalized = BrowserPageZoomPolicy.normalizedDefault(zoom)
+        defaultPageZoom = normalized
+        if hasTemporaryPageZoomOverride {
+            if BrowserPageZoomPolicy.levelsMatch(pageZoom, normalized) {
+                hasTemporaryPageZoomOverride = false
+            }
+            return false
+        }
+        return setPageZoom(normalized)
     }
 
     func refreshReaderModeAvailability() async {
@@ -1341,8 +1373,19 @@ final class BrowserPage: NSObject {
         }
     }
 
+    private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
+        let changed = setPageZoom(zoom)
+        hasTemporaryPageZoomOverride = !BrowserPageZoomPolicy.levelsMatch(
+            pageZoom,
+            defaultPageZoom
+        )
+        return changed
+    }
+
     private func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard zoom != pageZoom else { return false }
+        guard !BrowserPageZoomPolicy.levelsMatch(zoom, pageZoom) else {
+            return false
+        }
         pageZoom = zoom
         webView.pageZoom = zoom
         return true

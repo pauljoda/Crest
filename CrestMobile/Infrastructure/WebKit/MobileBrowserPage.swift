@@ -47,7 +47,7 @@ final class MobileBrowserPage: NSObject {
     var isFindPresented: Bool { findSession.isPresented }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
-    private(set) var pageZoom: CGFloat = 1
+    private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     var readerModeState = BrowserReaderModeState.unavailable
     private(set) var isContentBlockingActive = false
     private(set) var isRequestingDesktopSite = false
@@ -102,6 +102,8 @@ final class MobileBrowserPage: NSObject {
     /// False for a page that may never touch credentials at all, such as a
     /// private-browsing page. It outranks the Space's own saving preference.
     @ObservationIgnored private let supportsCredentialAccess: Bool
+    @ObservationIgnored private var defaultPageZoom: CGFloat
+    @ObservationIgnored private var hasTemporaryPageZoomOverride = false
 
     typealias CredentialFillTarget = (formID: String, frame: WKFrameInfo)
 
@@ -133,6 +135,7 @@ final class MobileBrowserPage: NSObject {
         contentRuleLists: [WKContentRuleList] = [],
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
+        defaultPageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel,
         loadsInitialURL: Bool = true,
         loadHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
@@ -207,6 +210,11 @@ final class MobileBrowserPage: NSObject {
         self.isCredentialAccessEnabled =
             allowsCredentialAccess
             && isCredentialAccessEnabled
+        let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
+            defaultPageZoom
+        )
+        self.defaultPageZoom = normalizedDefaultPageZoom
+        pageZoom = normalizedDefaultPageZoom
         credentialState = BrowserCredentialPageState(spaceID: space.id)
         httpAuthenticationSession = BrowserHTTPAuthenticationSession(
             spaceID: space.id,
@@ -251,6 +259,12 @@ final class MobileBrowserPage: NSObject {
         webView = WKWebView(frame: .zero, configuration: configuration)
 
         super.init()
+        if !BrowserPageZoomPolicy.levelsMatch(
+            normalizedDefaultPageZoom,
+            BrowserPageZoomPolicy.defaultLevel
+        ) {
+            webView.pageZoom = normalizedDefaultPageZoom
+        }
         #if DEBUG
             // iOS ships no developer tooling of its own, so an inspectable
             // release web view would be attack surface and nothing else: any
@@ -661,17 +675,31 @@ final class MobileBrowserPage: NSObject {
 
     @discardableResult
     func zoomIn() -> Bool {
-        setPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
+        setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
     }
 
     @discardableResult
     func zoomOut() -> Bool {
-        setPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
+        setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
     }
 
     @discardableResult
     func resetZoom() -> Bool {
-        setPageZoom(1)
+        hasTemporaryPageZoomOverride = false
+        return setPageZoom(defaultPageZoom)
+    }
+
+    @discardableResult
+    func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
+        let normalized = BrowserPageZoomPolicy.normalizedDefault(zoom)
+        defaultPageZoom = normalized
+        if hasTemporaryPageZoomOverride {
+            if BrowserPageZoomPolicy.levelsMatch(pageZoom, normalized) {
+                hasTemporaryPageZoomOverride = false
+            }
+            return false
+        }
+        return setPageZoom(normalized)
     }
 
     func refreshReaderModeAvailability() async {
@@ -1076,8 +1104,19 @@ final class MobileBrowserPage: NSObject {
         webView.window != nil
     }
 
+    private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
+        let changed = setPageZoom(zoom)
+        hasTemporaryPageZoomOverride = !BrowserPageZoomPolicy.levelsMatch(
+            pageZoom,
+            defaultPageZoom
+        )
+        return changed
+    }
+
     private func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard zoom != pageZoom else { return false }
+        guard !BrowserPageZoomPolicy.levelsMatch(zoom, pageZoom) else {
+            return false
+        }
         pageZoom = zoom
         webView.pageZoom = zoom
         return true

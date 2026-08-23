@@ -68,6 +68,34 @@ final class BrowserSettingsPaneTests: XCTestCase {
         )
     }
 
+    func testGeneralSettingsPresentsTheSharedDefaultZoomControl() {
+        let preferences = BrowserDefaultPageZoomStore(
+            persistence: InMemoryBrowserDefaultPageZoomPersistence()
+        )
+        let section = BrowserDefaultPageZoomSettingsSection(
+            preferences: preferences
+        )
+
+        XCTAssertEqual(preferences.defaultZoom, 1)
+        XCTAssertEqual(
+            BrowserPageZoomPolicy.percentageLabel(
+                for: preferences.defaultZoom
+            ),
+            "100%"
+        )
+        XCTAssertEqual(
+            BrowserDefaultPageZoomSettingsSection.controlIdentifier,
+            "default-page-zoom-slider"
+        )
+        XCTAssertNotNil(section.body)
+        XCTAssertTrue(
+            BrowserSettingsDestination.general.matchesSearchQuery(
+                "zoom",
+                locale: Locale(identifier: "en_US")
+            )
+        )
+    }
+
     /// The Setup section is data because the two shells offer different setup
     /// capabilities, so a caller's action has to survive the trip into the pane.
     func testAdvancedSetupActionCarriesItsIdentityAndFires() {

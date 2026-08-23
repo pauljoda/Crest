@@ -3445,6 +3445,73 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertEqual(pages.pageZoomFeedbackRevision, 4)
     }
 
+    func testMobileDefaultZoomFollowsResidentAndRecreatedPages() throws {
+        let preferences = BrowserDefaultPageZoomStore(
+            persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.25)
+        )
+        var space = makeSpace(index: 12)
+        let backgroundTab = BrowserTab.startPage()
+        space.tabs.append(backgroundTab)
+        var session = BrowserSession(
+            spaces: [space],
+            selectedSpaceID: space.id
+        )
+        let pages = MobileBrowserPageStore(
+            usesEphemeralWebsiteDataStores: true,
+            pageZoomPreferences: preferences
+        )
+
+        pages.select(session: session)
+        let page = try XCTUnwrap(pages.activePage)
+        XCTAssertEqual(page.pageZoom, 1.25, accuracy: 0.001)
+        XCTAssertEqual(page.webView.pageZoom, 1.25, accuracy: 0.001)
+
+        session.selectTab(backgroundTab.id)
+        pages.select(session: session)
+        let backgroundPage = try XCTUnwrap(pages.activePage)
+        XCTAssertEqual(backgroundPage.pageZoom, 1.25, accuracy: 0.001)
+        session.selectTab(page.tabID)
+        pages.select(session: session)
+
+        preferences.defaultZoom = 1.5
+        XCTAssertEqual(page.pageZoom, 1.5, accuracy: 0.001)
+        XCTAssertEqual(
+            backgroundPage.pageZoom,
+            1.5,
+            accuracy: 0.001,
+            "Inactive resident pages must adopt the new global baseline."
+        )
+
+        pages.zoomIn()
+        XCTAssertEqual(page.pageZoom, 1.75, accuracy: 0.001)
+        page.load(try XCTUnwrap(URL(string: "about:blank#navigated")))
+        XCTAssertEqual(
+            page.pageZoom,
+            1.75,
+            accuracy: 0.001,
+            "A page-local zoom override survives navigation in the same page."
+        )
+
+        preferences.defaultZoom = 2
+        XCTAssertEqual(
+            page.pageZoom,
+            1.75,
+            accuracy: 0.001,
+            "Changing the baseline must not discard a temporary page override."
+        )
+        XCTAssertEqual(backgroundPage.pageZoom, 2, accuracy: 0.001)
+        pages.resetZoom()
+        XCTAssertEqual(page.pageZoom, 2, accuracy: 0.001)
+
+        pages.zoomOut()
+        XCTAssertEqual(page.pageZoom, 1.75, accuracy: 0.001)
+        pages.unloadPage(for: page.tabID)
+        pages.select(session: session)
+
+        XCTAssertEqual(pages.activePage?.pageZoom ?? 0, 2, accuracy: 0.001)
+        XCTAssertFalse(pages.activePage === page)
+    }
+
     func testMobileFindUsesWebKitAndClearsItsStateWhenDismissed() async throws {
         let space = makeSpace(index: 11)
         let page = MobileBrowserPage(

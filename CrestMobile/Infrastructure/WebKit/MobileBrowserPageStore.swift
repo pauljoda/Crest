@@ -6,7 +6,11 @@ import WebKit
 
 @Observable
 @MainActor
-final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageHosting {
+final class MobileBrowserPageStore:
+    BrowserSpaceDataDeleting,
+    MobileBrowserPageHosting,
+    BrowserDefaultPageZoomObserving
+{
     typealias HTTPAuthenticationCredentialLoader =
         @MainActor (
             BrowserHTTPAuthenticationProtectionSpace,
@@ -71,6 +75,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
     @ObservationIgnored private var memoryPressureReleaseTask: Task<Void, Never>?
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
     @ObservationIgnored private let usesEphemeralWebsiteDataStores: Bool
+    @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
     @ObservationIgnored private let websiteDataStoreRemover: any BrowserWebsiteDataStoreRemoving
@@ -96,6 +101,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
             BrowserLaunchIsolationPolicy.requiresIsolation(.current),
+        pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
@@ -124,6 +130,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         self.browsingMode = browsingMode
         self.usesEphemeralWebsiteDataStores =
             usesEphemeralWebsiteDataStores || browsingMode.isPrivate
+        self.pageZoomPreferences = pageZoomPreferences
         self.tabStateArchive =
             self.usesEphemeralWebsiteDataStores
             ? nil
@@ -172,6 +179,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         if monitorsMemoryPressure {
             installMemoryPressureSource()
         }
+        pageZoomPreferences.register(self)
     }
 
     deinit {
@@ -772,6 +780,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
             contentRuleLists: contentRuleLists(for: space),
             allowsCredentialAccess: !browsingMode.isPrivate,
             isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
+            defaultPageZoom: pageZoomPreferences.defaultZoom,
             loadsInitialURL: false,
             loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
                 try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
@@ -1025,6 +1034,17 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
         pageZoomFeedbackRevision &+= 1
     }
 
+    func defaultPageZoomDidChange(to zoom: CGFloat) {
+        var visited: Set<ObjectIdentifier> = []
+        let retainedPages =
+            Array(pagesByTabID.values)
+            + transientLeases.values.compactMap { $0.value?.page }
+        for page in retainedPages
+        where visited.insert(ObjectIdentifier(page)).inserted {
+            page.applyDefaultPageZoom(zoom)
+        }
+    }
+
     @discardableResult
     func copyPageLink() -> Bool {
         guard activePage?.copyPageLink() == true else { return false }
@@ -1197,6 +1217,7 @@ final class MobileBrowserPageStore: BrowserSpaceDataDeleting, MobileBrowserPageH
             contentRuleLists: contentRuleLists(for: space),
             allowsCredentialAccess: !browsingMode.isPrivate,
             isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
+            defaultPageZoom: pageZoomPreferences.defaultZoom,
             loadsInitialURL: adoptedConfiguration == nil && archivedState == nil,
             loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
                 try await loadHTTPAuthenticationCredential(protectionSpace, space.id)

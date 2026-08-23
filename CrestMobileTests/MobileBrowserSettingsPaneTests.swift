@@ -86,6 +86,22 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
         )
     }
 
+    func testMobileGeneralSettingsUsesTheSharedDefaultZoomSection() {
+        let preferences = BrowserDefaultPageZoomStore(
+            persistence: InMemoryBrowserDefaultPageZoomPersistence()
+        )
+        let section = BrowserDefaultPageZoomSettingsSection(
+            preferences: preferences
+        )
+
+        XCTAssertEqual(preferences.defaultZoom, 1)
+        XCTAssertEqual(
+            BrowserDefaultPageZoomSettingsSection.controlIdentifier,
+            "default-page-zoom-slider"
+        )
+        XCTAssertNotNil(section.body)
+    }
+
     /// Touch reaches the saved-password manager through a sheet, so the pane on the
     /// page shows the Space's preferences and a way in — never the list itself.
     func testMobilePasswordPaneKeepsTheManagerBehindASheet() {

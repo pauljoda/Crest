@@ -241,6 +241,10 @@
     "2026-08-23-navigation-continuity": {
       "category": "fixed",
       "message": "Restore back and forward history with archived tabs, and keep extension actions and blocking pages attached to the intended tab and destination"
+    },
+    "2026-08-23-default-page-zoom": {
+      "category": "new",
+      "message": "Choose a default page zoom that new and existing pages follow"
     }
   }
 }
