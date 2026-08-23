@@ -3,6 +3,6 @@
   "channels": {
     "stable": "2026-08-18-stable-0-4-0",
     "development": "2026-08-22-channel-publication-cursors",
-    "nightly": "2026-08-20-nightly-0-4-5"
+    "nightly": "2026-08-22-channel-publication-cursors"
   }
 }
