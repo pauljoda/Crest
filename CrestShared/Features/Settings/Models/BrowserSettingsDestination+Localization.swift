@@ -13,6 +13,7 @@ extension BrowserSettingsDestination {
         case .extensions: "Extensions"
         case .featureFlags: "Feature Flags"
         case .advanced: "Advanced"
+        case .about: "About"
         }
     }
 
@@ -39,6 +40,7 @@ extension BrowserSettingsDestination {
         case .extensions: "Space-specific add-ons"
         case .featureFlags: "WebKit experiments"
         case .advanced: "Import, export, and runtime"
+        case .about: "Version, updates, and support"
         }
     }
 
@@ -68,6 +70,8 @@ extension BrowserSettingsDestination {
             "WebKit experimental preview testable developer stable runtime flags features"
         case .advanced:
             "import export backup portability data records"
+        case .about:
+            "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community"
         }
     }
 

@@ -229,6 +229,10 @@
     "2026-08-22-webextension-permission-settlement": {
       "category": "fixed",
       "message": "Open Firefox extensions reliably when WebKit leaves permission checks unfinished"
+    },
+    "2026-08-23-about-settings": {
+      "category": "new",
+      "message": "See version details, recent changes, software updates, community feedback, issue reporting, and the public roadmap in About settings"
     }
   }
 }

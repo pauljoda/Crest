@@ -106,6 +106,8 @@ struct BrowserSettingsDestinationRouter: View {
                 setupActions: setupActions,
                 showsMacOSImportRequirement: showsMacOSImportRequirement
             )
+        case .about:
+            BrowserAboutSettingsPane()
         }
     }
 }

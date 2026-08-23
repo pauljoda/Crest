@@ -28,7 +28,7 @@ struct BrowserSettingsPageLayout: Equatable {
         case .spaces: .fullBleed
         case .shortcuts, .featureFlags: .selfScrolling
         case .general, .links, .sync, .privacy, .passwords, .extensions,
-            .advanced:
+            .advanced, .about:
             .readable
         }
     }

@@ -19,6 +19,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
                 "extensions",
                 "featureFlags",
                 "advanced",
+                "about",
             ],
             """
             Settings identifiers derive from these raw values \
@@ -51,6 +52,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
                 .extensions,
                 .featureFlags,
                 .advanced,
+                .about,
             ]
         )
     }
@@ -80,7 +82,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
             BrowserSettingsDestination.platformCases,
             BrowserSettingsDestination.allCases
         )
-        XCTAssertEqual(BrowserSettingsDestination.platformCases.count, 10)
+        XCTAssertEqual(BrowserSettingsDestination.platformCases.count, 11)
     }
 
 }

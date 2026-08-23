@@ -60,6 +60,7 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
             ).body
         )
         XCTAssertNotNil(BrowserGeneralSettingsPane(browser: browser).body)
+        XCTAssertNotNil(BrowserAboutSettingsPane().body)
         XCTAssertNotNil(
             BrowserPrivacySettingsPane(
                 browser: browser,
@@ -170,6 +171,10 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
         XCTAssertFalse(
             BrowserSettingsDestination.platformCases.contains(.shortcuts),
             "iOS has no rebindable command table, so it never builds that pane."
+        )
+        XCTAssertTrue(
+            BrowserSettingsDestination.platformCases.contains(.about),
+            "Build information and support routes belong on every platform."
         )
     }
 

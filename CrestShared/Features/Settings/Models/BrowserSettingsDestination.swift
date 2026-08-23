@@ -24,6 +24,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     case extensions
     case featureFlags
     case advanced
+    case about
 
     var id: String { rawValue }
 
@@ -59,6 +60,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .extensions: "puzzlepiece.extension"
         case .featureFlags: "flag.2.crossed"
         case .advanced: "switch.2"
+        case .about: "info.circle"
         }
     }
 
@@ -78,6 +80,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
         case .extensions: CrestBrandPalette.sky
         case .featureFlags: CrestBrandPalette.coral
         case .advanced: CrestBrandPalette.sage
+        case .about: CrestBrandPalette.sky
         }
     }
 

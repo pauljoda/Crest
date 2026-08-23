@@ -48,6 +48,7 @@ final class BrowserSettingsPaneTests: XCTestCase {
             ).body
         )
         XCTAssertNotNil(BrowserGeneralSettingsPane(browser: browser).body)
+        XCTAssertNotNil(BrowserAboutSettingsPane().body)
         XCTAssertNotNil(
             BrowserPrivacySettingsPane(
                 browser: browser,
