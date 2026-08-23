@@ -233,6 +233,10 @@
     "2026-08-23-about-settings": {
       "category": "new",
       "message": "See version details, recent changes, software updates, community feedback, issue reporting, and the public roadmap in About settings"
+    },
+    "2026-08-23-fullscreen-sidebar-controls": {
+      "category": "fixed",
+      "message": "Keep Mac window controls and collapsed-sidebar reveal available in fullscreen"
     }
   }
 }

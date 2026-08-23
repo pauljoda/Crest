@@ -45,9 +45,14 @@ final class BrowserNativeWindowControlsHostView: NSView {
             window.titlebarSeparatorStyle = .none
         }
         applySystemToolbarMetrics(to: window)
+        let shouldShowWindowControls =
+            BrowserNativeWindowControlsPolicy.showsWindowControls(
+                sidebarPresentationShowsControls: isVisible,
+                in: window.styleMask
+            )
         for type in BrowserNativeWindowControlsPolicy.buttonTypes {
             guard let button = window.standardWindowButton(type) else { continue }
-            let shouldHide = !isVisible
+            let shouldHide = !shouldShowWindowControls
             guard button.isHidden != shouldHide else { continue }
             button.isHidden = shouldHide
         }

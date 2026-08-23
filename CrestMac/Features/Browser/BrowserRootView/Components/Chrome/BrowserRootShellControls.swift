@@ -12,11 +12,20 @@ struct BrowserRootShellControls: View {
         switch model.sidebarPresentation {
         case .collapsed:
             BrowserCollapsedSidebarRevealControl(
-                capabilities: BrowserInteractionCapabilities(),
-                showSidebar: {
-                    model.presentFloatingSidebar(reduceMotion: reduceMotion)
-                }
+                capabilities: interactionCapabilities,
+                showSidebar: presentFloatingSidebar
             )
+            // The shared control keeps its capability-driven hover behavior for
+            // every pointer shell. The Mac shell also listens through AppKit so
+            // live WKWebView content cannot swallow the edge transition before
+            // SwiftUI sees it.
+            .overlay {
+                if revealMetrics.revealsOnHover {
+                    BrowserCollapsedSidebarHoverTracker(
+                        onHoverChange: collapsedSidebarHoverChanged
+                    )
+                }
+            }
         case .docked:
             BrowserSidebarResizeHandle(
                 width: model.sidebarWidthBinding,
@@ -33,6 +42,23 @@ struct BrowserRootShellControls: View {
         case .floating:
             EmptyView()
         }
+    }
+
+    private var interactionCapabilities: BrowserInteractionCapabilities {
+        BrowserInteractionCapabilities()
+    }
+
+    private var revealMetrics: BrowserCollapsedSidebarRevealMetrics {
+        .resolve(interactionCapabilities)
+    }
+
+    private func collapsedSidebarHoverChanged(_ isHovering: Bool) {
+        guard isHovering else { return }
+        presentFloatingSidebar()
+    }
+
+    private func presentFloatingSidebar() {
+        model.presentFloatingSidebar(reduceMotion: reduceMotion)
     }
 
     private func commitSidebarWidth(_ width: CGFloat) {
