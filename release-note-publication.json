@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-18-stable-0-4-0",
-    "development": "2026-08-22-channel-publication-cursors",
+    "development": "2026-08-22-webextension-permission-settlement",
     "nightly": "2026-08-22-channel-publication-cursors"
   }
 }
