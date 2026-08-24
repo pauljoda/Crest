@@ -3,6 +3,7 @@ struct BrowserPasswordSettingsLayout: Equatable {
     let showsSavedPasswords: Bool
     let showsExportAction: Bool
     let showsManageAction: Bool
+    let supportsCredentialFileImport: Bool
     /// What the shell's exporter opens, named the way that shell's reader knows it:
     /// the desktop gets a save panel, touch gets the Files picker. The warning before
     /// a plaintext export names it, so the noun travels with the layout rather than
@@ -14,6 +15,7 @@ struct BrowserPasswordSettingsLayout: Equatable {
         showsSavedPasswords: true,
         showsExportAction: true,
         showsManageAction: false,
+        supportsCredentialFileImport: true,
         exportDestinationName: "save panel"
     )
 
@@ -22,6 +24,7 @@ struct BrowserPasswordSettingsLayout: Equatable {
         showsSavedPasswords: false,
         showsExportAction: false,
         showsManageAction: true,
+        supportsCredentialFileImport: false,
         exportDestinationName: "Files picker"
     )
 
@@ -35,6 +38,7 @@ struct BrowserPasswordSettingsLayout: Equatable {
         showsSavedPasswords: true,
         showsExportAction: true,
         showsManageAction: false,
+        supportsCredentialFileImport: true,
         exportDestinationName: "Files picker"
     )
 }

@@ -51,6 +51,18 @@ actor InMemoryCredentialVault: CredentialVault {
         credentialsBySpace[spaceID, default: [:]][credential.descriptor.id] = credential
     }
 
+    func replaceAll(_ credentials: [BrowserCredential], in spaceID: SpaceID) throws {
+        for credential in credentials where credential.descriptor.spaceID != spaceID {
+            throw CredentialVaultError.spaceMismatch(
+                expected: spaceID,
+                actual: credential.descriptor.spaceID
+            )
+        }
+        credentialsBySpace[spaceID] = Dictionary(
+            uniqueKeysWithValues: credentials.map { ($0.descriptor.id, $0) }
+        )
+    }
+
     func setSynchronizable(_ isSynchronizable: Bool, in spaceID: SpaceID) {
         guard var credentials = credentialsBySpace[spaceID] else { return }
         for id in credentials.keys {

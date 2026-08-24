@@ -14,13 +14,15 @@ enum BrowserCredentialSettingsPolicy {
         matching query: String
     ) -> [CredentialDescriptor] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return descriptors }
-        return descriptors.filter {
-            $0.username.localizedCaseInsensitiveContains(query)
-                || $0.origin.description.localizedCaseInsensitiveContains(query)
-                || $0.displayName?.localizedCaseInsensitiveContains(query) == true
-                || $0.scope.settingsLabel?.localizedCaseInsensitiveContains(query) == true
-        }
+        let matches = query.isEmpty
+            ? descriptors
+            : descriptors.filter {
+                $0.username.localizedCaseInsensitiveContains(query)
+                    || $0.origin.description.localizedCaseInsensitiveContains(query)
+                    || $0.displayName?.localizedCaseInsensitiveContains(query) == true
+                    || $0.scope.settingsLabel?.localizedCaseInsensitiveContains(query) == true
+            }
+        return matches.sorted(by: displayOrder)
     }
 
     /// Everything a reader needs before deleting: whose password, for which site,
@@ -47,4 +49,19 @@ enum BrowserCredentialSettingsPolicy {
 
     static let disabledDescription =
         "Crest Passwords is off in this Space. Saved passwords remain here until you delete them."
+
+    private static func displayOrder(
+        _ lhs: CredentialDescriptor,
+        _ rhs: CredentialDescriptor
+    ) -> Bool {
+        let siteOrder = lhs.origin.host.localizedStandardCompare(rhs.origin.host)
+        if siteOrder != .orderedSame {
+            return siteOrder == .orderedAscending
+        }
+        let usernameOrder = lhs.username.localizedStandardCompare(rhs.username)
+        if usernameOrder != .orderedSame {
+            return usernameOrder == .orderedAscending
+        }
+        return lhs.id.rawValue.uuidString < rhs.id.rawValue.uuidString
+    }
 }

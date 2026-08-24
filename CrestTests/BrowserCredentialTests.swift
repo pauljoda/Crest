@@ -1300,3 +1300,333 @@ private actor RecordingCredentialKeychainStore: CredentialKeychainStoring {
         storage[service]?[account]
     }
 }
+
+final class BrowserCredentialCSVImportTests: XCTestCase {
+    func testParsesBrowserCSVWithQuotedUnicodeCommasAndNewlines() throws {
+        let csv = "name,url,username,password,note\r\n"
+            + "\"Café, Admin\",https://EXAMPLE.com:443/login,\"zoë@example.com\","
+            + "\"line one\nline two, \"\"quoted\"\"\",\"optional, note\"\r\n"
+
+        let parsed = try BrowserCredentialCSVImportParser.parse(Data(csv.utf8))
+        let record = try XCTUnwrap(parsed.records.first)
+
+        XCTAssertEqual(parsed.format, .browser)
+        XCTAssertEqual(parsed.records.count, 1)
+        XCTAssertTrue(parsed.rejections.isEmpty)
+        XCTAssertEqual(record.displayName, "Café, Admin")
+        XCTAssertEqual(record.origin.description, "https://example.com")
+        XCTAssertEqual(record.username, "zoë@example.com")
+        XCTAssertEqual(record.password, "line one\nline two, \"quoted\"")
+        XCTAssertFalse(String(describing: record).contains(record.password))
+        XCTAssertFalse(String(reflecting: record).contains(record.password))
+    }
+
+    func testDetectsFirefoxSafariAndBitwardenHeaderVariants() throws {
+        let firefox = try BrowserCredentialCSVImportParser.parse(
+            Data(
+                "url,username,password,httpRealm,formActionOrigin,guid\nhttps://mozilla.example/login,user,secret,,,id"
+                    .utf8
+            )
+        )
+        let safari = try BrowserCredentialCSVImportParser.parse(
+            Data(
+                "Title,URL,Username,Password,Notes,OTPAuth\nApple,https://apple.example,user,secret,,"
+                    .utf8
+            )
+        )
+        let bitwarden = try BrowserCredentialCSVImportParser.parse(
+            Data(
+                "name,login_uri,login_username,login_password,notes\nVault,bitwarden.example,user,secret,"
+                    .utf8
+            )
+        )
+
+        XCTAssertEqual(firefox.format, .firefox)
+        XCTAssertEqual(safari.format, .safari)
+        XCTAssertEqual(bitwarden.format, .bitwarden)
+        XCTAssertEqual(bitwarden.records.first?.origin.description, "https://bitwarden.example")
+    }
+
+    func testRejectsAmbiguousMissingMalformedAndOversizedCSV() throws {
+        XCTAssertThrowsError(
+            try BrowserCredentialCSVImportParser.parse(
+                Data("url,origin,username,password\nhttps://one.example,https://two.example,user,secret".utf8)
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserCredentialCSVImportError,
+                .ambiguousHeaders(field: .origin)
+            )
+        }
+        XCTAssertThrowsError(
+            try BrowserCredentialCSVImportParser.parse(
+                Data("url,username\nhttps://one.example,user".utf8)
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserCredentialCSVImportError,
+                .missingHeader(field: .password)
+            )
+        }
+        XCTAssertThrowsError(
+            try BrowserCredentialCSVImportParser.parse(
+                Data("url,username,password\n".utf8)
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserCredentialCSVImportError,
+                .noCredentialRows
+            )
+        }
+        XCTAssertThrowsError(
+            try BrowserCredentialCSVImportParser.parse(
+                Data("url,username,password\n\"https://one.example,user,secret".utf8)
+            )
+        ) { error in
+            XCTAssertEqual(error as? BrowserCredentialCSVImportError, .malformedCSV)
+        }
+        XCTAssertThrowsError(
+            try BrowserCredentialCSVImportParser.parse(
+                Data("url,username,password\nhttps://one.example,user,secret".utf8),
+                limits: BrowserCredentialCSVImportLimits(
+                    maximumByteCount: 12,
+                    maximumRowCount: 10,
+                    maximumColumnCount: 10,
+                    maximumFieldCharacterCount: 100
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? BrowserCredentialCSVImportError, .fileTooLarge)
+        }
+    }
+
+    func testFileReadStopsAtTheConfiguredByteLimit() throws {
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("crest-password-import-\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        try Data("url,username,password\nhttps://one.example,user,synthetic-secret".utf8)
+            .write(to: fileURL)
+
+        XCTAssertThrowsError(
+            try BrowserCredentialCSVImportParser.parse(
+                contentsOf: fileURL,
+                limits: BrowserCredentialCSVImportLimits(
+                    maximumByteCount: 12,
+                    maximumRowCount: 10,
+                    maximumColumnCount: 10,
+                    maximumFieldCharacterCount: 100
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? BrowserCredentialCSVImportError, .fileTooLarge)
+        }
+    }
+
+    @MainActor
+    func testImportedHTTPPasswordRemainsAvailableForManualAccessOnly() async throws {
+        let vault = InMemoryCredentialVault()
+        let browser = BrowserStore(
+            session: .preview,
+            persistence: InMemoryBrowserSessionPersistence(),
+            credentialVault: vault
+        )
+        let space = try XCTUnwrap(browser.session.spaces.first)
+        let url = try XCTUnwrap(URL(string: "http://legacy.example/login"))
+        let credential = BrowserCredential(
+            descriptor: CredentialDescriptor(
+                spaceID: space.id,
+                origin: try XCTUnwrap(CredentialOrigin(url: url)),
+                username: "legacy-user"
+            ),
+            password: "synthetic-http-secret"
+        )
+
+        try await browser.replaceCredentialInventory([credential], in: space.id)
+
+        let descriptors = try await browser.savedCredentialDescriptors(in: space.id)
+        let stored = try await browser.credential(
+            id: credential.descriptor.id,
+            in: space.id
+        )
+        let suggestions = try await browser.credentialSuggestions(
+            for: url,
+            in: space.id
+        )
+        XCTAssertEqual(descriptors, [credential.descriptor])
+        XCTAssertEqual(stored, credential)
+        XCTAssertTrue(suggestions.isEmpty)
+    }
+
+    func testWarnsForHTTPAndRejectsOnlyBrokenRowsWithoutLosingValidRows() throws {
+        let csv = """
+            url,username,password
+            https://valid.example/path,,valid-secret
+            http://insecure.example,user,insecure-secret
+            not a url,user,bad-secret
+            https://empty.example,user,
+            """
+
+        let parsed = try BrowserCredentialCSVImportParser.parse(Data(csv.utf8))
+
+        XCTAssertEqual(parsed.records.map(\.rowNumber), [2, 3])
+        XCTAssertEqual(parsed.records.first?.username, "")
+        XCTAssertEqual(parsed.rejections.map(\.rowNumber), [4, 5])
+        XCTAssertEqual(
+            parsed.rejections.map(\.reason),
+            [.invalidOrigin, .emptyPassword]
+        )
+
+        let plan = BrowserCredentialImportPlan(
+            format: parsed.format,
+            records: parsed.records,
+            rejections: parsed.rejections,
+            existingCredentials: [],
+            destination: BrowserSpaceRuntimeAssignment(
+                spaceID: SpaceID(),
+                profileID: UUID()
+            ),
+            synchronizesWithICloud: false
+        )
+        XCTAssertEqual(
+            plan.warnings,
+            [
+                BrowserCredentialCSVRowWarning(
+                    rowNumber: 3,
+                    reason: .insecureOrigin
+                )
+            ]
+        )
+        XCTAssertEqual(try plan.resolvedInventory().summary.acceptedCount, 2)
+        XCTAssertEqual(try plan.resolvedInventory().summary.warningCount, 1)
+    }
+
+    func testConflictPlanCollapsesIdenticalRowsAndRequiresChoiceForDifferentSecrets() throws {
+        let spaceID = SpaceID()
+        let origin = try XCTUnwrap(
+            CredentialOrigin(url: URL(string: "https://accounts.example/login")!)
+        )
+        let existing = BrowserCredential(
+            descriptor: CredentialDescriptor(
+                spaceID: spaceID,
+                origin: origin,
+                username: "Paul@example.com",
+                createdAt: Date(timeIntervalSince1970: 100)
+            ),
+            password: "current-secret"
+        )
+        let records = [
+            BrowserCredentialCSVImportRecord(
+                rowNumber: 2,
+                displayName: "Accounts",
+                origin: origin,
+                username: "paul@example.com",
+                password: "imported-secret"
+            ),
+            BrowserCredentialCSVImportRecord(
+                rowNumber: 3,
+                displayName: "Accounts duplicate",
+                origin: origin,
+                username: "PAUL@example.com",
+                password: "imported-secret"
+            ),
+            BrowserCredentialCSVImportRecord(
+                rowNumber: 4,
+                displayName: "Accounts alternate",
+                origin: origin,
+                username: "paul@example.com",
+                password: "alternate-secret"
+            ),
+        ]
+        var plan = BrowserCredentialImportPlan(
+            format: .browser,
+            records: records,
+            rejections: [],
+            existingCredentials: [existing],
+            destination: BrowserSpaceRuntimeAssignment(
+                spaceID: spaceID,
+                profileID: UUID()
+            ),
+            synchronizesWithICloud: false,
+            now: Date(timeIntervalSince1970: 200)
+        )
+        let group = try XCTUnwrap(plan.groups.first)
+
+        XCTAssertTrue(group.requiresChoice)
+        XCTAssertEqual(group.selection, .existing)
+        XCTAssertEqual(group.candidates.map(\.rowNumber), [2, 4])
+        XCTAssertEqual(group.collapsedDuplicateRowCount, 1)
+        XCTAssertEqual(plan.groups(matching: "ACCOUNTS").map(\.id), [group.id])
+        XCTAssertEqual(plan.groups(matching: "paul@").map(\.id), [group.id])
+        XCTAssertTrue(plan.groups(matching: "missing").isEmpty)
+        XCTAssertFalse(String(describing: plan).contains("current-secret"))
+        XCTAssertFalse(String(describing: plan).contains("imported-secret"))
+        XCTAssertFalse(String(reflecting: group.id).contains("paul@example.com"))
+        XCTAssertTrue(String(reflecting: group.id).contains("<redacted>"))
+
+        plan.select(.imported(rowNumber: 4), for: group.id)
+        let result = try plan.resolvedInventory()
+        XCTAssertEqual(result.credentials.count, 1)
+        XCTAssertEqual(result.credentials.first?.descriptor.id, existing.descriptor.id)
+        XCTAssertEqual(result.credentials.first?.password, "alternate-secret")
+        XCTAssertEqual(result.summary.acceptedCount, 1)
+        XCTAssertEqual(result.summary.skippedCount, 2)
+        XCTAssertEqual(result.summary.warningCount, 0)
+        XCTAssertEqual(result.summary.rejectedCount, 0)
+    }
+
+    @MainActor
+    func testAuthenticatedInventoryAndAtomicReplacementStayInsideDestinationSpace() async throws {
+        let vault = InMemoryCredentialVault()
+        let browser = BrowserStore(
+            session: .preview,
+            persistence: InMemoryBrowserSessionPersistence(),
+            credentialVault: vault
+        )
+        let work = try XCTUnwrap(browser.session.spaces.first)
+        let personal = try XCTUnwrap(browser.session.spaces.dropFirst().first)
+        let origin = try XCTUnwrap(URL(string: "https://isolated.example/login"))
+        _ = try await browser.saveCredential(
+            username: "work",
+            password: "work-secret",
+            for: origin,
+            in: work.id
+        )
+        _ = try await browser.saveCredential(
+            username: "personal",
+            password: "personal-secret",
+            for: origin,
+            in: personal.id
+        )
+        let authenticator = StubBrowserCredentialAuthenticator(allowsAccess: true)
+        let access = BrowserCredentialSensitiveAccess(
+            browser: browser,
+            authenticator: authenticator
+        )
+        let assignment = BrowserSpaceRuntimeAssignment(space: work)
+
+        let inventory = try await access.credentialInventory(
+            matching: assignment,
+            reason: "Authenticate for a synthetic import test."
+        )
+        XCTAssertEqual(inventory.map(\.password), ["work-secret"])
+
+        let replacement = BrowserCredential(
+            descriptor: CredentialDescriptor(
+                spaceID: work.id,
+                origin: try XCTUnwrap(CredentialOrigin(url: origin)),
+                username: "replacement",
+                createdAt: Date(timeIntervalSince1970: 500)
+            ),
+            password: "replacement-secret"
+        )
+        try await browser.replaceCredentialInventory([replacement], in: work.id)
+        let workUsernames = try await browser.savedCredentialDescriptors(in: work.id)
+            .map(\.username)
+        let personalUsernames = try await browser.savedCredentialDescriptors(in: personal.id)
+            .map(\.username)
+
+        XCTAssertEqual(workUsernames, ["replacement"])
+        XCTAssertEqual(personalUsernames, ["personal"])
+        XCTAssertEqual(authenticator.reasons.count, 1)
+    }
+}

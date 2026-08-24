@@ -12,66 +12,150 @@ struct BrowserPasswordDescriptorRow: View {
     let descriptor: CredentialDescriptor
     let space: BrowserSpace?
     var isDeleting = false
+    var isSelectionActive = false
+    var isSelected = false
     let showDetails: () -> Void
     let requestDeletion: () -> Void
+    var toggleSelection: () -> Void = {}
 
     var body: some View {
         HStack(spacing: CrestSpacing.small) {
-            Image(systemName: "key.fill")
-                .foregroundStyle(space?.accent.color ?? CrestBrandTheme.accent)
-                .frame(width: 22)
-                .accessibilityHidden(true)
+            Button(action: primaryAction) {
+                HStack(spacing: CrestSpacing.medium) {
+                    leadingIcon
 
-            VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
-                Text(descriptor.displayName ?? descriptor.username)
-                    .font(CrestTypography.controlTitle)
-                    .lineLimit(1)
-                if descriptor.displayName != nil {
-                    Text(descriptor.username)
-                        .font(CrestTypography.metadata)
-                        .foregroundStyle(CrestColor.textSecondary)
-                        .lineLimit(1)
+                    VStack(
+                        alignment: .leading,
+                        spacing: CrestFormRowMetrics.titleSpacing
+                    ) {
+                        Text(primaryLabel)
+                            .font(CrestTypography.controlTitle)
+                            .lineLimit(1)
+                        Text(secondaryLabel)
+                            .font(CrestTypography.metadata)
+                            .foregroundStyle(CrestColor.textSecondary)
+                            .lineLimit(1)
+
+                        if let scopeLabel = descriptor.scope.settingsLabel {
+                            Text(scopeLabel)
+                                .font(CrestTypography.compactMetadata)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer(minLength: CrestSpacing.small)
+
+                    statusIcons
+
+                    if !isSelectionActive && !isDeleting {
+                        Image(systemName: "chevron.forward")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
                 }
-                Text(descriptor.origin.description)
-                    .font(CrestTypography.metadata)
-                    .foregroundStyle(CrestColor.textSecondary)
-                    .lineLimit(1)
-                if let scopeLabel = descriptor.scope.settingsLabel {
-                    Text(scopeLabel)
-                        .font(CrestTypography.compactMetadata)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
+                .contentShape(Rectangle())
             }
-
-            Spacer(minLength: CrestSpacing.small)
-
-            if descriptor.isSynchronizable {
-                Image(systemName: "icloud")
-                    .foregroundStyle(.secondary)
-                    .help("Synchronized through Crest’s iCloud Keychain item")
-                    .accessibilityLabel("iCloud synchronization on")
-            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .disabled(isDeleting)
+            .accessibilityHint(
+                isSelectionActive
+                    ? "Adds or removes this password from the selection."
+                    : "Authenticates before showing the saved password."
+            )
 
             if isDeleting {
                 ProgressView()
                     .controlSize(.small)
-            } else {
+            } else if !isSelectionActive {
+                Menu("Password Actions", systemImage: "ellipsis.circle") {
+                    Button("View Password", systemImage: "eye", action: showDetails)
+                    Divider()
+                    Button(
+                        "Delete Password",
+                        systemImage: "trash",
+                        role: .destructive,
+                        action: requestDeletion
+                    )
+                }
+                .labelStyle(.iconOnly)
+                .menuIndicator(.hidden)
+                .fixedSize()
+            }
+        }
+        .frame(minHeight: CrestFormRowMetrics.minimumHeight)
+        .accessibilityElement(children: .contain)
+        .contextMenu {
+            if !isSelectionActive {
                 Button("View Password", systemImage: "eye", action: showDetails)
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.crestIcon())
-
                 Button(
                     "Delete Password",
                     systemImage: "trash",
                     role: .destructive,
                     action: requestDeletion
                 )
-                .labelStyle(.iconOnly)
-                .buttonStyle(.crestIcon(tint: .red))
             }
         }
-        .frame(minHeight: CrestFormRowMetrics.minimumHeight)
-        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var leadingIcon: some View {
+        if isSelectionActive {
+            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(
+                    isSelected
+                        ? (space?.accent.color ?? CrestBrandTheme.accent)
+                        : .secondary
+                )
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: "key.fill")
+                .foregroundStyle(space?.accent.color ?? CrestBrandTheme.accent)
+                .frame(width: 22)
+                .accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder
+    private var statusIcons: some View {
+        if descriptor.isSynchronizable {
+            Image(systemName: "icloud")
+                .foregroundStyle(.secondary)
+                .help("Synchronized through Crest’s iCloud Keychain item")
+                .accessibilityLabel("iCloud synchronization on")
+        }
+
+        if !descriptor.origin.isSecure {
+            Image(systemName: "exclamationmark.shield.fill")
+                .foregroundStyle(.orange)
+                .help(
+                    "Imported from an insecure HTTP site. Crest keeps it available for manual access but does not autofill it on insecure connections."
+                )
+                .accessibilityLabel("Manual access only for insecure HTTP site")
+        }
+    }
+
+    private var primaryLabel: String {
+        descriptor.displayName ?? descriptor.origin.host
+    }
+
+    private var secondaryLabel: String {
+        let account = descriptor.username.isEmpty
+            ? String(localized: "No username")
+            : descriptor.username
+        return descriptor.displayName == nil
+            ? "\(account) · \(descriptor.origin.description)"
+            : "\(account) · \(descriptor.origin.host)"
+    }
+
+    private func primaryAction() {
+        if isSelectionActive {
+            toggleSelection()
+        } else {
+            showDetails()
+        }
     }
 }

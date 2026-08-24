@@ -7,6 +7,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         let environment = BrowserLaunchEnvironment(
             values: [
                 "CREST_ISOLATED_SESSION": "1",
+                "CREST_ISOLATED_PERSISTENCE_ID": "APP-252 Verification!",
                 "CREST_RESET_SESSION": "1",
                 "CREST_SHOWCASE_SESSION": "1",
                 "CREST_USE_IN_MEMORY_CREDENTIALS": "1",
@@ -22,6 +23,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         )
 
         XCTAssertTrue(environment.explicitlyRequiresIsolation)
+        XCTAssertEqual(environment.persistentIsolationID, "app-252verification")
         XCTAssertTrue(environment.resetsSession)
         XCTAssertTrue(environment.presentsShowcaseSession)
         XCTAssertTrue(environment.usesInMemoryCredentialVault)
@@ -59,6 +61,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         XCTAssertFalse(environment.forcesOnboardingWelcome)
         XCTAssertFalse(environment.forcesMacOnboardingSetup)
         XCTAssertFalse(environment.forcesMobileOnboardingSetup)
+        XCTAssertNil(environment.persistentIsolationID)
     }
 
     func testMissingPerformanceRunIDKeepsTheReleaseSoakFallback() {

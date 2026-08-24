@@ -8,47 +8,56 @@ enum BrowserPasswordImportCommitter {
         browser: BrowserStore
     ) async -> BrowserPasswordImportResult {
         guard !passwords.isEmpty else { return .empty }
-        var descriptorsBySpace: [SpaceID: [CredentialDescriptor]] = [:]
+        var recordsBySpace: [SpaceID: [BrowserCredentialCSVImportRecord]] = [:]
         var importedCount = 0
         var skippedCount = 0
 
-        for password in passwords {
-            guard let originURL = URL(string: password.origin.description) else {
-                skippedCount += 1
-                continue
-            }
+        for (index, password) in passwords.enumerated() {
             let destinationIDs = destinationSpaceIDs(for: password, plan: plan)
             guard !destinationIDs.isEmpty else {
                 skippedCount += 1
                 continue
             }
             for spaceID in destinationIDs where browser.session.space(id: spaceID) != nil {
-                if descriptorsBySpace[spaceID] == nil {
-                    descriptorsBySpace[spaceID] =
-                        (try? await browser.savedCredentialDescriptors(
-                            in: spaceID
-                        )) ?? []
-                }
-                let isDuplicate = descriptorsBySpace[spaceID, default: []].contains {
-                    $0.origin == password.origin && $0.username == password.username
-                }
-                guard !isDuplicate else {
-                    skippedCount += 1
-                    continue
-                }
-                do {
-                    let descriptor = try await browser.saveCredential(
+                recordsBySpace[spaceID, default: []].append(
+                    BrowserCredentialCSVImportRecord(
+                        rowNumber: index + 2,
+                        displayName: password.origin.host,
+                        origin: password.origin,
                         username: password.username,
-                        password: password.password,
-                        for: originURL,
-                        in: spaceID,
-                        displayName: password.origin.host
+                        password: password.password
                     )
-                    descriptorsBySpace[spaceID, default: []].append(descriptor)
-                    importedCount += 1
-                } catch {
-                    skippedCount += 1
+                )
+            }
+        }
+
+        for (spaceID, records) in recordsBySpace {
+            guard let space = browser.session.space(id: spaceID) else {
+                skippedCount += records.count
+                continue
+            }
+            do {
+                let existing = try await browser.credentialInventory(in: spaceID)
+                let importPlan = BrowserCredentialImportPlan(
+                    format: .browser,
+                    records: records,
+                    rejections: [],
+                    existingCredentials: existing,
+                    destination: BrowserSpaceRuntimeAssignment(space: space),
+                    synchronizesWithICloud: space.credentialPreferences
+                        .syncsCrestPasswordsWithICloud
+                )
+                let resolution = try importPlan.resolvedInventory()
+                if resolution.summary.acceptedCount > 0 {
+                    try await browser.replaceCredentialInventory(
+                        resolution.credentials,
+                        in: spaceID
+                    )
                 }
+                importedCount += resolution.summary.acceptedCount
+                skippedCount += resolution.summary.skippedCount
+            } catch {
+                skippedCount += records.count
             }
         }
         return BrowserPasswordImportResult(

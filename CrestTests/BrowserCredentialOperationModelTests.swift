@@ -123,28 +123,50 @@ final class BrowserCredentialOperationModelTests: XCTestCase {
         XCTAssertTrue(model.hasFailed)
     }
 
-    func testStrongPasswordOperationReturnsToIdleAfterFillingGeneratedPassword() async {
+    func testStrongPasswordOperationSavesBeforeFillingGeneratedPassword() async {
         let model = BrowserStrongPasswordOperationModel()
-        var filledPassword: String?
+        var operations: [String] = []
 
-        await model.generateAndFill(
+        await model.generateSaveAndFill(
             generate: { "fixed-strong-password" },
-            fill: { filledPassword = $0 }
+            save: { password in operations.append("save:\(password)") },
+            fill: { password in operations.append("fill:\(password)") }
         )
 
-        XCTAssertEqual(filledPassword, "fixed-strong-password")
+        XCTAssertEqual(
+            operations,
+            [
+                "save:fixed-strong-password",
+                "fill:fixed-strong-password",
+            ]
+        )
         XCTAssertEqual(model.phase, .idle)
     }
 
-    func testStrongPasswordOperationPublishesFailureWhenFillFails() async {
+    func testStrongPasswordOperationDoesNotFillWhenSavingFails() async {
+        let model = BrowserStrongPasswordOperationModel()
+        var filled = false
+
+        await model.generateSaveAndFill(
+            generate: { "fixed-strong-password" },
+            save: { _ in throw TestFailure.expected },
+            fill: { _ in filled = true }
+        )
+
+        XCTAssertFalse(filled)
+        XCTAssertEqual(model.phase, .failedBeforeSave)
+    }
+
+    func testStrongPasswordOperationReportsThatThePasswordIsSafeWhenFillFails() async {
         let model = BrowserStrongPasswordOperationModel()
 
-        await model.generateAndFill(
+        await model.generateSaveAndFill(
             generate: { "fixed-strong-password" },
+            save: { _ in },
             fill: { _ in throw TestFailure.expected }
         )
 
-        XCTAssertEqual(model.phase, .failed)
+        XCTAssertEqual(model.phase, .savedButFillFailed)
     }
 
     private func origin(_ string: String) throws -> CredentialOrigin {

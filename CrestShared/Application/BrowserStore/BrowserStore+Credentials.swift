@@ -60,6 +60,29 @@ extension BrowserStore {
         return try await credentialVault.credential(id: id, in: spaceID)
     }
 
+    func credentialInventory(in spaceID: SpaceID) async throws -> [BrowserCredential] {
+        guard session.space(id: spaceID) != nil else {
+            throw CredentialVaultError.missingSpace
+        }
+        let descriptors = try await credentialVault.descriptors(in: spaceID)
+        var credentials: [BrowserCredential] = []
+        credentials.reserveCapacity(descriptors.count)
+        for descriptor in descriptors {
+            guard
+                let credential = try await credentialVault.credential(
+                    id: descriptor.id,
+                    in: spaceID
+                ),
+                credential.descriptor == descriptor,
+                credential.descriptor.spaceID == spaceID
+            else {
+                throw BrowserCredentialSensitiveAccessError.malformedCredentialInventory
+            }
+            credentials.append(credential)
+        }
+        return credentials
+    }
+
     func httpAuthenticationCredential(
         for protectionSpace: BrowserHTTPAuthenticationProtectionSpace,
         in spaceID: SpaceID
@@ -347,6 +370,27 @@ extension BrowserStore {
             throw CredentialVaultError.missingSpace
         }
         try await credentialVault.delete(id: id, in: spaceID)
+    }
+
+    func replaceCredentialInventory(
+        _ credentials: [BrowserCredential],
+        in spaceID: SpaceID
+    ) async throws {
+        guard session.space(id: spaceID) != nil else {
+            throw CredentialVaultError.missingSpace
+        }
+        guard !isPrivateBrowsing else {
+            throw CredentialVaultError.unavailableInPrivateBrowsing
+        }
+        for credential in credentials {
+            guard credential.descriptor.spaceID == spaceID else {
+                throw CredentialVaultError.spaceMismatch(
+                    expected: spaceID,
+                    actual: credential.descriptor.spaceID
+                )
+            }
+        }
+        try await credentialVault.replaceAll(credentials, in: spaceID)
     }
 
     private func performCredentialSave(

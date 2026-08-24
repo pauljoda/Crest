@@ -5,6 +5,7 @@ import Observation
 final class BrowserStrongPasswordOperationModel {
 
     typealias PasswordGenerator = @MainActor () throws -> String
+    typealias PasswordSaver = @MainActor (String) async throws -> Void
     typealias PasswordFiller = @MainActor (String) async throws -> Void
 
     private(set) var phase = BrowserStrongPasswordOperationPhase.idle
@@ -13,12 +14,9 @@ final class BrowserStrongPasswordOperationModel {
         phase == .working
     }
 
-    var hasFailed: Bool {
-        phase == .failed
-    }
-
-    func generateAndFill(
+    func generateSaveAndFill(
         generate: PasswordGenerator = { try BrowserStrongPasswordGenerator.generate() },
+        save: PasswordSaver,
         fill: PasswordFiller
     ) async {
         guard !isWorking else { return }
@@ -26,10 +24,20 @@ final class BrowserStrongPasswordOperationModel {
 
         do {
             let password = try generate()
-            try await fill(password)
-            phase = .idle
+            do {
+                try await save(password)
+            } catch {
+                phase = Task.isCancelled ? .idle : .failedBeforeSave
+                return
+            }
+            do {
+                try await fill(password)
+                phase = .idle
+            } catch {
+                phase = Task.isCancelled ? .idle : .savedButFillFailed
+            }
         } catch {
-            phase = Task.isCancelled ? .idle : .failed
+            phase = Task.isCancelled ? .idle : .failedBeforeSave
         }
     }
 }
@@ -37,5 +45,6 @@ final class BrowserStrongPasswordOperationModel {
 enum BrowserStrongPasswordOperationPhase: Equatable, Sendable {
     case idle
     case working
-    case failed
+    case failedBeforeSave
+    case savedButFillFailed
 }

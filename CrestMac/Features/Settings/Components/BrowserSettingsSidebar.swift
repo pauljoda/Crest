@@ -23,8 +23,14 @@ struct BrowserSettingsSidebar: View {
         .searchable(
             text: $navigation.searchText,
             placement: .sidebar,
-            prompt: "Search settings"
+            prompt: Text(searchPrompt)
         )
         .searchFocused($isSearchFocused)
+    }
+
+    private var searchPrompt: LocalizedStringKey {
+        navigation.selection == .passwords
+            ? "Search passwords"
+            : "Search settings"
     }
 }

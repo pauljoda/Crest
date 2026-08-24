@@ -25,6 +25,10 @@ struct BrowserPasswordSettingsPane: View {
     @State private var credentialDetailRequest: BrowserCredentialDetailRequest?
     @State private var confirmsPlaintextExport = false
     @State private var isExporting = false
+    @State private var isChoosingImportFile = false
+    @State private var isSelectingCredentials = false
+    @State private var selectedCredentialIDs: Set<CredentialID> = []
+    @State private var confirmsSelectionDeletion = false
 
     init(
         browser: BrowserStore,
@@ -113,6 +117,14 @@ struct BrowserPasswordSettingsPane: View {
 
                     if layout.showsSavedPasswords {
                         Section("Saved passwords") {
+                            if !credentials.descriptors.isEmpty || !searchText.isEmpty {
+                                BrowserCredentialSearchField(
+                                    title: "Search saved passwords",
+                                    text: $searchText,
+                                    accessibilityIdentifier: "saved-password-search"
+                                )
+                            }
+                            passwordManagerActions
                             savedPasswords
                             Text(passwordCountLabel).crestFormFootnote()
                         }
@@ -189,6 +201,18 @@ struct BrowserPasswordSettingsPane: View {
                 "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the \(layout.exportDestinationName)."
             )
         }
+        .confirmationDialog(
+            "Delete Selected Passwords?",
+            isPresented: $confirmsSelectionDeletion,
+            titleVisibility: .visible
+        ) {
+            Button(selectionDeletionButtonLabel, role: .destructive) {
+                deleteSelectedCredentials()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(selectionDeletionMessage)
+        }
         .sheet(item: $credentialDetailRequest) { request in
             BrowserCredentialDetailView(
                 browser: browser,
@@ -196,6 +220,32 @@ struct BrowserPasswordSettingsPane: View {
                 request: request
             )
             .id(request.id)
+        }
+        .sheet(item: $credentials.importPlan) { plan in
+            BrowserCredentialImportReviewView(
+                initialPlanID: plan.id,
+                credentials: credentials,
+                browser: browser,
+                spaceAccess: spaceAccess
+            )
+        }
+        .alert(
+            "Password Import Finished",
+            isPresented: importSummaryIsPresented,
+            presenting: credentials.importSummary
+        ) { _ in
+            Button("OK") { credentials.importSummary = nil }
+        } message: { summary in
+            Text(
+                "Accepted \(summary.acceptedCount), skipped \(summary.skippedCount), reviewed \(summary.warningCount) warnings, and rejected \(summary.rejectedCount) from the selected file."
+            )
+        }
+        .fileImporter(
+            isPresented: $isChoosingImportFile,
+            allowedContentTypes: [.commaSeparatedText, .plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            openImportResult(result)
         }
         .fileExporter(
             isPresented: $isExporting,
@@ -211,6 +261,68 @@ struct BrowserPasswordSettingsPane: View {
     }
 
     // MARK: - Sections
+
+    @ViewBuilder
+    private var passwordManagerActions: some View {
+        if layout.supportsCredentialFileImport, let space {
+            ViewThatFits {
+                HStack {
+                    importButton(space: space)
+                    Spacer()
+                    selectionButton
+                }
+                VStack(alignment: .leading) {
+                    importButton(space: space)
+                    selectionButton
+                }
+            }
+
+            if isSelectingCredentials {
+                HStack {
+                    Button("Select All") {
+                        selectedCredentialIDs = Set(filteredDescriptors.map(\.id))
+                    }
+                    .disabled(filteredDescriptors.isEmpty)
+
+                    Button("Delete Selected", role: .destructive) {
+                        confirmsSelectionDeletion = true
+                    }
+                    .disabled(
+                        selectedCredentialIDs.isEmpty
+                            || credentials.isDeletingSelection
+                    )
+                }
+            }
+        }
+    }
+
+    private func importButton(space: BrowserSpace) -> some View {
+        Button(
+            "Import into \(space.name)…",
+            systemImage: "square.and.arrow.down"
+        ) {
+            isChoosingImportFile = true
+        }
+        .buttonStyle(.crestTertiary)
+        .disabled(
+            !space.credentialPreferences.isEnabled
+                || credentials.isPreparingImport
+                || credentials.isCommittingImport
+        )
+        .accessibilityIdentifier("import-space-passwords")
+    }
+
+    private var selectionButton: some View {
+        Button(
+            isSelectingCredentials ? "Done Selecting" : "Select Passwords",
+            systemImage: isSelectingCredentials ? "checkmark" : "checkmark.circle"
+        ) {
+            isSelectingCredentials.toggle()
+            if !isSelectingCredentials { selectedCredentialIDs.removeAll() }
+        }
+        .buttonStyle(.crestTertiary)
+        .disabled(credentials.descriptors.isEmpty || credentials.isDeletingSelection)
+    }
 
     @ViewBuilder
     private func credentialPreferences(in space: BrowserSpace) -> some View {
@@ -272,6 +384,8 @@ struct BrowserPasswordSettingsPane: View {
                     descriptor: descriptor,
                     space: space,
                     isDeleting: credentials.isDeleting(descriptor),
+                    isSelectionActive: isSelectingCredentials,
+                    isSelected: selectedCredentialIDs.contains(descriptor.id),
                     showDetails: {
                         guard let space,
                             let request = BrowserCredentialDetailRequest(
@@ -281,7 +395,12 @@ struct BrowserPasswordSettingsPane: View {
                         else { return }
                         credentialDetailRequest = request
                     },
-                    requestDeletion: { credentialPendingDeletion = descriptor }
+                    requestDeletion: { credentialPendingDeletion = descriptor },
+                    toggleSelection: {
+                        if !selectedCredentialIDs.insert(descriptor.id).inserted {
+                            selectedCredentialIDs.remove(descriptor.id)
+                        }
+                    }
                 )
             }
         }
@@ -327,6 +446,29 @@ struct BrowserPasswordSettingsPane: View {
         }
     }
 
+    private var importSummaryIsPresented: Binding<Bool> {
+        Binding {
+            credentials.importSummary != nil
+        } set: { isPresented in
+            if !isPresented { credentials.importSummary = nil }
+        }
+    }
+
+    private var selectionDeletionMessage: String {
+        let spaceName = space?.name ?? "this Space"
+        let count = selectedCredentialIDs.count
+        let passwordLabel = count == 1 ? "password" : "passwords"
+        return
+            "Delete \(count) selected \(passwordLabel) from \(spaceName)? Crest will authenticate you and apply the deletion as one Keychain change. This cannot be undone."
+    }
+
+    private var selectionDeletionButtonLabel: String {
+        let count = selectedCredentialIDs.count
+        return count == 1
+            ? String(localized: "Delete 1 Password")
+            : String(localized: "Delete \(count) Passwords")
+    }
+
     private func prepareExport() {
         guard let selectedSpaceID, canRevealSelectedSpaceData else { return }
         Task { @MainActor in
@@ -345,6 +487,709 @@ struct BrowserPasswordSettingsPane: View {
         credentialDetailRequest = nil
         confirmsPlaintextExport = false
         isExporting = false
+        isChoosingImportFile = false
+        isSelectingCredentials = false
+        selectedCredentialIDs.removeAll()
+        confirmsSelectionDeletion = false
         credentials.clearSensitiveData()
+    }
+
+    private func openImportResult(_ result: Result<[URL], any Error>) {
+        guard case .success(let urls) = result,
+              let url = urls.first,
+              let selectedSpaceID else {
+            if case .failure = result {
+                credentials.errorMessage = "Crest couldn’t open that password file."
+            }
+            return
+        }
+        Task { @MainActor in
+            await credentials.prepareImport(
+                from: url,
+                in: selectedSpaceID,
+                accessController: spaceAccess
+            ) {
+                self.selectedSpaceID == selectedSpaceID
+                    && self.canRevealSelectedSpaceData
+            }
+        }
+    }
+
+    private func deleteSelectedCredentials() {
+        guard let selectedSpaceID else { return }
+        let ids = selectedCredentialIDs
+        Task { @MainActor in
+            if await credentials.deleteSelection(
+                ids,
+                in: selectedSpaceID,
+                accessController: spaceAccess,
+                isStillSelected: {
+                    self.selectedSpaceID == selectedSpaceID
+                        && self.canRevealSelectedSpaceData
+                }
+            ) {
+                selectedCredentialIDs.removeAll()
+                isSelectingCredentials = false
+            }
+        }
+    }
+}
+
+private struct BrowserCredentialImportReviewView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+
+    let initialPlanID: UUID
+    let credentials: BrowserCredentialSpaceStore
+    let browser: BrowserStore
+    let spaceAccess: BrowserSpaceAccessController
+    @State private var searchText = ""
+    @State private var revealedGroupIDs: Set<BrowserCredentialImportGroupID> = []
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let plan = credentials.importPlan,
+                   plan.id == initialPlanID,
+                   let space = browser.space(matching: plan.destination) {
+                    VStack(spacing: 0) {
+                        ScrollView {
+                            LazyVStack(
+                                alignment: .leading,
+                                spacing: CrestSpacing.extraExtraLarge
+                            ) {
+                                BrowserCredentialImportDestinationCard(
+                                    space: space,
+                                    format: plan.format
+                                )
+                                BrowserCredentialImportSummaryView(plan: plan)
+
+                                if !plan.groups.isEmpty {
+                                    VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+                                        BrowserCredentialImportReviewSectionHeader(
+                                            title: "Accounts",
+                                            detail:
+                                                "Review every valid account. Choose which password to keep, or skip any account."
+                                        )
+
+                                        BrowserCredentialSearchField(
+                                            title: "Search imported passwords",
+                                            text: $searchText,
+                                            accessibilityIdentifier:
+                                                "imported-password-search"
+                                        )
+                                    }
+
+                                    let matchingGroups = plan.groups(matching: searchText)
+                                    if matchingGroups.isEmpty {
+                                        ContentUnavailableView.search(text: searchText)
+                                            .frame(maxWidth: .infinity)
+                                    } else {
+                                        ForEach(matchingGroups) { group in
+                                            BrowserCredentialImportAccountRow(
+                                                group: group,
+                                                revealsPasswords:
+                                                    revealedGroupIDs.contains(group.id),
+                                                select: { selection in
+                                                    credentials.selectImport(
+                                                        selection,
+                                                        for: group.id
+                                                    )
+                                                },
+                                                togglePasswordVisibility: {
+                                                    if !revealedGroupIDs.insert(group.id)
+                                                        .inserted
+                                                    {
+                                                        revealedGroupIDs.remove(group.id)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                            if !plan.warnings.isEmpty {
+                                BrowserCredentialImportWarningRows(
+                                    warnings: plan.warnings
+                                )
+                            }
+
+                            if !plan.rejections.isEmpty {
+                                BrowserCredentialImportRejectedRows(
+                                    rejections: plan.rejections
+                                )
+                            }
+
+                                Label(
+                                    "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics.",
+                                    systemImage: "lock.shield.fill"
+                                )
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            }
+                            .padding(CrestSpacing.extraExtraLarge)
+                        }
+
+                        Divider()
+                        importFooter(plan: plan, space: space)
+                    }
+                } else {
+                    ContentUnavailableView(
+                        "Import No Longer Available",
+                        systemImage: "key.slash",
+                        description: Text(
+                            "The destination Space changed. Choose the file again."
+                        )
+                    )
+                }
+            }
+            .navigationTitle("Review Password Import")
+            .interactiveDismissDisabled(credentials.isCommittingImport)
+        }
+        .browserCredentialImportReviewSizing()
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { revealedGroupIDs.removeAll() }
+        }
+        .onDisappear { revealedGroupIDs.removeAll() }
+    }
+
+    private func importFooter(
+        plan: BrowserCredentialImportPlan,
+        space: BrowserSpace
+    ) -> some View {
+        HStack(spacing: CrestSpacing.medium) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+                Text("Ready for \(space.name)")
+                    .font(.subheadline.weight(.semibold))
+                Text(importSummary(plan))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: CrestSpacing.medium)
+
+            if credentials.isCommittingImport {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Importing passwords")
+            }
+
+            Button("Cancel") {
+                credentials.cancelImport()
+                dismiss()
+            }
+            .keyboardShortcut(.cancelAction)
+            .disabled(credentials.isCommittingImport)
+
+            Button(credentials.isCommittingImport ? "Importing…" : "Import") {
+                commit()
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
+            .disabled(
+                credentials.importPlan == nil
+                    || credentials.isCommittingImport
+            )
+        }
+        .padding(.horizontal, CrestSpacing.extraExtraLarge)
+        .padding(.vertical, CrestSpacing.large)
+        .background(.bar)
+    }
+
+    private func importSummary(_ plan: BrowserCredentialImportPlan) -> String {
+        guard let summary = try? plan.resolvedInventory().summary else {
+            return "Review the file before importing."
+        }
+        return
+            "\(summary.acceptedCount) to import, \(summary.skippedCount) to keep or skip, \(warningLabel(summary.warningCount)), \(summary.rejectedCount) rejected."
+    }
+
+    private func warningLabel(_ count: Int) -> String {
+        count == 1
+            ? String(localized: "1 warning")
+            : String(localized: "\(count) warnings")
+    }
+
+    private func commit() {
+        Task { @MainActor in
+            await credentials.commitImport(
+                accessController: spaceAccess,
+                isStillSelected: {
+                    guard let plan = credentials.importPlan else { return false }
+                    return browser.space(matching: plan.destination) != nil
+                }
+            )
+            if credentials.importPlan == nil { dismiss() }
+        }
+    }
+}
+
+private struct BrowserCredentialImportDestinationCard: View {
+    let space: BrowserSpace
+    let format: BrowserCredentialCSVImportFormat
+
+    var body: some View {
+        HStack(alignment: .top, spacing: CrestSpacing.large) {
+            Image(systemName: space.symbol)
+                .font(.title2)
+                .foregroundStyle(.tint)
+                .frame(width: 44, height: 44)
+                .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+                Text("Importing into")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(space.name)
+                    .font(.title3.weight(.semibold))
+                Text(
+                    "Every accepted credential will be stored only in this Space’s Keychain inventory."
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: CrestSpacing.small)
+
+            Label(format.rawValue, systemImage: "doc.text")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, CrestSpacing.small)
+                .padding(.vertical, 6)
+                .background(Color.primary.opacity(0.055), in: Capsule())
+        }
+        .padding(CrestSpacing.large)
+        .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.secondary.opacity(0.2))
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct BrowserCredentialImportSummaryView: View {
+    let plan: BrowserCredentialImportPlan
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+            BrowserCredentialImportReviewSectionHeader(
+                title: "Review",
+                detail: "Confirm what Crest will change before anything is saved."
+            )
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: CrestSpacing.medium) {
+                    metrics
+                }
+                LazyVGrid(
+                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    spacing: CrestSpacing.medium
+                ) {
+                    metrics
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var metrics: some View {
+        BrowserCredentialImportMetric(
+            title: "Ready to import",
+            value: plan.proposedImportCount,
+            systemImage: "checkmark.circle.fill",
+            color: .green
+        )
+        BrowserCredentialImportMetric(
+            title: "Need review",
+            value: plan.conflictCount,
+            systemImage: "arrow.triangle.branch",
+            color: .orange
+        )
+        BrowserCredentialImportMetric(
+            title: "Warnings",
+            value: plan.warnings.count,
+            systemImage: "exclamationmark.shield.fill",
+            color: .orange
+        )
+        BrowserCredentialImportMetric(
+            title: "Rejected rows",
+            value: plan.rejections.count,
+            systemImage: "xmark.octagon.fill",
+            color: .red
+        )
+    }
+}
+
+private struct BrowserCredentialImportWarningRows: View {
+    let warnings: [BrowserCredentialCSVRowWarning]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+            BrowserCredentialImportReviewSectionHeader(
+                title: "Warnings",
+                detail:
+                    "These credentials are valid and will be imported. Review the security limitation before continuing."
+            )
+
+            LazyVStack(spacing: 0) {
+                ForEach(warnings, id: \.rowNumber) { warning in
+                    HStack(alignment: .firstTextBaseline, spacing: CrestSpacing.medium) {
+                        Text("Row \(warning.rowNumber)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .frame(minWidth: 54, alignment: .leading)
+                        Text(warning.reason.message)
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, CrestSpacing.medium)
+
+                    if warning.rowNumber != warnings.last?.rowNumber {
+                        Divider()
+                    }
+                }
+            }
+            .padding(.horizontal, CrestSpacing.large)
+            .background(Color.orange.opacity(0.075), in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+private struct BrowserCredentialImportMetric: View {
+    let title: LocalizedStringKey
+    let value: Int
+    let systemImage: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: CrestSpacing.medium) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundStyle(color)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
+                Text("\(value)")
+                    .font(.title2.weight(.semibold))
+                    .monospacedDigit()
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(CrestSpacing.medium)
+        .frame(minWidth: 150, maxWidth: .infinity, minHeight: 72)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct BrowserCredentialImportReviewSectionHeader: View {
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+            Text(detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct BrowserCredentialImportRejectedRows: View {
+    let rejections: [BrowserCredentialCSVRowRejection]
+
+    private var visibleRejections: [BrowserCredentialCSVRowRejection] {
+        Array(rejections.prefix(100))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+            BrowserCredentialImportReviewSectionHeader(
+                title: "Rejected rows",
+                detail:
+                    "These rows are excluded from the import. Correct the source file to import them later."
+            )
+
+            LazyVStack(spacing: 0) {
+                ForEach(visibleRejections, id: \.rowNumber) { rejection in
+                    HStack(alignment: .firstTextBaseline, spacing: CrestSpacing.medium) {
+                        Text("Row \(rejection.rowNumber)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .frame(minWidth: 54, alignment: .leading)
+                        Text(rejection.reason.message)
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, CrestSpacing.medium)
+
+                    if rejection.rowNumber != visibleRejections.last?.rowNumber {
+                        Divider()
+                    }
+                }
+
+                if rejections.count > visibleRejections.count {
+                    Divider()
+                    Text(
+                        "\(rejections.count - visibleRejections.count) additional rejected rows are included in the final count."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, CrestSpacing.medium)
+                }
+            }
+            .padding(.horizontal, CrestSpacing.large)
+            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+private struct BrowserCredentialImportAccountRow: View {
+    let group: BrowserCredentialImportGroup
+    let revealsPasswords: Bool
+    let select: (BrowserCredentialImportSelection) -> Void
+    let togglePasswordVisibility: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+            HStack(alignment: .firstTextBaseline, spacing: CrestSpacing.medium) {
+                VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+                    Text(group.origin.description)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Text(group.username.isEmpty ? "No username" : group.username)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: CrestSpacing.medium)
+                HStack(spacing: CrestSpacing.small) {
+                    if !group.origin.isSecure {
+                        Label("HTTP", systemImage: "exclamationmark.shield.fill")
+                            .foregroundStyle(.orange)
+                    }
+                    Label(status.title, systemImage: status.systemImage)
+                        .foregroundStyle(status.color)
+                }
+                .font(.caption.weight(.medium))
+            }
+
+            if revealsPasswords {
+                Divider()
+                VStack(alignment: .leading, spacing: CrestSpacing.small) {
+                    if let password = group.existingPasswordForReview {
+                        BrowserCredentialImportPasswordValue(
+                            label: "Current",
+                            password: password
+                        )
+                    }
+                    ForEach(
+                        group.candidates.enumerated(),
+                        id: \.element.rowNumber
+                    ) { index, candidate in
+                        BrowserCredentialImportPasswordValue(
+                            label: importedPasswordLabel(
+                                index: index,
+                                count: group.candidates.count
+                            ),
+                            password: candidate.password
+                        )
+                    }
+                }
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    Text("Password to keep")
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    selectionPicker
+                        .labelsHidden()
+                    passwordVisibilityButton
+                }
+                VStack(alignment: .leading, spacing: CrestSpacing.small) {
+                    Text("Password to keep")
+                        .font(.subheadline.weight(.medium))
+                    selectionPicker
+                        .labelsHidden()
+                    passwordVisibilityButton
+                }
+            }
+
+            if group.collapsedDuplicateRowCount > 0 {
+                Label(
+                    duplicateSummary,
+                    systemImage: "doc.on.doc"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(CrestSpacing.large)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.secondary.opacity(0.16))
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var status: (title: LocalizedStringKey, systemImage: String, color: Color) {
+        if group.requiresChoice {
+            return (
+                "Needs review",
+                "exclamationmark.arrow.triangle.2.circlepath",
+                .orange
+            )
+        }
+        if group.hasExistingCredential {
+            return ("Already saved", "checkmark.circle", .secondary)
+        }
+        return ("New", "plus.circle.fill", .green)
+    }
+
+    private var selectionPicker: some View {
+        Picker("Password to keep", selection: selectionBinding) {
+            if group.hasExistingCredential {
+                Text("Keep current password")
+                    .tag(BrowserCredentialImportSelection.existing)
+            }
+            ForEach(
+                group.candidates.enumerated(),
+                id: \.element.rowNumber
+            ) { index, candidate in
+                Text(
+                    importedPasswordChoiceLabel(
+                        index: index,
+                        count: group.candidates.count
+                    )
+                )
+                    .tag(
+                        BrowserCredentialImportSelection.imported(
+                            rowNumber: candidate.rowNumber
+                        )
+                    )
+            }
+            Text("Skip this account")
+                .tag(BrowserCredentialImportSelection.skip)
+        }
+        .pickerStyle(.menu)
+    }
+
+    private var passwordVisibilityButton: some View {
+        Button(
+            revealsPasswords ? "Hide Passwords" : "View Passwords",
+            systemImage: revealsPasswords ? "eye.slash" : "eye",
+            action: togglePasswordVisibility
+        )
+        .buttonStyle(.borderless)
+        .accessibilityIdentifier(
+            "import-password-visibility-\(group.origin.host)"
+        )
+    }
+
+    private func importedPasswordChoiceLabel(index: Int, count: Int) -> String {
+        count == 1
+            ? String(localized: "Use imported password")
+            : String(localized: "Use imported password \(index + 1)")
+    }
+
+    private func importedPasswordLabel(index: Int, count: Int) -> LocalizedStringKey {
+        count == 1 ? "Imported" : "Imported \(index + 1)"
+    }
+
+    private var duplicateSummary: String {
+        let count = group.collapsedDuplicateRowCount
+        return count == 1
+            ? String(localized: "1 identical duplicate will be skipped.")
+            : String(localized: "\(count) identical duplicates will be skipped.")
+    }
+
+    private var selectionBinding: Binding<BrowserCredentialImportSelection> {
+        Binding(
+            get: { group.selection },
+            set: { selection in select(selection) }
+        )
+    }
+}
+
+private struct BrowserCredentialSearchField: View {
+    let title: LocalizedStringKey
+    @Binding var text: String
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        HStack(spacing: CrestSpacing.small) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            TextField(title, text: $text)
+                .textFieldStyle(.plain)
+
+            if !text.isEmpty {
+                Button("Clear Search", systemImage: "xmark.circle.fill") {
+                    text = ""
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, CrestSpacing.small)
+        #if os(macOS)
+        .frame(height: 30)
+        #else
+        .frame(minHeight: 44)
+        #endif
+        .background(.quaternary, in: .rect(cornerRadius: CrestRadius.control))
+        .accessibilityIdentifier(accessibilityIdentifier)
+    }
+}
+
+private struct BrowserCredentialImportPasswordValue: View {
+    let label: LocalizedStringKey
+    let password: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: CrestSpacing.medium) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 72, alignment: .leading)
+            Text(verbatim: password)
+                .font(.body.monospaced())
+                .textSelection(.enabled)
+                .privacySensitive()
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Password value shown visually")
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func browserCredentialImportReviewSizing() -> some View {
+        #if os(macOS)
+        frame(
+            minWidth: 660,
+            idealWidth: 720,
+            minHeight: 520,
+            idealHeight: 620
+        )
+        #else
+        presentationDetents([.large])
+        #endif
     }
 }

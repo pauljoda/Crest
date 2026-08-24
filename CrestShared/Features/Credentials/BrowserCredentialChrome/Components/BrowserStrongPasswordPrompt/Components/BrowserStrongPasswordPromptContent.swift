@@ -36,9 +36,13 @@ struct BrowserStrongPasswordPromptContent: View {
                 metrics: metrics,
                 action: generateAndFill
             )
-            if model.hasFailed {
+            if model.phase == .failedBeforeSave {
                 BrowserCredentialPromptError(
-                    "The form changed before Crest could fill the password."
+                    "Crest couldn’t save a strong password. Nothing was filled."
+                )
+            } else if model.phase == .savedButFillFailed {
+                BrowserCredentialPromptError(
+                    "The password is saved in this Space, but the form changed before Crest could fill it."
                 )
             }
         }

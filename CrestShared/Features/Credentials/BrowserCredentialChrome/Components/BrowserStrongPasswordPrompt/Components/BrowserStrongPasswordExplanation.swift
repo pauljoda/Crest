@@ -6,7 +6,7 @@ struct BrowserStrongPasswordExplanation: View {
 
     var body: some View {
         Text(
-            "Crest fills a unique 20-character password here and in its confirmation field. It is saved only after you submit and confirm the \(spaceName) prompt."
+            "Crest saves a unique 20-character password in \(spaceName) first, then fills it here and in the confirmation field."
         )
         .font(.caption)
         .foregroundStyle(.secondary)

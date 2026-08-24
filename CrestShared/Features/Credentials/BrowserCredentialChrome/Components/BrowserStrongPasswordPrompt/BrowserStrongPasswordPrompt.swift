@@ -44,9 +44,27 @@ struct BrowserStrongPasswordPrompt: View {
 
     private func generateAndFill() {
         Task { @MainActor in
-            await model.generateAndFill { password in
-                try await port.fillGeneratedPassword(password, request.id)
-            }
+            await model.generateSaveAndFill(
+                save: { password in
+                    let candidate = BrowserCredentialSaveCandidate(
+                        id: UUID(),
+                        origin: request.origin,
+                        topLevelOrigin: request.topLevelOrigin,
+                        username: request.usernameHint ?? "",
+                        password: password,
+                        passwordKind: .new,
+                        isCrossOriginFrame: request.isCrossOriginFrame,
+                        submittedAt: request.requestedAt
+                    )
+                    _ = try await browser.commitCredentialSave(
+                        candidate,
+                        in: port.spaceID
+                    )
+                },
+                fill: { password in
+                    try await port.fillGeneratedPassword(password, request.id)
+                }
+            )
         }
     }
 }

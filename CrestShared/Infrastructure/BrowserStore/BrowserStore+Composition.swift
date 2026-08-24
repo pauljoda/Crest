@@ -48,6 +48,20 @@ extension BrowserStore {
     static func isolatedLaunch(
         launchEnvironment: BrowserLaunchEnvironment
     ) -> BrowserStore {
+        if let isolationID = launchEnvironment.persistentIsolationID {
+            if let store = persistentIsolatedLaunch(
+                launchEnvironment: launchEnvironment,
+                isolationID: isolationID
+            ) {
+                return store
+            }
+        }
+        return inMemoryIsolatedLaunch(launchEnvironment: launchEnvironment)
+    }
+
+    private static func inMemoryIsolatedLaunch(
+        launchEnvironment: BrowserLaunchEnvironment
+    ) -> BrowserStore {
         var session = isolatedFixtureSession(for: launchEnvironment)
         session.repairRuntimeIntegrity()
         session.cleanupCurrentTabsUsingSpacePreferences()
@@ -64,6 +78,38 @@ extension BrowserStore {
             session: session,
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
+            syncCoordinator: syncCoordinator
+        )
+    }
+
+    private static func persistentIsolatedLaunch(
+        launchEnvironment: BrowserLaunchEnvironment,
+        isolationID: String
+    ) -> BrowserStore? {
+        let namespace = "\(ProductIdentity.serviceNamespace).isolated.\(isolationID)"
+        guard let defaults = UserDefaults(suiteName: namespace) else { return nil }
+        let persistence = UserDefaultsBrowserSessionPersistence(
+            defaults: defaults,
+            faviconStore: InMemoryBrowserFaviconStore()
+        )
+        var session = persistence.load()
+            ?? isolatedFixtureSession(for: launchEnvironment)
+        session.repairRuntimeIntegrity()
+        session.cleanupCurrentTabsUsingSpacePreferences()
+        session.applyDataRetentionPolicies()
+        session.selectDefaultSpaceForLaunch()
+        persistence.save(session)
+        let syncCoordinator = BrowserSyncCoordinator(
+            persistence: InMemoryBrowserSyncJournalPersistence()
+        )
+        _ = try? syncCoordinator.stage(
+            session: session,
+            deletionReason: .retention
+        )
+        return BrowserStore(
+            session: session,
+            persistence: persistence,
+            credentialVault: KeychainCredentialVault(servicePrefix: namespace),
             syncCoordinator: syncCoordinator
         )
     }

@@ -347,6 +347,10 @@ final class BrowserSettingsPaneTests: XCTestCase {
 
         XCTAssertNotEqual(mac, mobile)
         XCTAssertNotEqual(mobile, sheet)
+
+        XCTAssertTrue(mac.supportsCredentialFileImport)
+        XCTAssertFalse(mobile.supportsCredentialFileImport)
+        XCTAssertTrue(sheet.supportsCredentialFileImport)
     }
 
     /// The warning before a plaintext export names where the file is about to be
@@ -384,8 +388,8 @@ final class BrowserSettingsPaneTests: XCTestCase {
 
         XCTAssertEqual(
             BrowserCredentialSettingsPolicy.filter(all, matching: "  "),
-            all,
-            "A blank query is not a filter."
+            [httpBasic, webForm],
+            "A blank query keeps every password and orders the manager by site."
         )
         XCTAssertEqual(
             BrowserCredentialSettingsPolicy.filter(all, matching: "PERSON"),

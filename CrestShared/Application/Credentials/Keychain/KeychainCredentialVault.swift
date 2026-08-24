@@ -76,6 +76,37 @@ actor KeychainCredentialVault: CredentialVault {
         try await store.upsert(item, in: service(for: spaceID))
     }
 
+    func replaceAll(
+        _ credentials: [BrowserCredential],
+        in spaceID: SpaceID
+    ) async throws {
+        let service = service(for: spaceID)
+        let replacementItems = try credentials.map {
+            try codec.item(for: $0, expectedSpaceID: spaceID)
+        }
+        guard Set(replacementItems.map(\.account)).count == replacementItems.count else {
+            throw CredentialVaultError.malformedStoredCredential
+        }
+        let originalItems = try await store.items(in: service)
+
+        do {
+            try await store.deleteAll(in: service)
+            for item in replacementItems {
+                try await store.upsert(item, in: service)
+            }
+        } catch {
+            do {
+                try await store.deleteAll(in: service)
+                for originalItem in originalItems {
+                    try await store.upsert(originalItem, in: service)
+                }
+            } catch {
+                throw CredentialVaultError.atomicReplacementRestoreFailed
+            }
+            throw error
+        }
+    }
+
     func setSynchronizable(
         _ isSynchronizable: Bool,
         in spaceID: SpaceID

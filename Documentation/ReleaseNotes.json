@@ -257,6 +257,10 @@
     "2026-08-24-start-page-launch": {
       "category": "fixed",
       "message": "Show the Start Page on launch instead of a blank unloaded tab"
+    },
+    "2026-08-24-space-password-management": {
+      "category": "new",
+      "message": "Import, search, review, reveal, and delete passwords directly from each Space's settings"
     }
   }
 }

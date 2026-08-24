@@ -30,6 +30,10 @@ actor PrivateBrowsingCredentialVault: CredentialVault {
         throw CredentialVaultError.unavailableInPrivateBrowsing
     }
 
+    func replaceAll(_ credentials: [BrowserCredential], in spaceID: SpaceID) async throws {
+        throw CredentialVaultError.unavailableInPrivateBrowsing
+    }
+
     func setSynchronizable(_ isSynchronizable: Bool, in spaceID: SpaceID) async throws {
         throw CredentialVaultError.unavailableInPrivateBrowsing
     }

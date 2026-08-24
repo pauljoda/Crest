@@ -102,6 +102,62 @@ final class KeychainCredentialVaultTests: XCTestCase {
         }
     }
 
+    func testAtomicReplacementRestoresTheOriginalInventoryWhenAWriteFails() async throws {
+        let spaceID = SpaceID()
+        let firstDescriptor = descriptor(
+            id: CredentialID(rawValue: UUID()),
+            spaceID: spaceID,
+            username: "first"
+        )
+        let secondDescriptor = descriptor(
+            id: CredentialID(rawValue: UUID()),
+            spaceID: spaceID,
+            username: "second"
+        )
+        let first = try keychainItem(
+            descriptor: firstDescriptor,
+            password: "first-original"
+        )
+        let second = try keychainItem(
+            descriptor: secondDescriptor,
+            password: "second-original"
+        )
+        let store = FailingMigrationCredentialKeychainStore(
+            items: [first, second],
+            failingAccount: second.account
+        )
+        let vault = KeychainCredentialVault(
+            store: store,
+            servicePrefix: "test.crest"
+        )
+        var synchronizedFirst = firstDescriptor
+        synchronizedFirst.isSynchronizable = true
+        var synchronizedSecond = secondDescriptor
+        synchronizedSecond.isSynchronizable = true
+
+        do {
+            try await vault.replaceAll(
+                [
+                    BrowserCredential(
+                        descriptor: synchronizedFirst,
+                        password: "first-replacement"
+                    ),
+                    BrowserCredential(
+                        descriptor: synchronizedSecond,
+                        password: "second-replacement"
+                    ),
+                ],
+                in: spaceID
+            )
+            XCTFail("Expected the replacement write to fail")
+        } catch {
+            XCTAssertEqual(error as? TestCredentialKeychainError, .injectedFailure)
+        }
+
+        let restoredItems = await store.storedItems
+        XCTAssertEqual(restoredItems, [first, second])
+    }
+
     private func descriptor(
         id: CredentialID,
         spaceID: SpaceID,

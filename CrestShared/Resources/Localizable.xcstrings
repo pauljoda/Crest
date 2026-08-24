@@ -4577,7 +4577,6 @@
       }
     },
     "Current" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14409,6 +14408,214 @@
           }
         }
       }
+    },
+    "%lld additional rejected rows are included in the final count." : {
+
+    },
+    "%lld identical duplicates will be skipped." : {
+
+    },
+    "%lld warnings" : {
+
+    },
+    "1 identical duplicate will be skipped." : {
+
+    },
+    "1 warning" : {
+
+    },
+    "Accepted %lld, skipped %lld, reviewed %lld warnings, and rejected %lld from the selected file." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accepted %1$lld, skipped %2$lld, reviewed %3$lld warnings, and rejected %4$lld from the selected file."
+          }
+        }
+      }
+    },
+    "Accounts" : {
+
+    },
+    "Adds or removes this password from the selection." : {
+
+    },
+    "Already saved" : {
+
+    },
+    "Authenticate to commit the password import into %@." : {
+
+    },
+    "Authenticate to delete selected passwords from %@." : {
+
+    },
+    "Authenticate to import passwords into %@." : {
+
+    },
+    "Authenticates before showing the saved password." : {
+
+    },
+    "Clear Search" : {
+
+    },
+    "Confirm what Crest will change before anything is saved." : {
+
+    },
+    "Crest couldn’t save a strong password. Nothing was filled." : {
+
+    },
+    "Crest saves a unique 20-character password in %@ first, then fills it here and in the confirmation field." : {
+
+    },
+    "Delete 1 Password" : {
+
+    },
+    "Delete %lld Passwords" : {
+
+    },
+    "Delete Selected" : {
+
+    },
+    "Delete Selected Passwords?" : {
+
+    },
+    "Done Selecting" : {
+
+    },
+    "Every accepted credential will be stored only in this Space’s Keychain inventory." : {
+
+    },
+    "Hide Passwords" : {
+
+    },
+    "HTTP" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import into %@…" : {
+
+    },
+    "Import No Longer Available" : {
+
+    },
+    "Imported" : {
+
+    },
+    "Imported %lld" : {
+
+    },
+    "Imported from an insecure HTTP site. Crest keeps it available for manual access but does not autofill it on insecure connections." : {
+
+    },
+    "Importing into" : {
+
+    },
+    "Importing passwords" : {
+
+    },
+    "Importing…" : {
+
+    },
+    "Keep current password" : {
+
+    },
+    "Manual access only for insecure HTTP site" : {
+
+    },
+    "Need review" : {
+
+    },
+    "Needs review" : {
+
+    },
+    "New" : {
+
+    },
+    "No username" : {
+
+    },
+    "Password Actions" : {
+
+    },
+    "Password Import Finished" : {
+
+    },
+    "Password to keep" : {
+
+    },
+    "Password value shown visually" : {
+
+    },
+    "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics." : {
+
+    },
+    "Ready for %@" : {
+
+    },
+    "Ready to import" : {
+
+    },
+    "Rejected rows" : {
+
+    },
+    "Review" : {
+
+    },
+    "Review every valid account. Choose which password to keep, or skip any account." : {
+
+    },
+    "Review Password Import" : {
+
+    },
+    "Row %lld" : {
+
+    },
+    "Search imported passwords" : {
+
+    },
+    "Search passwords" : {
+
+    },
+    "Search saved passwords" : {
+
+    },
+    "Select All" : {
+
+    },
+    "Select Passwords" : {
+
+    },
+    "Skip this account" : {
+
+    },
+    "The destination Space changed. Choose the file again." : {
+
+    },
+    "The password is saved in this Space, but the form changed before Crest could fill it." : {
+
+    },
+    "These credentials are valid and will be imported. Review the security limitation before continuing." : {
+
+    },
+    "These rows are excluded from the import. Correct the source file to import them later." : {
+
+    },
+    "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
+
+    },
+    "Use imported password" : {
+
+    },
+    "Use imported password %lld" : {
+
+    },
+    "View Passwords" : {
+
+    },
+    "Warnings" : {
+
     }
   },
   "version" : "1.3"
