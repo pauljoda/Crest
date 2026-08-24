@@ -12,6 +12,12 @@ struct BrowserCommandPaletteRowIcon: View {
                     profileID: model.profileID(for: result),
                     size: BrowserCommandPaletteMetrics.rowFaviconSize
                 )
+            } else if let provider = result.searchProvider {
+                BrowserSearchProviderIcon(
+                    provider: provider,
+                    profileID: model.space?.profile.id,
+                    size: BrowserCommandPaletteMetrics.rowFaviconSize
+                )
             } else {
                 Image(systemName: result.symbol)
                     .font(

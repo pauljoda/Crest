@@ -261,6 +261,10 @@
     "2026-08-24-space-password-management": {
       "category": "new",
       "message": "Import, search, review, reveal, and delete passwords directly from each Space's settings"
+    },
+    "2026-08-24-custom-search-providers-and-suggestions": {
+      "category": "new",
+      "message": "Use custom search engines with website icons and optional search suggestions in each Space"
     }
   }
 }

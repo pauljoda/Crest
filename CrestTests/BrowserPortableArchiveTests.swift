@@ -10,7 +10,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testRoundTripPreservesPortableStateWithFreshIsolationIdentities() throws {
-        let source = makePortableFixture()
+        let source = try makePortableFixture()
         let sourceSpace = try XCTUnwrap(source.selectedSpace)
 
         let data = try BrowserPortableArchive.encode(
@@ -68,7 +68,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testEncodedArchiveCannotContainCredentialOrWebsiteRuntimeState() throws {
-        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        let data = try BrowserPortableArchive.encode(session: try makePortableFixture())
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
 
         XCTAssertFalse(json.contains("secret"))
@@ -84,7 +84,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
 
     func testVersionThreeArchiveKeepsItsCanonicalJSONKeys() throws {
         let data = try BrowserPortableArchive.encode(
-            session: makePortableFixture(),
+            session: try makePortableFixture(),
             exportedAt: Date(timeIntervalSince1970: 1_800_000_000)
         )
         let root = try XCTUnwrap(
@@ -202,7 +202,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testVersionTwoArchiveWithoutSplitFieldsStillImports() throws {
-        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        let data = try BrowserPortableArchive.encode(session: try makePortableFixture())
         var root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
         )
@@ -234,7 +234,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         let store = BrowserStore(session: .preview, persistence: persistence)
         let originalIDs = Set(store.session.spaces.map(\.id))
         let imported = try BrowserPortableArchive(
-            session: makePortableFixture()
+            session: try makePortableFixture()
         ).materialize()
 
         try store.importPortableArchive(imported)
@@ -249,7 +249,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testUnsupportedSchemaVersionIsRejectedBeforeMaterialization() throws {
-        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        let data = try BrowserPortableArchive.encode(session: try makePortableFixture())
         var root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
         )
@@ -269,7 +269,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testLegacyVersionOneArchiveImportsFoldersAtTopLevel() throws {
-        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        let data = try BrowserPortableArchive.encode(session: try makePortableFixture())
         var root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
         )
@@ -293,7 +293,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testCyclicFolderHierarchyIsRejected() throws {
-        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        let data = try BrowserPortableArchive.encode(session: try makePortableFixture())
         var root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
         )
@@ -331,7 +331,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: fullSession, persistence: persistence)
         let imported = try BrowserPortableArchive(
-            session: makePortableFixture()
+            session: try makePortableFixture()
         ).materialize()
 
         XCTAssertThrowsError(try store.importPortableArchive(imported)) {
@@ -345,7 +345,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testSavedTabWithUnknownFolderIsRejected() throws {
-        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        let data = try BrowserPortableArchive.encode(session: try makePortableFixture())
         var root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
         )
@@ -371,7 +371,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     func testDuplicateHistoryURLsMergeWithoutDuplicatingRows() throws {
-        let source = makePortableFixture()
+        let source = try makePortableFixture()
         let sourceEntry = try XCTUnwrap(source.selectedSpace?.history.first)
         let data = try BrowserPortableArchive.encode(session: source)
         var root = try XCTUnwrap(
@@ -405,7 +405,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         XCTAssertEqual(importedHistory[0].title, "Newer title")
     }
 
-    private func makePortableFixture() -> BrowserSession {
+    private func makePortableFixture() throws -> BrowserSession {
         let folder = SavedFolder(
             title: "Research",
             symbol: "folder.fill",
@@ -454,6 +454,26 @@ final class BrowserPortableArchiveTests: XCTestCase {
             lastVisitedAt: Date(timeIntervalSince1970: 1_700_000_000),
             visitCount: 4
         )
+        var browsingPreferences = BrowserSpaceBrowsingPreferences(
+            searchProvider: .brave,
+            currentTabCleanupPolicy: .after30Days,
+            dataRetention: BrowserSpaceDataRetentionPreferences(
+                history: .ninetyDays,
+                archive: .thirtyDays,
+                downloads: .oneWeek
+            )
+        )
+        let kagi = try BrowserCustomSearchProvider(
+            id: UUID(
+                uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02, 0x64)
+            ),
+            name: "Kagi",
+            searchURLTemplate: "https://kagi.com/search?q=%s",
+            suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
+        )
+        try browsingPreferences.upsertCustomSearchProvider(kagi)
+        browsingPreferences.searchProvider = kagi.provider
+        browsingPreferences.searchSuggestionsEnabled = true
         let space = BrowserSpace(
             id: SpaceID(),
             profile: BrowsingProfile(),
@@ -464,15 +484,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
             tabs: [pinned, saved, startPage],
             archivedTabs: [archived],
             history: [history],
-            browsingPreferences: BrowserSpaceBrowsingPreferences(
-                searchProvider: .brave,
-                currentTabCleanupPolicy: .after30Days,
-                dataRetention: BrowserSpaceDataRetentionPreferences(
-                    history: .ninetyDays,
-                    archive: .thirtyDays,
-                    downloads: .oneWeek
-                )
-            ),
+            browsingPreferences: browsingPreferences,
             credentialPreferences: BrowserCredentialPreferences(
                 syncsCrestPasswordsWithICloud: false,
                 alsoOffersSaveToSystemPasswords: true

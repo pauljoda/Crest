@@ -15,6 +15,7 @@ struct BrowserCommandPalette: View {
         initialQuery: String = "",
         otherSpaces: [BrowserSpace] = [],
         commands: BrowserCommandPaletteCommandRegistry? = nil,
+        isPrivateBrowsing: Bool = false,
         isSourceAvailable: @escaping (BrowserTabRuntimeAssignment) -> Bool,
         selectTab:
             @escaping (
@@ -43,6 +44,7 @@ struct BrowserCommandPalette: View {
                 initialQuery: initialQuery,
                 otherSpaces: otherSpaces,
                 commands: commands,
+                isPrivateBrowsing: isPrivateBrowsing,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
                 selectTabInSpace: selectTabInSpace,

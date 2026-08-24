@@ -13,6 +13,7 @@ struct BrowserCommandPaletteIntentRow: View {
                     if let provider = item.result.searchProvider {
                         BrowserSearchProviderIcon(
                             provider: provider,
+                            profileID: model.space?.profile.id,
                             size: BrowserCommandPaletteMetrics.intentSymbolPointSize
                         )
                     } else {

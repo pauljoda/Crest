@@ -57,6 +57,63 @@ enum BrowserCommandPaletteResults {
     }
 }
 
+// MARK: - Remote Search Suggestions
+
+extension BrowserCommandPaletteResults {
+    static func insertingRemoteSuggestions(
+        _ suggestions: [String],
+        query: String,
+        provider: BrowserSearchProvider,
+        into localResults: [BrowserCommandPaletteResult]
+    ) -> [BrowserCommandPaletteResult] {
+        let normalizedQuery = normalizedSuggestion(query)
+        var claimed = Set(
+            localResults.map { normalizedSuggestion($0.title).lowercased() }
+        )
+        claimed.insert(normalizedQuery.lowercased())
+
+        var remoteResults: [BrowserCommandPaletteResult] = []
+        remoteResults.reserveCapacity(BrowserCommandPaletteResultLimits.searchSuggestions)
+        for rawSuggestion in suggestions {
+            guard remoteResults.count < BrowserCommandPaletteResultLimits.searchSuggestions else {
+                break
+            }
+            let suggestion = normalizedSuggestion(rawSuggestion)
+            guard !suggestion.isEmpty, suggestion.count <= 256 else { continue }
+            let key = suggestion.folding(
+                options: [.caseInsensitive, .diacriticInsensitive],
+                locale: .current
+            )
+            guard claimed.insert(key).inserted else { continue }
+            guard let url = provider.searchURL(for: suggestion) else { continue }
+            remoteResults.append(
+                BrowserCommandPaletteResult(
+                    section: .searchSuggestions,
+                    id: "search-suggestion-\(provider.id.rawValue)-\(key)",
+                    title: suggestion,
+                    subtitle: "Search with \(provider.title)",
+                    symbol: "magnifyingglass",
+                    searchProvider: provider,
+                    trailing: "Search",
+                    target: .url(url)
+                )
+            )
+        }
+        guard !remoteResults.isEmpty else { return localResults }
+
+        let insertionIndex = localResults.first?.isIntent == true ? 1 : 0
+        var results = localResults
+        results.insert(contentsOf: remoteResults, at: insertionIndex)
+        return results
+    }
+
+    private static func normalizedSuggestion(_ value: String) -> String {
+        value
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+    }
+}
+
 // MARK: - Intent
 
 extension BrowserCommandPaletteResults {

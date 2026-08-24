@@ -21,6 +21,7 @@ struct BrowserRootCommandPaletteLayer: View {
                 initialQuery: mode.initialQuery,
                 otherSpaces: otherSpaces,
                 commands: commandActions.paletteRegistry(shortcuts: shortcuts),
+                isPrivateBrowsing: model.browser.isPrivateBrowsing,
                 isSourceAvailable: model.isPaletteSourceAvailable,
                 selectTab: model.selectPaletteTab,
                 selectTabInSpace: model.selectPaletteTab,
@@ -36,6 +37,7 @@ struct BrowserRootCommandPaletteLayer: View {
             .id(
                 BrowserCommandPalettePresentationIdentity(
                     mode: mode,
+                    space: model.browser.selectedSpace,
                     source: source,
                     otherSpaces: otherSpaces
                 )

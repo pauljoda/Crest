@@ -300,6 +300,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 selectedTabID: browser.selectedTab?.id,
                 otherSpaces: model.paletteOtherSpaces,
                 commands: mobileBrowserCommandContext.paletteRegistry,
+                isPrivateBrowsing: browser.isPrivateBrowsing,
                 isSourceAvailable: model.isPaletteSourceAvailable,
                 selectTab: model.selectPaletteTab,
                 selectTabInSpace: model.selectPaletteTab,

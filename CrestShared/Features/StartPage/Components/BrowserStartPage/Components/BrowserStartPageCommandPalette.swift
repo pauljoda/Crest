@@ -35,6 +35,7 @@ struct BrowserStartPageCommandPalette: View {
         BrowserCommandPalette(
             space: page.space,
             selectedTabID: page.selectedTabID,
+            isPrivateBrowsing: page.isPrivateBrowsing,
             isSourceAvailable: page.isSourceAvailable,
             selectTab: page.selectTab,
             openURL: page.openURL,
@@ -44,6 +45,7 @@ struct BrowserStartPageCommandPalette: View {
         .id(
             BrowserCommandPalettePresentationIdentity(
                 focusRequest: page.focusRequest,
+                space: page.space,
                 source: sourceAssignment
             )
         )

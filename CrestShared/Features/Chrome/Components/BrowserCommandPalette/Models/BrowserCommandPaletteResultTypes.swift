@@ -105,6 +105,7 @@ struct BrowserCommandPaletteResultGroup: Identifiable, Equatable, Sendable {
 }
 
 enum BrowserCommandPaletteResultLimits {
+    static let searchSuggestions = 3
     static let restingTabs = 5
     static let matchedTabs = 8
     static let restingActions = 3
@@ -123,6 +124,7 @@ enum BrowserCommandPaletteResultLimits {
 }
 
 enum BrowserCommandPaletteSection: String, CaseIterable, Sendable {
+    case searchSuggestions
     case tabs
     case actions
     case saved
@@ -131,6 +133,7 @@ enum BrowserCommandPaletteSection: String, CaseIterable, Sendable {
 
     var title: String {
         switch self {
+        case .searchSuggestions: "Search Suggestions"
         case .tabs: "Tabs"
         case .actions: "Actions"
         case .saved: "Pinned & Saved"

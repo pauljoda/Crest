@@ -14616,6 +14616,120 @@
     },
     "Warnings" : {
 
+    },
+    "A custom search engine already uses this name." : {
+
+    },
+    "A Space can contain up to 32 custom search engines." : {
+
+    },
+    "Add an HTTPS search URL containing %s or {searchTerms}." : {
+
+    },
+    "Add Search Engine" : {
+
+    },
+    "Authentication tokens and other secrets cannot be stored in a search template. Sign in on the search engine website instead." : {
+
+    },
+    "Built-In" : {
+
+    },
+    "Check the search engine details and try again." : {
+
+    },
+    "Couldn’t Save Search Engine" : {
+
+    },
+    "Custom engines belong to this Space and sync with it. Crest loads their favicon from the engine’s website; the image itself is not synced. Sign in on the engine’s website instead of putting a token in a URL template." : {
+
+    },
+    "Edit Search Engine" : {
+
+    },
+    "Enter a name for this search engine." : {
+
+    },
+    "Enter a valid URL template." : {
+
+    },
+    "Google will become this Space’s search engine." : {
+
+    },
+    "Include exactly one %s or {searchTerms} query placeholder." : {
+
+    },
+    "Manage Search Engines…" : {
+
+    },
+    "More" : {
+
+    },
+    "No Custom Search Engines" : {
+
+    },
+    "Put the query placeholder in the path or query, not the fragment." : {
+
+    },
+    "Remove Search Engine?" : {
+
+    },
+    "Save" : {
+
+    },
+    "Search engine names must be 64 characters or fewer." : {
+
+    },
+    "Search engine templates may only use the standard HTTPS port." : {
+
+    },
+    "Search engine templates must use HTTPS." : {
+
+    },
+    "Search Engine" : {
+
+    },
+    "Search Engines" : {
+
+    },
+    "Search Suggestions" : {
+
+    },
+    "Search suggestions" : {
+
+    },
+    "Search URL" : {
+
+    },
+    "Suggestion URL" : {
+
+    },
+    "Suggestions (Optional)" : {
+
+    },
+    "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions." : {
+
+    },
+    "This removes %@ from this Space." : {
+
+    },
+    "URL templates must be 2,048 characters or fewer." : {
+
+    },
+    "Use a public search engine host, not a local or numeric address." : {
+
+    },
+    "Use exactly one %s or {searchTerms} where the encoded search should appear. HTTPS is required." : {
+
+    },
+    "Use exactly one query placeholder." : {
+
+    },
+    "Usernames and passwords cannot be stored in a search template." : {
+
+    },
+    "When enabled, typed searches are sent to this Space’s search engine after a short delay. Crest never requests suggestions in Private Browsing." : {
+
     }
   },
   "version" : "1.3"

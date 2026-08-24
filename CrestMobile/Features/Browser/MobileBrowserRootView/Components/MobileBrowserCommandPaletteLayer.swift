@@ -6,6 +6,7 @@ struct MobileBrowserCommandPaletteLayer: View {
     let selectedTabID: TabID?
     let otherSpaces: [BrowserSpace]
     let commands: BrowserCommandPaletteCommandRegistry
+    let isPrivateBrowsing: Bool
     let isSourceAvailable: (BrowserTabRuntimeAssignment) -> Bool
     let selectTab:
         (
@@ -36,6 +37,7 @@ struct MobileBrowserCommandPaletteLayer: View {
                 initialQuery: mode.initialQuery,
                 otherSpaces: otherSpaces,
                 commands: commands,
+                isPrivateBrowsing: isPrivateBrowsing,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
                 selectTabInSpace: selectTabInSpace,
@@ -47,6 +49,7 @@ struct MobileBrowserCommandPaletteLayer: View {
             .id(
                 BrowserCommandPalettePresentationIdentity(
                     mode: mode,
+                    space: space,
                     source: sourceAssignment,
                     otherSpaces: otherSpaces
                 )

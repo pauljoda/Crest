@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserSearchProviderIdentityLabel: View {
     let provider: BrowserSearchProvider
+    var profileID: UUID? = nil
     var title: String? = nil
     var iconSize: CGFloat = 20
 
@@ -9,7 +10,11 @@ struct BrowserSearchProviderIdentityLabel: View {
         Label {
             Text(title ?? provider.title)
         } icon: {
-            BrowserSearchProviderIcon(provider: provider, size: iconSize)
+            BrowserSearchProviderIcon(
+                provider: provider,
+                profileID: profileID,
+                size: iconSize
+            )
         }
     }
 }

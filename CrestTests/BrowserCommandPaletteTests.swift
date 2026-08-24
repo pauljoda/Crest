@@ -347,6 +347,91 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         }
     }
 
+    func testRemoteSuggestionsAreLimitedDeduplicatedAndUseTheOrdinaryProviderURLBuilder() throws {
+        let provider = try BrowserCustomSearchProvider(
+            name: "Kagi",
+            searchURLTemplate: "https://kagi.com/search?q=%s",
+            suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
+        ).provider
+        let local = BrowserCommandPaletteResults.results(
+            for: BrowserCommandPaletteInput(
+                query: "swift",
+                space: makeSpace(tabs: []),
+                searchProvider: provider
+            )
+        )
+
+        let merged = BrowserCommandPaletteResults.insertingRemoteSuggestions(
+            ["Swift", "  swift   concurrency ", "SWIFT CONCURRENCY", "SwiftUI", "WebKit"],
+            query: "swift",
+            provider: provider,
+            into: local
+        )
+        let suggestions = merged.filter { $0.section == .searchSuggestions }
+
+        XCTAssertEqual(suggestions.map(\.title), ["swift concurrency", "SwiftUI", "WebKit"])
+        XCTAssertEqual(suggestions.count, 3)
+        XCTAssertEqual(
+            suggestions.first?.target,
+            .url(try XCTUnwrap(provider.searchURL(for: "swift concurrency")))
+        )
+        XCTAssertTrue(suggestions.allSatisfy { $0.searchProvider == provider })
+        XCTAssertTrue(merged.first?.isIntent == true)
+    }
+
+    func testOpenSearchSuggestionParserFailsClosedForMalformedOrOversizedResponses() {
+        let valid = Data(#"["crest",["Crest browser","crest browser","Crest SwiftUI"]]"#.utf8)
+
+        XCTAssertEqual(
+            BrowserSearchSuggestionResponseParser.suggestions(from: valid),
+            ["Crest browser", "crest browser", "Crest SwiftUI"]
+        )
+        XCTAssertTrue(
+            BrowserSearchSuggestionResponseParser.suggestions(
+                from: Data(#"{"suggestions":["not OpenSearch"]}"#.utf8)
+            ).isEmpty
+        )
+        XCTAssertTrue(
+            BrowserSearchSuggestionResponseParser.suggestions(
+                from: Data(
+                    repeating: 0x20,
+                    count: BrowserSearchSuggestionClient.maximumResponseByteCount + 1
+                )
+            ).isEmpty
+        )
+    }
+
+    func testEmbeddedPaletteIdentityChangesWithItsSpaceSearchContract() throws {
+        var space = makeSpace(tabs: [])
+        let original = BrowserCommandPalettePresentationIdentity(
+            space: space,
+            source: nil
+        )
+        var preferences = space.browsingPreferences
+        let custom = try BrowserCustomSearchProvider(
+            name: "Kagi",
+            searchURLTemplate: "https://kagi.com/search?q=%s",
+            suggestionURLTemplate: "https://kagi.com/api/autosuggest?q=%s"
+        )
+        try preferences.upsertCustomSearchProvider(custom)
+        preferences.searchProvider = custom.provider
+        space.browsingPreferences = preferences
+        let customProvider = BrowserCommandPalettePresentationIdentity(
+            space: space,
+            source: nil
+        )
+
+        preferences.searchSuggestionsEnabled = true
+        space.browsingPreferences = preferences
+        let suggestionsEnabled = BrowserCommandPalettePresentationIdentity(
+            space: space,
+            source: nil
+        )
+
+        XCTAssertNotEqual(original, customProvider)
+        XCTAssertNotEqual(customProvider, suggestionsEnabled)
+    }
+
     func testAQueryThatAlreadyReadsAsAURLPutsGoingThereFirst() throws {
         let space = makeSpace(tabs: [tab("Apple", "https://apple.com/store")])
 
