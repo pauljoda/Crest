@@ -16,7 +16,8 @@ extension MobileBrowserPage: WKUIDelegate {
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        popupCoordinator.resolveOpen(
+        recordAcceptedPopup()
+        return popupCoordinator.resolveOpen(
             for: navigationAction,
             currentURL: webView.url
         ) { [weak self] requestedURL in

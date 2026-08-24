@@ -2081,6 +2081,9 @@
         }
       }
     },
+    "Allow Automatic Pop-ups" : {
+
+    },
     "Allow Crest to Use Passkeys…" : {
       "localizations" : {
         "ar" : {
@@ -2100,6 +2103,9 @@
           }
         }
       }
+    },
+    "Allow automatic pop-ups for %@" : {
+
     },
     "Allow Download" : {
       "localizations" : {
@@ -2419,6 +2425,12 @@
           }
         }
       }
+    },
+    "Automatic Pop-ups" : {
+
+    },
+    "Automatic pop-ups are blocked. Allow them for this site, then retry the action on the page." : {
+
     },
     "Automatically cleaned" : {
       "localizations" : {
@@ -9631,6 +9643,12 @@
         }
       }
     },
+    "Pop-up blocked for %@" : {
+
+    },
+    "Pop-ups allowed for %@" : {
+
+    },
     "Popular picks" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10730,6 +10748,9 @@
         }
       }
     },
+    "Retry the action on the page. Crest did not reopen the blocked pop-up." : {
+
+    },
     "return" : {
       "localizations" : {
         "ar" : {
@@ -11109,6 +11130,9 @@
           }
         }
       }
+    },
+    "Saves this permission in the current Space. Retry the action on the site afterward" : {
+
     },
     "Saving password" : {
       "localizations" : {

@@ -1143,6 +1143,16 @@ final class BrowserPagePool:
         page.receiveGeolocationMessage(message)
     }
 
+    func routeBlockedPopupMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pages.values.first(where: { $0.webView === sourceWebView })
+                ?? suspendedPagesByTabID.values
+                .joined()
+                .first(where: { $0.webView === sourceWebView })
+        else { return }
+        page.receiveBlockedPopupMessage(message)
+    }
+
     func replaceExtensionPageNavigation(
         _ page: BrowserPage,
         with destinationURL: URL

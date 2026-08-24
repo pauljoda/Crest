@@ -154,6 +154,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
         var readerModeActionTitle: LocalizedStringResource { "Show Reader" }
         var readerModeState: BrowserReaderModeState { .unavailable }
         var pageZoomLabel: String { "100%" }
+        var blockedPopupNotice: BrowserBlockedPopupNotice? { nil }
 
         func goBack() {}
         func goForward() {}
@@ -170,6 +171,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
         func zoomIn() {}
         func zoomOut() {}
         func resetZoom() {}
+        func allowAutomaticPopupsForBlockedSite() {}
         func copyPageLink() -> Bool { false }
         func copyPageLinkAsMarkdown() -> Bool { false }
         func printPage() {}

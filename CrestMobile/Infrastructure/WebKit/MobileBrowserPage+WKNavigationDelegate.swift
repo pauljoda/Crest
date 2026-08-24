@@ -8,6 +8,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         activeNavigation = navigation
         isAwaitingPopupNavigation = false
+        beginBlockedPopupNavigation()
         beginGeolocationNavigation()
         // WebKit accepted the navigation Crest asked for, so the authorization
         // that came with it is spent.

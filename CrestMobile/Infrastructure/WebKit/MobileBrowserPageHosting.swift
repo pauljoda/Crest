@@ -26,4 +26,8 @@ protocol MobileBrowserPageHosting: AnyObject {
     /// Routes a pre-iOS 27 geolocation bridge message from a shared popup
     /// content controller to the page whose web view authored it.
     func routeGeolocationMessage(_ message: WKScriptMessage)
+
+    /// Routes a blocked-popup bridge message from a shared popup content
+    /// controller to the page whose web view actually authored it.
+    func routeBlockedPopupMessage(_ message: WKScriptMessage)
 }

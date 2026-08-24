@@ -16,18 +16,43 @@ struct MobilePageActionsMenu: View {
             )
             .crestMenuActionLabelStyle()
         } label: {
-            Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: controlSize.width, height: controlSize.height)
-                .contentShape(.rect)
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(
+                        pages.blockedPopupNotice == nil
+                            ? Color.secondary
+                            : Color.orange
+                    )
+                if pages.blockedPopupNotice != nil {
+                    Circle()
+                        .fill(.orange)
+                        .frame(width: 7, height: 7)
+                        .offset(x: 3, y: -3)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(width: controlSize.width, height: controlSize.height)
+            .contentShape(.rect)
         }
         .crestMenuActionLabelStyle()
         .tint(.primary)
         .menuStyle(.button)
         .buttonStyle(.plain)
-        .accessibilityLabel("Page Actions")
-        .accessibilityHint("Opens controls for this webpage")
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier("page-actions-menu")
+    }
+
+    private var accessibilityLabel: String {
+        guard let notice = pages.blockedPopupNotice else { return "Page Actions" }
+        return notice.chromeAccessibilityLabel(surfaceName: "Page Actions")
+    }
+
+    private var accessibilityHint: String {
+        guard pages.blockedPopupNotice != nil else {
+            return "Opens controls for this webpage"
+        }
+        return "Opens the Automatic Pop-ups permission and retry guidance"
     }
 }

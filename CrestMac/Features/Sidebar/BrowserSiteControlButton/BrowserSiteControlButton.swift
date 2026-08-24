@@ -6,17 +6,20 @@ struct BrowserSiteControlButton: View {
     @State private var isPresented = false
 
     var body: some View {
-        BrowserSiteControlTrigger(isPresented: presentationBinding)
-            .popover(isPresented: presentationBinding, arrowEdge: .top) {
-                BrowserSiteControlPopover(
-                    configuration: configuration,
-                    dismiss: { presentationBinding.wrappedValue = false }
-                )
-            }
-            .onDisappear {
-                guard isPresented else { return }
-                presentationBinding.wrappedValue = false
-            }
+        BrowserSiteControlTrigger(
+            isPresented: presentationBinding,
+            blockedPopupNotice: configuration.page.blockedPopupState.notice
+        )
+        .popover(isPresented: presentationBinding, arrowEdge: .top) {
+            BrowserSiteControlPopover(
+                configuration: configuration,
+                dismiss: { presentationBinding.wrappedValue = false }
+            )
+        }
+        .onDisappear {
+            guard isPresented else { return }
+            presentationBinding.wrappedValue = false
+        }
     }
 
     private var presentationBinding: Binding<Bool> {

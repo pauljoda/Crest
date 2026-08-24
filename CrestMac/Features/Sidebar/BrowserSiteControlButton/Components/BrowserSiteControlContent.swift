@@ -16,6 +16,15 @@ struct BrowserSiteControlContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             BrowserSiteControlHeader(page: configuration.page)
+            if let notice = configuration.page.blockedPopupState.notice {
+                BrowserBlockedPopupSiteControlNotice(
+                    notice: notice,
+                    allow: {
+                        configuration.page.allowAutomaticPopupsForBlockedSite()
+                        permissionsExpansion = true
+                    }
+                )
+            }
             BrowserSiteQuickActions(
                 page: configuration.page,
                 dismiss: dismiss

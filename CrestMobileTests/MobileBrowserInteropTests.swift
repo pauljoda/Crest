@@ -408,6 +408,77 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
     }
 
+    func testAutomaticPopupBridgeBlocksCoalescesAndAllowsOnlyANewAttempt() async throws {
+        let context = try makePopupContext()
+        let origin = try XCTUnwrap(URL(string: "https://mobile-popups.crest.test/"))
+        let siteOrigin = try XCTUnwrap(BrowserSiteOrigin(url: origin))
+        context.opener.webView.frame = CGRect(x: 0, y: 0, width: 390, height: 700)
+        context.opener.webView.loadSimulatedRequest(
+            URLRequest(url: origin),
+            responseHTML: """
+                <!doctype html><html><body><script>
+                globalThis.results = [];
+                globalThis.tryPopup = () => {
+                  const result = window.open('about:blank') === null ? 'null' : 'window';
+                  globalThis.results.push(result);
+                  return result;
+                };
+                setTimeout(() => {
+                  globalThis.tryPopup();
+                  globalThis.tryPopup();
+                  globalThis.tryPopup();
+                }, 100);
+                </script></body></html>
+                """
+        )
+
+        try await waitUntil(timeout: 5) {
+            context.opener.blockedPopupState.notice?.status == .blocked
+        }
+        let blockedResults =
+            try await context.opener.webView.callAsyncJavaScript(
+                "return globalThis.results.join(',');",
+                arguments: [:],
+                in: nil,
+                contentWorld: .page
+            ) as? String
+        XCTAssertEqual(blockedResults, "null,null,null")
+        XCTAssertEqual(context.store.selectedSpace?.tabs.count, 1)
+        XCTAssertEqual(context.opener.blockedPopupState.indicationRevision, 1)
+
+        context.opener.allowAutomaticPopupsForBlockedSite()
+
+        XCTAssertEqual(
+            context.pages.permissionCenter.decision(
+                for: .popups,
+                origin: siteOrigin,
+                in: context.opener.spaceID
+            ),
+            .grantPersistently
+        )
+        XCTAssertEqual(
+            context.opener.blockedPopupState.notice?.status,
+            .allowedAwaitingRetry
+        )
+        XCTAssertEqual(context.store.selectedSpace?.tabs.count, 1)
+
+        let retryResult =
+            try await context.opener.webView.callAsyncJavaScript(
+                "return globalThis.tryPopup();",
+                arguments: [:],
+                in: nil,
+                contentWorld: .page
+            ) as? String
+        XCTAssertEqual(retryResult, "window")
+        try await waitUntil(timeout: 5) {
+            context.store.selectedSpace?.tabs.count == 2
+        }
+        XCTAssertNil(context.opener.blockedPopupState.notice)
+        XCTAssertTrue(context.pages.activePage?.wasOpenedAsPopup == true)
+
+        context.pages.reconcile(validTabIDs: [])
+    }
+
     func testAdoptedPopupWebViewIsTheOneRegisteredForItsPopupTab() throws {
         let popupURL = try XCTUnwrap(URL(string: "https://example.com/popup"))
         let context = try makePopupContext()
@@ -536,6 +607,35 @@ final class MobileBrowserInteropTests: XCTestCase {
         XCTAssertEqual(regular.store.selectedSpace?.tabs.count, 1)
         XCTAssertTrue(privateContext.pages.activePage?.wasOpenedAsPopup == true)
         XCTAssertFalse(regular.pages.activePage?.wasOpenedAsPopup == true)
+    }
+
+    func testBlockedPopupStateDoesNotLeakIntoAPrivateSession() throws {
+        let regular = try makePopupContext()
+        let privateContext = try makePopupContext(browsingMode: .privateBrowsing)
+        let origin = BrowserSiteOrigin(
+            scheme: "https",
+            host: "private-popups.example",
+            port: 443
+        )
+        var regularState = regular.opener.blockedPopupState
+        XCTAssertTrue(
+            regularState.recordBlockedAttempt(
+                documentIdentifier: "regular-document",
+                origin: origin
+            )
+        )
+        regular.opener.blockedPopupState = regularState
+
+        XCTAssertNotNil(regular.opener.blockedPopupState.notice)
+        XCTAssertNil(privateContext.opener.blockedPopupState.notice)
+        XCTAssertEqual(
+            privateContext.pages.permissionCenter.decision(
+                for: .popups,
+                origin: origin,
+                in: privateContext.opener.spaceID
+            ),
+            .ask
+        )
     }
 
     func testAPopupToAnotherApplicationsSchemeOpensNoTab() throws {

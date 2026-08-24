@@ -29,6 +29,7 @@ final class BrowserPage: NSObject {
     var committedNavigationCount = 0
     var completedNavigationCount = 0
     private(set) var navigationFailure: BrowserNavigationFailure?
+    var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
     var webContentFailureMessage: String?
@@ -115,6 +116,7 @@ final class BrowserPage: NSObject {
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
+    @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     @ObservationIgnored private var hostedNotificationMessageProxy: BrowserHostedWebNotificationScriptMessageProxy?
     @ObservationIgnored var hostedNotificationIdentifiers: Set<String> = []
@@ -357,6 +359,13 @@ final class BrowserPage: NSObject {
             }
         }
         if extensionBaseURL == nil {
+            if ownsUserContentController {
+                blockedPopupMessageProxy = BrowserBlockedPopupContentBridge.install(
+                    in: webView.configuration.userContentController
+                ) { [weak self] message in
+                    self?.receiveBlockedPopupMessage(message)
+                }
+            }
             geolocationCoordinator = BrowserGeolocationCoordinator(
                 webView: webView,
                 permissionCenter: permissionCenter,
@@ -655,6 +664,7 @@ final class BrowserPage: NSObject {
             chromeWebStoreMessageProxy = nil
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
+            blockedPopupMessageProxy = nil
             geolocationCoordinator = nil
             hostedNotificationMessageProxy = nil
             userActivityHandler = nil
@@ -702,6 +712,14 @@ final class BrowserPage: NSObject {
                 )
         }
         geolocationMessageProxy = nil
+        if blockedPopupMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserBlockedPopupContentBridge.messageHandlerName,
+                    contentWorld: BrowserBlockedPopupContentBridge.contentWorld
+                )
+        }
+        blockedPopupMessageProxy = nil
         geolocationCoordinator = nil
         if hostedNotificationMessageProxy != nil {
             webView.configuration.userContentController
@@ -1392,6 +1410,7 @@ final class BrowserPage: NSObject {
     }
 
     func prepareForNavigation(to url: URL?) {
+        beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
         if navigationContext?.iconMode == .automatic {
             let current = webView.url.flatMap(BrowserHistoryURL.normalized) ?? webView.url
@@ -1415,8 +1434,14 @@ final class BrowserPage: NSObject {
             origin.map {
                 permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
             } ?? .ask
-        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
+        let allowsAutomaticPopups =
             BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
+        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
+            allowsAutomaticPopups
+        recordPopupPermissionSynchronized(
+            allowsAutomaticPopups: allowsAutomaticPopups,
+            origin: origin
+        )
     }
 
     func recordNavigationFailure(

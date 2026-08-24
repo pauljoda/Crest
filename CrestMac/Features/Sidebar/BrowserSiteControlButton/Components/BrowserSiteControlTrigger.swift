@@ -2,32 +2,62 @@ import SwiftUI
 
 struct BrowserSiteControlTrigger: View {
     @Binding var isPresented: Bool
+    let blockedPopupNotice: BrowserBlockedPopupNotice?
 
     var body: some View {
         Button {
             isPresented.toggle()
         } label: {
-            Image(systemName: "slider.horizontal.3")
-                .font(
-                    .system(
-                        size: BrowserTabTrailingControlPolicy.glyphSize,
-                        weight: .medium
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(
+                        .system(
+                            size: BrowserTabTrailingControlPolicy.glyphSize,
+                            weight: .medium
+                        )
                     )
-                )
-                .frame(
-                    width: BrowserSiteControlLayoutPolicy.triggerSize.width,
-                    height: BrowserSiteControlLayoutPolicy.triggerSize.height
-                )
-                .contentShape(.rect)
+                if blockedPopupNotice != nil {
+                    Circle()
+                        .fill(.orange)
+                        .frame(width: 7, height: 7)
+                        .overlay {
+                            Circle().stroke(.background, lineWidth: 1)
+                        }
+                        .offset(x: 2, y: -1)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(
+                width: BrowserSiteControlLayoutPolicy.triggerSize.width,
+                height: BrowserSiteControlLayoutPolicy.triggerSize.height
+            )
+            .contentShape(.rect)
         }
         .buttonStyle(
             CrestChromeButtonStyle(
                 controlSize: BrowserSiteControlLayoutPolicy.triggerSize
             )
         )
-        .foregroundStyle(.secondary)
-        .accessibilityLabel("Site Controls")
+        .foregroundStyle(
+            blockedPopupNotice == nil ? Color.secondary : Color.orange
+        )
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier("browser-site-controls")
-        .help("Site Controls")
+        .help(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        guard let blockedPopupNotice else { return "Site Controls" }
+        return blockedPopupNotice.chromeAccessibilityLabel(
+            surfaceName: "Site Controls"
+        )
+    }
+
+    private var accessibilityHint: String {
+        guard blockedPopupNotice != nil else {
+            return "Opens controls for this website"
+        }
+        return "Opens the Automatic Pop-ups permission and retry guidance"
     }
 }

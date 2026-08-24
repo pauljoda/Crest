@@ -900,6 +900,15 @@ final class MobileBrowserPageStore:
         page.receiveGeolocationMessage(message)
     }
 
+    func routeBlockedPopupMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pagesByTabID.values.first(where: {
+                $0.webView === sourceWebView
+            })
+        else { return }
+        page.receiveBlockedPopupMessage(message)
+    }
+
     func goBack() {
         activePage?.goBack()
     }

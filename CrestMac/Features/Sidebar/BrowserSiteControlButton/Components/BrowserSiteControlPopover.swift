@@ -34,6 +34,11 @@ struct BrowserSiteControlPopover: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Site Controls")
         .accessibilityIdentifier("browser-site-controls-popover")
+        .onAppear {
+            if configuration.page.blockedPopupState.notice != nil {
+                isPermissionsExpanded = true
+            }
+        }
     }
 
     private var toolbarActions: [BrowserExtensionToolbarAction] {

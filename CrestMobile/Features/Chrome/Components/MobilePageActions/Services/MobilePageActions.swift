@@ -14,6 +14,7 @@ protocol MobilePageActions {
     var readerModeActionTitle: LocalizedStringResource { get }
     var readerModeState: BrowserReaderModeState { get }
     var pageZoomLabel: String { get }
+    var blockedPopupNotice: BrowserBlockedPopupNotice? { get }
 
     func goBack()
     func goForward()
@@ -30,6 +31,7 @@ protocol MobilePageActions {
     func zoomIn()
     func zoomOut()
     func resetZoom()
+    func allowAutomaticPopupsForBlockedSite()
     @discardableResult func copyPageLink() -> Bool
     @discardableResult func copyPageLinkAsMarkdown() -> Bool
     func printPage()

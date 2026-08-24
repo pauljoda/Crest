@@ -94,6 +94,10 @@ struct MobileSelectedPageActionPort: MobilePageActions {
         BrowserPageZoomPolicy.percentageLabel(for: activePage?.pageZoom ?? 1)
     }
 
+    var blockedPopupNotice: BrowserBlockedPopupNotice? {
+        activePage?.blockedPopupState.notice
+    }
+
     func goBack() {
         activePage?.goBack()
     }
@@ -155,6 +159,10 @@ struct MobileSelectedPageActionPort: MobilePageActions {
     func resetZoom() {
         guard activePage != nil else { return }
         pages.resetZoom()
+    }
+
+    func allowAutomaticPopupsForBlockedSite() {
+        activePage?.allowAutomaticPopupsForBlockedSite()
     }
 
     @discardableResult

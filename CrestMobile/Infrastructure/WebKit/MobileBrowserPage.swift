@@ -41,6 +41,7 @@ final class MobileBrowserPage: NSObject {
     var committedNavigationCount = 0
     private(set) var completedNavigationCount = 0
     private(set) var navigationFailure: BrowserNavigationFailure?
+    var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
     private(set) var showsProcessFailure = false
@@ -90,6 +91,7 @@ final class MobileBrowserPage: NSObject {
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
+    @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
@@ -299,6 +301,11 @@ final class MobileBrowserPage: NSObject {
                 }
         )
         if ownsUserContentController {
+            blockedPopupMessageProxy = BrowserBlockedPopupContentBridge.install(
+                in: webView.configuration.userContentController
+            ) { [weak self] message in
+                self?.receiveBlockedPopupMessage(message)
+            }
             geolocationMessageProxy = BrowserGeolocationContentBridge.install(
                 in: webView.configuration.userContentController
             ) { [weak self] message in
@@ -440,6 +447,7 @@ final class MobileBrowserPage: NSObject {
             linkPeekMessageProxy = nil
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
+            blockedPopupMessageProxy = nil
             geolocationCoordinator = nil
             userActivityHandler = nil
             return
@@ -477,6 +485,14 @@ final class MobileBrowserPage: NSObject {
                 )
         }
         geolocationMessageProxy = nil
+        if blockedPopupMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserBlockedPopupContentBridge.messageHandlerName,
+                    contentWorld: BrowserBlockedPopupContentBridge.contentWorld
+                )
+        }
+        blockedPopupMessageProxy = nil
         geolocationCoordinator = nil
         userActivityHandler = nil
     }
@@ -1123,6 +1139,7 @@ final class MobileBrowserPage: NSObject {
     }
 
     func prepareForNavigation(to url: URL?) {
+        beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
         if navigationContext?.iconMode == .automatic {
             let current = webView.url.flatMap(BrowserHistoryURL.normalized) ?? webView.url
@@ -1142,8 +1159,14 @@ final class MobileBrowserPage: NSObject {
             origin.map {
                 permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
             } ?? .ask
-        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
+        let allowsAutomaticPopups =
             BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
+        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
+            allowsAutomaticPopups
+        recordPopupPermissionSynchronized(
+            allowsAutomaticPopups: allowsAutomaticPopups,
+            origin: origin
+        )
     }
 
     /// True when Crest, not web content, asked for this navigation. Two signals

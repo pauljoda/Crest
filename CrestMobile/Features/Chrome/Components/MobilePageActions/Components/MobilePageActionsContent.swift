@@ -6,6 +6,36 @@ struct MobilePageActionsContent: View {
     var hideToolbar: (() -> Void)? = nil
 
     var body: some View {
+        if let notice = pages.blockedPopupNotice {
+            Section("Automatic Pop-ups") {
+                switch notice.status {
+                case .blocked:
+                    Button {
+                        pages.allowAutomaticPopupsForBlockedSite()
+                    } label: {
+                        Label(
+                            "Allow Automatic Pop-ups",
+                            systemImage: "macwindow.badge.plus"
+                        )
+                    }
+                    .accessibilityLabel(
+                        notice.allowActionAccessibilityLabel
+                    )
+                    .accessibilityHint(
+                        notice.allowActionAccessibilityHint
+                    )
+                    .accessibilityIdentifier("allow-blocked-automatic-popups")
+                case .allowedAwaitingRetry:
+                    Label(notice.title, systemImage: "checkmark.circle")
+                        .accessibilityLabel(
+                            Text(verbatim: "\(notice.title). \(notice.guidance)")
+                        )
+                    Text(notice.guidance)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+
         ControlGroup {
             if let url = pages.activeURL {
                 ShareLink(item: url) {

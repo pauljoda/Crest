@@ -250,6 +250,109 @@ final class BrowserNavigationPolicyTests: XCTestCase {
         }
     }
 
+    func testBlockedPopupStateCoalescesOneIndicationPerDocument() {
+        let origin = BrowserSiteOrigin(
+            scheme: "https",
+            host: "console.example",
+            port: 443
+        )
+        var state = BrowserBlockedPopupPageState()
+
+        XCTAssertTrue(
+            state.recordBlockedAttempt(
+                documentIdentifier: "document-a",
+                origin: origin
+            )
+        )
+        XCTAssertFalse(
+            state.recordBlockedAttempt(
+                documentIdentifier: "document-a",
+                origin: origin
+            )
+        )
+        XCTAssertFalse(
+            state.recordBlockedAttempt(
+                documentIdentifier: "spoofed-document-b",
+                origin: origin
+            ),
+            "A document cannot stack another indication by changing its payload."
+        )
+        XCTAssertEqual(state.indicationRevision, 1)
+        XCTAssertEqual(state.notice?.status, .blocked)
+
+        XCTAssertTrue(state.recordPermissionAllowed())
+        XCTAssertEqual(state.notice?.status, .allowedAwaitingRetry)
+        XCTAssertEqual(
+            state.indicationRevision,
+            1,
+            "Retry guidance updates the existing indication instead of announcing another."
+        )
+        XCTAssertTrue(state.recordPermissionBlockedAgain())
+        XCTAssertEqual(state.notice?.status, .blocked)
+        XCTAssertEqual(state.indicationRevision, 1)
+    }
+
+    func testBlockedPopupStateResetsWithoutLeakingAcrossPageInstances() {
+        let origin = BrowserSiteOrigin(
+            scheme: "https",
+            host: "console.example",
+            port: 443
+        )
+        var firstTab = BrowserBlockedPopupPageState()
+        var secondTab = BrowserBlockedPopupPageState()
+
+        XCTAssertTrue(
+            firstTab.recordBlockedAttempt(
+                documentIdentifier: "first-document",
+                origin: origin
+            )
+        )
+        XCTAssertNil(secondTab.notice, "A second tab starts without the first tab's state.")
+        XCTAssertFalse(firstTab.clearAfterAllowedPopup())
+        XCTAssertEqual(firstTab.notice?.status, .blocked)
+        XCTAssertTrue(firstTab.clearForNavigation())
+        XCTAssertNil(firstTab.notice)
+        XCTAssertNil(firstTab.documentIdentifier)
+
+        XCTAssertTrue(
+            secondTab.recordBlockedAttempt(
+                documentIdentifier: "second-document",
+                origin: origin
+            )
+        )
+        XCTAssertNil(firstTab.notice, "A later indication remains scoped to its own page.")
+        XCTAssertEqual(secondTab.indicationRevision, 1)
+    }
+
+    func testBlockedPopupPresentationNamesSiteAndExposesAllowAction() {
+        let notice = BrowserBlockedPopupNotice(
+            origin: BrowserSiteOrigin(
+                scheme: "https",
+                host: "vcenter.example",
+                port: 443
+            ),
+            status: .blocked
+        )
+
+        XCTAssertEqual(notice.title, "Pop-up blocked for vcenter.example")
+        XCTAssertEqual(
+            notice.chromeAccessibilityLabel(surfaceName: "Site Controls"),
+            "Pop-up blocked for vcenter.example. Site Controls"
+        )
+        XCTAssertEqual(
+            notice.allowActionAccessibilityLabel,
+            "Allow automatic pop-ups for vcenter.example"
+        )
+        XCTAssertTrue(notice.allowActionAccessibilityHint.contains("current Space"))
+
+        let allowed = BrowserBlockedPopupNotice(
+            origin: notice.origin,
+            status: .allowedAwaitingRetry
+        )
+        XCTAssertTrue(allowed.guidance.contains("Retry the action"))
+        XCTAssertTrue(allowed.guidance.contains("did not reopen"))
+    }
+
     func testExternalSchemesLeaveWebKitWhileItsOwnSchemesStay() throws {
         for address in [
             "https://example.com/page",
