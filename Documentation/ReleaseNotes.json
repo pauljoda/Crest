@@ -249,6 +249,14 @@
     "2026-08-24-split-view-customization": {
       "category": "new",
       "message": "Keep split views visible in collapsed folders and customize them with names, icons, emoji, and colors"
+    },
+    "2026-08-24-webpage-typing-reliability": {
+      "category": "fixed",
+      "message": "Keep typing and cursor placement reliable in website editors on Mac"
+    },
+    "2026-08-24-start-page-launch": {
+      "category": "fixed",
+      "message": "Show the Start Page on launch instead of a blank unloaded tab"
     }
   }
 }

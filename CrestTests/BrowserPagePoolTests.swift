@@ -402,12 +402,16 @@ final class BrowserPagePoolTests: XCTestCase {
     }
 
     func testBrowserPreparationOnlyLoadsTheRestoredTabWhenStartupOptsIn() async {
-        let selected = BrowserTab(title: "Selected", url: nil, placement: .current)
+        let selected = BrowserTab(
+            title: "Selected",
+            url: URL(string: "https://example.com/restored"),
+            placement: .current
+        )
         let space = makeSpace(tabs: [selected], selectedTabID: selected.id)
         let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
 
         for behavior in [
-            BrowserStartupBehavior.waitForTabSelection,
+            BrowserStartupBehavior.showStartPage,
             .lastActiveTab,
         ] {
             let browser = BrowserStore(
@@ -431,13 +435,54 @@ final class BrowserPagePoolTests: XCTestCase {
 
             XCTAssertEqual(
                 pages.activeTabID,
-                behavior.activatesRestoredTab ? selected.id : nil
+                behavior == .lastActiveTab ? selected.id : nil
             )
             XCTAssertEqual(
                 pages.retainedTabIDs,
-                behavior.activatesRestoredTab ? [selected.id] : []
+                behavior == .lastActiveTab ? [selected.id] : []
             )
         }
+    }
+
+    func testBrowserPreparationPresentsStartPageWithoutPersistingOverRestoredSelection() async
+        throws
+    {
+        let restored = BrowserTab(
+            title: "Restored",
+            url: try XCTUnwrap(URL(string: "https://example.com/restored")),
+            placement: .current
+        )
+        let space = makeSpace(tabs: [restored], selectedTabID: restored.id)
+        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let persistence = InMemoryBrowserSessionPersistence()
+        persistence.save(session)
+        let savedScopeCount = persistence.savedScopes.count
+        let browser = BrowserStore(session: session, persistence: persistence)
+        let pages = BrowserPagePool(
+            contentRuleListProvider: EmptyBrowserContentRuleListProvider()
+        )
+        let model = BrowserRootModel(
+            browser: browser,
+            pages: pages,
+            chrome: BrowserChromeState(),
+            spaceAccess: BrowserSpaceAccessController(),
+            windowState: nil,
+            startupBehavior: .showStartPage,
+            persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
+        )
+
+        await model.prepareBrowser()
+
+        XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
+        XCTAssertTrue(
+            try XCTUnwrap(browser.selectedSpace).tabs.contains {
+                $0.id == restored.id && $0.url == restored.url
+            }
+        )
+        XCTAssertNil(pages.activeTabID)
+        XCTAssertTrue(pages.retainedTabIDs.isEmpty)
+        XCTAssertEqual(persistence.session?.selectedTab?.id, restored.id)
+        XCTAssertEqual(persistence.savedScopes.count, savedScopeCount)
     }
 
     func testUnloadingAPinnedPageReleasesOnlyItsResidentWebViewAndCanRehydrate() {

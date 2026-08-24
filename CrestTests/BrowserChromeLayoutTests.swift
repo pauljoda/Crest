@@ -1505,20 +1505,20 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    func testStartupBehaviorDefaultsToWaitingForTabSelection() {
+    func testStartupBehaviorDefaultsToShowingStartPage() {
         let suiteName = "BrowserChromeLayoutTests.startup.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         XCTAssertEqual(
             BrowserStartupPreference.behavior(defaults: defaults),
-            .waitForTabSelection
+            .showStartPage
         )
 
         defaults.set("showStartPage", forKey: BrowserStartupPreference.key)
         XCTAssertEqual(
             BrowserStartupPreference.behavior(defaults: defaults),
-            .waitForTabSelection
+            .showStartPage
         )
 
         defaults.set(
@@ -1533,10 +1533,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
         defaults.set("invalid", forKey: BrowserStartupPreference.key)
         XCTAssertEqual(
             BrowserStartupPreference.behavior(defaults: defaults),
-            .waitForTabSelection
+            .showStartPage
         )
 
-        XCTAssertFalse(BrowserStartupBehavior.waitForTabSelection.activatesRestoredTab)
+        XCTAssertEqual(BrowserStartupBehavior.showStartPage.title, "Show Start Page")
+        XCTAssertEqual(
+            BrowserStartupBehavior.lastActiveTab.title,
+            "Open Last Active Tab"
+        )
+        XCTAssertFalse(BrowserStartupBehavior.showStartPage.activatesRestoredTab)
         XCTAssertTrue(BrowserStartupBehavior.lastActiveTab.activatesRestoredTab)
     }
 

@@ -60,6 +60,10 @@ struct BrowserGeneralSettingsPane: View {
                 preferences: pageZoomPreferences
             )
 
+            #if os(macOS)
+                BrowserAutomaticQuoteSubstitutionSettingsSection()
+            #endif
+
             #if os(iOS)
                 Section("Layout") {
                     Toggle(
@@ -241,6 +245,34 @@ struct BrowserGeneralSettingsPane: View {
         }
     }
 }
+
+#if os(macOS)
+    /// The supported app-level override for WebKit's macOS Smart Quotes policy.
+    /// WebKit initializes the text checker once per process, so the persisted
+    /// preference intentionally advertises its relaunch boundary in the UI.
+    struct BrowserAutomaticQuoteSubstitutionSettingsSection: View {
+        static let controlIdentifier =
+            "automatic-quote-substitution-toggle"
+
+        @AppStorage(BrowserAutomaticQuoteSubstitutionPreference.key)
+        private var isEnabled =
+            BrowserAutomaticQuoteSubstitutionPreference.defaultIsEnabled
+
+        var body: some View {
+            Section("Typing") {
+                Toggle(
+                    "Use smart quotes on webpages",
+                    isOn: $isEnabled
+                )
+                .accessibilityIdentifier(Self.controlIdentifier)
+
+                CrestFormFootnote(
+                    "Smart quotes can interfere with some website editors. Changes take effect the next time Crest opens."
+                )
+            }
+        }
+    }
+#endif
 
 /// The single adaptive presentation of Crest's global page-zoom baseline.
 /// Both platform settings shells route through `BrowserGeneralSettingsPane`, so

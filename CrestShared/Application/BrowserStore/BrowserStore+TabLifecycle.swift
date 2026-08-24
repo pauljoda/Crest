@@ -5,13 +5,35 @@ import Foundation
 extension BrowserStore {
     @discardableResult
     func openNewTab() -> TabID? {
+        guard let result = selectOrCreateStartPageDraft() else { return nil }
+        if result.wasCreated {
+            persist(scope: .core)
+        } else {
+            persist(syncUrgency: .coalesced, scope: .core)
+        }
+        return result.tabID
+    }
+
+    /// Presents the Start Page before the person chooses a restored tab.
+    ///
+    /// Launch presentation is intentionally runtime-only. The durable session
+    /// keeps its restored selection, so merely opening and closing Crest does
+    /// not turn the Start Page draft into the next "last active tab."
+    @discardableResult
+    func presentStartPageForLaunch() -> TabID? {
+        selectOrCreateStartPageDraft()?.tabID
+    }
+
+    private func selectOrCreateStartPageDraft() -> (
+        tabID: TabID,
+        wasCreated: Bool
+    )? {
         guard let space = selectedSpace else { return nil }
         if let draft = space.currentTabs.first(where: \.isStartPage) {
             session.selectTab(draft.id)
-            persist(syncUrgency: .coalesced, scope: .core)
-            return draft.id
+            return (draft.id, false)
         }
-        let tabID = session.openTab(
+        guard let tabID = session.openTab(
             title: BrowserTab.startPageTitle,
             url: nil,
             symbol: BrowserTab.startPageSymbol,
@@ -20,9 +42,8 @@ extension BrowserStore {
                 after: space.selectedTabID,
                 in: space
             )
-        )
-        persist(scope: .core)
-        return tabID
+        ) else { return nil }
+        return (tabID, true)
     }
 
     @discardableResult

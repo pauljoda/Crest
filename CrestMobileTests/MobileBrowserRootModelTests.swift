@@ -245,7 +245,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             spaces: [space],
             selectedSpaceID: space.id,
             browsingMode: .privateBrowsing,
-            startupBehavior: .waitForTabSelection
+            startupBehavior: .showStartPage
         )
         fixture.model.presentationChanged(to: .compact)
 
@@ -355,7 +355,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         let fixture = makeFixture(
             spaces: [source, destination],
             selectedSpaceID: source.id,
-            startupBehavior: .waitForTabSelection
+            startupBehavior: .showStartPage
         )
         let sourceAssignment = BrowserTabRuntimeAssignment(
             tabID: try XCTUnwrap(source.selectedTabID),

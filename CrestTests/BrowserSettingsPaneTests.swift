@@ -6,6 +6,45 @@ import XCTest
 @MainActor
 final class BrowserSettingsPaneTests: XCTestCase {
 
+    func testAutomaticQuoteSubstitutionDefaultsOffOnDesktop() throws {
+        let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        BrowserAutomaticQuoteSubstitutionPreference.registerDefault(
+            defaults: defaults
+        )
+
+        XCTAssertFalse(
+            BrowserAutomaticQuoteSubstitutionPreference.defaultIsEnabled
+        )
+        XCTAssertFalse(
+            defaults.bool(
+                forKey: BrowserAutomaticQuoteSubstitutionPreference.key
+            )
+        )
+    }
+
+    func testAutomaticQuoteSubstitutionPreservesAnExplicitDesktopOverride() throws {
+        let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(
+            true,
+            forKey: BrowserAutomaticQuoteSubstitutionPreference.key
+        )
+
+        BrowserAutomaticQuoteSubstitutionPreference.registerDefault(
+            defaults: defaults
+        )
+
+        XCTAssertTrue(
+            defaults.bool(
+                forKey: BrowserAutomaticQuoteSubstitutionPreference.key
+            )
+        )
+    }
+
     // MARK: - Panes
 
     /// The three panes moved out of the macOS shell in A4a are shared source. This
@@ -91,6 +130,22 @@ final class BrowserSettingsPaneTests: XCTestCase {
         XCTAssertTrue(
             BrowserSettingsDestination.general.matchesSearchQuery(
                 "zoom",
+                locale: Locale(identifier: "en_US")
+            )
+        )
+    }
+
+    func testGeneralSettingsPresentsTheDesktopSmartQuotesControl() {
+        let section = BrowserAutomaticQuoteSubstitutionSettingsSection()
+
+        XCTAssertEqual(
+            BrowserAutomaticQuoteSubstitutionSettingsSection.controlIdentifier,
+            "automatic-quote-substitution-toggle"
+        )
+        XCTAssertNotNil(section.body)
+        XCTAssertTrue(
+            BrowserSettingsDestination.general.matchesSearchQuery(
+                "smart quotes",
                 locale: Locale(identifier: "en_US")
             )
         )

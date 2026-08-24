@@ -227,7 +227,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
             chrome: BrowserChromeState(sidebarIsPresented: true),
             spaceAccess: BrowserSpaceAccessController(),
             windowState: nil,
-            startupBehavior: .waitForTabSelection,
+            startupBehavior: .showStartPage,
             persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
         )
 

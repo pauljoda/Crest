@@ -98,7 +98,7 @@ enum BrowserRootPreviewFixture {
             chrome: makeChrome(state: state),
             spaceAccess: BrowserSpaceAccessController(),
             windowState: makeWindowState(session: browser.session),
-            startupBehavior: .waitForTabSelection,
+            startupBehavior: .showStartPage,
             persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
         )
     }

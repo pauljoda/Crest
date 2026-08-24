@@ -32,6 +32,7 @@ struct CrestApp: App {
         let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
             launchEnvironment
         )
+        BrowserAutomaticQuoteSubstitutionPreference.registerDefault()
         BrowserWebKitFeatureFlagStore.configureForLaunch(
             usesIsolatedLaunch: usesIsolatedLaunch
         )

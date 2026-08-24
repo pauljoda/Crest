@@ -2,12 +2,9 @@ import Foundation
 
 enum BrowserStartupBehavior: String, CaseIterable, Identifiable, Sendable {
     case lastActiveTab
-    // Preserve the legacy raw value so existing preferences migrate without a
-    // one-time surprise. The old behavior created a new Start Page; the current
-    // behavior leaves the restored selection unloaded until the user chooses it.
-    case waitForTabSelection = "showStartPage"
+    case showStartPage
 
-    static let defaultBehavior = BrowserStartupBehavior.waitForTabSelection
+    static let defaultBehavior = BrowserStartupBehavior.showStartPage
 
     var id: Self { self }
 
@@ -15,8 +12,8 @@ enum BrowserStartupBehavior: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .lastActiveTab:
             "Open Last Active Tab"
-        case .waitForTabSelection:
-            "Wait for Tab Selection"
+        case .showStartPage:
+            "Show Start Page"
         }
     }
 

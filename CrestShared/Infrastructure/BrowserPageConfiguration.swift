@@ -1,6 +1,25 @@
 import Foundation
 import WebKit
 
+/// Crest's platform default for typographic quote replacement in webpage editors.
+///
+/// WebKit on macOS reads this exact app-domain key before consulting the system
+/// Smart Quotes preference. Desktop webpage editors are more likely to expect
+/// literal punctuation, while iOS keeps the system's touch-keyboard behavior.
+enum BrowserAutomaticQuoteSubstitutionPreference {
+    static let key = "WebAutomaticQuoteSubstitutionEnabled"
+
+    #if os(macOS)
+        static let defaultIsEnabled = false
+    #else
+        static let defaultIsEnabled = true
+    #endif
+
+    static func registerDefault(defaults: UserDefaults = .standard) {
+        defaults.register(defaults: [key: defaultIsEnabled])
+    }
+}
+
 @MainActor
 enum BrowserPageConfiguration {
     /// Builds the configuration every Crest page shares.

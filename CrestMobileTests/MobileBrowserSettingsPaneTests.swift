@@ -6,6 +6,25 @@ import XCTest
 @MainActor
 final class MobileBrowserSettingsPaneTests: XCTestCase {
 
+    func testAutomaticQuoteSubstitutionRetainsTheMobileDefault() throws {
+        let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        BrowserAutomaticQuoteSubstitutionPreference.registerDefault(
+            defaults: defaults
+        )
+
+        XCTAssertTrue(
+            BrowserAutomaticQuoteSubstitutionPreference.defaultIsEnabled
+        )
+        XCTAssertTrue(
+            defaults.bool(
+                forKey: BrowserAutomaticQuoteSubstitutionPreference.key
+            )
+        )
+    }
+
     /// Compact-width Forms must not ask `ViewThatFits` to choose again while the
     /// Space name field updates the preview. UIKit reports that feedback loop as
     /// a collection-view layout crash during renaming.

@@ -95,9 +95,12 @@ extension BrowserRootModel {
         await pages.restoreExtensions(in: browser.session)
         await pages.prepareContentBlocking()
         hasRestoredExtensions = true
-        address = browser.selectedTab?.url?.absoluteString ?? ""
-        if startupBehavior.activatesRestoredTab {
+        switch startupBehavior {
+        case .lastActiveTab:
             synchronizeSelection()
+        case .showStartPage:
+            browser.presentStartPageForLaunch()
+            address = ""
         }
     }
 

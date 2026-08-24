@@ -29,6 +29,7 @@ struct CrestMobileApp: App {
         let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
             launchEnvironment
         )
+        BrowserAutomaticQuoteSubstitutionPreference.registerDefault()
         presentsInstalledApplicationUI =
             BrowserLaunchIsolationPolicy.presentsInstalledApplicationUI(
                 launchEnvironment
@@ -130,7 +131,7 @@ struct CrestMobileApp: App {
             )
         startupBehavior =
             launchEnvironment.presentsShowcaseSession
-            ? .waitForTabSelection
+            ? .showStartPage
             : usesIsolatedLaunch
                 ? .lastActiveTab
                 : BrowserStartupPreference.behavior()

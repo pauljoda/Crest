@@ -18,7 +18,7 @@ struct MobileBrowserRootView: View {
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController(),
         windowState: BrowserWindowStateStore? = nil,
         suspendsCompactPagePresentation: Bool = false,
-        startupBehavior: BrowserStartupBehavior = .waitForTabSelection,
+        startupBehavior: BrowserStartupBehavior = .showStartPage,
         togglePrivateBrowsing: @escaping () -> Void,
         closePrivateBrowsing: @escaping () -> Void
     ) {

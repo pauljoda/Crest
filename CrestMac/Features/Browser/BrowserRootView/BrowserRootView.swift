@@ -22,7 +22,7 @@ struct BrowserRootView: View {
         windowState: BrowserWindowStateStore? = nil,
         spaceSettingsPresentation: BrowserSpaceSettingsPresentationState =
             BrowserSpaceSettingsPresentationState(),
-        startupBehavior: BrowserStartupBehavior = .waitForTabSelection,
+        startupBehavior: BrowserStartupBehavior = .showStartPage,
         shortcuts: BrowserShortcutStore? = nil,
         initialSidebarWidth: Double? = nil,
         persistSidebarWidth: @escaping (Double) -> Void =

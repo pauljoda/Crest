@@ -5,7 +5,7 @@ import XCTest
 final class MobileBrowserWindowSceneModelTests: XCTestCase {
     func testStartupWaitsInTheTabViewerUnlessLastActiveTabIsEnabled() {
         for behavior in [
-            BrowserStartupBehavior.waitForTabSelection,
+            BrowserStartupBehavior.showStartPage,
             .lastActiveTab,
         ] {
             let rootBrowser = BrowserStore(

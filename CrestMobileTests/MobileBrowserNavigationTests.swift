@@ -2561,7 +2561,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
                 authenticator: BrowserPreviewAuthenticator(result: false)
             ),
             windowState: nil,
-            startupBehavior: .waitForTabSelection,
+            startupBehavior: .showStartPage,
             persistedSidebarWidth: MobileBrowserRootLayout.defaultRegularSidebarWidth
         )
     }
