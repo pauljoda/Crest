@@ -1215,6 +1215,177 @@ final class BrowserSyncTests: XCTestCase {
         XCTAssertEqual(space.liveSplitGroupIDs, [groupID])
     }
 
+    func testSplitGroupMetadataProjectsAndMaterializesWithMembership() throws {
+        let groupID = SplitGroupID(rawValue: fixedUUID(1_190))
+        let metadata = BrowserSplitGroupMetadata(
+            id: groupID,
+            customTitle: "Synced Research",
+            titleModifiedAt: fixedDate(300),
+            customIconSymbol: BrowserIconSymbol.symbol(forEmoji: "🛰️"),
+            iconModifiedAt: fixedDate(301),
+            tint: BrowserSpaceBrandColor(red: 0.2, green: 0.5, blue: 0.8),
+            tintModifiedAt: fixedDate(302)
+        )
+        var session = splitGroupSession(memberships: [groupID, groupID])
+        session.spaces[0].splitGroups = [metadata]
+        let spaceID = session.spaces[0].id
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(1_191))
+
+        try journal.stage(session: session, at: fixedDate(400))
+        let projected = try XCTUnwrap(
+            journal.records.compactMap { record -> BrowserSyncSpace? in
+                guard case .space(let space)? = record.payload else {
+                    return nil
+                }
+                return space
+            }.first
+        )
+        let materialized = try journal.materializedSession(applyingTo: session)
+
+        XCTAssertEqual(projected.splitGroups, [metadata])
+        XCTAssertEqual(
+            try XCTUnwrap(materialized.space(id: spaceID)).splitGroups,
+            [metadata]
+        )
+    }
+
+    func testOlderClientSpaceRecordCannotStripSplitGroupMetadata() throws {
+        let groupID = SplitGroupID(rawValue: fixedUUID(1_192))
+        let metadata = BrowserSplitGroupMetadata(
+            id: groupID,
+            customTitle: "Preserved",
+            titleModifiedAt: fixedDate(300)
+        )
+        var session = splitGroupSession(memberships: [groupID, groupID])
+        session.spaces[0].splitGroups = [metadata]
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(1_193))
+        try journal.stage(session: session, at: fixedDate(400))
+        let aware = try XCTUnwrap(
+            journal.records.compactMap { record -> BrowserSyncSpace? in
+                guard case .space(let space)? = record.payload else {
+                    return nil
+                }
+                return space
+            }.first
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(aware)
+            ) as? [String: Any]
+        )
+        object.removeValue(forKey: "splitGroups")
+        let legacy = try JSONDecoder().decode(
+            BrowserSyncSpace.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertNil(legacy.splitGroups)
+        let awareRecord = BrowserSyncRecord.save(
+            .space(aware),
+            version: BrowserSyncVersion(
+                logicalClock: 10,
+                deviceID: fixedUUID(1_194)
+            )
+        )
+        let legacyRecord = BrowserSyncRecord.save(
+            .space(legacy),
+            version: BrowserSyncVersion(
+                logicalClock: 100,
+                deviceID: fixedUUID(1_195)
+            )
+        )
+        var first = BrowserSyncJournal(deviceID: fixedUUID(1_196))
+        var second = BrowserSyncJournal(deviceID: fixedUUID(1_197))
+
+        try first.merge([awareRecord])
+        try first.merge([legacyRecord])
+        try second.merge([legacyRecord])
+        try second.merge([awareRecord])
+
+        XCTAssertEqual(first.records, second.records)
+        let resolved = try XCTUnwrap(
+            first.records.compactMap { record -> BrowserSyncSpace? in
+                guard case .space(let space)? = record.payload else {
+                    return nil
+                }
+                return space
+            }.first
+        )
+        XCTAssertEqual(resolved.splitGroups, [metadata])
+    }
+
+    func testConcurrentGroupRenameAndTintMergePerField() throws {
+        let groupID = SplitGroupID(rawValue: fixedUUID(1_198))
+        let firstTint = BrowserSpaceBrandColor(red: 0.1, green: 0.2, blue: 0.3)
+        let latestTint = BrowserSpaceBrandColor(red: 0.7, green: 0.5, blue: 0.2)
+        var session = splitGroupSession(memberships: [groupID, groupID])
+        session.spaces[0].splitGroups = [
+            BrowserSplitGroupMetadata(
+                id: groupID,
+                customTitle: "Original",
+                titleModifiedAt: fixedDate(100),
+                tint: firstTint,
+                tintModifiedAt: fixedDate(100)
+            )
+        ]
+        var journal = BrowserSyncJournal(deviceID: fixedUUID(1_199))
+        try journal.stage(session: session, at: fixedDate(200))
+        let base = try XCTUnwrap(
+            journal.records.compactMap { record -> BrowserSyncSpace? in
+                guard case .space(let space)? = record.payload else {
+                    return nil
+                }
+                return space
+            }.first
+        )
+        var renamed = base
+        renamed.splitGroups = [
+            BrowserSplitGroupMetadata(
+                id: groupID,
+                customTitle: "Renamed Elsewhere",
+                titleModifiedAt: fixedDate(500),
+                tint: firstTint,
+                tintModifiedAt: fixedDate(100)
+            )
+        ]
+        var tinted = base
+        tinted.splitGroups = [
+            BrowserSplitGroupMetadata(
+                id: groupID,
+                customTitle: "Original",
+                titleModifiedAt: fixedDate(100),
+                tint: latestTint,
+                tintModifiedAt: fixedDate(600)
+            )
+        ]
+        let renamedRecord = BrowserSyncRecord.save(
+            .space(renamed),
+            version: BrowserSyncVersion(
+                logicalClock: 20,
+                deviceID: fixedUUID(1_200)
+            )
+        )
+        let tintedRecord = BrowserSyncRecord.save(
+            .space(tinted),
+            version: BrowserSyncVersion(
+                logicalClock: 30,
+                deviceID: fixedUUID(1_201)
+            )
+        )
+        let resolved = try BrowserSyncMergeResolver.resolve(
+            renamedRecord,
+            tintedRecord
+        )
+        guard case .space(let resolvedSpace)? = resolved.payload else {
+            return XCTFail("Expected a Space payload")
+        }
+        let result = try XCTUnwrap(resolvedSpace.splitGroups?.first)
+
+        XCTAssertEqual(result.customTitle, "Renamed Elsewhere")
+        XCTAssertEqual(result.titleModifiedAt, fixedDate(500))
+        XCTAssertEqual(result.tint, latestTint)
+        XCTAssertEqual(result.tintModifiedAt, fixedDate(600))
+    }
+
     /// The field-strip mitigation. A device that predates split view re-saves a
     /// tab it merely activated: its record has a fresher logical clock and a
     /// fresher activation, but its encoder never wrote `splitGroupID` and its
@@ -1387,10 +1558,16 @@ final class BrowserSyncTests: XCTestCase {
     func testALoneSplitMemberSurvivesUntilItsSiblingsArrive() throws {
         let groupID = SplitGroupID(rawValue: fixedUUID(1_160))
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(1_161))
-        let cloudSession = splitGroupSession(
+        var cloudSession = splitGroupSession(
             memberships: [groupID, groupID, groupID],
             spaceID: cloudSpaceID
         )
+        let metadata = BrowserSplitGroupMetadata(
+            id: groupID,
+            customTitle: "Arriving Pair",
+            titleModifiedAt: fixedDate(800)
+        )
+        cloudSession.spaces[0].splitGroups = [metadata]
         let memberIDs = try XCTUnwrap(cloudSession.space(id: cloudSpaceID)).tabs.map(\.id)
         var cloud = BrowserSyncJournal(deviceID: fixedUUID(1_162))
         try cloud.stage(session: cloudSession, at: fixedDate(900))
@@ -1418,6 +1595,11 @@ final class BrowserSyncTests: XCTestCase {
 
         let lonely = try XCTUnwrap(afterOne.space(id: cloudSpaceID))
         XCTAssertEqual(lonely.tabs.map(\.splitGroupID), [groupID])
+        XCTAssertEqual(
+            lonely.splitGroups,
+            [metadata],
+            "Space metadata must wait safely for later member records."
+        )
         XCTAssertNil(
             lonely.splitGroup(containing: try XCTUnwrap(memberIDs.first)),
             "A run of one must not present as a split"
@@ -1447,6 +1629,7 @@ final class BrowserSyncTests: XCTestCase {
         )
         XCTAssertEqual(reconstituted.splitGroupMembers(of: groupID).map(\.id), memberIDs)
         XCTAssertEqual(reconstituted.liveSplitGroupIDs, [groupID])
+        XCTAssertEqual(reconstituted.splitGroups, [metadata])
     }
 
     func testArchivePayloadCarryingSplitMembershipFailsValidation() throws {

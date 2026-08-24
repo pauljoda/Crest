@@ -586,9 +586,11 @@ extension BrowserSession {
     ) -> Bool {
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            !emoji.isEmpty
+            let normalizedEmoji = BrowserIconSymbol.normalizedEmoji(emoji)
         else { return false }
-        spaces[spaceIndex].tabs[tabIndex].symbol = BrowserTab.symbol(forEmoji: emoji)
+        spaces[spaceIndex].tabs[tabIndex].symbol = BrowserTab.symbol(
+            forEmoji: normalizedEmoji
+        )
         spaces[spaceIndex].tabs[tabIndex].faviconData = nil
         spaces[spaceIndex].tabs[tabIndex].faviconURL = nil
         spaces[spaceIndex].tabs[tabIndex].iconAccent = nil
@@ -1030,6 +1032,79 @@ extension BrowserSession {
             tabs[index].markPositionModified(at: date)
         }
         spaces[spaceIndex].tabs = tabs
+        let retainedGroupIDs = Set(tabs.compactMap(\.splitGroupID))
+        spaces[spaceIndex].splitGroups.removeAll {
+            !retainedGroupIDs.contains($0.id)
+        }
+    }
+
+    @discardableResult
+    mutating func setSplitGroupTitle(
+        _ title: String?,
+        groupID: SplitGroupID,
+        in spaceID: SpaceID,
+        at date: Date = .now
+    ) -> Bool {
+        updateSplitGroupMetadata(groupID: groupID, in: spaceID) {
+            let resolved = BrowserTab.resolvedCustomTitle(title)
+            guard $0.customTitle != resolved else { return false }
+            $0.setTitle(resolved, at: date)
+            return true
+        }
+    }
+
+    @discardableResult
+    mutating func setSplitGroupEmojiIcon(
+        _ emoji: String?,
+        groupID: SplitGroupID,
+        in spaceID: SpaceID,
+        at date: Date = .now
+    ) -> Bool {
+        let normalized = emoji.flatMap(BrowserIconSymbol.normalizedEmoji)
+        if emoji != nil, normalized == nil { return false }
+        return updateSplitGroupMetadata(groupID: groupID, in: spaceID) {
+            guard $0.emojiIcon != normalized else { return false }
+            $0.setEmojiIcon(normalized, at: date)
+            return true
+        }
+    }
+
+    @discardableResult
+    mutating func setSplitGroupTint(
+        _ tint: BrowserSpaceBrandColor?,
+        groupID: SplitGroupID,
+        in spaceID: SpaceID,
+        at date: Date = .now
+    ) -> Bool {
+        updateSplitGroupMetadata(groupID: groupID, in: spaceID) {
+            guard $0.tint != tint else { return false }
+            $0.setTint(tint, at: date)
+            return true
+        }
+    }
+
+    private mutating func updateSplitGroupMetadata(
+        groupID: SplitGroupID,
+        in spaceID: SpaceID,
+        mutation: (inout BrowserSplitGroupMetadata) -> Bool
+    ) -> Bool {
+        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
+            spaces[spaceIndex].liveSplitGroupIDs.contains(groupID)
+        else { return false }
+        let metadataIndex = spaces[spaceIndex].splitGroups.firstIndex {
+            $0.id == groupID
+        }
+        var metadata =
+            metadataIndex.map {
+                spaces[spaceIndex].splitGroups[$0]
+            } ?? BrowserSplitGroupMetadata(id: groupID)
+        guard mutation(&metadata) else { return false }
+        if let metadataIndex {
+            spaces[spaceIndex].splitGroups[metadataIndex] = metadata
+        } else {
+            spaces[spaceIndex].splitGroups.append(metadata)
+        }
+        return true
     }
 
     /// The contiguous run of same-group tabs around `index`, or just that one

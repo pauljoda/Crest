@@ -11,17 +11,20 @@ struct BrowserNavigationHistoryMenu: View {
     let action: (BrowserNavigationHistoryItem) -> Void
 
     var body: some View {
-        if items.isEmpty {
-            Text(emptyTitle)
-        } else {
-            ForEach(items) { item in
-                Button {
-                    action(item)
-                } label: {
-                    Label(item.title, systemImage: "globe")
+        Group {
+            if items.isEmpty {
+                Text(emptyTitle)
+            } else {
+                ForEach(items) { item in
+                    Button {
+                        action(item)
+                    } label: {
+                        Label(item.title, systemImage: "globe")
+                    }
+                    .help(item.url.absoluteString)
                 }
-                .help(item.url.absoluteString)
             }
         }
+        .crestMenuActionLabelStyle()
     }
 }

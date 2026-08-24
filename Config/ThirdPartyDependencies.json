@@ -8,6 +8,16 @@
       "notice": "ThirdParty/Sparkle-LICENSE.txt"
     }
   ],
+  "bundledData": [
+    {
+      "identity": "unicode-emoji-test",
+      "name": "Unicode Emoji Test Data",
+      "version": "17.0",
+      "license": "Unicode License v3",
+      "notice": "ThirdParty/Unicode-LICENSE.txt",
+      "source": "https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt"
+    }
+  ],
   "developmentTools": {
     "Periphery": "MIT",
     "XcodeGen": "MIT"

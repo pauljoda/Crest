@@ -35,7 +35,10 @@ struct BrowserSidebarAddressField<
     @ViewBuilder
     var body: some View {
         if hasFieldContextMenu {
-            field.contextMenu { fieldContextMenu }
+            field.contextMenu {
+                fieldContextMenu
+                    .crestMenuActionLabelStyle()
+            }
         } else {
             field
         }

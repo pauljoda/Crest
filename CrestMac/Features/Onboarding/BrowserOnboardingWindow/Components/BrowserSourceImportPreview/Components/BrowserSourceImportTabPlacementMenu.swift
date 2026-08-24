@@ -6,21 +6,25 @@ struct BrowserSourceImportTabPlacementMenu: View {
 
     var body: some View {
         Menu {
-            Button("Pinned", systemImage: "pin.fill") {
-                setPlacement(tab.id, .pinned)
+            Group {
+                Button("Pinned", systemImage: "pin.fill") {
+                    setPlacement(tab.id, .pinned)
+                }
+                Button("Saved", systemImage: "bookmark.fill") {
+                    setPlacement(tab.id, .saved)
+                }
+                Button("Open", systemImage: "rectangle") {
+                    setPlacement(tab.id, .current)
+                }
             }
-            Button("Saved", systemImage: "bookmark.fill") {
-                setPlacement(tab.id, .saved)
-            }
-            Button("Open", systemImage: "rectangle") {
-                setPlacement(tab.id, .current)
-            }
+            .crestMenuActionLabelStyle()
         } label: {
             Image(systemName: "ellipsis")
                 .frame(width: 22, height: 22)
         }
         .menuIndicator(.hidden)
         .menuStyle(.borderlessButton)
+        .crestMenuActionLabelStyle()
         .fixedSize()
         .accessibilityLabel(Text("Tab placement for \(tab.title)"))
         .accessibilityValue(Text(placementTitle))

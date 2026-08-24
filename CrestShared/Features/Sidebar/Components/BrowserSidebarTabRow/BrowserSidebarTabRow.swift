@@ -40,6 +40,7 @@ struct BrowserSidebarTabRow: View {
     @State private var isDropTargeted = false
     @State private var dropTargetHeight = CrestLayout.sidebarRowHeight
     @State private var renameRequest: BrowserTabRuntimeAssignment?
+    @State private var iconRequest: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
     @FocusState private var isTitleFocused: Bool
 
@@ -57,10 +58,12 @@ struct BrowserSidebarTabRow: View {
         .onChange(of: runtimeAssignment) { _, assignment in
             guard renameRequest != assignment else { return }
             cancelTitleEditing()
+            iconRequest = nil
         }
         .onChange(of: configuration.isCurrentAndUnlocked) { _, isAvailable in
             guard !isAvailable else { return }
             cancelTitleEditing()
+            iconRequest = nil
         }
     }
 
@@ -95,8 +98,12 @@ struct BrowserSidebarTabRow: View {
             isRenaming: isRenaming,
             draftTitle: $draftTitle,
             isTitleFocused: $isTitleFocused,
+            isChoosingIcon: iconPresentation,
             activate: activate,
             beginRenaming: beginRenaming,
+            beginChangingIcon: beginChangingIcon,
+            setEmojiIcon: setRequestedTabEmoji,
+            resetIcon: clearRequestedTabIcon,
             commitTitle: commitTitle,
             cancelTitleEditing: cancelTitleEditing,
             dismissFromAuxiliaryClick: dismissFromAuxiliaryClick
@@ -120,6 +127,47 @@ struct BrowserSidebarTabRow: View {
         Task { @MainActor in
             isTitleFocused = true
         }
+    }
+
+    private func beginChangingIcon() {
+        guard configuration.isCurrentAndUnlocked else { return }
+        iconRequest = runtimeAssignment
+    }
+
+    private var iconPresentation: Binding<Bool> {
+        Binding {
+            iconRequest == runtimeAssignment
+                && configuration.isCurrentAndUnlocked
+        } set: { isPresented in
+            if isPresented {
+                beginChangingIcon()
+            } else {
+                iconRequest = nil
+            }
+        }
+    }
+
+    private func setRequestedTabEmoji(_ emoji: String) {
+        guard let request = iconRequest,
+            request == runtimeAssignment,
+            configuration.isCurrentAndUnlocked
+        else { return }
+        browser.setTabEmojiIcon(
+            emoji,
+            for: request.tabID,
+            matching: configuration.assignment
+        )
+    }
+
+    private func clearRequestedTabIcon() {
+        guard let request = iconRequest,
+            request == runtimeAssignment,
+            configuration.isCurrentAndUnlocked
+        else { return }
+        browser.clearTabIcon(
+            for: request.tabID,
+            matching: configuration.assignment
+        )
     }
 
     private func commitTitle() {

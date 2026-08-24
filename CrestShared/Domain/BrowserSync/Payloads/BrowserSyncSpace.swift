@@ -11,6 +11,10 @@ struct BrowserSyncSpace: Codable, Equatable, Sendable {
     var accessPolicy: BrowserSpaceAccessPolicy
     var isSavedTabsExpanded: Bool
     var savedTabsExpansionModifiedAt: Date?
+    /// `nil` means a client predating split-group customization wrote this
+    /// payload and had no opinion. A new client writes an array, including an
+    /// empty one when the last customized group was explicitly dissolved.
+    var splitGroups: [BrowserSplitGroupMetadata]?
     var orderToken: String
 
     init(
@@ -24,6 +28,7 @@ struct BrowserSyncSpace: Codable, Equatable, Sendable {
         accessPolicy: BrowserSpaceAccessPolicy = .open,
         isSavedTabsExpanded: Bool = true,
         savedTabsExpansionModifiedAt: Date? = nil,
+        splitGroups: [BrowserSplitGroupMetadata]? = nil,
         orderToken: String
     ) {
         self.id = id
@@ -31,12 +36,14 @@ struct BrowserSyncSpace: Codable, Equatable, Sendable {
         self.name = name
         self.symbol = symbol
         self.accent = accent
-        self.branding = branding?.normalized()
+        self.branding =
+            branding?.normalized()
             ?? .legacy(accent: accent, symbol: symbol)
         self.browsingPreferences = browsingPreferences
         self.accessPolicy = accessPolicy
         self.isSavedTabsExpanded = isSavedTabsExpanded
         self.savedTabsExpansionModifiedAt = savedTabsExpansionModifiedAt
+        self.splitGroups = splitGroups.map(BrowserSplitGroupMetadata.normalized)
         self.orderToken = orderToken
     }
 
@@ -51,6 +58,7 @@ struct BrowserSyncSpace: Codable, Equatable, Sendable {
         case accessPolicy
         case isSavedTabsExpanded
         case savedTabsExpansionModifiedAt
+        case splitGroups
         case orderToken
     }
 
@@ -61,26 +69,34 @@ struct BrowserSyncSpace: Codable, Equatable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         symbol = try container.decode(String.self, forKey: .symbol)
         accent = try container.decode(SpaceAccent.self, forKey: .accent)
-        branding = try container.decodeIfPresent(
-            BrowserSpaceBranding.self,
-            forKey: .branding
-        ) ?? .legacy(accent: accent, symbol: symbol)
-        browsingPreferences = try container.decodeIfPresent(
-            BrowserSpaceBrowsingPreferences.self,
-            forKey: .browsingPreferences
-        ) ?? .default
-        accessPolicy = try container.decodeIfPresent(
-            BrowserSpaceAccessPolicy.self,
-            forKey: .accessPolicy
-        ) ?? .open
-        isSavedTabsExpanded = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .isSavedTabsExpanded
-        ) ?? true
+        branding =
+            try container.decodeIfPresent(
+                BrowserSpaceBranding.self,
+                forKey: .branding
+            ) ?? .legacy(accent: accent, symbol: symbol)
+        browsingPreferences =
+            try container.decodeIfPresent(
+                BrowserSpaceBrowsingPreferences.self,
+                forKey: .browsingPreferences
+            ) ?? .default
+        accessPolicy =
+            try container.decodeIfPresent(
+                BrowserSpaceAccessPolicy.self,
+                forKey: .accessPolicy
+            ) ?? .open
+        isSavedTabsExpanded =
+            try container.decodeIfPresent(
+                Bool.self,
+                forKey: .isSavedTabsExpanded
+            ) ?? true
         savedTabsExpansionModifiedAt = try container.decodeIfPresent(
             Date.self,
             forKey: .savedTabsExpansionModifiedAt
         )
+        splitGroups = try container.decodeIfPresent(
+            [BrowserSplitGroupMetadata].self,
+            forKey: .splitGroups
+        ).map(BrowserSplitGroupMetadata.normalized)
         orderToken = try container.decode(String.self, forKey: .orderToken)
     }
 }

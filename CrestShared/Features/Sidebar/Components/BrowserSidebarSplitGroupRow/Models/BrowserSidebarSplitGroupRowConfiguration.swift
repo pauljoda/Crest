@@ -64,6 +64,20 @@ struct BrowserSidebarSplitGroupRowConfiguration {
         BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
     }
 
+    var runtimeAssignment: BrowserSplitGroupRuntimeAssignment {
+        BrowserSplitGroupRuntimeAssignment(
+            groupID: groupID,
+            spaceID: spaceID,
+            profileID: profileID
+        )
+    }
+
+    var metadata: BrowserSplitGroupMetadata {
+        browser.space(matching: assignment)?
+            .splitGroupMetadata(for: groupID)
+            ?? BrowserSplitGroupMetadata(id: groupID)
+    }
+
     /// Selecting any member presents the whole split, so the container reads as
     /// presented whenever the Space's selection is one of its members.
     var isPresented: Bool {
@@ -150,4 +164,32 @@ struct BrowserSidebarSplitGroupRowConfiguration {
         else { return false }
         return space.tabs.contains { $0.splitGroupID == groupID }
     }
+}
+
+struct BrowserSplitGroupRuntimeAssignment: Equatable, Sendable {
+    let groupID: SplitGroupID
+    let spaceID: SpaceID
+    let profileID: UUID
+
+    var spaceAssignment: BrowserSpaceRuntimeAssignment {
+        BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
+    }
+}
+
+struct BrowserSidebarSplitGroupRowInteractionContext {
+    let isRenaming: Bool
+    let draftTitle: Binding<String>
+    let isTitleFocused: FocusState<Bool>.Binding
+    let isChoosingIcon: Binding<Bool>
+    let isChoosingTint: Binding<Bool>
+    let tint: Binding<BrowserSpaceBrandColor>
+    let activate: () -> Void
+    let beginRenaming: () -> Void
+    let beginChangingIcon: () -> Void
+    let beginChangingTint: () -> Void
+    let setEmojiIcon: (String) -> Void
+    let resetIcon: () -> Void
+    let commitTitle: () -> Void
+    let cancelTitleEditing: () -> Void
+    let resetTint: () -> Void
 }

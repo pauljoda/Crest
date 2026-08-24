@@ -47,23 +47,26 @@ struct BrowserReloadControl: View {
 
             if isDeveloperMode {
                 Menu {
-                    Button("Reload", systemImage: "arrow.clockwise") {
-                        performAnimatedReload(reload)
+                    Group {
+                        Button("Reload", systemImage: "arrow.clockwise") {
+                            performAnimatedReload(reload)
+                        }
+                        Button(
+                            "Reload (Ignore Cache)",
+                            systemImage: "arrow.trianglehead.2.clockwise.rotate.90"
+                        ) {
+                            performAnimatedReload(reloadFromOrigin)
+                        }
+                        Divider()
+                        Button(
+                            "Clear Cookies, Storage, and Reload",
+                            systemImage: "trash"
+                        ) {
+                            clearAndReload()
+                        }
+                        .disabled(isClearingSiteData)
                     }
-                    Button(
-                        "Reload (Ignore Cache)",
-                        systemImage: "arrow.trianglehead.2.clockwise.rotate.90"
-                    ) {
-                        performAnimatedReload(reloadFromOrigin)
-                    }
-                    Divider()
-                    Button(
-                        "Clear Cookies, Storage, and Reload",
-                        systemImage: "trash"
-                    ) {
-                        clearAndReload()
-                    }
-                    .disabled(isClearingSiteData)
+                    .crestMenuActionLabelStyle()
                 } label: {
                     Image(systemName: isClearingSiteData ? "progress.indicator" : "chevron.down")
                         .font(.system(size: 8, weight: .bold))
@@ -73,6 +76,7 @@ struct BrowserReloadControl: View {
                         )
                         .contentShape(.rect)
                 }
+                .crestMenuActionLabelStyle()
                 .menuIndicator(.hidden)
                 .menuStyle(.button)
                 .buttonStyle(CrestChromeButtonStyle(controlSize: menuControlSize))

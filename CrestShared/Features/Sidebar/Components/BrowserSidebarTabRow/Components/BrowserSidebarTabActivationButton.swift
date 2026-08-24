@@ -16,6 +16,7 @@ struct BrowserSidebarTabActivationButton: View {
     /// line leaves it at zero: its container has already placed it.
     var leadingInset: CGFloat = 0
     let restoreSavedLocation: (() -> Void)?
+    let iconCustomization: BrowserIconCustomizationPresentation
     let select: () -> Void
 
     var body: some View {
@@ -25,6 +26,17 @@ struct BrowserSidebarTabActivationButton: View {
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
         .contentShape(.rect)
+        .overlay(alignment: .leading) {
+            Color.clear
+                .frame(
+                    width: metrics.faviconSlot?.width ?? 18,
+                    height: metrics.faviconSlot?.glyphSize ?? 18
+                )
+                .padding(.leading, leadingInset)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .browserIconCustomizationPopover(iconCustomization)
+        }
         .accessibilityLabel(tab.displayTitle)
         .accessibilityValue(
             BrowserChromeAccessibility.tabValue(isLoaded: isLoaded)

@@ -1183,6 +1183,164 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertNil(decoded.faviconData)
     }
 
+    func testEmojiNormalizationKeepsOneCompleteGraphemeCluster() {
+        XCTAssertEqual(
+            BrowserIconSymbol.normalizedEmoji("👨🏽‍💻trailing text"),
+            "👨🏽‍💻"
+        )
+        XCTAssertEqual(BrowserIconSymbol.normalizedEmoji("🇺🇸"), "🇺🇸")
+        XCTAssertEqual(BrowserIconSymbol.normalizedEmoji("1️⃣"), "1️⃣")
+        XCTAssertEqual(BrowserIconSymbol.normalizedEmoji("👩‍👩‍👧‍👦"), "👩‍👩‍👧‍👦")
+        XCTAssertNil(BrowserIconSymbol.normalizedEmoji("ordinary text"))
+    }
+
+    func testSharedIconPickerCatalogKeepsEveryOfficialSequenceComplete() {
+        let choices = BrowserTabEmojiChoices.matching(
+            "",
+            maximumVersion: 17
+        )
+
+        XCTAssertFalse(choices.isEmpty)
+        XCTAssertEqual(
+            choices.count,
+            BrowserTabEmojiChoices.catalogMetadata.fullyQualifiedCount
+        )
+        XCTAssertEqual(BrowserTabEmojiChoices.catalogMetadata.unicodeVersion, "17.0")
+        XCTAssertEqual(
+            BrowserTabEmojiChoices.catalogMetadata.sourceURL,
+            "https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt"
+        )
+        XCTAssertEqual(
+            BrowserTabEmojiChoices.catalogMetadata.sourceSHA256,
+            "1d8a944f88d7952f7ef7c5167fef3c67995bcae24543949710231b03a201acda"
+        )
+        XCTAssertEqual(Set(choices.map(\.id)).count, choices.count)
+        for category in BrowserEmojiCategory.allCases {
+            XCTAssertFalse(
+                BrowserTabEmojiChoices.choices(
+                    in: category,
+                    maximumVersion: 17
+                ).isEmpty,
+                "Missing choices for \(category.rawValue)"
+            )
+        }
+        for choice in choices {
+            XCTAssertEqual(choice.emoji.count, 1, choice.name)
+            XCTAssertEqual(
+                BrowserIconSymbol.normalizedEmoji(choice.emoji),
+                choice.emoji,
+                choice.name
+            )
+        }
+    }
+
+    func testSharedIconPickerSearchesOfficialNamesAndExactToneVariants() {
+        XCTAssertTrue(
+            BrowserTabEmojiChoices.matching(
+                "technologist: medium skin tone",
+                maximumVersion: 17
+            ).contains { $0.emoji == "👩🏽‍💻" }
+        )
+        XCTAssertTrue(
+            BrowserTabEmojiChoices.matching("star", maximumVersion: 17)
+                .contains { $0.emoji == "⭐" }
+        )
+        XCTAssertTrue(
+            BrowserTabEmojiChoices.matching(
+                "rainbow flag",
+                maximumVersion: 17
+            )
+            .contains { $0.emoji == "🏳️‍🌈" }
+        )
+        XCTAssertTrue(
+            BrowserTabEmojiChoices.matching(
+                "handshake: dark skin tone, light skin tone",
+                maximumVersion: 17
+            ).contains { $0.emoji == "🫱🏿‍🫲🏻" }
+        )
+    }
+
+    func testSharedIconPickerGroupsToneVariantsWithoutDiscardingThem() throws {
+        let handshake = try XCTUnwrap(
+            BrowserTabEmojiChoices.choices(
+                in: .people,
+                maximumVersion: 17
+            ).first { $0.name == "Handshake" }
+        )
+
+        XCTAssertEqual(handshake.emoji, "🤝")
+        XCTAssertTrue(handshake.variants.contains { $0.emoji == "🫱🏿‍🫲🏻" })
+        XCTAssertTrue(handshake.keywords.contains("dark skin tone"))
+    }
+
+    func testSharedIconPickerFiltersNewEmojiByPlatformRelease() {
+        let emoji16 = BrowserEmojiPlatformSupport.maximumVersion(
+            for: OperatingSystemVersion(
+                majorVersion: 26,
+                minorVersion: 1,
+                patchVersion: 0
+            )
+        )
+        let emoji17 = BrowserEmojiPlatformSupport.maximumVersion(
+            for: OperatingSystemVersion(
+                majorVersion: 26,
+                minorVersion: 4,
+                patchVersion: 0
+            )
+        )
+        let nextMajor = BrowserEmojiPlatformSupport.maximumVersion(
+            for: OperatingSystemVersion(
+                majorVersion: 27,
+                minorVersion: 0,
+                patchVersion: 0
+            )
+        )
+
+        XCTAssertEqual(emoji16, 16)
+        XCTAssertEqual(emoji17, 17)
+        XCTAssertEqual(nextMajor, 17)
+        XCTAssertFalse(
+            BrowserTabEmojiChoices.matching(
+                "distorted face",
+                maximumVersion: emoji16
+            ).contains { $0.emoji == "🫪" }
+        )
+        XCTAssertTrue(
+            BrowserTabEmojiChoices.matching(
+                "distorted face",
+                maximumVersion: emoji17
+            ).contains { $0.emoji == "🫪" }
+        )
+    }
+
+    func testComposedEmojiPersistsWithoutScalarTruncation() throws {
+        var session = BrowserSession.preview
+        let tab = try XCTUnwrap(session.selectedTab)
+        let emoji = "👨🏽‍💻"
+
+        XCTAssertTrue(
+            session.setTabEmojiIcon(
+                emoji,
+                tabID: tab.id,
+                in: session.selectedSpaceID
+            )
+        )
+
+        let decoded = try JSONDecoder().decode(
+            BrowserSession.self,
+            from: JSONEncoder().encode(session)
+        )
+        XCTAssertEqual(decoded.selectedTab?.emojiIcon, emoji)
+        XCTAssertEqual(decoded.selectedTab?.emojiIcon?.count, 1)
+    }
+
+    func testMacUsesTheNativeCharacterPaletteForEmojiCustomization() {
+        XCTAssertEqual(
+            BrowserNativeEmojiPickerPresentation.current,
+            .characterPalette
+        )
+    }
+
     func testClearingAnIconReturnsTheTabToAutomaticCurrentURLUpdates() throws {
         var session = BrowserSession.preview
         let tab = try XCTUnwrap(session.selectedTab)

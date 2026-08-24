@@ -7,6 +7,7 @@ struct PortableSpace: Codable, Equatable, Sendable {
     let branding: BrowserSpaceBranding?
     let folders: [PortableFolder]
     let tabs: [PortableTab]
+    let splitGroups: [PortableSplitGroupMetadata]?
     let archivedTabs: [PortableArchivedTab]
     let history: [PortableHistoryEntry]
     let browsingPreferences: BrowserSpaceBrowsingPreferences
@@ -19,6 +20,7 @@ struct PortableSpace: Codable, Equatable, Sendable {
         branding = space.branding
         folders = space.folders.map(PortableFolder.init)
         tabs = space.tabs.map(PortableTab.init)
+        splitGroups = space.splitGroups.map(PortableSplitGroupMetadata.init)
         archivedTabs = space.archivedTabs.map(PortableArchivedTab.init)
         history = space.history.map(PortableHistoryEntry.init)
         browsingPreferences = space.browsingPreferences
@@ -68,6 +70,12 @@ struct PortableSpace: Codable, Equatable, Sendable {
             throw BrowserPortableArchiveError.invalidContents
         }
 
+        let sourceSplitGroupIDs = Set(tabs.compactMap(\.splitGroupID))
+        let splitGroupIDsBySourceID = Dictionary(
+            uniqueKeysWithValues: sourceSplitGroupIDs.map {
+                ($0, SplitGroupID())
+            }
+        )
         var tabIDsBySourceID: [UUID: TabID] = [:]
         var materializedTabs: [BrowserTab] = []
         materializedTabs.reserveCapacity(max(tabs.count, 1))
@@ -83,7 +91,8 @@ struct PortableSpace: Codable, Equatable, Sendable {
                 }
             }
             let materialized = try tab.materialize(
-                folderIDsBySourceID: folderIDsBySourceID
+                folderIDsBySourceID: folderIDsBySourceID,
+                splitGroupIDsBySourceID: splitGroupIDsBySourceID
             )
             tabIDsBySourceID[tab.id] = materialized.id
             materializedTabs.append(materialized)
@@ -91,6 +100,22 @@ struct PortableSpace: Codable, Equatable, Sendable {
 
         if materializedTabs.isEmpty {
             materializedTabs = [BrowserTab.startPage()]
+        }
+        guard
+            BrowserSplitGroupNormalizer.normalized(materializedTabs)
+                == materializedTabs
+        else {
+            throw BrowserPortableArchiveError.invalidContents
+        }
+
+        var seenSplitGroupMetadataIDs: Set<UUID> = []
+        let materializedSplitGroups = try (splitGroups ?? []).map { metadata in
+            guard seenSplitGroupMetadataIDs.insert(metadata.id).inserted,
+                let groupID = splitGroupIDsBySourceID[metadata.id]
+            else {
+                throw BrowserPortableArchiveError.invalidContents
+            }
+            return try metadata.materialize(id: groupID)
         }
 
         var seenArchivedTabIDs: Set<UUID> = []
@@ -123,6 +148,7 @@ struct PortableSpace: Codable, Equatable, Sendable {
             branding: branding,
             folders: folderTree.foldersInDisplayOrder,
             tabs: materializedTabs,
+            splitGroups: materializedSplitGroups,
             archivedTabs: materializedArchive,
             history: materializedHistory,
             browsingPreferences: browsingPreferences,
@@ -167,5 +193,58 @@ struct PortableSpace: Codable, Equatable, Sendable {
             }
             .prefix(BrowserSession.maximumHistoryEntriesPerSpace)
             .map(\.self)
+    }
+}
+
+/// Portable copy of group identity. Group IDs are source UUIDs in an archive
+/// and are remapped alongside tab membership on import, so importing the same
+/// archive twice cannot alias two live groups.
+struct PortableSplitGroupMetadata: Codable, Equatable, Sendable {
+    let id: UUID
+    let customTitle: String?
+    let titleModifiedAt: Date?
+    let customIconSymbol: String?
+    let iconModifiedAt: Date?
+    let tint: BrowserSpaceBrandColor?
+    let tintModifiedAt: Date?
+
+    init(_ metadata: BrowserSplitGroupMetadata) {
+        id = metadata.id.rawValue
+        customTitle = metadata.customTitle
+        titleModifiedAt = metadata.titleModifiedAt
+        customIconSymbol = metadata.customIconSymbol
+        iconModifiedAt = metadata.iconModifiedAt
+        tint = metadata.tint
+        tintModifiedAt = metadata.tintModifiedAt
+    }
+
+    func materialize(id: SplitGroupID) throws -> BrowserSplitGroupMetadata {
+        if let customTitle {
+            try ArchiveValidation.requireText(
+                customTitle,
+                maximumLength: ArchiveLimits.maximumTabTitleLength
+            )
+        }
+        if let customIconSymbol {
+            try ArchiveValidation.requireText(
+                customIconSymbol,
+                maximumLength: ArchiveLimits.maximumSymbolLength
+            )
+            guard BrowserIconSymbol.emoji(from: customIconSymbol) != nil else {
+                throw BrowserPortableArchiveError.invalidContents
+            }
+        }
+        for date in [titleModifiedAt, iconModifiedAt, tintModifiedAt] {
+            if let date { try ArchiveValidation.requireDate(date) }
+        }
+        return BrowserSplitGroupMetadata(
+            id: id,
+            customTitle: customTitle,
+            titleModifiedAt: titleModifiedAt,
+            customIconSymbol: customIconSymbol,
+            iconModifiedAt: iconModifiedAt,
+            tint: tint,
+            tintModifiedAt: tintModifiedAt
+        )
     }
 }

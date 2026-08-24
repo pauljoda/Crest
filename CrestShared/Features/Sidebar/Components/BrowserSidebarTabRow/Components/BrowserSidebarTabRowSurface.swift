@@ -107,7 +107,8 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             unload: configuration.unload,
             pullNewIcon: configuration.pullNewIcon,
             restoreSavedLocation: configuration.restoreSavedLocation,
-            renameTab: interaction.beginRenaming
+            renameTab: interaction.beginRenaming,
+            changeIcon: interaction.beginChangingIcon
         )
         .tint(.primary)
         .onAppear {

@@ -13,13 +13,15 @@ enum BrowserSyncMergeResolver {
         }
 
         if let tombstone = first.tombstone,
-           case let .tab(tab)? = second.payload,
-           tab.lastActivatedAt > tombstone.deletedAt {
+            case .tab(let tab)? = second.payload,
+            tab.lastActivatedAt > tombstone.deletedAt
+        {
             return second
         }
         if let tombstone = second.tombstone,
-           case let .tab(tab)? = first.payload,
-           tab.lastActivatedAt > tombstone.deletedAt {
+            case .tab(let tab)? = first.payload,
+            tab.lastActivatedAt > tombstone.deletedAt
+        {
             return first
         }
 
@@ -29,18 +31,24 @@ enum BrowserSyncMergeResolver {
         }
 
         switch (firstPayload, secondPayload) {
-        case let (.space(firstSpace), .space(secondSpace)):
+        case (.space(let firstSpace), .space(let secondSpace)):
             var merged = newer.payload?.spaceValue ?? firstSpace
             if let latestDisclosure = latestSavedTabsDisclosure(
                 firstSpace,
                 secondSpace
             ) {
                 merged.isSavedTabsExpanded = latestDisclosure.isSavedTabsExpanded
-                merged.savedTabsExpansionModifiedAt = latestDisclosure
+                merged.savedTabsExpansionModifiedAt =
+                    latestDisclosure
                     .savedTabsExpansionModifiedAt
             }
+            merged.splitGroups = mergedSplitGroups(
+                firstSpace.splitGroups,
+                secondSpace.splitGroups,
+                prefersFirst: newer.version == first.version
+            )
             return BrowserSyncRecord.save(.space(merged), version: newer.version)
-        case let (.folder(firstFolder), .folder(secondFolder)):
+        case (.folder(let firstFolder), .folder(let secondFolder)):
             var merged = newer.payload?.folderValue ?? firstFolder
             if let latestDisclosure = latestFolderDisclosure(
                 firstFolder,
@@ -50,12 +58,13 @@ enum BrowserSyncMergeResolver {
                 merged.collapseModifiedAt = latestDisclosure.collapseModifiedAt
             }
             return BrowserSyncRecord.save(.folder(merged), version: newer.version)
-        case let (.tab(firstTab), .tab(secondTab)):
+        case (.tab(let firstTab), .tab(let secondTab)):
             var merged = newer.payload?.tabValue ?? firstTab
             merged.lastActivatedAt = max(firstTab.lastActivatedAt, secondTab.lastActivatedAt)
             if let latestPosition = latestPosition(firstTab, secondTab) {
                 merged.placement = latestPosition.placement
-                merged.folderID = latestPosition.placement == .saved
+                merged.folderID =
+                    latestPosition.placement == .saved
                     ? latestPosition.folderID
                     : nil
                 merged.orderToken = latestPosition.orderToken
@@ -108,7 +117,7 @@ enum BrowserSyncMergeResolver {
                 merged.titleModifiedAt = latestTitle.titleModifiedAt
             }
             return BrowserSyncRecord.save(.tab(merged), version: newer.version)
-        case let (.history(firstHistory), .history(secondHistory)):
+        case (.history(let firstHistory), .history(let secondHistory)):
             var merged = newer.payload?.historyValue ?? firstHistory
             merged = BrowserSyncHistory(
                 id: merged.id,
@@ -133,7 +142,7 @@ enum BrowserSyncMergeResolver {
             first.savedTabsExpansionModifiedAt,
             second.savedTabsExpansionModifiedAt
         ) {
-        case let (firstDate?, secondDate?) where firstDate != secondDate:
+        case (let firstDate?, let secondDate?) where firstDate != secondDate:
             firstDate > secondDate ? first : second
         case (_?, nil):
             first
@@ -144,12 +153,45 @@ enum BrowserSyncMergeResolver {
         }
     }
 
+    /// Preserves the field when an older client writes a newer Space record,
+    /// while letting an explicit empty array from a capable client clear it.
+    /// When two capable devices both edit the same group, membership follows
+    /// the newer Space record and each retained group's fields merge by their
+    /// own wall-clock stamps.
+    private static func mergedSplitGroups(
+        _ first: [BrowserSplitGroupMetadata]?,
+        _ second: [BrowserSplitGroupMetadata]?,
+        prefersFirst: Bool
+    ) -> [BrowserSplitGroupMetadata]? {
+        switch (first, second) {
+        case (nil, nil):
+            return nil
+        case (let groups?, nil), (nil, let groups?):
+            return groups
+        case (let first?, let second?):
+            let preferred = prefersFirst ? first : second
+            let fallback = prefersFirst ? second : first
+            let fallbackByID = Dictionary(
+                uniqueKeysWithValues: fallback.map { ($0.id, $0) }
+            )
+            return preferred.map { metadata in
+                guard let older = fallbackByID[metadata.id] else {
+                    return metadata
+                }
+                return BrowserSplitGroupMetadata.merged(
+                    preferred: metadata,
+                    fallback: older
+                )
+            }
+        }
+    }
+
     private static func latestFolderDisclosure(
         _ first: BrowserSyncFolder,
         _ second: BrowserSyncFolder
     ) -> BrowserSyncFolder? {
         switch (first.collapseModifiedAt, second.collapseModifiedAt) {
-        case let (firstDate?, secondDate?) where firstDate != secondDate:
+        case (let firstDate?, let secondDate?) where firstDate != secondDate:
             firstDate > secondDate ? first : second
         case (_?, nil):
             first
@@ -165,7 +207,7 @@ enum BrowserSyncMergeResolver {
         _ second: BrowserSyncTab
     ) -> BrowserSyncTab? {
         switch (first.positionModifiedAt, second.positionModifiedAt) {
-        case let (firstDate?, secondDate?) where firstDate != secondDate:
+        case (let firstDate?, let secondDate?) where firstDate != secondDate:
             firstDate > secondDate ? first : second
         case (_?, nil):
             first
@@ -181,7 +223,7 @@ enum BrowserSyncMergeResolver {
         _ second: BrowserSyncTab
     ) -> BrowserSyncTab? {
         switch (first.titleModifiedAt, second.titleModifiedAt) {
-        case let (firstDate?, secondDate?) where firstDate != secondDate:
+        case (let firstDate?, let secondDate?) where firstDate != secondDate:
             firstDate > secondDate ? first : second
         case (_?, nil):
             first

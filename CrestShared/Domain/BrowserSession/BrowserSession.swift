@@ -309,6 +309,13 @@ extension BrowserSession {
                 branding: source.branding,
                 folders: repairedFolders,
                 tabs: repairedTabs,
+                // Metadata is keyed by the stable group ID and may legitimately
+                // arrive before its tab records in a CloudKit batch. Integrity
+                // repair normalizes duplicates but does not prune an orphan;
+                // explicit user mutations own dissolution cleanup.
+                splitGroups: BrowserSplitGroupMetadata.normalized(
+                    source.splitGroups
+                ),
                 archivedTabs: repairedArchive,
                 history: Array(source.history.prefix(Self.maximumHistoryEntriesPerSpace)),
                 browsingPreferences: source.browsingPreferences,

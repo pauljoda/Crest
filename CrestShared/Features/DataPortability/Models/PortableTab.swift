@@ -8,6 +8,7 @@ struct PortableTab: Codable, Equatable, Sendable {
     let symbol: String
     let placement: TabPlacement
     let folderID: UUID?
+    let splitGroupID: UUID?
     let lastActivatedAt: Date
 
     init(_ tab: BrowserTab) {
@@ -24,11 +25,13 @@ struct PortableTab: Codable, Equatable, Sendable {
         symbol = tab.symbol
         placement = tab.placement
         folderID = tab.folderID?.rawValue
+        splitGroupID = tab.splitGroupID?.rawValue
         lastActivatedAt = tab.lastActivatedAt
     }
 
     func materialize(
-        folderIDsBySourceID: [UUID: FolderID]
+        folderIDsBySourceID: [UUID: FolderID],
+        splitGroupIDsBySourceID: [UUID: SplitGroupID]
     ) throws -> BrowserTab {
         try ArchiveValidation.requireText(title, maximumLength: ArchiveLimits.maximumTabTitleLength)
         try ArchiveValidation.requireText(symbol, maximumLength: ArchiveLimits.maximumSymbolLength)
@@ -63,6 +66,9 @@ struct PortableTab: Codable, Equatable, Sendable {
             faviconData: nil,
             placement: placement,
             folderID: materializedFolderID,
+            splitGroupID: splitGroupID.flatMap {
+                splitGroupIDsBySourceID[$0]
+            },
             lastActivatedAt: lastActivatedAt
         )
     }

@@ -34,35 +34,41 @@ struct BrowserFolderOrganizationMenuContent: View {
         }
 
         Menu("Move to Folder", systemImage: "folder.badge.gearshape") {
-            Button("Top Level", systemImage: "rectangle.topthird.inset.filled") {
-                performIfCurrent {
-                    browser.moveFolder(
-                        folder.id,
-                        matching: assignment.spaceAssignment,
-                        into: nil
-                    )
-                }
-            }
-            .disabled(folder.parentID == nil)
-
-            if !moveDestinations.isEmpty {
-                Divider()
-                ForEach(moveDestinations) { destination in
-                    Button(
-                        destination.path,
-                        systemImage: destination.node.folder.symbol
-                    ) {
-                        performIfCurrent {
-                            browser.moveFolder(
-                                folder.id,
-                                matching: assignment.spaceAssignment,
-                                into: destination.node.id
-                            )
-                        }
+            Group {
+                Button(
+                    "Top Level",
+                    systemImage: "rectangle.topthird.inset.filled"
+                ) {
+                    performIfCurrent {
+                        browser.moveFolder(
+                            folder.id,
+                            matching: assignment.spaceAssignment,
+                            into: nil
+                        )
                     }
-                    .disabled(folder.parentID == destination.node.id)
+                }
+                .disabled(folder.parentID == nil)
+
+                if !moveDestinations.isEmpty {
+                    Divider()
+                    ForEach(moveDestinations) { destination in
+                        Button(
+                            destination.path,
+                            systemImage: destination.node.folder.symbol
+                        ) {
+                            performIfCurrent {
+                                browser.moveFolder(
+                                    folder.id,
+                                    matching: assignment.spaceAssignment,
+                                    into: destination.node.id
+                                )
+                            }
+                        }
+                        .disabled(folder.parentID == destination.node.id)
+                    }
                 }
             }
+            .crestMenuActionLabelStyle()
         }
 
         Divider()

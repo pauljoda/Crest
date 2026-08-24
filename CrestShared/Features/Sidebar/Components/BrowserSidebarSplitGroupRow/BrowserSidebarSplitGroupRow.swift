@@ -38,11 +38,41 @@ struct BrowserSidebarSplitGroupRow: View {
     /// decides *whether* and *which*, the host decides what appears.
     let select: (TabID) -> Void
 
+    @State private var renameRequest: BrowserSplitGroupRuntimeAssignment?
+    @State private var iconRequest: BrowserSplitGroupRuntimeAssignment?
+    @State private var tintRequest: BrowserSplitGroupRuntimeAssignment?
+    @State private var draftTitle = ""
+    @FocusState private var isTitleFocused: Bool
+
     var body: some View {
-        BrowserSidebarSplitGroupRowContent(configuration: configuration)
-            .modifier(
-                BrowserSidebarSplitGroupRowSurface(configuration: configuration)
+        BrowserSidebarSplitGroupRowContent(
+            configuration: configuration,
+            interaction: interaction
+        )
+        .modifier(
+            BrowserSidebarSplitGroupRowSurface(
+                configuration: configuration,
+                interaction: interaction
             )
+        )
+        .popover(isPresented: tintPresentation, arrowEdge: .trailing) {
+            BrowserFolderColorPicker(
+                color: interaction.tint,
+                title: "Split View Color",
+                showsReset: configuration.metadata.tint != nil,
+                resetTitle: "Use Default Color",
+                reset: interaction.resetTint
+            )
+            .presentationCompactAdaptation(.popover)
+        }
+        .onChange(of: configuration.runtimeAssignment) { _, assignment in
+            guard renameRequest != assignment else { return }
+            clearDeferredActions()
+        }
+        .onChange(of: configuration.isCurrentAndUnlocked) { _, available in
+            guard !available else { return }
+            clearDeferredActions()
+        }
     }
 
     private var configuration: BrowserSidebarSplitGroupRowConfiguration {
@@ -65,5 +95,153 @@ struct BrowserSidebarSplitGroupRow: View {
             hasVisibleFollowingRow: hasVisibleFollowingRow,
             select: select
         )
+    }
+
+    private var interaction: BrowserSidebarSplitGroupRowInteractionContext {
+        BrowserSidebarSplitGroupRowInteractionContext(
+            isRenaming: isRenaming,
+            draftTitle: $draftTitle,
+            isTitleFocused: $isTitleFocused,
+            isChoosingIcon: iconPresentation,
+            isChoosingTint: tintPresentation,
+            tint: tintBinding,
+            activate: activate,
+            beginRenaming: beginRenaming,
+            beginChangingIcon: beginChangingIcon,
+            beginChangingTint: beginChangingTint,
+            setEmojiIcon: setRequestedEmoji,
+            resetIcon: clearRequestedIcon,
+            commitTitle: commitTitle,
+            cancelTitleEditing: cancelTitleEditing,
+            resetTint: resetTint
+        )
+    }
+
+    private var isRenaming: Bool {
+        renameRequest == configuration.runtimeAssignment
+            && configuration.isCurrentAndUnlocked
+    }
+
+    private func activate() {
+        guard configuration.isCurrentAndUnlocked,
+            let memberID = configuration.focusedMemberID
+                ?? configuration.members.first?.id
+        else { return }
+        configuration.select(memberID)
+    }
+
+    private func beginRenaming() {
+        guard configuration.isCurrentAndUnlocked else { return }
+        draftTitle = configuration.metadata.displayTitle
+        renameRequest = configuration.runtimeAssignment
+        Task { @MainActor in isTitleFocused = true }
+    }
+
+    private func commitTitle() {
+        guard let request = renameRequest,
+            request == configuration.runtimeAssignment,
+            configuration.isCurrentAndUnlocked
+        else { return }
+        renameRequest = nil
+        configuration.browser.setSplitGroupTitle(
+            draftTitle,
+            groupID: request.groupID,
+            matching: request.spaceAssignment
+        )
+    }
+
+    private func cancelTitleEditing() {
+        draftTitle = configuration.metadata.displayTitle
+        renameRequest = nil
+        isTitleFocused = false
+    }
+
+    private func beginChangingIcon() {
+        guard configuration.isCurrentAndUnlocked else { return }
+        iconRequest = configuration.runtimeAssignment
+    }
+
+    private func beginChangingTint() {
+        guard configuration.isCurrentAndUnlocked else { return }
+        tintRequest = configuration.runtimeAssignment
+    }
+
+    private var iconPresentation: Binding<Bool> {
+        deferredPresentation(request: $iconRequest, begin: beginChangingIcon)
+    }
+
+    private var tintPresentation: Binding<Bool> {
+        deferredPresentation(request: $tintRequest, begin: beginChangingTint)
+    }
+
+    private func deferredPresentation(
+        request: Binding<BrowserSplitGroupRuntimeAssignment?>,
+        begin: @escaping () -> Void
+    ) -> Binding<Bool> {
+        Binding {
+            request.wrappedValue == configuration.runtimeAssignment
+                && configuration.isCurrentAndUnlocked
+        } set: { isPresented in
+            if isPresented {
+                begin()
+            } else {
+                request.wrappedValue = nil
+            }
+        }
+    }
+
+    private var tintBinding: Binding<BrowserSpaceBrandColor> {
+        Binding {
+            configuration.metadata.tint ?? .folderDefault
+        } set: { tint in
+            guard tintRequest == configuration.runtimeAssignment,
+                configuration.isCurrentAndUnlocked
+            else { return }
+            configuration.browser.setSplitGroupTint(
+                tint,
+                groupID: configuration.groupID,
+                matching: configuration.assignment
+            )
+        }
+    }
+
+    private func resetTint() {
+        guard tintRequest == configuration.runtimeAssignment,
+            configuration.isCurrentAndUnlocked
+        else { return }
+        configuration.browser.setSplitGroupTint(
+            nil,
+            groupID: configuration.groupID,
+            matching: configuration.assignment
+        )
+    }
+
+    private func setRequestedEmoji(_ emoji: String) {
+        guard iconRequest == configuration.runtimeAssignment,
+            configuration.isCurrentAndUnlocked
+        else { return }
+        configuration.browser.setSplitGroupEmojiIcon(
+            emoji,
+            groupID: configuration.groupID,
+            matching: configuration.assignment
+        )
+    }
+
+    private func clearRequestedIcon() {
+        guard iconRequest == configuration.runtimeAssignment,
+            configuration.isCurrentAndUnlocked
+        else { return }
+        configuration.browser.setSplitGroupEmojiIcon(
+            nil,
+            groupID: configuration.groupID,
+            matching: configuration.assignment
+        )
+        iconRequest = nil
+    }
+
+    private func clearDeferredActions() {
+        cancelTitleEditing()
+        iconRequest = nil
+        tintRequest = nil
     }
 }

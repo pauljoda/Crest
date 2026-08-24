@@ -111,15 +111,18 @@ struct BrowserSavedFolderGroupConfiguration {
     /// The one tab a collapsed folder keeps on screen, while it still holds a
     /// page. A folder that collapses over the selected tab does not evict it,
     /// so the row stays reachable rather than disappearing under the header.
-    func keptCollapsedTab(
+    func keptCollapsedItem(
         for state: BrowserCollapsedFolderTabVisibilityState
-    ) -> BrowserTab? {
+    ) -> BrowserSidebarTabListItem? {
         guard let keptTabID = state.keptTabID,
             pageAccess.containsResidentPage(keptTabID)
         else {
             return nil
         }
-        return tabs.first { $0.id == keptTabID }
+        return BrowserSidebarTabListItemPolicy.collapsedItem(
+            keeping: keptTabID,
+            in: tabs
+        )
     }
 
     var residentFolderTabIDs: [TabID] {

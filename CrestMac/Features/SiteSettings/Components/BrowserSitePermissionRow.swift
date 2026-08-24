@@ -13,11 +13,24 @@ struct BrowserSitePermissionRow: View {
                 .font(.caption)
             Spacer(minLength: CrestSpacing.small)
             Menu(permission.settingsLabel(for: currentDecision)) {
-                Button(permission.defaultDecisionLabel) { setDecision(.ask) }
-                Button("Allow") { setDecision(.grantPersistently) }
-                Button("Block") { setDecision(.denyPersistently) }
+                Group {
+                    Button(
+                        permission.defaultDecisionLabel,
+                        systemImage: "questionmark.circle"
+                    ) {
+                        setDecision(.ask)
+                    }
+                    Button("Allow", systemImage: "checkmark.circle") {
+                        setDecision(.grantPersistently)
+                    }
+                    Button("Block", systemImage: "nosign") {
+                        setDecision(.denyPersistently)
+                    }
+                }
+                .crestMenuActionLabelStyle()
             }
             .menuStyle(.borderlessButton)
+            .crestMenuActionLabelStyle()
             .fixedSize()
         }
     }

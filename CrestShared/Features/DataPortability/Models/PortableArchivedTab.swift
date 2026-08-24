@@ -13,7 +13,10 @@ struct PortableArchivedTab: Codable, Equatable, Sendable {
 
     func materialize() throws -> ArchivedTab {
         try ArchiveValidation.requireDate(archivedAt)
-        let materializedTab = try tab.materialize(folderIDsBySourceID: [:])
+        let materializedTab = try tab.materialize(
+            folderIDsBySourceID: [:],
+            splitGroupIDsBySourceID: [:]
+        )
         guard materializedTab.placement == .current else {
             throw BrowserPortableArchiveError.invalidContents
         }

@@ -116,19 +116,22 @@ private struct BrowserShortcutRow: View {
             )
 
             Menu {
-                Button(
-                    BrowserShortcutSettingsPresentation.clearShortcut,
-                    systemImage: "delete.left"
-                ) {
-                    record(nil)
+                Group {
+                    Button(
+                        BrowserShortcutSettingsPresentation.clearShortcut,
+                        systemImage: "delete.left"
+                    ) {
+                        record(nil)
+                    }
+                    .disabled(shortcut == nil)
+                    Button(
+                        BrowserShortcutSettingsPresentation.resetToDefault,
+                        systemImage: "arrow.counterclockwise",
+                        action: reset
+                    )
+                    .disabled(!isCustomized)
                 }
-                .disabled(shortcut == nil)
-                Button(
-                    BrowserShortcutSettingsPresentation.resetToDefault,
-                    systemImage: "arrow.counterclockwise",
-                    action: reset
-                )
-                .disabled(!isCustomized)
+                .crestMenuActionLabelStyle()
             } label: {
                 Image(systemName: "ellipsis")
                     .frame(
@@ -139,6 +142,7 @@ private struct BrowserShortcutRow: View {
             }
             .menuIndicator(.hidden)
             .menuStyle(.borderlessButton)
+            .crestMenuActionLabelStyle()
             .fixedSize()
             .help(Text(BrowserShortcutSettingsPresentation.shortcutActions))
             .accessibilityLabel(
@@ -199,20 +203,23 @@ private struct BrowserExtensionShortcutRow: View {
             )
 
             Menu {
-                Button(
-                    BrowserShortcutSettingsPresentation.clearShortcut,
-                    systemImage: "delete.left"
-                ) {
-                    record(nil)
+                Group {
+                    Button(
+                        BrowserShortcutSettingsPresentation.clearShortcut,
+                        systemImage: "delete.left"
+                    ) {
+                        record(nil)
+                    }
+                    .disabled(command.shortcut == nil)
+                    Button(
+                        BrowserShortcutSettingsPresentation
+                            .resetToExtensionDefault,
+                        systemImage: "arrow.counterclockwise",
+                        action: reset
+                    )
+                    .disabled(!command.isCustomized)
                 }
-                .disabled(command.shortcut == nil)
-                Button(
-                    BrowserShortcutSettingsPresentation
-                        .resetToExtensionDefault,
-                    systemImage: "arrow.counterclockwise",
-                    action: reset
-                )
-                .disabled(!command.isCustomized)
+                .crestMenuActionLabelStyle()
             } label: {
                 Image(systemName: "ellipsis")
                     .frame(
@@ -223,6 +230,7 @@ private struct BrowserExtensionShortcutRow: View {
             }
             .menuIndicator(.hidden)
             .menuStyle(.borderlessButton)
+            .crestMenuActionLabelStyle()
             .fixedSize()
             .help(Text(BrowserShortcutSettingsPresentation.shortcutActions))
             .accessibilityLabel(

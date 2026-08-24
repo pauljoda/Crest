@@ -73,6 +73,16 @@ def audit_swift_packages(catalog: dict) -> int:
     return len(actual)
 
 
+def audit_bundled_data(catalog: dict) -> int:
+    for data_set in catalog.get("bundledData", []):
+        notice_path = REPOSITORY_ROOT / data_set["notice"]
+        if not notice_path.is_file():
+            raise RuntimeError(
+                f"Missing notice for {data_set['name']}: {data_set['notice']}"
+            )
+    return len(catalog.get("bundledData", []))
+
+
 def audit_npm_packages(catalog: dict) -> int:
     package_lock = load_json(PACKAGE_LOCK_PATH)
     packages = package_lock.get("packages", {})
@@ -136,6 +146,7 @@ def main() -> int:
     try:
         catalog = load_json(CATALOG_PATH)
         swift_count = audit_swift_packages(catalog)
+        data_count = audit_bundled_data(catalog)
         npm_count = audit_npm_packages(catalog)
         action_count = audit_workflow_actions(catalog)
     except RuntimeError as error:
@@ -143,9 +154,9 @@ def main() -> int:
         return 1
 
     print(
-        f"License audit passed: {swift_count} runtime Swift package and "
-        f"{npm_count} Help Center packages plus {action_count} workflow action "
-        "repositories are declared and reviewed."
+        f"License audit passed: {swift_count} runtime Swift package, "
+        f"{data_count} bundled data set, {npm_count} Help Center packages, and "
+        f"{action_count} workflow action repositories are declared and reviewed."
     )
     return 0
 

@@ -40,9 +40,11 @@ struct BrowserSpaceHeaderActionsMenu: View {
     private var menu: some View {
         Menu {
             items
+                .crestMenuActionLabelStyle()
         } label: {
             label
         }
+        .crestMenuActionLabelStyle()
     }
 
     @ViewBuilder

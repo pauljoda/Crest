@@ -4,6 +4,7 @@ import SwiftUI
 /// source, one set of drop anchors, and one context menu for the whole run.
 struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
+    let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -11,7 +12,19 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
         content
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
-            .background(groupTint, in: containerShape)
+            .background {
+                containerShape
+                    .fill(groupTint)
+                    .overlay {
+                        if let tint = configuration.metadata.tint {
+                            containerShape.fill(
+                                tint.color.opacity(
+                                    configuration.isPresented ? 0.16 : 0.10
+                                )
+                            )
+                        }
+                    }
+            }
             .animation(surfaceAnimation, value: configuration.isPresented)
             .padding(.horizontal, configuration.rowHorizontalInset)
             .padding(.vertical, configuration.metrics.rowVerticalInset)
@@ -42,7 +55,8 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
             )
             .contextMenu {
                 BrowserSidebarSplitGroupContextMenu(
-                    configuration: configuration
+                    configuration: configuration,
+                    interaction: interaction
                 )
                 .tint(.primary)
                 // A group lifts as one block through the same touch path its

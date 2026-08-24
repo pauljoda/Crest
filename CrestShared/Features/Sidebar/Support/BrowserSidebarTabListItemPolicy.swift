@@ -46,6 +46,19 @@ enum BrowserSidebarTabListItemPolicy {
         return items
     }
 
+    /// The row a collapsed folder keeps visible for its resident selection.
+    /// If that tab belongs to a renderable split, the whole group remains the
+    /// visible subject; reducing it to `.tab` would claim only one pane was
+    /// presented while the content area still showed every member.
+    static func collapsedItem(
+        keeping tabID: TabID,
+        in tabs: [BrowserTab]
+    ) -> BrowserSidebarTabListItem? {
+        items(for: tabs).first { item in
+            item.tabs.contains { $0.id == tabID }
+        }
+    }
+
     /// The group a tab could fold into, or `nil` when its placement bars it from
     /// membership at all. Pinned tabs are a grid of shortcuts rather than an
     /// ordered run, so they never fold even if a stale ID rode in on them.

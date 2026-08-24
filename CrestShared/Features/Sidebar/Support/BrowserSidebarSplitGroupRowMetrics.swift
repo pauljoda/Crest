@@ -38,9 +38,9 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
     /// four wants to see where each one ends.
     let memberSpacing: CGFloat
 
-    /// The count affordance is a label, not a control, so it sits below the
-    /// minimum hit target on purpose: nothing in it is actionable, and the
-    /// group's own context menu is what a press there reaches.
+    /// The header owns group actions now, including its ellipsis menu. Touch
+    /// shells therefore give it a full native hit target while pointer shells
+    /// keep the compact sidebar rhythm.
     let headerHeight: CGFloat
 
     let headerGlyphSize: CGFloat
@@ -54,9 +54,9 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
         containerPadding: CrestSpacing.extraSmall,
         containerCornerRadius: CrestRadius.control,
         memberSpacing: 0,
-        headerHeight: 20,
-        headerGlyphSize: 10,
-        headerSpacing: 4
+        headerHeight: 30,
+        headerGlyphSize: 16,
+        headerSpacing: 7
     )
 
     /// A touch shell: the same container, with the members held apart and a
@@ -67,8 +67,8 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
         containerPadding: CrestSpacing.extraSmall,
         containerCornerRadius: CrestRadius.control,
         memberSpacing: CrestSpacing.extraExtraSmall,
-        headerHeight: 22,
-        headerGlyphSize: 11,
-        headerSpacing: 4
+        headerHeight: 44,
+        headerGlyphSize: 20,
+        headerSpacing: 8
     )
 }

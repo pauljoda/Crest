@@ -30,6 +30,7 @@ enum BrowserSyncProjection {
                         accessPolicy: space.accessPolicy,
                         isSavedTabsExpanded: space.isSavedTabsExpanded,
                         savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
+                        splitGroups: space.splitGroups,
                         orderToken: try requiredOrderToken(
                             for: spaceRecordID,
                             in: spaceTokens

@@ -2,7 +2,7 @@ import Foundation
 
 struct BrowserPortableArchive: Codable, Equatable, Sendable {
     static let formatIdentifier = "com.pauldavis.crest.browser-data"
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 3
     static let maximumEncodedByteCount = 50 * 1_024 * 1_024
     static let maximumSpaceCount = 64
     static let defaultFilename = "Crest Browser Data.json"

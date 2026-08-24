@@ -28,6 +28,7 @@ struct BrowserDownloadFinishedAction: View {
                             perform(.open(itemID, destination))
                         }
                     }
+                    .crestMenuActionLabelStyle()
                 } label: {
                     Color.clear
                         .frame(
@@ -36,6 +37,7 @@ struct BrowserDownloadFinishedAction: View {
                         )
                         .contentShape(.rect)
                 }
+                .crestMenuActionLabelStyle()
                 .menuIndicator(.hidden)
                 .modifier(BrowserPlatformUtilityFilterMenuStyle())
                 .frame(

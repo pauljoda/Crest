@@ -12,5 +12,6 @@ struct BrowserFolderOrganizationMenu: View {
 
     var body: some View {
         BrowserFolderOrganizationMenuContent(menu: self)
+            .crestMenuActionLabelStyle()
     }
 }

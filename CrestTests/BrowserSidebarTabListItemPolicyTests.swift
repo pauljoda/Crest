@@ -262,6 +262,51 @@ final class BrowserSidebarTabListItemPolicyTests: XCTestCase {
         )
     }
 
+    func testCollapsedFolderKeepsTheWholeSelectedSplitGroupVisible() throws {
+        let group = SplitGroupID(rawValue: Self.uuid(0x0E))
+        let head = makeTab(0xD1, "Head", group: group, placement: .saved)
+        let selected = makeTab(
+            0xD2,
+            "Selected",
+            group: group,
+            placement: .saved
+        )
+        let neighbor = makeTab(0xD3, "Neighbor", placement: .saved)
+
+        let item = try XCTUnwrap(
+            BrowserSidebarTabListItemPolicy.collapsedItem(
+                keeping: selected.id,
+                in: [head, selected, neighbor]
+            )
+        )
+
+        XCTAssertEqual(
+            item,
+            .splitGroup(id: group, members: [head, selected]),
+            "The collapsed representation must match the split still presented in content."
+        )
+    }
+
+    func testCollapsedFolderKeepsAnOrdinarySelectedTabAsAPlainRow() throws {
+        let selected = makeTab(0xE1, "Selected", placement: .saved)
+        let neighbor = makeTab(0xE2, "Neighbor", placement: .saved)
+
+        XCTAssertEqual(
+            BrowserSidebarTabListItemPolicy.collapsedItem(
+                keeping: selected.id,
+                in: [selected, neighbor]
+            ),
+            .tab(selected)
+        )
+        XCTAssertNil(
+            BrowserSidebarTabListItemPolicy.collapsedItem(
+                keeping: TabID(),
+                in: [selected, neighbor]
+            ),
+            "A collapsed, nonselected folder does not invent a retained row."
+        )
+    }
+
     func testAnEmptySectionHasNoRows() {
         XCTAssertTrue(BrowserSidebarTabListItemPolicy.items(for: []).isEmpty)
     }

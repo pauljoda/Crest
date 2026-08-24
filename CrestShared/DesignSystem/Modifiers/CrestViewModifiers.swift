@@ -57,4 +57,13 @@ extension View {
     func crestAccessibilityValue(_ value: Text?) -> some View {
         modifier(CrestOptionalAccessibilityValue(value: value))
     }
+
+    /// Keeps action menus consistent across Apple platforms. Every Crest-authored
+    /// menu action supplies an icon when a meaningful symbol, Crest, or logo is
+    /// available. Apply this to the action builder *inside* each `Menu` or
+    /// `contextMenu`: native menu presentation is a boundary, so styling only the
+    /// revealing control does not reliably reach submenu rows on macOS.
+    func crestMenuActionLabelStyle() -> some View {
+        labelStyle(.titleAndIcon)
+    }
 }

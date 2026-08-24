@@ -11,34 +11,38 @@ struct BrowserManualSetupPlacementMenu: View {
 
     var body: some View {
         Menu {
-            ForEach(
-                BrowserManualSetupPlacementPresentation.choices,
-                id: \.self
-            ) { placement in
-                Button(
-                    BrowserManualSetupPlacementPresentation.title(
-                        for: placement
-                    ),
-                    systemImage: BrowserManualSetupPlacementPresentation.symbol(
-                        for: placement
-                    )
-                ) {
-                    setPlacement(placement)
+            Group {
+                ForEach(
+                    BrowserManualSetupPlacementPresentation.choices,
+                    id: \.self
+                ) { placement in
+                    Button(
+                        BrowserManualSetupPlacementPresentation.title(
+                            for: placement
+                        ),
+                        systemImage: BrowserManualSetupPlacementPresentation.symbol(
+                            for: placement
+                        )
+                    ) {
+                        setPlacement(placement)
+                    }
                 }
+                Divider()
+                Button(
+                    "Remove",
+                    systemImage: "trash",
+                    role: .destructive,
+                    action: removeTab
+                )
             }
-            Divider()
-            Button(
-                "Remove",
-                systemImage: "trash",
-                role: .destructive,
-                action: removeTab
-            )
+            .crestMenuActionLabelStyle()
         } label: {
             BrowserManualSetupPlacementMenuLabel(
                 placement: tab.placement,
                 symbol: labelSymbol
             )
         }
+        .crestMenuActionLabelStyle()
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(

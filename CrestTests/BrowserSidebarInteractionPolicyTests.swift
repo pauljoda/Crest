@@ -5,6 +5,56 @@ import XCTest
 
 final class BrowserSidebarInteractionPolicyTests: XCTestCase {
 
+    // MARK: - Shared icon customization
+
+    func testAutomaticWebsiteFaviconDoesNotOfferAResetAction() {
+        let tab = BrowserTab(
+            title: "Example",
+            url: URL(string: "https://example.com"),
+            faviconData: Data([0x01]),
+            iconMode: .automatic,
+            placement: .current
+        )
+
+        XCTAssertFalse(BrowserTabIconCustomizationPolicy.showsReset(for: tab))
+    }
+
+    func testOnlyDeliberateTabIconOverridesOfferAResetAction() {
+        let pulled = BrowserTab(
+            title: "Pulled",
+            url: URL(string: "https://example.com/pulled"),
+            faviconData: Data([0x01]),
+            iconMode: .pulled,
+            placement: .current
+        )
+        let emoji = BrowserTab(
+            title: "Emoji",
+            url: URL(string: "https://example.com/emoji"),
+            symbol: BrowserTab.symbol(forEmoji: "👩🏽‍💻"),
+            iconMode: .emoji,
+            placement: .current
+        )
+
+        XCTAssertTrue(BrowserTabIconCustomizationPolicy.showsReset(for: pulled))
+        XCTAssertTrue(BrowserTabIconCustomizationPolicy.showsReset(for: emoji))
+    }
+
+    func testCompactIconPickerLetsTheSystemChooseAVerticalEdge() {
+        XCTAssertNil(
+            BrowserIconPopoverPlacementPolicy.preferredArrowEdge(
+                horizontalSizeClass: .compact,
+                regularArrowEdge: .trailing
+            )
+        )
+        XCTAssertEqual(
+            BrowserIconPopoverPlacementPolicy.preferredArrowEdge(
+                horizontalSizeClass: .regular,
+                regularArrowEdge: .trailing
+            ),
+            .trailing
+        )
+    }
+
     // MARK: - Hiding a control until the pointer arrives
 
     /// The full matrix, because the rule is a conjunction and only one of the
@@ -700,9 +750,9 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(pointer.containerPadding, 4)
         XCTAssertEqual(pointer.containerCornerRadius, 12)
         XCTAssertEqual(pointer.memberSpacing, 0)
-        XCTAssertEqual(pointer.headerHeight, 20)
-        XCTAssertEqual(pointer.headerGlyphSize, 10)
-        XCTAssertEqual(pointer.headerSpacing, 4)
+        XCTAssertEqual(pointer.headerHeight, 30)
+        XCTAssertEqual(pointer.headerGlyphSize, 16)
+        XCTAssertEqual(pointer.headerSpacing, 7)
 
         let touch = BrowserSidebarInteractionPolicy.splitGroupRowMetrics(
             capabilities(hover: false, touch: true)
@@ -712,9 +762,14 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(touch.containerPadding, 4)
         XCTAssertEqual(touch.containerCornerRadius, 12)
         XCTAssertEqual(touch.memberSpacing, 2)
-        XCTAssertEqual(touch.headerHeight, 22)
-        XCTAssertEqual(touch.headerGlyphSize, 11)
-        XCTAssertEqual(touch.headerSpacing, 4)
+        XCTAssertEqual(touch.headerHeight, 44)
+        XCTAssertEqual(touch.headerGlyphSize, 20)
+        XCTAssertEqual(touch.headerSpacing, 8)
+        XCTAssertGreaterThanOrEqual(
+            touch.headerHeight,
+            44,
+            "The group action header remains a native touch target."
+        )
     }
 
     /// The container and the rows inside it are concentric on both shells, so
@@ -932,7 +987,55 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - Split-group icon deck
+
+    func testSplitGroupIconDeckRaisesTheFocusedMemberAboveItsPeers() {
+        let tabs = splitGroupIconTabs()
+
+        XCTAssertEqual(
+            BrowserSidebarSplitGroupIconDeck.orderedMembers(
+                tabs,
+                focusedMemberID: tabs[0].id
+            ).map(\.id),
+            [tabs[1].id, tabs[2].id, tabs[0].id]
+        )
+    }
+
+    func testSplitGroupIconDeckAdmitsAFocusedMemberBeyondItsVisibleLimit() {
+        let tabs = splitGroupIconTabs()
+
+        XCTAssertEqual(
+            BrowserSidebarSplitGroupIconDeck.orderedMembers(
+                tabs,
+                focusedMemberID: tabs[3].id
+            ).map(\.id),
+            [tabs[0].id, tabs[1].id, tabs[3].id]
+        )
+    }
+
+    func testSplitGroupIconDeckKeepsOrdinaryOrderWithoutAFocusedMember() {
+        let tabs = splitGroupIconTabs()
+
+        XCTAssertEqual(
+            BrowserSidebarSplitGroupIconDeck.orderedMembers(
+                tabs,
+                focusedMemberID: nil
+            ).map(\.id),
+            Array(tabs.prefix(3).map(\.id))
+        )
+    }
+
     // MARK: - Fixtures
+
+    private func splitGroupIconTabs() -> [BrowserTab] {
+        (1...4).map {
+            BrowserTab(
+                title: "Deck \($0)",
+                url: nil,
+                placement: .current
+            )
+        }
+    }
 
     private func capabilities(
         hover: Bool,

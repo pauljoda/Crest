@@ -157,16 +157,22 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private func spaceActions(includesNewSpace: Bool) -> some View {
-        Menu("Space Actions", systemImage: "ellipsis.circle") {
-            if let space {
-                moveSpaceCommands(space.id)
+        Menu {
+            Group {
+                if let space {
+                    moveSpaceCommands(space.id)
+                }
+                if includesNewSpace {
+                    Divider()
+                    Button("New Space", systemImage: "plus", action: addSpace)
+                }
             }
-            if includesNewSpace {
-                Divider()
-                Button("New Space", systemImage: "plus", action: addSpace)
-            }
+            .crestMenuActionLabelStyle()
+        } label: {
+            Image(systemName: "ellipsis.circle")
         }
-        .labelStyle(.iconOnly)
+        .crestMenuActionLabelStyle()
+        .accessibilityLabel("Space Actions")
     }
 
     private var addSpaceButton: some View {

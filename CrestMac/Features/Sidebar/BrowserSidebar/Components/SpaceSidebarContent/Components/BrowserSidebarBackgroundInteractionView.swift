@@ -17,6 +17,7 @@ struct BrowserSidebarBackgroundInteractionView: View {
                         perform(action)
                     }
                 }
+                .crestMenuActionLabelStyle()
             }
             .accessibilityLabel("Sidebar background")
             .accessibilityHint("Drag to move the window or open Space actions")

@@ -79,6 +79,9 @@ enum BrowserSyncMaterializer {
                     branding: syncedSpace.branding,
                     folders: folders,
                     tabs: usableTabs,
+                    splitGroups: syncedSpace.splitGroups
+                        ?? local?.splitGroups
+                        ?? [],
                     archivedTabs: archive,
                     history: history,
                     browsingPreferences: syncedSpace.browsingPreferences,

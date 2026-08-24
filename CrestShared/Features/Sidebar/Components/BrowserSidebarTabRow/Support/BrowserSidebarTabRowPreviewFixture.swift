@@ -80,8 +80,12 @@ enum BrowserSidebarTabRowPreviewFixture {
             isRenaming: isRenaming,
             draftTitle: draftTitle,
             isTitleFocused: isTitleFocused,
+            isChoosingIcon: .constant(false),
             activate: {},
             beginRenaming: {},
+            beginChangingIcon: {},
+            setEmojiIcon: { _ in },
+            resetIcon: {},
             commitTitle: {},
             cancelTitleEditing: {},
             dismissFromAuxiliaryClick: {}

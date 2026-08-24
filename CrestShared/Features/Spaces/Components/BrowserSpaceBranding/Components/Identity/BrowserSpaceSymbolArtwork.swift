@@ -23,11 +23,16 @@ struct BrowserSpaceSymbolArtwork: View {
                     .resizable()
                     .interpolation(.high)
             } else {
-                Image(systemName: space.symbol)
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(space.branding.primaryColor.color)
-                    .padding(size * 0.2)
+                if let emoji = BrowserIconSymbol.emoji(from: space.symbol) {
+                    Text(emoji)
+                        .font(.system(size: size * 0.68))
+                } else {
+                    Image(systemName: space.symbol)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(space.branding.primaryColor.color)
+                        .padding(size * 0.2)
+                }
             }
         }
         .frame(width: size, height: size)

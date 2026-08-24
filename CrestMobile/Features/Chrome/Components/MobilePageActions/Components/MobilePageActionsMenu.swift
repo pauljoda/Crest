@@ -14,6 +14,7 @@ struct MobilePageActionsMenu: View {
                 pages: pages,
                 hideToolbar: hideToolbar
             )
+            .crestMenuActionLabelStyle()
         } label: {
             Image(systemName: systemImage)
                 .font(.system(size: 13, weight: .semibold))
@@ -21,6 +22,7 @@ struct MobilePageActionsMenu: View {
                 .frame(width: controlSize.width, height: controlSize.height)
                 .contentShape(.rect)
         }
+        .crestMenuActionLabelStyle()
         .tint(.primary)
         .menuStyle(.button)
         .buttonStyle(.plain)

@@ -10,10 +10,14 @@ import SwiftUI
 /// because the container drags the whole run as one block.
 struct BrowserSidebarSplitGroupRowContent: View {
     let configuration: BrowserSidebarSplitGroupRowConfiguration
+    let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
     var body: some View {
         VStack(spacing: configuration.metrics.memberSpacing) {
-            BrowserSidebarSplitGroupHeader(configuration: configuration)
+            BrowserSidebarSplitGroupHeader(
+                configuration: configuration,
+                interaction: interaction
+            )
 
             ForEach(configuration.members) { member in
                 BrowserSidebarTabRow(

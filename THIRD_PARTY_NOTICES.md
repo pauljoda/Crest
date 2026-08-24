@@ -9,6 +9,11 @@ Crest's macOS application has one third-party runtime dependency:
 The complete Sparkle distribution notice is preserved in
 [`ThirdParty/Sparkle-LICENSE.txt`](ThirdParty/Sparkle-LICENSE.txt).
 
+Crest's emoji picker catalog is generated from the official
+[Unicode Emoji 17.0 test data](https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt).
+The Unicode data notice is preserved in
+[`ThirdParty/Unicode-LICENSE.txt`](ThirdParty/Unicode-LICENSE.txt).
+
 The app otherwise links only Apple platform frameworks supplied by the macOS
 and iOS SDKs: AuthenticationServices, CloudKit, LocalAuthentication, Security,
 SwiftUI, and WebKit.

@@ -2,6 +2,12 @@ import SwiftUI
 
 struct BrowserFolderColorPicker: View {
     @Binding var color: BrowserSpaceBrandColor
+    var title: LocalizedStringKey = "Folder Color"
+    var showsReset = false
+    var resetTitle: LocalizedStringKey? = nil
+    var reset: (() -> Void)? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let columns = Array(
         repeating: GridItem(.fixed(28), spacing: CrestSpacing.small),
@@ -10,8 +16,28 @@ struct BrowserFolderColorPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-            Text("Folder Color")
-                .font(.headline)
+            HStack(spacing: CrestSpacing.small) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if showsReset, let resetTitle, let reset {
+                    Button(action: reset) {
+                        Image(systemName: "trash")
+                            .frame(
+                                width: CrestLayout.minimumHitTarget,
+                                height: CrestLayout.minimumHitTarget
+                            )
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .transition(.scale(scale: 0.72).combined(with: .opacity))
+                    .help(Text(resetTitle))
+                    .accessibilityLabel(Text(resetTitle))
+                    .accessibilityIdentifier("browser-color-picker-reset")
+                }
+            }
 
             LazyVGrid(columns: columns, spacing: CrestSpacing.small) {
                 ForEach(BrowserFolderColorPalette.choices) { choice in
@@ -55,5 +81,13 @@ struct BrowserFolderColorPicker: View {
         }
         .padding(CrestSpacing.large)
         .frame(width: 246)
+        .animation(resetAnimation, value: showsReset)
+    }
+
+    private var resetAnimation: Animation? {
+        BrowserVisualAccessibilityPolicy.animation(
+            CrestMotion.collection,
+            reduceMotion: reduceMotion
+        )
     }
 }

@@ -2846,6 +2846,12 @@
         }
       }
     },
+    "Change Color…" : {
+
+    },
+    "Change Icon…" : {
+
+    },
     "change current tab url address focus" : {
       "localizations" : {
         "ar" : {
@@ -3101,6 +3107,12 @@
           }
         }
       }
+    },
+    "Choose Emoji…" : {
+
+    },
+    "Choose one emoji." : {
+
     },
     "Choose one to three colors. The same named slots style banners, gradients, and crests." : {
       "extractionState" : "stale",
@@ -4606,6 +4618,9 @@
         }
       }
     },
+    "Custom Emoji" : {
+
+    },
     "Custom filter selection" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5397,6 +5412,9 @@
           }
         }
       }
+    },
+    "Emoji" : {
+
     },
     "Eligible tabs remain recoverable from Archive." : {
       "localizations" : {
@@ -8824,6 +8842,9 @@
         }
       }
     },
+    "Open Emoji Picker" : {
+
+    },
     "Open Extension Manager…" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10440,6 +10461,9 @@
         }
       }
     },
+    "Rename Split View…" : {
+
+    },
     "Rename Tab" : {
       "localizations" : {
         "ar" : {
@@ -11809,7 +11833,6 @@
       }
     },
     "Space Icon" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11900,6 +11923,18 @@
           }
         }
       }
+    },
+    "Split View actions" : {
+
+    },
+    "Split View Color" : {
+
+    },
+    "Split View Icon" : {
+
+    },
+    "Split View Name" : {
+
     },
     "split view break up unsplit separate cards" : {
       "localizations" : {
@@ -12523,6 +12558,9 @@
           }
         }
       }
+    },
+    "Tab Icon" : {
+
     },
     "Tab Name" : {
       "localizations" : {
@@ -14029,6 +14067,15 @@
         }
       }
     },
+    "Use Default Color" : {
+
+    },
+    "Use Emoji" : {
+
+    },
+    "Use Emoji Keyboard" : {
+
+    },
     "Use Face ID, Touch ID, or your device passcode or password before this private Space can be viewed." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14060,6 +14107,9 @@
         }
       }
     },
+    "Use Stacked Icons" : {
+
+    },
     "Use the arrow keys or drag to rotate the gradient line" : {
       "localizations" : {
         "ar" : {
@@ -14079,6 +14129,9 @@
           }
         }
       }
+    },
+    "Use Website Icon" : {
+
     },
     "Username" : {
       "localizations" : {

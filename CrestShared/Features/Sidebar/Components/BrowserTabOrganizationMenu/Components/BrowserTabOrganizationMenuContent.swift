@@ -10,6 +10,7 @@ struct BrowserTabOrganizationMenuContent: View {
     var pullNewIcon: (() -> Void)? = nil
     var restoreSavedLocation: (() -> Void)? = nil
     var renameTab: (() -> Void)? = nil
+    var changeIcon: (() -> Void)? = nil
 
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -23,6 +24,7 @@ struct BrowserTabOrganizationMenuContent: View {
         pullNewIcon = menu.pullNewIcon
         restoreSavedLocation = menu.restoreSavedLocation
         renameTab = menu.renameTab
+        changeIcon = menu.changeIcon
     }
 
     var body: some View {
@@ -53,13 +55,7 @@ struct BrowserTabOrganizationMenuContent: View {
                         matching: sourceAssignment
                     )
                 },
-                setEmoji: { liveTab, emoji in
-                    browser.setTabEmojiIcon(
-                        emoji,
-                        for: liveTab.id,
-                        matching: sourceAssignment
-                    )
-                }
+                changeIcon: { _ in changeIcon?() }
             )
 
             Divider()
@@ -78,39 +74,44 @@ struct BrowserTabOrganizationMenuContent: View {
         }
 
         Menu("Save in Folder", systemImage: "folder") {
-            Button("Saved Tabs", systemImage: "bookmark") {
-                performIfCurrent { liveTab in
-                    browser.moveTab(
-                        liveTab.id,
-                        matching: sourceAssignment,
-                        to: .saved
-                    )
-                }
-            }
-            .disabled(tab.placement == .saved && tab.folderID == nil)
-
-            if let space = browser.space(matching: sourceAssignment),
-                !space.folders.isEmpty
-            {
-                Divider()
-                let tree = space.folderTree
-                ForEach(tree.flattenedNodes(collapsedFolderIDs: [])) { node in
-                    Button(
-                        tree.pathTitle(for: node.id) ?? node.folder.title,
-                        systemImage: node.folder.symbol
-                    ) {
-                        performIfCurrent { liveTab in
-                            browser.moveTab(
-                                liveTab.id,
-                                matching: sourceAssignment,
-                                to: .saved,
-                                folderID: node.id
-                            )
-                        }
+            Group {
+                Button("Saved Tabs", systemImage: "bookmark") {
+                    performIfCurrent { liveTab in
+                        browser.moveTab(
+                            liveTab.id,
+                            matching: sourceAssignment,
+                            to: .saved
+                        )
                     }
-                    .disabled(tab.placement == .saved && tab.folderID == node.id)
+                }
+                .disabled(tab.placement == .saved && tab.folderID == nil)
+
+                if let space = browser.space(matching: sourceAssignment),
+                    !space.folders.isEmpty
+                {
+                    Divider()
+                    let tree = space.folderTree
+                    ForEach(tree.flattenedNodes(collapsedFolderIDs: [])) { node in
+                        Button(
+                            tree.pathTitle(for: node.id) ?? node.folder.title,
+                            systemImage: node.folder.symbol
+                        ) {
+                            performIfCurrent { liveTab in
+                                browser.moveTab(
+                                    liveTab.id,
+                                    matching: sourceAssignment,
+                                    to: .saved,
+                                    folderID: node.id
+                                )
+                            }
+                        }
+                        .disabled(
+                            tab.placement == .saved && tab.folderID == node.id
+                        )
+                    }
                 }
             }
+            .crestMenuActionLabelStyle()
         }
 
         if tab.placement != .current {
@@ -157,6 +158,7 @@ struct BrowserTabOrganizationMenuContent: View {
                         )
                     )
                 }
+                .crestMenuActionLabelStyle()
             }
             .tint(.primary)
         }

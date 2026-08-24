@@ -17,6 +17,7 @@ struct CrestSpaceChipCommands: ViewModifier {
                         action: command.perform
                     )
                 }
+                .crestMenuActionLabelStyle()
             }
         }
     }

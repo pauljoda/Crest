@@ -3,7 +3,6 @@ import Foundation
 struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     static let startPageTitle = "Start Page"
     static let startPageSymbol = "flag.fill"
-    private static let emojiSymbolPrefix = "crest.emoji:"
 
     let id: TabID
     var title: String
@@ -125,13 +124,11 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     }
 
     var emojiIcon: String? {
-        guard symbol.hasPrefix(Self.emojiSymbolPrefix) else { return nil }
-        let emoji = String(symbol.dropFirst(Self.emojiSymbolPrefix.count))
-        return emoji.isEmpty ? nil : emoji
+        BrowserIconSymbol.emoji(from: symbol)
     }
 
     static func symbol(forEmoji emoji: String) -> String {
-        emojiSymbolPrefix + emoji
+        BrowserIconSymbol.symbol(forEmoji: emoji)
     }
 
     mutating func markPositionModified(at date: Date) {
@@ -283,5 +280,39 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
                 Bool.self,
                 forKey: .keepsPageLoaded
             ) ?? false
+    }
+}
+
+/// The storage boundary shared by every browser entity that can wear an emoji.
+///
+/// An emoji is stored in the same `symbol` slot as an SF Symbol, with a prefix
+/// that makes the two vocabularies unambiguous. Normalization selects one
+/// Swift `Character`, not one Unicode scalar, so flags, skin tones, keycaps,
+/// and zero-width-joiner sequences survive as the complete grapheme a person
+/// picked.
+enum BrowserIconSymbol {
+    private static let emojiPrefix = "crest.emoji:"
+
+    static func symbol(forEmoji input: String) -> String {
+        guard let emoji = normalizedEmoji(input) else { return input }
+        return emojiPrefix + emoji
+    }
+
+    static func emoji(from symbol: String) -> String? {
+        guard symbol.hasPrefix(emojiPrefix) else { return nil }
+        return normalizedEmoji(String(symbol.dropFirst(emojiPrefix.count)))
+    }
+
+    static func normalizedEmoji(_ input: String) -> String? {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let character = trimmed.first else { return nil }
+        let candidate = String(character)
+        let scalars = candidate.unicodeScalars
+        let isEmoji = scalars.contains { scalar in
+            scalar.properties.isEmojiPresentation
+                || scalar.value == 0xFE0F
+                || scalar.value == 0x20E3
+        }
+        return isEmoji ? candidate : nil
     }
 }

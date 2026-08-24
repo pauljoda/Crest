@@ -13,6 +13,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
     var branding: BrowserSpaceBranding
     var folders: [SavedFolder]
     var tabs: [BrowserTab]
+    var splitGroups: [BrowserSplitGroupMetadata]
     var archivedTabs: [ArchivedTab]
     var history: [BrowserHistoryEntry]
     var browsingPreferences: BrowserSpaceBrowsingPreferences
@@ -31,6 +32,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         branding: BrowserSpaceBranding? = nil,
         folders: [SavedFolder],
         tabs: [BrowserTab],
+        splitGroups: [BrowserSplitGroupMetadata] = [],
         archivedTabs: [ArchivedTab] = [],
         history: [BrowserHistoryEntry] = [],
         browsingPreferences: BrowserSpaceBrowsingPreferences = .default,
@@ -50,6 +52,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
             ?? .legacy(accent: accent, symbol: symbol)
         self.folders = folders
         self.tabs = tabs
+        self.splitGroups = BrowserSplitGroupMetadata.normalized(splitGroups)
         self.archivedTabs = archivedTabs
         self.history = history
         self.browsingPreferences = browsingPreferences
@@ -101,6 +104,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         case branding
         case folders
         case tabs
+        case splitGroups
         case archivedTabs
         case history
         case browsingPreferences
@@ -127,6 +131,12 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
             ) ?? .legacy(accent: accent, symbol: symbol)
         folders = try container.decode([SavedFolder].self, forKey: .folders)
         tabs = try container.decode([BrowserTab].self, forKey: .tabs)
+        splitGroups = BrowserSplitGroupMetadata.normalized(
+            try container.decodeIfPresent(
+                [BrowserSplitGroupMetadata].self,
+                forKey: .splitGroups
+            ) ?? []
+        )
         archivedTabs = try container.decodeIfPresent([ArchivedTab].self, forKey: .archivedTabs) ?? []
         history = try container.decodeIfPresent([BrowserHistoryEntry].self, forKey: .history) ?? []
         browsingPreferences =

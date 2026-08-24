@@ -97,6 +97,7 @@ struct BrowserSpaceAccessView: View {
                                 BrowserSpaceIdentityLabel(space: candidate)
                             }
                         }
+                        .crestMenuActionLabelStyle()
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "square.grid.2x2")
@@ -105,6 +106,7 @@ struct BrowserSpaceAccessView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
+                    .crestMenuActionLabelStyle()
                     .buttonStyle(.bordered)
                     .controlSize(.large)
                     .accessibilityIdentifier("switch-private-space")

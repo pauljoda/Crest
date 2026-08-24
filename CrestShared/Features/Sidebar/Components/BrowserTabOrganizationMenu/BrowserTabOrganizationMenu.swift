@@ -10,8 +10,10 @@ struct BrowserTabOrganizationMenu: View {
     var pullNewIcon: (() -> Void)? = nil
     var restoreSavedLocation: (() -> Void)? = nil
     var renameTab: (() -> Void)? = nil
+    var changeIcon: (() -> Void)? = nil
 
     var body: some View {
         BrowserTabOrganizationMenuContent(menu: self)
+            .crestMenuActionLabelStyle()
     }
 }

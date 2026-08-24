@@ -13,8 +13,8 @@ struct BrowserSavedFolderTabRows: View {
     let configuration: BrowserSavedFolderGroupConfiguration
     let interaction: BrowserSavedFolderGroupInteractionContext
 
-    private var keptCollapsedTab: BrowserTab? {
-        configuration.keptCollapsedTab(
+    private var keptCollapsedItem: BrowserSidebarTabListItem? {
+        configuration.keptCollapsedItem(
             for: interaction.collapsedTabVisibility.wrappedValue
         )
     }
@@ -37,16 +37,9 @@ struct BrowserSavedFolderTabRows: View {
                     rows(followingTabIDs: followingTabIDs)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-            } else if let keptCollapsedTab {
-                BrowserSavedFolderTabRow(
-                    configuration: configuration,
-                    tab: keptCollapsedTab,
-                    isLoaded: true,
-                    followingTabID: followingTabIDs[keptCollapsedTab.id],
-                    hasVisibleFollowingRow: false,
-                    unload: interaction.unloadKeptCollapsedTab
-                )
-                .transition(.opacity)
+            } else if let keptCollapsedItem {
+                collapsedRow(keptCollapsedItem)
+                    .transition(.opacity)
             }
         }
         // The line is drawn across the run's own width, so the run has to claim
@@ -56,6 +49,29 @@ struct BrowserSavedFolderTabRows: View {
             section,
             state: configuration.browser.sidebarReorderState
         )
+    }
+
+    @ViewBuilder
+    private func collapsedRow(_ item: BrowserSidebarTabListItem) -> some View {
+        switch item {
+        case .tab(let tab):
+            BrowserSavedFolderTabRow(
+                configuration: configuration,
+                tab: tab,
+                isLoaded: true,
+                followingTabID: nil,
+                hasVisibleFollowingRow: false,
+                unload: interaction.unloadKeptCollapsedTab
+            )
+        case .splitGroup(let groupID, let members):
+            BrowserSavedFolderSplitGroupRow(
+                configuration: configuration,
+                groupID: groupID,
+                members: members,
+                followingTabID: nil,
+                hasVisibleFollowingRow: false
+            )
+        }
     }
 
     @ViewBuilder

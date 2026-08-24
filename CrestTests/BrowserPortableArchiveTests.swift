@@ -82,7 +82,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         XCTAssertTrue(json.contains(BrowserPortableArchive.formatIdentifier))
     }
 
-    func testVersionTwoArchiveKeepsItsCanonicalJSONKeys() throws {
+    func testVersionThreeArchiveKeepsItsCanonicalJSONKeys() throws {
         let data = try BrowserPortableArchive.encode(
             session: makePortableFixture(),
             exportedAt: Date(timeIntervalSince1970: 1_800_000_000)
@@ -97,6 +97,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         let archivedTabs = try XCTUnwrap(space["archivedTabs"] as? [[String: Any]])
         let history = try XCTUnwrap(space["history"] as? [[String: Any]])
 
+        XCTAssertEqual(root["schemaVersion"] as? Int, 3)
         XCTAssertEqual(
             Set(root.keys),
             Set(["exportedAt", "format", "schemaVersion", "spaces"])
@@ -106,6 +107,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
             Set([
                 "accent", "archivedTabs", "branding", "browsingPreferences",
                 "folders", "history", "name", "selectedTabID", "symbol", "tabs",
+                "splitGroups",
             ])
         )
         XCTAssertEqual(
@@ -132,6 +134,98 @@ final class BrowserPortableArchiveTests: XCTestCase {
             Set([
                 "firstVisitedAt", "lastVisitedAt", "title", "url", "visitCount",
             ])
+        )
+    }
+
+    func testSplitGroupMembershipAndCustomizationRoundTripWithFreshIdentity()
+        throws
+    {
+        let sourceGroupID = SplitGroupID()
+        let emoji = "👨🏽‍💻"
+        let tint = BrowserSpaceBrandColor(red: 0.22, green: 0.54, blue: 0.76)
+        let first = BrowserTab(
+            title: "First",
+            url: URL(string: "https://example.com/first"),
+            placement: .current,
+            splitGroupID: sourceGroupID
+        )
+        let second = BrowserTab(
+            title: "Second",
+            url: URL(string: "https://example.com/second"),
+            placement: .current,
+            splitGroupID: sourceGroupID
+        )
+        let metadata = BrowserSplitGroupMetadata(
+            id: sourceGroupID,
+            customTitle: "Portable Pair",
+            titleModifiedAt: Date(timeIntervalSince1970: 100),
+            customIconSymbol: BrowserIconSymbol.symbol(forEmoji: emoji),
+            iconModifiedAt: Date(timeIntervalSince1970: 200),
+            tint: tint,
+            tintModifiedAt: Date(timeIntervalSince1970: 300)
+        )
+        let sourceSpace = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Split",
+            symbol: "rectangle.split.2x1",
+            accent: .indigo,
+            folders: [],
+            tabs: [first, second],
+            splitGroups: [metadata],
+            selectedTabID: first.id
+        )
+        let source = BrowserSession(
+            spaces: [sourceSpace],
+            selectedSpaceID: sourceSpace.id
+        )
+
+        let imported = try BrowserPortableArchive.decode(
+            BrowserPortableArchive.encode(session: source)
+        ).materialize()
+        let importedSpace = try XCTUnwrap(imported.spaces.first)
+        let importedGroupID = try XCTUnwrap(
+            importedSpace.tabs.first?.splitGroupID
+        )
+
+        XCTAssertNotEqual(importedGroupID, sourceGroupID)
+        XCTAssertEqual(
+            importedSpace.tabs.map(\.splitGroupID),
+            [importedGroupID, importedGroupID]
+        )
+        let importedMetadata = try XCTUnwrap(
+            importedSpace.splitGroupMetadata(for: importedGroupID)
+        )
+        XCTAssertEqual(importedMetadata.displayTitle, "Portable Pair")
+        XCTAssertEqual(importedMetadata.emojiIcon, emoji)
+        XCTAssertEqual(importedMetadata.tint, tint)
+    }
+
+    func testVersionTwoArchiveWithoutSplitFieldsStillImports() throws {
+        let data = try BrowserPortableArchive.encode(session: makePortableFixture())
+        var root = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        root["schemaVersion"] = 2
+        var spaces = try XCTUnwrap(root["spaces"] as? [[String: Any]])
+        for index in spaces.indices {
+            spaces[index].removeValue(forKey: "splitGroups")
+            var tabs = try XCTUnwrap(spaces[index]["tabs"] as? [[String: Any]])
+            for tabIndex in tabs.indices {
+                tabs[tabIndex].removeValue(forKey: "splitGroupID")
+            }
+            spaces[index]["tabs"] = tabs
+        }
+        root["spaces"] = spaces
+
+        let imported = try BrowserPortableArchive.decode(
+            JSONSerialization.data(withJSONObject: root)
+        ).materialize()
+
+        XCTAssertEqual(imported.spaces.count, 1)
+        XCTAssertTrue(imported.spaces[0].splitGroups.isEmpty)
+        XCTAssertTrue(
+            imported.spaces[0].tabs.allSatisfy { $0.splitGroupID == nil }
         )
     }
 

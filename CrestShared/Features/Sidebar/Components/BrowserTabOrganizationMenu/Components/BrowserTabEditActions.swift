@@ -8,36 +8,42 @@ struct BrowserTabEditActions: View {
     let performIfCurrent: ((BrowserTab) -> Void) -> Void
     let replaceSavedLocation: (BrowserTab) -> Void
     let clearIcon: (BrowserTab) -> Void
-    let setEmoji: (BrowserTab, String) -> Void
+    let changeIcon: (BrowserTab) -> Void
 
     var body: some View {
         if tab.supportsSavedLocationEditing {
             Menu("Edit Tab", systemImage: "pencil") {
-                Button(
-                    "Replace with Current URL",
-                    systemImage: "arrow.triangle.2.circlepath"
-                ) {
-                    performIfCurrent(replaceSavedLocation)
-                }
-                .disabled(!tab.isAwayFromSavedLocation)
+                Group {
+                    Button(
+                        "Replace with Current URL",
+                        systemImage: "arrow.triangle.2.circlepath"
+                    ) {
+                        performIfCurrent(replaceSavedLocation)
+                    }
+                    .disabled(!tab.isAwayFromSavedLocation)
 
-                Button("Return to Saved URL", systemImage: "arrow.uturn.backward") {
-                    performIfCurrent { _ in restoreSavedLocation?() }
-                }
-                .disabled(
-                    !tab.isAwayFromSavedLocation
-                        || restoreSavedLocation == nil
-                )
+                    Button(
+                        "Return to Saved URL",
+                        systemImage: "arrow.uturn.backward"
+                    ) {
+                        performIfCurrent { _ in restoreSavedLocation?() }
+                    }
+                    .disabled(
+                        !tab.isAwayFromSavedLocation
+                            || restoreSavedLocation == nil
+                    )
 
-                Divider()
-                BrowserTabIconActions(
-                    tab: tab,
-                    isLoaded: isLoaded,
-                    pullNewIcon: pullNewIcon,
-                    performIfCurrent: performIfCurrent,
-                    clearIcon: clearIcon,
-                    setEmoji: setEmoji
-                )
+                    Divider()
+                    BrowserTabIconActions(
+                        tab: tab,
+                        isLoaded: isLoaded,
+                        pullNewIcon: pullNewIcon,
+                        performIfCurrent: performIfCurrent,
+                        clearIcon: clearIcon,
+                        changeIcon: changeIcon
+                    )
+                }
+                .crestMenuActionLabelStyle()
             }
         } else {
             BrowserTabIconActions(
@@ -46,7 +52,7 @@ struct BrowserTabEditActions: View {
                 pullNewIcon: pullNewIcon,
                 performIfCurrent: performIfCurrent,
                 clearIcon: clearIcon,
-                setEmoji: setEmoji
+                changeIcon: changeIcon
             )
         }
     }

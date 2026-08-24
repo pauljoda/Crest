@@ -10,7 +10,9 @@ struct BrowserDataPortabilityExternalImportControls: View {
                     model.beginBookmarkImport(from: source)
                 }
             }
+            .crestMenuActionLabelStyle()
         }
+        .crestMenuActionLabelStyle()
         .accessibilityIdentifier("import-bookmarks")
 
         Menu("Import History…", systemImage: "clock.arrow.circlepath") {
@@ -19,7 +21,9 @@ struct BrowserDataPortabilityExternalImportControls: View {
                     model.beginHistoryImport(from: source)
                 }
             }
+            .crestMenuActionLabelStyle()
         }
+        .crestMenuActionLabelStyle()
         .accessibilityIdentifier("import-history")
 
         Menu("Import Open Tabs…", systemImage: "rectangle.stack.badge.plus") {
@@ -28,7 +32,9 @@ struct BrowserDataPortabilityExternalImportControls: View {
                     model.beginTabImport(from: source)
                 }
             }
+            .crestMenuActionLabelStyle()
         }
+        .crestMenuActionLabelStyle()
         .accessibilityIdentifier("import-open-tabs")
     }
 }

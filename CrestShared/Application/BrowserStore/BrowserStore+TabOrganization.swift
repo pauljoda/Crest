@@ -410,6 +410,63 @@ extension BrowserStore {
         return true
     }
 
+    @discardableResult
+    func setSplitGroupTitle(
+        _ title: String?,
+        groupID: SplitGroupID,
+        matching assignment: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard
+            space(matching: assignment)?.liveSplitGroupIDs.contains(groupID)
+                == true,
+            session.setSplitGroupTitle(
+                title,
+                groupID: groupID,
+                in: assignment.spaceID
+            )
+        else { return false }
+        persist(syncUrgency: .coalesced, scope: .core)
+        return true
+    }
+
+    @discardableResult
+    func setSplitGroupEmojiIcon(
+        _ emoji: String?,
+        groupID: SplitGroupID,
+        matching assignment: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard
+            space(matching: assignment)?.liveSplitGroupIDs.contains(groupID)
+                == true,
+            session.setSplitGroupEmojiIcon(
+                emoji,
+                groupID: groupID,
+                in: assignment.spaceID
+            )
+        else { return false }
+        persist(syncUrgency: .coalesced, scope: .core)
+        return true
+    }
+
+    @discardableResult
+    func setSplitGroupTint(
+        _ tint: BrowserSpaceBrandColor?,
+        groupID: SplitGroupID,
+        matching assignment: BrowserSpaceRuntimeAssignment
+    ) -> Bool {
+        guard
+            space(matching: assignment)?.liveSplitGroupIDs.contains(groupID)
+                == true,
+            session.setSplitGroupTint(
+                tint,
+                groupID: groupID,
+                in: assignment.spaceID
+            )
+        else { return false }
+        persist(syncUrgency: .coalesced, scope: .core)
+        return true
+    }
+
     /// The selected tab, when it can host a split card at all.
     ///
     /// Pinned tabs never take part in a split, and a Start Page is an

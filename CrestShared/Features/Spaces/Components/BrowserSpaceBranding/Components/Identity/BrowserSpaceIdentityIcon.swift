@@ -13,10 +13,16 @@ struct BrowserSpaceIdentityIcon: View {
                     size: size
                 )
             case .symbol(let systemImage):
-                Image(systemName: systemImage)
-                    .font(.system(size: size * 0.56, weight: .semibold))
-                    .foregroundStyle(space.branding.primaryColor.color)
-                    .frame(width: size, height: size)
+                if let emoji = BrowserIconSymbol.emoji(from: systemImage) {
+                    Text(emoji)
+                        .font(.system(size: size * 0.68))
+                        .frame(width: size, height: size)
+                } else {
+                    Image(systemName: systemImage)
+                        .font(.system(size: size * 0.56, weight: .semibold))
+                        .foregroundStyle(space.branding.primaryColor.color)
+                        .frame(width: size, height: size)
+                }
             }
         }
         .accessibilityHidden(true)

@@ -1138,6 +1138,140 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
         )
     }
 
+    func testSplitGroupCustomizationPersistsEveryFieldAndFullEmojiCluster()
+        throws
+    {
+        let group = SplitGroupID()
+        let head = makeTab("Head", group: group)
+        let tail = makeTab("Tail", group: group)
+        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
+        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let tint = BrowserSpaceBrandColor(red: 0.16, green: 0.48, blue: 0.82)
+        let emoji = "👨🏽‍💻"
+
+        XCTAssertTrue(
+            session.setSplitGroupTitle(
+                "  Research Pair  ",
+                groupID: group,
+                in: space.id,
+                at: mutationDate
+            )
+        )
+        XCTAssertTrue(
+            session.setSplitGroupEmojiIcon(
+                emoji,
+                groupID: group,
+                in: space.id,
+                at: mutationDate.addingTimeInterval(1)
+            )
+        )
+        XCTAssertTrue(
+            session.setSplitGroupTint(
+                tint,
+                groupID: group,
+                in: space.id,
+                at: mutationDate.addingTimeInterval(2)
+            )
+        )
+
+        let decoded = try JSONDecoder().decode(
+            BrowserSession.self,
+            from: JSONEncoder().encode(session)
+        )
+        let metadata = try XCTUnwrap(
+            decoded.space(id: space.id)?.splitGroupMetadata(for: group)
+        )
+        XCTAssertEqual(metadata.displayTitle, "Research Pair")
+        XCTAssertEqual(metadata.emojiIcon, emoji)
+        XCTAssertEqual(metadata.tint, tint)
+        XCTAssertEqual(metadata.titleModifiedAt, mutationDate)
+        XCTAssertEqual(
+            metadata.iconModifiedAt,
+            mutationDate.addingTimeInterval(1)
+        )
+        XCTAssertEqual(
+            metadata.tintModifiedAt,
+            mutationDate.addingTimeInterval(2)
+        )
+    }
+
+    func testDissolvingAGroupRemovesItsDurableCustomization() throws {
+        let group = SplitGroupID()
+        let head = makeTab("Head", group: group)
+        let tail = makeTab("Tail", group: group)
+        let space = makeSpace(tabs: [head, tail], selectedTabID: head.id)
+        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        XCTAssertTrue(
+            session.setSplitGroupTitle(
+                "Temporary Pair",
+                groupID: group,
+                in: space.id,
+                at: mutationDate
+            )
+        )
+
+        XCTAssertTrue(
+            session.removeTabFromSplit(
+                tail.id,
+                in: space.id,
+                at: mutationDate.addingTimeInterval(1)
+            )
+        )
+
+        let repaired = try XCTUnwrap(session.space(id: space.id))
+        XCTAssertNil(repaired.splitGroupMetadata(for: group))
+        XCTAssertTrue(repaired.splitGroups.isEmpty)
+    }
+
+    func testRepairRetainsMetadataWhileOnlyOneSyncedMemberHasArrived() throws {
+        let group = SplitGroupID()
+        let lone = makeTab("First Arrival", group: group)
+        let metadata = BrowserSplitGroupMetadata(
+            id: group,
+            customTitle: "Synced Pair",
+            titleModifiedAt: mutationDate
+        )
+        let space = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Work",
+            symbol: "briefcase.fill",
+            accent: .indigo,
+            folders: [],
+            tabs: [lone],
+            splitGroups: [metadata],
+            selectedTabID: lone.id
+        )
+
+        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+
+        XCTAssertEqual(
+            try XCTUnwrap(session.space(id: space.id)).splitGroups,
+            [metadata],
+            "Runtime repair cannot erase metadata before the remaining CloudKit tab records arrive."
+        )
+    }
+
+    func testLegacySpaceWithoutSplitMetadataDecodesWithAnEmptyCollection()
+        throws
+    {
+        let tab = makeTab("Legacy")
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(space)
+            ) as? [String: Any]
+        )
+        object.removeValue(forKey: "splitGroups")
+
+        let decoded = try JSONDecoder().decode(
+            BrowserSpace.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertTrue(decoded.splitGroups.isEmpty)
+    }
+
     @MainActor
     private func makeStore(
         folders: [SavedFolder] = [],

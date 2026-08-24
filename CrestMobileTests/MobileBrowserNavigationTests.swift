@@ -1658,6 +1658,42 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
+    func testEmojiCustomizationRoutesToTheFocusedNativeTextInput() {
+        XCTAssertEqual(
+            BrowserNativeEmojiPickerPresentation.current,
+            .focusedTextInput
+        )
+    }
+
+    func testMobileEmojiPickerUsesTheCompleteGeneratedCatalog() {
+        let choices = BrowserTabEmojiChoices.matching(
+            "",
+            maximumVersion: 17
+        )
+
+        XCTAssertEqual(BrowserTabEmojiChoices.catalogMetadata.unicodeVersion, "17.0")
+        XCTAssertEqual(choices.count, 3944)
+        XCTAssertTrue(choices.contains { $0.emoji == "🫱🏿‍🫲🏻" })
+        XCTAssertTrue(choices.contains { $0.emoji == "🫪" })
+        XCTAssertTrue(
+            choices.allSatisfy {
+                BrowserIconSymbol.normalizedEmoji($0.emoji) == $0.emoji
+            }
+        )
+    }
+
+    func testMobileVariantPickerUsesCompactEmojiGridMetrics() {
+        XCTAssertEqual(BrowserEmojiVariantPickerMetrics.columnCount, 3)
+        XCTAssertEqual(
+            BrowserEmojiVariantPickerMetrics.contentWidth(for: 6),
+            CrestLayout.minimumHitTarget * 3 + CrestSpacing.extraSmall * 2
+        )
+        XCTAssertEqual(
+            BrowserEmojiVariantPickerMetrics.contentWidth(for: 1),
+            CrestLayout.minimumHitTarget
+        )
+    }
+
     func testMobileLeadingChromeMirrorsForRightToLeftLayout() {
         XCTAssertEqual(
             BrowserChromeDirectionPolicy.leadingOffset(

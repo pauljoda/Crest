@@ -7,19 +7,26 @@ struct BrowserUtilityFilterMenu: View {
 
     var body: some View {
         Menu {
-            Picker("Filter", selection: $filter) {
-                ForEach(BrowserUtilityListFilter.options(for: surface)) { option in
-                    Label(option.title, systemImage: option.systemImage)
-                        .tag(option)
+            Group {
+                Picker("Filter", selection: $filter) {
+                    ForEach(BrowserUtilityListFilter.options(for: surface)) { option in
+                        Label(option.title, systemImage: option.systemImage)
+                            .tag(option)
+                    }
                 }
-            }
 
-            if let clearHistory, surface == .history {
-                Divider()
-                Button("Clear History", systemImage: "trash", role: .destructive) {
-                    clearHistory()
+                if let clearHistory, surface == .history {
+                    Divider()
+                    Button(
+                        "Clear History",
+                        systemImage: "trash",
+                        role: .destructive
+                    ) {
+                        clearHistory()
+                    }
                 }
             }
+            .crestMenuActionLabelStyle()
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
                 .frame(
@@ -28,7 +35,7 @@ struct BrowserUtilityFilterMenu: View {
                 )
                 .contentShape(.rect)
         }
-        .labelStyle(.iconOnly)
+        .crestMenuActionLabelStyle()
         .menuIndicator(.hidden)
         .modifier(BrowserPlatformUtilityFilterMenuStyle())
         .help(Text(surface.filterLabel))

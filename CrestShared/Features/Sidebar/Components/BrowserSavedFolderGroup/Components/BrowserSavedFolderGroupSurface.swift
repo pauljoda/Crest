@@ -70,7 +70,7 @@ struct BrowserSavedFolderGroupSurface: View {
             arrowEdge: .trailing
         ) {
             BrowserFolderColorPicker(color: interaction.folderColor)
-                .presentationCompactAdaptation(.sheet)
+                .presentationCompactAdaptation(.popover)
         }
         .confirmationDialog(
             "Delete \(folder.title)?",

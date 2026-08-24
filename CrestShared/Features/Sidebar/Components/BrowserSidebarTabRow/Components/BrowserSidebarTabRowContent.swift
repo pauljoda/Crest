@@ -39,6 +39,17 @@ struct BrowserSidebarTabRowContent: View {
                 metrics: configuration.metrics,
                 leadingInset: configuration.metrics.contentLeadingInset,
                 restoreSavedLocation: configuration.restoreSavedLocation,
+                iconCustomization: BrowserIconCustomizationPresentation(
+                    isPresented: interaction.isChoosingIcon,
+                    title: "Tab Icon",
+                    currentEmoji: configuration.tab.emojiIcon,
+                    showsReset: BrowserTabIconCustomizationPolicy.showsReset(
+                        for: configuration.tab
+                    ),
+                    resetTitle: "Use Website Icon",
+                    setEmoji: interaction.setEmojiIcon,
+                    reset: interaction.resetIcon
+                ),
                 select: interaction.activate
             )
         }

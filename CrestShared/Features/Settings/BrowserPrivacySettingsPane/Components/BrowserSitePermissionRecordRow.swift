@@ -23,13 +23,25 @@ struct BrowserSitePermissionRecordRow: View {
             Spacer(minLength: CrestSpacing.small)
 
             Menu(record.decision.settingsLabel) {
-                Button("Allow") { set(.grantPersistently) }
-                Button("Block") { set(.denyPersistently) }
-                Divider()
-                Button("Ask Again", role: .destructive) {
-                    permissionCenter.reset(recordID: record.id)
+                Group {
+                    Button("Allow", systemImage: "checkmark.circle") {
+                        set(.grantPersistently)
+                    }
+                    Button("Block", systemImage: "nosign") {
+                        set(.denyPersistently)
+                    }
+                    Divider()
+                    Button(
+                        "Ask Again",
+                        systemImage: "arrow.counterclockwise",
+                        role: .destructive
+                    ) {
+                        permissionCenter.reset(recordID: record.id)
+                    }
                 }
+                .crestMenuActionLabelStyle()
             }
+            .crestMenuActionLabelStyle()
             .modifier(BrowserPlatformSitePermissionMenuModifier())
             .accessibilityLabel(
                 "\(record.displayLabel) for \(record.origin.displayName)"

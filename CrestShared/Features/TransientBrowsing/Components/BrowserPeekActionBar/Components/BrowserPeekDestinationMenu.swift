@@ -21,6 +21,7 @@ struct BrowserPeekDestinationMenu: View {
                     )
                 }
             }
+            .crestMenuActionLabelStyle()
         } label: {
             Image(systemName: "chevron.down")
                 .font(.caption2.weight(.semibold))
@@ -30,6 +31,7 @@ struct BrowserPeekDestinationMenu: View {
                 )
                 .contentShape(.rect)
         }
+        .crestMenuActionLabelStyle()
         .menuIndicator(.hidden)
         .accessibilityLabel("Choose Destination Space")
         .accessibilityValue(Text(selectedSpace?.name ?? "Space"))

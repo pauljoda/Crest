@@ -83,31 +83,44 @@ struct MobilePageActionsContent: View {
             }
 
             Menu("Share & Export…", systemImage: "square.and.arrow.up") {
-                if let url = pages.activeURL {
-                    ShareLink(item: url) {
-                        Label("Share…", systemImage: "square.and.arrow.up")
-                    }
-                }
-
-                Button("Print…", systemImage: "printer") {
-                    pages.printPage()
-                }
-
-                Menu("Export as PDF…", systemImage: "doc.richtext") {
-                    ForEach(MobileBrowserFileExportDestination.allCases) { destination in
-                        Button(destination.title, systemImage: destination.systemImage) {
-                            pages.exportPDF(to: destination)
+                Group {
+                    if let url = pages.activeURL {
+                        ShareLink(item: url) {
+                            Label("Share…", systemImage: "square.and.arrow.up")
                         }
                     }
-                }
 
-                Menu("Export Web Archive…", systemImage: "archivebox") {
-                    ForEach(MobileBrowserFileExportDestination.allCases) { destination in
-                        Button(destination.title, systemImage: destination.systemImage) {
-                            pages.exportWebArchive(to: destination)
+                    Button("Print…", systemImage: "printer") {
+                        pages.printPage()
+                    }
+
+                    Menu("Export as PDF…", systemImage: "doc.richtext") {
+                        ForEach(MobileBrowserFileExportDestination.allCases) {
+                            destination in
+                            Button(
+                                destination.title,
+                                systemImage: destination.systemImage
+                            ) {
+                                pages.exportPDF(to: destination)
+                            }
                         }
+                        .crestMenuActionLabelStyle()
+                    }
+
+                    Menu("Export Web Archive…", systemImage: "archivebox") {
+                        ForEach(MobileBrowserFileExportDestination.allCases) {
+                            destination in
+                            Button(
+                                destination.title,
+                                systemImage: destination.systemImage
+                            ) {
+                                pages.exportWebArchive(to: destination)
+                            }
+                        }
+                        .crestMenuActionLabelStyle()
                     }
                 }
+                .crestMenuActionLabelStyle()
             }
         }
     }
