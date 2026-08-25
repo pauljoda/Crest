@@ -281,6 +281,10 @@
     "2026-08-25-loading-start-page-and-space-search": {
       "category": "fixed",
       "message": "Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space"
+    },
+    "2026-08-25-start-0-5-release-line": {
+      "category": "internal",
+      "message": "Record the Crest 0.5 release candidate line"
     }
   }
 }
