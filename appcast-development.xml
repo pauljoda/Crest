@@ -6,36 +6,46 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.4.71</title>
-            <pubDate>Sun, 23 Aug 2026 16:44:41 +0000</pubDate>
+            <title>0.4.80</title>
+            <pubDate>Tue, 25 Aug 2026 21:33:23 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1044</sparkle:version>
-            <sparkle:shortVersionString>0.4.71</sparkle:shortVersionString>
+            <sparkle:version>1047</sparkle:version>
+            <sparkle:shortVersionString>0.4.80</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- See version details, recent changes, software updates, community feedback, issue reporting, and the public roadmap in About settings
+- Choose a default page zoom that new and existing pages follow
+- Keep split views visible in collapsed folders and customize them with names, icons, emoji, and colors
+- Import, search, review, reveal, and delete passwords directly from each Space's settings
+- Use custom search engines with website icons and optional search suggestions in each Space
+- See update availability and control media from a global sidebar widget deck across Spaces
+
+### Improved
+
+- Follow new downloads into Downloads and see live size, progress, speed, and time remaining across Mac and iPhone
 
 ### Fixed
 
-- Keep Mac window controls and collapsed-sidebar reveal available in fullscreen
-- Restore back and forward history with archived tabs, and keep extension actions and blocking pages attached to the intended tab and destination
+- Keep typing and cursor placement reliable in website editors on Mac
+- Show the Start Page on launch instead of a blank unloaded tab
+- Show blocked pop-ups in Site Controls with a one-step allow action
+- Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/7a99b8dc496e806d2151d040bfe04eac0c6f4994...4da50c78459aac632bf99b8b716aaa7026296229) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.71-development-2026-08-23-4da50c7-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/4da50c78459aac632bf99b8b716aaa7026296229...aac042880149f71446ff01ec79d317a7656b8237) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.80-development-2026-08-25-aac0428-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.71-development-2026-08-23-4da50c7-arm64.dmg" length="7990047" type="application/octet-stream" sparkle:edSignature="BRDPgvVH4exEWMgDA03SlBQycERnZh3k/+Bl2jl4XhZXvn2KbmKx+YZfr5hLjxJjVzEK8x4NeZzD1wDOBd5MCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.80-development-2026-08-25-aac0428-arm64.dmg" length="8669472" type="application/octet-stream" sparkle:edSignature="pwsaTRhfwehUMBb5sHCJ6hGzNS/zlnkFFXUumH//KG83lW7+oj0LwEMT1nLpOGAmYQeMgUAhmPg69vUh6/smAg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 9ykveDK66VOsF2Ic6HZZz59acGpEPoLG6f4imrxrh12TAN11FIPQdtuKShn5u8+3BjVu3oC6uvSJPYQg12c4Ag==
-length: 2149
+edSignature: RqaUN0MkQPMtB2/mifI425Ik0jZZ5COPOugxWa1OtCBDMePiBWKA3RkeUQQIZwsVw4F3J1LbPjjgw015UbsnDQ==
+length: 2664
 -->
