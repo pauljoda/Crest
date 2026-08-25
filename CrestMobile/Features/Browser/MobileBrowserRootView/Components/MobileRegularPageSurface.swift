@@ -82,6 +82,8 @@ struct MobileRegularPageSurface: View {
                 usesBorderlessFrame: usesCollapsedSidebarBorderlessFrame,
                 isStartPage: model.browser.selectedTab?.isStartPage == true,
                 hasActivePage: model.selectedPage != nil,
+                completedNavigationCount:
+                    model.selectedPage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: model.browser.selectedSpace != nil,
                 handleWebContentInteraction: {
                     model.navigation.utilityPresentation

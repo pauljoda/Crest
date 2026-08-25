@@ -5,6 +5,20 @@ import XCTest
 
 @MainActor
 final class BrowserPageNavigationMarkerTests: XCTestCase {
+    func testEmptyPageBackgroundIsClearUntilWebKitFinishesContent() throws {
+        let page = try makePage()
+
+        XCTAssertEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+
+        page.webView(page.webView, didCommit: nil)
+
+        XCTAssertEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+
+        page.webView(page.webView, didFinish: nil)
+
+        XCTAssertNotEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+    }
+
     func testTheAppInitiatedMarkerIsConsumedByTheNavigationItAuthorized() throws {
         let page = try makePage()
         let fileURL = URL(fileURLWithPath: "/tmp/crest-desktop-fixture.html")

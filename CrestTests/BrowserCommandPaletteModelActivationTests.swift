@@ -35,7 +35,6 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             space: space,
             selectedTabID: sourceTab.id,
             initialQuery: "",
-            otherSpaces: [],
             commands: nil,
             isSourceAvailable: { _ in sourceIsAvailable },
             selectTab: { source, target in
@@ -43,7 +42,6 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
                 capturedTarget = target
                 return true
             },
-            selectTabInSpace: nil,
             openURL: { _, _ in false },
             dismiss: { dismissalCount += 1 }
         )
@@ -138,14 +136,12 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             space: fixture.space,
             selectedTabID: fixture.sourceTab.id,
             initialQuery: "",
-            otherSpaces: [],
             commands: nil,
             isPrivateBrowsing: false,
             suggestionDebounce: .zero,
             fetchSuggestions: { _, _ in throw SuggestionTestError.failed },
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in false },
-            selectTabInSpace: nil,
             openURL: { _, _ in false },
             dismiss: {}
         )
@@ -207,7 +203,6 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             space: fixture.space,
             selectedTabID: fixture.sourceTab.id,
             initialQuery: "",
-            otherSpaces: [],
             commands: nil,
             isPrivateBrowsing: isPrivateBrowsing,
             suggestionDebounce: .zero,
@@ -216,7 +211,6 @@ final class BrowserCommandPaletteModelActivationTests: XCTestCase {
             },
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in false },
-            selectTabInSpace: nil,
             openURL: { _, _ in false },
             dismiss: {}
         )

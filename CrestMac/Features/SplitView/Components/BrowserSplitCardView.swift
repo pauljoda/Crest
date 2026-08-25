@@ -34,6 +34,7 @@ struct BrowserSplitCardView: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let tabPromotionNamespace: Namespace.ID
+    let startPageFocusRequest: Int
     let isCommandPalettePresented: Bool
     /// Where this card records its bounds for the surface's click monitor.
     let cardFrames: BrowserSplitCardFrameRegistry
@@ -53,6 +54,7 @@ struct BrowserSplitCardView: View {
             pages: pages,
             spaceAccess: spaceAccess,
             tabPromotionNamespace: tabPromotionNamespace,
+            startPageFocusRequest: startPageFocusRequest,
             isCommandPalettePresented: isCommandPalettePresented
         )
         .modifier(

@@ -14,17 +14,14 @@ struct BrowserRootCommandPaletteLayer: View {
             let source = model.paletteSourceAssignment,
             model.isPaletteSourceAvailable(source)
         {
-            let otherSpaces = model.paletteOtherSpaces
             BrowserCommandPalette(
                 space: model.browser.selectedSpace,
                 selectedTabID: model.browser.selectedTab?.id,
                 initialQuery: mode.initialQuery,
-                otherSpaces: otherSpaces,
                 commands: commandActions.paletteRegistry(shortcuts: shortcuts),
                 isPrivateBrowsing: model.browser.isPrivateBrowsing,
                 isSourceAvailable: model.isPaletteSourceAvailable,
                 selectTab: model.selectPaletteTab,
-                selectTabInSpace: model.selectPaletteTab,
                 openURL: { source, url in
                     model.openPaletteURL(url, mode: mode, from: source)
                 },
@@ -38,8 +35,7 @@ struct BrowserRootCommandPaletteLayer: View {
                 BrowserCommandPalettePresentationIdentity(
                     mode: mode,
                     space: model.browser.selectedSpace,
-                    source: source,
-                    otherSpaces: otherSpaces
+                    source: source
                 )
             )
             .transition(.browserCommandPaletteOverlay)

@@ -2055,6 +2055,22 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
     }
 
+    func testNewTabFocusesAnAlreadySelectedStartPageWithoutAnOverlay() {
+        let chrome = BrowserChromeState()
+        let initialFocusRequest = chrome.startPageFocusRequest
+
+        chrome.openNewTab(isStartPageSelected: true)
+
+        XCTAssertNil(chrome.commandPaletteMode)
+        XCTAssertNotEqual(chrome.startPageFocusRequest, initialFocusRequest)
+
+        let focusedRequest = chrome.startPageFocusRequest
+        chrome.openNewTab(isStartPageSelected: false)
+
+        XCTAssertEqual(chrome.commandPaletteMode, .newTab)
+        XCTAssertEqual(chrome.startPageFocusRequest, focusedRequest)
+    }
+
     func testStartPageHasADistinctIdentityFromTheNewTabAction() {
         let tab = BrowserTab.startPage()
 

@@ -539,17 +539,6 @@ extension MobileBrowserRootModel {
 // MARK: - Command Palette
 
 extension MobileBrowserRootModel {
-    /// The Spaces the launcher may search besides the one on screen. Deleting
-    /// Spaces are excluded because selecting one would resurrect it.
-    var paletteOtherSpaces: [BrowserSpace] {
-        guard let source = paletteSourceAssignment else { return [] }
-        return BrowserCommandPaletteActionPolicy.availableOtherSpaces(
-            from: source,
-            in: browser,
-            accessController: spaceAccess
-        )
-    }
-
     var paletteSourceAssignment: BrowserTabRuntimeAssignment? {
         guard let space = browser.selectedSpace, let tab = browser.selectedTab else {
             return nil

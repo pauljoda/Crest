@@ -9,6 +9,11 @@ struct BrowserWebPageSurface: View {
         ZStack(alignment: .top) {
             BrowserPlatformWebView(page: page)
                 .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
+                .opacity(
+                    BrowserPageSurfacePolicy.revealsWebContent(
+                        completedNavigationCount: page.completedNavigationCount
+                    ) ? 1 : 0
+                )
 
             if page.isFindPresented {
                 BrowserFindBar(port: findPort, capabilities: capabilities)

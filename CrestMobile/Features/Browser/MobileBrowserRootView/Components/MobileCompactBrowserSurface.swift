@@ -16,6 +16,7 @@ struct MobileCompactBrowserSurface<
     let usesBorderlessFloatingPageFrame: Bool
     let isStartPage: Bool
     let hasActivePage: Bool
+    let completedNavigationCount: Int
     let hasSelectedSpace: Bool
     let showSidebar: () -> Void
     let commitSidebarWidth: (CGFloat) -> Void
@@ -71,6 +72,7 @@ struct MobileCompactBrowserSurface<
                 usesBorderlessFrame: false,
                 isStartPage: isStartPage,
                 hasActivePage: hasActivePage,
+                completedNavigationCount: completedNavigationCount,
                 hasSelectedSpace: hasSelectedSpace,
                 handleWebContentInteraction: {},
                 content: page

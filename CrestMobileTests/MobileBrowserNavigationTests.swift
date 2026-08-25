@@ -7,6 +7,25 @@ import XCTest
 
 @MainActor
 final class MobileBrowserNavigationTests: XCTestCase {
+    func testEmptyMobilePageBackgroundIsClearUntilWebKitFinishesContent() throws {
+        let space = makeSpace(index: 31)
+        let page = MobileBrowserPage(
+            tab: space.tabs[0],
+            space: space,
+            openNewTab: { _ in }
+        )
+
+        XCTAssertEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+
+        page.webView(page.webView, didCommit: nil)
+
+        XCTAssertEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+
+        page.webView(page.webView, didFinish: nil)
+
+        XCTAssertNotEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+    }
+
     func testMobileStartPageUsesOnBrandTextAcrossLayouts() {
         XCTAssertEqual(
             MobileStartPageAppearancePolicy.foregroundTone(

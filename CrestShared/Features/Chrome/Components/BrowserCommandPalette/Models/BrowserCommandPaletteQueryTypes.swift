@@ -4,7 +4,6 @@ struct BrowserCommandPaletteInput: Sendable {
     var query: String
     var space: BrowserSpace?
     var selectedTabID: TabID?
-    var otherSpaces: [BrowserSpace]
     var commands: [BrowserShortcutCommand]
     var searchProvider: BrowserSearchProvider
 
@@ -12,14 +11,12 @@ struct BrowserCommandPaletteInput: Sendable {
         query: String,
         space: BrowserSpace?,
         selectedTabID: TabID? = nil,
-        otherSpaces: [BrowserSpace] = [],
         commands: [BrowserShortcutCommand] = [],
         searchProvider: BrowserSearchProvider = .google
     ) {
         self.query = query
         self.space = space
         self.selectedTabID = selectedTabID
-        self.otherSpaces = otherSpaces
         self.commands = commands
         self.searchProvider = searchProvider
     }

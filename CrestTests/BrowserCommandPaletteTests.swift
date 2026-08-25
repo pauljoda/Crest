@@ -226,20 +226,17 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
             folders: [folder],
             history: [historyEntry("علامة في السجل", "https://example.com/history")]
         )
-        let other = makeSpace(name: "شخصي", tabs: [tab("علامة أخرى", "https://example.com/other")])
-
         let results = BrowserCommandPaletteResults.results(
             for: BrowserCommandPaletteInput(
                 query: "علامة",
                 space: space,
-                otherSpaces: [other],
                 commands: [.toggleSidebar]
             )
         )
 
         XCTAssertEqual(
             results.compactMap(\.section),
-            [.tabs, .saved, .history, .otherSpaces]
+            [.tabs, .saved, .history]
         )
         XCTAssertEqual(results.first?.title, "Search with Google")
     }
@@ -298,7 +295,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertEqual(results.first?.title, "Pinned Apple")
     }
 
-    func testSearchIntentLeadsTabsActionsSavedHistoryAndOtherSpaces() {
+    func testSearchIntentLeadsTabsActionsSavedAndHistory() {
         let space = makeSpace(
             tabs: [tab("Sidebar Notes", "https://example.com/notes")],
             pinned: [
@@ -306,16 +303,10 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
             ],
             history: [historyEntry("Sidebar Patterns", "https://example.com/patterns")]
         )
-        let other = makeSpace(
-            name: "Personal",
-            tabs: [tab("Sidebar Sketches", "https://example.com/sketches")]
-        )
-
         let results = BrowserCommandPaletteResults.results(
             for: BrowserCommandPaletteInput(
                 query: "sidebar",
                 space: space,
-                otherSpaces: [other],
                 commands: [.toggleSidebar]
             )
         )
@@ -324,9 +315,9 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertEqual(results.first?.title, "Search with Google")
         XCTAssertEqual(
             results.dropFirst().compactMap(\.section),
-            [.tabs, .actions, .saved, .history, .otherSpaces]
+            [.tabs, .actions, .saved, .history]
         )
-        XCTAssertEqual(results.count, 6)
+        XCTAssertEqual(results.count, 5)
     }
 
     func testSearchIntentCarriesTheSelectedProviderForBrandedPresentation() throws {
@@ -633,50 +624,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertEqual(action?.symbol, "sidebar.leading")
     }
 
-    // MARK: - Other Spaces
-
-    func testTabsInOtherSpacesAreAnnotatedWithTheirSpaceAndSwitchToIt() throws {
-        let personalTab = tab("Recipes", "https://example.com/recipes")
-        let personal = makeSpace(name: "Personal", tabs: [personalTab])
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(
-                query: "recipes",
-                space: makeSpace(tabs: []),
-                otherSpaces: [personal]
-            )
-        )
-        let crossSpace = try XCTUnwrap(results.first { $0.section == .otherSpaces })
-
-        XCTAssertEqual(crossSpace.trailing, "Personal")
-        XCTAssertEqual(
-            crossSpace.target,
-            .spaceTab(tabAssignment(personalTab, in: personal))
-        )
-        XCTAssertEqual(crossSpace.foreignSpaceID, personal.id)
-        XCTAssertEqual(crossSpace.faviconTabID, personalTab.id)
-    }
-
-    func testOtherSpaceResultsAreCappedSoOneBusySpaceCannotFloodTheList() {
-        let noisy = makeSpace(
-            name: "Archive",
-            tabs: (0..<12).map { tab("Report \($0)", "https://example.com/report/\($0)") }
-        )
-
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(
-                query: "report",
-                space: makeSpace(tabs: []),
-                otherSpaces: [noisy]
-            )
-        )
-
-        XCTAssertEqual(
-            results.filter { $0.section == .otherSpaces }.count,
-            BrowserCommandPaletteResultLimits.otherSpaceTabs
-        )
-    }
-
     // MARK: - Identity
 
     func testEveryResultCarriesADistinctIdentitySoTheListCanAnimate() {
@@ -695,13 +642,10 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
             folders: [folder],
             history: [historyEntry("Apple Newsroom", "https://apple.com/newsroom")]
         )
-        let other = makeSpace(name: "Personal", tabs: [tab("Apple Music", "https://music.apple.com")])
-
         let results = BrowserCommandPaletteResults.results(
             for: BrowserCommandPaletteInput(
                 query: "apple",
                 space: space,
-                otherSpaces: [other],
                 commands: [.toggleSidebar]
             )
         )
@@ -851,30 +795,6 @@ final class BrowserCommandPaletteLayoutTests: XCTestCase {
     }
 }
 
-/// Selecting a result that lives in another Space has to move the browser twice
-/// — Space first, then tab — and the store is what makes that one navigation.
-@MainActor
-final class BrowserCommandPaletteCrossSpaceSelectionTests: XCTestCase {
-    func testSelectingASpaceThenATabLandsOnThatTabInThatSpace() throws {
-        let store = BrowserStore(
-            session: .preview,
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        let origin = try XCTUnwrap(store.selectedSpace?.id)
-        let destination = try XCTUnwrap(
-            store.session.spaces.first { $0.id != origin }
-        )
-        let target = try XCTUnwrap(destination.tabs.first { !$0.isStartPage })
-
-        store.selectSpace(destination.id)
-        store.selectTab(target.id)
-
-        XCTAssertEqual(store.selectedSpace?.id, destination.id)
-        XCTAssertEqual(store.selectedTab?.id, target.id)
-        XCTAssertNotEqual(store.selectedSpace?.id, origin)
-    }
-}
-
 @MainActor
 final class BrowserCommandPaletteModelPerformanceTests: XCTestCase {
     func testQueryChangesKeepTheLastPublishedRowsUntilReplacementIsReady() async throws {
@@ -904,11 +824,9 @@ final class BrowserCommandPaletteModelPerformanceTests: XCTestCase {
             space: space,
             selectedTabID: nil,
             initialQuery: "",
-            otherSpaces: [],
             commands: nil,
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in true },
-            selectTabInSpace: nil,
             openURL: { _, url in
                 openedURL = url
                 return true
@@ -979,11 +897,9 @@ final class BrowserCommandPaletteModelPerformanceTests: XCTestCase {
             space: space,
             selectedTabID: nil,
             initialQuery: "",
-            otherSpaces: [],
             commands: nil,
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in true },
-            selectTabInSpace: nil,
             openURL: { _, _ in true },
             dismiss: {}
         )

@@ -50,26 +50,6 @@ enum BrowserCommandPalettePreviewFixture {
         selectedTabID: selectedTabID
     )
 
-    static let otherSpace = BrowserSpace(
-        id: SpaceID(rawValue: uuid(finalByte: 0x22)),
-        profile: BrowsingProfile(id: uuid(finalByte: 0x32)),
-        name: "Research",
-        symbol: "book.fill",
-        accent: .teal,
-        folders: [],
-        tabs: [
-            BrowserTab(
-                id: TabID(rawValue: uuid(finalByte: 0x14)),
-                title: "Swift Package Index",
-                url: url("https://swiftpackageindex.com"),
-                faviconData: faviconData,
-                placement: .current,
-                lastActivatedAt: date(offset: 250)
-            )
-        ],
-        selectedTabID: nil
-    )
-
     static let registry = BrowserCommandPaletteCommandRegistry(
         commands: [.newWindow, .showHistory, .showDownloads, .toggleSidebar],
         shortcut: { command in
@@ -111,22 +91,6 @@ enum BrowserCommandPalettePreviewFixture {
 
     static let commandResult = BrowserCommandPaletteResults.actionResult(.showHistory)
 
-    static let foreignSpaceResult = BrowserCommandPaletteResult(
-        section: .otherSpaces,
-        id: "preview-foreign-space-tab",
-        title: "Swift Package Index",
-        subtitle: "swiftpackageindex.com",
-        symbol: "globe",
-        trailing: otherSpace.name,
-        target: .spaceTab(
-            BrowserTabRuntimeAssignment(
-                tabID: TabID(rawValue: uuid(finalByte: 0x14)),
-                spaceID: otherSpace.id,
-                profileID: otherSpace.profile.id
-            )
-        )
-    )
-
     static let historyResult = BrowserCommandPaletteResult(
         section: .history,
         id: "preview-history",
@@ -161,11 +125,9 @@ enum BrowserCommandPalettePreviewFixture {
             space: currentSpace,
             selectedTabID: selectedTabID,
             initialQuery: query,
-            otherSpaces: [otherSpace],
             commands: registry,
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in true },
-            selectTabInSpace: { _, _ in true },
             openURL: { _, _ in true },
             dismiss: {}
         )

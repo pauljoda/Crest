@@ -19,6 +19,8 @@ enum BrowserCommandPaletteActionPolicy {
         accessController: BrowserSpaceAccessController
     ) -> (space: BrowserSpace, tab: BrowserTab)? {
         guard
+            target.spaceID == source.spaceID,
+            target.profileID == source.profileID,
             selectedSource(
                 matching: source,
                 in: browser,
@@ -34,27 +36,6 @@ enum BrowserCommandPaletteActionPolicy {
             let tab = space.tabs.first(where: { $0.id == target.tabID })
         else { return nil }
         return (space, tab)
-    }
-
-    static func availableOtherSpaces(
-        from source: BrowserTabRuntimeAssignment,
-        in browser: BrowserStore,
-        accessController: BrowserSpaceAccessController
-    ) -> [BrowserSpace] {
-        guard
-            selectedSource(
-                matching: source,
-                in: browser,
-                accessController: accessController
-            ) != nil
-        else { return [] }
-        return browser.session.spaces.filter { space in
-            space.id != source.spaceID
-                && browser.space(
-                    matching: BrowserSpaceRuntimeAssignment(space: space)
-                ) != nil
-                && !accessController.isLocked(space)
-        }
     }
 
     private static func selectedSource(

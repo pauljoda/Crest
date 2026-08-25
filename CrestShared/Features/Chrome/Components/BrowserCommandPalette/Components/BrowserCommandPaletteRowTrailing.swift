@@ -6,16 +6,7 @@ struct BrowserCommandPaletteRowTrailing: View {
 
     @ViewBuilder
     var body: some View {
-        if let foreignSpace = model.foreignSpace(for: result) {
-            BrowserSpaceIdentityLabel(
-                space: foreignSpace,
-                title: foreignSpace.name,
-                iconSize: BrowserCommandPaletteMetrics.foreignSpaceIconSize
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-        } else if case .command(let command) = result.target,
+        if case .command(let command) = result.target,
             let chord = model.commands?.shortcut(for: command)
         {
             Text(verbatim: chord.displayString)

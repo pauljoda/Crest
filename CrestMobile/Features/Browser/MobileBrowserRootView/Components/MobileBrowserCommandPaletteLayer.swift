@@ -4,16 +4,10 @@ struct MobileBrowserCommandPaletteLayer: View {
     let mode: BrowserCommandPaletteMode?
     let space: BrowserSpace?
     let selectedTabID: TabID?
-    let otherSpaces: [BrowserSpace]
     let commands: BrowserCommandPaletteCommandRegistry
     let isPrivateBrowsing: Bool
     let isSourceAvailable: (BrowserTabRuntimeAssignment) -> Bool
     let selectTab:
-        (
-            BrowserTabRuntimeAssignment,
-            BrowserTabRuntimeAssignment
-        ) -> Bool
-    let selectTabInSpace:
         (
             BrowserTabRuntimeAssignment,
             BrowserTabRuntimeAssignment
@@ -35,12 +29,10 @@ struct MobileBrowserCommandPaletteLayer: View {
                 space: space,
                 selectedTabID: selectedTabID,
                 initialQuery: mode.initialQuery,
-                otherSpaces: otherSpaces,
                 commands: commands,
                 isPrivateBrowsing: isPrivateBrowsing,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
-                selectTabInSpace: selectTabInSpace,
                 openURL: { source, url in openURL(source, url, mode) },
                 dismiss: dismiss,
                 morphNamespace: morphNamespace,
@@ -50,8 +42,7 @@ struct MobileBrowserCommandPaletteLayer: View {
                 BrowserCommandPalettePresentationIdentity(
                     mode: mode,
                     space: space,
-                    source: sourceAssignment,
-                    otherSpaces: otherSpaces
+                    source: sourceAssignment
                 )
             )
             .transition(.browserCommandPaletteOverlay)

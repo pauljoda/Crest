@@ -151,7 +151,9 @@ struct BrowserCommandActions {
     // MARK: - Windows
 
     func openNewTab() {
-        chrome.presentCommandPalette()
+        chrome.openNewTab(
+            isStartPageSelected: browser.selectedTab?.isStartPage == true
+        )
     }
 
     func openNewWindow() {

@@ -13,7 +13,6 @@ struct BrowserCommandPalette: View {
         space: BrowserSpace?,
         selectedTabID: TabID?,
         initialQuery: String = "",
-        otherSpaces: [BrowserSpace] = [],
         commands: BrowserCommandPaletteCommandRegistry? = nil,
         isPrivateBrowsing: Bool = false,
         isSourceAvailable: @escaping (BrowserTabRuntimeAssignment) -> Bool,
@@ -22,12 +21,6 @@ struct BrowserCommandPalette: View {
                 BrowserTabRuntimeAssignment,
                 BrowserTabRuntimeAssignment
             ) -> Bool,
-        selectTabInSpace: (
-            (
-                BrowserTabRuntimeAssignment,
-                BrowserTabRuntimeAssignment
-            ) -> Bool
-        )? = nil,
         openURL: @escaping (BrowserTabRuntimeAssignment, URL) -> Bool,
         dismiss: @escaping () -> Void,
         presentation: BrowserCommandPalettePresentation = .overlay,
@@ -42,12 +35,10 @@ struct BrowserCommandPalette: View {
                 space: space,
                 selectedTabID: selectedTabID,
                 initialQuery: initialQuery,
-                otherSpaces: otherSpaces,
                 commands: commands,
                 isPrivateBrowsing: isPrivateBrowsing,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
-                selectTabInSpace: selectTabInSpace,
                 openURL: openURL,
                 dismiss: dismiss
             ))
@@ -70,11 +61,9 @@ struct BrowserCommandPalette: View {
             space: BrowserCommandPalettePreviewFixture.currentSpace,
             selectedTabID: BrowserCommandPalettePreviewFixture.selectedTabID,
             initialQuery: "swift",
-            otherSpaces: [BrowserCommandPalettePreviewFixture.otherSpace],
             commands: BrowserCommandPalettePreviewFixture.registry,
             isSourceAvailable: { _ in true },
             selectTab: { _, _ in true },
-            selectTabInSpace: { _, _ in true },
             openURL: { _, _ in true },
             dismiss: {}
         )
@@ -86,11 +75,9 @@ struct BrowserCommandPalette: View {
     BrowserCommandPalette(
         space: BrowserCommandPalettePreviewFixture.currentSpace,
         selectedTabID: BrowserCommandPalettePreviewFixture.selectedTabID,
-        otherSpaces: [BrowserCommandPalettePreviewFixture.otherSpace],
         commands: BrowserCommandPalettePreviewFixture.registry,
         isSourceAvailable: { _ in true },
         selectTab: { _, _ in true },
-        selectTabInSpace: { _, _ in true },
         openURL: { _, _ in true },
         dismiss: {},
         presentation: .embedded

@@ -69,6 +69,8 @@ struct BrowserSplitPageSurface: View {
                     pages: model.pages,
                     spaceAccess: model.spaceAccess,
                     tabPromotionNamespace: tabPromotionNamespace,
+                    startPageFocusRequest:
+                        model.chrome.startPageFocusRequest,
                     isCommandPalettePresented:
                         model.chrome.isCommandPalettePresented,
                     cardFrames: cardFrames,
@@ -323,18 +325,20 @@ struct BrowserSplitPageSurface: View {
     }
 
     /// The transparent-interior decision, made per card rather than once for
-    /// the window: a start-page card shows the Space's atmosphere through it
-    /// while its loaded neighbours keep their opaque page background.
+    /// the window: a start-page or not-yet-committed card shows the Space's
+    /// atmosphere through it while loaded neighbours keep their page background.
     private func usesTransparentInnerSurface(_ member: BrowserTab) -> Bool {
-        BrowserPageSurfacePolicy.usesTransparentInnerSurface(
+        let page = model.pages.presentedPage(
+            matching: BrowserTabRuntimeAssignment(
+                tabID: member.id,
+                spaceID: space.id,
+                profileID: space.profile.id
+            )
+        )
+        return BrowserPageSurfacePolicy.usesTransparentInnerSurface(
             isStartPage: member.isStartPage,
-            hasActivePage: model.pages.presentedPage(
-                matching: BrowserTabRuntimeAssignment(
-                    tabID: member.id,
-                    spaceID: space.id,
-                    profileID: space.profile.id
-                )
-            ) != nil
+            hasActivePage: page != nil,
+            completedNavigationCount: page?.completedNavigationCount ?? 0
         )
     }
 }

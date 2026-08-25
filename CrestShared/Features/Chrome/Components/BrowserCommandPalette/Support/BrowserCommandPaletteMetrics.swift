@@ -41,7 +41,6 @@ enum BrowserCommandPaletteMetrics {
     static let rowIconCornerRadius: CGFloat = 8
     static let rowIconBackgroundOpacity = 0.08
 
-    static let foreignSpaceIconSize: CGFloat = 14
     static let shortcutHorizontalPadding: CGFloat = 6
     static let shortcutMinimumHeight: CGFloat = 20
     static let shortcutCornerRadius: CGFloat = 5

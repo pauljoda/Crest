@@ -31,11 +31,20 @@ struct MobileBrowserLivePageView: View {
             requestFocus: requestFocus
         )
         .id(page.tabID)
+        .opacity(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                completedNavigationCount: page.completedNavigationCount
+            ) ? 1 : 0
+        )
         .background(
             Color(
-                uiColor: page.themeColor
-                    ?? page.webView.underPageBackgroundColor
-                    ?? .systemBackground
+                uiColor: BrowserPageSurfacePolicy.revealsWebContent(
+                    completedNavigationCount: page.completedNavigationCount
+                )
+                    ? page.themeColor
+                        ?? page.webView.underPageBackgroundColor
+                        ?? .systemBackground
+                    : .clear
             )
         )
         .ignoresSafeArea(

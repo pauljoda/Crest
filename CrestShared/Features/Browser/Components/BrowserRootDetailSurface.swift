@@ -17,6 +17,7 @@ struct BrowserRootDetailSurface<Content: View>: View {
     let usesBorderlessFrame: Bool
     let isStartPage: Bool
     let hasActivePage: Bool
+    let completedNavigationCount: Int
     let hasSelectedSpace: Bool
     let handleWebContentInteraction: () -> Void
     let content: Content
@@ -37,7 +38,8 @@ struct BrowserRootDetailSurface<Content: View>: View {
             usesTransparentInnerSurface:
                 BrowserPageSurfacePolicy.usesTransparentInnerSurface(
                     isStartPage: isStartPage,
-                    hasActivePage: hasActivePage
+                    hasActivePage: hasActivePage,
+                    completedNavigationCount: completedNavigationCount
                 ),
             showsFallbackBorder: !hasSelectedSpace,
             showsBoundary: !usesBorderlessFrame

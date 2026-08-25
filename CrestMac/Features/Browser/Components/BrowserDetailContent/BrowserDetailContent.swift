@@ -11,6 +11,7 @@ struct BrowserDetailContent: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let tabPromotionNamespace: Namespace.ID
+    let startPageFocusRequest: Int
     let isCommandPalettePresented: Bool
 
     var body: some View {
@@ -24,6 +25,7 @@ struct BrowserDetailContent: View {
                 pages: pages,
                 spaceAccess: spaceAccess,
                 tabPromotionNamespace: tabPromotionNamespace,
+                focusRequest: startPageFocusRequest,
                 isCommandPalettePresented: isCommandPalettePresented
             )
         case .livePage, .navigationFailure, .processFailure:

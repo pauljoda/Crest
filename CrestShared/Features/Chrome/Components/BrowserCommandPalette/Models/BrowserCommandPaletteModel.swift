@@ -7,7 +7,6 @@ import Observation
 final class BrowserCommandPaletteModel {
     let space: BrowserSpace?
     let selectedTabID: TabID?
-    let otherSpaces: [BrowserSpace]
     let commands: BrowserCommandPaletteCommandRegistry?
 
     var query: String {
@@ -35,13 +34,6 @@ final class BrowserCommandPaletteModel {
             BrowserTabRuntimeAssignment,
             BrowserTabRuntimeAssignment
         ) -> Bool
-    private let selectTabInSpaceAction:
-        (
-            (
-                BrowserTabRuntimeAssignment,
-                BrowserTabRuntimeAssignment
-            ) -> Bool
-        )?
     private let openURLAction: (BrowserTabRuntimeAssignment, URL) -> Bool
     private let dismissAction: () -> Void
 
@@ -49,7 +41,6 @@ final class BrowserCommandPaletteModel {
         space: BrowserSpace?,
         selectedTabID: TabID?,
         initialQuery: String,
-        otherSpaces: [BrowserSpace],
         commands: BrowserCommandPaletteCommandRegistry?,
         isPrivateBrowsing: Bool = false,
         suggestionDebounce: Duration = .milliseconds(250),
@@ -69,21 +60,13 @@ final class BrowserCommandPaletteModel {
                 BrowserTabRuntimeAssignment,
                 BrowserTabRuntimeAssignment
             ) -> Bool,
-        selectTabInSpace: (
-            (
-                BrowserTabRuntimeAssignment,
-                BrowserTabRuntimeAssignment
-            ) -> Bool
-        )?,
         openURL: @escaping (BrowserTabRuntimeAssignment, URL) -> Bool,
         dismiss: @escaping () -> Void
     ) {
-        let actionableOtherSpaces = selectTabInSpace == nil ? [] : otherSpaces
         let input = BrowserCommandPaletteInput(
             query: initialQuery,
             space: space,
             selectedTabID: selectedTabID,
-            otherSpaces: actionableOtherSpaces,
             commands: commands?.commands ?? [],
             searchProvider: space?.browsingPreferences.searchProvider ?? .google
         )
@@ -91,7 +74,6 @@ final class BrowserCommandPaletteModel {
 
         self.space = space
         self.selectedTabID = selectedTabID
-        self.otherSpaces = actionableOtherSpaces
         self.commands = commands
         query = initialQuery
         results = prepared.results
@@ -102,7 +84,6 @@ final class BrowserCommandPaletteModel {
         self.fetchSuggestions = fetchSuggestions
         isSourceAvailableAction = isSourceAvailable
         selectTabAction = selectTab
-        selectTabInSpaceAction = selectTabInSpace
         openURLAction = openURL
         dismissAction = dismiss
     }
@@ -130,9 +111,6 @@ final class BrowserCommandPaletteModel {
         case .tab(let target):
             guard let sourceAssignment = availableSourceAssignment else { return }
             didActivate = selectTabAction(sourceAssignment, target)
-        case .spaceTab(let target):
-            guard let sourceAssignment = availableSourceAssignment else { return }
-            didActivate = selectTabInSpaceAction?(sourceAssignment, target) ?? false
         case .url(let url):
             guard let sourceAssignment = availableSourceAssignment else { return }
             didActivate = openURLAction(sourceAssignment, url)
@@ -159,13 +137,6 @@ final class BrowserCommandPaletteModel {
                 return nil
             }
             return space.tabs.first { $0.id == assignment.tabID }
-        case .spaceTab(let assignment):
-            guard
-                let space = otherSpaces.first(where: {
-                    assignmentMatches(assignment, space: $0)
-                })
-            else { return nil }
-            return space.tabs.first { $0.id == assignment.tabID }
         case .url, .command:
             return nil
         }
@@ -173,17 +144,10 @@ final class BrowserCommandPaletteModel {
 
     func profileID(for result: BrowserCommandPaletteResult) -> UUID? {
         switch result.target {
-        case .tab(let assignment), .spaceTab(let assignment):
+        case .tab(let assignment):
             assignment.profileID
         case .url, .command:
             nil
-        }
-    }
-
-    func foreignSpace(for result: BrowserCommandPaletteResult) -> BrowserSpace? {
-        guard case .spaceTab(let assignment) = result.target else { return nil }
-        return otherSpaces.first {
-            assignmentMatches(assignment, space: $0)
         }
     }
 
@@ -267,7 +231,6 @@ final class BrowserCommandPaletteModel {
             query: query,
             space: space,
             selectedTabID: selectedTabID,
-            otherSpaces: otherSpaces,
             commands: commands?.commands ?? [],
             searchProvider: space?.browsingPreferences.searchProvider ?? .google
         )

@@ -30,11 +30,17 @@ enum BrowserPageSurfacePolicy {
 
     static func usesTransparentInnerSurface(
         isStartPage: Bool,
-        hasActivePage: Bool
+        hasActivePage: Bool,
+        completedNavigationCount: Int
     ) -> Bool {
         (startPageUsesSpaceAtmosphere
             && startPageUsesTransparentInnerSurface
             && isStartPage)
             || !hasActivePage
+            || completedNavigationCount == 0
+    }
+
+    static func revealsWebContent(completedNavigationCount: Int) -> Bool {
+        completedNavigationCount > 0
     }
 }

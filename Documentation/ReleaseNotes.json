@@ -277,6 +277,10 @@
     "2026-08-25-sidebar-widgets-and-now-playing": {
       "category": "new",
       "message": "See update availability and control media from a global sidebar widget deck across Spaces"
+    },
+    "2026-08-25-loading-start-page-and-space-search": {
+      "category": "fixed",
+      "message": "Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space"
     }
   }
 }

@@ -17,6 +17,11 @@ struct BrowserRootPageSurface: View {
         } ?? false
     }
 
+    private var completedNavigationCount: Int {
+        guard hasActivePage else { return 0 }
+        return model.pages.activePage?.completedNavigationCount ?? 0
+    }
+
     private var pageSurfacePresentation: BrowserPageSurfacePresentation {
         let selectedSpace = model.browser.selectedSpace
         return BrowserPageSurfaceBranchPolicy.resolve(
@@ -61,6 +66,7 @@ struct BrowserRootPageSurface: View {
                 usesBorderlessFrame: false,
                 isStartPage: model.browser.selectedTab?.isStartPage == true,
                 hasActivePage: hasActivePage,
+                completedNavigationCount: completedNavigationCount,
                 hasSelectedSpace: model.browser.selectedSpace != nil,
                 handleWebContentInteraction: {
                     model.chrome.utilityPresentation
@@ -90,6 +96,8 @@ struct BrowserRootPageSurface: View {
                             pages: model.pages,
                             spaceAccess: model.spaceAccess,
                             tabPromotionNamespace: tabPromotionNamespace,
+                            startPageFocusRequest:
+                                model.chrome.startPageFocusRequest,
                             isCommandPalettePresented:
                                 model.chrome.isCommandPalettePresented
                         )

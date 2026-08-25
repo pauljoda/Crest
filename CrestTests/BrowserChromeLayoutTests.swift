@@ -1463,19 +1463,39 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(
             BrowserPageSurfacePolicy.usesTransparentInnerSurface(
                 isStartPage: true,
-                hasActivePage: false
+                hasActivePage: false,
+                completedNavigationCount: 0
             )
         )
         XCTAssertTrue(
             BrowserPageSurfacePolicy.usesTransparentInnerSurface(
                 isStartPage: false,
-                hasActivePage: false
+                hasActivePage: false,
+                completedNavigationCount: 0
+            )
+        )
+        XCTAssertTrue(
+            BrowserPageSurfacePolicy.usesTransparentInnerSurface(
+                isStartPage: false,
+                hasActivePage: true,
+                completedNavigationCount: 0
             )
         )
         XCTAssertFalse(
             BrowserPageSurfacePolicy.usesTransparentInnerSurface(
                 isStartPage: false,
-                hasActivePage: true
+                hasActivePage: true,
+                completedNavigationCount: 1
+            )
+        )
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                completedNavigationCount: 0
+            )
+        )
+        XCTAssertTrue(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                completedNavigationCount: 1
             )
         )
         XCTAssertGreaterThan(BrowserPageSurfacePolicy.shadowOpacity, 0)

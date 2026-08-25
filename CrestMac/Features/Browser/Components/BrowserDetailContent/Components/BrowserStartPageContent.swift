@@ -13,6 +13,7 @@ struct BrowserStartPageContent: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let tabPromotionNamespace: Namespace.ID
+    let focusRequest: Int
     let isCommandPalettePresented: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -28,6 +29,9 @@ struct BrowserStartPageContent: View {
                 openURL: openStartPageURL,
                 isCommandPaletteObscured: isCommandPalettePresented,
                 layout: .macOSPage,
+                focusRequest: tab.id == browser.selectedTab?.id
+                    ? focusRequest
+                    : nil,
                 promotion: BrowserStartPagePromotion(
                     namespace: tabPromotionNamespace,
                     id: BrowserTabPromotionID.value(for: tab.id)

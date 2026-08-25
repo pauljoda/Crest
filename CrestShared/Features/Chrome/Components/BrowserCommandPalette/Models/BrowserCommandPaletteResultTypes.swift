@@ -85,15 +85,8 @@ struct BrowserCommandPaletteResult: Identifiable, Equatable, Sendable {
 
     var faviconTabID: TabID? {
         switch target {
-        case .tab(let assignment), .spaceTab(let assignment): assignment.tabID
+        case .tab(let assignment): assignment.tabID
         case .url, .command: nil
-        }
-    }
-
-    var foreignSpaceID: SpaceID? {
-        switch target {
-        case .spaceTab(let assignment): assignment.spaceID
-        case .tab, .url, .command: nil
         }
     }
 }
@@ -112,7 +105,6 @@ enum BrowserCommandPaletteResultLimits {
     static let matchedActions = 5
     static let saved = 5
     static let history = 6
-    static let otherSpaceTabs = 5
     static let historyScan = 1_500
     static let historyCandidates = 40
     static let initialResultCapacity = 24
@@ -129,7 +121,6 @@ enum BrowserCommandPaletteSection: String, CaseIterable, Sendable {
     case actions
     case saved
     case history
-    case otherSpaces
 
     var title: String {
         switch self {
@@ -138,7 +129,6 @@ enum BrowserCommandPaletteSection: String, CaseIterable, Sendable {
         case .actions: "Actions"
         case .saved: "Pinned & Saved"
         case .history: "History"
-        case .otherSpaces: "Other Spaces"
         }
     }
 
@@ -147,7 +137,6 @@ enum BrowserCommandPaletteSection: String, CaseIterable, Sendable {
 
 enum BrowserCommandPaletteTarget: Equatable, Hashable, Sendable {
     case tab(BrowserTabRuntimeAssignment)
-    case spaceTab(BrowserTabRuntimeAssignment)
     case url(URL)
     case command(BrowserShortcutCommand)
 }

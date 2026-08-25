@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
-    func testExactSourceAndTargetAssignmentsRejectReplacementLockAndDeletion() throws {
+    func testTargetRequiresCurrentSpaceAndRejectsReplacementOrLock() throws {
         let source = makeSpace(index: 1)
         let destination = makeSpace(index: 2)
         let browser = makeBrowser(spaces: [source, destination], selected: source.id)
@@ -21,6 +21,14 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             )
         )
         XCTAssertNotNil(
+            BrowserCommandPaletteActionPolicy.target(
+                sourceAssignment,
+                from: sourceAssignment,
+                in: browser,
+                accessController: access
+            )
+        )
+        XCTAssertNil(
             BrowserCommandPaletteActionPolicy.target(
                 destinationAssignment,
                 from: sourceAssignment,
@@ -50,49 +58,19 @@ final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
             )
         )
 
-        var protectedDestination = destination
-        protectedDestination.accessPolicy = .deviceOwnerAuthentication
+        var protectedSource = source
+        protectedSource.accessPolicy = .deviceOwnerAuthentication
         browser.session = BrowserSession(
-            spaces: [source, protectedDestination],
+            spaces: [protectedSource, destination],
             selectedSpaceID: source.id
         )
         XCTAssertNil(
             BrowserCommandPaletteActionPolicy.target(
-                try assignment(for: protectedDestination),
+                try assignment(for: protectedSource),
                 from: sourceAssignment,
                 in: browser,
                 accessController: access
             )
-        )
-    }
-
-    func testOtherSpacesExcludeLockedAndDeletingDestinations() throws {
-        let source = makeSpace(index: 10)
-        let available = makeSpace(index: 20)
-        var locked = makeSpace(index: 30)
-        locked.accessPolicy = .deviceOwnerAuthentication
-        let browser = makeBrowser(
-            spaces: [source, available, locked],
-            selected: source.id
-        )
-        let access = BrowserSpaceAccessController()
-
-        XCTAssertEqual(
-            BrowserCommandPaletteActionPolicy.availableOtherSpaces(
-                from: try assignment(for: source),
-                in: browser,
-                accessController: access
-            ).map(\.id),
-            [available.id]
-        )
-
-        XCTAssertTrue(browser.family.beginDeletingSpace(available.id))
-        XCTAssertTrue(
-            BrowserCommandPaletteActionPolicy.availableOtherSpaces(
-                from: try assignment(for: source),
-                in: browser,
-                accessController: access
-            ).isEmpty
         )
     }
 

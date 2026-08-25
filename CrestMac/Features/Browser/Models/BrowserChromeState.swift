@@ -8,6 +8,7 @@ final class BrowserChromeState {
     private(set) var commandPaletteMode: BrowserCommandPaletteMode?
     let utilityPresentation: BrowserUtilityPresentationState
     private(set) var addressFocusRequest = 0
+    private(set) var startPageFocusRequest = 0
     private(set) var urlCopyFeedbackRevision = 0
     private(set) var pageZoomFeedbackLabel = "100%"
     private(set) var pageZoomFeedbackRevision = 0
@@ -40,6 +41,15 @@ final class BrowserChromeState {
 
     func presentCommandPalette() {
         commandPaletteMode = .newTab
+    }
+
+    func openNewTab(isStartPageSelected: Bool) {
+        guard isStartPageSelected else {
+            presentCommandPalette()
+            return
+        }
+        commandPaletteMode = nil
+        startPageFocusRequest &+= 1
     }
 
     func dismissCommandPalette() {
