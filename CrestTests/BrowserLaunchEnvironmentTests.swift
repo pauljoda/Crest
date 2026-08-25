@@ -17,6 +17,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
                 "CREST_PERFORMANCE_BASE_URL": "http://127.0.0.1:8080/",
                 "CREST_PERFORMANCE_TAB_COUNT": "12",
                 "CREST_PERFORMANCE_RUN_ID": "run-42",
+                "CREST_UPDATE_WIDGET_FIXTURE": "ready:0.5.99:599",
             ],
             isXCTestRuntime: true,
             isSwiftUIPreviewRuntime: true
@@ -36,6 +37,10 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         )
         XCTAssertEqual(environment.performanceTabCount, "12")
         XCTAssertEqual(environment.performanceRunID, "run-42")
+        XCTAssertEqual(
+            environment.softwareUpdateWidgetFixture,
+            "ready:0.5.99:599"
+        )
         XCTAssertTrue(environment.isXCTestRuntime)
         XCTAssertTrue(environment.isSwiftUIPreviewRuntime)
     }

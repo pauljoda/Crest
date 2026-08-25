@@ -10,6 +10,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     let performanceBaseURLString: String?
     let performanceTabCount: String?
     let performanceRunID: String
+    let softwareUpdateWidgetFixture: String?
     let isXCTestRuntime: Bool
     let isSwiftUIPreviewRuntime: Bool
 
@@ -38,6 +39,10 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         performanceRunID =
             values[Key.performanceRunID.rawValue]
             ?? Defaults.performanceRunID
+        softwareUpdateWidgetFixture =
+            values[
+                Key.softwareUpdateWidgetFixture.rawValue
+            ]
         self.isXCTestRuntime = isXCTestRuntime
         self.isSwiftUIPreviewRuntime = isSwiftUIPreviewRuntime
     }
@@ -69,6 +74,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         case performanceBaseURL = "CREST_PERFORMANCE_BASE_URL"
         case performanceTabCount = "CREST_PERFORMANCE_TAB_COUNT"
         case performanceRunID = "CREST_PERFORMANCE_RUN_ID"
+        case softwareUpdateWidgetFixture = "CREST_UPDATE_WIDGET_FIXTURE"
     }
 
     private enum Defaults {

@@ -44,11 +44,12 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
             title: appcastItem.title
                 ?? "Crest \(appcastItem.displayVersionString)",
             version: appcastItem.displayVersionString,
+            build: appcastItem.versionString,
             releaseNotes: appcastItem.itemDescription,
             informationURL: appcastItem.infoURL,
             isInformationOnly: appcastItem.isInformationOnlyUpdate,
+            suppressesWindowPresentation: !state.userInitiated,
             install: { reply(.install) },
-            dismiss: { reply(.dismiss) },
             skip: { reply(.skip) }
         )
     }
@@ -117,7 +118,6 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     ) {
         model.presentReadyToInstall(
             install: { reply(.install) },
-            dismiss: { reply(.dismiss) },
             cancel: { reply(.skip) }
         )
     }

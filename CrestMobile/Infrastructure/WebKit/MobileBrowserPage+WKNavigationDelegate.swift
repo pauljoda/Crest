@@ -33,6 +33,10 @@ extension MobileBrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         activeNavigation = navigation
+        // Reloads and history traversal do not necessarily pass through the
+        // app-level load path. Retire the old document's session as soon as
+        // WebKit starts any replacement navigation.
+        mediaSessionCoordinator?.prepareForNavigation()
         isAwaitingPopupNavigation = false
         beginBlockedPopupNavigation()
         beginGeolocationNavigation()
@@ -51,6 +55,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        mediaSessionCoordinator?.didCommitNavigation()
         committedNavigationCount &+= 1
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
     }
@@ -68,6 +73,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
         completeNavigation()
+        mediaSessionCoordinator?.didFinishNavigation()
         Task { [weak self] in
             await self?.refreshReaderModeAvailability()
         }
@@ -270,6 +276,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        mediaSessionCoordinator?.webContentProcessDidTerminate()
         httpAuthenticationSession.authenticationFailed()
         recordWebContentTermination()
     }

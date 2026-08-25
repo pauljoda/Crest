@@ -35,6 +35,9 @@ struct BrowserSoftwareUpdateView: View {
             guard phase == .idle else { return }
             dismissWindow(id: BrowserSceneID.softwareUpdate.rawValue)
         }
+        .onChange(of: model.dismissalRevision) {
+            dismissWindow(id: BrowserSceneID.softwareUpdate.rawValue)
+        }
         .onDisappear {
             model.closePresentation()
         }
@@ -65,7 +68,6 @@ struct BrowserSoftwareUpdateView: View {
                     """,
                 isInformationOnly: false,
                 install: {},
-                dismiss: {},
                 skip: {}
             )
         }

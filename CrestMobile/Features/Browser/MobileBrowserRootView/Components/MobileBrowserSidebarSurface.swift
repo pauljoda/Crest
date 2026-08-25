@@ -55,6 +55,7 @@ struct MobileBrowserSidebarSurface: View {
     let closePrivateBrowsing: () -> Void
     let toggleSidebar: () -> Void
     let showsSidebarToggle: Bool
+    let sidebarIsPresented: Bool
     let sidebarIsDocked: Bool
     let utilityPresentation: BrowserUtilityPresentationState
 
@@ -170,6 +171,7 @@ struct MobileBrowserSidebarSurface: View {
             closePrivateBrowsing: closePrivateBrowsing,
             toggleSidebar: toggleSidebar,
             showsSidebarToggle: showsSidebarToggle,
+            sidebarIsPresented: sidebarIsPresented,
             sidebarIsDocked: sidebarIsDocked
         )
     }
@@ -280,6 +282,7 @@ struct MobileBrowserSidebarSurface: View {
         closePrivateBrowsing: {},
         toggleSidebar: {},
         showsSidebarToggle: true,
+        sidebarIsPresented: true,
         sidebarIsDocked: true,
         utilityPresentation: BrowserUtilityPresentationState()
     )

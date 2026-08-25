@@ -30,6 +30,7 @@ final class MobileBrowserWindowSceneModel {
         startupBehavior: BrowserStartupBehavior,
         monitorsMemoryPressure: Bool,
         usesEphemeralWebsiteDataStores: Bool = false,
+        mediaSessionStore: BrowserMediaSessionStore? = nil,
         linkPreferenceStore: BrowserLinkPreferenceStore = .shared
     ) {
         let windowState = BrowserWindowStateStore(
@@ -50,6 +51,7 @@ final class MobileBrowserWindowSceneModel {
             monitorsMemoryPressure: monitorsMemoryPressure,
             usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
             permissionCenter: permissionCenter,
+            mediaSessionStore: mediaSessionStore,
             loadHTTPAuthenticationCredential: { protectionSpace, spaceID in
                 try await browser.httpAuthenticationCredential(
                     for: protectionSpace,

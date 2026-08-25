@@ -82,6 +82,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
+    @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored private let activateHostedNotificationSource: (SpaceID, TabID) -> Void
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
@@ -120,6 +121,7 @@ final class BrowserPagePool:
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         hostedNotificationCenter:
             (any BrowserHostedWebNotificationCentering)? = nil,
+        mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
@@ -158,6 +160,7 @@ final class BrowserPagePool:
         self.mozillaAddonsProvider = mozillaAddonsProvider
         self.permissionCenter = permissionCenter
         self.hostedNotificationCenter = hostedNotificationCenter
+        self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
         self.dialogPresenter = dialogPresenter
         self.popupTabHost = popupTabHost
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
@@ -1082,7 +1085,11 @@ final class BrowserPagePool:
             registration.space.profile.id == opener.profileID
         else { return nil }
 
-        let page = makePage(space: registration.space, adoptedConfiguration: configuration)
+        let page = makePage(
+            space: registration.space,
+            tabID: registration.tab.id,
+            adoptedConfiguration: configuration
+        )
         page.markOpenedAsPopup()
         page.updateNavigationContext(
             tab: registration.tab,
@@ -1151,6 +1158,16 @@ final class BrowserPagePool:
                 .first(where: { $0.webView === sourceWebView })
         else { return }
         page.receiveBlockedPopupMessage(message)
+    }
+
+    func routeMediaSessionMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pages.values.first(where: { $0.webView === sourceWebView })
+                ?? suspendedPagesByTabID.values
+                .joined()
+                .first(where: { $0.webView === sourceWebView })
+        else { return }
+        page.receiveMediaSessionMessage(message)
     }
 
     func replaceExtensionPageNavigation(
@@ -1480,6 +1497,7 @@ final class BrowserPagePool:
         }
         let page = makePage(
             space: space,
+            tabID: tab.id,
             extensionConfiguration: extensionConfiguration
         )
         page.updateNavigationContext(
@@ -1511,6 +1529,7 @@ final class BrowserPagePool:
         } else {
             replacement = makePage(
                 space: space,
+                tabID: tabID,
                 extensionConfiguration: extensionConfiguration
             )
         }
@@ -1531,6 +1550,7 @@ final class BrowserPagePool:
     /// both supplied by WebKit and must be used exactly as handed over.
     private func makePage(
         space: BrowserSpace,
+        tabID: TabID? = nil,
         adoptedConfiguration: WKWebViewConfiguration? = nil,
         extensionConfiguration: BrowserExtensionPageConfiguration? = nil
     ) -> BrowserPage {
@@ -1558,6 +1578,7 @@ final class BrowserPagePool:
                 ? hostedNotificationCenter
                 : nil,
             serverTrustOverrides: serverTrustOverrides,
+            mediaSessionStore: tabID == nil ? nil : mediaSessionStore,
             spaceID: space.id,
             profileID: space.profile.id,
             spaceName: space.name,

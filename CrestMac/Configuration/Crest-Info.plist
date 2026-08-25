@@ -86,6 +86,8 @@
 	<string>https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<real>3600</real>
 	<key>SUAutomaticallyUpdate</key>
 	<true/>
 	<key>CrestDefaultUpdateChannel</key>

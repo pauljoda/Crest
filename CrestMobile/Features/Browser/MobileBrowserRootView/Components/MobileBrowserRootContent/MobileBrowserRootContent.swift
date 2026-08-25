@@ -73,6 +73,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     usesCollapsedSidebarBorderlessFrame,
                 isStartPage: browser.selectedTab?.isStartPage == true,
                 hasActivePage: model.selectedPage != nil,
+                completedNavigationCount:
+                    model.selectedPage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: browser.selectedSpace != nil,
                 showSidebar: showRegularSidebar,
                 commitSidebarWidth: commitRegularSidebarWidth,
@@ -107,6 +109,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     closePrivateBrowsing: closePrivateBrowsing,
                     toggleSidebar: toggleCompactSidebar,
                     showsSidebarToggle: true,
+                    sidebarIsPresented: true,
                     sidebarIsDocked: true,
                     utilityPresentation: navigation.utilityPresentation
                 ),
@@ -138,6 +141,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     closePrivateBrowsing: closePrivateBrowsing,
                     toggleSidebar: toggleCompactSidebar,
                     showsSidebarToggle: true,
+                    sidebarIsPresented:
+                        navigation.compactSidebarPresentation.showsSidebar,
                     sidebarIsDocked: false,
                     utilityPresentation: navigation.utilityPresentation
                 )
@@ -248,6 +253,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         closePrivateBrowsing: closePrivateBrowsing,
                         toggleSidebar: toggleRegularSidebar,
                         showsSidebarToggle: true,
+                        sidebarIsPresented:
+                            navigation.regularSidebarIsPresented,
                         sidebarIsDocked:
                             navigation.regularSidebarIsDocked,
                         utilityPresentation:
@@ -301,12 +308,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 mode: commandPaletteMode,
                 space: browser.selectedSpace,
                 selectedTabID: browser.selectedTab?.id,
-                otherSpaces: model.paletteOtherSpaces,
                 commands: mobileBrowserCommandContext.paletteRegistry,
                 isPrivateBrowsing: browser.isPrivateBrowsing,
                 isSourceAvailable: model.isPaletteSourceAvailable,
                 selectTab: model.selectPaletteTab,
-                selectTabInSpace: model.selectPaletteTab,
                 openURL: { source, url, mode in
                     model.openPaletteURL(url, mode: mode, from: source)
                 },

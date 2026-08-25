@@ -9,8 +9,10 @@ struct CrestMobileApp: App {
     @State private var pages: MobileBrowserPageStore
     @State private var spaceAccess: BrowserSpaceAccessController
     @State private var shortcuts: BrowserShortcutStore
+    @State private var sidebarWidgets: BrowserSidebarWidgetRuntime
     private let permissionCenter: BrowserSitePermissionCenter
     private let pageStoreRegistry: MobileBrowserPageStoreRegistry
+    private let mediaSessions: BrowserMediaSessionStore
     private let tabStateArchive: (any BrowserTabStateArchiving)?
     private let windowStatePersistence: any BrowserWindowStatePersisting
     private let startupBehavior: BrowserStartupBehavior
@@ -60,10 +62,16 @@ struct CrestMobileApp: App {
             usesIsolatedLaunch
             ? nil
             : BrowserTabStateArchive.production()
+        let mediaSessions = BrowserMediaSessionStore()
+        let sidebarWidgets = BrowserSidebarWidgetRuntime(
+            registrations: [.nowPlaying],
+            sources: [mediaSessions]
+        )
         let pages = MobileBrowserPageStore(
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             permissionCenter: permissionCenter,
+            mediaSessionStore: mediaSessions,
             downloadLedger: Self.showcaseDownloadLedger(
                 launchEnvironment: launchEnvironment,
                 browser: browser
@@ -108,6 +116,7 @@ struct CrestMobileApp: App {
         _onboardingCoordinator = State(initialValue: onboardingCoordinator)
         _pages = State(initialValue: pages)
         _spaceAccess = State(initialValue: spaceAccess)
+        _sidebarWidgets = State(initialValue: sidebarWidgets)
         // A hardware keyboard on iPad reads the same rebindable command table
         // the Mac menu bar does, composed exactly the way the Mac composes it.
         _shortcuts = State(
@@ -118,6 +127,7 @@ struct CrestMobileApp: App {
         )
         self.permissionCenter = permissionCenter
         pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
+        self.mediaSessions = mediaSessions
         self.tabStateArchive = tabStateArchive
         windowStatePersistence =
             usesIsolatedLaunch
@@ -165,10 +175,16 @@ struct CrestMobileApp: App {
                     usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
                     onboardingProgress: onboardingProgress,
                     onboardingCoordinator: onboardingCoordinator,
-                    automaticallyPresentsOnboarding: automaticallyPresentsOnboarding
+                    automaticallyPresentsOnboarding: automaticallyPresentsOnboarding,
+                    mediaSessions: mediaSessions,
+                    sidebarWidgets: sidebarWidgets
                 )
                 .environment(cloudSync)
                 .environment(onboardingCoordinator)
+                .environment(
+                    \.browserSidebarWidgetRuntime,
+                    sidebarWidgets
+                )
                 .task { await cloudSync.start() }
             } else {
                 EmptyView()

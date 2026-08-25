@@ -65,6 +65,7 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private var inactiveSinceByTabID: [TabID: Date] = [:]
     @ObservationIgnored private var ephemeralDataStores: [UUID: WKWebsiteDataStore] = [:]
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
+    @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: (URL, SpaceID, Bool) -> Void
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
@@ -103,6 +104,7 @@ final class MobileBrowserPageStore:
             BrowserLaunchIsolationPolicy.requiresIsolation(.current),
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
+        mediaSessionStore: BrowserMediaSessionStore? = nil,
         downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
@@ -136,6 +138,7 @@ final class MobileBrowserPageStore:
             ? nil
             : tabStateArchive
         self.popupTabHost = popupTabHost
+        self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
         self.permissionCenter = permissionCenter
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
@@ -909,6 +912,15 @@ final class MobileBrowserPageStore:
         page.receiveBlockedPopupMessage(message)
     }
 
+    func routeMediaSessionMessage(_ message: WKScriptMessage) {
+        guard let sourceWebView = message.webView,
+            let page = pagesByTabID.values.first(where: {
+                $0.webView === sourceWebView
+            })
+        else { return }
+        page.receiveMediaSessionMessage(message)
+    }
+
     func goBack() {
         activePage?.goBack()
     }
@@ -1221,6 +1233,7 @@ final class MobileBrowserPageStore:
             downloadCenter: downloadCenter,
             permissionCenter: permissionCenter,
             serverTrustOverrides: serverTrustOverrides,
+            mediaSessionStore: mediaSessionStore,
             websiteDataStore: websiteDataStore(for: space.profile),
             adoptedConfiguration: adoptedConfiguration,
             contentRuleLists: contentRuleLists(for: space),

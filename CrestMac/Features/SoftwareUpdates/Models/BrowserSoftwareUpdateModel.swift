@@ -6,8 +6,10 @@ import Observation
 final class BrowserSoftwareUpdateModel {
     private(set) var phase = BrowserSoftwareUpdatePhase.idle
     private(set) var presentationRevision = 0
+    private(set) var dismissalRevision = 0
     private(set) var updateTitle: String?
     private(set) var updateVersion: String?
+    private(set) var updateBuild: String?
     private(set) var releaseNotes: String?
     private(set) var informationURL: URL?
     private(set) var message: String?
@@ -15,17 +17,25 @@ final class BrowserSoftwareUpdateModel {
     private(set) var isInformationOnly = false
     private(set) var didRelaunch = false
     private(set) var canRetryTermination = false
+    private(set) var isFixture = false
+
+    @ObservationIgnored private weak var widgetSource: BrowserSoftwareUpdateWidgetSource?
 
     @ObservationIgnored private var expectedDownloadLength: UInt64?
     @ObservationIgnored private var receivedDownloadLength: UInt64 = 0
     @ObservationIgnored private var permissionResponse: ((Bool) -> Void)?
     @ObservationIgnored private var cancellation: (() -> Void)?
     @ObservationIgnored private var install: (() -> Void)?
-    @ObservationIgnored private var dismiss: (() -> Void)?
     @ObservationIgnored private var skip: (() -> Void)?
     @ObservationIgnored private var installAndRelaunch: (() -> Void)?
     @ObservationIgnored private var retryTermination: (() -> Void)?
     @ObservationIgnored private var acknowledgement: (() -> Void)?
+    @ObservationIgnored private var suppressesWindowPresentation = false
+
+    init(widgetSource: BrowserSoftwareUpdateWidgetSource? = nil) {
+        self.widgetSource = widgetSource
+        widgetSource?.bind(self)
+    }
 
     func presentPermissionRequest(response: @escaping (Bool) -> Void) {
         resetCallbacks()
@@ -40,6 +50,7 @@ final class BrowserSoftwareUpdateModel {
         permissionResponse = nil
         response?(isEnabled)
         phase = .idle
+        publishWidgetState()
     }
 
     func presentChecking(cancellation: @escaping () -> Void) {
@@ -53,22 +64,26 @@ final class BrowserSoftwareUpdateModel {
     func presentUpdate(
         title: String,
         version: String?,
+        build: String? = nil,
         releaseNotes: String? = nil,
         informationURL: URL? = nil,
         isInformationOnly: Bool,
+        isFixture: Bool = false,
+        suppressesWindowPresentation: Bool = false,
         install: @escaping () -> Void,
-        dismiss: @escaping () -> Void,
         skip: @escaping () -> Void
     ) {
         resetCallbacks()
         phase = .updateAvailable
         updateTitle = title
         updateVersion = version
+        updateBuild = build
         self.releaseNotes = releaseNotes
         self.informationURL = informationURL
         self.isInformationOnly = isInformationOnly
+        self.isFixture = isFixture
+        self.suppressesWindowPresentation = suppressesWindowPresentation
         self.install = install
-        self.dismiss = dismiss
         self.skip = skip
         message =
             isInformationOnly
@@ -121,12 +136,14 @@ final class BrowserSoftwareUpdateModel {
     func setExpectedDownloadLength(_ length: UInt64) {
         expectedDownloadLength = length > 0 ? length : nil
         updateDownloadProgress()
+        publishWidgetState()
     }
 
     func receiveDownloadedBytes(_ length: UInt64) {
         let addition = receivedDownloadLength.addingReportingOverflow(length)
         receivedDownloadLength = addition.overflow ? .max : addition.partialValue
         updateDownloadProgress()
+        publishWidgetState()
     }
 
     func presentExtraction() {
@@ -139,17 +156,16 @@ final class BrowserSoftwareUpdateModel {
 
     func setExtractionProgress(_ progress: Double) {
         self.progress = min(max(progress, 0), 1)
+        publishWidgetState()
     }
 
     func presentReadyToInstall(
         install: @escaping () -> Void,
-        dismiss: @escaping () -> Void,
         cancel: @escaping () -> Void
     ) {
         phase = .readyToInstall
         message = "The update is ready. Crest will relaunch to finish installing it."
         installAndRelaunch = install
-        self.dismiss = dismiss
         skip = cancel
         present()
     }
@@ -186,20 +202,29 @@ final class BrowserSoftwareUpdateModel {
     func installUpdate() {
         guard !isInformationOnly, let install else { return }
         self.install = nil
+        skip = nil
         phase = .downloading
+        publishWidgetState()
         install()
     }
 
-    func dismissUpdate() {
-        let dismiss = self.dismiss
-        self.dismiss = nil
-        dismiss?()
-        reset()
+    /// Hides only the update window. The pending Sparkle choice stays alive so
+    /// the global widget remains actionable until the user installs or skips
+    /// this exact build.
+    func deferUpdatePresentation() {
+        guard phase == .updateAvailable || phase == .readyToInstall,
+            !suppressesWindowPresentation
+        else { return }
+        suppressesWindowPresentation = true
+        dismissalRevision &+= 1
+        publishWidgetState()
     }
 
     func skipUpdate() {
         let skip = self.skip
         self.skip = nil
+        install = nil
+        installAndRelaunch = nil
         skip?()
         reset()
     }
@@ -214,7 +239,9 @@ final class BrowserSoftwareUpdateModel {
     func installAndRelaunchNow() {
         let reply = installAndRelaunch
         installAndRelaunch = nil
+        skip = nil
         phase = .installing
+        publishWidgetState()
         reply?()
     }
 
@@ -236,7 +263,7 @@ final class BrowserSoftwareUpdateModel {
         case .checking, .downloading:
             cancelCurrentOperation()
         case .updateAvailable, .readyToInstall:
-            dismissUpdate()
+            deferUpdatePresentation()
         case .upToDate, .failed, .installed:
             acknowledge()
         case .idle, .extracting, .installing:
@@ -249,6 +276,7 @@ final class BrowserSoftwareUpdateModel {
     }
 
     func focus() {
+        suppressesWindowPresentation = false
         present()
     }
 
@@ -264,7 +292,10 @@ final class BrowserSoftwareUpdateModel {
     }
 
     private func present() {
-        presentationRevision &+= 1
+        if !suppressesWindowPresentation {
+            presentationRevision &+= 1
+        }
+        publishWidgetState()
     }
 
     private func reset() {
@@ -272,26 +303,67 @@ final class BrowserSoftwareUpdateModel {
         phase = .idle
         updateTitle = nil
         updateVersion = nil
+        updateBuild = nil
         releaseNotes = nil
         informationURL = nil
         message = nil
         progress = nil
         isInformationOnly = false
+        isFixture = false
+        suppressesWindowPresentation = false
         didRelaunch = false
         canRetryTermination = false
         expectedDownloadLength = nil
         receivedDownloadLength = 0
+        publishWidgetState()
     }
 
     private func resetCallbacks() {
         permissionResponse = nil
         cancellation = nil
         install = nil
-        dismiss = nil
         skip = nil
         installAndRelaunch = nil
         retryTermination = nil
         canRetryTermination = false
         acknowledgement = nil
+    }
+
+    var sidebarWidgetSnapshot: BrowserSoftwareUpdateWidgetSnapshot? {
+        let widgetPhase: BrowserSoftwareUpdateWidgetPhase
+        switch phase {
+        case .checking:
+            guard updateVersion != nil || updateBuild != nil else { return nil }
+            widgetPhase = .checking
+        case .updateAvailable:
+            widgetPhase = .available
+        case .downloading:
+            widgetPhase = .downloading
+        case .extracting:
+            widgetPhase = .extracting
+        case .readyToInstall:
+            widgetPhase = .readyToInstall
+        case .installing:
+            widgetPhase = .installing
+        case .failed:
+            guard updateVersion != nil || updateBuild != nil else { return nil }
+            widgetPhase = .failed
+        case .idle, .permission, .upToDate, .installed:
+            return nil
+        }
+        return BrowserSoftwareUpdateWidgetSnapshot(
+            phase: widgetPhase,
+            title: updateTitle ?? "Crest Update",
+            version: updateVersion,
+            build: updateBuild,
+            message: message,
+            progress: progress,
+            isInformationOnly: isInformationOnly,
+            isFixture: isFixture
+        )
+    }
+
+    private func publishWidgetState() {
+        widgetSource?.publish(sidebarWidgetSnapshot)
     }
 }

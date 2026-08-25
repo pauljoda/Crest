@@ -275,14 +275,27 @@ enum BrowserFaviconCapture {
                 let url = URL(string: source, relativeTo: manifestURL)?.absoluteURL,
                 isHTTPFamily(url)
             else { return nil }
+            // Manifest-only maskable and monochrome assets are installation
+            // resources, not general browser chrome. Their safe-zone padding or
+            // single-color glyph can look broken when used as a tab favicon.
+            // The Web App Manifest default is `any` when purpose is omitted.
+            let purposes = Set(
+                (icon["purpose"] as? String ?? "any")
+                    .lowercased()
+                    .split(whereSeparator: \.isWhitespace)
+                    .map(String.init)
+            )
+            guard purposes.contains("any") else { return nil }
             let sizes = (icon["sizes"] as? String ?? "")
                 .lowercased()
                 .split(whereSeparator: \.isWhitespace)
-            let maximumSize = sizes
+            let maximumSize =
+                sizes
                 .compactMap { Int($0.split(separator: "x").first ?? "") }
                 .max() ?? 0
             let type = (icon["type"] as? String)?.lowercased()
-            let isScalable = sizes.contains("any")
+            let isScalable =
+                sizes.contains("any")
                 || type == "image/svg+xml"
                 || url.pathExtension.lowercased() == "svg"
             return ManifestIconCandidate(
@@ -349,12 +362,15 @@ enum BrowserFaviconCapture {
                     .split(whereSeparator: \.isWhitespace)
                     .map(String.init)
             )
-            let isTouchIcon = relationships.contains("apple-touch-icon")
+            let isTouchIcon =
+                relationships.contains("apple-touch-icon")
                 || relationships.contains("apple-touch-icon-precomposed")
-            let isBrowserIcon = !isTouchIcon
+            let isBrowserIcon =
+                !isTouchIcon
                 && (relationships.contains("icon")
                     || relationships.contains("shortcut"))
-            let maximumSize = (value["sizes"] as? String ?? "")
+            let maximumSize =
+                (value["sizes"] as? String ?? "")
                 .split(whereSeparator: \.isWhitespace)
                 .compactMap { size in
                     Int(size.split(separator: "x").first ?? "")

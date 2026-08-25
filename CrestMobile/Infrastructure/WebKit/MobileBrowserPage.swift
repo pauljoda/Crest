@@ -12,7 +12,7 @@ import WebKit
 
 @Observable
 @MainActor
-final class MobileBrowserPage: NSObject {
+final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     private(set) var tabID: TabID
     let spaceID: SpaceID
     let profileID: UUID
@@ -93,6 +93,8 @@ final class MobileBrowserPage: NSObject {
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
     @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
+    @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
+    @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
@@ -132,6 +134,7 @@ final class MobileBrowserPage: NSObject {
         recoverGeolocationSystemAuthorization:
             BrowserGeolocationCoordinator.RecoverSystemAuthorization? = nil,
         serverTrustOverrides: BrowserServerTrustOverrideStore = BrowserServerTrustOverrideStore(),
+        mediaSessionStore: BrowserMediaSessionStore? = nil,
         websiteDataStore: WKWebsiteDataStore? = nil,
         adoptedConfiguration: WKWebViewConfiguration? = nil,
         contentRuleList: WKContentRuleList? = nil,
@@ -260,6 +263,7 @@ final class MobileBrowserPage: NSObject {
             linkPeekMessageProxy = installedLinkPeekProxy
         }
         webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.underPageBackgroundColor = .clear
 
         super.init()
         if !BrowserPageZoomPolicy.levelsMatch(
@@ -278,6 +282,36 @@ final class MobileBrowserPage: NSObject {
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsLinkPreview = false
+        if let mediaSessionStore {
+            let coordinator = BrowserMediaSessionPageCoordinator(
+                webView: webView,
+                endpoint: self,
+                store: mediaSessionStore,
+                owner: { [weak self] in
+                    guard let self else { return nil }
+                    return BrowserTabRuntimeAssignment(
+                        tabID: tabID,
+                        spaceID: spaceID,
+                        profileID: profileID
+                    )
+                },
+                fallbackTitle: { [weak self] in
+                    guard let self else { return nil }
+                    return self.navigationContext?.mediaSessionOwnerTitle(
+                        observedPageTitle: self.title
+                    ) ?? BrowserTab.resolvedCustomTitle(self.title)
+                }
+            )
+            mediaSessionCoordinator = coordinator
+            if ownsUserContentController {
+                mediaSessionMessageProxy =
+                    BrowserMediaSessionContentBridge.install(
+                        in: webView.configuration.userContentController
+                    ) { [weak self] message in
+                        self?.receiveMediaSessionMessage(message)
+                    }
+            }
+        }
         linkPeekMessageProxy?.receive = { [weak self] message in
             self?.receiveLinkPeekPressMessage(message)
         }
@@ -409,6 +443,7 @@ final class MobileBrowserPage: NSObject {
         tab: BrowserTab,
         automaticallyOpensPeek: Bool = true
     ) {
+        let previousTitle = navigationContext?.title
         let shouldRefreshAutomaticIcon =
             tab.iconMode == .automatic
             && !tab.hasCurrentAutomaticFavicon
@@ -424,12 +459,16 @@ final class MobileBrowserPage: NSObject {
             profileID: profileID,
             automaticallyOpensPeek: automaticallyOpensPeek
         )
+        if previousTitle != navigationContext?.title {
+            mediaSessionCoordinator?.ownerTitleDidChange()
+        }
         if shouldRefreshAutomaticIcon {
             refreshFavicon()
         }
     }
 
     func prepareForSpaceDeletion() {
+        mediaSessionCoordinator?.prepareForRemoval()
         linkPeekPressCoordinator.cancel()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
@@ -449,6 +488,8 @@ final class MobileBrowserPage: NSObject {
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
             blockedPopupMessageProxy = nil
+            mediaSessionMessageProxy = nil
+            mediaSessionCoordinator = nil
             geolocationCoordinator = nil
             userActivityHandler = nil
             return
@@ -494,6 +535,15 @@ final class MobileBrowserPage: NSObject {
                 )
         }
         blockedPopupMessageProxy = nil
+        if mediaSessionMessageProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserMediaSessionContentBridge.messageHandlerName,
+                    contentWorld: BrowserMediaSessionContentBridge.contentWorld
+                )
+        }
+        mediaSessionMessageProxy = nil
+        mediaSessionCoordinator = nil
         geolocationCoordinator = nil
         userActivityHandler = nil
     }
@@ -990,7 +1040,7 @@ final class MobileBrowserPage: NSObject {
                 }
             },
             webView.observe(\.title, options: [.initial, .new]) { [weak self] webView, _ in
-                Task { @MainActor in self?.title = webView.title }
+                Task { @MainActor in self?.recordObservedTitle(webView.title) }
             },
             webView.observe(\.estimatedProgress, options: [.initial, .new]) { [weak self] webView, _ in
                 Task { @MainActor in self?.estimatedProgress = webView.estimatedProgress }
@@ -1010,7 +1060,7 @@ final class MobileBrowserPage: NSObject {
                     // A standards-provided theme color owns the browser's
                     // overscroll atmosphere. Nil restores WebKit's derived
                     // html/body background instead of inventing a Crest color.
-                    webView.underPageBackgroundColor = themeColor
+                    self?.updateUnderPageBackground()
                 }
             },
             webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] webView, _ in
@@ -1033,12 +1083,19 @@ final class MobileBrowserPage: NSObject {
         activeNavigation = nil
         clearNavigationFailure()
         url = webView.url
-        title = webView.title
+        recordObservedTitle(webView.title)
         processRecovery.recordSuccessfulNavigation()
         showsProcessFailure = false
         needsWebContentRestore = false
         completedNavigationCount &+= 1
+        updateUnderPageBackground()
         refreshFavicon()
+    }
+
+    private func recordObservedTitle(_ observedTitle: String?) {
+        guard title != observedTitle else { return }
+        title = observedTitle
+        mediaSessionCoordinator?.ownerTitleDidChange()
     }
 
     private func refreshFavicon() {
@@ -1140,6 +1197,7 @@ final class MobileBrowserPage: NSObject {
     }
 
     func prepareForNavigation(to url: URL?) {
+        mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
         if navigationContext?.iconMode == .automatic {
@@ -1151,6 +1209,39 @@ final class MobileBrowserPage: NSObject {
         }
         pendingNavigationURL = url
         clearNavigationFailure(preservingPendingURL: true)
+    }
+
+    func updateUnderPageBackground() {
+        webView.underPageBackgroundColor =
+            completedNavigationCount == 0 ? .clear : themeColor
+    }
+
+    func receiveMediaSessionMessage(_ message: WKScriptMessage) {
+        guard message.webView === webView else {
+            host?.routeMediaSessionMessage(message)
+            return
+        }
+        mediaSessionCoordinator?.receive(message)
+    }
+
+    func performMediaSessionAction(
+        _ action: BrowserMediaSessionAction,
+        documentIdentifier: String
+    ) {
+        mediaSessionCoordinator?.perform(
+            action,
+            documentIdentifier: documentIdentifier
+        )
+    }
+
+    func setMediaSessionMuted(
+        _ muted: Bool,
+        documentIdentifier: String
+    ) {
+        mediaSessionCoordinator?.setMuted(
+            muted,
+            documentIdentifier: documentIdentifier
+        )
     }
 
     func synchronizePopupPermission(for url: URL? = nil) {

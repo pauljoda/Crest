@@ -157,6 +157,38 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testWebManifestExcludesMaskableAndMonochromeInstallationIcons() throws {
+        let manifestURL = try XCTUnwrap(
+            URL(string: "https://video.example/manifest.webmanifest")
+        )
+        let manifestData = Data(
+            #"""
+            {"icons":[
+                {"src":"normal-192.png","sizes":"192x192"},
+                {"src":"monochrome-512.png","sizes":"512x512","purpose":"monochrome"},
+                {"src":"maskable-512.png","sizes":"512x512","purpose":"maskable"},
+                {"src":"general-maskable-256.png","sizes":"256x256","purpose":"any maskable"}
+            ]}
+            """#.utf8
+        )
+
+        XCTAssertEqual(
+            BrowserFaviconCapture.manifestIconURLs(
+                from: manifestData,
+                manifestURL: manifestURL
+            ),
+            [
+                try XCTUnwrap(
+                    URL(string: "https://video.example/general-maskable-256.png")
+                ),
+                try XCTUnwrap(
+                    URL(string: "https://video.example/normal-192.png")
+                ),
+            ]
+        )
+    }
+
     func testNativeFaviconCandidateRequestBypassesPageCORSAndStaleCaches() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [FaviconURLProtocolStub.self]

@@ -20,9 +20,11 @@ struct CrestApp: App {
     @State private var windowTransparency: BrowserWindowTransparencyStore
     @State private var splitFocus: BrowserSplitFocusPreferenceStore
     @State private var softwareUpdates: BrowserSoftwareUpdateService
+    @State private var sidebarWidgets: BrowserSidebarWidgetRuntime
     private let extensionControllerPool: BrowserExtensionControllerPool
     private let extensionCommandMonitor: BrowserExtensionCommandMonitor
     private let pagePoolRegistry: BrowserPagePoolRegistry
+    private let systemNowPlaying: BrowserSystemNowPlayingCoordinator?
     private let startupBehavior: BrowserStartupBehavior
     private let presentsInstalledApplicationUI: Bool
 
@@ -125,12 +127,31 @@ struct CrestApp: App {
             usesIsolatedLaunch
             ? nil
             : BrowserTabStateArchive.production()
+        let mediaSessions = BrowserMediaSessionStore()
+        let systemNowPlaying =
+            presentsInstalledApplicationUI
+            ? BrowserSystemNowPlayingCoordinator(store: mediaSessions)
+            : nil
+        systemNowPlaying?.start()
+        let softwareUpdates = BrowserSoftwareUpdateService(
+            isEnabled: presentsInstalledApplicationUI && !usesIsolatedLaunch
+        )
+        if usesIsolatedLaunch,
+            let fixture = launchEnvironment.softwareUpdateWidgetFixture
+        {
+            softwareUpdates.presentIsolatedSidebarWidgetFixture(fixture)
+        }
+        let sidebarWidgets = BrowserSidebarWidgetRuntime(
+            registrations: [.softwareUpdate, .nowPlaying],
+            sources: [softwareUpdates.widgetSource, mediaSessions]
+        )
         let pages = BrowserPagePool(
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
             extensionControllerPool: extensionControllerPool,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter,
+            mediaSessionStore: mediaSessions,
             downloadLedger: Self.showcaseDownloadLedger(
                 launchEnvironment: launchEnvironment,
                 browser: browser
@@ -250,11 +271,8 @@ struct CrestApp: App {
                 usesIsolatedLaunch: usesIsolatedLaunch
             )
         )
-        _softwareUpdates = State(
-            initialValue: BrowserSoftwareUpdateService(
-                isEnabled: presentsInstalledApplicationUI && !usesIsolatedLaunch
-            )
-        )
+        _softwareUpdates = State(initialValue: softwareUpdates)
+        _sidebarWidgets = State(initialValue: sidebarWidgets)
         _pages = State(initialValue: pages)
         _privatePages = State(initialValue: privatePages)
         self.extensionControllerPool = extensionControllerPool
@@ -264,6 +282,7 @@ struct CrestApp: App {
             shortcuts: shortcuts
         )
         pagePoolRegistry = BrowserPagePoolRegistry(primary: pages)
+        self.systemNowPlaying = systemNowPlaying
         self.startupBehavior = startupBehavior
     }
 
@@ -303,10 +322,15 @@ struct CrestApp: App {
                             spaceAccess: spaceAccess,
                             spaceSettingsPresentation: spaceSettingsPresentation,
                             startupBehavior: startupBehavior,
-                            shortcuts: shortcuts
+                            shortcuts: shortcuts,
+                            sidebarWidgets: sidebarWidgets
                         )
                         .environment(windowTransparency)
                         .environment(splitFocus)
+                        .environment(
+                            \.browserSidebarWidgetRuntime,
+                            sidebarWidgets
+                        )
                     }
                 }
                 .background(
@@ -393,6 +417,10 @@ struct CrestApp: App {
                 )
                 .environment(windowTransparency)
                 .environment(splitFocus)
+                .environment(
+                    \.browserSidebarWidgetRuntime,
+                    sidebarWidgets
+                )
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(.dark)
                 .onDisappear(perform: closePrivateBrowsingWindow)

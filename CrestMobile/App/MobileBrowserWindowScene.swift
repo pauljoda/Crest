@@ -8,6 +8,7 @@ struct MobileBrowserWindowScene: View {
 
     private let onboardingProgress: BrowserOnboardingProgressStore
     private let automaticallyPresentsOnboarding: Bool
+    private let sidebarWidgets: BrowserSidebarWidgetRuntime
     @Bindable private var onboardingCoordinator: BrowserOnboardingCoordinator
 
     @State private var model: MobileBrowserWindowSceneModel
@@ -27,11 +28,14 @@ struct MobileBrowserWindowScene: View {
         usesEphemeralWebsiteDataStores: Bool,
         onboardingProgress: BrowserOnboardingProgressStore,
         onboardingCoordinator: BrowserOnboardingCoordinator,
-        automaticallyPresentsOnboarding: Bool
+        automaticallyPresentsOnboarding: Bool,
+        mediaSessions: BrowserMediaSessionStore,
+        sidebarWidgets: BrowserSidebarWidgetRuntime
     ) {
         self.onboardingProgress = onboardingProgress
         self.onboardingCoordinator = onboardingCoordinator
         self.automaticallyPresentsOnboarding = automaticallyPresentsOnboarding
+        self.sidebarWidgets = sidebarWidgets
         _model = State(
             initialValue: MobileBrowserWindowSceneModel(
                 id: id,
@@ -43,7 +47,8 @@ struct MobileBrowserWindowScene: View {
                 windowStatePersistence: windowStatePersistence,
                 startupBehavior: startupBehavior,
                 monitorsMemoryPressure: monitorsMemoryPressure,
-                usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores
+                usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
+                mediaSessionStore: mediaSessions
             )
         )
     }
@@ -66,8 +71,8 @@ struct MobileBrowserWindowScene: View {
                 guard scenePhase == .active else { return }
                 await model.sweepExpiredTabsWhileActive()
             }
-            .onAppear(perform: model.activateWindow)
-            .onDisappear(perform: model.closeWindowRuntime)
+            .onAppear(perform: activateWindow)
+            .onDisappear(perform: closeWindowRuntime)
             .onOpenURL(perform: openExternalURL)
             // UIKit's warning supplements the kernel pressure source the standard store
             // watches: it only reaches a foregrounded app, but it is also the one signal
@@ -92,12 +97,15 @@ struct MobileBrowserWindowScene: View {
             .onChange(of: scenePhase, initial: true) { _, phase in
                 switch phase {
                 case .active:
-                    model.activateWindow()
+                    activateWindow()
                 case .inactive:
+                    sidebarWidgets.suspendHost(id: model.windowState.id)
                     model.prepareForInactiveScene()
                 case .background:
+                    sidebarWidgets.suspendHost(id: model.windowState.id)
                     model.prepareForBackgroundScene()
                 @unknown default:
+                    sidebarWidgets.suspendHost(id: model.windowState.id)
                     model.prepareForBackgroundScene()
                 }
             }
@@ -109,6 +117,19 @@ struct MobileBrowserWindowScene: View {
                 value: onboardingCoordinator.isMobilePresented
             )
             .onAppear(perform: presentAutomaticOnboardingIfNeeded)
+    }
+
+    private func activateWindow() {
+        model.activateWindow()
+        sidebarWidgets.activateHost(
+            id: model.windowState.id,
+            capabilities: [.mediaSessions]
+        )
+    }
+
+    private func closeWindowRuntime() {
+        sidebarWidgets.removeHost(id: model.windowState.id)
+        model.closeWindowRuntime()
     }
 
     @ViewBuilder

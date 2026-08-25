@@ -30,5 +30,6 @@ struct MobileBrowserSidebarContentConfiguration {
     let closePrivateBrowsing: () -> Void
     let toggleSidebar: () -> Void
     let showsSidebarToggle: Bool
+    let sidebarIsPresented: Bool
     let sidebarIsDocked: Bool
 }

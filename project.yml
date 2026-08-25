@@ -58,6 +58,7 @@ targets:
       - sdk: CloudKit.framework
       - sdk: CoreLocation.framework
       - sdk: LocalAuthentication.framework
+      - sdk: MediaPlayer.framework
       - sdk: UserNotifications.framework
       - sdk: WebKit.framework
       - sdk: Security.framework

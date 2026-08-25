@@ -16,6 +16,7 @@ struct BrowserMacWindowScene: View {
     private let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     private let startupBehavior: BrowserStartupBehavior
     private let shortcuts: BrowserShortcutStore?
+    private let sidebarWidgets: BrowserSidebarWidgetRuntime
 
     init(
         id: BrowserWindowID,
@@ -29,7 +30,8 @@ struct BrowserMacWindowScene: View {
         spaceAccess: BrowserSpaceAccessController,
         spaceSettingsPresentation: BrowserSpaceSettingsPresentationState,
         startupBehavior: BrowserStartupBehavior,
-        shortcuts: BrowserShortcutStore? = nil
+        shortcuts: BrowserShortcutStore? = nil,
+        sidebarWidgets: BrowserSidebarWidgetRuntime
     ) {
         self.id = id
         self.browser = browser
@@ -43,6 +45,7 @@ struct BrowserMacWindowScene: View {
         self.spaceSettingsPresentation = spaceSettingsPresentation
         self.startupBehavior = startupBehavior
         self.shortcuts = shortcuts
+        self.sidebarWidgets = sidebarWidgets
     }
 
     var body: some View {
@@ -113,6 +116,7 @@ struct BrowserMacWindowScene: View {
             if phase == .active {
                 activateWindow()
             } else {
+                sidebarWidgets.suspendHost(id: id)
                 if phase == .inactive {
                     spaceAccess.lockAllForInactiveScene()
                 } else {
@@ -124,6 +128,14 @@ struct BrowserMacWindowScene: View {
     }
 
     private func activateWindow() {
+        sidebarWidgets.activateHost(
+            id: id,
+            capabilities: [
+                .persistentSidebar,
+                .mediaSessions,
+                .directSoftwareUpdates,
+            ]
+        )
         pagePoolRegistry.register(
             pages,
             browser: browser,
@@ -137,6 +149,7 @@ struct BrowserMacWindowScene: View {
     }
 
     private func closeWindowRuntime() {
+        sidebarWidgets.removeHost(id: id)
         extensionControllerPool.setHostWindowFocused(false)
         pagePoolRegistry.unregister(pages, for: id)
         flushPendingPersistence()

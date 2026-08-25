@@ -30,4 +30,8 @@ protocol MobileBrowserPageHosting: AnyObject {
     /// Routes a blocked-popup bridge message from a shared popup content
     /// controller to the page whose web view actually authored it.
     func routeBlockedPopupMessage(_ message: WKScriptMessage)
+
+    /// Routes a Media Session message received through an opener's shared
+    /// content controller to the resident page that authored it.
+    func routeMediaSessionMessage(_ message: WKScriptMessage)
 }

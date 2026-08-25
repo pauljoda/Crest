@@ -273,6 +273,10 @@
     "2026-08-24-download-feedback-and-telemetry": {
       "category": "improved",
       "message": "Follow new downloads into Downloads and see live size, progress, speed, and time remaining across Mac and iPhone"
+    },
+    "2026-08-25-sidebar-widgets-and-now-playing": {
+      "category": "new",
+      "message": "See update availability and control media from a global sidebar widget deck across Spaces"
     }
   }
 }
