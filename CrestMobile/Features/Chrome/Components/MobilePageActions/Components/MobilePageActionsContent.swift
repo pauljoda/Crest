@@ -3,9 +3,25 @@ import SwiftUI
 struct MobilePageActionsContent: View {
     let browser: BrowserStore
     let pages: any MobilePageActions
+    var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
 
     var body: some View {
+        if let downloadsAccess {
+            Button(action: downloadsAccess.open) {
+                Label(downloadsAccess.rowTitle, systemImage: "arrow.down.circle")
+            }
+            .accessibilityLabel("Downloads")
+            .accessibilityValue(
+                BrowserChromeAccessibility.countValue(
+                    downloadsAccess.newItemCount,
+                    singular: "new download",
+                    plural: "new downloads"
+                )
+            )
+            .accessibilityIdentifier("page-actions-downloads")
+        }
+
         if let notice = pages.blockedPopupNotice {
             Section("Automatic Pop-ups") {
                 switch notice.status {

@@ -5,6 +5,32 @@ import UniformTypeIdentifiers
 import WebKit
 
 extension MobileBrowserPage: WKNavigationDelegate {
+    private func downloadFeedbackSource(
+        for destinationURL: URL?,
+        in webView: WKWebView
+    ) -> BrowserDownloadFeedbackSource? {
+        guard
+            let capture = downloadSourceStore.consume(
+                destinationURL: destinationURL
+            ),
+            let window = webView.window,
+            webView.bounds.width > 0,
+            webView.bounds.height > 0
+        else { return nil }
+        let pointInWebView = CGPoint(
+            x: capture.normalizedTouchPoint.x * webView.bounds.width,
+            y: capture.normalizedTouchPoint.y * webView.bounds.height
+        )
+        let pointInWindow = webView.convert(pointInWebView, to: window)
+        guard pointInWindow.x.isFinite, pointInWindow.y.isFinite else {
+            return nil
+        }
+        return BrowserDownloadFeedbackSource(
+            pointInGlobal: pointInWindow,
+            windowIdentifier: ObjectIdentifier(window)
+        )
+    }
+
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         activeNavigation = navigation
         isAwaitingPopupNavigation = false
@@ -151,12 +177,20 @@ extension MobileBrowserPage: WKNavigationDelegate {
         navigationAction: WKNavigationAction,
         didBecome download: WKDownload
     ) {
+        let feedbackSource = downloadFeedbackSource(
+            for: navigationAction.request.url,
+            in: webView
+        )
         downloadCenter.start(
             download,
             in: webView,
             profileID: profileID,
             spaceID: spaceID,
-            spaceName: spaceName
+            spaceName: spaceName,
+            isUserInitiated:
+                BrowserDownloadInitiationPolicy
+                .userInitiatedOverride(hasTrustedSource: feedbackSource != nil),
+            feedbackSource: feedbackSource
         )
         discardDownloadOnlySurfaceIfNeeded()
     }
@@ -166,12 +200,21 @@ extension MobileBrowserPage: WKNavigationDelegate {
         navigationResponse: WKNavigationResponse,
         didBecome download: WKDownload
     ) {
+        let feedbackSource = downloadFeedbackSource(
+            for: download.originalRequest?.url
+                ?? navigationResponse.response.url,
+            in: webView
+        )
         downloadCenter.start(
             download,
             in: webView,
             profileID: profileID,
             spaceID: spaceID,
-            spaceName: spaceName
+            spaceName: spaceName,
+            isUserInitiated:
+                BrowserDownloadInitiationPolicy
+                .userInitiatedOverride(hasTrustedSource: feedbackSource != nil),
+            feedbackSource: feedbackSource
         )
         discardDownloadOnlySurfaceIfNeeded()
     }

@@ -63,6 +63,25 @@ enum BrowserLinkContextContentBridge {
             } catch (_) {}
           };
 
+          const postActivation = (event, link, href) => {
+            const rect = link.getBoundingClientRect();
+            const viewportWidth = Math.max(globalThis.innerWidth, 1);
+            const viewportHeight = Math.max(globalThis.innerHeight, 1);
+            try {
+              webkit.messageHandlers.crestLinkContext.postMessage({
+                version: 1,
+                kind: "activation",
+                href,
+                minX: rect.left / viewportWidth,
+                minY: rect.top / viewportHeight,
+                width: rect.width / viewportWidth,
+                height: rect.height / viewportHeight,
+                touchX: event.clientX / viewportWidth,
+                touchY: event.clientY / viewportHeight
+              });
+            } catch (_) {}
+          };
+
           const elementFromEvent = (event, selector) => {
             const path = typeof event.composedPath === "function"
               ? event.composedPath()
@@ -125,6 +144,16 @@ enum BrowserLinkContextContentBridge {
             }
             return resolved.href.length <= 4096 ? resolved.href : null;
           };
+
+          globalThis.addEventListener("pointerdown", (event) => {
+            if (!event.isTrusted || (event.button !== undefined && event.button !== 0)) {
+              return;
+            }
+            const link = linkFromEvent(event);
+            const href = destination(event);
+            if (!link || !href) return;
+            postActivation(event, link, href);
+          }, { capture: true, passive: true });
 
           globalThis.addEventListener("contextmenu", (event) => {
             if (!event.isTrusted) return;

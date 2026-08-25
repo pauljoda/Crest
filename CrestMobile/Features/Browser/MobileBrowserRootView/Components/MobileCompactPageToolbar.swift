@@ -3,6 +3,7 @@ import SwiftUI
 struct MobileCompactPageToolbar: View {
     let browser: BrowserStore
     let pageActions: MobileSelectedPageActionPort?
+    let downloadsAccess: MobileDownloadsMenuAccess?
     @Binding var address: String
     @Binding var isAddressEditing: Bool
     let submitAddress: () -> Void
@@ -27,6 +28,7 @@ struct MobileCompactPageToolbar: View {
                     progress: pageActions?.activePage?.estimatedProgress ?? 0,
                     isLoading: pageActions?.activePage?.isLoading == true,
                     pageActions: pageActions,
+                    downloadsAccess: downloadsAccess,
                     hideToolbar: hideToolbar,
                     reloadOrStop: reloadOrStop,
                     transition: .revealTabViewer,

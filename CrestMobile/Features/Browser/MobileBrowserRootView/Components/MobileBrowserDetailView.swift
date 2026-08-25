@@ -28,6 +28,7 @@ struct MobileBrowserDetailView: View {
     /// both paths share it: the carousel's `ScrollView` resolves its cells'
     /// safe area to zero, so a cell can only learn the real one as data.
     @State private var resolvedSafeAreaInsets = EdgeInsets()
+    @State private var downloadsAssignment: BrowserSpaceRuntimeAssignment?
 
     var body: some View {
         let pageActions = MobileSelectedPageActionPort(
@@ -157,6 +158,7 @@ struct MobileBrowserDetailView: View {
                     MobileCompactPageToolbar(
                         browser: browser,
                         pageActions: pageActions,
+                        downloadsAccess: compactDownloadsAccess,
                         address: $address,
                         isAddressEditing: $isAddressEditing,
                         submitAddress: submitAddress,
@@ -222,6 +224,14 @@ struct MobileBrowserDetailView: View {
             ),
             value: compactToolbarIsHidden
         )
+        .sheet(item: $downloadsAssignment) { assignment in
+            MobileDownloadsView(
+                browser: browser,
+                pages: pages,
+                assignment: assignment,
+                spaceAccess: spaceAccess
+            )
+        }
     }
 
     /// What the page area's safe area is, measured clear of the keyboard.
@@ -243,6 +253,39 @@ struct MobileBrowserDetailView: View {
             }
             .ignoresSafeArea(.keyboard, edges: .bottom)
             .accessibilityHidden(true)
+    }
+
+    private var compactDownloadsAccess: MobileDownloadsMenuAccess? {
+        guard isCompact,
+            let selectedSpace = browser.selectedSpace,
+            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: BrowserSpaceRuntimeAssignment(space: selectedSpace),
+                in: browser,
+                accessController: spaceAccess
+            )
+        else { return nil }
+        let items = pages.downloadCenter.items(for: space.profile.id)
+        return MobileDownloadsMenuAccess(
+            newItemCount: pages.downloadCenter
+                .unacknowledgedItems(for: space.profile.id).count,
+            activeProgress: BrowserDownloadNotificationPolicy.progress(
+                in: items
+            ),
+            open: presentCompactDownloads
+        )
+    }
+
+    private func presentCompactDownloads() {
+        guard let selectedSpace = browser.selectedSpace,
+            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: BrowserSpaceRuntimeAssignment(space: selectedSpace),
+                in: browser,
+                accessController: spaceAccess
+            )
+        else { return }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        _ = pages.downloadCenter.acknowledgeItems(for: space.profile.id)
+        downloadsAssignment = assignment
     }
 
     /// The four questions the find bar asks, bound to the page it is over.

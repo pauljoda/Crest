@@ -112,6 +112,7 @@ final class BrowserPage: NSObject {
     /// The link the pending web-content context menu is over. Read and cleared
     /// by this page's `BrowserDesktopWebViewMenuHost` conformance.
     @ObservationIgnored var linkContextCapture = BrowserLinkContextCapturePolicy()
+    @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored let splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
@@ -1669,6 +1670,14 @@ final class BrowserPage: NSObject {
             scriptMessage.name
                 == BrowserLinkContextContentBridge.messageHandlerName
         else { return }
+        if scriptMessage.frameInfo.isMainFrame,
+            let activation = BrowserDownloadSourceCapture(
+                messageBody: scriptMessage.body
+            )
+        {
+            downloadSourceStore.record(activation)
+            return
+        }
         linkContextCapture.record(body: scriptMessage.body)
     }
 

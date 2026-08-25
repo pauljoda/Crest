@@ -170,6 +170,44 @@ extension BrowserPage: WKNavigationDelegate {
         )
     }
 
+    private func downloadFeedbackSource(
+        for destinationURL: URL?,
+        in webView: WKWebView
+    ) -> BrowserDownloadFeedbackSource? {
+        guard
+            let capture = downloadSourceStore.consume(
+                destinationURL: destinationURL
+            ),
+            let window = webView.window,
+            let contentView = window.contentView,
+            webView.bounds.width > 0,
+            webView.bounds.height > 0
+        else { return nil }
+
+        var pointInWebView = CGPoint(
+            x: capture.normalizedTouchPoint.x * webView.bounds.width,
+            y: capture.normalizedTouchPoint.y * webView.bounds.height
+        )
+        if !webView.isFlipped {
+            pointInWebView.y = webView.bounds.height - pointInWebView.y
+        }
+        let pointInWindow = webView.convert(pointInWebView, to: nil)
+        let pointInContent = contentView.convert(pointInWindow, from: nil)
+        let pointFromTopLeading = CGPoint(
+            x: pointInContent.x,
+            y: contentView.isFlipped
+                ? pointInContent.y
+                : contentView.bounds.height - pointInContent.y
+        )
+        guard pointFromTopLeading.x.isFinite,
+            pointFromTopLeading.y.isFinite
+        else { return nil }
+        return BrowserDownloadFeedbackSource(
+            pointInGlobal: pointFromTopLeading,
+            windowIdentifier: ObjectIdentifier(window)
+        )
+    }
+
     func webView(
         _ webView: WKWebView,
         decidePolicyFor navigationResponse: WKNavigationResponse,
@@ -188,12 +226,20 @@ extension BrowserPage: WKNavigationDelegate {
         navigationAction: WKNavigationAction,
         didBecome download: WKDownload
     ) {
+        let feedbackSource = downloadFeedbackSource(
+            for: navigationAction.request.url,
+            in: webView
+        )
         downloadCenter.start(
             download,
             in: webView,
             profileID: profileID,
             spaceID: spaceID,
-            spaceName: spaceName
+            spaceName: spaceName,
+            isUserInitiated:
+                BrowserDownloadInitiationPolicy
+                .userInitiatedOverride(hasTrustedSource: feedbackSource != nil),
+            feedbackSource: feedbackSource
         )
         discardDownloadOnlySurfaceIfNeeded()
     }
@@ -203,12 +249,21 @@ extension BrowserPage: WKNavigationDelegate {
         navigationResponse: WKNavigationResponse,
         didBecome download: WKDownload
     ) {
+        let feedbackSource = downloadFeedbackSource(
+            for: download.originalRequest?.url
+                ?? navigationResponse.response.url,
+            in: webView
+        )
         downloadCenter.start(
             download,
             in: webView,
             profileID: profileID,
             spaceID: spaceID,
-            spaceName: spaceName
+            spaceName: spaceName,
+            isUserInitiated:
+                BrowserDownloadInitiationPolicy
+                .userInitiatedOverride(hasTrustedSource: feedbackSource != nil),
+            feedbackSource: feedbackSource
         )
         discardDownloadOnlySurfaceIfNeeded()
     }

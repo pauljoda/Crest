@@ -45,10 +45,13 @@ final class BrowserDownloadCenter: NSObject {
         ) async -> BrowserSitePermissionPromptResponse
 
     private(set) var ledger = BrowserDownloadLedger()
+    private(set) var feedbackEvents: [BrowserDownloadFeedbackEvent] = []
 
     @ObservationIgnored private var downloads: [ObjectIdentifier: WKDownload] = [:]
     @ObservationIgnored private var itemIDs: [ObjectIdentifier: UUID] = [:]
     @ObservationIgnored private var progressObservations: [ObjectIdentifier: AnyCancellable] = [:]
+    @ObservationIgnored private var transferEstimators: [ObjectIdentifier: BrowserDownloadTransferEstimator] = [:]
+    @ObservationIgnored private var feedbackExpirationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var stagingURLs: [ObjectIdentifier: URL] = [:]
     @ObservationIgnored private var destinationURLs: [ObjectIdentifier: URL] = [:]
     @ObservationIgnored private var securityScopedResources: [ObjectIdentifier: URL] = [:]
@@ -120,7 +123,8 @@ final class BrowserDownloadCenter: NSObject {
         ledger.unacknowledgedItems(for: profileID)
     }
 
-    func acknowledgeItems(for profileID: UUID) {
+    @discardableResult
+    func acknowledgeItems(for profileID: UUID) -> Int {
         ledger.acknowledgeItems(for: profileID)
     }
 
@@ -234,12 +238,29 @@ final class BrowserDownloadCenter: NSObject {
         profileID: UUID,
         spaceID: SpaceID,
         spaceName: String,
-        isUserInitiated: Bool? = nil
+        isUserInitiated: Bool? = nil,
+        feedbackSource: BrowserDownloadFeedbackSource? = nil
     ) {
+        guard downloads[ObjectIdentifier(download)] == nil else { return }
         let requestedFilename = download.originalRequest?.url?.lastPathComponent
         let filename = requestedFilename.flatMap { $0.isEmpty ? nil : $0 } ?? "download"
         let itemID = ledger.begin(profileID: profileID, filename: filename)
-        if let request = download.originalRequest {
+        if let feedbackSource {
+            presentFeedback(
+                BrowserDownloadFeedbackEvent(
+                    id: itemID,
+                    profileID: profileID,
+                    spaceID: spaceID,
+                    filename: filename,
+                    source: feedbackSource
+                )
+            )
+        }
+        if let originalRequest = download.originalRequest,
+            let request = BrowserDownloadRetryRequestPolicy.replayableRequest(
+                from: originalRequest
+            )
+        {
             retryContexts[itemID] = BrowserDownloadRetryContext(
                 webView: webView,
                 request: request,
@@ -264,7 +285,8 @@ final class BrowserDownloadCenter: NSObject {
     func retryAutomaticDownload(
         _ itemID: UUID,
         matching assignment: BrowserSpaceRuntimeAssignment,
-        isAssignmentAvailable: @MainActor (BrowserSpaceRuntimeAssignment) -> Bool
+        isAssignmentAvailable:
+            @escaping @MainActor (BrowserSpaceRuntimeAssignment) -> Bool
     ) async -> Bool {
         guard let item = ledger.items.first(where: { $0.id == itemID }),
             item.profileID == assignment.profileID,
@@ -291,11 +313,46 @@ final class BrowserDownloadCenter: NSObject {
         )
         retryLeases[itemID] = lease
         ledger.restart(itemID)
-        let download = await webView.startDownload(using: context.request)
-        if Task.isCancelled {
-            rejectRetryRegistration(download, itemID: itemID, lease: lease)
+        guard !Task.isCancelled else {
+            cancelRetryLease(itemID: itemID, lease: lease)
             return false
         }
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                webView.startDownload(using: context.request) {
+                    [weak self] download in
+                    guard let self else {
+                        download.cancel { _ in }
+                        continuation.resume(returning: false)
+                        return
+                    }
+                    continuation.resume(
+                        returning: finishRetryRegistration(
+                            download,
+                            itemID: itemID,
+                            lease: lease,
+                            context: context,
+                            webView: webView,
+                            isAssignmentAvailable: isAssignmentAvailable
+                        )
+                    )
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.cancelRetryLease(itemID: itemID, lease: lease)
+            }
+        }
+    }
+
+    private func finishRetryRegistration(
+        _ download: WKDownload,
+        itemID: UUID,
+        lease: BrowserDownloadRetryLease,
+        context: BrowserDownloadRetryContext,
+        webView: WKWebView,
+        isAssignmentAvailable: @MainActor (BrowserSpaceRuntimeAssignment) -> Bool
+    ) -> Bool {
         let currentItem = ledger.items.first { $0.id == itemID }
         let currentContext = retryContexts[itemID]
         guard
@@ -306,7 +363,7 @@ final class BrowserDownloadCenter: NSObject {
                 contextAssignment: currentContext === context
                     ? currentContext?.assignment
                     : nil,
-                isAssignmentAvailable: isAssignmentAvailable(assignment)
+                isAssignmentAvailable: isAssignmentAvailable(lease.assignment)
             )
         else {
             rejectRetryRegistration(download, itemID: itemID, lease: lease)
@@ -324,6 +381,17 @@ final class BrowserDownloadCenter: NSObject {
             isUserInitiatedOverride: nil
         )
         return true
+    }
+
+    private func cancelRetryLease(
+        itemID: UUID,
+        lease: BrowserDownloadRetryLease
+    ) {
+        guard retryLeases[itemID] == lease else { return }
+        retryLeases.removeValue(forKey: itemID)
+        if ledger.items.first(where: { $0.id == itemID })?.state == .preparing {
+            ledger.blockAutomaticDownload(itemID)
+        }
     }
 
     private func rejectRetryRegistration(
@@ -383,20 +451,50 @@ final class BrowserDownloadCenter: NSObject {
             }
         )
         download.delegate = self
-        progressObservations[key] = download.progress.publisher(for: \.fractionCompleted)
-            .receive(on: DispatchQueue.main)
-            .map(BrowserDownloadProgressPolicy.normalized)
-            .removeDuplicates { previous, next in
-                !BrowserDownloadProgressPolicy.shouldPublish(
-                    previous: previous,
-                    next: next
+        let progress = download.progress
+        transferEstimators[key] = BrowserDownloadTransferEstimator()
+        progressObservations[key] = Publishers.CombineLatest4(
+            progress.publisher(
+                for: \.completedUnitCount,
+                options: [.initial, .new]
+            ),
+            progress.publisher(
+                for: \.totalUnitCount,
+                options: [.initial, .new]
+            ),
+            progress.publisher(
+                for: \.fractionCompleted,
+                options: [.initial, .new]
+            ),
+            progress.publisher(for: \.isPaused, options: [.initial, .new])
+        )
+        .receive(on: DispatchQueue.main)
+        .removeDuplicates { previous, next in
+            previous.0 == next.0
+                && previous.1 == next.1
+                && previous.2 == next.2
+                && previous.3 == next.3
+        }
+        .throttle(
+            for: .milliseconds(100),
+            scheduler: DispatchQueue.main,
+            latest: true
+        )
+        .sink { [weak self] completed, total, fraction, isPaused in
+            MainActor.assumeIsolated {
+                guard let self,
+                    var estimator = self.transferEstimators[key]
+                else { return }
+                let update = estimator.sample(
+                    completedUnitCount: completed,
+                    totalUnitCount: total,
+                    fractionCompleted: fraction,
+                    isPaused: isPaused
                 )
+                self.transferEstimators[key] = estimator
+                self.ledger.setTransferUpdate(update, for: itemID)
             }
-            .sink { [weak self] progress in
-                MainActor.assumeIsolated {
-                    self?.ledger.setProgress(progress, for: itemID)
-                }
-            }
+        }
     }
 
     func destinationURL(
@@ -436,7 +534,8 @@ final class BrowserDownloadCenter: NSObject {
             savedDecision = .denyPersistently
         }
         let automaticDownloadAction: BrowserAutomaticDownloadAction
-        let isUserInitiated = download.isUserInitiated
+        let isUserInitiated =
+            download.isUserInitiated
             || userInitiatedOverrideKeys.contains(key)
         if let origin = sourceOrigins[key],
             let webViewID = sourceWebViewIDs[key],
@@ -582,6 +681,9 @@ final class BrowserDownloadCenter: NSObject {
         }
 
         do {
+            let finalByteCount = try? staging.resourceValues(
+                forKeys: [.fileSizeKey]
+            ).fileSize.map(Int64.init)
             let quarantine = BrowserDownloadQuarantine(sourceURL: download.originalRequest?.url)
             try BrowserDownloadTransfer.finish(
                 from: staging,
@@ -589,7 +691,7 @@ final class BrowserDownloadCenter: NSObject {
                 quarantine: quarantine
             )
             update(download) { ledger, itemID in
-                ledger.finish(itemID)
+                ledger.finish(itemID, finalByteCount: finalByteCount)
             }
             authenticationSucceeded = true
         } catch {
@@ -720,6 +822,7 @@ final class BrowserDownloadCenter: NSObject {
         downloads.removeValue(forKey: key)
         itemIDs.removeValue(forKey: key)
         progressObservations.removeValue(forKey: key)
+        transferEstimators.removeValue(forKey: key)
         stagingURLs.removeValue(forKey: key)
         destinationURLs.removeValue(forKey: key)
         securityScopedResources.removeValue(forKey: key)?
@@ -730,5 +833,28 @@ final class BrowserDownloadCenter: NSObject {
         sourceWebViewIDs.removeValue(forKey: key)
         approvedRetryKeys.remove(key)
         userInitiatedOverrideKeys.remove(key)
+    }
+
+    func dismissFeedback(_ eventID: UUID) {
+        feedbackEvents.removeAll { $0.id == eventID }
+        feedbackExpirationTasks.removeValue(forKey: eventID)?.cancel()
+    }
+
+    private func presentFeedback(_ event: BrowserDownloadFeedbackEvent) {
+        let previousIDs = Set(feedbackEvents.map(\.id))
+        feedbackEvents = BrowserDownloadFeedbackPolicy.bounded(
+            feedbackEvents,
+            appending: event
+        )
+        let retainedIDs = Set(feedbackEvents.map(\.id))
+        for removedID in previousIDs.subtracting(retainedIDs) {
+            feedbackExpirationTasks.removeValue(forKey: removedID)?.cancel()
+        }
+        feedbackExpirationTasks[event.id]?.cancel()
+        feedbackExpirationTasks[event.id] = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: BrowserDownloadFeedbackPolicy.lifetime)
+            guard !Task.isCancelled else { return }
+            self?.dismissFeedback(event.id)
+        }
     }
 }

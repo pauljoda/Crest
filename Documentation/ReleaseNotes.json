@@ -269,6 +269,10 @@
     "2026-08-24-blocked-popup-site-controls": {
       "category": "fixed",
       "message": "Show blocked pop-ups in Site Controls with a one-step allow action"
+    },
+    "2026-08-24-download-feedback-and-telemetry": {
+      "category": "improved",
+      "message": "Follow new downloads into Downloads and see live size, progress, speed, and time remaining across Mac and iPhone"
     }
   }
 }

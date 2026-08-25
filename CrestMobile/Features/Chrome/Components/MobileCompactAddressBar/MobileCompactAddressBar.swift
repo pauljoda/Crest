@@ -8,6 +8,7 @@ struct MobileCompactAddressBar: View {
     let progress: Double
     let isLoading: Bool
     let pageActions: (any MobilePageActions)?
+    let downloadsAccess: MobileDownloadsMenuAccess?
     let hideToolbar: (() -> Void)?
     let reloadOrStop: (() -> Void)?
     let transition: MobileCompactChromeTransition
@@ -24,6 +25,7 @@ struct MobileCompactAddressBar: View {
                     browser: browser,
                     pages: pageActions,
                     systemImage: "ellipsis.circle",
+                    downloadsAccess: downloadsAccess,
                     hideToolbar: hideToolbar,
                     controlSize: MobileCompactAddressBarLayout.pageActionsControlSize
                 )

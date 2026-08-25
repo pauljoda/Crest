@@ -65,6 +65,89 @@ final class MobileBrowserSidebarUtilityCoordinatorTests: XCTestCase {
         XCTAssertTrue(context.pages.downloadCenter.items.isEmpty)
     }
 
+    func testCompactDownloadsOpenAtomicallyClearsOnlyTheNewBadge() {
+        let context = makeContext()
+        let profileID = context.source.profile.id
+
+        XCTAssertEqual(
+            context.pages.downloadCenter.unacknowledgedItems(for: profileID).count,
+            1
+        )
+        XCTAssertEqual(
+            context.pages.downloadCenter.acknowledgeItems(for: profileID),
+            1
+        )
+        XCTAssertTrue(
+            context.pages.downloadCenter.unacknowledgedItems(for: profileID).isEmpty
+        )
+        XCTAssertEqual(
+            context.pages.downloadCenter.items(for: profileID).map(\.id),
+            [context.downloadItemID]
+        )
+        XCTAssertEqual(
+            context.pages.downloadCenter.acknowledgeItems(for: profileID),
+            0
+        )
+    }
+
+    func testDownloadBadgeLifetimeIsPageStoreAndProfileScoped() {
+        let context = makeContext()
+        let sourceProfileID = context.source.profile.id
+        let secondProfileID = UUID()
+        var secondLedger = BrowserDownloadLedger()
+        _ = secondLedger.begin(
+            profileID: secondProfileID,
+            filename: "other.bin"
+        )
+        let secondStore = MobileBrowserPageStore(
+            usesEphemeralWebsiteDataStores: true,
+            downloadLedger: secondLedger
+        )
+
+        _ = context.pages.downloadCenter.acknowledgeItems(
+            for: sourceProfileID
+        )
+
+        XCTAssertTrue(
+            context.pages.downloadCenter
+                .unacknowledgedItems(for: sourceProfileID).isEmpty
+        )
+        XCTAssertEqual(
+            secondStore.downloadCenter
+                .unacknowledgedItems(for: secondProfileID).count,
+            1
+        )
+        XCTAssertTrue(
+            BrowserDownloadLedger()
+                .unacknowledgedItems(for: sourceProfileID).isEmpty
+        )
+    }
+
+    func testCompactDownloadsMenuPresentsVisibleAndSpokenUnreadCounts() {
+        let empty = MobileDownloadsMenuAccess(
+            newItemCount: 0,
+            activeProgress: nil,
+            open: {}
+        )
+        let single = MobileDownloadsMenuAccess(
+            newItemCount: 1,
+            activeProgress: 0.5,
+            open: {}
+        )
+        let multiple = MobileDownloadsMenuAccess(
+            newItemCount: 3,
+            activeProgress: 0.75,
+            open: {}
+        )
+
+        XCTAssertEqual(empty.rowTitle, "Downloads")
+        XCTAssertEqual(empty.unreadAccessibilityValue, "0 new downloads")
+        XCTAssertEqual(single.rowTitle, "Downloads (1)")
+        XCTAssertEqual(single.unreadAccessibilityValue, "1 new download")
+        XCTAssertEqual(multiple.rowTitle, "Downloads (3)")
+        XCTAssertEqual(multiple.unreadAccessibilityValue, "3 new downloads")
+    }
+
     private func makeCoordinator(
         _ context: Context,
         selectTab: @escaping (TabID) -> Void,

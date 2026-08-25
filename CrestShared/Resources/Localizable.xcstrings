@@ -171,6 +171,9 @@
         }
       }
     },
+    "%@ downloaded" : {
+
+    },
     "%@ Enabled" : {
       "localizations" : {
         "ar" : {
@@ -256,6 +259,29 @@
         }
       }
     },
+    "%@ of %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "%@ of %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "%@ per second" : {
+
+    },
     "%@ refused the connection or isn’t accepting connections." : {
       "localizations" : {
         "ar" : {
@@ -265,6 +291,9 @@
           }
         }
       }
+    },
+    "%@ remaining" : {
+
     },
     "%@ returned a response Crest couldn’t load." : {
       "localizations" : {
@@ -334,6 +363,19 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@، الحالية"
+          }
+        }
+      }
+    },
+    "%@/s" : {
+
+    },
+    "%@/s · %@ remaining" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@/s · %2$@ remaining"
           }
         }
       }
@@ -2316,6 +2358,9 @@
         }
       }
     },
+    "Ask where to save each download" : {
+
+    },
     "Authenticate to copy the Crest password for %@." : {
       "localizations" : {
         "ar" : {
@@ -3121,6 +3166,9 @@
       }
     },
     "Choose Emoji…" : {
+
+    },
+    "Choose Folder…" : {
 
     },
     "Choose one emoji." : {
@@ -5107,6 +5155,9 @@
         }
       }
     },
+    "Download location" : {
+
+    },
     "Download Progress" : {
       "localizations" : {
         "ar" : {
@@ -5136,6 +5187,9 @@
           }
         }
       }
+    },
+    "Downloads (%lld)" : {
+
     },
     "Downloads from this Space appear here." : {
       "localizations" : {
@@ -5428,6 +5482,7 @@
 
     },
     "Eligible tabs remain recoverable from Archive." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5866,6 +5921,9 @@
           }
         }
       }
+    },
+    "Feature Flags" : {
+
     },
     "Fess" : {
       "localizations" : {
@@ -8072,6 +8130,9 @@
     "Move Split Card Right" : {
 
     },
+    "Move the pointer to the leading edge to preview the sidebar" : {
+
+    },
     "Move the pointer to the leading edge to show the sidebar" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8536,6 +8597,9 @@
           }
         }
       }
+    },
+    "No passwords saved for this site" : {
+
     },
     "No Results" : {
       "localizations" : {
@@ -10643,6 +10707,7 @@
       }
     },
     "Require device authentication" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11109,6 +11174,9 @@
           }
         }
       }
+    },
+    "Saved passwords stay in this Space and can still be viewed or deleted from Passwords settings." : {
+
     },
     "Saved tabs" : {
       "extractionState" : "stale",
@@ -11631,6 +11699,7 @@
       }
     },
     "Show Sidebar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -11639,6 +11708,9 @@
           }
         }
       }
+    },
+    "Show Sidebar Temporarily" : {
+
     },
     "Show Toolbar" : {
       "localizations" : {
@@ -13226,6 +13298,9 @@
         }
       }
     },
+    "This policy applies only to %@. Eligible tabs remain recoverable from Archive." : {
+
+    },
     "This policy applies only to %arg. Eligible tabs remain recoverable from Archive." : {
       "localizations" : {
         "ar" : {
@@ -13281,6 +13356,7 @@
       }
     },
     "This sign-in frame is embedded in %arg." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14093,6 +14169,9 @@
     "Use Default Color" : {
 
     },
+    "Use Downloads" : {
+
+    },
     "Use Emoji" : {
 
     },
@@ -14255,6 +14334,12 @@
           }
         }
       }
+    },
+    "WebKit experimental preview testable developer stable runtime flags features" : {
+
+    },
+    "WebKit experiments" : {
+
     },
     "WebKit presents the person’s enabled Passwords providers for AutoFill. An explicit user-approved copy from Crest is not enabled in this build. It is not a system extension and will never require reduced security." : {
       "extractionState" : "stale",

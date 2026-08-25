@@ -290,6 +290,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             .color ?? .accentColor,
                         downloads: model.selectedUtilityDownloads,
                         newDownloadCount: model.newUtilityDownloads.count,
+                        downloadCenter: pages.downloadCenter,
+                        profileID: browser.selectedSpace?.profile.id,
+                        spaceID: browser.selectedSpace?.id,
                         select: navigation.utilityPresentation.present
                     )
                 }

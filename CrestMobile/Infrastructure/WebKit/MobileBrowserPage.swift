@@ -89,6 +89,7 @@ final class MobileBrowserPage: NSObject {
     @ObservationIgnored private var linkPeekMessageProxy: MobileLinkPeekScriptMessageProxy?
     @ObservationIgnored let linkPeekPressCoordinator = MobileLinkPeekPressCoordinator()
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
+    @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
     @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
@@ -1289,6 +1290,23 @@ final class MobileBrowserPage: NSObject {
 
         switch event.phase {
         case .began:
+            if message.frameInfo.isMainFrame,
+                let destinationURL = event.destinationURL,
+                let normalizedSourceRect = event.normalizedSourceRect
+            {
+                downloadSourceStore.record(
+                    BrowserDownloadSourceCapture(
+                        destinationURL: destinationURL,
+                        normalizedSourceRect: normalizedSourceRect,
+                        normalizedTouchPoint:
+                            event.normalizedTouchPoint
+                            ?? CGPoint(
+                                x: normalizedSourceRect.midX,
+                                y: normalizedSourceRect.midY
+                            )
+                    )
+                )
+            }
             let sourcePresentation =
                 message.frameInfo.isMainFrame
                 ? sourcePresentation(for: event)
