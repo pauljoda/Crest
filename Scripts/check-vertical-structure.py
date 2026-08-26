@@ -118,6 +118,7 @@ RULE_REASONS = {
     "preview-live-dependency": "Replace the live preview dependency with an in-memory fixture.",
     "preview-nondeterministic-fixture": "Use fixed preview identities, dates, and fixture values.",
 }
+RAW_STRING_DELIMITER_PATTERN = re.compile(r'(#+)("""|")')
 
 DECLARATION_PATTERN = re.compile(
     r"(?<![A-Za-z0-9_.])"
@@ -128,7 +129,10 @@ DECLARATION_PATTERN = re.compile(
     r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)",
 )
 EXTENSION_PATTERN = re.compile(
-    r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^\n]*\))?\s*)*"
+    # `\s` includes newlines. Letting the leading quantifier cross line
+    # boundaries makes a masked generated catalog backtrack through every
+    # following line while it searches for `extension`.
+    r"^[ \t]*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^\n]*\))?\s*)*"
     r"(?:(?:public|internal|private|fileprivate|package|nonisolated)\s+)*"
     r"extension\s+(?P<target>[A-Za-z_][A-Za-z0-9_.]*)\b",
     re.MULTILINE,
@@ -150,20 +154,20 @@ PREVIEW_CONFORMANCE_PATTERN = re.compile(
     r"TextFieldStyle|FormStyle|Shape|Layout)\b"
 )
 COMPUTED_VIEW_PATTERN = re.compile(
-    r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^\n]*\))?\s+)*"
+    r"^[ \t]*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^\n]*\))?\s+)*"
     r"(?:(?:public|internal|private|fileprivate|package|nonisolated)\s+)*"
     r"var\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*some\s+"
     r"(?:SwiftUI\s*\.\s*)?View\s*\{",
     re.MULTILINE,
 )
 VIEW_RETURNING_FUNCTION_PATTERN = re.compile(
-    r"^\s*(?:(?:public|internal|private|fileprivate|package|nonisolated)\s+)*"
+    r"^[ \t]*(?:(?:public|internal|private|fileprivate|package|nonisolated)\s+)*"
     r"func\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b[^{}]{0,2000}?"
     r"->\s*some\s+(?:SwiftUI\s*\.\s*)?View[^{}]{0,500}?\{",
     re.MULTILINE,
 )
 VIEW_BUILDER_FUNCTION_PATTERN = re.compile(
-    r"^\s*@ViewBuilder(?:\([^\n]*\))?\s+"
+    r"^[ \t]*@ViewBuilder(?:\([^\n]*\))?\s+"
     r"(?:(?:public|internal|private|fileprivate|package|nonisolated)\s+)*"
     r"func\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b[^{}]{0,2000}?\{",
     re.MULTILINE,
@@ -285,7 +289,7 @@ def _masked_source(source: str) -> str:
             index += 2
             continue
 
-        raw_string_match = re.match(r"(#+)(\"\"\"|\")", source[index:])
+        raw_string_match = RAW_STRING_DELIMITER_PATTERN.match(source, index)
         if raw_string_match is not None:
             hashes, delimiter = raw_string_match.groups()
             token_length = len(hashes) + len(delimiter)
@@ -497,7 +501,7 @@ def _feature_location(relative_path: str) -> tuple[str, tuple[str, ...]] | None:
 
 def _preview_ranges(masked_source: str) -> list[PreviewRange]:
     ranges: list[PreviewRange] = []
-    for preview in re.finditer(r"(?m)^\s*#Preview\b", masked_source):
+    for preview in re.finditer(r"(?m)^[ \t]*#Preview\b", masked_source):
         opening_brace = masked_source.find("{", preview.end())
         if opening_brace == -1:
             continue

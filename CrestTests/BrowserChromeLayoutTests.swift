@@ -932,16 +932,24 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     @MainActor
     func testHidingSidebarKeepsItsUndockedSurfaceWhileHovered() async throws {
+        let waits = SidebarMorphWaits()
         let model = BrowserRootPreviewFixture.makeModel()
+        model.sidebarMorphWait = waits.wait
 
         model.sidebarSurfaceHoverChanged(true, reduceMotion: false)
         model.hideSidebar(reduceMotion: false)
-        try await Task.sleep(for: .milliseconds(10))
+        await waits.waitUntilRequestCount(1)
+        let morph = try XCTUnwrap(model.sidebarMorphTask)
 
         XCTAssertEqual(model.sidebarPresentation, .floating)
         XCTAssertTrue(model.isSidebarMorphing)
+        XCTAssertEqual(
+            waits.requestedDurations,
+            [CrestMotion.sidebarMorphCompletionDelay]
+        )
 
-        try await Task.sleep(for: .milliseconds(300))
+        waits.elapse(0)
+        await morph.value
 
         XCTAssertEqual(model.sidebarPresentation, .floating)
         XCTAssertFalse(model.isSidebarMorphing)
@@ -954,10 +962,19 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     @MainActor
     func testHidingSidebarDismissesAfterMorphWhenPointerIsAway() async throws {
+        let waits = SidebarMorphWaits()
         let model = BrowserRootPreviewFixture.makeModel()
+        model.sidebarMorphWait = waits.wait
 
         model.hideSidebar(reduceMotion: false)
-        try await Task.sleep(for: .milliseconds(300))
+        await waits.waitUntilRequestCount(1)
+        let morph = try XCTUnwrap(model.sidebarMorphTask)
+
+        XCTAssertEqual(model.sidebarPresentation, .floating)
+        XCTAssertTrue(model.isSidebarMorphing)
+
+        waits.elapse(0)
+        await morph.value
 
         XCTAssertEqual(model.sidebarPresentation, .collapsed)
         XCTAssertFalse(model.isSidebarMorphing)
@@ -1309,6 +1326,167 @@ final class BrowserChromeLayoutTests: XCTestCase {
             12
         )
         XCTAssertEqual(BrowserSpaceSwitcherLayout.compactStripSpacing, 2)
+    }
+
+    func testCompactSpaceStripBudgetsThePickerBetweenUtilities() {
+        for width in [
+            BrowserChromeLayout.sidebarMinimumWidth,
+            BrowserChromeLayout.sidebarIdealWidth,
+            BrowserChromeLayout.sidebarMaximumWidth,
+        ] {
+            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
+                availableWidth: width,
+                spaceCount: 20,
+                leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
+                trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
+            )
+
+            XCTAssertTrue(allocation.keepsUtilitiesClear, "width: \(width)")
+            XCTAssertGreaterThanOrEqual(
+                allocation.pickerViewportWidth,
+                BrowserSpaceSwitcherLayout.segmentWidth,
+                "width: \(width)"
+            )
+            XCTAssertEqual(
+                (allocation.pickerMinX + allocation.pickerMaxX) / 2,
+                width / 2,
+                accuracy: 0.001
+            )
+        }
+    }
+
+    func testCompactSpaceStripBalancesAsymmetricUtilityOccupancy() {
+        let cases: [(CGFloat, CGFloat, CGFloat)] = [
+            (BrowserChromeLayout.sidebarMinimumWidth, 0, 32),
+            (BrowserChromeLayout.sidebarIdealWidth, 48, 32),
+            (BrowserChromeLayout.sidebarMaximumWidth, 32, 64),
+        ]
+
+        for (width, leading, trailing) in cases {
+            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
+                availableWidth: width,
+                spaceCount: 7,
+                leadingUtilityWidth: leading,
+                trailingUtilityWidth: trailing
+            )
+
+            XCTAssertTrue(
+                allocation.keepsUtilitiesClear,
+                "width: \(width), leading: \(leading), trailing: \(trailing)"
+            )
+            XCTAssertEqual(
+                (allocation.pickerMinX + allocation.pickerMaxX) / 2,
+                width / 2,
+                accuracy: 0.001
+            )
+        }
+    }
+
+    func testCompactSpaceStripCentersContentThatFitsItsViewport() {
+        for count in [0, 1, 5] {
+            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
+                availableWidth: BrowserChromeLayout.sidebarMaximumWidth,
+                spaceCount: count,
+                leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
+                trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
+            )
+
+            XCTAssertFalse(allocation.usesOverflow, "count: \(count)")
+            XCTAssertEqual(
+                2 * allocation.fittingContentHorizontalInset
+                    + allocation.pickerContentWidth,
+                allocation.pickerViewportWidth,
+                accuracy: 0.001,
+                "count: \(count)"
+            )
+        }
+
+        let overflowing = BrowserSpaceSwitcherLayout.compactStripAllocation(
+            availableWidth: BrowserChromeLayout.sidebarMinimumWidth,
+            spaceCount: 20,
+            leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
+            trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
+        )
+        XCTAssertEqual(overflowing.fittingContentHorizontalInset, 0)
+    }
+
+    func testCompactSpaceStripAccessibilityOrderMatchesVisualOrder() {
+        XCTAssertGreaterThan(
+            BrowserSpaceSwitcherLayout.leadingUtilityAccessibilityPriority,
+            BrowserSpaceSwitcherLayout.pickerAccessibilityPriority
+        )
+        XCTAssertGreaterThan(
+            BrowserSpaceSwitcherLayout.pickerAccessibilityPriority,
+            BrowserSpaceSwitcherLayout.trailingUtilityAccessibilityPriority
+        )
+    }
+
+    func testCompactSpaceStripUsesOverflowAtBoundaryCountsAndWidths() {
+        let cases: [(CGFloat, Int, Bool)] = [
+            (BrowserChromeLayout.sidebarMinimumWidth, 0, false),
+            (BrowserChromeLayout.sidebarMinimumWidth, 1, false),
+            (BrowserChromeLayout.sidebarMinimumWidth, 5, true),
+            (BrowserChromeLayout.sidebarMinimumWidth, 6, true),
+            (BrowserChromeLayout.sidebarMinimumWidth, 7, true),
+            (BrowserChromeLayout.sidebarMinimumWidth, 20, true),
+            (BrowserChromeLayout.sidebarIdealWidth, 5, true),
+            (BrowserChromeLayout.sidebarIdealWidth, 6, true),
+            (BrowserChromeLayout.sidebarIdealWidth, 7, true),
+            (BrowserChromeLayout.sidebarMaximumWidth, 5, false),
+            (BrowserChromeLayout.sidebarMaximumWidth, 6, false),
+            (BrowserChromeLayout.sidebarMaximumWidth, 7, true),
+            (BrowserChromeLayout.sidebarMaximumWidth, 20, true),
+        ]
+
+        for (width, count, expectsOverflow) in cases {
+            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
+                availableWidth: width,
+                spaceCount: count,
+                leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
+                trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
+            )
+
+            XCTAssertEqual(
+                allocation.usesOverflow,
+                expectsOverflow,
+                "width: \(width), count: \(count)"
+            )
+        }
+    }
+
+    func testCompactSpaceStripAlwaysTargetsTheActiveSurvivingSpace() {
+        let spaces = (0..<20).map { _ in SpaceID() }
+
+        XCTAssertNil(
+            BrowserSpaceSwitcherLayout.compactScrollTarget(
+                spaceIDs: [],
+                selectedSpaceID: spaces[0]
+            )
+        )
+        for count in [1, 5, 6, 7, 20] {
+            let visibleSpaces = Array(spaces.prefix(count))
+            XCTAssertEqual(
+                BrowserSpaceSwitcherLayout.compactScrollTarget(
+                    spaceIDs: visibleSpaces,
+                    selectedSpaceID: visibleSpaces[0]
+                ),
+                visibleSpaces[0]
+            )
+            XCTAssertEqual(
+                BrowserSpaceSwitcherLayout.compactScrollTarget(
+                    spaceIDs: visibleSpaces,
+                    selectedSpaceID: visibleSpaces[count - 1]
+                ),
+                visibleSpaces[count - 1]
+            )
+        }
+        XCTAssertEqual(
+            BrowserSpaceSwitcherLayout.compactScrollTarget(
+                spaceIDs: Array(spaces.dropFirst()),
+                selectedSpaceID: spaces[0]
+            ),
+            spaces[1]
+        )
     }
 
     /// The scrolling track's step and its segment are the same number on

@@ -112,6 +112,26 @@ private let ownerLogCategory = "Owner"
 
         self.assertEqual(self.violation_keys(), set())
 
+    def test_generated_string_catalog_does_not_cross_lines_when_finding_extensions(
+        self,
+    ) -> None:
+        entries = "\n".join(
+            f'        "generated-entry-{index}",' for index in range(4_000)
+        )
+        self.write_source(
+            "CrestShared/Domain/GeneratedCatalog.swift",
+            f"""enum GeneratedCatalog {{
+    static let entries = [
+{entries}
+    ]
+}}
+
+extension GeneratedCatalog {{}}
+""",
+        )
+
+        self.assertEqual(self.violation_keys(), set())
+
     def test_named_extension_files_reject_unrelated_owners_and_primary_types(
         self,
     ) -> None:

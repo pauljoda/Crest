@@ -49,115 +49,7 @@ struct BrowserPasswordSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.passwords) {
-            Section("System passkeys") {
-                BrowserPasskeyAccessView()
-            }
-
-            Section("Space") {
-                CrestSpaceMenuPicker(
-                    "Passwords for",
-                    selection: $selectedSpaceID,
-                    spaces: CrestSpaceIdentity.list(browser.session.spaces)
-                )
-            }
-
-            if let space {
-                if canRevealSelectedSpaceData {
-                    Section("Crest Passwords") {
-                        Toggle(
-                            "Use Crest Passwords in this Space",
-                            isOn: browser.credentialPreferenceBinding(
-                                \.isEnabled,
-                                in: space
-                            )
-                        )
-                        .accessibilityIdentifier(
-                            "space-crest-passwords-enabled"
-                        )
-
-                        Group {
-                            if layout.showsCredentialPreferences {
-                                credentialPreferences(in: space)
-                            }
-
-                            if layout.showsManageAction {
-                                Button(
-                                    "Manage Saved Passwords…",
-                                    systemImage: "key.fill"
-                                ) {
-                                    manage?()
-                                }
-                                .buttonStyle(.crestTertiary)
-                            }
-
-                            if layout.showsExportAction {
-                                Button(
-                                    "Export Passwords…",
-                                    systemImage: "square.and.arrow.up"
-                                ) {
-                                    confirmsPlaintextExport = true
-                                }
-                                .buttonStyle(.crestTertiary)
-                                .disabled(
-                                    credentials.descriptors.isEmpty
-                                        || credentials.isPreparingExport
-                                )
-                                .accessibilityIdentifier(
-                                    "export-space-passwords"
-                                )
-                            }
-                        }
-                        .disabled(!space.credentialPreferences.isEnabled)
-
-                        if !space.credentialPreferences.isEnabled {
-                            Text(BrowserCredentialSettingsPolicy.disabledDescription)
-                                .crestFormFootnote()
-                        }
-                    }
-
-                    if layout.showsSavedPasswords {
-                        Section("Saved passwords") {
-                            if !credentials.descriptors.isEmpty || !searchText.isEmpty {
-                                BrowserCredentialSearchField(
-                                    title: "Search saved passwords",
-                                    text: $searchText,
-                                    accessibilityIdentifier: "saved-password-search"
-                                )
-                            }
-                            passwordManagerActions
-                            savedPasswords
-                            Text(passwordCountLabel).crestFormFootnote()
-                        }
-                    }
-
-                    if let errorMessage = credentials.errorMessage {
-                        Section {
-                            Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                                .crestFormFootnote()
-                                .foregroundStyle(.red)
-                        }
-                    }
-
-                    Section {
-                        if layout.showsSavedPasswords {
-                            CrestFormFootnote(
-                                "Crest shows descriptor metadata only. Password values stay in the active Space’s Data Protection Keychain and never enter session or CloudKit data."
-                            )
-                        } else {
-                            CrestFormFootnote(
-                                "Crest Passwords stay in this Space. They never enter another Space’s suggestions or records."
-                            )
-                        }
-                    }
-                } else {
-                    BrowserSettingsPrivateSpaceAccessSection(
-                        space: space,
-                        accessController: spaceAccess,
-                        detail:
-                            "Unlock this Space before viewing account and site metadata or changing its password settings."
-                    )
-                }
-            }
+            settingsSections
         }
         .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
         .task(id: credentialLoadRequest) {
@@ -261,6 +153,119 @@ struct BrowserPasswordSettingsPane: View {
     }
 
     // MARK: - Sections
+
+    @ViewBuilder
+    private var settingsSections: some View {
+        Section("System passkeys") {
+            BrowserPasskeyAccessView()
+        }
+
+        Section("Space") {
+            CrestSpaceMenuPicker(
+                "Passwords for",
+                selection: $selectedSpaceID,
+                spaces: CrestSpaceIdentity.list(browser.session.spaces)
+            )
+        }
+
+        if let space {
+            if canRevealSelectedSpaceData {
+                Section("Crest Passwords") {
+                    Toggle(
+                        "Use Crest Passwords in this Space",
+                        isOn: browser.credentialPreferenceBinding(
+                            \.isEnabled,
+                            in: space
+                        )
+                    )
+                    .accessibilityIdentifier(
+                        "space-crest-passwords-enabled"
+                    )
+
+                    Group {
+                        if layout.showsCredentialPreferences {
+                            credentialPreferences(in: space)
+                        }
+
+                        if layout.showsManageAction {
+                            Button(
+                                "Manage Saved Passwords…",
+                                systemImage: "key.fill"
+                            ) {
+                                manage?()
+                            }
+                            .buttonStyle(.crestTertiary)
+                        }
+
+                        if layout.showsExportAction {
+                            Button(
+                                "Export Passwords…",
+                                systemImage: "square.and.arrow.up"
+                            ) {
+                                confirmsPlaintextExport = true
+                            }
+                            .buttonStyle(.crestTertiary)
+                            .disabled(
+                                credentials.descriptors.isEmpty
+                                    || credentials.isPreparingExport
+                            )
+                            .accessibilityIdentifier(
+                                "export-space-passwords"
+                            )
+                        }
+                    }
+                    .disabled(!space.credentialPreferences.isEnabled)
+
+                    if !space.credentialPreferences.isEnabled {
+                        Text(BrowserCredentialSettingsPolicy.disabledDescription)
+                            .crestFormFootnote()
+                    }
+                }
+
+                if layout.showsSavedPasswords {
+                    Section("Saved passwords") {
+                        if !credentials.descriptors.isEmpty || !searchText.isEmpty {
+                            BrowserCredentialSearchField(
+                                title: "Search saved passwords",
+                                text: $searchText,
+                                accessibilityIdentifier: "saved-password-search"
+                            )
+                        }
+                        passwordManagerActions
+                        savedPasswords
+                        Text(passwordCountLabel).crestFormFootnote()
+                    }
+                }
+
+                if let errorMessage = credentials.errorMessage {
+                    Section {
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                            .crestFormFootnote()
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                Section {
+                    if layout.showsSavedPasswords {
+                        CrestFormFootnote(
+                            "Crest shows descriptor metadata only. Password values stay in the active Space’s Data Protection Keychain and never enter session or CloudKit data."
+                        )
+                    } else {
+                        CrestFormFootnote(
+                            "Crest Passwords stay in this Space. They never enter another Space’s suggestions or records."
+                        )
+                    }
+                }
+            } else {
+                BrowserSettingsPrivateSpaceAccessSection(
+                    space: space,
+                    accessController: spaceAccess,
+                    detail:
+                        "Unlock this Space before viewing account and site metadata or changing its password settings."
+                )
+            }
+        }
+    }
 
     @ViewBuilder
     private var passwordManagerActions: some View {
@@ -496,8 +501,9 @@ struct BrowserPasswordSettingsPane: View {
 
     private func openImportResult(_ result: Result<[URL], any Error>) {
         guard case .success(let urls) = result,
-              let url = urls.first,
-              let selectedSpaceID else {
+            let url = urls.first,
+            let selectedSpaceID
+        else {
             if case .failure = result {
                 credentials.errorMessage = "Crest couldn’t open that password file."
             }
@@ -550,8 +556,9 @@ private struct BrowserCredentialImportReviewView: View {
         NavigationStack {
             Group {
                 if let plan = credentials.importPlan,
-                   plan.id == initialPlanID,
-                   let space = browser.space(matching: plan.destination) {
+                    plan.id == initialPlanID,
+                    let space = browser.space(matching: plan.destination)
+                {
                     VStack(spacing: 0) {
                         ScrollView {
                             LazyVStack(
@@ -608,17 +615,17 @@ private struct BrowserCredentialImportReviewView: View {
                                     }
                                 }
 
-                            if !plan.warnings.isEmpty {
-                                BrowserCredentialImportWarningRows(
-                                    warnings: plan.warnings
-                                )
-                            }
+                                if !plan.warnings.isEmpty {
+                                    BrowserCredentialImportWarningRows(
+                                        warnings: plan.warnings
+                                    )
+                                }
 
-                            if !plan.rejections.isEmpty {
-                                BrowserCredentialImportRejectedRows(
-                                    rejections: plan.rejections
-                                )
-                            }
+                                if !plan.rejections.isEmpty {
+                                    BrowserCredentialImportRejectedRows(
+                                        rejections: plan.rejections
+                                    )
+                                }
 
                                 Label(
                                     "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics.",
@@ -1074,11 +1081,11 @@ private struct BrowserCredentialImportAccountRow: View {
                         count: group.candidates.count
                     )
                 )
-                    .tag(
-                        BrowserCredentialImportSelection.imported(
-                            rowNumber: candidate.rowNumber
-                        )
+                .tag(
+                    BrowserCredentialImportSelection.imported(
+                        rowNumber: candidate.rowNumber
                     )
+                )
             }
             Text("Skip this account")
                 .tag(BrowserCredentialImportSelection.skip)
@@ -1148,9 +1155,9 @@ private struct BrowserCredentialSearchField: View {
         }
         .padding(.horizontal, CrestSpacing.small)
         #if os(macOS)
-        .frame(height: 30)
+            .frame(height: 30)
         #else
-        .frame(minHeight: 44)
+            .frame(minHeight: 44)
         #endif
         .background(.quaternary, in: .rect(cornerRadius: CrestRadius.control))
         .accessibilityIdentifier(accessibilityIdentifier)
@@ -1178,18 +1185,18 @@ private struct BrowserCredentialImportPasswordValue: View {
     }
 }
 
-private extension View {
+extension View {
     @ViewBuilder
-    func browserCredentialImportReviewSizing() -> some View {
+    fileprivate func browserCredentialImportReviewSizing() -> some View {
         #if os(macOS)
-        frame(
-            minWidth: 660,
-            idealWidth: 720,
-            minHeight: 520,
-            idealHeight: 620
-        )
+            frame(
+                minWidth: 660,
+                idealWidth: 720,
+                minHeight: 520,
+                idealHeight: 620
+            )
         #else
-        presentationDetents([.large])
+            presentationDetents([.large])
         #endif
     }
 }

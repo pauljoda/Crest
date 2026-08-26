@@ -85,6 +85,7 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
         .accessibilityValue(Text(accessibilityValue))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .help(space.name)
+        .id(space.id)
     }
 
     private func accessibilityValue(
