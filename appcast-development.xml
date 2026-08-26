@@ -7,10 +7,10 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.5.0</title>
-            <pubDate>Wed, 26 Aug 2026 00:12:57 +0000</pubDate>
+            <pubDate>Wed, 26 Aug 2026 13:50:49 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1048</sparkle:version>
+            <sparkle:version>1051</sparkle:version>
             <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
@@ -24,13 +24,13 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/aac042880149f71446ff01ec79d317a7656b8237...e84edda4defdb507ab8844fbfd9d7abc4fbbccb2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.0-development-2026-08-26-e84edda-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/e84edda4defdb507ab8844fbfd9d7abc4fbbccb2...e84edda4defdb507ab8844fbfd9d7abc4fbbccb2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.0-development-2026-08-26-e84edda-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.0-development-2026-08-26-e84edda-arm64.dmg" length="8668445" type="application/octet-stream" sparkle:edSignature="WhSwWdRF0xDufVYeq8l34jj4JlKZMa8lShuFcNFPVDkuhrH1FB0VLnx2ECdcXoIWA7guVAcMQx0dOuNE+xnSBg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.0-development-2026-08-26-e84edda-arm64.dmg" length="8672031" type="application/octet-stream" sparkle:edSignature="dL4aWYtmMfi0fzhH5jI+/AHVkCfZnBwlfL883938eXtDbUw70nViqWMtDosddZtZVDiExRQTz8QA8jiiTtRwCw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: LrYHyJZSUTIoyd3yKDKdJiqPcLrSOUnFnUcHtUz7t3XN+hZ0Mw48rCwb6wGHftmjgfc0Ic5PJJ0dGFNcxBrmCw==
+edSignature: qWJ4w7i4vUus63jiEQ0cP35/xPUmlRATi68HAqKiMlXH6mG8ZfvV+/P+tI9v/zPCgAMksr4SPLRN3WZ+raWNAg==
 length: 1821
 -->
