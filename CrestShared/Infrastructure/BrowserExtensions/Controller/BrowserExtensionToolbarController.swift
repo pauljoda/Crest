@@ -3,15 +3,18 @@ final class BrowserExtensionToolbarController {
     let persistence: BrowserExtensionPersistenceController
     let runtime: BrowserExtensionRuntimeContextController
     let tabWindowCoordinator: BrowserExtensionTabWindowCoordinator
+    let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
 
     init(
         persistence: BrowserExtensionPersistenceController,
         runtime: BrowserExtensionRuntimeContextController,
-        tabWindowCoordinator: BrowserExtensionTabWindowCoordinator
+        tabWindowCoordinator: BrowserExtensionTabWindowCoordinator,
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     ) {
         self.persistence = persistence
         self.runtime = runtime
         self.tabWindowCoordinator = tabWindowCoordinator
+        self.webpageMenuRegistry = webpageMenuRegistry
     }
 
     func setPinned(

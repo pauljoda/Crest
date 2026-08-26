@@ -18,6 +18,7 @@ import XCTest
 @MainActor
 final class BrowserExtensionActionPopupLiveTests: XCTestCase {
     private let darkReaderID = "eimadpbcbfnmbkopoojfekhnkhdbieeh"
+    private let lastPassID = "hdokiejnpimakedhajhdlcegeplioahd"
     private let onePasswordID = "aeblfdkhhhdcdjpifhhbdiojplfjncoa"
     private let sponsorBlockID = "mnjggcdmjocbbbhaepdhchncahnbgone"
 
@@ -328,6 +329,78 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         }
     }
 
+    /// LastPass has a multi-megabyte service worker and its popup immediately
+    /// asks that worker for synchronized state. A URL-less Start Page still
+    /// represents Crest's selected tab, so the toolbar action must go through
+    /// WebKit's normal perform-action lifecycle instead of displaying a
+    /// preloaded popover whose background handshake has not completed.
+    func testLiveLastPassPopupRendersSignedOutStateFromStartPage() async throws {
+        try skipUnlessLiveRunRequested()
+        let candidate = try await candidate(
+            extensionID: lastPassID,
+            slug: "lastpass-free-password-manager"
+        )
+        let outcome = try await popupOutcome(
+            candidate: candidate,
+            extensionID: lastPassID,
+            activeTabURL: nil,
+            viaRestoration: true,
+            viaPopover: true,
+            usesEphemeralWebKitStorage: false,
+            warmsPopupBeforeMeasurement: false
+        )
+
+        XCTAssertTrue(outcome.presentsPopup)
+        XCTAssertNotNil(
+            outcome.readyMilliseconds,
+            """
+            LastPass never completed its Start Page popup handshake. Text: \
+            \(outcome.renderedText.prefix(300)). Runtime errors: \
+            \(outcome.contextErrors)
+            """
+        )
+        XCTAssertFalse(
+            outcome.renderedText.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty,
+            "LastPass presented a blank popup from the Start Page."
+        )
+    }
+
+    /// LastPass's options page is a useful stress case for tab-hosted extension
+    /// pages: its first document fans out into several megabytes of scripts and
+    /// styles. The first open must resolve those packaged resources just like a
+    /// reload does; requiring the person to reload a blank extension tab is not
+    /// a viable options-page lifecycle.
+    func testLiveLastPassOptionsPageRendersWithoutManualReload() async throws {
+        try skipUnlessLiveRunRequested()
+        let candidate = try await candidate(
+            extensionID: lastPassID,
+            slug: "lastpass-free-password-manager"
+        )
+        let outcome = try await optionsPageOutcome(
+            candidate: candidate,
+            extensionID: lastPassID,
+            viaRestoration: true
+        )
+
+        XCTAssertFalse(
+            outcome.firstLoadText.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty,
+            """
+            LastPass's options page was blank on its first open. A manual reload \
+            rendered: \(outcome.reloadText.prefix(300)). Navigation failure: \
+            \(outcome.navigationFailure ?? "none"). Runtime errors: \
+            \(outcome.contextErrors)
+            """
+        )
+        XCTAssertTrue(
+            outcome.reloadText.contains("Preferences"),
+            "LastPass's options page did not render after a diagnostic reload."
+        )
+    }
+
     private func assertNoStalledHostCall(
         _ hostCalls: [String],
         label: String
@@ -413,10 +486,165 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         var permissionProbeStatus: WKWebExtensionContext.PermissionStatus?
     }
 
+    private struct OptionsPageOutcome {
+        var firstLoadText: String
+        var reloadText: String
+        var navigationFailure: String?
+        var contextErrors: [String]
+    }
+
+    private func optionsPageOutcome(
+        candidate: LiveCandidate,
+        extensionID: String,
+        viaRestoration: Bool
+    ) async throws -> OptionsPageOutcome {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-extension-options-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        let registryPersistence =
+            InMemoryBrowserExtensionRegistryPersistence()
+        let profile = BrowsingProfile()
+        let targetSpace = BrowserSpace(
+            id: SpaceID(),
+            profile: profile,
+            name: "Work",
+            symbol: "puzzlepiece.extension.fill",
+            accent: .indigo,
+            folders: [],
+            tabs: [],
+            selectedTabID: nil
+        )
+        let otherSpace = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Personal",
+            symbol: "person.fill",
+            accent: .orange,
+            folders: [],
+            tabs: [],
+            selectedTabID: nil
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(
+                spaces: [targetSpace, otherSpace],
+                selectedSpaceID: targetSpace.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+
+        func makePool() -> BrowserExtensionControllerPool {
+            let pool = BrowserExtensionControllerPool(
+                packageStore: BrowserExtensionPackageStore(
+                    fileManager: fileManager,
+                    rootURL: root,
+                    removesRootOnDeinit: false
+                ),
+                registry: BrowserExtensionRegistry(
+                    persistence: registryPersistence
+                ),
+                usesEphemeralWebKitStorage: false
+            )
+            pool.setNativeMessagingHandler(AbsentHostNativeMessagingHandler())
+            return pool
+        }
+
+        func attach(
+            _ pool: BrowserExtensionControllerPool
+        ) -> BrowserPagePool {
+            let pages = BrowserPagePool(
+                monitorsMemoryPressure: false,
+                usesEphemeralWebsiteDataStores: false,
+                extensionControllerPool: pool
+            )
+            pool.connect(browser: browser, pageProvider: pages)
+            pages.select(session: browser.session)
+            return pages
+        }
+
+        var pool = makePool()
+        var pages = attach(pool)
+        switch candidate {
+        case .chrome(let candidate):
+            _ = try await pool.installChromeWebStoreExtension(
+                candidate,
+                in: targetSpace
+            )
+            _ = try await pool.installChromeWebStoreExtension(
+                candidate,
+                in: otherSpace
+            )
+        case .mozilla(let candidate):
+            _ = try await pool.installMozillaAddonsExtension(
+                candidate,
+                in: targetSpace
+            )
+            _ = try await pool.installMozillaAddonsExtension(
+                candidate,
+                in: otherSpace
+            )
+        }
+
+        if viaRestoration {
+            pool = makePool()
+            pages = attach(pool)
+            await pool.restoreEnabledExtensions(in: [targetSpace, otherSpace])
+        }
+        browser.selectSpace(targetSpace.id)
+        pages.select(session: browser.session)
+        let targetContext = try XCTUnwrap(
+            pool.loadedContext(extensionID: extensionID, in: targetSpace.id)
+        )
+        _ = try XCTUnwrap(
+            pool.loadedContext(extensionID: extensionID, in: otherSpace.id)
+        )
+        targetContext.isInspectable = true
+        pool.openOptionsPage(extensionID: extensionID, in: targetSpace.id)
+
+        let page = try XCTUnwrap(pages.activePage)
+        let firstLoadText = await renderedBodyText(in: page.webView)
+        let navigationFailure = page.navigationFailure.map {
+            String(describing: $0)
+        }
+        page.webView.reload()
+        let reloadText = await renderedBodyText(in: page.webView)
+        let contextErrors = Self.errorDescriptions(targetContext.errors)
+
+        _ = try? await pool.deleteData(for: targetSpace)
+        _ = try? await pool.deleteData(for: otherSpace)
+        try? await WKWebsiteDataStore.remove(forIdentifier: profile.id)
+        try? await WKWebsiteDataStore.remove(
+            forIdentifier: otherSpace.profile.id
+        )
+        return OptionsPageOutcome(
+            firstLoadText: firstLoadText,
+            reloadText: reloadText,
+            navigationFailure: navigationFailure,
+            contextErrors: contextErrors
+        )
+    }
+
+    private func renderedBodyText(in webView: WKWebView) async -> String {
+        var text = ""
+        for _ in 0..<200 {
+            text =
+                ((try? await webView.evaluateJavaScript(
+                    "document.body.innerText"
+                )) as? String) ?? ""
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return text
+    }
+
     private func popupOutcome(
         candidate: LiveCandidate,
         extensionID: String,
-        activeTabURL: URL,
+        activeTabURL: URL?,
         viaRestoration: Bool,
         viaPopover: Bool = false,
         idleSecondsBeforePresenting: Int = 0,
@@ -537,7 +765,9 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             context.permissionStatus(for: $0)
         }
         context.isInspectable = true
-        await load(activeTabURL, in: webView)
+        if let activeTabURL {
+            await load(activeTabURL, in: webView)
+        }
         if idleSecondsBeforePresenting > 0 {
             try await Task.sleep(for: .seconds(idleSecondsBeforePresenting))
         }
@@ -770,7 +1000,7 @@ private final class AbsentHostNativeMessagingHandler:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -779,7 +1009,7 @@ private final class AbsentHostNativeMessagingHandler:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {

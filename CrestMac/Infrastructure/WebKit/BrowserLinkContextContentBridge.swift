@@ -52,13 +52,54 @@ enum BrowserLinkContextContentBridge {
 
           let sequence = 0;
 
-          const post = (href, imageURL) => {
+          const selectionText = (event) => {
+            const element = event.target instanceof Element
+              ? event.target
+              : null;
+            if (
+              element instanceof HTMLInputElement
+              || element instanceof HTMLTextAreaElement
+            ) {
+              const start = element.selectionStart;
+              const end = element.selectionEnd;
+              if (Number.isInteger(start) && Number.isInteger(end) && end > start) {
+                return element.value.slice(start, end);
+              }
+            }
+            const selected = globalThis.getSelection?.()?.toString() ?? "";
+            return selected.length <= 4096 && selected.length > 0
+              ? selected
+              : null;
+          };
+
+          const isEditable = (event) => {
+            const path = typeof event.composedPath === "function"
+              ? event.composedPath()
+              : [];
+            return path.some((node) =>
+              node instanceof HTMLElement
+              && (
+                node.isContentEditable
+                || node instanceof HTMLTextAreaElement
+                || (
+                  node instanceof HTMLInputElement
+                  && !["button", "checkbox", "color", "file", "hidden",
+                    "image", "radio", "range", "reset", "submit"]
+                    .includes(node.type)
+                )
+              )
+            );
+          };
+
+          const post = (event, href, imageURL) => {
             try {
               webkit.messageHandlers.crestLinkContext.postMessage({
-                version: 2,
+                version: 3,
                 token: ++sequence,
                 href,
-                imageURL
+                imageURL,
+                selectionText: selectionText(event),
+                editable: isEditable(event)
               });
             } catch (_) {}
           };
@@ -157,7 +198,7 @@ enum BrowserLinkContextContentBridge {
 
           globalThis.addEventListener("contextmenu", (event) => {
             if (!event.isTrusted) return;
-            post(destination(event), imageDestination(event));
+            post(event, destination(event), imageDestination(event));
           }, { capture: true, passive: true });
         })();
         """#

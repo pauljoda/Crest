@@ -22,12 +22,14 @@ final class BrowserExtensionRuntimeContextController {
     private var controllerEntries: [SpaceID: ControllerEntry] = [:]
     private var contextsBySpace: [SpaceID: [String: WKWebExtensionContext]] = [:]
     private var runtimeResourceAccess: [SpaceID: [String: AnyObject]] = [:]
+    private var internalGrantedPermissionsBySpace: [SpaceID: [String: Set<String>]] = [:]
 
     private let persistence: BrowserExtensionPersistenceController
     private let permissions: BrowserExtensionPermissionController
     private let contextObserver: BrowserExtensionContextObserver
     private let commandController: BrowserExtensionCommandController
     private let tabWindowCoordinator: BrowserExtensionTabWindowCoordinator
+    private let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private let storedResourcePreparer: any BrowserExtensionStoredResourcePreparing
     private let usesEphemeralWebKitStorage: Bool
 
@@ -37,6 +39,7 @@ final class BrowserExtensionRuntimeContextController {
         contextObserver: BrowserExtensionContextObserver,
         commandController: BrowserExtensionCommandController,
         tabWindowCoordinator: BrowserExtensionTabWindowCoordinator,
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry,
         storedResourcePreparer:
             any BrowserExtensionStoredResourcePreparing,
         usesEphemeralWebKitStorage: Bool
@@ -47,6 +50,7 @@ final class BrowserExtensionRuntimeContextController {
         self.contextObserver = contextObserver
         self.commandController = commandController
         self.tabWindowCoordinator = tabWindowCoordinator
+        self.webpageMenuRegistry = webpageMenuRegistry
         self.storedResourcePreparer = storedResourcePreparer
         self.usesEphemeralWebKitStorage = usesEphemeralWebKitStorage
     }
@@ -107,6 +111,13 @@ final class BrowserExtensionRuntimeContextController {
         contextsBySpace[spaceID] ?? [:]
     }
 
+    func internallyGrantedPermissions(
+        extensionID: String,
+        in spaceID: SpaceID
+    ) -> Set<String> {
+        internalGrantedPermissionsBySpace[spaceID]?[extensionID] ?? []
+    }
+
     func extensionPageConfiguration(
         for extensionURL: URL,
         in spaceID: SpaceID
@@ -135,7 +146,8 @@ final class BrowserExtensionRuntimeContextController {
         unsupportedAPIs: Set<String>,
         permissionSnapshot: BrowserExtensionPermissionSnapshot,
         persistsRuntimeSummary: Bool,
-        source: BrowserExtensionInstallationSource?
+        source: BrowserExtensionInstallationSource?,
+        internalGrantedPermissions: Set<String> = []
     ) async throws -> WKWebExtensionContext {
         if let existingContext = loadedContext(
             extensionID: extensionID,
@@ -153,7 +165,8 @@ final class BrowserExtensionRuntimeContextController {
             unsupportedAPIs: unsupportedAPIs,
             permissionSnapshot: permissionSnapshot,
             persistsRuntimeSummary: persistsRuntimeSummary,
-            source: source
+            source: source,
+            internalGrantedPermissions: internalGrantedPermissions
         )
     }
 
@@ -214,12 +227,14 @@ final class BrowserExtensionRuntimeContextController {
         unsupportedAPIs: Set<String>,
         permissionSnapshot: BrowserExtensionPermissionSnapshot,
         persistsRuntimeSummary: Bool,
-        source: BrowserExtensionInstallationSource?
+        source: BrowserExtensionInstallationSource?,
+        internalGrantedPermissions: Set<String> = []
     ) throws -> WKWebExtensionContext {
         let compatibility = BrowserExtensionCompatibilityPolicy.assess(
             extensionID: extensionID,
             requestedPermissions: webExtension.requestedPermissions
-                .map(\.rawValue),
+                .map(\.rawValue)
+                .filter { !internalGrantedPermissions.contains($0) },
             source: BrowserExtensionCompatibilitySource(
                 installationSource: source
             ),
@@ -256,6 +271,12 @@ final class BrowserExtensionRuntimeContextController {
         context.baseURL = runtimeIdentity.baseURL
         context.unsupportedAPIs = unsupportedAPIs
         let restoreError = permissions.apply(permissionSnapshot, to: context)
+        for permissionName in internalGrantedPermissions {
+            context.setPermissionStatus(
+                .grantedExplicitly,
+                for: WKWebExtension.Permission(rawValue: permissionName)
+            )
+        }
         let nativeMessagingIdentity: BrowserExtensionNativeMessagingIdentity?
         switch source {
         case .chromeWebStore(let chromeSource)
@@ -271,16 +292,30 @@ final class BrowserExtensionRuntimeContextController {
         default:
             nativeMessagingIdentity = nil
         }
+        let nativeMessagingAuthorization =
+            BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: Set(
+                    permissionSnapshot.grantedPermissions.keys
+                ),
+                clientID: .scoped(
+                    extensionID: extensionID,
+                    spaceID: space.id
+                )
+            )
         if let nativeMessagingIdentity {
             tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
                 nativeMessagingIdentity,
-                authorization: BrowserExtensionNativeMessagingAuthorization(
-                    grantedPermissions: Set(
-                        permissionSnapshot.grantedPermissions.keys
-                    ),
-                    clientID: BrowserExtensionServiceClientID(
-                        runtimeIdentity.uniqueIdentifier
-                    )
+                authorization: nativeMessagingAuthorization,
+                for: context
+            )
+        } else if permissionSnapshot.grantedPermissions["contextMenus"] != nil
+            || permissionSnapshot.grantedPermissions["menus"] != nil,
+            internalGrantedPermissions.contains("nativeMessaging")
+        {
+            tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+                BrowserExtensionNativeMessagingAuthorization(
+                    grantedPermissions: ["contextMenus"],
+                    clientID: nativeMessagingAuthorization.clientID
                 ),
                 for: context
             )
@@ -291,10 +326,15 @@ final class BrowserExtensionRuntimeContextController {
             tabWindowCoordinator.unregisterNativeMessagingIdentity(
                 for: context
             )
+            webpageMenuRegistry.removeClient(
+                .scoped(extensionID: extensionID, spaceID: space.id)
+            )
             throw error
         }
 
         contextsBySpace[space.id, default: [:]][extensionID] = context
+        internalGrantedPermissionsBySpace[space.id, default: [:]][extensionID] =
+            internalGrantedPermissions
         commandController.captureDefaults(
             for: context,
             extensionID: extensionID,
@@ -351,11 +391,16 @@ final class BrowserExtensionRuntimeContextController {
         extensionID: String,
         isEnabled: Bool
     ) -> BrowserExtensionSummary {
-        persistence.summary(
+        let internalPermissions = internalGrantedPermissions(for: context)
+        return persistence.summary(
             for: context,
             extensionID: extensionID,
             isEnabled: isEnabled,
-            permissionSnapshot: permissions.snapshot(for: context)
+            permissionSnapshot: permissions.snapshot(
+                for: context,
+                excluding: internalPermissions
+            ),
+            excluding: internalPermissions
         )
     }
 
@@ -363,10 +408,15 @@ final class BrowserExtensionRuntimeContextController {
         for context: WKWebExtensionContext,
         installation: BrowserExtensionInstallation
     ) -> BrowserExtensionSummary {
-        persistence.summary(
+        let internalPermissions = internalGrantedPermissions(for: context)
+        return persistence.summary(
             for: context,
             installation: installation,
-            permissionSnapshot: permissions.snapshot(for: context)
+            permissionSnapshot: permissions.snapshot(
+                for: context,
+                excluding: internalPermissions
+            ),
+            excluding: internalPermissions
         )
     }
 
@@ -393,6 +443,13 @@ final class BrowserExtensionRuntimeContextController {
         extensionID: String,
         in spaceID: SpaceID
     ) {
+        webpageMenuRegistry.removeClient(
+            .scoped(extensionID: extensionID, spaceID: spaceID)
+        )
+        internalGrantedPermissionsBySpace[spaceID]?[extensionID] = nil
+        if internalGrantedPermissionsBySpace[spaceID]?.isEmpty == true {
+            internalGrantedPermissionsBySpace.removeValue(forKey: spaceID)
+        }
         runtimeResourceAccess[spaceID]?.removeValue(forKey: extensionID)
         if runtimeResourceAccess[spaceID]?.isEmpty == true {
             runtimeResourceAccess.removeValue(forKey: spaceID)
@@ -421,6 +478,7 @@ final class BrowserExtensionRuntimeContextController {
             "Extension contexts must be released before their Space controller."
         )
         contextsBySpace.removeValue(forKey: spaceID)
+        internalGrantedPermissionsBySpace.removeValue(forKey: spaceID)
         controllerEntries.removeValue(forKey: spaceID)
         tabWindowCoordinator.unregister(spaceID: spaceID)
     }
@@ -443,7 +501,12 @@ final class BrowserExtensionRuntimeContextController {
         )
         let preparedResource = try storedResourcePreparer.prepare(
             resourceURL: storedResourceURL,
-            installation: installation
+            request: BrowserExtensionStoredResourcePreparationRequest(
+                extensionID: installation.id,
+                source: installation.source,
+                spaceID: installation.spaceID,
+                requestedPermissions: installation.requestedPermissions
+            )
         )
         let context = try await loadExtension(
             at: preparedResource.resourceURL,
@@ -452,7 +515,9 @@ final class BrowserExtensionRuntimeContextController {
             unsupportedAPIs: Set(installation.unsupportedAPIs),
             permissionSnapshot: installation.permissionSnapshot,
             persistsRuntimeSummary: true,
-            source: installation.source
+            source: installation.source,
+            internalGrantedPermissions:
+                preparedResource.internalGrantedPermissions
         )
         if let retainedAccess = preparedResource.retainedAccess {
             retainRuntimeResourceAccess(
@@ -476,7 +541,8 @@ final class BrowserExtensionRuntimeContextController {
         permissions.persistPermissionState(
             context: context,
             extensionID: extensionID,
-            in: spaceID
+            in: spaceID,
+            excluding: internalGrantedPermissions(for: context)
         )
     }
 
@@ -503,6 +569,18 @@ final class BrowserExtensionRuntimeContextController {
             in: spaceID
         )
         persistence.updateSummary(runtimeSummary, in: spaceID)
+    }
+
+    private func internalGrantedPermissions(
+        for context: WKWebExtensionContext
+    ) -> Set<String> {
+        for (spaceID, contexts) in contextsBySpace {
+            guard let entry = contexts.first(where: { $0.value === context })
+            else { continue }
+            return internalGrantedPermissionsBySpace[spaceID]?[entry.key]
+                ?? []
+        }
+        return []
     }
 
 }

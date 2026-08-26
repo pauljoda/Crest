@@ -21,6 +21,14 @@ extension BrowserExtensionTabWindowCoordinator {
         verifiedNativeMessagingAuthorizations[key] = authorization
     }
 
+    func registerCapabilityBrokerAuthorization(
+        _ authorization: BrowserExtensionNativeMessagingAuthorization,
+        for context: WKWebExtensionContext
+    ) {
+        verifiedNativeMessagingAuthorizations[ObjectIdentifier(context)] =
+            authorization
+    }
+
     func unregisterNativeMessagingIdentity(
         for context: WKWebExtensionContext
     ) {
@@ -38,12 +46,24 @@ extension BrowserExtensionTabWindowCoordinator {
     ) {
         guard
             let nativeMessagingHandler,
-            let extensionIdentity = verifiedNativeMessagingIdentities[
-                ObjectIdentifier(extensionContext)
-            ],
             let authorization = verifiedNativeMessagingAuthorizations[
                 ObjectIdentifier(extensionContext)
             ]
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
+            return
+        }
+        let extensionIdentity = verifiedNativeMessagingIdentities[
+            ObjectIdentifier(extensionContext)
+        ]
+        guard
+            extensionIdentity != nil
+                || applicationIdentifier
+                    == BrowserExtensionNativeMessagingApplication
+                    .capabilityBrokerIdentifier
         else {
             replyHandler(
                 nil,
@@ -68,12 +88,23 @@ extension BrowserExtensionTabWindowCoordinator {
     ) {
         guard
             let nativeMessagingHandler,
-            let extensionIdentity = verifiedNativeMessagingIdentities[
-                ObjectIdentifier(extensionContext)
-            ],
             let authorization = verifiedNativeMessagingAuthorizations[
                 ObjectIdentifier(extensionContext)
             ]
+        else {
+            completionHandler(
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
+            return
+        }
+        let extensionIdentity = verifiedNativeMessagingIdentities[
+            ObjectIdentifier(extensionContext)
+        ]
+        guard
+            extensionIdentity != nil
+                || port.applicationIdentifier
+                    == BrowserExtensionNativeMessagingApplication
+                    .capabilityBrokerIdentifier
         else {
             completionHandler(
                 BrowserExtensionNativeMessagingError.unverifiedExtension

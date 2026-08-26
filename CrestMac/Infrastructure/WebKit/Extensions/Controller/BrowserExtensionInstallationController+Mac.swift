@@ -116,11 +116,18 @@ extension BrowserExtensionInstallationController {
             candidate.source
         )
         var didLoadNewContext = false
+        var pendingLifecycle: PendingContextMenuInstallLifecycle?
         do {
             let compatibilityPackage = try prepareCompatibilityPackage(
                 package,
                 extensionID: extensionID,
                 source: source,
+                spaceID: space.id,
+                requestedPermissions: candidate.requestedPermissions
+            )
+            pendingLifecycle = prepareContextMenuInstallLifecycle(
+                previous: previous,
+                extensionID: extensionID,
                 spaceID: space.id,
                 requestedPermissions: candidate.requestedPermissions
             )
@@ -144,7 +151,9 @@ extension BrowserExtensionInstallationController {
                         hosts: candidate.requestedHosts
                     ),
                 persistsRuntimeSummary: false,
-                source: source
+                source: source,
+                internalGrantedPermissions:
+                    compatibilityPackage?.internalGrantedPermissions ?? []
             )
             didLoadNewContext = true
             var runtimeSummary = runtime.summary(
@@ -200,6 +209,7 @@ extension BrowserExtensionInstallationController {
             }
             return runtimeSummary
         } catch {
+            cancelContextMenuInstallLifecycle(pendingLifecycle)
             if didLoadNewContext,
                 let context = runtime.loadedContext(
                     extensionID: extensionID,
@@ -249,11 +259,18 @@ extension BrowserExtensionInstallationController {
             candidate.source
         )
         var didLoadNewContext = false
+        var pendingLifecycle: PendingContextMenuInstallLifecycle?
         do {
             let compatibilityPackage = try prepareCompatibilityPackage(
                 package,
                 extensionID: extensionID,
                 source: source,
+                spaceID: space.id,
+                requestedPermissions: candidate.requestedPermissions
+            )
+            pendingLifecycle = prepareContextMenuInstallLifecycle(
+                previous: previous,
+                extensionID: extensionID,
                 spaceID: space.id,
                 requestedPermissions: candidate.requestedPermissions
             )
@@ -277,7 +294,9 @@ extension BrowserExtensionInstallationController {
                         hosts: candidate.requestedHosts
                     ),
                 persistsRuntimeSummary: false,
-                source: source
+                source: source,
+                internalGrantedPermissions:
+                    compatibilityPackage?.internalGrantedPermissions ?? []
             )
             didLoadNewContext = true
             var runtimeSummary = runtime.summary(
@@ -333,6 +352,7 @@ extension BrowserExtensionInstallationController {
             }
             return runtimeSummary
         } catch {
+            cancelContextMenuInstallLifecycle(pendingLifecycle)
             if didLoadNewContext,
                 let context = runtime.loadedContext(
                     extensionID: extensionID,
@@ -381,11 +401,18 @@ extension BrowserExtensionInstallationController {
             candidate.source
         )
         var didLoadNewContext = false
+        var pendingLifecycle: PendingContextMenuInstallLifecycle?
         do {
             let compatibilityPackage = try prepareCompatibilityPackage(
                 package,
                 extensionID: extensionID,
                 source: source,
+                spaceID: space.id,
+                requestedPermissions: candidate.requestedPermissions
+            )
+            pendingLifecycle = prepareContextMenuInstallLifecycle(
+                previous: previous,
+                extensionID: extensionID,
                 spaceID: space.id,
                 requestedPermissions: candidate.requestedPermissions
             )
@@ -409,7 +436,9 @@ extension BrowserExtensionInstallationController {
                         hosts: candidate.requestedHosts
                     ),
                 persistsRuntimeSummary: false,
-                source: source
+                source: source,
+                internalGrantedPermissions:
+                    compatibilityPackage?.internalGrantedPermissions ?? []
             )
             didLoadNewContext = true
             var runtimeSummary = runtime.summary(
@@ -467,6 +496,7 @@ extension BrowserExtensionInstallationController {
             }
             return runtimeSummary
         } catch {
+            cancelContextMenuInstallLifecycle(pendingLifecycle)
             if didLoadNewContext,
                 let context = runtime.loadedContext(
                     extensionID: extensionID,
@@ -509,29 +539,4 @@ extension BrowserExtensionInstallationController {
             )
     }
 
-    private func restorePreviousInstallation(
-        _ previous: BrowserExtensionInstallation?,
-        extensionID: String,
-        in space: BrowserSpace
-    ) async {
-        guard let previous else {
-            persistence.removeSummary(
-                extensionID: extensionID,
-                in: space.id
-            )
-            return
-        }
-        if previous.isEnabled {
-            _ = try? await runtime.loadInstallation(previous, in: space)
-        } else {
-            persistence.updateSummary(
-                persistence.summary(
-                    for: previous,
-                    nativeMessagingCapability:
-                        runtime.nativeMessagingCapability
-                ),
-                in: space.id
-            )
-        }
-    }
 }

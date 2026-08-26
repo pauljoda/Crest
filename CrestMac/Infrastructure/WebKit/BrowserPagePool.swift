@@ -52,6 +52,7 @@ final class BrowserPagePool:
     private(set) var contentBlockingErrorDescription: String?
     let downloadCenter: BrowserDownloadCenter
     let extensionControllerPool: BrowserExtensionControllerPool
+    @ObservationIgnored private let extensionWebpageMenuProvider: BrowserExtensionWebpageMenuProvider
     let permissionCenter: BrowserSitePermissionCenter
     let serverTrustOverrides = BrowserServerTrustOverrideStore()
 
@@ -156,6 +157,9 @@ final class BrowserPagePool:
             ? nil
             : tabStateArchive
         self.extensionControllerPool = extensionControllerPool
+        extensionWebpageMenuProvider = BrowserExtensionWebpageMenuProvider(
+            extensionControllerPool: extensionControllerPool
+        )
         self.chromeWebStoreProvider = chromeWebStoreProvider
         self.mozillaAddonsProvider = mozillaAddonsProvider
         self.permissionCenter = permissionCenter
@@ -1623,7 +1627,16 @@ final class BrowserPagePool:
             openNewTab: openNewTab,
             openModifiedLink: openModifiedLink,
             openPeek: openPeek,
-            splitLinkHost: splitLinkHost
+            splitLinkHost: splitLinkHost,
+            extensionWebpageMenuItems: {
+                [extensionWebpageMenuProvider] context in
+                guard let tabID else { return [] }
+                return extensionWebpageMenuProvider.items(
+                    for: tabID,
+                    in: space.id,
+                    context: context
+                )
+            }
         )
         page.host = self
         return page

@@ -40,10 +40,11 @@ final class BrowserDesktopWebView: WKWebView {
             item.action = #selector(downloadImage(_:))
             item.representedObject = imageDownloadURL
         }
+        BrowserDesktopWebViewMenuPolicy.append(
+            menuHost?.extensionMenuItems(for: context) ?? [],
+            to: menu
+        )
         guard let destination = context.splitViewLinkDestination else { return }
-        if let last = menu.items.last, !last.isSeparatorItem {
-            menu.addItem(.separator())
-        }
         let item = NSMenuItem(
             title: String(localized: "Open Link in Split View"),
             action: #selector(openLinkInSplitView(_:)),
@@ -51,7 +52,7 @@ final class BrowserDesktopWebView: WKWebView {
         )
         item.target = self
         item.representedObject = destination
-        menu.addItem(item)
+        BrowserDesktopWebViewMenuPolicy.append([item], to: menu)
     }
 
     /// A capture belongs to one menu. Whatever this one did not use is dropped
@@ -80,5 +81,15 @@ enum BrowserDesktopWebViewMenuPolicy {
 
     static func downloadImageItem(in menu: NSMenu) -> NSMenuItem? {
         menu.items.first { $0.identifier == downloadImageIdentifier }
+    }
+
+    static func append(_ items: [NSMenuItem], to menu: NSMenu) {
+        guard !items.isEmpty else { return }
+        if let last = menu.items.last, !last.isSeparatorItem {
+            menu.addItem(.separator())
+        }
+        for item in items {
+            menu.addItem(item)
+        }
     }
 }

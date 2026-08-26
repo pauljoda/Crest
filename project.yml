@@ -80,6 +80,8 @@ targets:
     platform: macOS
     sources:
       - path: CrestTests
+        excludes:
+          - Fixtures/ContextMenusProbeExtension
     dependencies:
       - target: Crest
     settings:

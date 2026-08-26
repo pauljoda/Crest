@@ -13,6 +13,7 @@ final class BrowserExtensionControllerPool {
     @ObservationIgnored let installationController: BrowserExtensionInstallationController
     @ObservationIgnored let restorationController: BrowserExtensionRestorationController
     @ObservationIgnored let toolbarController: BrowserExtensionToolbarController
+    @ObservationIgnored let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
 
     @ObservationIgnored private var commandSettingsHandler: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Void)?
 
@@ -36,6 +37,8 @@ final class BrowserExtensionControllerPool {
         storedResourcePreparer:
             any BrowserExtensionStoredResourcePreparing =
             BrowserExtensionStoredResourceIdentityPreparer(),
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
+            BrowserExtensionWebpageMenuRegistry(),
         usesEphemeralWebKitStorage: Bool = true
     ) {
         let tabWindowCoordinator = BrowserExtensionTabWindowCoordinator()
@@ -56,6 +59,7 @@ final class BrowserExtensionControllerPool {
                 contextObserver: BrowserExtensionContextObserver(),
                 commandController: commandController,
                 tabWindowCoordinator: tabWindowCoordinator,
+                webpageMenuRegistry: webpageMenuRegistry,
                 storedResourcePreparer: storedResourcePreparer,
                 usesEphemeralWebKitStorage: usesEphemeralWebKitStorage
             )
@@ -65,9 +69,12 @@ final class BrowserExtensionControllerPool {
         self.permissionController = permissionController
         self.commandController = commandController
         self.runtimeContextController = runtimeContextController
+        self.webpageMenuRegistry = webpageMenuRegistry
         installationController = BrowserExtensionInstallationController(
             persistence: persistenceController,
-            runtime: runtimeContextController
+            runtime: runtimeContextController,
+            webpageMenuRegistry: webpageMenuRegistry,
+            storedResourcePreparer: storedResourcePreparer
         )
         restorationController = BrowserExtensionRestorationController(
             persistence: persistenceController,
@@ -76,7 +83,8 @@ final class BrowserExtensionControllerPool {
         toolbarController = BrowserExtensionToolbarController(
             persistence: persistenceController,
             runtime: runtimeContextController,
-            tabWindowCoordinator: tabWindowCoordinator
+            tabWindowCoordinator: tabWindowCoordinator,
+            webpageMenuRegistry: webpageMenuRegistry
         )
 
         tabWindowCoordinator.actionDidUpdate = { [weak self] in

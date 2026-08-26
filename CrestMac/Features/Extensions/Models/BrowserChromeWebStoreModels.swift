@@ -52,6 +52,7 @@ enum BrowserWebExtensionCompatibilityPackageError: LocalizedError {
 
 final class BrowserWebExtensionPreparedPackage {
     let resourceURL: URL
+    let internalGrantedPermissions: Set<String>
 
     private let rootURL: URL
     private let fileManager: FileManager
@@ -59,11 +60,13 @@ final class BrowserWebExtensionPreparedPackage {
     init(
         resourceURL: URL,
         rootURL: URL,
-        fileManager: FileManager
+        fileManager: FileManager,
+        internalGrantedPermissions: Set<String> = []
     ) {
         self.resourceURL = resourceURL
         self.rootURL = rootURL
         self.fileManager = fileManager
+        self.internalGrantedPermissions = internalGrantedPermissions
     }
 
     deinit {

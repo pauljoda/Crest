@@ -75,17 +75,32 @@ struct CrestApp: App {
         let hostedNotificationCenter = BrowserHostedWebNotificationSystemCenter()
         let extensionControllerPool =
             usesIsolatedLaunch
-            ? BrowserExtensionControllerPool()
+            ? BrowserExtensionControllerPool(
+                storedResourcePreparer:
+                    BrowserStoreWebExtensionStoredResourcePreparer()
+            )
             : BrowserExtensionControllerPool.production(
                 storedResourcePreparer:
                     BrowserStoreWebExtensionStoredResourcePreparer()
             )
         let privateExtensionControllerPool = BrowserExtensionControllerPool()
-        if !usesIsolatedLaunch {
-            extensionControllerPool.setNativeMessagingHandler(
-                BrowserNativeMessagingService.production()
-            )
-        }
+        extensionControllerPool.setNativeMessagingHandler(
+            usesIsolatedLaunch
+                ? BrowserNativeMessagingService(
+                    capability:
+                        BrowserPlatformExtensionNativeMessagingCapability
+                        .currentBuild,
+                    resolver: BrowserNativeMessagingHostManifestResolver(
+                        searchDirectories: []
+                    ),
+                    webpageMenuRegistry:
+                        extensionControllerPool.webpageMenuRegistry
+                )
+                : BrowserNativeMessagingService.production(
+                    webpageMenuRegistry:
+                        extensionControllerPool.webpageMenuRegistry
+                )
+        )
         extensionControllerPool.setCommandSettingsHandler {
             route,
             spaceID in

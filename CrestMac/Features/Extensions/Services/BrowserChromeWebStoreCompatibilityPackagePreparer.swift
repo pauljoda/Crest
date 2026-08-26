@@ -9,10 +9,12 @@ enum BrowserWebExtensionManifestCompatibilityPolicy {
     ) -> [String] {
         webExtension.errors.compactMap { reportedError in
             let error = reportedError as NSError
-            guard !isValidEmptyActionCommandWarning(
-                error,
-                manifest: webExtension.manifest
-            ) else {
+            guard
+                !isValidEmptyActionCommandWarning(
+                    error,
+                    manifest: webExtension.manifest
+                )
+            else {
                 return nil
             }
             return error.localizedDescription
@@ -73,6 +75,7 @@ enum BrowserWebExtensionManifestCompatibilityPolicy {
 }
 
 struct BrowserWebExtensionCompatibilityPackagePreparer {
+    static let internalContextMenuTransportPermission = "nativeMessaging"
     private static let legacyBackgroundPreludePattern =
         #"(?s)\A// Crest's WKWebExtension host currently has no notifications API\.\s*.*?Object\.defineProperty\(globalThis, \"chrome\", \{\s*value: crestChromeCompatibility,\s*configurable: true\s*\}\);\s*\}\s*"#
     private static let emulatedPermissions: Set<String> = [
@@ -155,7 +158,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             return BrowserWebExtensionPreparedPackage(
                 resourceURL: resourceURL,
                 rootURL: rootURL,
-                fileManager: fileManager
+                fileManager: fileManager,
+                internalGrantedPermissions: Self.internalGrantedPermissions(
+                    requestedPermissions: requestedPermissions
+                )
             )
         } catch {
             try? fileManager.removeItem(at: rootURL)
@@ -191,7 +197,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             manifest: manifest,
             runtimeIdentity: runtimeIdentity
         )
-        Self.normalizeManifestForWebKit(&manifest)
+        Self.normalizeManifestForWebKit(
+            &manifest,
+            requestedPermissions: requestedPermissions
+        )
         let compatibilityScriptName = Self.generatedJavaScriptName(
             prefix: "crest-webextension-compatibility",
             source: compatibilityScript
@@ -411,10 +420,32 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     }
 
     private static func normalizeManifestForWebKit(
-        _ manifest: inout [String: Any]
+        _ manifest: inout [String: Any],
+        requestedPermissions: [String]
     ) {
         BrowserWebExtensionManifestCompatibilityPolicy
             .normalizeCommandsForWebKit(in: &manifest)
+        guard
+            requestedPermissions.contains("contextMenus")
+                || requestedPermissions.contains("menus")
+        else { return }
+        var permissions = manifest["permissions"] as? [String] ?? []
+        if !permissions.contains(internalContextMenuTransportPermission) {
+            permissions.append(internalContextMenuTransportPermission)
+        }
+        manifest["permissions"] = permissions
+    }
+
+    static func internalGrantedPermissions(
+        requestedPermissions: [String]
+    ) -> Set<String> {
+        (requestedPermissions.contains("contextMenus")
+            || requestedPermissions.contains("menus"))
+            && !requestedPermissions.contains(
+                internalContextMenuTransportPermission
+            )
+            ? [internalContextMenuTransportPermission]
+            : []
     }
 
     private func installExtensionPageCompatibility(
@@ -919,6 +950,36 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     return normalized;
                 };
+                const installEventFacade = (nativeEvent, facade) => {
+                    if (!nativeEvent) return false;
+                    for (const [property, value] of Object.entries(facade)) {
+                        let descriptor;
+                        try {
+                            descriptor = Reflect.getOwnPropertyDescriptor(
+                                nativeEvent,
+                                property
+                            );
+                            Object.defineProperty(nativeEvent, property, {
+                                value,
+                                configurable: true,
+                                enumerable: descriptor?.enumerable ?? true
+                            });
+                        } catch {}
+                        try {
+                            if (nativeEvent[property] !== value) {
+                                nativeEvent[property] = value;
+                            }
+                        } catch {}
+                        try {
+                            if (nativeEvent[property] !== value) {
+                                return false;
+                            }
+                        } catch {
+                            return false;
+                        }
+                    }
+                    return true;
+                };
                 const normalizedMenuNamespaces = new WeakMap();
                 const normalizeMenuNamespace = (nativeMenus) => {
                     if (!nativeMenus) return nativeMenus;
@@ -926,54 +987,516 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return normalizedMenuNamespaces.get(nativeMenus);
                     }
 
-                    const overlays = new Map();
-                    for (const [methodName, propertiesIndex] of [
-                        ["create", 0],
-                        ["update", 1]
-                    ]) {
-                        let nativeMethod;
+                    const items = new Map();
+                    const listeners = new Set();
+                    const clickContexts = new Map();
+                    const nativeClicks = new Map();
+                    const installListeners = new Set();
+                    const pendingInstallDetails = [];
+                    const acknowledgedInstallEvents = new Set();
+                    let generatedID = 0;
+                    let port;
+                    let reconnectHandle;
+                    let installDispatchScheduled = false;
+
+                    const scheduleInstallDispatch = () => {
+                        if (
+                            installDispatchScheduled
+                            || pendingInstallDetails.length === 0
+                            || installListeners.size === 0
+                        ) {
+                            return;
+                        }
+                        installDispatchScheduled = true;
+                        queueMicrotask(() => {
+                            installDispatchScheduled = false;
+                            if (installListeners.size === 0) return;
+                            const details = pendingInstallDetails.splice(0);
+                            for (const detail of details) {
+                                for (const listener of installListeners) {
+                                    try { listener(detail); } catch {}
+                                }
+                            }
+                        });
+                    };
+                    const onInstalled = Object.freeze({
+                        addListener(listener) {
+                            if (typeof listener !== "function") return;
+                            installListeners.add(listener);
+                            scheduleInstallDispatch();
+                        },
+                        removeListener(listener) {
+                            installListeners.delete(listener);
+                        },
+                        hasListener(listener) {
+                            return installListeners.has(listener);
+                        },
+                        hasListeners() {
+                            return installListeners.size > 0;
+                        }
+                    });
+                    const nativeRuntime = nativeBrowser?.runtime
+                        ?? primaryRoot?.runtime;
+                    try {
+                        nativeRuntime?.onInstalled?.addListener((details) => {
+                            pendingInstallDetails.push(details);
+                            scheduleInstallDispatch();
+                        });
+                    } catch {}
+                    installEventFacade(nativeRuntime?.onInstalled, onInstalled);
+
+                    const encodedID = (value) => {
+                        const kind = typeof value === "number"
+                            ? "number"
+                            : "string";
+                        return `${kind}:${String(value)}`;
+                    };
+                    const decodedID = (value) => {
+                        if (typeof value !== "string") return undefined;
+                        const separator = value.indexOf(":");
+                        if (separator < 0) return undefined;
+                        const kind = value.slice(0, separator);
+                        const encodedValue = value.slice(separator + 1);
+                        if (kind === "string") return encodedValue;
+                        if (kind !== "number") return undefined;
+                        const number = Number(encodedValue);
+                        return Number.isFinite(number) ? number : undefined;
+                    };
+                    const definition = (id, properties, existing) => {
+                        const normalized = normalizedMenuProperties(
+                            properties
+                        ) ?? {};
+                        const authored = {
+                            ...(existing?.authored ?? {}),
+                            ...normalized
+                        };
+                        const originalID = existing?.originalID ?? id;
+                        return {
+                            id: encodedID(originalID),
+                            originalID,
+                            parentId: authored.parentId === undefined
+                                ? undefined
+                                : encodedID(authored.parentId),
+                            type: authored.type ?? "normal",
+                            title: authored.title ?? "",
+                            contexts: Array.isArray(authored.contexts)
+                                && authored.contexts.length > 0
+                                ? authored.contexts
+                                : ["page"],
+                            documentUrlPatterns: Array.isArray(
+                                authored.documentUrlPatterns
+                            )
+                                ? authored.documentUrlPatterns.filter(
+                                    supportedMenuPattern
+                                )
+                                : [],
+                            targetUrlPatterns: Array.isArray(
+                                authored.targetUrlPatterns
+                            )
+                                ? authored.targetUrlPatterns.filter(
+                                    supportedMenuPattern
+                                )
+                                : [],
+                            enabled: authored.enabled ?? true,
+                            visible: authored.visible ?? true,
+                            onclick: typeof authored.onclick === "function"
+                                ? authored.onclick
+                                : undefined,
+                            authored
+                        };
+                    };
+                    const serializedItems = () => Array.from(
+                        items.values(),
+                        (item) => ({
+                            id: item.id,
+                            ...(item.parentId === undefined
+                                ? {}
+                                : { parentId: item.parentId }),
+                            type: item.type,
+                            title: item.title,
+                            contexts: item.contexts,
+                            documentUrlPatterns:
+                                item.documentUrlPatterns,
+                            targetUrlPatterns: item.targetUrlPatterns,
+                            enabled: item.enabled,
+                            visible: item.visible
+                        })
+                    );
+                    const postDefinitions = () => {
+                        try {
+                            port?.postMessage({
+                                api: "contextMenus.replace",
+                                items: serializedItems()
+                            });
+                        } catch {}
+                    };
+                    const queueValue = (map, key, value) => {
+                        const queue = map.get(key) ?? [];
+                        queue.push(value);
+                        map.set(key, queue);
+                    };
+                    const authoredClickInfo = (item, nativeInfo, hit) => {
+                        const info = {
+                            ...nativeInfo,
+                            menuItemId: item.originalID
+                        };
+                        const parent = item.parentId === undefined
+                            ? undefined
+                            : items.get(item.parentId);
+                        if (parent) {
+                            info.parentMenuItemId = parent.originalID;
+                        }
+                        if (!hit) return info;
+                        info.pageUrl = hit.pageURL;
+                        info.frameUrl = hit.documentURL;
+                        info.editable = Boolean(hit.editable);
+                        if (typeof hit.linkURL === "string") {
+                            info.linkUrl = hit.linkURL;
+                        }
+                        if (typeof hit.sourceURL === "string") {
+                            info.srcUrl = hit.sourceURL;
+                        }
+                        if (typeof hit.mediaType === "string") {
+                            info.mediaType = hit.mediaType;
+                        }
+                        if (typeof hit.selectionText === "string") {
+                            info.selectionText = hit.selectionText;
+                        }
+                        if (hit.mainFrame === true) info.frameId = 0;
+                        else delete info.frameId;
+                        return info;
+                    };
+                    const dispatchClick = (item, nativeInfo, tab, hit) => {
+                        const info = authoredClickInfo(
+                            item,
+                            nativeInfo,
+                            hit
+                        );
+                        try { item.onclick?.(info, tab); } catch {}
+                        for (const listener of listeners) {
+                            try { listener(info, tab); } catch {}
+                        }
+                    };
+                    const flushClicks = (key) => {
+                        const contexts = clickContexts.get(key) ?? [];
+                        const events = nativeClicks.get(key) ?? [];
+                        while (contexts.length > 0 && events.length > 0) {
+                            const hit = contexts.shift();
+                            const event = events.shift();
+                            const { info, tab } = event;
+                            globalThis.clearTimeout(
+                                event.fallbackHandle
+                            );
+                            const item = items.get(key);
+                            if (!item) continue;
+                            dispatchClick(item, info, tab, hit);
+                        }
+                        if (contexts.length > 0) {
+                            clickContexts.set(key, contexts);
+                        } else {
+                            clickContexts.delete(key);
+                        }
+                        if (events.length > 0) {
+                            nativeClicks.set(key, events);
+                        } else {
+                            nativeClicks.delete(key);
+                        }
+                    };
+                    const resumeNativeClicks = (key) => {
+                        const item = items.get(key);
+                        if (!item) return;
+                        const needsWebpageHit = item.contexts.some(
+                            (context) => context !== "tab"
+                        );
+                        if (!needsWebpageHit) {
+                            const events = nativeClicks.get(key) ?? [];
+                            nativeClicks.delete(key);
+                            for (const event of events) {
+                                globalThis.clearTimeout(event.fallbackHandle);
+                                dispatchClick(item, event.info, event.tab);
+                            }
+                            return;
+                        }
+                        flushClicks(key);
+                        if (
+                            !item.contexts.includes("tab")
+                            && !item.contexts.includes("all")
+                        ) return;
+                        for (const event of nativeClicks.get(key) ?? []) {
+                            if (event.fallbackHandle !== undefined) continue;
+                            event.fallbackHandle = globalThis.setTimeout(
+                                () => {
+                                    const pending = nativeClicks.get(key) ?? [];
+                                    const index = pending.indexOf(event);
+                                    if (index < 0) return;
+                                    pending.splice(index, 1);
+                                    if (pending.length > 0) {
+                                        nativeClicks.set(key, pending);
+                                    } else {
+                                        nativeClicks.delete(key);
+                                    }
+                                    dispatchClick(
+                                        items.get(key) ?? item,
+                                        event.info,
+                                        event.tab
+                                    );
+                                },
+                                100
+                            );
+                        }
+                    };
+                    const receiveContextMenuMessage = (message) => {
+                        if (
+                            message?.api === "contextMenus.restore"
+                            && Array.isArray(message.items)
+                        ) {
+                            const restoredItems = new Map();
+                            for (const serialized of message.items) {
+                                const originalID = decodedID(serialized?.id);
+                                if (originalID === undefined) continue;
+                                const parentId = serialized.parentId === undefined
+                                    ? undefined
+                                    : decodedID(serialized.parentId);
+                                const item = definition(originalID, {
+                                    type: serialized.type,
+                                    title: serialized.title,
+                                    contexts: serialized.contexts,
+                                    documentUrlPatterns:
+                                        serialized.documentUrlPatterns,
+                                    targetUrlPatterns:
+                                        serialized.targetUrlPatterns,
+                                    enabled: serialized.enabled,
+                                    visible: serialized.visible,
+                                    ...(parentId === undefined
+                                        ? {}
+                                        : { parentId })
+                                });
+                                restoredItems.set(item.id, item);
+                            }
+                            items.clear();
+                            for (const [id, item] of restoredItems) {
+                                items.set(id, item);
+                                resumeNativeClicks(id);
+                            }
+                            return;
+                        }
+                        if (
+                            message?.api === "runtime.onInstalled"
+                            && typeof message.eventID === "string"
+                        ) {
+                            if (!acknowledgedInstallEvents.has(message.eventID)) {
+                                acknowledgedInstallEvents.add(message.eventID);
+                                const details = { reason: message.reason };
+                                if (typeof message.previousVersion === "string") {
+                                    details.previousVersion =
+                                        message.previousVersion;
+                                }
+                                pendingInstallDetails.push(details);
+                                scheduleInstallDispatch();
+                            }
+                            try {
+                                port?.postMessage({
+                                    api: "runtime.onInstalled.ack",
+                                    eventID: message.eventID
+                                });
+                            } catch {}
+                            return;
+                        }
+                        if (
+                            message?.api !== "contextMenus.click"
+                            || typeof message.menuItemID !== "string"
+                        ) {
+                            return;
+                        }
+                        queueValue(
+                            clickContexts,
+                            message.menuItemID,
+                            message
+                        );
+                        flushClicks(message.menuItemID);
+                    };
+                    const connectContextMenuTransport = () => {
+                        if (port) return;
+                        const runtime = nativeBrowser?.runtime
+                            ?? primaryRoot?.runtime;
+                        const connectNative = runtime?.connectNative;
+                        if (typeof connectNative !== "function") return;
+                        try {
+                            port = Reflect.apply(
+                                connectNative,
+                                runtime,
+                                [capabilityBrokerHost]
+                            );
+                        } catch {
+                            port = undefined;
+                            return;
+                        }
+                        port?.onMessage?.addListener(
+                            receiveContextMenuMessage
+                        );
+                        port?.onDisconnect?.addListener(() => {
+                            port = undefined;
+                            globalThis.clearTimeout(reconnectHandle);
+                            reconnectHandle = globalThis.setTimeout(
+                                connectContextMenuTransport,
+                                1000
+                            );
+                        });
+                        try {
+                            port?.postMessage({ api: "contextMenus.ready" });
+                        } catch {}
+                    };
+                    const publishDefinitions = () => {
+                        connectContextMenuTransport();
+                        postDefinitions();
+                    };
+                    const nativeProperties = (item) => ({
+                        ...item.authored,
+                        id: item.id,
+                        ...(item.parentId === undefined
+                            ? { parentId: undefined }
+                            : { parentId: item.parentId }),
+                        contexts: ["tab"],
+                        documentUrlPatterns: [],
+                        targetUrlPatterns: [],
+                        visible: true,
+                        onclick: undefined
+                    });
+                    const nativeCreate = nativeMenus.create;
+                    const nativeUpdate = nativeMenus.update;
+                    const nativeRemove = nativeMenus.remove;
+                    const nativeRemoveAll = nativeMenus.removeAll;
+                    const create = (...args) => {
+                        const properties = args[0] ?? {};
+                        const originalID = properties.id
+                            ?? `crest-generated-${++generatedID}`;
+                        const item = definition(originalID, properties);
+                        const nativeResult = Reflect.apply(
+                            nativeCreate,
+                            nativeMenus,
+                            [nativeProperties(item), ...args.slice(1)]
+                        );
+                        items.set(item.id, item);
+                        publishDefinitions();
+                        return properties.id === undefined
+                            ? nativeResult
+                            : properties.id;
+                    };
+                    const update = (...args) => {
+                        const key = encodedID(args[0]);
+                        const existing = items.get(key);
+                        if (!existing) {
+                            return Reflect.apply(
+                                nativeUpdate,
+                                nativeMenus,
+                                args
+                            );
+                        }
+                        const item = definition(
+                            existing.originalID,
+                            args[1],
+                            existing
+                        );
+                        const result = Reflect.apply(
+                            nativeUpdate,
+                            nativeMenus,
+                            [item.id, nativeProperties(item), ...args.slice(2)]
+                        );
+                        items.set(key, item);
+                        publishDefinitions();
+                        return result;
+                    };
+                    const remove = (...args) => {
+                        const key = encodedID(args[0]);
+                        const result = Reflect.apply(
+                            nativeRemove,
+                            nativeMenus,
+                            [key, ...args.slice(1)]
+                        );
+                        const removed = new Set([key]);
+                        let changed = true;
+                        while (changed) {
+                            changed = false;
+                            for (const item of items.values()) {
+                                if (removed.has(item.parentId)) {
+                                    changed = !removed.has(item.id) || changed;
+                                    removed.add(item.id);
+                                }
+                            }
+                        }
+                        for (const id of removed) items.delete(id);
+                        publishDefinitions();
+                        return result;
+                    };
+                    const removeAll = (...args) => {
+                        const result = Reflect.apply(
+                            nativeRemoveAll,
+                            nativeMenus,
+                            args
+                        );
+                        items.clear();
+                        publishDefinitions();
+                        return result;
+                    };
+                    const onClicked = Object.freeze({
+                        addListener(listener) {
+                            if (typeof listener === "function") {
+                                listeners.add(listener);
+                            }
+                        },
+                        removeListener(listener) {
+                            listeners.delete(listener);
+                        },
+                        hasListener(listener) {
+                            return listeners.has(listener);
+                        },
+                        hasListeners() { return listeners.size > 0; }
+                    });
+                    try {
+                        nativeMenus.onClicked?.addListener((info, tab) => {
+                            const key = String(info?.menuItemId ?? "");
+                            const event = { info, tab };
+                            queueValue(nativeClicks, key, event);
+                            resumeNativeClicks(key);
+                        });
+                    } catch {}
+                    const installedOnClickedFacade = installEventFacade(
+                        nativeMenus.onClicked,
+                        onClicked
+                    );
+                    const overlays = new Map([
+                        ["create", create],
+                        ["update", update],
+                        ["remove", remove],
+                        ["removeAll", removeAll],
+                        ["onClicked", onClicked]
+                    ]);
+                    if (installedOnClickedFacade) {
+                        overlays.delete("onClicked");
+                    }
+                    for (const [property, value] of overlays) {
                         let descriptor;
                         try {
-                            nativeMethod = nativeMenus[methodName];
                             descriptor = Reflect.getOwnPropertyDescriptor(
                                 nativeMenus,
-                                methodName
+                                property
                             );
-                        } catch {}
-                        if (typeof nativeMethod !== "function") continue;
-
-                        const method = (...args) => {
-                            const normalizedArguments = Array.from(args);
-                            normalizedArguments[propertiesIndex] =
-                                normalizedMenuProperties(
-                                    normalizedArguments[propertiesIndex]
-                                );
-                            return Reflect.apply(
-                                nativeMethod,
-                                nativeMenus,
-                                normalizedArguments
-                            );
-                        };
-                        try {
-                            Object.defineProperty(nativeMenus, methodName, {
-                                value: method,
+                            Object.defineProperty(nativeMenus, property, {
+                                value,
                                 configurable: true,
                                 enumerable: descriptor?.enumerable ?? true
                             });
-                        } catch {
-                            try { nativeMenus[methodName] = method; } catch {}
-                        }
-                        let installedMethod;
-                        try {
-                            installedMethod = nativeMenus[methodName];
                         } catch {}
-                        if (installedMethod !== method) {
-                            overlays.set(methodName, method);
-                        }
+                        try {
+                            if (nativeMenus[property] === value) {
+                                overlays.delete(property);
+                            }
+                        } catch {}
                     }
                     const normalized = overlays.size === 0
                         ? nativeMenus
                         : namespaceFacade(nativeMenus, {}, overlays);
+                    connectContextMenuTransport();
                     normalizedMenuNamespaces.set(nativeMenus, normalized);
                     normalizedMenuNamespaces.set(normalized, normalized);
                     return normalized;
@@ -1612,6 +2135,14 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                     }
                 };
+                const sidePanel = {
+                    setPanelBehavior(...args) {
+                        return rejectCallbackOrPromise(
+                            args,
+                            "Side panels are not available in Crest."
+                        );
+                    }
+                };
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 let idleWatchPort;
@@ -1773,6 +2304,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     offscreen,
                     management,
                     downloads,
+                    sidePanel,
                     idle,
                     webRequest,
                     webNavigation,

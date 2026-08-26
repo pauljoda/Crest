@@ -4,6 +4,129 @@ import XCTest
 
 final class BrowserNativeMessagingTests: XCTestCase {
     @MainActor
+    func testCapabilityBrokerDisconnectRetainsContextMenuDefinitions() throws {
+        let clientID = try XCTUnwrap(
+            BrowserExtensionServiceClientID("extension.space")
+        )
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        var publishedMessages: [[String: Any]] = []
+        let connection = BrowserExtensionCapabilityBrokerConnection(
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["contextMenus"],
+                clientID: clientID
+            ),
+            notificationService: nil,
+            idleStateProvider: { _ in .active },
+            webpageMenuRegistry: registry,
+            publish: { publishedMessages.append($0) }
+        )
+        try connection.receive([
+            "api": "contextMenus.replace",
+            "items": [
+                [
+                    "id": "page",
+                    "type": "normal",
+                    "title": "Page",
+                    "contexts": ["page"],
+                    "documentUrlPatterns": [],
+                    "targetUrlPatterns": [],
+                    "enabled": true,
+                    "visible": true,
+                ] as [String: Any]
+            ],
+        ])
+
+        connection.stop()
+
+        XCTAssertEqual(registry.definitions(for: clientID).map(\.id), ["page"])
+        registry.publishClick(
+            menuItemID: "page",
+            context: BrowserExtensionWebpageMenuContext(
+                pageURL: URL(string: "https://example.com")!,
+                documentURL: URL(string: "https://example.com")!,
+                linkURL: nil,
+                sourceURL: nil,
+                selectionText: nil,
+                isEditable: false,
+                isMainFrame: true
+            ),
+            for: clientID
+        )
+        XCTAssertTrue(publishedMessages.isEmpty)
+    }
+
+    @MainActor
+    func testCapabilityBrokerRehydratesContextMenusAfterWorkerRestart() throws {
+        let clientID = try XCTUnwrap(
+            BrowserExtensionServiceClientID("extension.space")
+        )
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        try registry.replaceDefinitions(
+            message: [
+                "api": "contextMenus.replace",
+                "items": [
+                    [
+                        "id": "string:image",
+                        "type": "normal",
+                        "title": "Image",
+                        "contexts": ["image"],
+                        "documentUrlPatterns": ["https://example.com/*"],
+                        "targetUrlPatterns": ["https://cdn.example.com/*"],
+                        "enabled": true,
+                        "visible": true,
+                    ] as [String: Any]
+                ],
+            ],
+            for: clientID
+        )
+        var publishedMessages: [[String: Any]] = []
+        let connection = BrowserExtensionCapabilityBrokerConnection(
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["contextMenus"],
+                clientID: clientID
+            ),
+            notificationService: nil,
+            idleStateProvider: { _ in .active },
+            webpageMenuRegistry: registry,
+            publish: { publishedMessages.append($0) }
+        )
+        registry.publishClick(
+            menuItemID: "string:image",
+            context: BrowserExtensionWebpageMenuContext(
+                pageURL: URL(string: "https://example.com/article")!,
+                documentURL: URL(string: "https://example.com/article")!,
+                linkURL: nil,
+                sourceURL: URL(string: "https://cdn.example.com/photo.webp")!,
+                selectionText: nil,
+                isEditable: false,
+                isMainFrame: true
+            ),
+            for: clientID
+        )
+
+        try connection.receive(["api": "contextMenus.ready"])
+
+        let restoration = try XCTUnwrap(
+            publishedMessages.first { $0["api"] as? String == "contextMenus.restore" }
+        )
+        let items = try XCTUnwrap(restoration["items"] as? [[String: Any]])
+        XCTAssertEqual(items.first?["id"] as? String, "string:image")
+        XCTAssertEqual(items.first?["contexts"] as? [String], ["image"])
+        XCTAssertEqual(
+            items.first?["targetUrlPatterns"] as? [String],
+            ["https://cdn.example.com/*"]
+        )
+        XCTAssertEqual(
+            publishedMessages.compactMap { $0["api"] as? String },
+            ["contextMenus.restore", "contextMenus.click"]
+        )
+        XCTAssertEqual(
+            publishedMessages.last?["mediaType"] as? String,
+            "image"
+        )
+    }
+
+    @MainActor
     func testCrestCapabilityBrokerAnswersIdleStateWithoutAnExternalHost()
         async throws
     {
@@ -96,6 +219,40 @@ final class BrowserNativeMessagingTests: XCTestCase {
             receivedError as? BrowserExtensionCapabilityBrokerError,
             .permissionDenied("idle")
         )
+    }
+
+    @MainActor
+    func testContextMenuTransportCannotReachAnExternalNativeHost()
+        async throws
+    {
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            )
+        )
+        let response = expectation(description: "Rejected external host")
+        var receivedError: Error?
+
+        service.sendMessage(
+            ["ping": "pong"],
+            applicationIdentifier: "com.example.native-host",
+            extensionIdentity: nil,
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["contextMenus", "nativeMessaging"]
+            )
+        ) { _, error in
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 1)
+
+        guard
+            case .unverifiedExtension? =
+                receivedError as? BrowserExtensionNativeMessagingError
+        else {
+            return XCTFail("The internal menu transport reached an external host.")
+        }
     }
 
     @MainActor

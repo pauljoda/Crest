@@ -257,7 +257,8 @@ final class BrowserExtensionPersistenceController {
         for context: WKWebExtensionContext,
         extensionID: String,
         isEnabled: Bool,
-        permissionSnapshot: BrowserExtensionPermissionSnapshot
+        permissionSnapshot: BrowserExtensionPermissionSnapshot,
+        excluding excludedPermissions: Set<String> = []
     ) -> BrowserExtensionSummary {
         let runtimeReport = BrowserExtensionRuntimeReport(
             errors: context.webExtension.errors + context.errors
@@ -269,6 +270,7 @@ final class BrowserExtensionPersistenceController {
                 ?? context.webExtension.version,
             requestedPermissions: context.webExtension.requestedPermissions
                 .map(\.rawValue)
+                .filter { !excludedPermissions.contains($0) }
                 .sorted(),
             requestedHosts: context.webExtension.allRequestedMatchPatterns
                 .map(\.string)
@@ -323,13 +325,15 @@ final class BrowserExtensionPersistenceController {
     func summary(
         for context: WKWebExtensionContext,
         installation: BrowserExtensionInstallation,
-        permissionSnapshot: BrowserExtensionPermissionSnapshot
+        permissionSnapshot: BrowserExtensionPermissionSnapshot,
+        excluding excludedPermissions: Set<String> = []
     ) -> BrowserExtensionSummary {
         var runtimeSummary = summary(
             for: context,
             extensionID: installation.id,
             isEnabled: installation.isEnabled,
-            permissionSnapshot: permissionSnapshot
+            permissionSnapshot: permissionSnapshot,
+            excluding: excludedPermissions
         )
         runtimeSummary.sourceDisplayName = installation.sourceDisplayName
         runtimeSummary.compatibilitySource =

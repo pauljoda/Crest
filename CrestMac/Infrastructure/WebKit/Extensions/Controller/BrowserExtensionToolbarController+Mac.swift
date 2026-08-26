@@ -27,11 +27,32 @@ extension BrowserExtensionToolbarController {
                     command: $0
                 )
             }
-            let menuItems =
-                tab.map {
-                    context.menuItems(for: $0).map(
-                        BrowserExtensionToolbarMenuItem.init(item:)
-                    )
+            let menuItems: [BrowserExtensionToolbarMenuItem] =
+                tab.map { tab in
+                    let nativeItems = context.menuItems(for: tab)
+                    let filteredItems: [NSMenuItem]
+                    if runtime.internallyGrantedPermissions(
+                        extensionID: summary.id,
+                        in: spaceID
+                    ).contains("nativeMessaging") {
+                        let clientID = BrowserExtensionServiceClientID.scoped(
+                            extensionID: summary.id,
+                            spaceID: spaceID
+                        )
+                        let definitions =
+                            webpageMenuRegistry.definitions(for: clientID)
+                        filteredItems =
+                            (try? BrowserExtensionWebpageMenuPolicy.tabItems(
+                                nativeItems,
+                                definitions: definitions,
+                                pageURL: tab.url(for: context)
+                            )) ?? []
+                    } else {
+                        filteredItems = nativeItems
+                    }
+                    return filteredItems.map {
+                        BrowserExtensionToolbarMenuItem(item: $0)
+                    }
                 } ?? []
             return BrowserExtensionToolbarAction(
                 id: summary.id,

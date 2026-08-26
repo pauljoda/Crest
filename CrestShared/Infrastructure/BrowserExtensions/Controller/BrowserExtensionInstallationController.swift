@@ -5,13 +5,20 @@ import WebKit
 final class BrowserExtensionInstallationController {
     let persistence: BrowserExtensionPersistenceController
     let runtime: BrowserExtensionRuntimeContextController
+    let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
+    private let storedResourcePreparer: any BrowserExtensionStoredResourcePreparing
 
     init(
         persistence: BrowserExtensionPersistenceController,
-        runtime: BrowserExtensionRuntimeContextController
+        runtime: BrowserExtensionRuntimeContextController,
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry,
+        storedResourcePreparer:
+            any BrowserExtensionStoredResourcePreparing
     ) {
         self.persistence = persistence
         self.runtime = runtime
+        self.webpageMenuRegistry = webpageMenuRegistry
+        self.storedResourcePreparer = storedResourcePreparer
     }
 
     func loadExtension(
@@ -42,30 +49,67 @@ final class BrowserExtensionInstallationController {
             extensionID: package.extensionID,
             in: space.id
         )
-        // An unpacked folder now keeps one identity across imports, so a second
-        // import of the same folder is a reload. Release the running context
-        // first, otherwise the already-loaded one would be handed back and the
-        // edited files on disk would never be read.
-        if let loaded = runtime.loadedContext(
-            extensionID: package.extensionID,
-            in: space.id
-        ) {
-            try? runtime.controller(for: space).unload(loaded)
-            runtime.releaseContext(
+        let source = BrowserExtensionInstallationSource.unpackedPackage
+        var didLoadNewContext = false
+        var pendingLifecycle: PendingContextMenuInstallLifecycle?
+        do {
+            // Inspect the staged copy without loading its background content.
+            // The requested permissions determine whether the platform-owned
+            // compatibility overlay is needed before the first real load.
+            let inspectedExtension = try await WKWebExtension(
+                resourceBaseURL: package.resourceURL
+            )
+            let requestedPermissions = inspectedExtension
+                .requestedPermissions.map(\.rawValue).sorted()
+            let permissionSnapshot =
+                previous?.permissionSnapshot
+                ?? BrowserExtensionPermissionSnapshot(
+                    grantedPermissions: Dictionary(
+                        uniqueKeysWithValues: requestedPermissions.filter {
+                            $0 == "contextMenus" || $0 == "menus"
+                        }.map { ($0, Date.distantFuture) }
+                    )
+                )
+            let preparedResource = try storedResourcePreparer.prepare(
+                resourceURL: package.resourceURL,
+                request: BrowserExtensionStoredResourcePreparationRequest(
+                    extensionID: package.extensionID,
+                    source: source,
+                    spaceID: space.id,
+                    requestedPermissions: requestedPermissions
+                )
+            )
+            pendingLifecycle = prepareContextMenuInstallLifecycle(
+                previous: previous,
+                extensionID: package.extensionID,
+                spaceID: space.id,
+                requestedPermissions: requestedPermissions
+            )
+            // An unpacked folder keeps one identity across imports, so a second
+            // import is a reload. Release the running context only after the
+            // replacement has been inspected and prepared successfully.
+            if let loaded = runtime.loadedContext(
                 extensionID: package.extensionID,
                 in: space.id
-            )
-        }
-        do {
+            ) {
+                try runtime.controller(for: space).unload(loaded)
+                runtime.releaseContext(
+                    extensionID: package.extensionID,
+                    in: space.id
+                )
+            }
             let context = try await runtime.loadExtension(
-                at: package.resourceURL,
+                at: preparedResource.resourceURL,
                 extensionID: package.extensionID,
                 in: space,
                 unsupportedAPIs: [],
-                permissionSnapshot: .empty,
+                permissionSnapshot: permissionSnapshot,
                 persistsRuntimeSummary: false,
-                source: nil
+                source: source,
+                internalGrantedPermissions:
+                    preparedResource.internalGrantedPermissions
             )
+            didLoadNewContext = true
             var summary = runtime.summary(
                 for: context,
                 extensionID: package.extensionID,
@@ -77,6 +121,7 @@ final class BrowserExtensionInstallationController {
                 id: package.extensionID,
                 spaceID: space.id,
                 packageName: package.packageName,
+                source: source,
                 displayName: summary.displayName,
                 version: summary.version,
                 requestedPermissions: summary.requestedPermissions,
@@ -108,9 +153,34 @@ final class BrowserExtensionInstallationController {
                 in: space.id
             )
             persistence.updateSummary(summary, in: space.id)
+            if let retainedAccess = preparedResource.retainedAccess {
+                runtime.retainRuntimeResourceAccess(
+                    retainedAccess,
+                    extensionID: package.extensionID,
+                    in: space.id
+                )
+            }
             return summary
         } catch {
+            cancelContextMenuInstallLifecycle(pendingLifecycle)
+            if didLoadNewContext,
+                let context = runtime.loadedContext(
+                    extensionID: package.extensionID,
+                    in: space.id
+                )
+            {
+                try? runtime.controller(for: space).unload(context)
+                runtime.releaseContext(
+                    extensionID: package.extensionID,
+                    in: space.id
+                )
+            }
             persistence.discard(package)
+            await restorePreviousInstallation(
+                previous,
+                extensionID: package.extensionID,
+                in: space
+            )
             throw error
         }
     }
@@ -212,5 +282,71 @@ final class BrowserExtensionInstallationController {
             || installation.source == .unpackedPackage
             || installation.source?.isChromeWebStore == true
             || installation.source?.isLocalPackage == true
+    }
+
+    struct PendingContextMenuInstallLifecycle {
+        let clientID: BrowserExtensionServiceClientID
+        let eventID: String
+    }
+
+    func prepareContextMenuInstallLifecycle(
+        previous: BrowserExtensionInstallation?,
+        extensionID: String,
+        spaceID: SpaceID,
+        requestedPermissions: [String]
+    ) -> PendingContextMenuInstallLifecycle? {
+        guard
+            requestedPermissions.contains("contextMenus")
+                || requestedPermissions.contains("menus")
+        else { return nil }
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID,
+            spaceID: spaceID
+        )
+        let eventID = webpageMenuRegistry.prepareInstallLifecycle(
+            reason: previous == nil ? .install : .update,
+            previousVersion: previous?.version,
+            for: clientID
+        )
+        return PendingContextMenuInstallLifecycle(
+            clientID: clientID,
+            eventID: eventID
+        )
+    }
+
+    func cancelContextMenuInstallLifecycle(
+        _ pending: PendingContextMenuInstallLifecycle?
+    ) {
+        guard let pending else { return }
+        webpageMenuRegistry.cancelInstallLifecycle(
+            eventID: pending.eventID,
+            for: pending.clientID
+        )
+    }
+
+    func restorePreviousInstallation(
+        _ previous: BrowserExtensionInstallation?,
+        extensionID: String,
+        in space: BrowserSpace
+    ) async {
+        guard let previous else {
+            persistence.removeSummary(
+                extensionID: extensionID,
+                in: space.id
+            )
+            return
+        }
+        if previous.isEnabled {
+            _ = try? await runtime.loadInstallation(previous, in: space)
+        } else {
+            persistence.updateSummary(
+                persistence.summary(
+                    for: previous,
+                    nativeMessagingCapability:
+                        runtime.nativeMessagingCapability
+                ),
+                in: space.id
+            )
+        }
     }
 }

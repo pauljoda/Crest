@@ -5,7 +5,7 @@ struct BrowserExtensionStoredResourceIdentityPreparer:
 {
     func prepare(
         resourceURL: URL,
-        installation _: BrowserExtensionInstallation
+        request _: BrowserExtensionStoredResourcePreparationRequest
     ) throws -> BrowserExtensionStoredResource {
         BrowserExtensionStoredResource(resourceURL: resourceURL)
     }

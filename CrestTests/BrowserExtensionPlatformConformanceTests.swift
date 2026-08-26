@@ -341,6 +341,667 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
 
     // MARK: - Context menu
 
+    func testTabMenuAPIDoesNotExposeWebpageContextItems()
+        async throws
+    {
+        let origin = try XCTUnwrap(
+            URL(string: "https://context-menu.crest.test/image")
+        )
+        let tab = BrowserTab(
+            title: "Context Menu Probe",
+            url: origin,
+            placement: .current
+        )
+        let space = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Context Menu Probe",
+            symbol: "photo",
+            accent: .indigo,
+            folders: [],
+            tabs: [tab],
+            selectedTabID: tab.id
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserExtensionControllerPool()
+        let controller = pool.controller(for: space)
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 480, height: 320),
+            configuration: BrowserPageConfiguration.make(
+                for: space.profile,
+                webExtensionController: controller
+            )
+        )
+        let pages = PageProviderStub()
+        pages.webViews[tab.id] = webView
+        pool.connect(browser: browser, pageProvider: pages)
+
+        let extensionURL = try makeContextMenuExtension()
+        defer { try? FileManager.default.removeItem(at: extensionURL) }
+        let context = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: "com.pauldavis.crest.context-menu-probe",
+            in: space
+        )
+        context.setPermissionStatus(.grantedExplicitly, for: .contextMenus)
+        context.setPermissionStatus(.grantedExplicitly, for: origin)
+        pool.reconcileExtensionState(in: browser.session)
+        let adapter = try XCTUnwrap(
+            pool.extensionTab(tab.id, in: space.id)
+        )
+
+        var registeredTabTitles: [String] = []
+        for _ in 0..<400 {
+            registeredTabTitles = context.menuItems(for: adapter).map(\.title)
+            if registeredTabTitles.contains("Probe Tab") { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertTrue(
+            registeredTabTitles.contains("Probe Tab"),
+            "The extension background did not finish registering its menus."
+        )
+        XCTAssertFalse(registeredTabTitles.contains("Probe Image"))
+        XCTAssertFalse(registeredTabTitles.contains("Probe Page"))
+    }
+
+    func testContextMenuTransportPermissionIsInternalToPreparedExtensions()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let sourceURL = try makeContextMenuExtension()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+        let runtimeIdentity = BrowserExtensionRuntimeIdentity(
+            extensionID: extensionID.rawValue,
+            uniqueIdentifier: "context-menu-transport-test",
+            baseURL: try XCTUnwrap(
+                URL(string: "crest-extension://context-menu-transport-test/")
+            )
+        )
+        let prepared = try XCTUnwrap(
+            BrowserWebExtensionCompatibilityPackagePreparer()
+                .prepareStoredResource(
+                    sourceURL,
+                    requestedPermissions: ["contextMenus"],
+                    runtimeIdentity: runtimeIdentity
+                )
+        )
+        let preparedManifestData = try Data(
+            contentsOf: prepared.resourceURL.appending(path: "manifest.json")
+        )
+        let preparedManifest = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: preparedManifestData)
+                as? [String: Any]
+        )
+        let preparedPermissions = try XCTUnwrap(
+            preparedManifest["permissions"] as? [String]
+        )
+        XCTAssertTrue(preparedPermissions.contains("nativeMessaging"))
+        XCTAssertEqual(
+            prepared.internalGrantedPermissions,
+            ["nativeMessaging"]
+        )
+
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: try XCTUnwrap(
+                    URL(
+                        string:
+                            "https://chromewebstore.google.com/detail/test/\(extensionID.rawValue)"
+                    )
+                ),
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+        let space = BrowserSession.preview.spaces[0]
+        let webpageMenuRegistry = BrowserExtensionWebpageMenuRegistry()
+        let pool = BrowserExtensionControllerPool(
+            webpageMenuRegistry: webpageMenuRegistry
+        )
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: webpageMenuRegistry
+            )
+        )
+        let context = try await pool.runtimeContextController.loadExtension(
+            at: prepared.resourceURL,
+            extensionID: extensionID.rawValue,
+            in: space,
+            unsupportedAPIs: [],
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: ["contextMenus"],
+                    hosts: []
+                ),
+            persistsRuntimeSummary: false,
+            source: source,
+            internalGrantedPermissions: prepared.internalGrantedPermissions
+        )
+        let summary = pool.runtimeContextController.summary(
+            for: context,
+            extensionID: extensionID.rawValue,
+            isEnabled: true
+        )
+
+        XCTAssertTrue(context.hasPermission(.nativeMessaging))
+        XCTAssertTrue(summary.requestedPermissions.contains("contextMenus"))
+        XCTAssertFalse(summary.requestedPermissions.contains("nativeMessaging"))
+        XCTAssertNil(
+            summary.permissionSnapshot.grantedPermissions["nativeMessaging"]
+        )
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID.rawValue,
+            spaceID: space.id
+        )
+        var definitions: [BrowserExtensionWebpageMenuDefinition] = []
+        for _ in 0..<200 {
+            definitions = webpageMenuRegistry.definitions(for: clientID)
+            if definitions.count == 3 { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(
+            definitions.map(\.id),
+            [
+                "string:probe-tab",
+                "string:probe-image",
+                "string:probe-page",
+            ])
+        XCTAssertEqual(definitions[1].contexts, ["image"])
+        XCTAssertEqual(definitions[2].contexts, ["page"])
+
+        let tab = try XCTUnwrap(
+            space.tabs.first { $0.id == space.selectedTabID }
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = PageProviderStub()
+        pages.webViews[tab.id] = WKWebView(
+            frame: .zero,
+            configuration: BrowserPageConfiguration.make(
+                for: space.profile,
+                webExtensionController: pool.controller(for: space)
+            )
+        )
+        pool.connect(browser: browser, pageProvider: pages)
+        pool.reconcileExtensionState(in: browser.session)
+        let adapter = try XCTUnwrap(
+            pool.extensionTab(tab.id, in: space.id)
+        )
+        var nativeTitles: [String] = []
+        for _ in 0..<200 {
+            nativeTitles = context.menuItems(for: adapter).map(\.title)
+            if nativeTitles.count == 3 { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(nativeTitles, ["Context Menu Probe"])
+        XCTAssertEqual(
+            context.menuItems(for: adapter).first?.submenu?.items.map(\.title),
+            ["Probe Tab", "Probe Image", "Probe Page"]
+        )
+        let toolbarActions = pool.toolbarController.toolbarActions(
+            summaries: [summary],
+            in: space.id,
+            tabID: tab.id
+        )
+        XCTAssertEqual(
+            toolbarActions.first?.menuItems.map(\.title),
+            ["Probe Tab"]
+        )
+
+        let provider = BrowserExtensionWebpageMenuProvider(
+            extensionControllerPool: pool
+        )
+        let imageContext = BrowserExtensionWebpageMenuContext(
+            pageURL: try XCTUnwrap(URL(string: "https://example.com/page")),
+            documentURL: try XCTUnwrap(URL(string: "https://example.com/page")),
+            linkURL: nil,
+            sourceURL: try XCTUnwrap(
+                URL(string: "https://example.com/photo.webp")
+            ),
+            selectionText: nil,
+            isEditable: false,
+            isMainFrame: true
+        )
+        let imageItems = provider.items(
+            for: tab.id,
+            in: space.id,
+            context: imageContext
+        )
+        XCTAssertEqual(imageItems.map(\.title), ["Probe Image"])
+        let imageItem = try XCTUnwrap(imageItems.first)
+        var publishedItemID: String?
+        _ = webpageMenuRegistry.observeClicks(for: clientID) { message in
+            publishedItemID = message["menuItemID"] as? String
+        }
+        XCTAssertTrue(
+            NSApp.sendAction(
+                try XCTUnwrap(imageItem.action),
+                to: imageItem.target,
+                from: imageItem
+            )
+        )
+        XCTAssertEqual(publishedItemID, "string:probe-image")
+        XCTAssertTrue(context.hasActiveUserGesture(in: adapter))
+    }
+
+    func testLocalContextMenuExtensionReachesTheInternalBroker()
+        async throws
+    {
+        let extensionID = "context-menu-local-probe@example.com"
+        let sourceURL = try makeContextMenuExtension()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+        let prepared = try XCTUnwrap(
+            BrowserWebExtensionCompatibilityPackagePreparer()
+                .prepareStoredResource(
+                    sourceURL,
+                    requestedPermissions: ["contextMenus"],
+                    runtimeIdentity:
+                        BrowserExtensionRuntimeIdentifierPolicy
+                        .identity(
+                            extensionID: extensionID,
+                            source: .localPackage(
+                                BrowserLocalExtensionSource(
+                                    extensionID: extensionID,
+                                    format: .firefoxXPI,
+                                    sha256Hex: String(repeating: "a", count: 64)
+                                )
+                            ),
+                            spaceID: BrowserSession.preview.spaces[0].id
+                        )
+                )
+        )
+        let source = BrowserExtensionInstallationSource.localPackage(
+            BrowserLocalExtensionSource(
+                extensionID: extensionID,
+                format: .firefoxXPI,
+                sha256Hex: String(repeating: "a", count: 64)
+            )
+        )
+        let space = BrowserSession.preview.spaces[0]
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pool = BrowserExtensionControllerPool(
+            webpageMenuRegistry: registry
+        )
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: registry
+            )
+        )
+
+        _ = try await pool.runtimeContextController.loadExtension(
+            at: prepared.resourceURL,
+            extensionID: extensionID,
+            in: space,
+            unsupportedAPIs: [],
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: ["contextMenus"],
+                    hosts: []
+                ),
+            persistsRuntimeSummary: false,
+            source: source,
+            internalGrantedPermissions: prepared.internalGrantedPermissions
+        )
+
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID,
+            spaceID: space.id
+        )
+        for _ in 0..<200 {
+            if !registry.definitions(for: clientID).isEmpty { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertFalse(registry.definitions(for: clientID).isEmpty)
+    }
+
+    func testPreparedContextMenuFixtureFiltersNativeWebpageItemsAndPreservesTree()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "bcdefghijklmnopabcdefghijklmnopa"
+            )
+        )
+        let runtimeIdentity = BrowserExtensionRuntimeIdentity(
+            extensionID: extensionID.rawValue,
+            uniqueIdentifier: "context-menu-fixture-test",
+            baseURL: try XCTUnwrap(
+                URL(string: "crest-extension://context-menu-fixture-test/")
+            )
+        )
+        let prepared = try XCTUnwrap(
+            BrowserWebExtensionCompatibilityPackagePreparer()
+                .prepareStoredResource(
+                    contextMenusFixtureURL,
+                    requestedPermissions: ["contextMenus", "tabs"],
+                    runtimeIdentity: runtimeIdentity
+                )
+        )
+        let pageURL = try XCTUnwrap(
+            URL(string: "http://127.0.0.1:8765/context-menu.html")
+        )
+        let tab = BrowserTab(
+            title: "Context Menu Fixture",
+            url: pageURL,
+            placement: .current
+        )
+        let space = BrowserSpace(
+            id: SpaceID(),
+            profile: BrowsingProfile(),
+            name: "Context Menu Fixture",
+            symbol: "cursorarrow.click",
+            accent: .indigo,
+            folders: [],
+            tabs: [tab],
+            selectedTabID: tab.id
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pool = BrowserExtensionControllerPool(
+            webpageMenuRegistry: registry
+        )
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: registry
+            )
+        )
+        let pages = PageProviderStub()
+        pages.webViews[tab.id] = WKWebView(
+            frame: .zero,
+            configuration: BrowserPageConfiguration.make(
+                for: space.profile,
+                webExtensionController: pool.controller(for: space)
+            )
+        )
+        pool.connect(browser: browser, pageProvider: pages)
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: try XCTUnwrap(
+                    URL(
+                        string:
+                            "https://chromewebstore.google.com/detail/fixture/\(extensionID.rawValue)"
+                    )
+                ),
+                crxSHA256Hex: String(repeating: "c", count: 64),
+                publisherKeyHashHex: String(repeating: "d", count: 64)
+            )
+        )
+        let context = try await pool.runtimeContextController.loadExtension(
+            at: prepared.resourceURL,
+            extensionID: extensionID.rawValue,
+            in: space,
+            unsupportedAPIs: [],
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: ["contextMenus", "tabs"],
+                    hosts: ["http://127.0.0.1/*"]
+                ),
+            persistsRuntimeSummary: false,
+            source: source,
+            internalGrantedPermissions: prepared.internalGrantedPermissions
+        )
+        pool.reconcileExtensionState(in: browser.session)
+        let adapter = try XCTUnwrap(
+            pool.extensionTab(tab.id, in: space.id)
+        )
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID.rawValue,
+            spaceID: space.id
+        )
+        var definitions: [BrowserExtensionWebpageMenuDefinition] = []
+        for _ in 0..<200 {
+            definitions = registry.definitions(for: clientID)
+            if definitions.count == 14 { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(definitions.count, 14)
+
+        var nativeItems: [NSMenuItem] = []
+        for _ in 0..<200 {
+            nativeItems = context.menuItems(for: adapter)
+            if nativeItems.first?.submenu?.items.count == 11 { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        let mapped = try BrowserExtensionWebpageMenuPolicy.nativeItems(
+            nativeItems,
+            definitions: definitions
+        )
+        XCTAssertEqual(mapped.count, 11)
+        let nested = try XCTUnwrap(
+            mapped.first { $0.definition.id == "string:nested" }
+        )
+        XCTAssertEqual(
+            nested.children.map(\.definition.id),
+            [
+                "string:nested-image",
+                "string:nested-separator",
+                "string:nested-disabled",
+            ]
+        )
+        XCTAssertTrue(nested.children[1].nativeItem.isSeparatorItem)
+
+        let provider = BrowserExtensionWebpageMenuProvider(
+            extensionControllerPool: pool
+        )
+        let imageItems = provider.items(
+            for: tab.id,
+            in: space.id,
+            context: BrowserExtensionWebpageMenuContext(
+                pageURL: pageURL,
+                documentURL: pageURL,
+                linkURL: nil,
+                sourceURL: try XCTUnwrap(
+                    URL(string: "http://127.0.0.1:8765/photo.webp")
+                ),
+                selectionText: nil,
+                isEditable: false,
+                isMainFrame: true
+            )
+        )
+        let extensionGroup = try XCTUnwrap(imageItems.first)
+        XCTAssertEqual(imageItems.map(\.title), ["Crest Context Menus Fixture"])
+        XCTAssertEqual(
+            extensionGroup.submenu?.items.map(\.title),
+            ["Fixture Image", "Fixture Nested"]
+        )
+        let nestedGroup = try XCTUnwrap(
+            extensionGroup.submenu?.items.last
+        )
+        XCTAssertEqual(
+            nestedGroup.submenu?.items.map {
+                $0.isSeparatorItem ? "-" : $0.title
+            },
+            ["Nested Image Action", "-", "Disabled Image Action"]
+        )
+        XCTAssertFalse(
+            try XCTUnwrap(nestedGroup.submenu?.items.last).isEnabled
+        )
+
+        let frameItems = provider.items(
+            for: tab.id,
+            in: space.id,
+            context: BrowserExtensionWebpageMenuContext(
+                pageURL: pageURL,
+                documentURL: try XCTUnwrap(
+                    URL(string: "http://127.0.0.1:8765/frame.html")
+                ),
+                linkURL: nil,
+                sourceURL: nil,
+                selectionText: "chosen words",
+                isEditable: true,
+                isMainFrame: false
+            )
+        )
+        XCTAssertEqual(
+            frameItems.first?.submenu?.items.map(\.title),
+            [
+                "Fixture Selection: chosen words",
+                "Fixture Editable",
+                "Fixture Frame",
+            ]
+        )
+        let enabledSummary = pool.runtimeContextController.summary(
+            for: context,
+            extensionID: extensionID.rawValue,
+            isEnabled: true
+        )
+        let toolbarActions = pool.toolbarController.toolbarActions(
+            summaries: [enabledSummary],
+            in: space.id,
+            tabID: tab.id
+        )
+        XCTAssertEqual(
+            toolbarActions.first?.menuItems.map(\.title),
+            ["Fixture Nested", "Fixture Tab"]
+        )
+        let disabledSummary = BrowserExtensionSummary(
+            id: enabledSummary.id,
+            displayName: enabledSummary.displayName,
+            version: enabledSummary.version,
+            requestedPermissions: enabledSummary.requestedPermissions,
+            requestedHosts: enabledSummary.requestedHosts,
+            unsupportedAPIs: enabledSummary.unsupportedAPIs,
+            errors: enabledSummary.errors,
+            diagnostics: enabledSummary.diagnostics,
+            isEnabled: false,
+            isLoaded: enabledSummary.isLoaded,
+            permissionSnapshot: enabledSummary.permissionSnapshot,
+            compatibilitySource: enabledSummary.compatibilitySource,
+            compatibilityAssessment: enabledSummary.compatibilityAssessment,
+            sourceDisplayName: enabledSummary.sourceDisplayName,
+            iconPayload: enabledSummary.iconPayload,
+            hasOptionsPage: enabledSummary.hasOptionsPage,
+            hasCommands: enabledSummary.hasCommands,
+            isPinned: enabledSummary.isPinned
+        )
+        pool.persistenceController.updateSummary(
+            disabledSummary,
+            in: space.id
+        )
+        XCTAssertTrue(
+            provider.items(
+                for: tab.id,
+                in: space.id,
+                context: BrowserExtensionWebpageMenuContext(
+                    pageURL: pageURL,
+                    documentURL: pageURL,
+                    linkURL: nil,
+                    sourceURL: nil,
+                    selectionText: nil,
+                    isEditable: false,
+                    isMainFrame: true
+                )
+            ).isEmpty
+        )
+    }
+
+    func testLoadingUnpackedContextMenuFixturePreparesCompatibilityBeforeFirstLoad()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let rootURL = fileManager.temporaryDirectory.appending(
+            path: "crest-unpacked-context-menu-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: rootURL) }
+        let space = BrowserSession.preview.spaces[0]
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                fileManager: fileManager,
+                rootURL: rootURL
+            ),
+            registry: BrowserExtensionRegistry(),
+            storedResourcePreparer:
+                BrowserStoreWebExtensionStoredResourcePreparer(
+                    fileManager: fileManager
+                ),
+            webpageMenuRegistry: registry
+        )
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: registry
+            )
+        )
+
+        let installed = try await pool.loadUnpackedExtension(
+            from: contextMenusFixtureURL,
+            in: space
+        )
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: installed.id,
+            spaceID: space.id
+        )
+        var definitions: [BrowserExtensionWebpageMenuDefinition] = []
+        for _ in 0..<200 {
+            definitions = registry.definitions(for: clientID)
+            if definitions.count == 14 { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertEqual(definitions.count, 14)
+        XCTAssertEqual(
+            pool.runtimeContextController.internallyGrantedPermissions(
+                extensionID: installed.id,
+                in: space.id
+            ),
+            ["nativeMessaging"]
+        )
+        XCTAssertEqual(
+            pool.persistenceController.installation(
+                extensionID: installed.id,
+                in: space.id
+            )?.source,
+            .unpackedPackage
+        )
+        XCTAssertNotNil(
+            installed.permissionSnapshot.grantedPermissions["contextMenus"]
+        )
+        XCTAssertNil(installed.permissionSnapshot.grantedPermissions["tabs"])
+    }
+
     func testActionContextMenuOffersCommandsSettingsAndPinning() async throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -520,8 +1181,50 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         return url
     }
 
+    private func makeContextMenuExtension() throws -> URL {
+        let url = try makeTemporaryExtension(
+            named: "Context Menu Probe",
+            extraManifest: [
+                "permissions": ["contextMenus"],
+                "host_permissions": ["https://context-menu.crest.test/*"],
+                "background": ["service_worker": "background.js"],
+            ]
+        )
+        try Data(
+            """
+            chrome.contextMenus.removeAll(() => {
+              chrome.contextMenus.create({
+                id: "probe-tab",
+                title: "Probe Tab",
+                contexts: ["tab"]
+              });
+              chrome.contextMenus.create({
+                id: "probe-image",
+                title: "Probe Image",
+                contexts: ["image"]
+              });
+              chrome.contextMenus.create({
+                id: "probe-page",
+                title: "Probe Page",
+                contexts: ["page"]
+              });
+            });
+            """.utf8
+        ).write(to: url.appending(path: "background.js"))
+        return url
+    }
+
     private var extensionID: String {
         "com.pauldavis.crest.space-probe"
+    }
+
+    private var contextMenusFixtureURL: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appending(
+                path: "Fixtures/ContextMenusProbeExtension",
+                directoryHint: .isDirectory
+            )
     }
 
     private var fixtureURL: URL {

@@ -663,10 +663,11 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 )
         )
 
+        let space = BrowserSession.preview.spaces[0]
         let loadedContext = try await pool.loadExtension(
             at: extensionURL,
             extensionID: extensionID.rawValue,
-            in: BrowserSession.preview.spaces[0],
+            in: space,
             source: source,
             permissionSnapshot:
                 BrowserExtensionInstallationPermissionPolicy
@@ -685,7 +686,10 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         XCTAssertEqual(
             handler.authorization?.clientID?.rawValue,
-            loadedContext.uniqueIdentifier
+            BrowserExtensionServiceClientID.scoped(
+                extensionID: extensionID.rawValue,
+                spaceID: space.id
+            ).rawValue
         )
         XCTAssertEqual(
             (handler.message as? [String: Any])?["ping"] as? String,
@@ -917,10 +921,11 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             )
         )
 
-        let loadedContext = try await pool.loadExtension(
+        let space = BrowserSession.preview.spaces[0]
+        _ = try await pool.loadExtension(
             at: extensionURL,
             extensionID: extensionID.rawValue,
-            in: BrowserSession.preview.spaces[0],
+            in: space,
             source: source,
             permissionSnapshot:
                 BrowserExtensionInstallationPermissionPolicy
@@ -940,7 +945,10 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         XCTAssertEqual(
             handler.authorization?.clientID?.rawValue,
-            loadedContext.uniqueIdentifier
+            BrowserExtensionServiceClientID.scoped(
+                extensionID: extensionID.rawValue,
+                spaceID: space.id
+            ).rawValue
         )
     }
 
@@ -2001,6 +2009,61 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
     }
 
+    func testDisablingExtensionRemovesItsWebpageMenuDefinitions() async throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory
+            .appending(
+                path: "crest-extension-disabled-menus-\(UUID().uuidString)",
+                directoryHint: .isDirectory
+            )
+        defer { try? fileManager.removeItem(at: root) }
+        let work = BrowserSession.preview.spaces[0]
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                fileManager: fileManager,
+                rootURL: root,
+                removesRootOnDeinit: false
+            ),
+            registry: BrowserExtensionRegistry(
+                persistence: InMemoryBrowserExtensionRegistryPersistence()
+            )
+        )
+        let summary = try await pool.loadUnpackedExtension(
+            from: fixtureURL,
+            in: work
+        )
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: summary.id,
+            spaceID: work.id
+        )
+        try pool.webpageMenuRegistry.replaceDefinitions(
+            message: [
+                "api": "contextMenus.replace",
+                "items": [
+                    [
+                        "id": "page",
+                        "type": "normal",
+                        "title": "Page",
+                        "contexts": ["page"],
+                        "documentUrlPatterns": [],
+                        "targetUrlPatterns": [],
+                        "enabled": true,
+                        "visible": true,
+                    ] as [String: Any]
+                ],
+            ],
+            for: clientID
+        )
+
+        try await pool.setExtensionEnabled(
+            false,
+            extensionID: summary.id,
+            in: work
+        )
+
+        XCTAssertTrue(pool.webpageMenuRegistry.definitions(for: clientID).isEmpty)
+    }
+
     func testRepeatedRestorationKeepsAnAlreadyLoadedExtensionReportedAsRunning() async throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory
@@ -2831,7 +2894,7 @@ private final class NativeMessagingHandlerSpy:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -2839,7 +2902,7 @@ private final class NativeMessagingHandlerSpy:
         hostName = applicationIdentifier
         self.extensionIdentity = extensionIdentity
         self.authorization = authorization
-        if case .chromeWebStore(let extensionID) = extensionIdentity {
+        if case .chromeWebStore(let extensionID)? = extensionIdentity {
             self.extensionID = extensionID
         }
         replyHandler(["received": true], nil)
@@ -2848,7 +2911,7 @@ private final class NativeMessagingHandlerSpy:
 
     func connect(
         port _: WKWebExtension.MessagePort,
-        extensionIdentity _: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity _: BrowserExtensionNativeMessagingIdentity?,
         authorization _: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
@@ -2878,7 +2941,7 @@ private final class IdleCapabilityBrokerHandler:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -2903,7 +2966,7 @@ private final class IdleCapabilityBrokerHandler:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
@@ -2944,7 +3007,7 @@ private final class NotificationCapabilityBrokerHandler:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -2975,7 +3038,7 @@ private final class NotificationCapabilityBrokerHandler:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {

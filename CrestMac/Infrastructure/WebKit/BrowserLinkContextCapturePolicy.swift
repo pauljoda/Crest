@@ -21,7 +21,7 @@ import Foundation
 struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
     /// The message contract the injected script posts against. A payload from
     /// an older or newer script is discarded rather than guessed at.
-    static let contractVersion = 2
+    static let contractVersion = 3
 
     /// Long enough for any real link, short enough that a page cannot park a
     /// megabyte-scale `data:` URL in the slot on every right-click.
@@ -46,9 +46,17 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
     /// Crest would not open in a tab are all the same answer: the slot empties.
     /// Anything else would leave the last good link in place for a menu it has
     /// nothing to do with.
-    mutating func record(body: Any) {
+    mutating func record(
+        body: Any,
+        documentURL: URL? = nil,
+        isMainFrame: Bool = true
+    ) {
         pendingToken += 1
-        pendingContext = Self.context(body: body)
+        pendingContext = Self.context(
+            body: body,
+            documentURL: documentURL,
+            isMainFrame: isMainFrame
+        )
     }
 
     /// Hands the pending content to the menu now opening and empties the slot.
@@ -68,18 +76,29 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
         pendingToken > consumedToken ? pendingContext : nil
     }
 
-    private static func context(body: Any) -> BrowserLinkContext? {
+    private static func context(
+        body: Any,
+        documentURL: URL?,
+        isMainFrame: Bool
+    ) -> BrowserLinkContext? {
         guard let dictionary = body as? [String: Any],
             dictionary["version"] as? Int == contractVersion,
             let href = dictionary["href"],
             href is String || href is NSNull,
             let imageURL = dictionary["imageURL"],
-            imageURL is String || imageURL is NSNull
+            imageURL is String || imageURL is NSNull,
+            let selectionText = dictionary["selectionText"],
+            selectionText is String || selectionText is NSNull,
+            let isEditable = dictionary["editable"] as? Bool
         else { return nil }
 
         return BrowserLinkContext(
             linkURL: webDestination(href),
-            imageURL: imageDestination(imageURL)
+            imageURL: imageDestination(imageURL),
+            documentURL: documentURL,
+            selectionText: selection(selectionText),
+            isEditable: isEditable,
+            isMainFrame: isMainFrame
         )
     }
 
@@ -107,9 +126,21 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
         }
         return url
     }
+
+    private static func selection(_ value: Any?) -> String? {
+        guard let value = value as? String,
+            !value.isEmpty,
+            value.count <= 4_096
+        else { return nil }
+        return value
+    }
 }
 
 struct BrowserLinkContext: Equatable, Sendable {
     let linkURL: URL?
     let imageURL: URL?
+    let documentURL: URL?
+    let selectionText: String?
+    let isEditable: Bool
+    let isMainFrame: Bool
 }

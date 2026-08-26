@@ -31,8 +31,7 @@ enum BrowserExtensionSystemIdleState: String, Equatable, Sendable {
 
 @MainActor
 final class BrowserExtensionIdleWatch {
-    private let stateProvider:
-        (TimeInterval) -> BrowserExtensionSystemIdleState
+    private let stateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
     private let publish: ([String: Any]) -> Void
     private var detectionIntervalInSeconds: TimeInterval = 60
     private var lastPublishedState: BrowserExtensionSystemIdleState?
@@ -95,12 +94,12 @@ final class BrowserExtensionCapabilityBrokerConnection {
     }
 
     private let authorization: BrowserExtensionNativeMessagingAuthorization
-    private let notificationService:
-        (any BrowserExtensionNotificationHandling)?
-    private let idleStateProvider:
-        (TimeInterval) -> BrowserExtensionSystemIdleState
+    private let notificationService: (any BrowserExtensionNotificationHandling)?
+    private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
     private let publish: ([String: Any]) -> Void
+    private let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private var watch: Watch?
+    private var webpageMenuClickObserver: UUID?
 
     init(
         authorization: BrowserExtensionNativeMessagingAuthorization,
@@ -108,11 +107,13 @@ final class BrowserExtensionCapabilityBrokerConnection {
             (any BrowserExtensionNotificationHandling)?,
         idleStateProvider:
             @escaping (TimeInterval) -> BrowserExtensionSystemIdleState,
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry,
         publish: @escaping ([String: Any]) -> Void
     ) {
         self.authorization = authorization
         self.notificationService = notificationService
         self.idleStateProvider = idleStateProvider
+        self.webpageMenuRegistry = webpageMenuRegistry
         self.publish = publish
     }
 
@@ -124,6 +125,12 @@ final class BrowserExtensionCapabilityBrokerConnection {
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         }
         switch api {
+        case "contextMenus.replace":
+            try replaceContextMenus(request)
+        case "contextMenus.ready":
+            try publishContextMenuReadyState()
+        case "runtime.onInstalled.ack":
+            try acknowledgeContextMenuLifecycle(request)
         case "idle.watch":
             try configureIdleWatch(request)
         case "notifications.watch":
@@ -134,6 +141,15 @@ final class BrowserExtensionCapabilityBrokerConnection {
     }
 
     func stop() {
+        if let clientID = authorization.clientID,
+            let webpageMenuClickObserver
+        {
+            webpageMenuRegistry.removeClickObserver(
+                webpageMenuClickObserver,
+                for: clientID
+            )
+        }
+        webpageMenuClickObserver = nil
         switch watch {
         case .idle(let watch):
             watch.stop()
@@ -143,6 +159,75 @@ final class BrowserExtensionCapabilityBrokerConnection {
             break
         }
         watch = nil
+    }
+
+    private func replaceContextMenus(_ request: [String: Any]) throws {
+        guard authorization.grants("contextMenus") else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied(
+                "contextMenus"
+            )
+        }
+        guard let clientID = authorization.clientID else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+        try webpageMenuRegistry.replaceDefinitions(
+            message: request,
+            for: clientID
+        )
+        observeContextMenuClicks(for: clientID)
+    }
+
+    private func observeContextMenuClicks(
+        for clientID: BrowserExtensionServiceClientID
+    ) {
+        if webpageMenuClickObserver == nil {
+            webpageMenuClickObserver = webpageMenuRegistry.observeClicks(
+                for: clientID,
+                publish: publish
+            )
+        }
+    }
+
+    private func publishContextMenuReadyState() throws {
+        let clientID = try contextMenuClientID()
+        if let message = webpageMenuRegistry.restorationMessage(for: clientID) {
+            publish(message)
+        }
+        observeContextMenuClicks(for: clientID)
+        if let message =
+            webpageMenuRegistry
+            .pendingInstallLifecycleMessage(for: clientID)
+        {
+            publish(message)
+        }
+    }
+
+    private func acknowledgeContextMenuLifecycle(
+        _ request: [String: Any]
+    ) throws {
+        let clientID = try contextMenuClientID()
+        guard let eventID = request["eventID"] as? String,
+            webpageMenuRegistry.acknowledgeInstallLifecycle(
+                eventID: eventID,
+                for: clientID
+            )
+        else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+    }
+
+    private func contextMenuClientID() throws
+        -> BrowserExtensionServiceClientID
+    {
+        guard authorization.grants("contextMenus") else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied(
+                "contextMenus"
+            )
+        }
+        guard let clientID = authorization.clientID else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+        return clientID
     }
 
     private func configureIdleWatch(_ request: [String: Any]) throws {
@@ -285,19 +370,16 @@ final class BrowserNativeMessagingService:
     BrowserExtensionNativeMessagingHandling
 {
     static let capabilityBrokerIdentifier =
-        ProductIdentity.serviceNamespace + ".webextension-compatibility"
+        BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier
 
     let capability: BrowserExtensionNativeMessagingCapability
     private let resolver: BrowserNativeMessagingHostManifestResolver
     private let replyTimeout: Duration
-    private let notificationService:
-        (any BrowserExtensionNotificationHandling)?
-    private let idleStateProvider:
-        (TimeInterval) -> BrowserExtensionSystemIdleState
+    private let notificationService: (any BrowserExtensionNotificationHandling)?
+    private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
+    let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private var connections: [ObjectIdentifier: BrowserNativeMessagingPersistentConnection] = [:]
-    private var capabilityConnections: [
-        ObjectIdentifier: BrowserExtensionCapabilityBrokerConnection
-    ] = [:]
+    private var capabilityConnections: [ObjectIdentifier: BrowserExtensionCapabilityBrokerConnection] = [:]
 
     init(
         capability: BrowserExtensionNativeMessagingCapability,
@@ -305,6 +387,8 @@ final class BrowserNativeMessagingService:
         replyTimeout: Duration = .seconds(30),
         notificationService:
             (any BrowserExtensionNotificationHandling)? = nil,
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
+            BrowserExtensionWebpageMenuRegistry(),
         idleStateProvider:
             ((TimeInterval) -> BrowserExtensionSystemIdleState)? = nil
     ) {
@@ -312,6 +396,7 @@ final class BrowserNativeMessagingService:
         self.resolver = resolver
         self.replyTimeout = replyTimeout
         self.notificationService = notificationService
+        self.webpageMenuRegistry = webpageMenuRegistry
         if let idleStateProvider {
             self.idleStateProvider = idleStateProvider
         } else {
@@ -322,7 +407,10 @@ final class BrowserNativeMessagingService:
         }
     }
 
-    static func production() -> BrowserNativeMessagingService {
+    static func production(
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
+            BrowserExtensionWebpageMenuRegistry()
+    ) -> BrowserNativeMessagingService {
         let notificationCenter = BrowserExtensionNotificationSystemCenter(
             center: .current()
         )
@@ -332,14 +420,15 @@ final class BrowserNativeMessagingService:
             resolver: .production(),
             notificationService: BrowserExtensionNotificationService(
                 center: notificationCenter
-            )
+            ),
+            webpageMenuRegistry: webpageMenuRegistry
         )
     }
 
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -361,6 +450,22 @@ final class BrowserNativeMessagingService:
                     replyHandler(nil, error)
                 }
             }
+            return
+        }
+        guard authorization.grants("nativeMessaging") else {
+            replyHandler(
+                nil,
+                BrowserExtensionCapabilityBrokerError.permissionDenied(
+                    "nativeMessaging"
+                )
+            )
+            return
+        }
+        guard let extensionIdentity else {
+            replyHandler(
+                nil,
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
             return
         }
         do {
@@ -396,7 +501,7 @@ final class BrowserNativeMessagingService:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
@@ -407,7 +512,10 @@ final class BrowserNativeMessagingService:
             return
         }
         if port.applicationIdentifier == Self.capabilityBrokerIdentifier {
-            guard authorization.grants("nativeMessaging") else {
+            guard
+                authorization.grants("nativeMessaging")
+                    || authorization.grants("contextMenus")
+            else {
                 completionHandler(
                     BrowserExtensionCapabilityBrokerError.permissionDenied(
                         "nativeMessaging"
@@ -420,6 +528,7 @@ final class BrowserNativeMessagingService:
                 authorization: authorization,
                 notificationService: notificationService,
                 idleStateProvider: idleStateProvider,
+                webpageMenuRegistry: webpageMenuRegistry,
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }
@@ -452,6 +561,20 @@ final class BrowserNativeMessagingService:
                 self?.removeCapabilityConnection(for: key)
             }
             completionHandler(nil)
+            return
+        }
+        guard authorization.grants("nativeMessaging") else {
+            completionHandler(
+                BrowserExtensionCapabilityBrokerError.permissionDenied(
+                    "nativeMessaging"
+                )
+            )
+            return
+        }
+        guard let extensionIdentity else {
+            completionHandler(
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
             return
         }
         do {
@@ -518,7 +641,9 @@ final class BrowserNativeMessagingService:
             message,
             applicationIdentifier: applicationIdentifier,
             extensionIdentity: extensionIdentity,
-            authorization: BrowserExtensionNativeMessagingAuthorization(),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["nativeMessaging"]
+            ),
             replyHandler: replyHandler
         )
     }
@@ -533,7 +658,9 @@ final class BrowserNativeMessagingService:
             message,
             applicationIdentifier: applicationIdentifier,
             extensionIdentity: .chromeWebStore(extensionID),
-            authorization: BrowserExtensionNativeMessagingAuthorization(),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["nativeMessaging"]
+            ),
             replyHandler: replyHandler
         )
     }

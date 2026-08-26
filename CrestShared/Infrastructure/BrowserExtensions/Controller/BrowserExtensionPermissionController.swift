@@ -129,9 +129,13 @@ final class BrowserExtensionPermissionController {
     func persistPermissionState(
         context: WKWebExtensionContext,
         extensionID: String,
-        in spaceID: SpaceID
+        in spaceID: SpaceID,
+        excluding excludedPermissions: Set<String> = []
     ) {
-        let snapshot = snapshot(for: context)
+        let snapshot = snapshot(
+            for: context,
+            excluding: excludedPermissions
+        )
         persistence.updatePermissionSnapshot(
             snapshot,
             extensionID: extensionID,
@@ -149,7 +153,8 @@ final class BrowserExtensionPermissionController {
             persistence.summary(
                 for: context,
                 installation: installation,
-                permissionSnapshot: snapshot
+                permissionSnapshot: snapshot,
+                excluding: excludedPermissions
             ),
             in: spaceID
         )
@@ -187,18 +192,19 @@ final class BrowserExtensionPermissionController {
     }
 
     func snapshot(
-        for context: WKWebExtensionContext
+        for context: WKWebExtensionContext,
+        excluding excludedPermissions: Set<String> = []
     ) -> BrowserExtensionPermissionSnapshot {
         BrowserExtensionPermissionSnapshot(
             grantedPermissions: Dictionary(
                 uniqueKeysWithValues: context.grantedPermissions.map {
                     ($0.key.rawValue, $0.value)
-                }
+                }.filter { !excludedPermissions.contains($0.0) }
             ),
             deniedPermissions: Dictionary(
                 uniqueKeysWithValues: context.deniedPermissions.map {
                     ($0.key.rawValue, $0.value)
-                }
+                }.filter { !excludedPermissions.contains($0.0) }
             ),
             grantedHosts: Dictionary(
                 uniqueKeysWithValues:

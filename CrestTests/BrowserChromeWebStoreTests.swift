@@ -1784,6 +1784,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 updateAvailableEvent:
                     typeof browser.runtime.onUpdateAvailable?.addListener,
                 menuID,
+                menuContexts: createdMenus[0]?.contexts,
                 menuTargetPatterns: createdMenus[0]?.targetUrlPatterns,
                 wrappedJSObjectType: typeof globalThis.wrappedJSObject,
                 wrappedSentinel: globalThis.wrappedJSObject?.crestSentinel
@@ -1842,12 +1843,361 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["nativeReceiver"] as? String, "native")
         XCTAssertEqual(result["updateAvailableEvent"] as? String, "function")
         XCTAssertEqual(result["menuID"] as? String, "subscribe")
+        XCTAssertEqual(result["menuContexts"] as? [String], ["tab"])
         XCTAssertEqual(
             result["menuTargetPatterns"] as? [String],
-            ["https://subscribe.example/*"]
+            []
         )
         XCTAssertEqual(result["wrappedJSObjectType"] as? String, "object")
         XCTAssertNil(result["wrappedSentinel"])
+    }
+
+    func testCompatibilityRuntimeTransportsWebpageMenuDefinitionsAndEnrichesNativeClicks()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-context-menu-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Context Menu Transport Fixture",
+            "version": "1.0",
+            "permissions": ["contextMenus", "sidePanel"],
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let runtimeIdentity = BrowserExtensionRuntimeIdentity(
+            extensionID: "context-menu-fixture",
+            uniqueIdentifier: "context-menu-fixture.space.personal",
+            baseURL: try XCTUnwrap(
+                URL(string: "crest-extension://context-menu-fixture/")
+            )
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["contextMenus", "sidePanel"],
+                runtimeIdentity: runtimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        let contextMenusTransportWebView = WKWebView()
+        let evaluatedResult =
+            try await contextMenusTransportWebView
+            .callAsyncJavaScript(
+                """
+                return await (async () => {
+                try {
+                const nativeCreates = [];
+                const brokerMessages = [];
+                let brokerHost;
+                let brokerMessageListener;
+                let nativeClickListener;
+                let nativeInstalledListener;
+                const port = {
+                    postMessage(message) { brokerMessages.push(message); },
+                    onMessage: {
+                        addListener(listener) { brokerMessageListener = listener; }
+                    },
+                    onDisconnect: { addListener() {} }
+                };
+                const nativeRuntime = {
+                    getManifest() { return { manifest_version: 3 }; },
+                    getURL(path = "") {
+                        return new URL(
+                            String(path),
+                            "crest-extension://context-menu-fixture/"
+                        ).href;
+                    },
+                    connectNative(host) {
+                        brokerHost = host;
+                        return port;
+                    }
+                };
+                Object.defineProperty(nativeRuntime, "onInstalled", {
+                    configurable: false,
+                    writable: false,
+                    enumerable: true,
+                    value: {
+                        addListener(listener) {
+                            nativeInstalledListener = listener;
+                        }
+                    }
+                });
+                const nativeMenus = {
+                    create(properties) {
+                        nativeCreates.push(properties);
+                        return properties.id;
+                    },
+                    update() {},
+                    remove() {},
+                    removeAll(callback) { callback?.(); }
+                };
+                Object.defineProperty(nativeMenus, "onClicked", {
+                    configurable: false,
+                    writable: false,
+                    enumerable: true,
+                    value: {
+                        addListener(listener) { nativeClickListener = listener; }
+                    }
+                });
+                const nativeChrome = {
+                    runtime: nativeRuntime,
+                    menus: nativeMenus
+                };
+                Object.defineProperty(nativeChrome, "contextMenus", {
+                    configurable: false,
+                    writable: false,
+                    enumerable: true,
+                    value: nativeMenus
+                });
+                Object.defineProperty(globalThis, "chrome", {
+                    configurable: false,
+                    writable: false,
+                    value: nativeChrome
+                });
+                \(source)
+                let sidePanelError;
+                try {
+                    await chrome.sidePanel.setPanelBehavior({
+                        openPanelOnActionClick: true
+                    });
+                } catch (error) {
+                    sidePanelError = String(error);
+                }
+                brokerMessageListener?.({
+                    api: "runtime.onInstalled",
+                    eventID: "fresh-install-event",
+                    reason: "install"
+                });
+                const callbackClicks = [];
+                const eventClicks = [];
+                const chromeEventClicks = [];
+                const installedReasons = [];
+                chrome.runtime.onInstalled.addListener((details) => {
+                    installedReasons.push(details.reason);
+                });
+                browser.contextMenus.onClicked.addListener((info, tab) => {
+                    eventClicks.push({ info, tab });
+                });
+                chrome.contextMenus.onClicked.addListener((info, tab) => {
+                    chromeEventClicks.push({ info, tab });
+                });
+                brokerMessageListener?.({
+                    api: "contextMenus.click",
+                    menuItemID: "string:restored",
+                    pageURL: "https://page.example/article",
+                    documentURL: "https://page.example/article",
+                    sourceURL: "https://cdn.example/restored.webp",
+                    mediaType: "image",
+                    editable: false,
+                    mainFrame: true
+                });
+                nativeClickListener?.(
+                    { menuItemId: "string:restored", frameId: 0 },
+                    { id: 7, url: "https://page.example/article" }
+                );
+                brokerMessageListener?.({
+                    api: "contextMenus.restore",
+                    items: [{
+                        id: "string:restored",
+                        type: "normal",
+                        title: "Restored Image",
+                        contexts: ["image"],
+                        documentUrlPatterns: ["https://page.example/*"],
+                        targetUrlPatterns: ["https://cdn.example/*.webp"],
+                        enabled: true,
+                        visible: true
+                    }]
+                });
+                browser.contextMenus.create({
+                    id: "image",
+                    title: "Convert %s",
+                    contexts: ["image"],
+                    documentUrlPatterns: ["https://page.example/*"],
+                    targetUrlPatterns: ["https://cdn.example/*.webp"],
+                    onclick(info, tab) {
+                        callbackClicks.push({ info, tab });
+                    }
+                });
+                brokerMessageListener?.({
+                    api: "contextMenus.click",
+                    menuItemID: "string:image",
+                    pageURL: "https://page.example/article",
+                    documentURL: "https://frame.example/content",
+                    sourceURL: "https://cdn.example/photo.webp",
+                    selectionText: "photo",
+                    editable: false,
+                    mainFrame: false
+                });
+                nativeClickListener?.(
+                    {
+                        menuItemId: "string:image",
+                        frameId: 99,
+                        wasChecked: false
+                    },
+                    { id: 7, url: "https://page.example/article" }
+                );
+                browser.contextMenus.create({
+                    id: "tab",
+                    title: "Tab Action",
+                    contexts: ["tab"]
+                });
+                nativeClickListener?.(
+                    {
+                        menuItemId: "string:tab",
+                        pageUrl: "https://page.example/article"
+                    },
+                    { id: 7, url: "https://page.example/article" }
+                );
+                await new Promise((resolve) => setTimeout(resolve, 100));
+                return JSON.stringify({
+                    brokerHost,
+                    nativeCreate: nativeCreates[0],
+                    definition:
+                        brokerMessages[brokerMessages.length - 1]?.items,
+                    callbackClick: callbackClicks[0],
+                    restoredClick: eventClicks[0],
+                    eventClick: eventClicks[1],
+                    chromeEventClick: chromeEventClicks[1],
+                    installedReasons,
+                    brokerAPIs: brokerMessages.map((message) => message.api),
+                    sidePanelError,
+                    tabClick: eventClicks[2]
+                });
+                } catch (error) {
+                    return JSON.stringify({
+                        scriptError: String(error),
+                        scriptStack: String(error?.stack ?? "")
+                    });
+                }
+                })();
+                """,
+                arguments: [:],
+                in: nil,
+                contentWorld: .page
+            )
+        withExtendedLifetime(contextMenusTransportWebView) {}
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+        if let scriptError = result["scriptError"] as? String {
+            XCTFail(
+                "Compatibility context-menu script failed: \(scriptError)\n\(result["scriptStack"] as? String ?? "")"
+            )
+            return
+        }
+        XCTAssertEqual(
+            result["brokerHost"] as? String,
+            BrowserNativeMessagingService.capabilityBrokerIdentifier
+        )
+        XCTAssertEqual(
+            result["installedReasons"] as? [String],
+            ["install"],
+            "\(result)"
+        )
+        let brokerAPIs = try XCTUnwrap(result["brokerAPIs"] as? [String])
+        XCTAssertTrue(brokerAPIs.contains("contextMenus.ready"))
+        XCTAssertTrue(brokerAPIs.contains("runtime.onInstalled.ack"))
+        XCTAssertEqual(
+            result["sidePanelError"] as? String,
+            "Error: Side panels are not available in Crest."
+        )
+        let nativeCreate = try XCTUnwrap(
+            result["nativeCreate"] as? [String: Any]
+        )
+        XCTAssertEqual(nativeCreate["id"] as? String, "string:image")
+        XCTAssertEqual(nativeCreate["contexts"] as? [String], ["tab"])
+        XCTAssertEqual(nativeCreate["documentUrlPatterns"] as? [String], [])
+        XCTAssertEqual(nativeCreate["targetUrlPatterns"] as? [String], [])
+        XCTAssertEqual(nativeCreate["visible"] as? Bool, true)
+        let definitions = try XCTUnwrap(
+            result["definition"] as? [[String: Any]]
+        )
+        let definition = try XCTUnwrap(
+            definitions.first { $0["id"] as? String == "string:image" }
+        )
+        XCTAssertEqual(definition["id"] as? String, "string:image")
+        XCTAssertEqual(definition["contexts"] as? [String], ["image"])
+        XCTAssertEqual(
+            definition["documentUrlPatterns"] as? [String],
+            ["https://page.example/*"]
+        )
+        XCTAssertEqual(
+            definition["targetUrlPatterns"] as? [String],
+            ["https://cdn.example/*.webp"]
+        )
+        let restoredClick = try XCTUnwrap(
+            result["restoredClick"] as? [String: Any]
+        )
+        let restoredInfo = try XCTUnwrap(
+            restoredClick["info"] as? [String: Any]
+        )
+        XCTAssertEqual(restoredInfo["menuItemId"] as? String, "restored")
+        XCTAssertEqual(
+            restoredInfo["srcUrl"] as? String,
+            "https://cdn.example/restored.webp"
+        )
+        XCTAssertEqual(restoredInfo["mediaType"] as? String, "image")
+        XCTAssertEqual(restoredInfo["frameId"] as? Int, 0)
+        for key in ["callbackClick", "eventClick", "chromeEventClick"] {
+            let click = try XCTUnwrap(result[key] as? [String: Any])
+            let info = try XCTUnwrap(click["info"] as? [String: Any])
+            let tab = try XCTUnwrap(click["tab"] as? [String: Any])
+            XCTAssertEqual(info["menuItemId"] as? String, "image")
+            XCTAssertEqual(
+                info["pageUrl"] as? String,
+                "https://page.example/article"
+            )
+            XCTAssertEqual(
+                info["frameUrl"] as? String,
+                "https://frame.example/content"
+            )
+            XCTAssertEqual(
+                info["srcUrl"] as? String,
+                "https://cdn.example/photo.webp"
+            )
+            XCTAssertEqual(info["selectionText"] as? String, "photo")
+            XCTAssertEqual(info["editable"] as? Bool, false)
+            XCTAssertNil(info["frameId"])
+            XCTAssertEqual(info["wasChecked"] as? Bool, false)
+            XCTAssertEqual(tab["id"] as? Int, 7)
+        }
+        let tabClick = try XCTUnwrap(
+            result["tabClick"] as? [String: Any]
+        )
+        let tabInfo = try XCTUnwrap(
+            tabClick["info"] as? [String: Any]
+        )
+        XCTAssertEqual(tabInfo["menuItemId"] as? String, "tab")
+        XCTAssertEqual(
+            tabInfo["pageUrl"] as? String,
+            "https://page.example/article"
+        )
     }
 
     func testCompatibilityFacadeSurvivesNativeNamespaceRefresh() async throws {
@@ -2153,6 +2503,32 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    func testContextMenuTransportDoesNotHideAnAuthoredNativeMessagingPermission() {
+        XCTAssertEqual(
+            BrowserWebExtensionCompatibilityPackagePreparer
+                .internalGrantedPermissions(
+                    requestedPermissions: ["contextMenus"]
+                ),
+            ["nativeMessaging"]
+        )
+        XCTAssertEqual(
+            BrowserWebExtensionCompatibilityPackagePreparer
+                .internalGrantedPermissions(
+                    requestedPermissions: ["menus"]
+                ),
+            ["nativeMessaging"]
+        )
+        XCTAssertTrue(
+            BrowserWebExtensionCompatibilityPackagePreparer
+                .internalGrantedPermissions(
+                    requestedPermissions: [
+                        "contextMenus",
+                        "nativeMessaging",
+                    ]
+                ).isEmpty
+        )
+    }
+
     func testStoredICloudPasswordsArchiveRestoresThroughCompatibilityDirectory()
         throws
     {
@@ -2307,6 +2683,26 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    func testServiceClientIdentityScopesVerifiedStoreRuntimeBySpace()
+        throws
+    {
+        let work = SpaceID()
+        let personal = SpaceID()
+
+        let workClient = BrowserExtensionServiceClientID.scoped(
+            extensionID: darkReaderID,
+            spaceID: work
+        )
+        let personalClient = BrowserExtensionServiceClientID.scoped(
+            extensionID: darkReaderID,
+            spaceID: personal
+        )
+
+        XCTAssertNotEqual(workClient, personalClient)
+        XCTAssertTrue(workClient.rawValue.contains(darkReaderID))
+        XCTAssertTrue(personalClient.rawValue.contains(darkReaderID))
+    }
+
     func testContentBridgeAdvertisesCrestOnlyOnTheTrustedStore() {
         XCTAssertTrue(
             BrowserChromeWebStoreContentBridge.source.contains("Add to Crest")
@@ -2340,35 +2736,37 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let navigation = ChromeWebStoreNavigationWaiter(webView: webView)
         let request = URLRequest(
             url: URL(
-                string: "https://chromewebstore.google.com/detail/google-translate/aapbdbdomjkkjkaonfhkkikfgjllcleb?hl=ja"
+                string:
+                    "https://chromewebstore.google.com/detail/google-translate/aapbdbdomjkkjkaonfhkkikfgjllcleb?hl=ja"
             )!
         )
 
         try await navigation.load(
             request,
             responseHTML: """
-            <html>
-              <body>
-                <main>
-                  <section>
-                    <h1>Google 翻訳</h1>
-                    <button aria-label="共有">共有</button>
-                    <button disabled><span>Chrome に追加</span></button>
-                  </section>
-                </main>
-              </body>
-            </html>
-            """
+                <html>
+                  <body>
+                    <main>
+                      <section>
+                        <h1>Google 翻訳</h1>
+                        <button aria-label="共有">共有</button>
+                        <button disabled><span>Chrome に追加</span></button>
+                      </section>
+                    </main>
+                  </body>
+                </html>
+                """
         )
 
-        let crestButtonExists = try await webView.evaluateJavaScript(
-            """
-            Boolean(document.querySelector(
-              'button:disabled + ' +
-              '[data-crest-chrome-web-store-button="aapbdbdomjkkjkaonfhkkikfgjllcleb"]'
-            ))
-            """
-        ) as? Bool
+        let crestButtonExists =
+            try await webView.evaluateJavaScript(
+                """
+                Boolean(document.querySelector(
+                  'button:disabled + ' +
+                  '[data-crest-chrome-web-store-button="aapbdbdomjkkjkaonfhkkikfgjllcleb"]'
+                ))
+                """
+            ) as? Bool
         XCTAssertEqual(crestButtonExists, true)
         withExtendedLifetime(proxy) {}
     }
@@ -2840,6 +3238,81 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 .contains("tabs")
         )
         XCTAssertTrue(afterUpdate.modifiedAt >= beforeUpdate.modifiedAt)
+    }
+
+    func testFreshStoreInstallDeliversContextMenuInstallLifecycle()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try replacementInstallationFixture(
+            permissions: ["contextMenus"],
+            backgroundScript: """
+                chrome.runtime.onInstalled.addListener(() => {
+                    chrome.contextMenus.create({
+                        id: "fresh-image",
+                        title: "Fresh Image Action",
+                        contexts: ["image"]
+                    });
+                });
+                """
+        )
+        defer { try? fileManager.removeItem(at: fixture.rootURL) }
+        let webpageMenuRegistry = BrowserExtensionWebpageMenuRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(
+                fileManager: fileManager,
+                rootURL: fixture.packageRootURL,
+                removesRootOnDeinit: false
+            ),
+            registry: BrowserExtensionRegistry(),
+            webpageMenuRegistry: webpageMenuRegistry
+        )
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: webpageMenuRegistry
+            )
+        )
+        let space = BrowserSession.preview.spaces[0]
+        let publisherHash =
+            BrowserCRX3Verifier.chromeWebStorePublisherKeyHash.hexString
+
+        _ = try await pool.installChromeWebStoreExtension(
+            replacementCandidate(
+                item: fixture.item,
+                extensionID: fixture.extensionID,
+                archiveData: fixture.archiveData,
+                packageHash: String(repeating: "a", count: 64),
+                publisherHash: publisherHash,
+                requestedPermissions: ["contextMenus"]
+            ),
+            in: space
+        )
+        let context = try XCTUnwrap(
+            pool.loadedContext(
+                extensionID: fixture.extensionID.rawValue,
+                in: space.id
+            )
+        )
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: fixture.extensionID.rawValue,
+            spaceID: space.id
+        )
+        var definitions: [BrowserExtensionWebpageMenuDefinition] = []
+        for _ in 0..<200 {
+            definitions = webpageMenuRegistry.definitions(for: clientID)
+            if !definitions.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertEqual(definitions.map(\.id), ["string:fresh-image"])
+        XCTAssertEqual(definitions.first?.contexts, ["image"])
+        XCTAssertNil(
+            webpageMenuRegistry.pendingInstallLifecycleMessage(for: clientID)
+        )
     }
 
     func testLiveDarkReaderPackageVerifiesInspectsAndLoadsWhenEnabled()
@@ -3324,7 +3797,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         archiveData: Data,
         packageHash: String,
         publisherHash: String,
-        version: String = "1.0"
+        version: String = "1.0",
+        requestedPermissions: [String] = []
     ) -> BrowserChromeWebStoreCandidate {
         let source = BrowserChromeWebStoreSource(
             extensionID: extensionID,
@@ -3345,7 +3819,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             displayName: "Replacement Rollback Probe",
             version: version,
             displayDescription: nil,
-            requestedPermissions: [],
+            requestedPermissions: requestedPermissions,
             requestedHosts: [],
             errors: [],
             iconPayload: nil,
@@ -3358,7 +3832,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
     }
 
     private func replacementInstallationFixture(
-        version: String = "1.0"
+        version: String = "1.0",
+        permissions: [String] = ["storage", "tabs"],
+        backgroundScript: String? = nil
     ) throws -> (
         rootURL: URL,
         packageRootURL: URL,
@@ -3384,12 +3860,18 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             at: sourceURL,
             withIntermediateDirectories: true
         )
-        let manifest: [String: Any] = [
+        var manifest: [String: Any] = [
             "manifest_version": 3,
             "name": "Replacement Rollback Probe",
             "version": version,
-            "permissions": ["storage", "tabs"],
+            "permissions": permissions,
         ]
+        if let backgroundScript {
+            manifest["background"] = ["service_worker": "background.js"]
+            try Data(backgroundScript.utf8).write(
+                to: sourceURL.appending(path: "background.js")
+            )
+        }
         try JSONSerialization.data(withJSONObject: manifest).write(
             to: sourceURL.appending(path: "manifest.json")
         )
@@ -3678,7 +4160,7 @@ private final class AuditNativeMessagingHandler:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -3687,7 +4169,7 @@ private final class AuditNativeMessagingHandler:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {

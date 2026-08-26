@@ -1397,7 +1397,7 @@ private final class BrowserMozillaAddonsAuditNativeMessagingHandler:
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
@@ -1406,7 +1406,7 @@ private final class BrowserMozillaAddonsAuditNativeMessagingHandler:
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {

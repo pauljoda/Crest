@@ -120,6 +120,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var linkContextCapture = BrowserLinkContextCapturePolicy()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored let splitLinkHost: BrowserSplitLinkHost
+    @ObservationIgnored let extensionWebpageMenuItems: @MainActor (BrowserExtensionWebpageMenuContext) -> [NSMenuItem]
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
@@ -236,6 +237,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
+        extensionWebpageMenuItems:
+            @escaping @MainActor (BrowserExtensionWebpageMenuContext)
+            -> [NSMenuItem] = { _ in [] },
         opensExternalURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
     ) {
         let pageInterval = Self.lifecycleSignposter.beginInterval("Initialize Browser Page")
@@ -288,6 +292,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         self.splitLinkHost = splitLinkHost
+        self.extensionWebpageMenuItems = extensionWebpageMenuItems
         credentialState = BrowserCredentialPageState(spaceID: spaceID)
         httpAuthenticationSession = BrowserHTTPAuthenticationSession(
             spaceID: spaceID,
@@ -1778,7 +1783,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             downloadSourceStore.record(activation)
             return
         }
-        linkContextCapture.record(body: scriptMessage.body)
+        linkContextCapture.record(
+            body: scriptMessage.body,
+            documentURL: scriptMessage.frameInfo.request.url,
+            isMainFrame: scriptMessage.frameInfo.isMainFrame
+        )
     }
 
     private func receiveChromeWebStoreMessage(

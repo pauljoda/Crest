@@ -28,6 +28,20 @@ struct BrowserExtensionServiceClientID:
         self.init(rawValue)
     }
 
+    static func scoped(
+        extensionID: String,
+        spaceID: SpaceID
+    ) -> BrowserExtensionServiceClientID {
+        guard
+            let clientID = BrowserExtensionServiceClientID(
+                "\(extensionID).space.\(spaceID.rawValue.uuidString.lowercased())"
+            )
+        else {
+            preconditionFailure("Unable to construct extension service identity")
+        }
+        return clientID
+    }
+
     static func < (
         lhs: BrowserExtensionServiceClientID,
         rhs: BrowserExtensionServiceClientID

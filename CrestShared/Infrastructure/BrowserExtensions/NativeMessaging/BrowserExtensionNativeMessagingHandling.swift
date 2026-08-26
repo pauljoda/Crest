@@ -5,6 +5,11 @@ enum BrowserExtensionNativeMessagingIdentity: Equatable, Sendable {
     case mozillaAddons(BrowserMozillaExtensionID)
 }
 
+enum BrowserExtensionNativeMessagingApplication {
+    static let capabilityBrokerIdentifier =
+        ProductIdentity.serviceNamespace + ".webextension-compatibility"
+}
+
 struct BrowserExtensionNativeMessagingAuthorization: Equatable, Sendable {
     let grantedPermissions: Set<String>
     let clientID: BrowserExtensionServiceClientID?
@@ -29,14 +34,14 @@ protocol BrowserExtensionNativeMessagingHandling: AnyObject {
     func sendMessage(
         _ message: Any,
         applicationIdentifier: String?,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     )
 
     func connect(
         port: WKWebExtension.MessagePort,
-        extensionIdentity: BrowserExtensionNativeMessagingIdentity,
+        extensionIdentity: BrowserExtensionNativeMessagingIdentity?,
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     )

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 extension BrowserPage: BrowserDesktopWebViewMenuHost {
@@ -21,8 +22,16 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
         }
         return BrowserDesktopWebViewMenuContext(
             splitViewLinkDestination: splitViewDestination,
-            imageDownloadURL: captured.imageURL
+            imageDownloadURL: captured.imageURL,
+            extensionContext: extensionMenuContext(from: captured)
         )
+    }
+
+    func extensionMenuItems(
+        for context: BrowserDesktopWebViewMenuContext
+    ) -> [NSMenuItem] {
+        guard let extensionContext = context.extensionContext else { return [] }
+        return extensionWebpageMenuItems(extensionContext)
     }
 
     func openLinkInSplitView(_ url: URL) {
@@ -54,5 +63,23 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
 
     func discardSplitViewLinkCapture() {
         linkContextCapture.clear()
+    }
+
+    private func extensionMenuContext(
+        from captured: BrowserLinkContext
+    ) -> BrowserExtensionWebpageMenuContext? {
+        guard extensionBaseURL == nil,
+            let pageURL = webView.url,
+            let documentURL = captured.documentURL ?? webView.url
+        else { return nil }
+        return BrowserExtensionWebpageMenuContext(
+            pageURL: pageURL,
+            documentURL: documentURL,
+            linkURL: captured.linkURL,
+            sourceURL: captured.imageURL,
+            selectionText: captured.selectionText,
+            isEditable: captured.isEditable,
+            isMainFrame: captured.isMainFrame
+        )
     }
 }

@@ -21,20 +21,22 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
 
     func prepare(
         resourceURL: URL,
-        installation: BrowserExtensionInstallation
+        request: BrowserExtensionStoredResourcePreparationRequest
     ) throws -> BrowserExtensionStoredResource {
         let supportsCompatibilityPreparation: Bool
-        switch installation.source {
+        switch request.source {
         case .chromeWebStore(let source):
             supportsCompatibilityPreparation =
-                source.extensionID.rawValue == installation.id
+                source.extensionID.rawValue == request.extensionID
         case .mozillaAddons(let source):
             supportsCompatibilityPreparation =
-                source.extensionID.rawValue == installation.id
+                source.extensionID.rawValue == request.extensionID
         case .localPackage(let source):
             supportsCompatibilityPreparation =
-                source.extensionID == installation.id
-        case .unpackedPackage, .safariWebExtension, nil:
+                source.extensionID == request.extensionID
+        case .unpackedPackage, nil:
+            supportsCompatibilityPreparation = true
+        case .safariWebExtension:
             supportsCompatibilityPreparation = false
         }
         guard supportsCompatibilityPreparation else {
@@ -45,13 +47,13 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
                 try compatibilityPreparer
                 .prepareStoredResource(
                     resourceURL,
-                    requestedPermissions: installation.requestedPermissions,
+                    requestedPermissions: request.requestedPermissions,
                     runtimeIdentity:
                         BrowserExtensionRuntimeIdentifierPolicy
                         .identity(
-                            extensionID: installation.id,
-                            source: installation.source,
-                            spaceID: installation.spaceID
+                            extensionID: request.extensionID,
+                            source: request.source,
+                            spaceID: request.spaceID
                         )
                 )
         else {
@@ -59,7 +61,9 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
         }
         return BrowserExtensionStoredResource(
             resourceURL: preparedPackage.resourceURL,
-            retainedAccess: preparedPackage
+            retainedAccess: preparedPackage,
+            internalGrantedPermissions:
+                preparedPackage.internalGrantedPermissions
         )
     }
 }

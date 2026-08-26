@@ -293,6 +293,10 @@
     "2026-08-26-webpage-editor-focus-restoration": {
       "category": "fixed",
       "message": "Continue typing with the same caret or selection after returning to a webpage tab on Mac"
+    },
+    "2026-08-26-extension-webpage-context-menus": {
+      "category": "fixed",
+      "message": "Use compatible browser extension actions directly from webpage context menus"
     }
   }
 }
