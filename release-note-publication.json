@@ -3,6 +3,6 @@
   "channels": {
     "stable": "2026-08-18-stable-0-4-0",
     "development": "2026-08-25-start-0-5-release-line",
-    "nightly": "2026-08-24-space-password-management"
+    "nightly": "2026-08-25-start-0-5-release-line"
   }
 }
