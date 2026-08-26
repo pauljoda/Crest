@@ -46,6 +46,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var pendingNavigationURL: URL?
     private(set) var showsProcessFailure = false
     var isFindPresented: Bool { findSession.isPresented }
+    var findQuery: String { findSession.query }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel

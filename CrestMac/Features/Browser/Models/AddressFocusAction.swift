@@ -13,9 +13,17 @@ enum AddressFocusAction {
     }
 
     static func resign() {
-        DispatchQueue.main.async {
-            NSApp.keyWindow?.makeFirstResponder(nil)
-        }
+        guard let window = NSApp.keyWindow else { return }
+        resign(in: window)
+    }
+
+    /// Gives up the responder that owns focus at this selection boundary.
+    ///
+    /// This must remain synchronous. Deferring the clear lets SwiftUI mount the
+    /// destination page first, turning an address-focus dismissal into a clear
+    /// of that page's newly restored responder instead.
+    static func resign(in window: NSWindow) {
+        window.makeFirstResponder(nil)
     }
 
     private static func firstEditableTextField(in view: NSView) -> NSTextField? {

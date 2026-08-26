@@ -289,6 +289,10 @@
     "2026-08-26-space-switcher-overflow": {
       "category": "fixed",
       "message": "Keep Space navigation centered and Archive controls reachable as more Spaces are added"
+    },
+    "2026-08-26-webpage-editor-focus-restoration": {
+      "category": "fixed",
+      "message": "Continue typing with the same caret or selection after returning to a webpage tab on Mac"
     }
   }
 }

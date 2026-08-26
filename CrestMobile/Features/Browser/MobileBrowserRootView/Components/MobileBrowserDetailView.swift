@@ -177,7 +177,8 @@ struct MobileBrowserDetailView: View {
             if let page, page.isFindPresented {
                 BrowserFindBar(
                     port: findPort(for: page),
-                    capabilities: capabilities
+                    capabilities: capabilities,
+                    isPageActive: true
                 )
                 .frame(
                     maxWidth: isCompact
@@ -294,6 +295,7 @@ struct MobileBrowserDetailView: View {
             find: { query, direction in
                 page.find(query, direction: direction)
             },
+            query: { page.findQuery },
             matchState: { page.findMatchState },
             focusRequest: { page.findFocusRequest },
             dismiss: page.dismissFind

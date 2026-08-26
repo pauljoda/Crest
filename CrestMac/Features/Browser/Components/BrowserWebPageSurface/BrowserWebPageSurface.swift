@@ -4,25 +4,35 @@ struct BrowserWebPageSurface: View {
     let page: BrowserPage
     let browser: BrowserStore
     let pagePresentation: BrowserPagePresentation
+    let isPageActive: Bool
+    let focusRestorationGate: BrowserWebFocusRestorationGate
 
     var body: some View {
         ZStack(alignment: .top) {
-            BrowserPlatformWebView(page: page)
-                .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
-                .opacity(
-                    BrowserPageSurfacePolicy.revealsWebContent(
-                        completedNavigationCount: page.completedNavigationCount
-                    ) ? 1 : 0
-                )
+            BrowserPlatformWebView(
+                page: page,
+                isPageActive: isPageActive,
+                focusRestorationGate: focusRestorationGate
+            )
+            .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
+            .opacity(
+                BrowserPageSurfacePolicy.revealsWebContent(
+                    completedNavigationCount: page.completedNavigationCount
+                ) ? 1 : 0
+            )
 
             if page.isFindPresented {
-                BrowserFindBar(port: findPort, capabilities: capabilities)
-                    .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
-                    .frame(
-                        maxWidth: .infinity,
-                        maxHeight: .infinity,
-                        alignment: .topTrailing
-                    )
+                BrowserFindBar(
+                    port: findPort,
+                    capabilities: capabilities,
+                    isPageActive: isPageActive
+                )
+                .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .topTrailing
+                )
             }
 
             BrowserWebPageFailureOverlay(
@@ -60,6 +70,7 @@ struct BrowserWebPageSurface: View {
             find: { query, direction in
                 page.find(query, direction: direction)
             },
+            query: { page.findQuery },
             matchState: { page.findMatchState },
             focusRequest: { page.findFocusRequest },
             dismiss: page.dismissFind

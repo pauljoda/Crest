@@ -8,6 +8,7 @@ import os
 
 extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
+        focusRestoration.invalidate()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
         // app-level load path. Retire the old document's session as soon as
@@ -282,6 +283,7 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        focusRestoration.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
         credentialState.webContentProcessDidTerminate()
         httpAuthenticationSession.authenticationFailed()

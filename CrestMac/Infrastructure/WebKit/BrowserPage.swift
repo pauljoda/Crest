@@ -15,6 +15,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     )
 
     @ObservationIgnored let webView: WKWebView
+    @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
+        let controller = BrowserWebFocusRestorationController(webView: webView)
+        (webView as? BrowserDesktopWebView)?.focusRestoration = controller
+        return controller
+    }()
 
     private(set) var url: URL?
     private(set) var title = ""
@@ -34,6 +39,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var pendingNavigationURL: URL?
     var webContentFailureMessage: String?
     var isFindPresented: Bool { findSession.isPresented }
+    var findQuery: String { findSession.query }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
@@ -683,6 +689,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        focusRestoration.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()
         chromeWebStoreTask?.cancel()
         chromeWebStoreTask = nil
@@ -1462,6 +1469,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        focusRestoration.invalidate()
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)

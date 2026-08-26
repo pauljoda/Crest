@@ -522,6 +522,10 @@ final class BrowserPagePool:
     func deactivatePagePresentation(at time: Date = .now) {
         guard activeTabID != nil || !presentedTabIDs.isEmpty else { return }
         for tabID in presentedTabIDs {
+            pages[tabID]?.focusRestoration.invalidate()
+        }
+        activePage?.focusRestoration.invalidate()
+        for tabID in presentedTabIDs {
             inactiveSinceByTabID[tabID] = time
         }
         if let activeTabID, !presentedTabIDs.contains(activeTabID) {
@@ -1803,6 +1807,7 @@ final class BrowserPagePool:
         presenting presentedTabIDs: [TabID],
         at time: Date
     ) {
+        prepareFocusTransition(to: pages[tabID])
         let departed = Set(self.presentedTabIDs).subtracting(presentedTabIDs)
         for departedTabID in departed where pages[departedTabID] != nil {
             inactiveSinceByTabID[departedTabID] = time
@@ -1817,6 +1822,24 @@ final class BrowserPagePool:
         }
         self.presentedTabIDs = presentedTabIDs
         activeTabID = tabID
+    }
+
+    private func prepareFocusTransition(to destination: BrowserPage?) {
+        let source = activePage
+        guard source !== destination else { return }
+        guard let source, let destination,
+            source.spaceID == destination.spaceID,
+            source.profileID == destination.profileID
+        else {
+            source?.focusRestoration.invalidate()
+            destination?.focusRestoration.invalidate()
+            return
+        }
+
+        source.focusRestoration.captureBeforeDeparture()
+        destination.focusRestoration.requestRestoration(
+            displacing: source.webView
+        )
     }
 
     @discardableResult

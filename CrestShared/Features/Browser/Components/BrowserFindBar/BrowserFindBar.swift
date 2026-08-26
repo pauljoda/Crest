@@ -19,9 +19,9 @@ import SwiftUI
 struct BrowserFindBar: View {
     let port: BrowserFindPort
     let capabilities: BrowserInteractionCapabilities
+    let isPageActive: Bool
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @State private var query = ""
     @FocusState private var focusedField: BrowserFindBarField?
 
     var body: some View {
@@ -65,11 +65,19 @@ struct BrowserFindBar: View {
             radius: BrowserFindBarMetrics.shadowRadius,
             y: BrowserFindBarMetrics.shadowOffset
         )
-        .task(id: port.focusRequest()) {
+        .task(
+            id: FocusTaskID(
+                request: port.focusRequest(),
+                isPageActive: isPageActive
+            )
+        ) {
+            guard isPageActive else { return }
+            // The returning NSViewRepresentable finishes its AppKit focus
+            // replay during layout. Resume afterward so the page-owned chrome,
+            // not the reattached WebKit view, remains authoritative.
+            await Task.yield()
+            guard !Task.isCancelled else { return }
             focusedField = .query
-        }
-        .onChange(of: query) {
-            port.find(query, .forward)
         }
         .onKeyPress(.escape) {
             port.dismiss()
@@ -80,13 +88,13 @@ struct BrowserFindBar: View {
     }
 
     private var queryField: some View {
-        TextField("Find in Page", text: $query)
+        TextField("Find in Page", text: queryBinding)
             .textFieldStyle(.plain)
             .modifier(BrowserPlatformFindQueryInputModifier())
             .focused($focusedField, equals: .query)
             .frame(width: metrics.queryWidth)
             .onSubmit {
-                port.find(query, .forward)
+                port.find(port.query(), .forward)
             }
             .accessibilityIdentifier("find-field")
     }
@@ -114,5 +122,19 @@ struct BrowserFindBar: View {
 
     private var metrics: BrowserFindBarMetrics {
         BrowserFindBarMetrics.resolve(capabilities)
+    }
+
+    private var query: String { port.query() }
+
+    private var queryBinding: Binding<String> {
+        Binding(
+            get: { port.query() },
+            set: { port.find($0, .forward) }
+        )
+    }
+
+    private struct FocusTaskID: Hashable {
+        let request: Int
+        let isPageActive: Bool
     }
 }

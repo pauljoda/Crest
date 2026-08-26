@@ -37,6 +37,7 @@ final class BrowserFindSessionTests: XCTestCase {
 
         let request = try XCTUnwrap(executor.requests.first)
         XCTAssertEqual(request.query, "Crest")
+        XCTAssertEqual(session.query, "Crest")
         XCTAssertTrue(request.configuration.backwards)
         XCTAssertFalse(request.configuration.caseSensitive)
         XCTAssertTrue(request.configuration.wraps)
@@ -68,14 +69,33 @@ final class BrowserFindSessionTests: XCTestCase {
         session.find("", using: executor)
 
         XCTAssertEqual(executor.requests.map(\.query), [""])
+        XCTAssertEqual(session.query, "")
         XCTAssertEqual(session.matchState, .idle)
         XCTAssertTrue(session.isPresented)
 
         session.dismiss(using: executor)
 
         XCTAssertEqual(executor.requests.map(\.query), ["", ""])
+        XCTAssertEqual(session.query, "")
         XCTAssertEqual(session.matchState, .idle)
         XCTAssertFalse(session.isPresented)
+    }
+
+    func testQueryBelongsToThePageUntilFindIsDismissed() {
+        let executor = BrowserFindExecutorSpy()
+        let session = BrowserFindSession()
+
+        session.present(hasLoadedPage: true)
+        session.find("resident editor", using: executor)
+        session.present(hasLoadedPage: true)
+
+        XCTAssertTrue(session.isPresented)
+        XCTAssertEqual(session.query, "resident editor")
+
+        session.dismiss(using: executor)
+
+        XCTAssertFalse(session.isPresented)
+        XCTAssertEqual(session.query, "")
     }
 }
 

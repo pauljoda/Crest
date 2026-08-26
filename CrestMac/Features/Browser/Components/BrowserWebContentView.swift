@@ -5,6 +5,9 @@ struct BrowserWebContentView: View {
     let browser: BrowserStore
     let pages: BrowserPagePool
 
+    @Environment(\.browserWebFocusRestorationGate)
+    private var browserFocusRestorationGate
+
     var body: some View {
         VStack(spacing: 0) {
             if page.isDeveloperModeEnabled {
@@ -19,7 +22,9 @@ struct BrowserWebContentView: View {
             BrowserWebPageSurface(
                 page: page,
                 browser: browser,
-                pagePresentation: pagePresentation
+                pagePresentation: pagePresentation,
+                isPageActive: pages.activePage === page,
+                focusRestorationGate: focusRestorationGate
             )
         }
         .onChange(of: page.developerCaptureFeedbackRevision) { _, revision in
@@ -33,6 +38,22 @@ struct BrowserWebContentView: View {
                 session: page.mozillaAddonsInstall
             )
         }
+    }
+
+    private var focusRestorationGate: BrowserWebFocusRestorationGate {
+        BrowserWebFocusRestorationGate(
+            browserChromeOwnsFocus:
+                browserFocusRestorationGate.browserChromeOwnsFocus,
+            pageChromeOwnsFocus:
+                page.isFindPresented
+                || page.credentialFillRequest != nil
+                || page.credentialSaveCandidate != nil
+                || page.isRegionCapturePresented
+                || page.isChromeWebStoreInstallPresented
+                || page.mozillaAddonsInstall.isPresented
+                || page.navigationFailure != nil
+                || page.webContentFailureMessage != nil
+        )
     }
 
     private var pagePresentation: BrowserPagePresentation {

@@ -112,6 +112,16 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 BrowserPageZoomFeedbackView(label: label)
             }
         }
+        .environment(
+            \.browserWebFocusRestorationGate,
+            BrowserWebFocusRestorationGate(
+                browserChromeOwnsFocus:
+                    !model.isWindowFocused
+                    || model.isAddressEditing
+                    || model.chrome.isCommandPalettePresented,
+                pageChromeOwnsFocus: false
+            )
+        )
         .animation(
             chromeAnimation(
                 model.isSidebarApproachingDock
@@ -125,8 +135,8 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 model.isSidebarApproachingDock
                     ? CrestMotion.sidebarDockAttachment
                     : model.isSidebarMorphing
-                    ? CrestMotion.sidebarMorph
-                    : CrestMotion.floatingPane
+                        ? CrestMotion.sidebarMorph
+                        : CrestMotion.floatingPane
             ),
             value: model.isFloatingSidebarPresented
         )

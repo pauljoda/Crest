@@ -2220,6 +2220,7 @@
 		9E133DFAB765EE9295A63963 /* CrestPlatformDynamicColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43FBC61B0968165324FBAB2 /* CrestPlatformDynamicColor.swift */; };
 		9E18C85D7FB30173E6794B67 /* BrowserDeveloperNavigationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7870F6434824F83436D14A9 /* BrowserDeveloperNavigationPolicy.swift */; };
 		9E2E31AA59AE36D15FBA8764 /* CrestPlatformDynamicColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A91493B58B075863827B0F0 /* CrestPlatformDynamicColor.swift */; };
+		9E345062F4D5710EA2DEFAC6 /* web-focus.html in Resources */ = {isa = PBXBuildFile; fileRef = 3AED8CA5108D4BC922AD78D0 /* web-focus.html */; };
 		9E6590E565B3685C461A1A09 /* BrowserUserActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A754B9CC219A48B4B1BC84A6 /* BrowserUserActivityBridge.swift */; };
 		9E73C3A004B15A60A42DAF53 /* BrowserNavigationHistoryMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4EFA01E2A8E4CE658D94FF /* BrowserNavigationHistoryMenu.swift */; };
 		9E755AA1D1C18755BD6DDF1E /* BrowserSidebarTabRowContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E65BF3845E93F177F9EA9920 /* BrowserSidebarTabRowContent.swift */; };
@@ -4225,6 +4226,7 @@
 		3AA82ADBD8922FABBF039E3D /* BrowserWebsiteDataStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWebsiteDataStoreTests.swift; sourceTree = "<group>"; };
 		3ABCA2C088B337227C064B87 /* Binding+BrowserSpaceBrandingEditorCrest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Binding+BrowserSpaceBrandingEditorCrest.swift"; sourceTree = "<group>"; };
 		3ACFB4DC31708A07AA857DAC /* BrowserChromeWebStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserChromeWebStoreTests.swift; sourceTree = "<group>"; };
+		3AED8CA5108D4BC922AD78D0 /* web-focus.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "web-focus.html"; sourceTree = "<group>"; };
 		3B33C4DD98045F18F3566E96 /* MobileBrowserFilePickerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileBrowserFilePickerController.swift; sourceTree = "<group>"; };
 		3B35DEF6ACF520497914B3AA /* CrestTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrestTypography.swift; sourceTree = "<group>"; };
 		3B3E57ABB85F126EB758A11E /* BrowserSafariWebExtensionInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSafariWebExtensionInspector.swift; sourceTree = "<group>"; };
@@ -7443,6 +7445,14 @@
 			path = BrowserSidebar;
 			sourceTree = "<group>";
 		};
+		269FABBC889E184B3E263850 /* WebFocus */ = {
+			isa = PBXGroup;
+			children = (
+				3AED8CA5108D4BC922AD78D0 /* web-focus.html */,
+			);
+			path = WebFocus;
+			sourceTree = "<group>";
+		};
 		2711370714960DEA07F8D07C /* BrowserSiteControlButton */ = {
 			isa = PBXGroup;
 			children = (
@@ -9071,6 +9081,7 @@
 				28125A0F343C1CAFBDC262C2 /* BlockedPopups */,
 				5298816AC6E2825F04F8ED5B /* SidebarWidgets */,
 				882D0257A3066FEA32225C2F /* SpaceProbeExtension */,
+				269FABBC889E184B3E263850 /* WebFocus */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -15472,6 +15483,7 @@
 				F91CD7F682CF013A4CD3C76E /* manifest.json in Resources */,
 				944321D412E9B62FB2EF1CB1 /* media-session.html in Resources */,
 				F145ED86FE642331596A559D /* style.css in Resources */,
+				9E345062F4D5710EA2DEFAC6 /* web-focus.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -5,6 +5,19 @@ import WebKit
 final class BrowserDesktopWebView: WKWebView {
     /// The page that owns this view. Weak because the page owns it.
     weak var menuHost: (any BrowserDesktopWebViewMenuHost)?
+    /// The page-owned record of this view's public AppKit editing responder.
+    weak var focusRestoration: BrowserWebFocusRestorationController?
+
+    override func becomeFirstResponder() -> Bool {
+        guard focusRestoration?.allowsNativeFocusAcquisition != false else {
+            return false
+        }
+        let becameFirstResponder = super.becomeFirstResponder()
+        if becameFirstResponder {
+            focusRestoration?.remember(self)
+        }
+        return becameFirstResponder
+    }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true

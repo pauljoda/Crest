@@ -6,6 +6,7 @@ import WebKit
 final class BrowserFindSession {
     private(set) var isPresented = false
     private(set) var matchState = BrowserFindMatchState.idle
+    private(set) var query = ""
 
     /// Bumped every time the page is asked for find, presented or not.
     ///
@@ -28,6 +29,7 @@ final class BrowserFindSession {
     func dismiss(using executor: any BrowserFindExecuting) {
         generation &+= 1
         matchState = .idle
+        query = ""
         isPresented = false
         clear(using: executor)
     }
@@ -38,6 +40,7 @@ final class BrowserFindSession {
         using executor: any BrowserFindExecuting
     ) {
         generation &+= 1
+        self.query = query
         let requestGeneration = generation
         guard !query.isEmpty else {
             matchState = .idle

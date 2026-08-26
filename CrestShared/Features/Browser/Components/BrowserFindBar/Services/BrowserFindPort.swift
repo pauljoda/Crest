@@ -8,7 +8,7 @@
 /// implementation to swap in, only two concrete pages, each bound where its
 /// shell presents the bar.
 ///
-/// `matchState` and `focusRequest` read through their page at call time rather
+/// `query`, `matchState`, and `focusRequest` read through their page at call time rather
 /// than carrying a snapshot, so Observation still tracks them — the result the
 /// bar draws has to change when WebKit answers, and the field has to be asked
 /// for again when the page is.
@@ -22,6 +22,9 @@ struct BrowserFindPort {
     /// Searches the page and moves to the match the direction asks for. An
     /// empty query clears the search rather than running it.
     let find: (String, BrowserFindDirection) -> Void
+
+    /// The query retained by this page while its tab is temporarily hidden.
+    let query: () -> String
 
     /// What the page can say about the search right now.
     let matchState: () -> BrowserFindMatchState

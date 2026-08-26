@@ -1,3 +1,4 @@
+import AppKit
 import WebKit
 import XCTest
 
@@ -444,7 +445,8 @@ final class BrowserPagePoolTests: XCTestCase {
         }
     }
 
-    func testBrowserPreparationPresentsStartPageWithoutPersistingOverRestoredSelection() async
+    func testBrowserPreparationPresentsStartPageWithoutPersistingOverRestoredSelection()
+        async
         throws
     {
         let restored = BrowserTab(
@@ -1403,6 +1405,125 @@ final class BrowserPagePoolTests: XCTestCase {
         pool.reconcile(validTabIDs: [])
     }
 
+    func testOrdinaryTabFocusReturnUsesTheSameResidentPageAndWebView() throws {
+        let first = BrowserTab(title: "First", url: nil, placement: .current)
+        let second = BrowserTab(title: "Second", url: nil, placement: .current)
+        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: space)
+        let firstPage = try XCTUnwrap(pool.activePage)
+        let firstWebView = firstPage.webView
+        let mount = mountForFocus(firstPage)
+
+        XCTAssertTrue(mount.window.makeFirstResponder(firstWebView))
+        pool.select(tab: second, space: space)
+        pool.select(tab: first, space: space)
+
+        XCTAssertTrue(pool.activePage === firstPage)
+        XCTAssertTrue(pool.activePage?.webView === firstWebView)
+        XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testSplitCardFocusReturnKeepsEveryMemberMounted() throws {
+        let groupID = SplitGroupID()
+        let first = BrowserTab(
+            title: "First",
+            url: nil,
+            placement: .current,
+            splitGroupID: groupID
+        )
+        let second = BrowserTab(
+            title: "Second",
+            url: nil,
+            placement: .current,
+            splitGroupID: groupID
+        )
+        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: space)
+        let firstPage = try XCTUnwrap(pool.presentedPage(for: first.id))
+        let secondPage = try XCTUnwrap(pool.presentedPage(for: second.id))
+        let mount = mountSplitForFocus(firstPage, secondPage)
+
+        XCTAssertTrue(mount.window.makeFirstResponder(firstPage.webView))
+        pool.select(tab: second, space: space)
+        XCTAssertTrue(mount.window.makeFirstResponder(secondPage.webView))
+        pool.select(tab: first, space: space)
+
+        XCTAssertEqual(pool.presentedTabIDs, [first.id, second.id])
+        XCTAssertTrue(firstPage.webView.superview === mount.firstHost)
+        XCTAssertTrue(secondPage.webView.superview === mount.secondHost)
+        XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+        XCTAssertTrue(
+            firstPage.focusRestoration.restoreIfNeeded(
+                in: mount.firstHost,
+                gate: .init(
+                    browserChromeOwnsFocus: false,
+                    pageChromeOwnsFocus: false
+                ),
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            ),
+            "The focused Split View card may take native focus only from the known card it replaces."
+        )
+        XCTAssertTrue(mount.window.firstResponder === firstPage.webView)
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testUnloadedPageNeverRestoresAResponderFromItsPriorWebView() throws {
+        let first = BrowserTab(title: "First", url: nil, placement: .current)
+        let second = BrowserTab(title: "Second", url: nil, placement: .current)
+        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: space)
+        let originalPage = try XCTUnwrap(pool.activePage)
+        let originalWebView = originalPage.webView
+        let mount = mountForFocus(originalPage)
+
+        XCTAssertTrue(mount.window.makeFirstResponder(originalWebView))
+        pool.select(tab: second, space: space)
+        pool.unloadPage(for: first.id)
+        pool.select(tab: first, space: space)
+        let recreatedPage = try XCTUnwrap(pool.activePage)
+
+        XCTAssertFalse(recreatedPage === originalPage)
+        XCTAssertFalse(recreatedPage.webView === originalWebView)
+        XCTAssertFalse(recreatedPage.focusRestoration.hasPendingRestoration)
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testNavigationAndProcessLossClearAPendingPageResponder() throws {
+        let first = BrowserTab(title: "First", url: nil, placement: .current)
+        let second = BrowserTab(title: "Second", url: nil, placement: .current)
+        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: space)
+        let firstPage = try XCTUnwrap(pool.activePage)
+        let mount = mountForFocus(firstPage)
+
+        XCTAssertTrue(mount.window.makeFirstResponder(firstPage.webView))
+        pool.select(tab: second, space: space)
+        pool.select(tab: first, space: space)
+        XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+
+        firstPage.webView(
+            firstPage.webView,
+            didStartProvisionalNavigation: nil
+        )
+        XCTAssertFalse(firstPage.focusRestoration.hasPendingRestoration)
+
+        XCTAssertTrue(mount.window.makeFirstResponder(firstPage.webView))
+        pool.select(tab: second, space: space)
+        pool.select(tab: first, space: space)
+        XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+        firstPage.webViewWebContentProcessDidTerminate(firstPage.webView)
+        XCTAssertFalse(firstPage.focusRestoration.hasPendingRestoration)
+        pool.reconcile(validTabIDs: [])
+    }
+
     func testAnUngroupedSelectionPresentsOnlyItself() {
         let solitary = BrowserTab(
             title: "Solitary",
@@ -2320,6 +2441,80 @@ final class BrowserPagePoolTests: XCTestCase {
             selectedTabID: selectedTabID
         )
     }
+
+    private func mountForFocus(_ page: BrowserPage) -> PageFocusMount {
+        let host = BrowserWebHostView(
+            frame: NSRect(x: 0, y: 0, width: 640, height: 480)
+        )
+        let window = NSWindow(
+            contentRect: host.frame,
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        host.attach(page.webView, focusRestoration: page.focusRestoration)
+        addTeardownBlock {
+            window.orderOut(nil)
+            host.detach()
+        }
+        return PageFocusMount(window: window, host: host)
+    }
+
+    private func mountSplitForFocus(
+        _ firstPage: BrowserPage,
+        _ secondPage: BrowserPage
+    ) -> SplitPageFocusMount {
+        let content = NSView(
+            frame: NSRect(x: 0, y: 0, width: 800, height: 480)
+        )
+        let firstHost = BrowserWebHostView(
+            frame: NSRect(x: 0, y: 0, width: 396, height: 480)
+        )
+        let secondHost = BrowserWebHostView(
+            frame: NSRect(x: 404, y: 0, width: 396, height: 480)
+        )
+        content.addSubview(firstHost)
+        content.addSubview(secondHost)
+        let window = NSWindow(
+            contentRect: content.frame,
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = content
+        window.makeKeyAndOrderFront(nil)
+        firstHost.attach(
+            firstPage.webView,
+            focusRestoration: firstPage.focusRestoration
+        )
+        secondHost.attach(
+            secondPage.webView,
+            focusRestoration: secondPage.focusRestoration
+        )
+        addTeardownBlock {
+            window.orderOut(nil)
+            firstHost.detach()
+            secondHost.detach()
+        }
+        return SplitPageFocusMount(
+            window: window,
+            firstHost: firstHost,
+            secondHost: secondHost
+        )
+    }
+}
+
+private struct PageFocusMount {
+    let window: NSWindow
+    let host: BrowserWebHostView
+}
+
+private struct SplitPageFocusMount {
+    let window: NSWindow
+    let firstHost: BrowserWebHostView
+    let secondHost: BrowserWebHostView
 }
 
 @MainActor
