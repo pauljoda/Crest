@@ -2427,28 +2427,72 @@ final class BrowserChromeLayoutTests: XCTestCase {
             .nextSpace
         )
         XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 0))
+        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 1))
         XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 2))
+        XCTAssertNil(BrowserSidebarMouseButtonPolicy.action(for: 5))
     }
 
-    func testAuxiliaryMouseButtonsPreferAvailablePageHistoryUnderWebContent() {
-        XCTAssertTrue(
-            BrowserSidebarMouseButtonPolicy.routesToPage(
-                isOverWebView: true,
-                canNavigatePage: true
+    func testAuxiliaryMouseButtonsStayWithinWebpageScope() {
+        for action in [
+            BrowserSidebarMouseButtonAction.previousSpace,
+            .nextSpace,
+        ] {
+            XCTAssertEqual(
+                BrowserSidebarMouseButtonPolicy.disposition(
+                    for: action,
+                    pointerScope: .webpage,
+                    canNavigatePage: true
+                ),
+                .navigatePage(action)
             )
-        )
-        XCTAssertFalse(
-            BrowserSidebarMouseButtonPolicy.routesToPage(
-                isOverWebView: true,
-                canNavigatePage: false
+            XCTAssertEqual(
+                BrowserSidebarMouseButtonPolicy.disposition(
+                    for: action,
+                    pointerScope: .webpage,
+                    canNavigatePage: false
+                ),
+                .consume
             )
-        )
-        XCTAssertFalse(
-            BrowserSidebarMouseButtonPolicy.routesToPage(
-                isOverWebView: false,
-                canNavigatePage: true
+        }
+    }
+
+    func testAuxiliaryMouseButtonsStayWithinSidebarScope() {
+        for action in [
+            BrowserSidebarMouseButtonAction.previousSpace,
+            .nextSpace,
+        ] {
+            XCTAssertEqual(
+                BrowserSidebarMouseButtonPolicy.disposition(
+                    for: action,
+                    pointerScope: .sidebar,
+                    canNavigatePage: true
+                ),
+                .switchSpace(action)
             )
-        )
+            XCTAssertEqual(
+                BrowserSidebarMouseButtonPolicy.disposition(
+                    for: action,
+                    pointerScope: .sidebar,
+                    canNavigatePage: false
+                ),
+                .switchSpace(action)
+            )
+        }
+    }
+
+    func testAuxiliaryMouseButtonsRemainUnclaimedOutsidePageAndSidebar() {
+        for action in [
+            BrowserSidebarMouseButtonAction.previousSpace,
+            .nextSpace,
+        ] {
+            XCTAssertNil(
+                BrowserSidebarMouseButtonPolicy.disposition(
+                    for: action,
+                    pointerScope: .unowned,
+                    canNavigatePage: true
+                )
+            )
+        }
     }
 
     @MainActor

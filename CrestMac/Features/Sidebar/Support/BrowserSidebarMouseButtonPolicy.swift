@@ -1,3 +1,15 @@
+enum BrowserSidebarMousePointerScope: Equatable {
+    case webpage
+    case sidebar
+    case unowned
+}
+
+enum BrowserSidebarMouseButtonDisposition: Equatable {
+    case navigatePage(BrowserSidebarMouseButtonAction)
+    case switchSpace(BrowserSidebarMouseButtonAction)
+    case consume
+}
+
 enum BrowserSidebarMouseButtonPolicy {
     static func action(for buttonNumber: Int) -> BrowserSidebarMouseButtonAction? {
         switch buttonNumber {
@@ -10,10 +22,18 @@ enum BrowserSidebarMouseButtonPolicy {
         }
     }
 
-    static func routesToPage(
-        isOverWebView: Bool,
+    static func disposition(
+        for action: BrowserSidebarMouseButtonAction,
+        pointerScope: BrowserSidebarMousePointerScope,
         canNavigatePage: Bool
-    ) -> Bool {
-        isOverWebView && canNavigatePage
+    ) -> BrowserSidebarMouseButtonDisposition? {
+        switch pointerScope {
+        case .webpage:
+            canNavigatePage ? .navigatePage(action) : .consume
+        case .sidebar:
+            .switchSpace(action)
+        case .unowned:
+            nil
+        }
     }
 }

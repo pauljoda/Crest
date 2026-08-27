@@ -60,6 +60,14 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     tabPromotionNamespace: tabPromotionNamespace
                 )
             }
+            .background {
+                BrowserSidebarAuxiliaryMouseMonitor(
+                    isSidebarVisible:
+                        model.sidebarPresentation.showsSidebar
+                        && !model.chrome.isCommandPalettePresented,
+                    perform: model.handleAuxiliaryMouseAction
+                )
+            }
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
 
@@ -163,11 +171,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .background {
-            BrowserSidebarAuxiliaryMouseMonitor(
-                perform: model.handleAuxiliaryMouseAction
-            )
-        }
     }
 
 }

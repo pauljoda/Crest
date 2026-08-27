@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct BrowserSidebarAuxiliaryMouseMonitor: NSViewRepresentable {
+    let isSidebarVisible: Bool
     let perform: @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
 
     func makeNSView(context: Context) -> BrowserSidebarAuxiliaryMouseObserverView {
-        BrowserSidebarAuxiliaryMouseObserverView(perform: perform)
+        let view = BrowserSidebarAuxiliaryMouseObserverView(perform: perform)
+        view.isHidden = !isSidebarVisible
+        return view
     }
 
     func updateNSView(
@@ -12,6 +15,7 @@ struct BrowserSidebarAuxiliaryMouseMonitor: NSViewRepresentable {
         context: Context
     ) {
         nsView.perform = perform
+        nsView.isHidden = !isSidebarVisible
     }
 
     static func dismantleNSView(

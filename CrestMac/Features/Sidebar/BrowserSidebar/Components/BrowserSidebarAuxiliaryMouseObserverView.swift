@@ -46,36 +46,73 @@ final class BrowserSidebarAuxiliaryMouseObserverView: NSView {
 
     private func handle(_ event: NSEvent) -> NSEvent? {
         guard event.window === window else { return event }
-
         guard
             let action = BrowserSidebarMouseButtonPolicy.action(
                 for: event.buttonNumber
             )
         else { return event }
 
-        if let webView = webViewUnderPointer(for: event) {
-            let canNavigatePage: Bool
-            switch action {
-            case .previousSpace:
-                canNavigatePage = webView.canGoBack
-            case .nextSpace:
-                canNavigatePage = webView.canGoForward
-            }
-            if BrowserSidebarMouseButtonPolicy.routesToPage(
-                isOverWebView: true,
-                canNavigatePage: canNavigatePage
-            ) {
-                switch action {
-                case .previousSpace:
-                    webView.goBack()
-                case .nextSpace:
-                    webView.goForward()
-                }
-                return nil
-            }
-        }
-        perform(action)
+        let webView = webViewUnderPointer(for: event)
+        guard
+            let disposition = BrowserSidebarMouseButtonPolicy.disposition(
+                for: action,
+                pointerScope: pointerScope(for: event, webView: webView),
+                canNavigatePage: canNavigate(action, in: webView)
+            )
+        else { return event }
+
+        execute(disposition, in: webView)
         return nil
+    }
+
+    private func pointerScope(
+        for event: NSEvent,
+        webView: WKWebView?
+    ) -> BrowserSidebarMousePointerScope {
+        if webView != nil { return .webpage }
+        guard !isHidden else { return .unowned }
+        let location = convert(event.locationInWindow, from: nil)
+        return bounds.contains(location) ? .sidebar : .unowned
+    }
+
+    private func canNavigate(
+        _ action: BrowserSidebarMouseButtonAction,
+        in webView: WKWebView?
+    ) -> Bool {
+        guard let webView else { return false }
+        return switch action {
+        case .previousSpace:
+            webView.canGoBack
+        case .nextSpace:
+            webView.canGoForward
+        }
+    }
+
+    private func execute(
+        _ disposition: BrowserSidebarMouseButtonDisposition,
+        in webView: WKWebView?
+    ) {
+        switch disposition {
+        case .navigatePage(let action):
+            navigate(action, in: webView)
+        case .switchSpace(let action):
+            perform(action)
+        case .consume:
+            break
+        }
+    }
+
+    private func navigate(
+        _ action: BrowserSidebarMouseButtonAction,
+        in webView: WKWebView?
+    ) {
+        guard let webView else { return }
+        switch action {
+        case .previousSpace:
+            webView.goBack()
+        case .nextSpace:
+            webView.goForward()
+        }
     }
 
     private func webViewUnderPointer(for event: NSEvent) -> WKWebView? {
