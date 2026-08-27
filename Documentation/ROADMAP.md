@@ -13,14 +13,11 @@ the live status for each issue.
 
 ### [0.5](https://github.com/pauljoda/Crest/milestone/1)
 
-#### Planned and in progress
-
-- [ ] [Support video picture-in-picture and optional automatic PiP](https://github.com/pauljoda/Crest/issues/6)
-
 #### Completed
 
 - [x] [Add global sidebar widgets for updates and media](https://github.com/pauljoda/Crest/issues/4) — [`a499b614`](https://github.com/pauljoda/Crest/commit/a499b614fc9d3532bfb8d436ab3efc653d78e476)
 - [x] [Add website notification support with clear per-Space controls](https://github.com/pauljoda/Crest/issues/5) — [`116cecc8`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01)
+- [x] [Support video picture-in-picture and optional automatic PiP](https://github.com/pauljoda/Crest/issues/6)
 - [x] [Add an About section for build, updates, and community links](https://github.com/pauljoda/Crest/issues/7) — [`553f4abf`](https://github.com/pauljoda/Crest/commit/553f4abf18ea79411c3e1a2ee647010492ebca1a)
 - [x] [Make the full sidebar adaptive across iPad and wider iPhone layouts](https://github.com/pauljoda/Crest/issues/8)
 - [x] [Add native emoji picking to icon customization](https://github.com/pauljoda/Crest/issues/9) — [`de12c20d`](https://github.com/pauljoda/Crest/commit/de12c20d14c5b2b0c5af0f310ac2a426bd8c40ad), [`fcf72347`](https://github.com/pauljoda/Crest/commit/fcf72347760c4ae73403fbe37ebf46ab1f1fe4d8)
@@ -54,13 +51,18 @@ the live status for each issue.
 - [ ] [Restore pinned and saved tabs to their root URL predictably](https://github.com/pauljoda/Crest/issues/41)
 - [ ] [Select and act on multiple tabs](https://github.com/pauljoda/Crest/issues/42)
 - [ ] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43)
-- [ ] [Keep new-window navigation inside Peek](https://github.com/pauljoda/Crest/issues/44)
-- [ ] [Restore webpage editor focus after switching tabs](https://github.com/pauljoda/Crest/issues/45)
-- [ ] [Support extension-provided image context menu actions](https://github.com/pauljoda/Crest/issues/46)
-- [ ] [Load background tabs before they are selected](https://github.com/pauljoda/Crest/issues/47)
 - [ ] [Make link-opening behavior configurable](https://github.com/pauljoda/Crest/issues/48)
-- [ ] [Keep the Space switcher from overlapping Archive controls](https://github.com/pauljoda/Crest/issues/50)
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
+- [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
+
+#### Completed
+
+- [x] [Keep new-window navigation inside Peek](https://github.com/pauljoda/Crest/issues/44) — [`618f39c7`](https://github.com/pauljoda/Crest/commit/618f39c78a3c0f4634004bcb19d50cfa61f7c174)
+- [x] [Restore webpage editor focus after switching tabs](https://github.com/pauljoda/Crest/issues/45) — [`4a89d112`](https://github.com/pauljoda/Crest/commit/4a89d112d72fe33acb43b6c81fd27dd882b66548)
+- [x] [Support extension-provided image context menu actions](https://github.com/pauljoda/Crest/issues/46) — [`7b241779`](https://github.com/pauljoda/Crest/commit/7b241779f2853dce16fff15b9fdc22a4aeea7666)
+- [x] [Load background tabs before they are selected](https://github.com/pauljoda/Crest/issues/47) — [`6953fae3`](https://github.com/pauljoda/Crest/commit/6953fae397a1483c46316aa41ab7dac1895e4d3d)
+- [x] [Keep the Space switcher from overlapping Archive controls](https://github.com/pauljoda/Crest/issues/50) — [`f0536ff7`](https://github.com/pauljoda/Crest/commit/f0536ff75270db715801ecb27dd5daeac607216b)
+- [x] [Keep mouse navigation scoped to the surface under the pointer](https://github.com/pauljoda/Crest/issues/52) — [`c7f76c8e`](https://github.com/pauljoda/Crest/commit/c7f76c8eeb374d3f61cc55950858d33ae4ece17d)
 
 <!-- crest-roadmap-sync:end -->
 
