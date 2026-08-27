@@ -6,6 +6,47 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.5.7</title>
+            <pubDate>Thu, 27 Aug 2026 15:18:32 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1054</sparkle:version>
+            <sparkle:shortVersionString>0.5.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 56 user-facing changes.
+
+### New
+
+- Use custom search engines with website icons and optional search suggestions in each Space
+- See update availability and control media from a global sidebar widget deck across Spaces
+
+### Improved
+
+- Follow new downloads into Downloads and see live size, progress, speed, and time remaining across Mac and iPhone
+
+### Fixed
+
+- Show blocked pop-ups in Site Controls with a one-step allow action
+- Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space
+- Keep Space navigation centered and Archive controls reachable as more Spaces are added
+- Continue typing with the same caret or selection after returning to a webpage tab on Mac
+- Use compatible browser extension actions directly from webpage context menus
+- Keep mouse back and forward navigation within the webpage or sidebar under the pointer
+- Keep new-window links inside Peek and Quick Window instead of hiding them in background tabs
+- Start loading tabs opened from links right away, with an option to select them automatically
+- Refresh available updates to the newest eligible build before downloading
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View source](https://github.com/pauljoda/Crest/commit/e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.5.7/Installer-Crest-0.5.7-arm64.dmg)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.5.7/Installer-Crest-0.5.7-arm64.dmg" length="8799967" type="application/octet-stream" sparkle:edSignature="0p3SBXDxGINRTOmn8PmK20C/cCnUGJ5xVmWGPDeSoEFWSOcyvX1zWsB/W0zaOqingd55ah3Hp5VBXReTUvTuCw=="/>
+        </item>
+        <item>
             <title>0.5.0</title>
             <pubDate>Wed, 26 Aug 2026 00:20:04 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -69,6 +110,6 @@ It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, reten
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 3vLWdHL3tfrxEl20A/HxBUQBQSwv+ojMMS1U0QEvcvR6nqYuLUGyZ8MFM/UNB6pYx3VRzMpES4mL/6hn773TDA==
-length: 3932
+edSignature: hSk1MYLGG33hgG3rm2bDMlxgYuIM2zTs5pUxOp2QBsyjYe4ftzcf0boN0jsCYYsOnM1UV/TAaElXjZ3Fr3ofCw==
+length: 6246
 -->
