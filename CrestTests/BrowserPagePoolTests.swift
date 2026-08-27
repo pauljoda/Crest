@@ -1273,10 +1273,9 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertFalse(popupTab.isStartPage)
     }
 
-    func testPopupFromATransientPeekPageFallsBackToARoutedTab() throws {
+    func testUserActivatedPopupFromATransientPageNavigatesTheSameLease() throws {
         let popupURL = try XCTUnwrap(URL(string: "https://example.com/popup"))
-        let peekURL = try XCTUnwrap(URL(string: "about:blank"))
-        var routedURLs: [URL] = []
+        let transientURL = try XCTUnwrap(URL(string: "about:blank"))
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
         let space = makeSpace(tabs: [openerTab], selectedTabID: openerTab.id)
         let store = BrowserStore(
@@ -1285,26 +1284,26 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let pool = BrowserPagePool(
             popupTabHost: store.popupTabHost,
-            openNewTab: { routedURLs.append($0) }
+            openNewTab: { url in
+                _ = store.openNewTab(url: url)
+            }
         )
         let lease = try XCTUnwrap(
-            pool.makeTransientPageLease(url: peekURL, in: space)
+            pool.makeTransientPageLease(url: transientURL, in: space)
         )
-        let peekPage = try XCTUnwrap(lease.page)
+        let transientPage = try XCTUnwrap(lease.page)
         let tabCount = try XCTUnwrap(store.selectedSpace?.tabs.count)
 
-        let popupWebView = peekPage.webView(
-            peekPage.webView,
-            createWebViewWith: try XCTUnwrap(
-                peekPage.webView.configuration.copy() as? WKWebViewConfiguration
-            ),
-            for: StubPopupNavigationAction(url: popupURL, navigationType: .linkActivated),
-            windowFeatures: WKWindowFeatures()
+        let popupWebView = try transientPage.requestTestPopup(
+            url: popupURL,
+            navigationType: .linkActivated
         )
 
         XCTAssertNil(popupWebView)
-        XCTAssertEqual(routedURLs, [popupURL])
+        XCTAssertTrue(lease.page === transientPage)
+        XCTAssertEqual(transientPage.pendingNavigationURL, popupURL)
         XCTAssertEqual(store.selectedSpace?.tabs.count, tabCount)
+        XCTAssertEqual(store.selectedTab?.id, openerTab.id)
     }
 
     func testClosingAnAdoptedPopupWebViewClosesItsTab() throws {
@@ -2617,14 +2616,28 @@ private struct PopupAdoptionContext {
     /// Hands the opener a configuration copied from its own, which is what WebKit
     /// does before calling `createWebViewWith`.
     func requestPopup(url: URL?, navigationType: WKNavigationType) -> WKWebView? {
-        guard
-            let configuration = opener.webView.configuration
-                .copy() as? WKWebViewConfiguration
-        else { return nil }
-        return opener.webView(
-            opener.webView,
+        try? opener.requestTestPopup(url: url, navigationType: navigationType)
+    }
+}
+
+@MainActor
+extension BrowserPage {
+    /// Drives the real `WKUIDelegate` entry point with the configuration WebKit
+    /// would copy from this opener.
+    func requestTestPopup(
+        url: URL?,
+        navigationType: WKNavigationType
+    ) throws -> WKWebView? {
+        let configuration = try XCTUnwrap(
+            webView.configuration.copy() as? WKWebViewConfiguration
+        )
+        return webView(
+            webView,
             createWebViewWith: configuration,
-            for: StubPopupNavigationAction(url: url, navigationType: navigationType),
+            for: StubPopupNavigationAction(
+                url: url,
+                navigationType: navigationType
+            ),
             windowFeatures: WKWindowFeatures()
         )
     }
@@ -2633,7 +2646,7 @@ private struct PopupAdoptionContext {
 /// WebKit never lets an app build a real `WKNavigationAction`, so popup tests
 /// stand in for the one WebKit hands to `createWebViewWith`: no target frame and
 /// a navigation type that selects the popup trigger under test.
-private final class StubPopupNavigationAction: WKNavigationAction,
+final class StubPopupNavigationAction: WKNavigationAction,
     BrowserNavigationActionSourceOriginProviding
 {
     private let stubRequest: URLRequest

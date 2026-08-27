@@ -484,6 +484,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webView.load(URLRequest(url: url))
     }
 
+    /// Replays a request WebKit classified as web-content navigation in this
+    /// page without granting it the broader trust of an app-initiated load.
+    func loadWebContentRequest(_ request: URLRequest) {
+        prepareForNavigation(to: request.url)
+        webView.load(request)
+    }
+
     /// WebKit's own opaque per-view session state: the back/forward list and the
     /// scroll position of every entry in it.
     ///

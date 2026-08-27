@@ -23,9 +23,16 @@
     This models a console launcher that requests its window after an asynchronous
     page action, plus a normal user-activated new-window link.
   </p>
+  <a id="open-transient" href="http://localhost:18773/blocked-popups.html?automatic=0&amp;surface=peek">
+    Open this fixture in a transient surface
+  </a>
   <button id="automatic-popup" type="button">Launch automatic console</button>
   <button id="explicit-window-open" type="button">Open user-activated window</button>
-  <a id="explicit-target-blank" href="about:blank" target="_blank">Open explicit target blank</a>
+  <a id="explicit-target-blank" href="about:blank#target-blank" target="_blank">Open explicit target blank</a>
+  <button id="fixture-window-open" type="button">Open script destination</button>
+  <a id="fixture-target-blank" href="popup-destination.html?path=target-blank" target="_blank">
+    Open target blank destination
+  </a>
   <output id="status" aria-live="polite">Waiting</output>
   <script>
     globalThis.automaticPopupResults = [];
@@ -45,8 +52,12 @@
     });
 
     document.querySelector("#explicit-window-open").addEventListener("click", () => {
-      const popup = window.open("about:blank", "crest-explicit");
+      const popup = window.open("about:blank#window-open", "crest-explicit");
       globalThis.explicitPopupResult = popup === null ? "null" : "window";
+    });
+
+    document.querySelector("#fixture-window-open").addEventListener("click", () => {
+      window.open("popup-destination.html?path=window-open", "crest-fixture");
     });
 
     if (new URLSearchParams(location.search).get("automatic") !== "0") {

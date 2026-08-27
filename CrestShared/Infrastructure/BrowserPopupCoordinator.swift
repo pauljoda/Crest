@@ -23,15 +23,16 @@ final class BrowserPopupCoordinator {
         self.handOffExternalScheme = handOffExternalScheme
     }
 
-    /// Resolves one new-window request while WebKit waits. `adopt` receives the
-    /// requested URL — nil for `window.open()` without a destination — and
-    /// returns the web view WebKit created from its own configuration, or nil
-    /// when the opener cannot host an adopted popup (a Peek or Quick Window
-    /// lease, or a pool without a tab host). A declined adoption still opens the
-    /// destination as a plain tab so the request is never silently dropped.
+    /// Resolves one new-window request while WebKit waits. A transient host may
+    /// consume the original request in its current page. Otherwise `adopt`
+    /// receives the requested URL — nil for `window.open()` without a
+    /// destination — and returns the web view WebKit created from its own
+    /// configuration. A declined adoption still opens a concrete destination as
+    /// a plain tab so a host without either capability never silently drops it.
     func resolveOpen(
         for navigationAction: WKNavigationAction,
         currentURL: URL?,
+        navigateCurrent: (URLRequest) -> Bool = { _ in false },
         adopt: (URL?) -> WKWebView?
     ) -> WKWebView? {
         guard navigationAction.targetFrame == nil else { return nil }
@@ -56,8 +57,13 @@ final class BrowserPopupCoordinator {
 
         // WebKit has already enforced its user-activation / automatic-window
         // preference before this delegate runs. Every request that reaches here
-        // must be adopted synchronously so `window.opener`, about:blank, and the
-        // identity provider's return channel survive.
+        // from a transient page stays in that page, preserving its browser
+        // history and visible presentation. Resident pages are adopted
+        // synchronously so `window.opener`, about:blank, and the identity
+        // provider's return channel survive.
+        if navigateCurrent(navigationAction.request) {
+            return nil
+        }
         if let popupWebView = adopt(destinationURL) {
             return popupWebView
         }

@@ -1,9 +1,60 @@
+import WebKit
 import XCTest
 
 @testable import Crest
 
 @MainActor
 final class BrowserPeekModelTests: XCTestCase {
+    func testTargetBlankNavigationStaysInTheExactPeekLease() throws {
+        let context = try makeContext()
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let lease = try XCTUnwrap(context.model.pageLease)
+        let page = try XCTUnwrap(lease.page)
+        let tabCount = try XCTUnwrap(
+            context.browser.selectedSpace?.tabs.count
+        )
+        let destination = try XCTUnwrap(
+            URL(string: "https://peek-target-blank.crest.test/destination")
+        )
+
+        let popupWebView = try page.requestTestPopup(
+            url: destination,
+            navigationType: .linkActivated
+        )
+
+        XCTAssertNil(popupWebView)
+        XCTAssertTrue(context.model.pageLease === lease)
+        XCTAssertTrue(context.model.page === page)
+        XCTAssertEqual(page.pendingNavigationURL, destination)
+        XCTAssertEqual(context.browser.selectedSpace?.tabs.count, tabCount)
+        XCTAssertEqual(context.coordinator.peekRequest, context.request)
+    }
+
+    func testWindowOpenNavigationStaysInTheExactPeekLease() throws {
+        let context = try makeContext()
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let lease = try XCTUnwrap(context.model.pageLease)
+        let page = try XCTUnwrap(lease.page)
+        let destination = try XCTUnwrap(
+            URL(string: "https://peek-window-open.crest.test/destination")
+        )
+
+        let popupWebView = try page.requestTestPopup(
+            url: destination,
+            navigationType: .other
+        )
+
+        XCTAssertNil(popupWebView)
+        XCTAssertTrue(context.model.pageLease === lease)
+        XCTAssertTrue(context.model.page === page)
+        XCTAssertEqual(page.pendingNavigationURL, destination)
+        XCTAssertEqual(
+            context.browser.selectedSpace?.tabs.map(\.id),
+            context.source.tabs.map(\.id)
+        )
+        XCTAssertEqual(context.coordinator.peekRequest, context.request)
+    }
+
     func testReplacementProfileInvalidatesTheExactPeekRuntime() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
@@ -393,7 +444,11 @@ final class BrowserPeekModelTests: XCTestCase {
         )
         let pages = BrowserPagePool(
             browsingMode: .privateBrowsing,
-            usesEphemeralWebsiteDataStores: true
+            usesEphemeralWebsiteDataStores: true,
+            popupTabHost: browser.popupTabHost,
+            openNewTab: { url in
+                _ = browser.openNewTab(url: url)
+            }
         )
         let request = BrowserPeekRequest(
             url: try XCTUnwrap(URL(string: "about:blank")),

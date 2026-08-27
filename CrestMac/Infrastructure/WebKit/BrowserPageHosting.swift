@@ -18,6 +18,13 @@ protocol BrowserPageHosting: AnyObject {
         with destinationURL: URL
     )
 
+    /// Keeps an allowed new-window request in its current transient surface,
+    /// or declines when the opener belongs to an ordinary resident tab.
+    func navigatePopupInCurrentPage(
+        _ request: URLRequest,
+        opener: BrowserPage
+    ) -> Bool
+
     /// Adopts the web view WebKit pre-made for a popup into a new selected tab,
     /// or returns nil when this opener cannot host one.
     func adoptPopupWebView(

@@ -1067,14 +1067,28 @@ final class BrowserPagePool:
             && !spacesDeletingData.contains(assignment.spaceID)
     }
 
+    func navigatePopupInCurrentPage(
+        _ request: URLRequest,
+        opener: BrowserPage
+    ) -> Bool {
+        guard request.url != nil,
+            !spacesReleasingData.contains(opener.spaceID),
+            !spacesDeletingData.contains(opener.spaceID),
+            transientLeases.values.contains(where: {
+                $0.value?.page === opener
+            })
+        else { return false }
+        opener.loadWebContentRequest(request)
+        return true
+    }
+
     /// Adopts the web view WebKit pre-made for a popup as a new selected tab in
     /// the opener's Space.
     ///
     /// Declines — leaving the coordinator to route the destination into an
-    /// ordinary tab — when the opener is not a resident page of this pool. That
-    /// covers Peek and Quick Window openers, whose pages belong to transient
-    /// leases with no tab of their own, so a popup from one cannot inherit a
-    /// place in the tab list.
+    /// ordinary tab — when the opener is not a resident page of this pool.
+    /// Transient openers have already had the opportunity to keep the request in
+    /// their lease before this adoption path is reached.
     ///
     /// Per-Space isolation needs no work here: WebKit derives the popup's
     /// configuration from the opener's, so it already carries the opener's

@@ -301,6 +301,10 @@
     "2026-08-26-scoped-auxiliary-mouse-navigation": {
       "category": "fixed",
       "message": "Keep mouse back and forward navigation within the webpage or sidebar under the pointer"
+    },
+    "2026-08-26-transient-new-window-navigation": {
+      "category": "fixed",
+      "message": "Keep new-window links inside Peek and Quick Window instead of hiding them in background tabs"
     }
   }
 }

@@ -21,15 +21,23 @@ extension BrowserPage: WKUIDelegate {
         recordAcceptedPopup()
         return popupCoordinator.resolveOpen(
             for: navigationAction,
-            currentURL: webView.url
-        ) { [weak self] requestedURL in
-            guard let self, let host else { return nil }
-            return host.adoptPopupWebView(
-                configuration: configuration,
-                requestedURL: requestedURL,
-                opener: self
-            )
-        }
+            currentURL: webView.url,
+            navigateCurrent: { [weak self] request in
+                guard let self, let host else { return false }
+                return host.navigatePopupInCurrentPage(
+                    request,
+                    opener: self
+                )
+            },
+            adopt: { [weak self] requestedURL in
+                guard let self, let host else { return nil }
+                return host.adoptPopupWebView(
+                    configuration: configuration,
+                    requestedURL: requestedURL,
+                    opener: self
+                )
+            }
+        )
     }
 
     /// Closes only tabs that web content opened. A hand-opened tab keeps its

@@ -660,6 +660,75 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         await removeDataStore(profile.id)
     }
 
+    func testUnapprovedAutomaticWindowOpenInATransientPageStaysBlocked() async throws {
+        let origin = try XCTUnwrap(
+            URL(string: "https://transient-blocked-popups.crest.test/")
+        )
+        let openerTab = BrowserTab(
+            title: "Opener",
+            url: nil,
+            placement: .current
+        )
+        let profile = BrowsingProfile()
+        let space = makeSpace(profile: profile, tabs: [openerTab])
+        let store = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserPagePool(
+            popupTabHost: store.popupTabHost,
+            openNewTab: { url in
+                _ = store.openNewTab(url: url)
+            }
+        )
+
+        do {
+            let lease = try XCTUnwrap(
+                pool.makeTransientPageLease(
+                    url: try XCTUnwrap(URL(string: "about:blank")),
+                    in: space
+                )
+            )
+            defer { lease.release() }
+            let opener = try XCTUnwrap(lease.page)
+            opener.webView.loadSimulatedRequest(
+                URLRequest(url: origin),
+                responseHTML: try blockedPopupFixtureHTML()
+            )
+            try await waitUntil("the transient popup blocker fixture to load") {
+                opener.url == origin && !opener.isLoading
+            }
+            try await waitUntil("all transient automatic window requests to run") {
+                try await self.intResult(
+                    from: opener.webView,
+                    script: "return globalThis.automaticPopupResults.length;"
+                ) == 3
+            }
+
+            let openResults = try await stringResult(
+                from: opener.webView,
+                script: "return globalThis.automaticPopupResults.join(',');"
+            )
+
+            XCTAssertEqual(openResults, "null,null,null")
+            XCTAssertTrue(lease.page === opener)
+            XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
+            XCTAssertEqual(
+                opener.blockedPopupState.notice,
+                BrowserBlockedPopupNotice(
+                    origin: try XCTUnwrap(BrowserSiteOrigin(url: origin)),
+                    status: .blocked
+                )
+            )
+            XCTAssertEqual(opener.blockedPopupState.indicationRevision, 1)
+        }
+
+        await removeDataStore(profile.id)
+    }
+
     func testAllowingAfterABlockedPopupPersistsAndOnlyNewAttemptOpens() async throws {
         let origin = try XCTUnwrap(URL(string: "https://allow-popups.crest.test/"))
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
@@ -822,6 +891,164 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             }
             XCTAssertEqual(opener.blockedPopupState.notice?.status, .blocked)
             XCTAssertTrue(pool.activePage?.wasOpenedAsPopup == true)
+        }
+
+        await removeDataStore(profile.id)
+    }
+
+    func testTransientTargetBlankKeepsOnePageAndNativeHistory() async throws {
+        let origin = try XCTUnwrap(
+            URL(string: "https://transient-target-blank.crest.test/?automatic=0")
+        )
+        let destination = try XCTUnwrap(
+            URL(string: "about:blank#target-blank")
+        )
+        let openerTab = BrowserTab(
+            title: "Opener",
+            url: nil,
+            placement: .current
+        )
+        let profile = BrowsingProfile()
+        let space = makeSpace(profile: profile, tabs: [openerTab])
+        let store = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserPagePool(
+            popupTabHost: store.popupTabHost,
+            openNewTab: { url in
+                _ = store.openNewTab(url: url)
+            }
+        )
+
+        do {
+            let lease = try XCTUnwrap(
+                pool.makeTransientPageLease(
+                    url: try XCTUnwrap(URL(string: "about:blank")),
+                    in: space
+                )
+            )
+            defer { lease.release() }
+            let page = try XCTUnwrap(lease.page)
+            page.webView.loadSimulatedRequest(
+                URLRequest(url: origin),
+                responseHTML: try blockedPopupFixtureHTML()
+            )
+            try await waitUntil("the transient target-blank fixture to load") {
+                page.url == origin && page.title == "Automatic Pop-up Fixture"
+            }
+
+            _ = try await stringResult(
+                from: page.webView,
+                script: """
+                    document.querySelector('#explicit-target-blank').click();
+                    return 'clicked';
+                    """
+            )
+
+            try await waitUntil("target blank to navigate the transient page") {
+                page.url == destination && !page.isLoading
+            }
+            XCTAssertTrue(lease.page === page)
+            XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
+            XCTAssertTrue(page.canGoBack)
+            XCTAssertFalse(page.canGoForward)
+            XCTAssertNil(page.navigationFailure)
+
+            page.goBack()
+            try await waitUntil("target-blank history to return to its source") {
+                page.url == origin && page.title == "Automatic Pop-up Fixture"
+            }
+            XCTAssertTrue(page.canGoForward)
+
+            page.goForward()
+            try await waitUntil("target-blank history to move forward") {
+                page.url == destination && !page.isLoading
+            }
+            XCTAssertTrue(lease.page === page)
+            XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
+        }
+
+        await removeDataStore(profile.id)
+    }
+
+    func testTransientWindowOpenKeepsOnePageAndNativeHistory() async throws {
+        let origin = try XCTUnwrap(
+            URL(string: "https://transient-window-open.crest.test/?automatic=0")
+        )
+        let destination = try XCTUnwrap(
+            URL(string: "about:blank#window-open")
+        )
+        let openerTab = BrowserTab(
+            title: "Opener",
+            url: nil,
+            placement: .current
+        )
+        let profile = BrowsingProfile()
+        let space = makeSpace(profile: profile, tabs: [openerTab])
+        let store = BrowserStore(
+            session: BrowserSession(
+                spaces: [space],
+                selectedSpaceID: space.id
+            ),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserPagePool(
+            popupTabHost: store.popupTabHost,
+            openNewTab: { url in
+                _ = store.openNewTab(url: url)
+            }
+        )
+
+        do {
+            let lease = try XCTUnwrap(
+                pool.makeTransientPageLease(
+                    url: try XCTUnwrap(URL(string: "about:blank")),
+                    in: space
+                )
+            )
+            defer { lease.release() }
+            let page = try XCTUnwrap(lease.page)
+            page.webView.loadSimulatedRequest(
+                URLRequest(url: origin),
+                responseHTML: try blockedPopupFixtureHTML()
+            )
+            try await waitUntil("the transient window-open fixture to load") {
+                page.url == origin && page.title == "Automatic Pop-up Fixture"
+            }
+
+            _ = try await stringResult(
+                from: page.webView,
+                script: """
+                    document.querySelector('#explicit-window-open').click();
+                    return 'clicked';
+                    """
+            )
+
+            try await waitUntil("window.open to navigate the transient page") {
+                page.url == destination && !page.isLoading
+            }
+            XCTAssertTrue(lease.page === page)
+            XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
+            XCTAssertTrue(page.canGoBack)
+            XCTAssertFalse(page.canGoForward)
+            XCTAssertNil(page.navigationFailure)
+
+            page.goBack()
+            try await waitUntil("window-open history to return to its source") {
+                page.url == origin && page.title == "Automatic Pop-up Fixture"
+            }
+            XCTAssertTrue(page.canGoForward)
+
+            page.goForward()
+            try await waitUntil("window-open history to move forward") {
+                page.url == destination && !page.isLoading
+            }
+            XCTAssertTrue(lease.page === page)
+            XCTAssertEqual(store.selectedSpace?.tabs.map(\.id), [openerTab.id])
         }
 
         await removeDataStore(profile.id)
