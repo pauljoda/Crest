@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Background destination loading</title>
+  <style>
+    :root { color-scheme: light dark; font-family: ui-rounded, system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 680px; padding: 64px 36px; }
+    main { border: 2px solid #6558d3; border-radius: 24px; padding: 28px; }
+    strong { color: #8b7df1; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Background destination</h1>
+    <p>Request completed for <strong id="identity">unknown</strong>.</p>
+    <p id="ready">Waiting for delayed title and favicon update…</p>
+  </main>
+  <script>
+    const identity = new URLSearchParams(location.search).get("id") ?? "unnamed";
+    document.querySelector("#identity").textContent = identity;
+    setTimeout(() => {
+      document.title = `${identity} ready`;
+      const favicon = document.createElement("link");
+      favicon.rel = "icon";
+      favicon.href = "background-tab-favicon.svg";
+      document.head.append(favicon);
+      document.querySelector("#ready").textContent =
+        `Title and favicon ready at ${new Date().toISOString()}`;
+    }, 450);
+  </script>
+</body>
+</html>

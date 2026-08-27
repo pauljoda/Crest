@@ -133,7 +133,12 @@ extension BrowserPage: WKNavigationDelegate {
         case .navigate:
             break
         case .backgroundTab(let url):
-            openModifiedLink(url, spaceID, false)
+            openModifiedLink(
+                url,
+                spaceID,
+                BrowserLinkPreferenceStore.shared.preferences
+                    .focusesNewTabsOpenedFromLinks
+            )
             decisionHandler(.cancel)
             return
         case .foregroundTab(let url):

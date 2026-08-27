@@ -190,7 +190,38 @@ struct CrestApp: App {
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
-                browser.openNewTab(url: url, in: spaceID, selecting: selecting)
+                guard
+                    let tabID = browser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ),
+                    let space = browser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
+                else { return nil }
+                return BrowserModifiedLinkRegistration(
+                    tab: tab,
+                    space: space,
+                    session: browser.session
+                )
+            },
+            backgroundPageDidUpdate: { update in
+                browser.updateTabFromPage(
+                    url: update.url,
+                    title: update.title,
+                    faviconData: update.faviconData,
+                    iconAccent: update.iconAccent,
+                    for: update.tabID,
+                    matching: update.assignment
+                )
+                if let url = update.completedNavigationURL {
+                    browser.recordVisit(
+                        url: url,
+                        title: update.title,
+                        matching: update.assignment
+                    )
+                }
+                return browser.session
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
             splitLinkHost: browser.splitLinkHost,
@@ -212,7 +243,38 @@ struct CrestApp: App {
             popupTabHost: privateBrowser.popupTabHost,
             openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
-                privateBrowser.openNewTab(url: url, in: spaceID, selecting: selecting)
+                guard
+                    let tabID = privateBrowser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ),
+                    let space = privateBrowser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
+                else { return nil }
+                return BrowserModifiedLinkRegistration(
+                    tab: tab,
+                    space: space,
+                    session: privateBrowser.session
+                )
+            },
+            backgroundPageDidUpdate: { update in
+                privateBrowser.updateTabFromPage(
+                    url: update.url,
+                    title: update.title,
+                    faviconData: update.faviconData,
+                    iconAccent: update.iconAccent,
+                    for: update.tabID,
+                    matching: update.assignment
+                )
+                if let url = update.completedNavigationURL {
+                    privateBrowser.recordVisit(
+                        url: url,
+                        title: update.title,
+                        matching: update.assignment
+                    )
+                }
+                return privateBrowser.session
             },
             openPeek: { request in privateTransientBrowsing.presentPeek(request) },
             splitLinkHost: privateBrowser.splitLinkHost

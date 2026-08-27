@@ -16,6 +16,7 @@ struct BrowserGeneralSettingsPane: View {
     let browser: BrowserStore
 
     @Bindable private var pageZoomPreferences: BrowserDefaultPageZoomStore
+    @Bindable private var linkPreferences: BrowserLinkPreferenceStore
     @State private var defaultBrowser = BrowserDefaultBrowserController()
     @State private var isCheckingDefaultBrowser = true
     @AppStorage(BrowserStartupPreference.key) private var startupBehaviorRawValue =
@@ -27,10 +28,12 @@ struct BrowserGeneralSettingsPane: View {
 
     init(
         browser: BrowserStore,
-        pageZoomPreferences: BrowserDefaultPageZoomStore = .shared
+        pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
+        linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
         self.browser = browser
         _pageZoomPreferences = Bindable(wrappedValue: pageZoomPreferences)
+        _linkPreferences = Bindable(wrappedValue: linkPreferences)
     }
 
     var body: some View {
@@ -53,6 +56,8 @@ struct BrowserGeneralSettingsPane: View {
                     "Startup choices take effect the next time Crest opens a window."
                 )
             }
+
+            BrowserNewTabSettingsSection(preferences: linkPreferences)
 
             BrowserPlatformAppearanceSettingsSection()
 
@@ -242,6 +247,27 @@ struct BrowserGeneralSettingsPane: View {
                 ?? .defaultBehavior
         } set: { behavior in
             startupBehaviorRawValue = behavior.rawValue
+        }
+    }
+}
+
+struct BrowserNewTabSettingsSection: View {
+    static let controlIdentifier =
+        "focus-new-tabs-opened-from-links-toggle"
+
+    @Bindable var preferences: BrowserLinkPreferenceStore
+
+    var body: some View {
+        Section("Tabs") {
+            Toggle(
+                "Focus new tabs opened from links",
+                isOn: $preferences.focusesNewTabsOpenedFromLinks
+            )
+            .accessibilityIdentifier(Self.controlIdentifier)
+
+            CrestFormFootnote(
+                "Selects tabs opened with Command-click or middle-click."
+            )
         }
     }
 }

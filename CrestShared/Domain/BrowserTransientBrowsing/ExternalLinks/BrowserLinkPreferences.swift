@@ -26,6 +26,7 @@ enum BrowserExternalLinkDestination:
 struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     var externalLinkDestination: BrowserExternalLinkDestination
     var externalLinkSpaceID: SpaceID?
+    var focusesNewTabsOpenedFromLinks: Bool
     var automaticallyOpensPeek: Bool
     var peekClickModifier: BrowserLinkClickModifier
     var quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy
@@ -36,6 +37,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     static let `default` = BrowserLinkPreferences(
         externalLinkDestination: .quickWindow,
         externalLinkSpaceID: nil,
+        focusesNewTabsOpenedFromLinks: false,
         automaticallyOpensPeek: true,
         peekClickModifier: .option,
         quickWindowArchivePolicy: .after6Hours,
@@ -47,6 +49,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case externalLinkDestination
         case externalLinkSpaceID
+        case focusesNewTabsOpenedFromLinks
         case automaticallyOpensPeek
         case peekClickModifier
         case quickWindowArchivePolicy
@@ -58,6 +61,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     init(
         externalLinkDestination: BrowserExternalLinkDestination,
         externalLinkSpaceID: SpaceID?,
+        focusesNewTabsOpenedFromLinks: Bool,
         automaticallyOpensPeek: Bool,
         peekClickModifier: BrowserLinkClickModifier,
         quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy,
@@ -67,6 +71,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     ) {
         self.externalLinkDestination = externalLinkDestination
         self.externalLinkSpaceID = externalLinkSpaceID
+        self.focusesNewTabsOpenedFromLinks = focusesNewTabsOpenedFromLinks
         self.automaticallyOpensPeek = automaticallyOpensPeek
         self.peekClickModifier = peekClickModifier
         self.quickWindowArchivePolicy = quickWindowArchivePolicy
@@ -86,6 +91,11 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
             SpaceID.self,
             forKey: .externalLinkSpaceID
         )
+        focusesNewTabsOpenedFromLinks =
+            try container.decodeIfPresent(
+                Bool.self,
+                forKey: .focusesNewTabsOpenedFromLinks
+            ) ?? false
         automaticallyOpensPeek =
             try container.decodeIfPresent(
                 Bool.self,

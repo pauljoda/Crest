@@ -271,6 +271,15 @@ final class BrowserWebHostView: NSView {
     private var isPageActive = false
     private var focusRestorationAttemptGeneration = 0
 
+    override func layout() {
+        super.layout()
+        guard let hostedWebView,
+            hostedWebView.superview === self,
+            hostedWebView.frame != bounds
+        else { return }
+        hostedWebView.frame = bounds
+    }
+
     func attach(
         _ webView: WKWebView,
         focusRestoration: BrowserWebFocusRestorationController? = nil

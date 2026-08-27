@@ -6,6 +6,266 @@ import XCTest
 
 @MainActor
 final class BrowserPagePoolTests: XCTestCase {
+    func testBackgroundModifiedLinkStartsLoadingWithoutChangingSelection() async throws {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(URL(string: "about:blank#background"))
+
+        context.open(destinationURL, selecting: false)
+
+        let backgroundTab = try XCTUnwrap(
+            context.openedTabs.first
+        )
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+        XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
+        let backgroundWebView = try XCTUnwrap(
+            context.pool.extensionWebView(
+                for: backgroundTab.id,
+                in: context.spaceID
+            )
+        )
+        try await waitForURL(destinationURL, in: backgroundWebView)
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+    }
+
+    func testSeveralRapidBackgroundModifiedLinksAllStartLoading() async throws {
+        let context = try makeModifiedLinkContext()
+        let destinations = try (1...4).map { index in
+            try XCTUnwrap(URL(string: "about:blank#background-\(index)"))
+        }
+
+        for destination in destinations {
+            context.open(destination, selecting: false)
+        }
+
+        XCTAssertEqual(context.openedTabs.count, destinations.count)
+        XCTAssertEqual(Set(context.openedTabs.compactMap(\.url)), Set(destinations))
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+        for tab in context.openedTabs {
+            XCTAssertTrue(context.pool.containsResidentPage(for: tab.id))
+            let webView = try XCTUnwrap(
+                context.pool.extensionWebView(for: tab.id, in: context.spaceID)
+            )
+            try await waitForURL(try XCTUnwrap(tab.url), in: webView)
+        }
+    }
+
+    func testCommandModifiedNewWindowPathStartsABackgroundTab() async throws {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(
+            URL(string: "https://background.crest.test/new-window")
+        )
+        var policy: WKNavigationActionPolicy?
+
+        context.sourcePage.webView(
+            context.sourcePage.webView,
+            decidePolicyFor: StubModifiedLinkNavigationAction(
+                url: destinationURL,
+                modifierFlags: .command,
+                buttonNumber: 0
+            )
+        ) { policy = $0 }
+
+        XCTAssertEqual(policy, .cancel)
+        let backgroundTab = try XCTUnwrap(context.openedTabs.first)
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
+        XCTAssertNotNil(
+            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+        )
+    }
+
+    func testMiddleClickNewWindowPathStartsABackgroundTab() async throws {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(
+            URL(string: "https://background.crest.test/middle-click")
+        )
+        var policy: WKNavigationActionPolicy?
+
+        context.sourcePage.webView(
+            context.sourcePage.webView,
+            decidePolicyFor: StubModifiedLinkNavigationAction(
+                url: destinationURL,
+                modifierFlags: [],
+                buttonNumber: 1 << 2
+            )
+        ) { policy = $0 }
+
+        XCTAssertEqual(policy, .cancel)
+        let backgroundTab = try XCTUnwrap(context.openedTabs.first)
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
+        XCTAssertNotNil(
+            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+        )
+    }
+
+    func testFocusNewTabsPreferenceSelectsACommandModifiedNewWindowTab() throws {
+        let originalPreference = BrowserLinkPreferenceStore.shared.preferences
+            .focusesNewTabsOpenedFromLinks
+        defer {
+            BrowserLinkPreferenceStore.shared.update {
+                $0.focusesNewTabsOpenedFromLinks = originalPreference
+            }
+        }
+        BrowserLinkPreferenceStore.shared.update {
+            $0.focusesNewTabsOpenedFromLinks = true
+        }
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(
+            URL(string: "https://background.crest.test/focused-command-click")
+        )
+        var policy: WKNavigationActionPolicy?
+
+        context.sourcePage.webView(
+            context.sourcePage.webView,
+            decidePolicyFor: StubModifiedLinkNavigationAction(
+                url: destinationURL,
+                modifierFlags: .command,
+                buttonNumber: 0
+            )
+        ) { policy = $0 }
+
+        XCTAssertEqual(policy, .cancel)
+        let openedTab = try XCTUnwrap(context.openedTabs.first)
+        XCTAssertEqual(context.store.selectedTab?.id, openedTab.id)
+
+        context.pool.select(session: context.store.session)
+
+        XCTAssertEqual(context.pool.activeTabID, openedTab.id)
+        XCTAssertTrue(context.pool.containsResidentPage(for: openedTab.id))
+    }
+
+    func testForegroundModifiedLinkStillLoadsThroughSelection() async throws {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(URL(string: "about:blank#foreground"))
+
+        context.open(destinationURL, selecting: true)
+
+        let foregroundTab = try XCTUnwrap(context.openedTabs.first)
+        XCTAssertEqual(context.store.selectedTab?.id, foregroundTab.id)
+        XCTAssertFalse(context.pool.containsResidentPage(for: foregroundTab.id))
+
+        context.pool.select(session: context.store.session)
+
+        XCTAssertEqual(context.pool.activeTabID, foregroundTab.id)
+        let webView = try XCTUnwrap(context.pool.activePage?.webView)
+        try await waitForURL(destinationURL, in: webView)
+    }
+
+    func testCompletedBackgroundNavigationUpdatesItsOwnTabAndHistory() async throws {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(
+            URL(string: "https://background.crest.test/completed")
+        )
+        context.open(destinationURL, selecting: false)
+        let backgroundTab = try XCTUnwrap(context.openedTabs.first)
+        let webView = try XCTUnwrap(
+            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+        )
+
+        webView.loadSimulatedRequest(
+            URLRequest(url: destinationURL),
+            responseHTML: "<html><head><title>Background Ready</title></head></html>"
+        )
+        try await waitForLoad(destinationURL, in: webView)
+
+        let updatedTab = try XCTUnwrap(
+            context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
+        )
+        XCTAssertEqual(updatedTab.title, "Background Ready")
+        XCTAssertEqual(context.store.selectedSpace?.history.last?.url, destinationURL)
+        XCTAssertTrue(
+            context.updates.values.contains {
+                $0.tabID == backgroundTab.id
+                    && $0.estimatedProgress == 1
+                    && !$0.isLoading
+            }
+        )
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+    }
+
+    func testBackgroundNavigationFailureUpdatesOnlyItsOwningTab() async throws {
+        let context = try makeModifiedLinkContext()
+        let initialURL = try XCTUnwrap(URL(string: "about:blank#before-failure"))
+        context.open(initialURL, selecting: false)
+        let backgroundTab = try XCTUnwrap(context.openedTabs.first)
+        let webView = try XCTUnwrap(
+            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+        )
+        try await waitForLoad(initialURL, in: webView)
+        let page = try XCTUnwrap(webView.navigationDelegate as? BrowserPage)
+        let failureURL = try XCTUnwrap(
+            URL(string: "https://failure-background.crest.test/unreachable")
+        )
+
+        page.load(failureURL)
+        try await waitForNavigationFailure(in: page)
+        try await waitForTab(backgroundTab.id, toReach: failureURL, in: context.store)
+
+        let failedTab = try XCTUnwrap(
+            context.store.selectedSpace?.tabs.first { $0.id == backgroundTab.id }
+        )
+        XCTAssertEqual(failedTab.url, failureURL)
+        XCTAssertEqual(failedTab.title, "failure-background.crest.test")
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+    }
+
+    func testBackgroundWebContentProcessRecoveryRemainsAssignedToItsTab()
+        async throws
+    {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(
+            URL(string: "about:blank#background-process-recovery")
+        )
+        context.open(destinationURL, selecting: false)
+        let backgroundTab = try XCTUnwrap(context.openedTabs.first)
+        let webView = try XCTUnwrap(
+            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+        )
+        try await waitForLoad(destinationURL, in: webView)
+        let page = try XCTUnwrap(webView.navigationDelegate as? BrowserPage)
+        let expectedTerminationCount = page.processTerminationCount + 1
+
+        page.webViewWebContentProcessDidTerminate(webView)
+        try await waitForBackgroundUpdate(
+            tabID: backgroundTab.id,
+            processTerminationCount: expectedTerminationCount,
+            in: context.updates
+        )
+
+        XCTAssertTrue(context.pool.containsResidentPage(for: backgroundTab.id))
+        XCTAssertEqual(context.store.selectedTab?.id, context.sourceTabID)
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+    }
+
+    func testBackgroundModifiedLinkBecomesMemoryPressureEligibleAfterInitialLoad()
+        async throws
+    {
+        let context = try makeModifiedLinkContext()
+        let destinationURL = try XCTUnwrap(
+            URL(string: "about:blank#settled-background")
+        )
+        context.open(destinationURL, selecting: false)
+        let backgroundTab = try XCTUnwrap(context.openedTabs.first)
+        let webView = try XCTUnwrap(
+            context.pool.extensionWebView(for: backgroundTab.id, in: context.spaceID)
+        )
+        try await waitForLoad(destinationURL, in: webView)
+        await Task.yield()
+
+        context.pool.handleMemoryPressure(.critical)
+        await context.pool.waitForPendingMemoryPressureResponse()
+
+        XCTAssertFalse(context.pool.containsResidentPage(for: backgroundTab.id))
+        XCTAssertEqual(context.pool.activeTabID, context.sourceTabID)
+        XCTAssertTrue(context.pool.containsResidentPage(for: context.sourceTabID))
+    }
+
     func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
         var session = BrowserSession.preview
         let pool = BrowserPagePool()
@@ -2325,6 +2585,77 @@ final class BrowserPagePoolTests: XCTestCase {
         }
     }
 
+    private func waitForURL(_ url: URL, in webView: WKWebView) async throws {
+        for attempt in 0..<200 {
+            if webView.url == url {
+                return
+            }
+            if attempt < 199 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        XCTFail("Timed out waiting for \(url).")
+    }
+
+    private func waitForLoad(_ url: URL, in webView: WKWebView) async throws {
+        for attempt in 0..<200 {
+            if webView.url == url, !webView.isLoading {
+                return
+            }
+            if attempt < 199 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        XCTFail("Timed out loading \(url).")
+    }
+
+    private func waitForNavigationFailure(in page: BrowserPage) async throws {
+        for attempt in 0..<200 {
+            if page.navigationFailure != nil {
+                return
+            }
+            if attempt < 199 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        XCTFail("Timed out waiting for a navigation failure.")
+    }
+
+    private func waitForTab(
+        _ tabID: TabID,
+        toReach url: URL,
+        in store: BrowserStore
+    ) async throws {
+        for attempt in 0..<200 {
+            if store.selectedSpace?.tabs.first(where: { $0.id == tabID })?.url == url {
+                return
+            }
+            if attempt < 199 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        XCTFail("Timed out waiting for tab \(tabID) to reach \(url).")
+    }
+
+    private func waitForBackgroundUpdate(
+        tabID: TabID,
+        processTerminationCount: Int,
+        in recorder: BrowserBackgroundPageUpdateRecorder
+    ) async throws {
+        for attempt in 0..<200 {
+            if recorder.values.contains(where: {
+                $0.tabID == tabID
+                    && $0.processTerminationCount == processTerminationCount
+            }) {
+                return
+            }
+            if attempt < 199 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        XCTFail("Timed out waiting for background process recovery.")
+    }
+
     /// Loads `url` as a simulated response so a back/forward entry exists without
     /// a network fixture, and waits for WebKit to commit it.
     private func load(_ url: URL, in page: BrowserPage) async throws {
@@ -2376,6 +2707,62 @@ final class BrowserPagePoolTests: XCTestCase {
             store: store,
             pool: pool,
             opener: try XCTUnwrap(pool.activePage)
+        )
+    }
+
+    private func makeModifiedLinkContext() throws -> ModifiedLinkContext {
+        let sourceTab = BrowserTab(title: "Source", url: nil, placement: .current)
+        let space = makeSpace(tabs: [sourceTab], selectedTabID: sourceTab.id)
+        let store = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let updates = BrowserBackgroundPageUpdateRecorder()
+        let pool = BrowserPagePool(
+            openModifiedLink: { url, spaceID, selecting in
+                guard
+                    let tabID = store.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ),
+                    let space = store.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
+                else { return nil }
+                return BrowserModifiedLinkRegistration(
+                    tab: tab,
+                    space: space,
+                    session: store.session
+                )
+            },
+            backgroundPageDidUpdate: { update in
+                updates.values.append(update)
+                store.updateTabFromPage(
+                    url: update.url,
+                    title: update.title,
+                    faviconData: update.faviconData,
+                    iconAccent: update.iconAccent,
+                    for: update.tabID,
+                    matching: update.assignment
+                )
+                if let url = update.completedNavigationURL {
+                    store.recordVisit(
+                        url: url,
+                        title: update.title,
+                        matching: update.assignment
+                    )
+                }
+                return store.session
+            }
+        )
+        pool.select(session: store.session)
+        return ModifiedLinkContext(
+            store: store,
+            pool: pool,
+            sourcePage: try XCTUnwrap(pool.activePage),
+            sourceTabID: sourceTab.id,
+            spaceID: space.id,
+            updates: updates
         )
     }
 
@@ -2605,6 +2992,29 @@ final class BrowserPageLifecyclePolicyTests: XCTestCase {
     }
 }
 
+@MainActor
+private struct ModifiedLinkContext {
+    let store: BrowserStore
+    let pool: BrowserPagePool
+    let sourcePage: BrowserPage
+    let sourceTabID: TabID
+    let spaceID: SpaceID
+    let updates: BrowserBackgroundPageUpdateRecorder
+
+    var openedTabs: [BrowserTab] {
+        store.selectedSpace?.tabs.filter { $0.id != sourceTabID } ?? []
+    }
+
+    func open(_ url: URL, selecting: Bool) {
+        sourcePage.openModifiedLink(url, spaceID, selecting)
+    }
+}
+
+@MainActor
+private final class BrowserBackgroundPageUpdateRecorder {
+    var values: [BrowserBackgroundPageUpdate] = []
+}
+
 /// One opener page, its pool, and the store that owns their tabs, so popup tests
 /// drive the real `WKUIDelegate` entry point instead of the pool's adoption API.
 @MainActor
@@ -2665,6 +3075,32 @@ final class StubPopupNavigationAction: WKNavigationAction,
     override var request: URLRequest { stubRequest }
     override var navigationType: WKNavigationType { stubNavigationType }
     override var targetFrame: WKFrameInfo? { nil }
+    var browserSourceOrigin: BrowserSiteOrigin? { nil }
+}
+
+private final class StubModifiedLinkNavigationAction: WKNavigationAction,
+    BrowserNavigationActionSourceOriginProviding
+{
+    private let stubRequest: URLRequest
+    private let stubModifierFlags: NSEvent.ModifierFlags
+    private let stubButtonNumber: Int
+
+    init(
+        url: URL,
+        modifierFlags: NSEvent.ModifierFlags,
+        buttonNumber: Int
+    ) {
+        stubRequest = URLRequest(url: url)
+        stubModifierFlags = modifierFlags
+        stubButtonNumber = buttonNumber
+        super.init()
+    }
+
+    override var request: URLRequest { stubRequest }
+    override var navigationType: WKNavigationType { .linkActivated }
+    override var targetFrame: WKFrameInfo? { nil }
+    override var modifierFlags: NSEvent.ModifierFlags { stubModifierFlags }
+    override var buttonNumber: Int { stubButtonNumber }
     var browserSourceOrigin: BrowserSiteOrigin? { nil }
 }
 

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -13,6 +14,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
         let preferences = BrowserLinkPreferences(
             externalLinkDestination: .chosenSpace,
             externalLinkSpaceID: destinationSpaceID,
+            focusesNewTabsOpenedFromLinks: true,
             automaticallyOpensPeek: false,
             peekClickModifier: .command,
             quickWindowArchivePolicy: .after24Hours,
@@ -44,12 +46,13 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
             [
                 "externalLinkDestination",
                 "externalLinkSpaceID",
+                "focusesNewTabsOpenedFromLinks",
                 "automaticallyOpensPeek",
                 "peekClickModifier",
                 "quickWindowArchivePolicy",
                 "remembersQuickWindowSpaceBySite",
                 "routes",
-                "rememberedQuickWindowSpacesBySite"
+                "rememberedQuickWindowSpacesBySite",
             ]
         )
         XCTAssertEqual(
@@ -76,6 +79,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
         let restored = try XCTUnwrap(persistence.load())
 
         XCTAssertEqual(restored.externalLinkDestination, .mostRecentSpace)
+        XCTAssertFalse(restored.focusesNewTabsOpenedFromLinks)
         XCTAssertFalse(restored.automaticallyOpensPeek)
         XCTAssertEqual(restored.peekClickModifier, .option)
         XCTAssertEqual(restored.quickWindowArchivePolicy, .after6Hours)
@@ -129,7 +133,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
                 match: .contains,
                 pattern: "example.com",
                 destinationSpaceID: lastSpaceID
-            )
+            ),
         ]
         let exactURL = try XCTUnwrap(
             URL(string: "https://EXAMPLE.com/reference#visited-fragment")

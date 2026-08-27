@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crest Background Tab Fixture</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: ui-rounded, system-ui, sans-serif;
+      background: Canvas;
+      color: CanvasText;
+    }
+    body { margin: 0 auto; max-width: 920px; padding: 40px; }
+    h1 { margin-bottom: 8px; }
+    p { color: color-mix(in srgb, CanvasText 65%, transparent); }
+    section {
+      border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+      border-radius: 18px;
+      margin: 20px 0;
+      padding: 20px;
+    }
+    .links { display: flex; flex-wrap: wrap; gap: 12px; }
+    a, button {
+      background: #6558d3;
+      border: 0;
+      border-radius: 999px;
+      color: white;
+      cursor: pointer;
+      font: inherit;
+      padding: 10px 16px;
+      text-decoration: none;
+    }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border-bottom: 1px solid color-mix(in srgb, CanvasText 12%, transparent); padding: 8px; text-align: left; }
+    code { font-size: 12px; }
+    #status { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Background tab loading</h1>
+  <p id="status">Source tab selected · waiting for background requests</p>
+
+  <section>
+    <h2>Open paths</h2>
+    <div class="links">
+      <a id="ordinary" href="background-tab-destination.html?id=ordinary">Ordinary foreground</a>
+      <a id="target-blank" target="_blank" href="background-tab-destination.html?id=target-blank">Target new window</a>
+      <a id="failure" href="#">Failure</a>
+      <a id="download" href="download.txt">Download only</a>
+      <button id="automatic-popup" type="button">Automatic popup</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Rapid destinations</h2>
+    <div class="links">
+      <a id="rapid-a" href="background-tab-destination.html?id=rapid-a">Rapid A</a>
+      <a id="rapid-b" href="background-tab-destination.html?id=rapid-b">Rapid B</a>
+      <a id="rapid-c" href="background-tab-destination.html?id=rapid-c">Rapid C</a>
+      <a id="rapid-d" href="background-tab-destination.html?id=rapid-d">Rapid D</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Server evidence</h2>
+    <table>
+      <thead><tr><th>Request</th><th>Starts</th><th>Completed bytes</th></tr></thead>
+      <tbody id="metrics"><tr><td colspan="3">No destination requests yet.</td></tr></tbody>
+    </table>
+  </section>
+
+  <script>
+    const metricsBody = document.querySelector("#metrics");
+    const status = document.querySelector("#status");
+    const destinationPattern = /background-tab-destination|download\.txt/;
+
+    document.querySelector("#failure").href =
+      `http://127.0.0.1:${Number(location.port) + 1}/fixture-failure`;
+    const automaticPopupButton = document.querySelector("#automatic-popup");
+    automaticPopupButton.addEventListener("click", () => {
+      location.search = "automatic-popup=1";
+    });
+    if (new URLSearchParams(location.search).has("automatic-popup")) {
+      setTimeout(() => {
+        window.open("background-tab-destination.html?id=automatic-popup");
+      }, 400);
+    }
+
+    async function refreshMetrics() {
+      try {
+        const response = await fetch("/__crest_network_metrics__", { cache: "no-store" });
+        const snapshot = await response.json();
+        const rows = Object.entries(snapshot.requests)
+          .filter(([path]) => destinationPattern.test(path))
+          .map(([path, starts]) => ({
+            path,
+            starts,
+            bytes: snapshot.responseBytes[path] ?? 0,
+          }));
+        if (rows.length > 0) {
+          metricsBody.replaceChildren(...rows.map((row) => {
+            const tr = document.createElement("tr");
+            const path = document.createElement("td");
+            const starts = document.createElement("td");
+            const bytes = document.createElement("td");
+            path.append(Object.assign(document.createElement("code"), { textContent: row.path }));
+            starts.textContent = String(row.starts);
+            bytes.textContent = row.bytes > 0 ? `${row.bytes} ✓` : "in progress";
+            tr.append(path, starts, bytes);
+            return tr;
+          }));
+          const completed = rows.filter((row) => row.bytes > 0).length;
+          status.textContent = `Source tab selected · ${rows.length} started · ${completed} completed`;
+        }
+      } catch (error) {
+        status.textContent = `Fixture metrics unavailable: ${error}`;
+      }
+    }
+
+    setInterval(refreshMetrics, 200);
+    refreshMetrics();
+  </script>
+</body>
+</html>

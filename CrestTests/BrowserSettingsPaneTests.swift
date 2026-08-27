@@ -151,6 +151,26 @@ final class BrowserSettingsPaneTests: XCTestCase {
         )
     }
 
+    func testGeneralSettingsPresentsTheNewTabFocusControlDefaultingOff() {
+        let preferences = BrowserLinkPreferenceStore(
+            persistence: InMemoryBrowserLinkPreferencesPersistence()
+        )
+        let section = BrowserNewTabSettingsSection(preferences: preferences)
+
+        XCTAssertFalse(preferences.preferences.focusesNewTabsOpenedFromLinks)
+        XCTAssertEqual(
+            BrowserNewTabSettingsSection.controlIdentifier,
+            "focus-new-tabs-opened-from-links-toggle"
+        )
+        XCTAssertNotNil(section.body)
+        XCTAssertTrue(
+            BrowserSettingsDestination.general.matchesSearchQuery(
+                "focus new tabs",
+                locale: Locale(identifier: "en_US")
+            )
+        )
+    }
+
     /// The Setup section is data because the two shells offer different setup
     /// capabilities, so a caller's action has to survive the trip into the pane.
     func testAdvancedSetupActionCarriesItsIdentityAndFires() {

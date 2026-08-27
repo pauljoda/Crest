@@ -305,6 +305,10 @@
     "2026-08-26-transient-new-window-navigation": {
       "category": "fixed",
       "message": "Keep new-window links inside Peek and Quick Window instead of hiding them in background tabs"
+    },
+    "2026-08-27-eager-background-tabs": {
+      "category": "fixed",
+      "message": "Start loading tabs opened from links right away, with an option to select them automatically"
     }
   }
 }

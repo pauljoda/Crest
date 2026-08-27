@@ -1574,10 +1574,19 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             extensionControllerPool: pool,
             openModifiedLink: { url, spaceID, selecting in
                 openedURL = url
-                browser.openNewTab(
-                    url: url,
-                    in: spaceID,
-                    selecting: selecting
+                guard
+                    let tabID = browser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ),
+                    let space = browser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
+                else { return nil }
+                return BrowserModifiedLinkRegistration(
+                    tab: tab,
+                    space: space,
+                    session: browser.session
                 )
             }
         )

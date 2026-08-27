@@ -81,6 +81,24 @@ final class BrowserWebHostViewTests: XCTestCase {
         )
     }
 
+    func testLayoutRepairsAnAttachedPreloadedWebViewsStaleGeometry() {
+        let host = BrowserWebHostView(
+            frame: NSRect(x: 0, y: 0, width: 720, height: 540)
+        )
+        let webView = WKWebView()
+
+        host.attach(webView)
+        webView.frame = .zero
+        host.needsLayout = true
+        host.layoutSubtreeIfNeeded()
+
+        XCTAssertEqual(
+            webView.frame,
+            host.bounds,
+            "A page that finished loading off screen must fill its host on first presentation."
+        )
+    }
+
     func testFocusPolicyRequiresAPermittedOwnerAndNoCompetingPresentation() {
         let allowed = BrowserWebFocusRestorationGate(
             browserChromeOwnsFocus: false,

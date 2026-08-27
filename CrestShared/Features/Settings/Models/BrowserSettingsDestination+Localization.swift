@@ -51,7 +51,7 @@ extension BrowserSettingsDestination {
     var searchTerms: LocalizedStringResource {
         switch self {
         case .general:
-            "browser startup default Space transparency sidebar interface page zoom percentage typing smart quotes punctuation"
+            "browser startup default Space transparency sidebar interface page zoom percentage typing smart quotes punctuation focus new tabs Command-click middle-click"
         case .links:
             "external apps Quick Window Peek pinned saved routing open"
         case .shortcuts:

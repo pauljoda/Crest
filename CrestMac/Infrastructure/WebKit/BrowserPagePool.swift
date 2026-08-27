@@ -5,6 +5,53 @@ import Observation
 import WebKit
 import os
 
+struct BrowserModifiedLinkRegistration {
+    let tab: BrowserTab
+    let space: BrowserSpace
+    let session: BrowserSession
+}
+
+struct BrowserBackgroundPageUpdate {
+    let tabID: TabID
+    let assignment: BrowserSpaceRuntimeAssignment
+    let url: URL?
+    let title: String
+    let faviconData: Data?
+    let iconAccent: BrowserTabIconAccent?
+    let estimatedProgress: Double
+    let isLoading: Bool
+    let readerModeState: BrowserReaderModeState
+    let completedNavigationURL: URL?
+    let processTerminationCount: Int
+}
+
+@MainActor
+private struct BrowserBackgroundPageSnapshot: Equatable {
+    let url: URL?
+    let title: String
+    let faviconData: Data?
+    let iconAccent: BrowserTabIconAccent?
+    let estimatedProgress: Double
+    let isLoading: Bool
+    let readerModeState: BrowserReaderModeState
+    let completedNavigationCount: Int
+    let processTerminationCount: Int
+    let hasNavigationFailure: Bool
+
+    init(page: BrowserPage) {
+        url = page.displayURL
+        title = page.navigationFailure?.displayHost ?? page.title
+        faviconData = page.faviconData
+        iconAccent = page.siteThemeIconAccent
+        estimatedProgress = page.estimatedProgress
+        isLoading = page.isLoading
+        readerModeState = page.readerModeState
+        completedNavigationCount = page.completedNavigationCount
+        processTerminationCount = page.processTerminationCount
+        hasNavigationFailure = page.navigationFailure != nil
+    }
+}
+
 @Observable
 @MainActor
 final class BrowserPagePool:
@@ -31,6 +78,12 @@ final class BrowserPagePool:
 
     typealias ResidencyDecisionProvider =
         @MainActor (BrowserPage, Bool) async -> BrowserPageResidencyDecision
+
+    typealias ModifiedLinkOpener =
+        @MainActor (URL, SpaceID, Bool) -> BrowserModifiedLinkRegistration?
+
+    typealias BackgroundPageUpdateHandler =
+        @MainActor (BrowserBackgroundPageUpdate) -> BrowserSession?
 
     /// The focused card: the one tab the URL bar, navigation controls, find,
     /// zoom, sharing, and every lifecycle observer speak for. Split View adds
@@ -79,7 +132,8 @@ final class BrowserPagePool:
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
     @ObservationIgnored private let openNewTab: (URL) -> Void
-    @ObservationIgnored private let openModifiedLink: (URL, SpaceID, Bool) -> Void
+    @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
+    @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
@@ -107,6 +161,8 @@ final class BrowserPagePool:
     /// handed in.
     @ObservationIgnored private let tabStateArchive: (any BrowserTabStateArchiving)?
     @ObservationIgnored private var lastPrunedTabIDsByProfileID: [UUID: Set<TabID>] = [:]
+    @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
+    @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
     init(
         monitorsMemoryPressure: Bool = false,
@@ -135,7 +191,8 @@ final class BrowserPagePool:
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         popupTabHost: BrowserPopupTabHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
-        openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
+        openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
+        backgroundPageDidUpdate: @escaping BackgroundPageUpdateHandler = { _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
         activateHostedNotificationSource:
@@ -173,6 +230,7 @@ final class BrowserPagePool:
         self.contentRuleListProvider = contentRuleListProvider
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
+        self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
         self.splitLinkHost = splitLinkHost
         self.activateHostedNotificationSource = activateHostedNotificationSource
@@ -480,6 +538,111 @@ final class BrowserPagePool:
         for card in cards {
             loadInitialURL(for: card.tab, into: card.page)
         }
+    }
+
+    private func openModifiedLink(
+        _ url: URL,
+        in spaceID: SpaceID,
+        selecting: Bool
+    ) {
+        guard let registration = openModifiedLink(url, spaceID, selecting) else {
+            return
+        }
+        guard !selecting else { return }
+        let page = page(for: registration.tab, space: registration.space)
+        observeBackgroundPage(
+            page,
+            for: registration.tab.id,
+            in: registration.space
+        )
+        extensionControllerPool.reconcileExtensionState(in: registration.session)
+        loadInitialURL(for: registration.tab, into: page)
+        reconcileCredentialAccess(in: registration.session)
+    }
+
+    private func observeBackgroundPage(
+        _ page: BrowserPage,
+        for tabID: TabID,
+        in space: BrowserSpace
+    ) {
+        backgroundPageAssignments[tabID] = BrowserSpaceRuntimeAssignment(space: space)
+        backgroundPageSnapshots[tabID] = BrowserBackgroundPageSnapshot(page: page)
+        trackBackgroundPageChanges(page, for: tabID)
+    }
+
+    private func trackBackgroundPageChanges(_ page: BrowserPage, for tabID: TabID) {
+        withObservationTracking {
+            _ = BrowserBackgroundPageSnapshot(page: page)
+        } onChange: { [weak self, weak page] in
+            Task { @MainActor in
+                guard let self, let page else { return }
+                self.backgroundPageDidChange(page, for: tabID)
+            }
+        }
+    }
+
+    private func backgroundPageDidChange(_ page: BrowserPage, for tabID: TabID) {
+        guard pages[tabID] === page,
+            let assignment = backgroundPageAssignments[tabID]
+        else {
+            forgetBackgroundPageObservation(for: tabID)
+            return
+        }
+        let previous = backgroundPageSnapshots[tabID]
+        let current = BrowserBackgroundPageSnapshot(page: page)
+        backgroundPageSnapshots[tabID] = current
+        trackBackgroundPageChanges(page, for: tabID)
+
+        let initialNavigationSettled =
+            current.completedNavigationCount > 0
+            || current.hasNavigationFailure
+            || (previous?.isLoading == true && !current.isLoading)
+        if initialNavigationSettled,
+            !presentedTabIDs.contains(tabID),
+            inactiveSinceByTabID[tabID] == nil
+        {
+            inactiveSinceByTabID[tabID] = .now
+        }
+
+        guard previous != current, !presentedTabIDs.contains(tabID) else {
+            return
+        }
+        let completedNavigationURL: URL? =
+            if let previous,
+                current.completedNavigationCount > previous.completedNavigationCount
+            {
+                page.url
+            } else {
+                nil
+            }
+        let update = BrowserBackgroundPageUpdate(
+            tabID: tabID,
+            assignment: assignment,
+            url: current.url,
+            title: current.title,
+            faviconData: current.faviconData,
+            iconAccent: current.iconAccent,
+            estimatedProgress: current.estimatedProgress,
+            isLoading: current.isLoading,
+            readerModeState: current.readerModeState,
+            completedNavigationURL: completedNavigationURL,
+            processTerminationCount: current.processTerminationCount
+        )
+        guard let session = backgroundPageDidUpdate(update) else { return }
+        extensionControllerPool.reconcileExtensionState(in: session)
+        if completedNavigationURL != nil,
+            let space = session.space(id: assignment.spaceID),
+            space.profile.id == assignment.profileID
+        {
+            Task { @MainActor [weak self] in
+                await self?.styleVisitedLinks(in: space)
+            }
+        }
+    }
+
+    private func forgetBackgroundPageObservation(for tabID: TabID) {
+        backgroundPageSnapshots[tabID] = nil
+        backgroundPageAssignments[tabID] = nil
     }
 
     /// The cards `tab` brings on screen, with the caller's own tab value in
@@ -1144,6 +1307,12 @@ final class BrowserPagePool:
             transientLeases.removeValue(forKey: entry.key)
             return
         }
+        if let tabID = tabID(for: page), pages[tabID] === page,
+            !presentedTabIDs.contains(tabID),
+            inactiveSinceByTabID[tabID] == nil
+        {
+            inactiveSinceByTabID[tabID] = .now
+        }
         closeWebContentInitiatedPage(page)
     }
 
@@ -1267,6 +1436,7 @@ final class BrowserPagePool:
         // was left.
         archiveTabState(for: tabID)
         guard let page = pages.removeValue(forKey: tabID) else { return }
+        forgetBackgroundPageObservation(for: tabID)
         page.prepareForSpaceDeletion()
         releaseSuspendedPages(for: tabID)
         inactiveSinceByTabID[tabID] = nil
@@ -1514,6 +1684,7 @@ final class BrowserPagePool:
             )
             existingPage.prepareForSpaceDeletion()
             pages.removeValue(forKey: tab.id)
+            forgetBackgroundPageObservation(for: tab.id)
             releaseSuspendedPages(for: tab.id)
             inactiveSinceByTabID[tab.id] = nil
         }
@@ -1639,7 +1810,9 @@ final class BrowserPagePool:
                 try await saveHTTPAuthenticationCredential(request, space.id)
             },
             openNewTab: openNewTab,
-            openModifiedLink: openModifiedLink,
+            openModifiedLink: { [weak self] url, spaceID, selecting in
+                self?.openModifiedLink(url, in: spaceID, selecting: selecting)
+            },
             openPeek: openPeek,
             splitLinkHost: splitLinkHost,
             extensionWebpageMenuItems: {
@@ -1877,6 +2050,7 @@ final class BrowserPagePool:
         var probes: [BrowserSpaceDataReleaseProbe] = []
         for tabID in tabIDs {
             if let page = pages.removeValue(forKey: tabID) {
+                forgetBackgroundPageObservation(for: tabID)
                 probes.append(BrowserSpaceDataReleaseProbe(page))
                 page.prepareForSpaceDeletion()
                 releasedAnyPage = true
@@ -1963,6 +2137,7 @@ final class BrowserPagePool:
             archiveTabState(for: tabID)
         }
         guard let page = pages.removeValue(forKey: tabID) else { return }
+        forgetBackgroundPageObservation(for: tabID)
         page.prepareForSpaceDeletion()
         releaseSuspendedPages(for: tabID)
         residencyRevision &+= 1

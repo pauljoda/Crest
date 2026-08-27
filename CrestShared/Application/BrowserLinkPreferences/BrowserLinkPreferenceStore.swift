@@ -13,6 +13,11 @@ final class BrowserLinkPreferenceStore {
         preferences = persistence.load() ?? .default
     }
 
+    var focusesNewTabsOpenedFromLinks: Bool {
+        get { preferences.focusesNewTabsOpenedFromLinks }
+        set { update { $0.focusesNewTabsOpenedFromLinks = newValue } }
+    }
+
     func update(_ update: (inout BrowserLinkPreferences) -> Void) {
         var revised = preferences
         update(&revised)
