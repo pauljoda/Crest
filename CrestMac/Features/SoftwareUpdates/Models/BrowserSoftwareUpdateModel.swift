@@ -27,6 +27,7 @@ final class BrowserSoftwareUpdateModel {
     @ObservationIgnored private var cancellation: (() -> Void)?
     @ObservationIgnored private var install: (() -> Void)?
     @ObservationIgnored private var skip: (() -> Void)?
+    @ObservationIgnored private var dismiss: (() -> Void)?
     @ObservationIgnored private var installAndRelaunch: (() -> Void)?
     @ObservationIgnored private var retryTermination: (() -> Void)?
     @ObservationIgnored private var acknowledgement: (() -> Void)?
@@ -71,7 +72,8 @@ final class BrowserSoftwareUpdateModel {
         isFixture: Bool = false,
         suppressesWindowPresentation: Bool = false,
         install: @escaping () -> Void,
-        skip: @escaping () -> Void
+        skip: @escaping () -> Void,
+        dismiss: @escaping () -> Void = {}
     ) {
         resetCallbacks()
         phase = .updateAvailable
@@ -85,6 +87,7 @@ final class BrowserSoftwareUpdateModel {
         self.suppressesWindowPresentation = suppressesWindowPresentation
         self.install = install
         self.skip = skip
+        self.dismiss = dismiss
         message =
             isInformationOnly
             ? "This release is available from the Crest website."
@@ -208,6 +211,29 @@ final class BrowserSoftwareUpdateModel {
         install()
     }
 
+    /// Ends only an undownloaded available-update choice so Sparkle can run a
+    /// fresh feed check. This is intentionally distinct from `.skip`, which
+    /// persists a version exclusion, and is unavailable once download or
+    /// installation work has begun.
+    @discardableResult
+    func beginRefreshingAvailableUpdate(
+        suppressesWindowPresentation: Bool
+    ) -> Bool {
+        guard phase == .updateAvailable, let dismiss else { return false }
+        resetCallbacks()
+        phase = .checking
+        message = "Checking whether a newer Crest update is available…"
+        self.suppressesWindowPresentation = suppressesWindowPresentation
+        present()
+        dismiss()
+        return true
+    }
+
+    func finishRefreshIfNeeded() {
+        guard phase == .checking else { return }
+        reset()
+    }
+
     /// Hides only the update window. The pending Sparkle choice stays alive so
     /// the global widget remains actionable until the user installs or skips
     /// this exact build.
@@ -240,6 +266,7 @@ final class BrowserSoftwareUpdateModel {
         let reply = installAndRelaunch
         installAndRelaunch = nil
         skip = nil
+        dismiss = nil
         phase = .installing
         publishWidgetState()
         reply?()
@@ -323,6 +350,7 @@ final class BrowserSoftwareUpdateModel {
         cancellation = nil
         install = nil
         skip = nil
+        dismiss = nil
         installAndRelaunch = nil
         retryTermination = nil
         canRetryTermination = false

@@ -7,13 +7,17 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
 {
     let model: BrowserSoftwareUpdateModel
     var channel: BrowserSoftwareUpdateChannel
+    var updateCycleDidFinish: (() -> Void)?
+    private let feedURLOverride: URL?
 
     init(
         model: BrowserSoftwareUpdateModel,
-        channel: BrowserSoftwareUpdateChannel
+        channel: BrowserSoftwareUpdateChannel,
+        feedURLOverride: URL? = nil
     ) {
         self.model = model
         self.channel = channel
+        self.feedURLOverride = feedURLOverride
         super.init()
     }
 
@@ -50,7 +54,8 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
             isInformationOnly: appcastItem.isInformationOnlyUpdate,
             suppressesWindowPresentation: !state.userInitiated,
             install: { reply(.install) },
-            skip: { reply(.skip) }
+            skip: { reply(.skip) },
+            dismiss: { reply(.dismiss) }
         )
     }
 
@@ -150,12 +155,20 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         model.focus()
     }
 
+    func updater(
+        _ updater: SPUUpdater,
+        didFinishUpdateCycleFor updateCheck: SPUUpdateCheck,
+        error: (any Error)?
+    ) {
+        updateCycleDidFinish?()
+    }
+
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {
         channel.allowedSparkleChannels
     }
 
     func feedURLString(for updater: SPUUpdater) -> String? {
-        channel.customFeedURL?.absoluteString
+        feedURLOverride?.absoluteString ?? channel.customFeedURL?.absoluteString
     }
 
     private func noUpdateMessage(_ error: any Error) -> String {

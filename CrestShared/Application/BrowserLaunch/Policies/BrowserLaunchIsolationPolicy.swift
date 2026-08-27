@@ -18,5 +18,6 @@ enum BrowserLaunchIsolationPolicy {
             || environment.forcesMacOnboardingSetup
             || environment.forcesMobileOnboardingSetup
             || environment.performanceBaseURLString != nil
+            || environment.isolatedSoftwareUpdateFeedURL != nil
     }
 }

@@ -1,3 +1,5 @@
+import Foundation
+
 struct BrowserLaunchEnvironment: Equatable, Sendable {
     let explicitlyRequiresIsolation: Bool
     let persistentIsolationID: String?
@@ -11,6 +13,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     let performanceTabCount: String?
     let performanceRunID: String
     let softwareUpdateWidgetFixture: String?
+    let isolatedSoftwareUpdateFeedURL: URL?
     let isXCTestRuntime: Bool
     let isSwiftUIPreviewRuntime: Bool
 
@@ -43,6 +46,9 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
             values[
                 Key.softwareUpdateWidgetFixture.rawValue
             ]
+        isolatedSoftwareUpdateFeedURL = Self.loopbackSoftwareUpdateFeedURL(
+            values[Key.softwareUpdateTestFeedURL.rawValue]
+        )
         self.isXCTestRuntime = isXCTestRuntime
         self.isSwiftUIPreviewRuntime = isSwiftUIPreviewRuntime
     }
@@ -62,6 +68,23 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         return String(normalized.prefix(48))
     }
 
+    private static func loopbackSoftwareUpdateFeedURL(_ value: String?) -> URL? {
+        guard let value, var components = URLComponents(string: value) else {
+            return nil
+        }
+        let loopbackHosts = ["127.0.0.1", "localhost", "::1"]
+        guard
+            components.scheme?.lowercased() == "http",
+            components.user == nil,
+            components.password == nil,
+            let host = components.host?.lowercased(),
+            loopbackHosts.contains(host),
+            !components.path.isEmpty
+        else { return nil }
+        components.fragment = nil
+        return components.url
+    }
+
     private enum Key: String {
         case isolatedSession = "CREST_ISOLATED_SESSION"
         case persistentIsolationID = "CREST_ISOLATED_PERSISTENCE_ID"
@@ -75,6 +98,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         case performanceTabCount = "CREST_PERFORMANCE_TAB_COUNT"
         case performanceRunID = "CREST_PERFORMANCE_RUN_ID"
         case softwareUpdateWidgetFixture = "CREST_UPDATE_WIDGET_FIXTURE"
+        case softwareUpdateTestFeedURL = "CREST_UPDATE_TEST_FEED_URL"
     }
 
     private enum Defaults {

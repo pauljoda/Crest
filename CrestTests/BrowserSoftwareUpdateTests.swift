@@ -28,7 +28,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(
             Bundle.main.object(forInfoDictionaryKey: "SUScheduledCheckInterval")
                 as? Double,
-            60 * 60
+            BrowserSoftwareUpdateRefreshCoordinator.minimumAutomaticCheckInterval
         )
         XCTAssertEqual(
             Bundle.main.object(forInfoDictionaryKey: "SUAutomaticallyUpdate") as? Bool,

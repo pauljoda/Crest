@@ -148,8 +148,14 @@ struct CrestApp: App {
             ? BrowserSystemNowPlayingCoordinator(store: mediaSessions)
             : nil
         systemNowPlaying?.start()
+        let isolatedSoftwareUpdateFeed =
+            launchEnvironment.isolatedSoftwareUpdateFeedURL
         let softwareUpdates = BrowserSoftwareUpdateService(
-            isEnabled: presentsInstalledApplicationUI && !usesIsolatedLaunch
+            isEnabled: presentsInstalledApplicationUI
+                && (!usesIsolatedLaunch || isolatedSoftwareUpdateFeed != nil),
+            preferences: usesIsolatedLaunch ? nil : .standard,
+            defaultChannel: isolatedSoftwareUpdateFeed.map { _ in .development },
+            feedURLOverride: isolatedSoftwareUpdateFeed
         )
         if usesIsolatedLaunch,
             let fixture = launchEnvironment.softwareUpdateWidgetFixture
@@ -400,7 +406,8 @@ struct CrestApp: App {
                             spaceSettingsPresentation: spaceSettingsPresentation,
                             startupBehavior: startupBehavior,
                             shortcuts: shortcuts,
-                            sidebarWidgets: sidebarWidgets
+                            sidebarWidgets: sidebarWidgets,
+                            softwareUpdates: softwareUpdates
                         )
                         .environment(windowTransparency)
                         .environment(splitFocus)

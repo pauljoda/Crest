@@ -18,6 +18,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
                 "CREST_PERFORMANCE_TAB_COUNT": "12",
                 "CREST_PERFORMANCE_RUN_ID": "run-42",
                 "CREST_UPDATE_WIDGET_FIXTURE": "ready:0.5.99:599",
+                "CREST_UPDATE_TEST_FEED_URL": "http://127.0.0.1:48151/appcast.xml",
             ],
             isXCTestRuntime: true,
             isSwiftUIPreviewRuntime: true
@@ -40,6 +41,10 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         XCTAssertEqual(
             environment.softwareUpdateWidgetFixture,
             "ready:0.5.99:599"
+        )
+        XCTAssertEqual(
+            environment.isolatedSoftwareUpdateFeedURL?.absoluteString,
+            "http://127.0.0.1:48151/appcast.xml"
         )
         XCTAssertTrue(environment.isXCTestRuntime)
         XCTAssertTrue(environment.isSwiftUIPreviewRuntime)
@@ -89,6 +94,17 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         XCTAssertTrue(
             BrowserLaunchIsolationPolicy.requiresIsolation(
                 BrowserLaunchEnvironment(
+                    values: [
+                        "CREST_UPDATE_TEST_FEED_URL":
+                            "http://localhost:48151/appcast.xml"
+                    ],
+                    isXCTestRuntime: false
+                )
+            )
+        )
+        XCTAssertTrue(
+            BrowserLaunchIsolationPolicy.requiresIsolation(
+                BrowserLaunchEnvironment(
                     values: ["CREST_RESET_SESSION": "1"],
                     isXCTestRuntime: false
                 )
@@ -128,6 +144,22 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
                 )
             )
         )
+    }
+
+    func testUpdateTestFeedAcceptsOnlyLoopbackHTTPURLs() {
+        let rejectedValues = [
+            "https://raw.githubusercontent.com/example/appcast.xml",
+            "http://example.com/appcast.xml",
+            "file:///tmp/appcast.xml",
+        ]
+
+        for value in rejectedValues {
+            let environment = BrowserLaunchEnvironment(
+                values: ["CREST_UPDATE_TEST_FEED_URL": value],
+                isXCTestRuntime: false
+            )
+            XCTAssertNil(environment.isolatedSoftwareUpdateFeedURL)
+        }
     }
 
     func testOnlyTheXCTestRuntimeSuppressesInstalledApplicationUI() {

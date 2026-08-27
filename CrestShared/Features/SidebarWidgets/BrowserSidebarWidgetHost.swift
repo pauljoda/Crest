@@ -3,6 +3,7 @@ import SwiftUI
 
 extension EnvironmentValues {
     @Entry var browserSidebarWidgetRuntime: BrowserSidebarWidgetRuntime? = nil
+    @Entry var browserApplicationIcon: Image? = nil
 }
 
 /// Geometry and finish shared by every card in the sidebar widget deck.
@@ -1157,14 +1158,8 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
 
     private var headerRow: some View {
         HStack(alignment: .top, spacing: CrestSpacing.small) {
-            CrestIconTile(
-                systemImage: "arrow.down.app.fill",
-                color: CrestBrandTheme.accent,
-                size: BrowserSidebarWidgetDeckStyle.headerTileSize,
-                cornerRadius: CrestRadius.compact,
-                castsShadow: true
-            )
-            .accessibilityHidden(true)
+            BrowserSoftwareUpdateApplicationIcon()
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 HStack(spacing: CrestSpacing.extraSmall) {
@@ -1301,6 +1296,20 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
         case .failed: "Update error"
         case .unavailable: "Unavailable"
         }
+    }
+}
+
+private struct BrowserSoftwareUpdateApplicationIcon: View {
+    @Environment(\.browserApplicationIcon) private var applicationIcon
+
+    var body: some View {
+        (applicationIcon ?? Image(systemName: "app.fill"))
+            .resizable()
+            .scaledToFit()
+            .frame(
+                width: BrowserSidebarWidgetDeckStyle.headerTileSize,
+                height: BrowserSidebarWidgetDeckStyle.headerTileSize
+            )
     }
 }
 

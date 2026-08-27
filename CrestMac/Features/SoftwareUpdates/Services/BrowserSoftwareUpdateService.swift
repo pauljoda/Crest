@@ -18,18 +18,21 @@ final class BrowserSoftwareUpdateService {
         didSet {
             userDriver.channel = channel
             preferences?.set(channel.rawValue, forKey: Self.channelPreferenceKey)
-            updater.resetUpdateCycleAfterShortDelay()
+            guard isEnabled else { return }
+            refreshCoordinator.channelDidChange()
         }
     }
 
     @ObservationIgnored private let preferences: UserDefaults?
     @ObservationIgnored private let userDriver: BrowserSoftwareUpdateUserDriver
     @ObservationIgnored private let updater: SPUUpdater
+    @ObservationIgnored private let refreshCoordinator: BrowserSoftwareUpdateRefreshCoordinator
 
     init(
         isEnabled: Bool,
         preferences: UserDefaults? = .standard,
-        defaultChannel: BrowserSoftwareUpdateChannel? = nil
+        defaultChannel: BrowserSoftwareUpdateChannel? = nil,
+        feedURLOverride: URL? = nil
     ) {
         let bundledDefaultChannel =
             defaultChannel
@@ -47,7 +50,8 @@ final class BrowserSoftwareUpdateService {
         let model = BrowserSoftwareUpdateModel(widgetSource: widgetSource)
         let userDriver = BrowserSoftwareUpdateUserDriver(
             model: model,
-            channel: channel
+            channel: channel,
+            feedURLOverride: feedURLOverride
         )
         self.model = model
         self.widgetSource = widgetSource
@@ -55,12 +59,21 @@ final class BrowserSoftwareUpdateService {
         self.preferences = preferences
         self.channel = channel
         self.userDriver = userDriver
-        updater = SPUUpdater(
+        let updater = SPUUpdater(
             hostBundle: .main,
             applicationBundle: .main,
             userDriver: userDriver,
             delegate: userDriver
         )
+        let refreshCoordinator = BrowserSoftwareUpdateRefreshCoordinator(
+            updater: updater,
+            model: model
+        )
+        self.updater = updater
+        self.refreshCoordinator = refreshCoordinator
+        userDriver.updateCycleDidFinish = { [weak refreshCoordinator] in
+            refreshCoordinator?.updateCycleDidFinish()
+        }
 
         guard isEnabled else { return }
         startUpdater()
@@ -90,7 +103,12 @@ final class BrowserSoftwareUpdateService {
             )
             return
         }
-        updater.checkForUpdates()
+        refreshCoordinator.checkForUpdates()
+    }
+
+    func applicationDidBecomeActive() {
+        guard isEnabled else { return }
+        refreshCoordinator.applicationDidBecomeActive()
     }
 
     /// Presents updater states for an explicitly isolated verification launch.
@@ -147,6 +165,7 @@ final class BrowserSoftwareUpdateService {
         do {
             try updater.start()
             startErrorDescription = nil
+            refreshCoordinator.updaterDidStart()
         } catch {
             isEnabled = false
             startErrorDescription = error.localizedDescription

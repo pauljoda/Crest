@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct BrowserMacWindowScene: View {
@@ -17,6 +18,7 @@ struct BrowserMacWindowScene: View {
     private let startupBehavior: BrowserStartupBehavior
     private let shortcuts: BrowserShortcutStore?
     private let sidebarWidgets: BrowserSidebarWidgetRuntime
+    private let softwareUpdates: BrowserSoftwareUpdateService
 
     init(
         id: BrowserWindowID,
@@ -31,7 +33,8 @@ struct BrowserMacWindowScene: View {
         spaceSettingsPresentation: BrowserSpaceSettingsPresentationState,
         startupBehavior: BrowserStartupBehavior,
         shortcuts: BrowserShortcutStore? = nil,
-        sidebarWidgets: BrowserSidebarWidgetRuntime
+        sidebarWidgets: BrowserSidebarWidgetRuntime,
+        softwareUpdates: BrowserSoftwareUpdateService
     ) {
         self.id = id
         self.browser = browser
@@ -46,6 +49,7 @@ struct BrowserMacWindowScene: View {
         self.startupBehavior = startupBehavior
         self.shortcuts = shortcuts
         self.sidebarWidgets = sidebarWidgets
+        self.softwareUpdates = softwareUpdates
     }
 
     var body: some View {
@@ -71,6 +75,10 @@ struct BrowserMacWindowScene: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(
             BrowserWindowAccessibilityID.scene(id)
+        )
+        .environment(
+            \.browserApplicationIcon,
+            Image(nsImage: NSApplication.shared.applicationIconImage)
         )
         .modifier(
             BrowserExternalLinkHandler(
@@ -128,6 +136,7 @@ struct BrowserMacWindowScene: View {
     }
 
     private func activateWindow() {
+        softwareUpdates.applicationDidBecomeActive()
         sidebarWidgets.activateHost(
             id: id,
             capabilities: [

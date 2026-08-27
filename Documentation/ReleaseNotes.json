@@ -309,6 +309,10 @@
     "2026-08-27-eager-background-tabs": {
       "category": "fixed",
       "message": "Start loading tabs opened from links right away, with an option to select them automatically"
+    },
+    "2026-08-27-newest-eligible-software-update": {
+      "category": "fixed",
+      "message": "Refresh available updates to the newest eligible build before downloading"
     }
   }
 }
