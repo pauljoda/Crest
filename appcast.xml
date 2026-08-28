@@ -7,6 +7,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <title>Crest</title>
         <item>
             <title>0.5.7</title>
+            <pubDate>Fri, 28 Aug 2026 20:17:54 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1056</sparkle:version>
+            <sparkle:shortVersionString>0.5.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### Fixed
+
+- Keep Space navigation centered and Archive controls reachable as more Spaces are added
+- Continue typing with the same caret or selection after returning to a webpage tab on Mac
+- Use compatible browser extension actions directly from webpage context menus
+- Keep mouse back and forward navigation within the webpage or sidebar under the pointer
+- Keep new-window links inside Peek and Quick Window instead of hiding them in background tabs
+- Start loading tabs opened from links right away, with an option to select them automatically
+- Refresh available updates to the newest eligible build before downloading
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/e84edda4defdb507ab8844fbfd9d7abc4fbbccb2...e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.7-nightly-2026-08-28-e4b3a1e-arm64.dmg)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.7-nightly-2026-08-28-e4b3a1e-arm64.dmg" length="8781078" type="application/octet-stream" sparkle:edSignature="1WfDB7BZv49wGuzx09A7rTJnqBhoV9VjYqxgw7ZgTw3I5GS+8WL6a/qrmPdL0vF97/NTOp9W0p5cepY6y0wWAg=="/>
+        </item>
+        <item>
+            <title>0.5.7</title>
             <pubDate>Thu, 27 Aug 2026 15:18:32 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:version>1054</sparkle:version>
@@ -46,70 +75,9 @@ Stable releases are signed, notarized, and ready for everyday use.
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.5.7/Installer-Crest-0.5.7-arm64.dmg" length="8799967" type="application/octet-stream" sparkle:edSignature="0p3SBXDxGINRTOmn8PmK20C/cCnUGJ5xVmWGPDeSoEFWSOcyvX1zWsB/W0zaOqingd55ah3Hp5VBXReTUvTuCw=="/>
         </item>
-        <item>
-            <title>0.5.0</title>
-            <pubDate>Wed, 26 Aug 2026 00:20:04 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1049</sparkle:version>
-            <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### New
-
-- Use custom search engines with website icons and optional search suggestions in each Space
-- See update availability and control media from a global sidebar widget deck across Spaces
-
-### Improved
-
-- Follow new downloads into Downloads and see live size, progress, speed, and time remaining across Mac and iPhone
-
-### Fixed
-
-- Show blocked pop-ups in Site Controls with a one-step allow action
-- Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/5c12adaddca80c9e2e4d853421374702513e4777...e84edda4defdb507ab8844fbfd9d7abc4fbbccb2) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.0-nightly-2026-08-26-e84edda-arm64.dmg)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.0-nightly-2026-08-26-e84edda-arm64.dmg" length="8669974" type="application/octet-stream" sparkle:edSignature="GtJ9w/pCis28FnYVwiZzFcL0ZMqSBj/C0TXFFWIuujBDL+IZplMEkcjybgDUI2tY81bhQpzA9sNEBlOznurfBg=="/>
-        </item>
-        <item>
-            <title>0.4.0</title>
-            <pubDate>Tue, 18 Aug 2026 00:48:23 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1032</sparkle:version>
-            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Crest stable release
-
-[Download Crest for Mac (Apple silicon)](https://github.com/pauljoda/Crest/releases/download/v0.4.0/Installer-Crest-0.4.0-arm64.dmg)
-
-Built from [`25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f).
-
-This release is signed and notarized for direct distribution.
-
-## Changes in this build
-
-### chore(release): prepare 0.4.0
-
-Crest 0.4 adds Split View across Mac, iPhone, and iPad; expands standards-based extension support across Chrome, Firefox, and Safari-created packages; and establishes signed, notarized direct updates through Sparkle.
-
-It also includes the Space, tab, drag-and-drop, navigation, favicon, sync, retention, and WebKit compatibility fixes collected in the 0.4.0 changelog.
-
-[View commit `25e75fd`](https://github.com/pauljoda/Crest/commit/25e75fd77a6d1ff2f5828b1d55004439d6b6515f)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.4.0/Installer-Crest-0.4.0-arm64.dmg" length="7505632" type="application/octet-stream" sparkle:edSignature="k4EGWp6622xra5umpPZ+V859HBeyN/tt8aNr+UDQhYkvUBM6+JdjnsBUemFrSjo3OBUFx3plkUajOSr7GYkHBQ=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: hSk1MYLGG33hgG3rm2bDMlxgYuIM2zTs5pUxOp2QBsyjYe4ftzcf0boN0jsCYYsOnM1UV/TAaElXjZ3Fr3ofCw==
-length: 6246
+edSignature: EdDvOyDXJKoGcYPksu6gx3dQ3MfOjGiZ58d5KkZ9699xiu60DIUvSOoXCo7dm/g9S4QklNDg2agl1wQHAhyyDg==
+length: 4678
 -->
