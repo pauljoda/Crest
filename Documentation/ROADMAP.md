@@ -69,6 +69,7 @@ the live status for each issue.
 - [ ] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
 - [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
 - [ ] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
+- [ ] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68)
 
 <!-- crest-roadmap-sync:end -->
 
