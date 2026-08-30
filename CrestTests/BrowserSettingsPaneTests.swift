@@ -6,42 +6,71 @@ import XCTest
 @MainActor
 final class BrowserSettingsPaneTests: XCTestCase {
 
-    func testAutomaticQuoteSubstitutionDefaultsOffOnDesktop() throws {
+    func testMacWebTextAssistanceForcesEverySmartMutationOff() throws {
+        let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let expectedKeys = Set([
+            "WebAutomaticSpellingCorrectionEnabled",
+            "WebGrammarCheckingEnabled",
+            "WebSmartInsertDeleteEnabled",
+            "WebSmartListsEnabled",
+            "WebAutomaticQuoteSubstitutionEnabled",
+            "WebAutomaticDashSubstitutionEnabled",
+            "WebAutomaticLinkDetectionEnabled",
+            "WebAutomaticTextReplacementEnabled",
+        ])
+        for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
+            defaults.set(true, forKey: key)
+        }
+
+        BrowserMacWebTextAssistancePolicy.configure(
+            defaults: defaults
+        )
+
+        XCTAssertEqual(
+            Set(BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys),
+            expectedKeys
+        )
+        XCTAssertEqual(
+            BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys.count,
+            expectedKeys.count
+        )
+        for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
+            XCTAssertFalse(defaults.bool(forKey: key), key)
+        }
+    }
+
+    func testMacWebTextAssistanceDefaultsSpellCheckingOff() throws {
         let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        BrowserAutomaticQuoteSubstitutionPreference.registerDefault(
+        BrowserMacWebTextAssistancePolicy.configure(
             defaults: defaults
         )
 
         XCTAssertFalse(
-            BrowserAutomaticQuoteSubstitutionPreference.defaultIsEnabled
+            BrowserMacWebTextAssistancePolicy.defaultIsSpellCheckingEnabled
         )
         XCTAssertFalse(
-            defaults.bool(
-                forKey: BrowserAutomaticQuoteSubstitutionPreference.key
-            )
+            defaults.bool(forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey)
         )
     }
 
-    func testAutomaticQuoteSubstitutionPreservesAnExplicitDesktopOverride() throws {
+    func testMacWebTextAssistancePreservesAnExplicitSpellCheckingChoice() throws {
         let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         defaults.set(
             true,
-            forKey: BrowserAutomaticQuoteSubstitutionPreference.key
+            forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey
         )
 
-        BrowserAutomaticQuoteSubstitutionPreference.registerDefault(
-            defaults: defaults
-        )
+        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
 
         XCTAssertTrue(
-            defaults.bool(
-                forKey: BrowserAutomaticQuoteSubstitutionPreference.key
-            )
+            defaults.bool(forKey: BrowserMacWebTextAssistancePolicy.spellCheckingKey)
         )
     }
 
@@ -135,17 +164,17 @@ final class BrowserSettingsPaneTests: XCTestCase {
         )
     }
 
-    func testGeneralSettingsPresentsTheDesktopSmartQuotesControl() {
-        let section = BrowserAutomaticQuoteSubstitutionSettingsSection()
+    func testGeneralSettingsPresentsTheDesktopSpellCheckingControl() {
+        let section = BrowserSpellCheckingSettingsSection()
 
         XCTAssertEqual(
-            BrowserAutomaticQuoteSubstitutionSettingsSection.controlIdentifier,
-            "automatic-quote-substitution-toggle"
+            BrowserSpellCheckingSettingsSection.controlIdentifier,
+            "continuous-spell-checking-toggle"
         )
         XCTAssertNotNil(section.body)
         XCTAssertTrue(
             BrowserSettingsDestination.general.matchesSearchQuery(
-                "smart quotes",
+                "spell check",
                 locale: Locale(identifier: "en_US")
             )
         )

@@ -38,7 +38,7 @@ struct CrestApp: App {
             BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(
                 launchEnvironment
             )
-        BrowserAutomaticQuoteSubstitutionPreference.registerDefault()
+        BrowserMacWebTextAssistancePolicy.configure()
         BrowserWebKitFeatureFlagStore.configureForLaunch(
             usesIsolatedLaunch: usesIsolatedLaunch
         )

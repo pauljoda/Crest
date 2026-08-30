@@ -66,7 +66,7 @@ struct BrowserGeneralSettingsPane: View {
             )
 
             #if os(macOS)
-                BrowserAutomaticQuoteSubstitutionSettingsSection()
+                BrowserSpellCheckingSettingsSection()
             #endif
 
             #if os(iOS)
@@ -273,27 +273,26 @@ struct BrowserNewTabSettingsSection: View {
 }
 
 #if os(macOS)
-    /// The supported app-level override for WebKit's macOS Smart Quotes policy.
+    /// The one supported app-level override for WebKit's macOS text checker.
     /// WebKit initializes the text checker once per process, so the persisted
     /// preference intentionally advertises its relaunch boundary in the UI.
-    struct BrowserAutomaticQuoteSubstitutionSettingsSection: View {
-        static let controlIdentifier =
-            "automatic-quote-substitution-toggle"
+    struct BrowserSpellCheckingSettingsSection: View {
+        static let controlIdentifier = "continuous-spell-checking-toggle"
 
-        @AppStorage(BrowserAutomaticQuoteSubstitutionPreference.key)
+        @AppStorage(BrowserMacWebTextAssistancePolicy.spellCheckingKey)
         private var isEnabled =
-            BrowserAutomaticQuoteSubstitutionPreference.defaultIsEnabled
+            BrowserMacWebTextAssistancePolicy.defaultIsSpellCheckingEnabled
 
         var body: some View {
             Section("Typing") {
                 Toggle(
-                    "Use smart quotes on webpages",
+                    "Check spelling on webpages",
                     isOn: $isEnabled
                 )
                 .accessibilityIdentifier(Self.controlIdentifier)
 
                 CrestFormFootnote(
-                    "Smart quotes can interfere with some website editors. Changes take effect the next time Crest opens."
+                    "Highlights misspelled words without changing what you type. Changes take effect the next time Crest opens."
                 )
             }
         }

@@ -571,6 +571,9 @@
         }
       }
     },
+    "%lld additional rejected rows are included in the final count." : {
+
+    },
     "%lld days ago" : {
       "localizations" : {
         "ar" : {
@@ -708,6 +711,9 @@
           }
         }
       }
+    },
+    "%lld identical duplicates will be skipped." : {
+
     },
     "%lld passwords" : {
       "comment" : "Password count shown while reviewing a browser import.",
@@ -1360,6 +1366,9 @@
         }
       }
     },
+    "%lld warnings" : {
+
+    },
     "%lld weeks ago" : {
       "localizations" : {
         "ar" : {
@@ -1434,6 +1443,12 @@
         }
       }
     },
+    "1 identical duplicate will be skipped." : {
+
+    },
+    "1 warning" : {
+
+    },
     "1Password can’t connect to its companion app" : {
       "localizations" : {
         "ar" : {
@@ -1465,6 +1480,9 @@
           }
         }
       }
+    },
+    "A custom search engine already uses this name." : {
+
     },
     "A firewall, filter, or device policy may also be responsible." : {
       "localizations" : {
@@ -1507,6 +1525,22 @@
         }
       }
     },
+    "A Space can contain up to 32 custom search engines." : {
+
+    },
+    "About" : {
+
+    },
+    "Accepted %lld, skipped %lld, reviewed %lld warnings, and rejected %lld from the selected file." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Accepted %1$lld, skipped %2$lld, reviewed %3$lld warnings, and rejected %4$lld from the selected file."
+          }
+        }
+      }
+    },
     "Account" : {
       "localizations" : {
         "ar" : {
@@ -1517,6 +1551,9 @@
         }
       }
     },
+    "Accounts" : {
+
+    },
     "Actions" : {
       "localizations" : {
         "ar" : {
@@ -1526,6 +1563,9 @@
           }
         }
       }
+    },
+    "Activity" : {
+
     },
     "Actual Size" : {
       "localizations" : {
@@ -1603,6 +1643,9 @@
         }
       }
     },
+    "Add an HTTPS search URL containing %s or {searchTerms}." : {
+
+    },
     "Add Background Color" : {
       "localizations" : {
         "ar" : {
@@ -1654,6 +1697,9 @@
           }
         }
       }
+    },
+    "Add Search Engine" : {
+
     },
     "Add Secondary Color" : {
       "localizations" : {
@@ -1798,6 +1844,9 @@
           }
         }
       }
+    },
+    "Adds or removes this password from the selection." : {
+
     },
     "Ads" : {
       "extractionState" : "stale",
@@ -2126,6 +2175,9 @@
     "Allow Automatic Pop-ups" : {
 
     },
+    "Allow automatic pop-ups for %@" : {
+
+    },
     "Allow Crest to Use Passkeys…" : {
       "localizations" : {
         "ar" : {
@@ -2145,9 +2197,6 @@
           }
         }
       }
-    },
-    "Allow automatic pop-ups for %@" : {
-
     },
     "Allow Download" : {
       "localizations" : {
@@ -2170,6 +2219,9 @@
         }
       }
     },
+    "Already saved" : {
+
+    },
     "Also available by swiping inward from the leading edge" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2191,6 +2243,12 @@
           }
         }
       }
+    },
+    "An open source browser for Mac, iPhone, and iPad." : {
+
+    },
+    "Animals & Nature" : {
+
     },
     "Annoyances" : {
       "extractionState" : "stale",
@@ -2358,7 +2416,13 @@
         }
       }
     },
+    "Ask questions, compare experiences, and discuss ideas" : {
+
+    },
     "Ask where to save each download" : {
+
+    },
+    "Authenticate to commit the password import into %@." : {
 
     },
     "Authenticate to copy the Crest password for %@." : {
@@ -2381,6 +2445,9 @@
         }
       }
     },
+    "Authenticate to delete selected passwords from %@." : {
+
+    },
     "Authenticate to export passwords from %@." : {
       "localizations" : {
         "ar" : {
@@ -2400,6 +2467,9 @@
           }
         }
       }
+    },
+    "Authenticate to import passwords into %@." : {
+
     },
     "Authenticate to reveal the Crest password for %@." : {
       "localizations" : {
@@ -2441,6 +2511,9 @@
         }
       }
     },
+    "Authenticates before showing the saved password." : {
+
+    },
     "Authenticating" : {
       "localizations" : {
         "ar" : {
@@ -2460,6 +2533,9 @@
           }
         }
       }
+    },
+    "Authentication tokens and other secrets cannot be stored in a search template. Sign in on the search engine website instead." : {
+
     },
     "Auto-archive" : {
       "localizations" : {
@@ -2849,7 +2925,7 @@
         }
       }
     },
-    "browser startup default Space transparency sidebar interface page zoom percentage" : {
+    "browser startup default Space transparency sidebar interface page zoom percentage typing smart quotes punctuation" : {
 
     },
     "Browsing" : {
@@ -2872,6 +2948,9 @@
         }
       }
     },
+    "Build" : {
+
+    },
     "Build a shield from a field, ordinary, charge, and restrained outer trim." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2882,6 +2961,12 @@
           }
         }
       }
+    },
+    "Built-In" : {
+
+    },
+    "Bundle identifier" : {
+
     },
     "Cancel" : {
       "localizations" : {
@@ -2906,9 +2991,6 @@
     "Change Color…" : {
 
     },
-    "Change Icon…" : {
-
-    },
     "change current tab url address focus" : {
       "localizations" : {
         "ar" : {
@@ -2918,6 +3000,9 @@
           }
         }
       }
+    },
+    "Change Icon…" : {
+
     },
     "Changes which Space supplies cookies and passwords" : {
       "extractionState" : "stale",
@@ -2989,6 +3074,9 @@
           }
         }
       }
+    },
+    "Check the search engine details and try again." : {
+
     },
     "Check whether the site is available in another browser or device." : {
       "localizations" : {
@@ -3156,6 +3244,7 @@
       }
     },
     "Choose Emoji Icon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -3165,13 +3254,7 @@
         }
       }
     },
-    "Choose Emoji…" : {
-
-    },
     "Choose Folder…" : {
-
-    },
-    "Choose one emoji." : {
 
     },
     "Choose one to three colors. The same named slots style banners, gradients, and crests." : {
@@ -3184,6 +3267,12 @@
           }
         }
       }
+    },
+    "Choose sidebar widget" : {
+
+    },
+    "Choose Space Icon" : {
+
     },
     "Choose up to three colors. Every crest layer uses this palette." : {
       "extractionState" : "stale",
@@ -3318,6 +3407,9 @@
           }
         }
       }
+    },
+    "Clear Search" : {
+
     },
     "Clear Unpinned Tabs" : {
       "localizations" : {
@@ -3640,6 +3732,9 @@
     "Common Lists" : {
 
     },
+    "Community & support" : {
+
+    },
     "Compass" : {
       "localizations" : {
         "ar" : {
@@ -3661,6 +3756,9 @@
         }
       }
     },
+    "Completed" : {
+
+    },
     "Completed visits from this Space appear here and remain separate from every other Space." : {
       "localizations" : {
         "ar" : {
@@ -3680,6 +3778,9 @@
           }
         }
       }
+    },
+    "Confirm what Crest will change before anything is saved." : {
+
     },
     "Content blocking" : {
       "localizations" : {
@@ -3886,6 +3987,9 @@
           }
         }
       }
+    },
+    "Couldn’t Save Search Engine" : {
+
     },
     "Create" : {
       "extractionState" : "stale",
@@ -4308,6 +4412,9 @@
         }
       }
     },
+    "Crest couldn’t save a strong password. Nothing was filled." : {
+
+    },
     "Crest couldn’t save this password to the %@ Space." : {
       "localizations" : {
         "ar" : {
@@ -4370,6 +4477,7 @@
       }
     },
     "Crest fills a unique 20-character password here and in its confirmation field. It is saved only after you submit and confirm the %@ prompt." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -4510,6 +4618,9 @@
         }
       }
     },
+    "Crest saves a unique 20-character password in %@ first, then fills it here and in the confirmation field." : {
+
+    },
     "Crest saves in %@ first; Passwords asks separately" : {
       "localizations" : {
         "ar" : {
@@ -4539,6 +4650,9 @@
           }
         }
       }
+    },
+    "Crest software update" : {
+
     },
     "Crest Studio" : {
       "extractionState" : "stale",
@@ -4677,7 +4791,7 @@
         }
       }
     },
-    "Custom Emoji" : {
+    "Custom engines belong to this Space and sync with it. Crest loads their favicon from the engine’s website; the image itself is not synced. Sign in on the engine’s website instead of putting a token in a URL template." : {
 
     },
     "Custom filter selection" : {
@@ -4900,6 +5014,12 @@
         }
       }
     },
+    "Delete %lld Passwords" : {
+
+    },
+    "Delete 1 Password" : {
+
+    },
     "Delete Folder" : {
       "localizations" : {
         "ar" : {
@@ -4939,6 +5059,12 @@
           }
         }
       }
+    },
+    "Delete Selected" : {
+
+    },
+    "Delete Selected Passwords?" : {
+
     },
     "Delete Space" : {
       "localizations" : {
@@ -5079,6 +5205,9 @@
         }
       }
     },
+    "Dismiss" : {
+
+    },
     "Divider %lld" : {
       "localizations" : {
         "ar" : {
@@ -5101,6 +5230,9 @@
           }
         }
       }
+    },
+    "Done Selecting" : {
+
     },
     "Double Ring" : {
       "localizations" : {
@@ -5167,6 +5299,9 @@
           }
         }
       }
+    },
+    "Download Update" : {
+
     },
     "Downloading…" : {
       "localizations" : {
@@ -5468,6 +5603,9 @@
         }
       }
     },
+    "Edit Search Engine" : {
+
+    },
     "Edit Tab" : {
       "localizations" : {
         "ar" : {
@@ -5477,9 +5615,6 @@
           }
         }
       }
-    },
-    "Emoji" : {
-
     },
     "Eligible tabs remain recoverable from Archive." : {
       "extractionState" : "stale",
@@ -5511,6 +5646,9 @@
           }
         }
       }
+    },
+    "Emoji" : {
+
     },
     "Enable this route" : {
       "localizations" : {
@@ -5564,6 +5702,9 @@
         }
       }
     },
+    "Enter a name for this search engine." : {
+
+    },
     "Enter a valid HTTPS filter-list URL." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5574,6 +5715,9 @@
           }
         }
       }
+    },
+    "Enter a valid URL template." : {
+
     },
     "Error code: %@" : {
       "localizations" : {
@@ -5614,6 +5758,9 @@
           }
         }
       }
+    },
+    "Every accepted credential will be stored only in this Space’s Keychain inventory." : {
+
     },
     "Every exact site, port, capability, and Space has its own choice. Camera and microphone access also require device-level privacy consent." : {
       "localizations" : {
@@ -6090,6 +6237,9 @@
         }
       }
     },
+    "Flags" : {
+
+    },
     "Flame" : {
       "localizations" : {
         "ar" : {
@@ -6179,6 +6329,12 @@
           }
         }
       }
+    },
+    "Follow planned and completed public work on GitHub" : {
+
+    },
+    "Food & Drink" : {
+
     },
     "For an intranet site, confirm that you are on the required network." : {
       "localizations" : {
@@ -6313,6 +6469,9 @@
         }
       }
     },
+    "Google will become this Space’s search engine." : {
+
+    },
     "Gradient" : {
       "localizations" : {
         "ar" : {
@@ -6394,6 +6553,9 @@
         }
       }
     },
+    "Hide Now Playing" : {
+
+    },
     "Hide Password" : {
       "localizations" : {
         "ar" : {
@@ -6403,6 +6565,9 @@
           }
         }
       }
+    },
+    "Hide Passwords" : {
+
     },
     "Hide Reader" : {
       "localizations" : {
@@ -6433,6 +6598,12 @@
           }
         }
       }
+    },
+    "Hide until this tab plays again" : {
+
+    },
+    "Hides recent changes" : {
+
     },
     "History" : {
       "localizations" : {
@@ -6577,6 +6748,9 @@
         }
       }
     },
+    "HTTP" : {
+
+    },
     "iCloud" : {
       "localizations" : {
         "ar" : {
@@ -6648,7 +6822,6 @@
       }
     },
     "Icon" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -6657,6 +6830,9 @@
           }
         }
       }
+    },
+    "Icon Type" : {
+
     },
     "Identity" : {
       "localizations" : {
@@ -6697,6 +6873,12 @@
           }
         }
       }
+    },
+    "Ignore this update build" : {
+
+    },
+    "Import" : {
+
     },
     "Import & Continue" : {
       "comment" : "Button that imports the current browser and continues to the next selected browser.",
@@ -6786,6 +6968,12 @@
         }
       }
     },
+    "Import into %@…" : {
+
+    },
+    "Import No Longer Available" : {
+
+    },
     "Import Open Tabs…" : {
       "localizations" : {
         "ar" : {
@@ -6833,6 +7021,12 @@
           }
         }
       }
+    },
+    "Imported" : {
+
+    },
+    "Imported %lld" : {
+
     },
     "Imported %lld bookmarks in %lld Spaces from %@." : {
       "localizations" : {
@@ -7306,6 +7500,9 @@
         }
       }
     },
+    "Imported from an insecure HTTP site. Crest keeps it available for manual access but does not autofill it on insecure connections." : {
+
+    },
     "Imported from Arc" : {
       "localizations" : {
         "ar" : {
@@ -7426,6 +7623,15 @@
         }
       }
     },
+    "Importing into" : {
+
+    },
+    "Importing passwords" : {
+
+    },
+    "Importing…" : {
+
+    },
     "In Progress" : {
       "localizations" : {
         "ar" : {
@@ -7445,6 +7651,9 @@
           }
         }
       }
+    },
+    "Include exactly one %s or {searchTerms} query placeholder." : {
+
     },
     "incognito private browsing" : {
       "localizations" : {
@@ -7466,6 +7675,9 @@
           }
         }
       }
+    },
+    "Inserts any emoji through the system text input experience." : {
+
     },
     "Install an unpacked extension or ZIP in this Space" : {
       "extractionState" : "stale",
@@ -7573,6 +7785,9 @@
           }
         }
       }
+    },
+    "Keep current password" : {
+
     },
     "Keep Loaded" : {
       "localizations" : {
@@ -7967,6 +8182,9 @@
         }
       }
     },
+    "Long press to choose a skin tone variation." : {
+
+    },
     "Lozenge" : {
       "localizations" : {
         "ar" : {
@@ -8037,6 +8255,9 @@
         }
       }
     },
+    "Manage Search Engines…" : {
+
+    },
     "Manual" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8047,6 +8268,9 @@
           }
         }
       }
+    },
+    "Manual access only for insecure HTTP site" : {
+
     },
     "Mark" : {
       "localizations" : {
@@ -8087,6 +8311,9 @@
           }
         }
       }
+    },
+    "More" : {
+
     },
     "Most Recent Tab" : {
       "localizations" : {
@@ -8197,6 +8424,12 @@
         }
       }
     },
+    "Mute" : {
+
+    },
+    "Muted" : {
+
+    },
     "Name" : {
       "localizations" : {
         "ar" : {
@@ -8237,6 +8470,9 @@
         }
       }
     },
+    "Need review" : {
+
+    },
     "Needs attention" : {
       "localizations" : {
         "ar" : {
@@ -8257,6 +8493,9 @@
         }
       }
     },
+    "Needs review" : {
+
+    },
     "Never" : {
       "localizations" : {
         "ar" : {
@@ -8266,6 +8505,9 @@
           }
         }
       }
+    },
+    "New" : {
+
     },
     "New Browser Window" : {
       "extractionState" : "stale",
@@ -8461,6 +8703,12 @@
         }
       }
     },
+    "Next Track" : {
+
+    },
+    "Next Widget" : {
+
+    },
     "No Archived Tabs" : {
       "localizations" : {
         "ar" : {
@@ -8500,6 +8748,9 @@
           }
         }
       }
+    },
+    "No Custom Search Engines" : {
+
     },
     "No Downloads" : {
       "localizations" : {
@@ -8588,6 +8839,12 @@
         }
       }
     },
+    "No Matching Emoji" : {
+
+    },
+    "No Matching Icons" : {
+
+    },
     "No Matching Passwords" : {
       "localizations" : {
         "ar" : {
@@ -8672,6 +8929,9 @@
         }
       }
     },
+    "No username" : {
+
+    },
     "None" : {
       "localizations" : {
         "ar" : {
@@ -8712,6 +8972,9 @@
         }
       }
     },
+    "Now Playing" : {
+
+    },
     "Number of charges" : {
       "localizations" : {
         "ar" : {
@@ -8731,6 +8994,9 @@
           }
         }
       }
+    },
+    "Objects" : {
+
     },
     "Off" : {
       "localizations" : {
@@ -9133,6 +9399,7 @@
       }
     },
     "Opens controls for this webpage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9204,6 +9471,7 @@
       }
     },
     "Other Spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -9264,6 +9532,9 @@
         }
       }
     },
+    "Page zoom" : {
+
+    },
     "Page Zoom" : {
       "localizations" : {
         "ar" : {
@@ -9273,9 +9544,6 @@
           }
         }
       }
-    },
-    "Page zoom" : {
-
     },
     "Page zoom (label)" : {
       "localizations" : {
@@ -9340,6 +9608,9 @@
         }
       }
     },
+    "Password Actions" : {
+
+    },
     "Password AutoFill won’t work in this Crest build. Apple requires Crest to be signed with the managed Web Browser Public Key Credential entitlement before its password helper will connect. This build does not have that entitlement." : {
       "localizations" : {
         "ar" : {
@@ -9359,6 +9630,15 @@
           }
         }
       }
+    },
+    "Password Import Finished" : {
+
+    },
+    "Password to keep" : {
+
+    },
+    "Password value shown visually" : {
+
     },
     "Password visible" : {
       "localizations" : {
@@ -9442,6 +9722,9 @@
         }
       }
     },
+    "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics." : {
+
+    },
     "Past Month" : {
       "localizations" : {
         "ar" : {
@@ -9482,6 +9765,12 @@
           }
         }
       }
+    },
+    "Pause" : {
+
+    },
+    "Paused" : {
+
     },
     "Paw" : {
       "localizations" : {
@@ -9707,6 +9996,9 @@
         }
       }
     },
+    "Play" : {
+
+    },
     "Pop-up blocked for %@" : {
 
     },
@@ -9846,6 +10138,12 @@
           }
         }
       }
+    },
+    "Previous Track" : {
+
+    },
+    "Previous Widget" : {
+
     },
     "Primary" : {
       "localizations" : {
@@ -10012,6 +10310,9 @@
           }
         }
       }
+    },
+    "Put the query placeholder in the path or query, not the fragment." : {
+
     },
     "Quartered" : {
       "localizations" : {
@@ -10236,6 +10537,9 @@
         }
       }
     },
+    "Ready for %@" : {
+
+    },
     "Ready for websites" : {
       "localizations" : {
         "ar" : {
@@ -10245,6 +10549,9 @@
           }
         }
       }
+    },
+    "Ready to import" : {
+
     },
     "Reconnect to Wi-Fi or Ethernet, then try again." : {
       "localizations" : {
@@ -10256,6 +10563,9 @@
         }
       }
     },
+    "Reddit is public. Remove passwords, private URLs, browsing history, and other sensitive information before posting. Use GitHub Issues for reports with a Crest version, Apple platform, and repeatable steps." : {
+
+    },
     "Regional" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10266,6 +10576,9 @@
           }
         }
       }
+    },
+    "Rejected rows" : {
+
     },
     "Reload" : {
       "localizations" : {
@@ -10468,6 +10781,9 @@
         }
       }
     },
+    "Remove Search Engine?" : {
+
+    },
     "Remove Secondary Color" : {
       "localizations" : {
         "ar" : {
@@ -10666,6 +10982,9 @@
         }
       }
     },
+    "Report an Issue" : {
+
+    },
     "Reported by the extension" : {
       "localizations" : {
         "ar" : {
@@ -10737,6 +11056,9 @@
         }
       }
     },
+    "Reset to 100%" : {
+
+    },
     "reset zoom zero" : {
       "localizations" : {
         "ar" : {
@@ -10746,9 +11068,6 @@
           }
         }
       }
-    },
-    "Reset to 100%" : {
-
     },
     "Resize Sidebar" : {
       "localizations" : {
@@ -10769,6 +11088,9 @@
           }
         }
       }
+    },
+    "Restart and Update" : {
+
     },
     "Restore %@" : {
       "localizations" : {
@@ -10856,6 +11178,9 @@
         }
       }
     },
+    "Review" : {
+
+    },
     "Review Crest Setup" : {
       "localizations" : {
         "ar" : {
@@ -10865,6 +11190,12 @@
           }
         }
       }
+    },
+    "Review every valid account. Choose which password to keep, or skip any account." : {
+
+    },
+    "Review Password Import" : {
+
     },
     "Review this Space’s content and network settings." : {
       "localizations" : {
@@ -10936,6 +11267,9 @@
           }
         }
       }
+    },
+    "Row %lld" : {
+
     },
     "Running" : {
       "localizations" : {
@@ -11014,6 +11348,9 @@
           }
         }
       }
+    },
+    "Save" : {
+
     },
     "Save & Offer to Passwords" : {
       "localizations" : {
@@ -11284,6 +11621,21 @@
         }
       }
     },
+    "Search Engine" : {
+
+    },
+    "Search engine names must be 64 characters or fewer." : {
+
+    },
+    "Search engine templates may only use the standard HTTPS port." : {
+
+    },
+    "Search engine templates must use HTTPS." : {
+
+    },
+    "Search Engines" : {
+
+    },
     "Search History…" : {
       "localizations" : {
         "ar" : {
@@ -11293,6 +11645,15 @@
           }
         }
       }
+    },
+    "Search Icons" : {
+
+    },
+    "Search imported passwords" : {
+
+    },
+    "Search or Enter Emoji" : {
+
     },
     "Search or Enter URL…" : {
       "localizations" : {
@@ -11314,6 +11675,12 @@
         }
       }
     },
+    "Search passwords" : {
+
+    },
+    "Search saved passwords" : {
+
+    },
     "Search settings" : {
       "localizations" : {
         "ar" : {
@@ -11324,6 +11691,12 @@
         }
       }
     },
+    "Search suggestions" : {
+
+    },
+    "Search Suggestions" : {
+
+    },
     "Search this Space" : {
       "localizations" : {
         "ar" : {
@@ -11333,6 +11706,9 @@
           }
         }
       }
+    },
+    "Search URL" : {
+
     },
     "Searching" : {
       "localizations" : {
@@ -11384,6 +11760,12 @@
           }
         }
       }
+    },
+    "Select All" : {
+
+    },
+    "Select Passwords" : {
+
     },
     "Select Space %arg" : {
       "localizations" : {
@@ -11464,6 +11846,9 @@
           }
         }
       }
+    },
+    "Send a reproducible bug report through GitHub Issues" : {
+
     },
     "Separate All Tabs" : {
       "localizations" : {
@@ -11568,6 +11953,9 @@
         }
       }
     },
+    "Share Feedback on r/CrestBrowser" : {
+
+    },
     "Share Page" : {
       "localizations" : {
         "ar" : {
@@ -11648,6 +12036,9 @@
         }
       }
     },
+    "Show Emoji Variations" : {
+
+    },
     "Show History" : {
       "localizations" : {
         "ar" : {
@@ -11712,6 +12103,15 @@
     "Show Sidebar Temporarily" : {
 
     },
+    "Show Tab" : {
+
+    },
+    "Show tab %@" : {
+
+    },
+    "Show tab playing %@" : {
+
+    },
     "Show Toolbar" : {
       "localizations" : {
         "ar" : {
@@ -11731,6 +12131,12 @@
           }
         }
       }
+    },
+    "Shows recent changes" : {
+
+    },
+    "Sidebar Widgets" : {
+
     },
     "Sign-in, unlocking, and filling won’t work through the Safari extension in Crest. The compatible route requires 1Password for Mac, the Chrome Web Store extension, the official Crest for Mac release, and adding Crest as a trusted browser in 1Password." : {
       "localizations" : {
@@ -11803,6 +12209,12 @@
           }
         }
       }
+    },
+    "Skip this account" : {
+
+    },
+    "Smileys & People" : {
+
     },
     "Snowflake" : {
       "localizations" : {
@@ -12022,15 +12434,6 @@
     "Split View actions" : {
 
     },
-    "Split View Color" : {
-
-    },
-    "Split View Icon" : {
-
-    },
-    "Split View Name" : {
-
-    },
     "split view break up unsplit separate cards" : {
       "localizations" : {
         "ar" : {
@@ -12084,6 +12487,9 @@
         }
       }
     },
+    "Split View Color" : {
+
+    },
     "Split View Columns" : {
       "localizations" : {
         "ar" : {
@@ -12093,6 +12499,12 @@
           }
         }
       }
+    },
+    "Split View Icon" : {
+
+    },
+    "Split View Name" : {
+
     },
     "Split View with %lld tabs" : {
       "localizations" : {
@@ -12402,6 +12814,12 @@
         }
       }
     },
+    "Suggestion URL" : {
+
+    },
+    "Suggestions (Optional)" : {
+
+    },
     "Sun" : {
       "localizations" : {
         "ar" : {
@@ -12483,6 +12901,7 @@
       }
     },
     "Symbol" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12491,6 +12910,9 @@
           }
         }
       }
+    },
+    "Symbols" : {
+
     },
     "Sync" : {
       "localizations" : {
@@ -12725,6 +13147,12 @@
         }
       }
     },
+    "TEST" : {
+
+    },
+    "Test fixture" : {
+
+    },
     "Texture" : {
       "localizations" : {
         "ar" : {
@@ -12861,6 +13289,9 @@
         }
       }
     },
+    "The destination Space changed. Choose the file again." : {
+
+    },
     "The diagnostics report contains sync status and record counts, not URLs, titles, browsing history, passwords, or account identifiers." : {
       "localizations" : {
         "ar" : {
@@ -12871,7 +13302,11 @@
         }
       }
     },
+    "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions." : {
+
+    },
     "The form changed before Crest could fill the password." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12955,6 +13390,9 @@
         }
       }
     },
+    "The password is saved in this Space, but the form changed before Crest could fill it." : {
+
+    },
     "The server-reported file type does not match the filename and one of those types can run software." : {
       "localizations" : {
         "ar" : {
@@ -13025,6 +13463,12 @@
           }
         }
       }
+    },
+    "These credentials are valid and will be imported. Review the security limitation before continuing." : {
+
+    },
+    "These rows are excluded from the import. Correct the source file to import them later." : {
+
     },
     "This bookmark file exceeds Crest’s folder, depth, tab, or Space limits." : {
       "localizations" : {
@@ -13298,6 +13742,9 @@
         }
       }
     },
+    "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
+
+    },
     "This policy applies only to %@. Eligible tabs remain recoverable from Archive." : {
 
     },
@@ -13310,6 +13757,9 @@
           }
         }
       }
+    },
+    "This removes %@ from this Space." : {
+
     },
     "This Safari extension depends on a native handler that belongs to its Safari app and can’t be reused by Crest. Install the extension’s Chrome Web Store version in Crest for Mac instead." : {
       "localizations" : {
@@ -13476,6 +13926,9 @@
           }
         }
       }
+    },
+    "Travel & Places" : {
+
     },
     "Tree" : {
       "localizations" : {
@@ -13860,6 +14313,12 @@
         }
       }
     },
+    "Unmute" : {
+
+    },
+    "Unmuted" : {
+
+    },
     "Unsupported APIs" : {
       "localizations" : {
         "ar" : {
@@ -13889,6 +14348,9 @@
           }
         }
       }
+    },
+    "Update Available" : {
+
     },
     "Update Extensions Automatically" : {
       "localizations" : {
@@ -14146,6 +14608,9 @@
         }
       }
     },
+    "URL templates must be 2,048 characters or fewer." : {
+
+    },
     "Use %@" : {
       "localizations" : {
         "ar" : {
@@ -14155,6 +14620,9 @@
           }
         }
       }
+    },
+    "Use a public search engine host, not a local or numeric address." : {
+
     },
     "Use Crest Passwords in this Space" : {
       "localizations" : {
@@ -14172,10 +14640,13 @@
     "Use Downloads" : {
 
     },
-    "Use Emoji" : {
+    "Use Emoji Keyboard" : {
 
     },
-    "Use Emoji Keyboard" : {
+    "Use exactly one %s or {searchTerms} where the encoded search should appear. HTTPS is required." : {
+
+    },
+    "Use exactly one query placeholder." : {
 
     },
     "Use Face ID, Touch ID, or your device passcode or password before this private Space can be viewed." : {
@@ -14199,6 +14670,15 @@
         }
       }
     },
+    "Use imported password" : {
+
+    },
+    "Use imported password %lld" : {
+
+    },
+    "Use Stacked Icons" : {
+
+    },
     "Use Strong Password" : {
       "localizations" : {
         "ar" : {
@@ -14208,9 +14688,6 @@
           }
         }
       }
-    },
-    "Use Stacked Icons" : {
-
     },
     "Use the arrow keys or drag to rotate the gradient line" : {
       "localizations" : {
@@ -14245,6 +14722,18 @@
         }
       }
     },
+    "Usernames and passwords cannot be stored in a search template." : {
+
+    },
+    "Version" : {
+
+    },
+    "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community" : {
+
+    },
+    "Version, updates, and support" : {
+
+    },
     "Vertical" : {
       "localizations" : {
         "ar" : {
@@ -14275,6 +14764,12 @@
         }
       }
     },
+    "View Passwords" : {
+
+    },
+    "View the Crest Roadmap" : {
+
+    },
     "Vigil" : {
       "localizations" : {
         "ar" : {
@@ -14304,6 +14799,9 @@
           }
         }
       }
+    },
+    "Warnings" : {
+
     },
     "Waves" : {
       "localizations" : {
@@ -14435,6 +14933,9 @@
         }
       }
     },
+    "What's New in Crest %@" : {
+
+    },
     "When Crest opens" : {
       "localizations" : {
         "ar" : {
@@ -14444,6 +14945,12 @@
           }
         }
       }
+    },
+    "When enabled, typed searches are sent to this Space’s search engine after a short delay. Crest never requests suggestions in Private Browsing." : {
+
+    },
+    "Widget deck" : {
+
     },
     "Winter" : {
       "localizations" : {
@@ -14517,328 +15024,6 @@
           }
         }
       }
-    },
-    "%lld additional rejected rows are included in the final count." : {
-
-    },
-    "%lld identical duplicates will be skipped." : {
-
-    },
-    "%lld warnings" : {
-
-    },
-    "1 identical duplicate will be skipped." : {
-
-    },
-    "1 warning" : {
-
-    },
-    "Accepted %lld, skipped %lld, reviewed %lld warnings, and rejected %lld from the selected file." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Accepted %1$lld, skipped %2$lld, reviewed %3$lld warnings, and rejected %4$lld from the selected file."
-          }
-        }
-      }
-    },
-    "Accounts" : {
-
-    },
-    "Adds or removes this password from the selection." : {
-
-    },
-    "Already saved" : {
-
-    },
-    "Authenticate to commit the password import into %@." : {
-
-    },
-    "Authenticate to delete selected passwords from %@." : {
-
-    },
-    "Authenticate to import passwords into %@." : {
-
-    },
-    "Authenticates before showing the saved password." : {
-
-    },
-    "Clear Search" : {
-
-    },
-    "Confirm what Crest will change before anything is saved." : {
-
-    },
-    "Crest couldn’t save a strong password. Nothing was filled." : {
-
-    },
-    "Crest saves a unique 20-character password in %@ first, then fills it here and in the confirmation field." : {
-
-    },
-    "Delete 1 Password" : {
-
-    },
-    "Delete %lld Passwords" : {
-
-    },
-    "Delete Selected" : {
-
-    },
-    "Delete Selected Passwords?" : {
-
-    },
-    "Done Selecting" : {
-
-    },
-    "Every accepted credential will be stored only in this Space’s Keychain inventory." : {
-
-    },
-    "Hide Passwords" : {
-
-    },
-    "HTTP" : {
-
-    },
-    "Import" : {
-
-    },
-    "Import into %@…" : {
-
-    },
-    "Import No Longer Available" : {
-
-    },
-    "Imported" : {
-
-    },
-    "Imported %lld" : {
-
-    },
-    "Imported from an insecure HTTP site. Crest keeps it available for manual access but does not autofill it on insecure connections." : {
-
-    },
-    "Importing into" : {
-
-    },
-    "Importing passwords" : {
-
-    },
-    "Importing…" : {
-
-    },
-    "Keep current password" : {
-
-    },
-    "Manual access only for insecure HTTP site" : {
-
-    },
-    "Need review" : {
-
-    },
-    "Needs review" : {
-
-    },
-    "New" : {
-
-    },
-    "No username" : {
-
-    },
-    "Password Actions" : {
-
-    },
-    "Password Import Finished" : {
-
-    },
-    "Password to keep" : {
-
-    },
-    "Password value shown visually" : {
-
-    },
-    "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics." : {
-
-    },
-    "Ready for %@" : {
-
-    },
-    "Ready to import" : {
-
-    },
-    "Rejected rows" : {
-
-    },
-    "Review" : {
-
-    },
-    "Review every valid account. Choose which password to keep, or skip any account." : {
-
-    },
-    "Review Password Import" : {
-
-    },
-    "Row %lld" : {
-
-    },
-    "Search imported passwords" : {
-
-    },
-    "Search passwords" : {
-
-    },
-    "Search saved passwords" : {
-
-    },
-    "Select All" : {
-
-    },
-    "Select Passwords" : {
-
-    },
-    "Skip this account" : {
-
-    },
-    "The destination Space changed. Choose the file again." : {
-
-    },
-    "The password is saved in this Space, but the form changed before Crest could fill it." : {
-
-    },
-    "These credentials are valid and will be imported. Review the security limitation before continuing." : {
-
-    },
-    "These rows are excluded from the import. Correct the source file to import them later." : {
-
-    },
-    "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
-
-    },
-    "Use imported password" : {
-
-    },
-    "Use imported password %lld" : {
-
-    },
-    "View Passwords" : {
-
-    },
-    "Warnings" : {
-
-    },
-    "A custom search engine already uses this name." : {
-
-    },
-    "A Space can contain up to 32 custom search engines." : {
-
-    },
-    "Add an HTTPS search URL containing %s or {searchTerms}." : {
-
-    },
-    "Add Search Engine" : {
-
-    },
-    "Authentication tokens and other secrets cannot be stored in a search template. Sign in on the search engine website instead." : {
-
-    },
-    "Built-In" : {
-
-    },
-    "Check the search engine details and try again." : {
-
-    },
-    "Couldn’t Save Search Engine" : {
-
-    },
-    "Custom engines belong to this Space and sync with it. Crest loads their favicon from the engine’s website; the image itself is not synced. Sign in on the engine’s website instead of putting a token in a URL template." : {
-
-    },
-    "Edit Search Engine" : {
-
-    },
-    "Enter a name for this search engine." : {
-
-    },
-    "Enter a valid URL template." : {
-
-    },
-    "Google will become this Space’s search engine." : {
-
-    },
-    "Include exactly one %s or {searchTerms} query placeholder." : {
-
-    },
-    "Manage Search Engines…" : {
-
-    },
-    "More" : {
-
-    },
-    "No Custom Search Engines" : {
-
-    },
-    "Put the query placeholder in the path or query, not the fragment." : {
-
-    },
-    "Remove Search Engine?" : {
-
-    },
-    "Save" : {
-
-    },
-    "Search engine names must be 64 characters or fewer." : {
-
-    },
-    "Search engine templates may only use the standard HTTPS port." : {
-
-    },
-    "Search engine templates must use HTTPS." : {
-
-    },
-    "Search Engine" : {
-
-    },
-    "Search Engines" : {
-
-    },
-    "Search Suggestions" : {
-
-    },
-    "Search suggestions" : {
-
-    },
-    "Search URL" : {
-
-    },
-    "Suggestion URL" : {
-
-    },
-    "Suggestions (Optional)" : {
-
-    },
-    "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions." : {
-
-    },
-    "This removes %@ from this Space." : {
-
-    },
-    "URL templates must be 2,048 characters or fewer." : {
-
-    },
-    "Use a public search engine host, not a local or numeric address." : {
-
-    },
-    "Use exactly one %s or {searchTerms} where the encoded search should appear. HTTPS is required." : {
-
-    },
-    "Use exactly one query placeholder." : {
-
-    },
-    "Usernames and passwords cannot be stored in a search template." : {
-
-    },
-    "When enabled, typed searches are sent to this Space’s search engine after a short delay. Crest never requests suggestions in Private Browsing." : {
-
     }
   },
   "version" : "1.3"
