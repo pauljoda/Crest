@@ -13,10 +13,6 @@ the live status for each issue.
 
 ### [0.5](https://github.com/pauljoda/Crest/milestone/1)
 
-#### Planned and in progress
-
-- [ ] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63)
-
 #### Completed
 
 - [x] [Add global sidebar widgets for updates and media](https://github.com/pauljoda/Crest/issues/4) — [`a499b614`](https://github.com/pauljoda/Crest/commit/a499b614fc9d3532bfb8d436ab3efc653d78e476)
@@ -66,10 +62,12 @@ the live status for each issue.
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
 - [ ] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62)
+- [ ] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63)
 - [ ] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
 - [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
 - [ ] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
 - [ ] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68)
+- [ ] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
 
 <!-- crest-roadmap-sync:end -->
 
