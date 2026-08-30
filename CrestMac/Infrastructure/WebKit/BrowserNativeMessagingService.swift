@@ -1,28 +1,8 @@
 import AppKit
 import CoreGraphics
 import Foundation
-import os
 import WebKit
-
-enum BrowserExtensionCapabilityBrokerError: LocalizedError, Equatable {
-    case invalidRequest
-    case permissionDenied(String)
-    case serviceFailure(String)
-    case unsupportedAPI(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidRequest:
-            "The extension sent Crest an invalid capability request."
-        case .permissionDenied(let permission):
-            "The extension does not have the \(permission) permission."
-        case .serviceFailure(let description):
-            description
-        case .unsupportedAPI(let api):
-            "Crest does not support the \(api) capability."
-        }
-    }
-}
+import os
 
 enum BrowserExtensionSystemIdleState: String, Equatable, Sendable {
     case active
@@ -563,7 +543,8 @@ final class BrowserNativeMessagingService:
                 do {
                     try connection.receive(message ?? NSNull())
                 } catch {
-                    let api = (message as? [String: Any])?["api"] as? String
+                    let api =
+                        (message as? [String: Any])?["api"] as? String
                         ?? "unknown"
                     Self.log.error(
                         "capability broker rejected \(api, privacy: .public): \(String(describing: error), privacy: .public)"

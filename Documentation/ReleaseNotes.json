@@ -317,6 +317,14 @@
     "2026-08-30-webextension-compatibility-layer": {
       "category": "improved",
       "message": "Improve sign-in, popups, page integration, relaunch behavior, and browser API compatibility for Chrome and Firefox extensions"
+    },
+    "2026-08-30-webpage-spell-checking": {
+      "category": "improved",
+      "message": "Check spelling on webpages without changing what you type"
+    },
+    "2026-08-30-cross-platform-native-messaging-build": {
+      "category": "internal",
+      "message": "Keep native messaging capability handling available across supported platforms"
     }
   }
 }

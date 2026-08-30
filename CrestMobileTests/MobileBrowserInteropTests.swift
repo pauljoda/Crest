@@ -8,6 +8,31 @@ import XCTest
 
 @MainActor
 final class MobileBrowserInteropTests: XCTestCase {
+    func testCapabilityBrokerErrorsRemainAvailableToTheMobileExtensionDelegate() {
+        XCTAssertEqual(
+            BrowserExtensionCapabilityBrokerError.invalidRequest.errorDescription,
+            "The extension sent Crest an invalid capability request."
+        )
+        XCTAssertEqual(
+            BrowserExtensionCapabilityBrokerError.permissionDenied(
+                "internalCapabilityBroker"
+            ).errorDescription,
+            "The extension does not have the internalCapabilityBroker permission."
+        )
+        XCTAssertEqual(
+            BrowserExtensionCapabilityBrokerError.serviceFailure(
+                "The capability broker failed."
+            ).errorDescription,
+            "The capability broker failed."
+        )
+        XCTAssertEqual(
+            BrowserExtensionCapabilityBrokerError.unsupportedAPI(
+                "windows.create"
+            ).errorDescription,
+            "Crest does not support the windows.create capability."
+        )
+    }
+
     func testMobilePageAdvertisesSafariCompatibleBrowserIdentity() async throws {
         let tab = BrowserTab(title: "Compatibility", url: nil, placement: .current)
         let space = BrowserSpace(
