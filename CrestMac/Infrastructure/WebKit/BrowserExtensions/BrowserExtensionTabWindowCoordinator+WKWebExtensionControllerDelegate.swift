@@ -16,16 +16,24 @@ extension BrowserExtensionTabWindowCoordinator:
         anchor: BrowserExtensionPopupAnchor?
     ) {
         let key = ObjectIdentifier(context)
+        guard pendingActionPopupRequests[key] == nil else { return }
         let request = BrowserExtensionActionPopupRequest(
             id: UUID(),
             anchor: anchor
         )
         pendingActionPopupRequests[key] = request
+        actionDidUpdate?()
         BrowserExtensionPopupActionRequest(
-            warmUp: BrowserExtensionPopupBackgroundWarmUp(
-                context: context,
-                deadline: popupBackgroundWarmUpDeadline
-            ),
+            prepareBackground: { [weak self, weak context] completion in
+                guard let self, let context else {
+                    completion(.timedOut)
+                    return
+                }
+                self.prepareActionPopupBackground(
+                    for: context,
+                    completion: completion
+                )
+            },
             performAction: { [weak self] in
                 guard let self,
                     self.pendingActionPopupRequests[key]?.id == request.id
@@ -57,14 +65,15 @@ extension BrowserExtensionTabWindowCoordinator:
                 else {
                     return false
                 }
-                self.pendingActionPopupRequests.removeValue(forKey: key)
+                self.takeActionPopupRequest(for: key)
                 return true
             },
             presentFallback: { [weak self] in
                 guard let self,
                     self.pendingActionPopupRequests[key]?.id == request.id,
-                    let pendingRequest = self.pendingActionPopupRequests
-                        .removeValue(forKey: key)
+                    let pendingRequest = self.takeActionPopupRequest(
+                        for: key
+                    )
                 else {
                     return
                 }
@@ -114,6 +123,73 @@ extension BrowserExtensionTabWindowCoordinator:
                 )
             }
         }
+    }
+
+    func prepareActionPopup(
+        _ action: WKWebExtension.Action,
+        for context: WKWebExtensionContext
+    ) {
+        guard action.presentsPopup else { return }
+        prepareActionPopupBackground(for: context) { _ in }
+    }
+
+    func isActionPopupLoading(
+        for context: WKWebExtensionContext
+    ) -> Bool {
+        pendingActionPopupRequests[ObjectIdentifier(context)] != nil
+    }
+
+    private func prepareActionPopupBackground(
+        for context: WKWebExtensionContext,
+        completion: @escaping BrowserExtensionPopupBackgroundWarmUpObserver
+    ) {
+        let key = ObjectIdentifier(context)
+        let now = popupBackgroundClock.now
+        if let readyUntil = popupBackgroundReadyUntil[key],
+            now < readyUntil
+        {
+            completion(.loaded)
+            return
+        }
+        popupBackgroundReadyUntil.removeValue(forKey: key)
+        if popupBackgroundWarmUpObservers[key] != nil {
+            popupBackgroundWarmUpObservers[key]?.append(completion)
+            return
+        }
+        popupBackgroundWarmUpObservers[key] = [completion]
+        BrowserExtensionPopupBackgroundWarmUp(
+            context: context,
+            deadline: popupBackgroundWarmUpDeadline
+        ).prepare { [weak self] outcome in
+            guard let self else {
+                completion(outcome)
+                return
+            }
+            if case .loaded = outcome {
+                self.popupBackgroundReadyUntil[key] =
+                    self.popupBackgroundClock.now.advanced(
+                        by: self.popupBackgroundWarmCacheDuration
+                    )
+            }
+            let observers = self.popupBackgroundWarmUpObservers.removeValue(
+                forKey: key
+            ) ?? []
+            for observer in observers {
+                observer(outcome)
+            }
+        }
+    }
+
+    @discardableResult
+    private func takeActionPopupRequest(
+        for key: ObjectIdentifier
+    ) -> BrowserExtensionActionPopupRequest? {
+        guard let request = pendingActionPopupRequests.removeValue(forKey: key)
+        else {
+            return nil
+        }
+        actionDidUpdate?()
+        return request
     }
 
     @discardableResult
@@ -179,8 +255,8 @@ extension BrowserExtensionTabWindowCoordinator:
             completionHandler(adapterError(.windowUnavailable))
             return
         }
-        let requestedPopup = pendingActionPopupRequests.removeValue(
-            forKey: ObjectIdentifier(context)
+        let requestedPopup = takeActionPopupRequest(
+            for: ObjectIdentifier(context)
         )
         if requestedPopup == nil,
             isActionPopupPresented(action)

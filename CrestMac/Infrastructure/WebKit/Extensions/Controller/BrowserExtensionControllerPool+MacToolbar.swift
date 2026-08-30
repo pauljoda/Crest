@@ -24,6 +24,10 @@ extension BrowserExtensionControllerPool {
         )
     }
 
+    func prepare(_ toolbarAction: BrowserExtensionToolbarAction) {
+        toolbarController.prepare(toolbarAction)
+    }
+
     func perform(
         _ menuItem: BrowserExtensionToolbarMenuItem,
         for toolbarAction: BrowserExtensionToolbarAction

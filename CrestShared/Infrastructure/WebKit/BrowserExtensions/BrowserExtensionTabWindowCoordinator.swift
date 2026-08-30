@@ -29,6 +29,12 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
         var pendingActionPopupRequests: [ObjectIdentifier: BrowserExtensionActionPopupRequest] = [:]
+        var popupBackgroundWarmUpObservers:
+            [ObjectIdentifier: [BrowserExtensionPopupBackgroundWarmUpObserver]] = [:]
+        var popupBackgroundReadyUntil:
+            [ObjectIdentifier: ContinuousClock.Instant] = [:]
+        let popupBackgroundClock = ContinuousClock()
+        var popupBackgroundWarmCacheDuration = Duration.seconds(15)
         /// How long a popup request gives its extension's background content
         /// before presenting nothing at all.
         ///

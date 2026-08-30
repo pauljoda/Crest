@@ -325,6 +325,10 @@
     "2026-08-30-cross-platform-native-messaging-build": {
       "category": "internal",
       "message": "Keep native messaging capability handling available across supported platforms"
+    },
+    "2026-08-30-responsive-extension-popups": {
+      "category": "improved",
+      "message": "Open extension popups reliably with faster startup and clear loading feedback"
     }
   }
 }

@@ -8,6 +8,7 @@ struct BrowserExtensionActionPresentation: Identifiable {
     let icon: NSImage?
     let isEnabled: Bool
     let isPinned: Bool
+    let isLoading: Bool
 
     init(
         id: String,
@@ -15,7 +16,8 @@ struct BrowserExtensionActionPresentation: Identifiable {
         badgeText: String = "",
         icon: NSImage? = nil,
         isEnabled: Bool = true,
-        isPinned: Bool = false
+        isPinned: Bool = false,
+        isLoading: Bool = false
     ) {
         self.id = id
         self.displayName = displayName
@@ -23,6 +25,7 @@ struct BrowserExtensionActionPresentation: Identifiable {
         self.icon = icon
         self.isEnabled = isEnabled
         self.isPinned = isPinned
+        self.isLoading = isLoading
     }
 
     init(action: BrowserExtensionToolbarAction) {
@@ -32,7 +35,8 @@ struct BrowserExtensionActionPresentation: Identifiable {
             badgeText: action.badgeText,
             icon: action.icon,
             isEnabled: action.isEnabled,
-            isPinned: action.isPinned
+            isPinned: action.isPinned,
+            isLoading: action.isPopupLoading
         )
     }
 }

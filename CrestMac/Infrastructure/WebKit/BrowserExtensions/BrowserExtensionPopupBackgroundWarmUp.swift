@@ -4,6 +4,8 @@ import WebKit
 /// the same WebKit background-readiness primitive.
 typealias BrowserExtensionPopupBackgroundWarmUp =
     BrowserExtensionBackgroundWarmUp
+typealias BrowserExtensionPopupBackgroundWarmUpObserver =
+    @MainActor (BrowserExtensionPopupBackgroundWarmUp.Outcome) -> Void
 
 /// Warms an extension background before asking WebKit to perform the action.
 ///
@@ -15,20 +17,24 @@ typealias BrowserExtensionPopupBackgroundWarmUp =
 /// WebKit still gets the action and can report or recover from the failure.
 @MainActor
 final class BrowserExtensionPopupActionRequest {
-    private let warmUp: BrowserExtensionPopupBackgroundWarmUp
+    typealias PrepareBackground =
+        @MainActor (@escaping BrowserExtensionPopupBackgroundWarmUpObserver) ->
+            Void
+
+    private let prepareBackground: PrepareBackground
     private let performAction: @MainActor () -> Void
     private let presentationDeadline: Duration?
     private let isPresentationSettled: (@MainActor () -> Bool)?
     private let presentFallback: (@MainActor () -> Void)?
 
     init(
-        warmUp: BrowserExtensionPopupBackgroundWarmUp,
+        prepareBackground: @escaping PrepareBackground,
         performAction: @escaping @MainActor () -> Void,
         presentationDeadline: Duration? = nil,
         isPresentationSettled: (@MainActor () -> Bool)? = nil,
         presentFallback: (@MainActor () -> Void)? = nil
     ) {
-        self.warmUp = warmUp
+        self.prepareBackground = prepareBackground
         self.performAction = performAction
         self.presentationDeadline = presentationDeadline
         self.isPresentationSettled = isPresentationSettled
@@ -41,7 +47,7 @@ final class BrowserExtensionPopupActionRequest {
                 BrowserExtensionPopupBackgroundWarmUp.Outcome
             ) -> Void
     ) {
-        warmUp.prepare { [performAction] outcome in
+        prepareBackground { [performAction] outcome in
             observe(outcome)
             performAction()
             guard

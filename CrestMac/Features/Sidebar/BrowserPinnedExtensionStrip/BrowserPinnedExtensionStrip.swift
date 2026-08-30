@@ -25,6 +25,7 @@ struct BrowserPinnedExtensionStrip: View {
             BrowserPinnedExtensionStripContent(
                 actions: presentedActions,
                 perform: perform,
+                prepare: prepare,
                 presentMenu: presentMenu
             )
         }
@@ -80,6 +81,17 @@ struct BrowserPinnedExtensionStrip: View {
                     sourceWindow: NSApp.keyWindow
                 )
         )
+    }
+
+    private func prepare(
+        _ presentation: BrowserExtensionActionPresentation
+    ) {
+        guard
+            let action = toolbarActions.first(where: {
+                $0.id == presentation.id
+            })
+        else { return }
+        extensionControllerPool.prepare(action)
     }
 
 }

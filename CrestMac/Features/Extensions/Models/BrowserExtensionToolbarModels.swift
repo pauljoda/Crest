@@ -10,6 +10,7 @@ struct BrowserExtensionToolbarAction: Identifiable {
     let icon: NSImage?
     let isEnabled: Bool
     let isPinned: Bool
+    let isPopupLoading: Bool
     let action: WKWebExtension.Action
     let context: WKWebExtensionContext
     let tab: BrowserExtensionTabAdapter?

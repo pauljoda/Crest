@@ -62,6 +62,8 @@ extension BrowserExtensionToolbarController {
                 icon: action.icon(for: CGSize(width: 20, height: 20)),
                 isEnabled: action.isEnabled,
                 isPinned: summary.isPinned,
+                isPopupLoading:
+                    tabWindowCoordinator.isActionPopupLoading(for: context),
                 action: action,
                 context: context,
                 tab: tab,
@@ -82,6 +84,11 @@ extension BrowserExtensionToolbarController {
             )
             return
         }
+        guard !tabWindowCoordinator.isActionPopupLoading(
+            for: toolbarAction.context
+        ) else {
+            return
+        }
         if let tab = toolbarAction.tab {
             toolbarAction.context.userGesturePerformed(in: tab)
         }
@@ -89,6 +96,19 @@ extension BrowserExtensionToolbarController {
             toolbarAction.action,
             for: toolbarAction.context,
             anchor: popupAnchor
+        )
+    }
+
+    func prepare(_ toolbarAction: BrowserExtensionToolbarAction) {
+        guard
+            toolbarAction.isEnabled,
+            toolbarAction.action.presentsPopup
+        else {
+            return
+        }
+        tabWindowCoordinator.prepareActionPopup(
+            toolbarAction.action,
+            for: toolbarAction.context
         )
     }
 

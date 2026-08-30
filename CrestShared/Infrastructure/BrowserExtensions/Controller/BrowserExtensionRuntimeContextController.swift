@@ -4,12 +4,12 @@ import WebKit
 /// Makes an extension background ready before another extension context sends
 /// its first runtime message or opens its first Port.
 ///
-/// Chrome starts an MV3 worker and retains that initial message while the
-/// worker evaluates its first-turn listeners. WebKit can instead reject the
-/// message immediately when a context is loaded but its background has not
-/// finished evaluating. A deadline preserves startup for a genuinely broken
-/// background, while the settlement window covers asynchronous application
-/// bootstrap that continues after WebKit reports top-level evaluation done.
+/// Chromium retains an initial message while an extension background installs
+/// its listeners. WebKit can instead report both persistent pages and workers
+/// loaded before those listeners are ready, then lose the first message. A
+/// deadline preserves startup for a genuinely broken background, while the
+/// settlement window covers application bootstrap that continues after
+/// WebKit's load callback.
 @MainActor
 final class BrowserExtensionBackgroundWarmUp {
     enum Outcome {
@@ -22,7 +22,7 @@ final class BrowserExtensionBackgroundWarmUp {
         @MainActor (@escaping @MainActor ((any Error)?) -> Void) -> Void
 
     nonisolated static let defaultDeadline = Duration.milliseconds(3000)
-    nonisolated static let nonpersistentBackgroundSettlementDelay =
+    nonisolated static let backgroundSettlementDelay =
         Duration.milliseconds(750)
 
     private let deadline: Duration
@@ -46,11 +46,8 @@ final class BrowserExtensionBackgroundWarmUp {
         deadline: Duration = BrowserExtensionBackgroundWarmUp.defaultDeadline
     ) {
         let settlementDelay =
-            if let context,
-                context.webExtension.hasBackgroundContent,
-                !context.webExtension.hasPersistentBackgroundContent
-            {
-                Self.nonpersistentBackgroundSettlementDelay
+            if context?.webExtension.hasBackgroundContent == true {
+                Self.backgroundSettlementDelay
             } else {
                 Duration.zero
             }

@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserPinnedExtensionActionList: View {
     let actions: [BrowserExtensionActionPresentation]
     let perform: (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) -> Void
+    var prepare: (BrowserExtensionActionPresentation) -> Void = { _ in }
     var presentMenu:
         (BrowserExtensionActionPresentation, BrowserExtensionPopupAnchor?) ->
             Void = { _, _ in }
@@ -17,6 +18,7 @@ struct BrowserPinnedExtensionActionList: View {
                         BrowserPinnedExtensionActionButton(
                             action: action,
                             perform: { perform(action, $0) },
+                            prepare: { prepare(action) },
                             presentMenu: { presentMenu(action, $0) }
                         )
                     }

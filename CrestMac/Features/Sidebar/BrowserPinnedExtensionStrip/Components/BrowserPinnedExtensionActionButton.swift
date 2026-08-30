@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserPinnedExtensionActionButton: View {
     let action: BrowserExtensionActionPresentation
     let perform: (BrowserExtensionPopupAnchor?) -> Void
+    var prepare: () -> Void = {}
     var presentMenu: (BrowserExtensionPopupAnchor?) -> Void = { _ in }
 
     @State private var isHovering = false
@@ -15,7 +16,7 @@ struct BrowserPinnedExtensionActionButton: View {
                 in: .rect(cornerRadius: 7)
             )
             .contentShape(.rect)
-            .onHover { isHovering = $0 }
+            .onHover(perform: hoverChanged)
     }
 
     private var anchoredButton: some View {
@@ -34,18 +35,34 @@ struct BrowserPinnedExtensionActionButton: View {
 
     private var actionButton: some View {
         Button(action: performAction) {
-            BrowserExtensionActionArtwork(
-                action: action,
-                glyphSize: BrowserPinnedExtensionStripLayoutPolicy.glyphSize
-            )
+            Group {
+                if action.isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityHidden(true)
+                } else {
+                    BrowserExtensionActionArtwork(
+                        action: action,
+                        glyphSize:
+                            BrowserPinnedExtensionStripLayoutPolicy.glyphSize
+                    )
+                }
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .disabled(!action.isEnabled)
+        .disabled(!action.isEnabled || action.isLoading)
         .accessibilityLabel(action.displayName)
+        .accessibilityValue(action.isLoading ? "Loading…" : "")
         .accessibilityIdentifier("pinned-extension-action-\(action.id)")
         .help(action.displayName)
+    }
+
+    private func hoverChanged(_ isHovering: Bool) {
+        self.isHovering = isHovering
+        guard isHovering, action.isEnabled, !action.isLoading else { return }
+        prepare()
     }
 
     private func performAction() {
