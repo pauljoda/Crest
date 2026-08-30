@@ -20,6 +20,38 @@ enum BrowserAutomaticQuoteSubstitutionPreference {
     }
 }
 
+#if os(macOS)
+    /// Crest's process-wide policy for WebKit's macOS text checker.
+    ///
+    /// WebKit snapshots these app-domain defaults the first time its text checker
+    /// is used. Configure them before creating a page so website editors receive
+    /// literal input, while continuous spell checking remains user-controlled.
+    enum BrowserMacWebTextAssistancePolicy {
+        static let spellCheckingKey = "WebContinuousSpellCheckingEnabled"
+        static let defaultIsSpellCheckingEnabled = false
+
+        static let disabledSmartTextKeys = [
+            "WebAutomaticSpellingCorrectionEnabled",
+            "WebGrammarCheckingEnabled",
+            "WebSmartInsertDeleteEnabled",
+            "WebSmartListsEnabled",
+            BrowserAutomaticQuoteSubstitutionPreference.key,
+            "WebAutomaticDashSubstitutionEnabled",
+            "WebAutomaticLinkDetectionEnabled",
+            "WebAutomaticTextReplacementEnabled",
+        ]
+
+        static func configure(defaults: UserDefaults = .standard) {
+            defaults.register(
+                defaults: [spellCheckingKey: defaultIsSpellCheckingEnabled]
+            )
+            for key in disabledSmartTextKeys {
+                defaults.set(false, forKey: key)
+            }
+        }
+    }
+#endif
+
 @MainActor
 enum BrowserPageConfiguration {
     /// Builds the configuration every Crest page shares.

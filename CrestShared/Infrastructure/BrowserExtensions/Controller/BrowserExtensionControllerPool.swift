@@ -16,7 +16,6 @@ final class BrowserExtensionControllerPool {
     @ObservationIgnored let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
 
     @ObservationIgnored private var commandSettingsHandler: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Void)?
-
     private(set) var actionRevision = 0
 
     /// The store-update scheduler, once a platform shell has supplied one.
@@ -139,6 +138,7 @@ final class BrowserExtensionControllerPool {
         guard count > 0 else { return }
         actionRevision &+= count
     }
+
 }
 
 // MARK: - Installation

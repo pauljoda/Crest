@@ -92,9 +92,34 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
             let isEditable = dictionary["editable"] as? Bool
         else { return nil }
 
+        let sourceValue: Any = dictionary["sourceURL"] ?? imageURL
+        guard sourceValue is String || sourceValue is NSNull else { return nil }
+        let encodedMediaType: Any?
+        if let explicitMediaType = dictionary["mediaType"] {
+            encodedMediaType = explicitMediaType
+        } else if imageURL is String {
+            encodedMediaType = "image"
+        } else {
+            encodedMediaType = nil
+        }
+        let mediaType: BrowserExtensionWebpageMenuMediaType?
+        if let encodedMediaType = encodedMediaType as? String {
+            guard
+                let parsedMediaType = BrowserExtensionWebpageMenuMediaType(
+                    rawValue: encodedMediaType
+                )
+            else { return nil }
+            mediaType = parsedMediaType
+        } else if encodedMediaType == nil || encodedMediaType is NSNull {
+            mediaType = nil
+        } else {
+            return nil
+        }
+
         return BrowserLinkContext(
             linkURL: webDestination(href),
-            imageURL: imageDestination(imageURL),
+            sourceURL: mediaSource(sourceValue),
+            mediaType: mediaType,
             documentURL: documentURL,
             selectionText: selection(selectionText),
             isEditable: isEditable,
@@ -114,7 +139,7 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
         return url
     }
 
-    private static func imageDestination(_ value: Any?) -> URL? {
+    private static func mediaSource(_ value: Any?) -> URL? {
         guard let string = value as? String,
             string.count <= maximumURLLength,
             let url = URL(string: string),
@@ -138,9 +163,14 @@ struct BrowserLinkContextCapturePolicy: Equatable, Sendable {
 
 struct BrowserLinkContext: Equatable, Sendable {
     let linkURL: URL?
-    let imageURL: URL?
+    let sourceURL: URL?
+    let mediaType: BrowserExtensionWebpageMenuMediaType?
     let documentURL: URL?
     let selectionText: String?
     let isEditable: Bool
     let isMainFrame: Bool
+
+    var imageURL: URL? {
+        mediaType == .image ? sourceURL : nil
+    }
 }

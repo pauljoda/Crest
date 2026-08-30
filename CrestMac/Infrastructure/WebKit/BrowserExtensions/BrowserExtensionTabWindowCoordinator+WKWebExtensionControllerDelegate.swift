@@ -21,10 +21,66 @@ extension BrowserExtensionTabWindowCoordinator:
             anchor: anchor
         )
         pendingActionPopupRequests[key] = request
-        BrowserExtensionPopupBackgroundWarmUp(
-            context: context,
-            deadline: popupBackgroundWarmUpDeadline
-        ).prepare {
+        BrowserExtensionPopupActionRequest(
+            warmUp: BrowserExtensionPopupBackgroundWarmUp(
+                context: context,
+                deadline: popupBackgroundWarmUpDeadline
+            ),
+            performAction: { [weak self] in
+                guard let self,
+                    self.pendingActionPopupRequests[key]?.id == request.id
+                else {
+                    browserExtensionPopupLog.error(
+                        "discarded stale action popup request"
+                    )
+                    return
+                }
+                BrowserExtensionBackgroundActivityLease(
+                    context: context,
+                    isActive: { [weak self] in
+                        self?.pendingActionPopupRequests[key]?.id
+                            == request.id
+                    }
+                ).start()
+                context.performAction(for: action.associatedTab)
+            },
+            presentationDeadline: popupPresentationDeadline,
+            isPresentationSettled: { [weak self, weak action] in
+                guard let self,
+                    self.pendingActionPopupRequests[key]?.id == request.id
+                else {
+                    return true
+                }
+                guard
+                    let action,
+                    self.isActionPopupPresented(action)
+                else {
+                    return false
+                }
+                self.pendingActionPopupRequests.removeValue(forKey: key)
+                return true
+            },
+            presentFallback: { [weak self] in
+                guard let self,
+                    self.pendingActionPopupRequests[key]?.id == request.id,
+                    let pendingRequest = self.pendingActionPopupRequests
+                        .removeValue(forKey: key)
+                else {
+                    return
+                }
+                browserExtensionPopupLog.error(
+                    "WebKit missed action popup presentation; using bounded fallback"
+                )
+                if !self.presentActionPopup(
+                    action,
+                    anchor: pendingRequest.anchor
+                ) {
+                    browserExtensionPopupLog.error(
+                        "bounded action popup fallback could not find an anchor"
+                    )
+                }
+            }
+        ).start {
             [weak self, weak context] outcome in
             guard let self, let context,
                 self.pendingActionPopupRequests[key]?.id == request.id
@@ -33,24 +89,13 @@ extension BrowserExtensionTabWindowCoordinator:
             }
             switch outcome {
             case .loaded:
-                pendingActionPopupRequests.removeValue(forKey: key)
                 browserExtensionPopupLog.notice(
                     """
                     background ready for \
                     \(context.uniqueIdentifier, privacy: .public)
                     """
                 )
-                guard presentActionPopup(action, anchor: request.anchor) else {
-                    browserExtensionPopupLog.error(
-                        """
-                        popup presentation unavailable for \
-                        \(context.uniqueIdentifier, privacy: .public)
-                        """
-                    )
-                    return
-                }
             case .failed(let error):
-                pendingActionPopupRequests.removeValue(forKey: key)
                 let cocoaError = error as NSError
                 browserExtensionPopupLog.error(
                     """
@@ -61,7 +106,6 @@ extension BrowserExtensionTabWindowCoordinator:
                     """
                 )
             case .timedOut:
-                pendingActionPopupRequests.removeValue(forKey: key)
                 browserExtensionPopupLog.error(
                     """
                     background timed out for \
@@ -79,27 +123,45 @@ extension BrowserExtensionTabWindowCoordinator:
     ) -> Bool {
         guard
             action.presentsPopup,
+            let presentationSource = anchor?.presentationSource(
+                fallbackWindow: NSApp.keyWindow
+            ),
             let popover = action.popupPopover
         else {
             return false
         }
+        // WebKit creates an extension action's popover outside Crest's SwiftUI
+        // view hierarchy. Without an explicit appearance, that auxiliary
+        // window can remain Aqua even while the browser and system are dark;
+        // `prefers-color-scheme` then also reports the wrong value to every
+        // extension popup. Carry the invoking window's resolved appearance
+        // onto both WebKit-owned surfaces before presentation. Applying it to
+        // the web view also updates a page that finished loading while WebKit
+        // was constructing the popover.
+        let appearance = presentationSource.view.effectiveAppearance
+        popover.appearance = appearance
+        action.popupWebView?.appearance = appearance
         if popover.isShown {
             action.closePopup()
             return true
-        }
-        guard
-            let presentationSource = anchor?.presentationSource(
-                fallbackWindow: NSApp.keyWindow
-            )
-        else {
-            return false
         }
         popover.show(
             relativeTo: presentationSource.rect,
             of: presentationSource.view,
             preferredEdge: .maxY
         )
+        // `NSPopover.show` creates its private window and can replace the
+        // popover object's inherited appearance while doing so. Apply the
+        // same resolved value to that concrete window once it exists.
+        popover.contentViewController?.view.window?.appearance = appearance
+        action.popupWebView?.appearance = appearance
         return true
+    }
+
+    private func isActionPopupPresented(
+        _ action: WKWebExtension.Action
+    ) -> Bool {
+        action.popupPopover?.isShown == true
     }
 
     func webExtensionController(
@@ -117,13 +179,22 @@ extension BrowserExtensionTabWindowCoordinator:
             completionHandler(adapterError(.windowUnavailable))
             return
         }
-        let requestedAnchor = pendingActionPopupRequests.removeValue(
+        let requestedPopup = pendingActionPopupRequests.removeValue(
             forKey: ObjectIdentifier(context)
-        )?.anchor
+        )
+        if requestedPopup == nil,
+            isActionPopupPresented(action)
+        {
+            // A bounded fallback already presented this action after WebKit
+            // missed its first delegate handoff. A late callback acknowledges
+            // that presentation instead of toggling the popup closed again.
+            completionHandler(nil)
+            return
+        }
         guard
             presentActionPopup(
                 action,
-                anchor: requestedAnchor
+                anchor: requestedPopup?.anchor
                     ?? BrowserExtensionPopupAnchor(
                         screenPoint: NSEvent.mouseLocation,
                         sourceWindow: NSApp.keyWindow

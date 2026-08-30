@@ -29,7 +29,7 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
         else {
             return nil
         }
-        return coordinator?.window(for: spaceID)
+        return coordinator?.window(for: tabID, in: spaceID)
     }
 
     func indexInWindow(for context: WKWebExtensionContext) -> Int {

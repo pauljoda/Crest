@@ -3,8 +3,15 @@ import WebKit
 
 @MainActor
 enum BrowserWebsiteDataStore {
-    static func launchScoped(for profile: BrowsingProfile) -> WKWebsiteDataStore {
-        guard !BrowserLaunchIsolationPolicy.requiresIsolation(.current) else {
+    static func launchScoped(
+        for profile: BrowsingProfile,
+        environment: BrowserLaunchEnvironment = .current
+    ) -> WKWebsiteDataStore {
+        guard
+            !BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(
+                environment
+            )
+        else {
             return .nonPersistent()
         }
         return persistent(for: profile)

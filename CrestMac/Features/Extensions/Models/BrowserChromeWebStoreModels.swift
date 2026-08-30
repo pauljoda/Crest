@@ -53,23 +53,34 @@ enum BrowserWebExtensionCompatibilityPackageError: LocalizedError {
 final class BrowserWebExtensionPreparedPackage {
     let resourceURL: URL
     let internalGrantedPermissions: Set<String>
+    let capabilityBrokerGrantedPermissions: Set<String>
+    let allowsInternalCapabilityBroker: Bool
 
     private let rootURL: URL
     private let fileManager: FileManager
+    private let removesRootOnDeinit: Bool
 
     init(
         resourceURL: URL,
         rootURL: URL,
         fileManager: FileManager,
-        internalGrantedPermissions: Set<String> = []
+        removesRootOnDeinit: Bool = true,
+        internalGrantedPermissions: Set<String> = [],
+        capabilityBrokerGrantedPermissions: Set<String> = [],
+        allowsInternalCapabilityBroker: Bool = false
     ) {
         self.resourceURL = resourceURL
         self.rootURL = rootURL
         self.fileManager = fileManager
+        self.removesRootOnDeinit = removesRootOnDeinit
         self.internalGrantedPermissions = internalGrantedPermissions
+        self.capabilityBrokerGrantedPermissions =
+            capabilityBrokerGrantedPermissions
+        self.allowsInternalCapabilityBroker = allowsInternalCapabilityBroker
     }
 
     deinit {
+        guard removesRootOnDeinit else { return }
         try? fileManager.removeItem(at: rootURL)
     }
 }

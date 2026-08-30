@@ -76,6 +76,7 @@ const sidebars = {
       items: [
         'extensions/status-and-technical-details',
         'extensions/native-companion-limits',
+        'extensions/api-compatibility-matrix',
         'extensions/compatibility',
         'extensions/troubleshoot-partial-compatibility',
         'extensions/onepassword',

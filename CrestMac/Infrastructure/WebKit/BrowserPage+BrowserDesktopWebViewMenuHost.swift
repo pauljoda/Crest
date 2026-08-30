@@ -76,7 +76,8 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
             pageURL: pageURL,
             documentURL: documentURL,
             linkURL: captured.linkURL,
-            sourceURL: captured.imageURL,
+            sourceURL: captured.sourceURL,
+            mediaType: captured.mediaType,
             selectionText: captured.selectionText,
             isEditable: captured.isEditable,
             isMainFrame: captured.isMainFrame

@@ -13,13 +13,16 @@ enum BrowserExtensionNativeMessagingApplication {
 struct BrowserExtensionNativeMessagingAuthorization: Equatable, Sendable {
     let grantedPermissions: Set<String>
     let clientID: BrowserExtensionServiceClientID?
+    let allowsInternalCapabilityBroker: Bool
 
     init(
         grantedPermissions: Set<String> = [],
-        clientID: BrowserExtensionServiceClientID? = nil
+        clientID: BrowserExtensionServiceClientID? = nil,
+        allowsInternalCapabilityBroker: Bool = false
     ) {
         self.grantedPermissions = grantedPermissions
         self.clientID = clientID
+        self.allowsInternalCapabilityBroker = allowsInternalCapabilityBroker
     }
 
     func grants(_ permission: String) -> Bool {

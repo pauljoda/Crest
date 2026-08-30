@@ -97,6 +97,7 @@ final class BrowserNativeMessagingTests: XCTestCase {
                 documentURL: URL(string: "https://example.com/article")!,
                 linkURL: nil,
                 sourceURL: URL(string: "https://cdn.example.com/photo.webp")!,
+                mediaType: .image,
                 selectionText: nil,
                 isEditable: false,
                 isMainFrame: true
@@ -159,7 +160,8 @@ final class BrowserNativeMessagingTests: XCTestCase {
                 "com.pauldavis.crest.webextension-compatibility",
             extensionIdentity: .chromeWebStore(extensionID),
             authorization: BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: ["idle", "nativeMessaging"]
+                grantedPermissions: ["idle"],
+                allowsInternalCapabilityBroker: true
             )
         ) { value, error in
             received = value
@@ -205,7 +207,7 @@ final class BrowserNativeMessagingTests: XCTestCase {
                 "com.pauldavis.crest.webextension-compatibility",
             extensionIdentity: .chromeWebStore(extensionID),
             authorization: BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: ["nativeMessaging"]
+                allowsInternalCapabilityBroker: true
             )
         ) { value, error in
             received = value
@@ -225,6 +227,11 @@ final class BrowserNativeMessagingTests: XCTestCase {
     func testContextMenuTransportCannotReachAnExternalNativeHost()
         async throws
     {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
         let service = BrowserNativeMessagingService(
             capability: .available,
             resolver: BrowserNativeMessagingHostManifestResolver(
@@ -237,9 +244,10 @@ final class BrowserNativeMessagingTests: XCTestCase {
         service.sendMessage(
             ["ping": "pong"],
             applicationIdentifier: "com.example.native-host",
-            extensionIdentity: nil,
+            extensionIdentity: .chromeWebStore(extensionID),
             authorization: BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: ["contextMenus", "nativeMessaging"]
+                grantedPermissions: ["contextMenus"],
+                allowsInternalCapabilityBroker: true
             )
         ) { _, error in
             receivedError = error
@@ -248,8 +256,8 @@ final class BrowserNativeMessagingTests: XCTestCase {
         await fulfillment(of: [response], timeout: 1)
 
         guard
-            case .unverifiedExtension? =
-                receivedError as? BrowserExtensionNativeMessagingError
+            case .permissionDenied("nativeMessaging")? =
+                receivedError as? BrowserExtensionCapabilityBrokerError
         else {
             return XCTFail("The internal menu transport reached an external host.")
         }
@@ -333,8 +341,9 @@ final class BrowserNativeMessagingTests: XCTestCase {
                 BrowserNativeMessagingService.capabilityBrokerIdentifier,
             extensionIdentity: .chromeWebStore(extensionID),
             authorization: BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: ["nativeMessaging", "notifications"],
-                clientID: clientID
+                grantedPermissions: ["notifications"],
+                clientID: clientID,
+                allowsInternalCapabilityBroker: true
             )
         ) { value, error in
             received = value
@@ -385,8 +394,9 @@ final class BrowserNativeMessagingTests: XCTestCase {
             idleStateProvider: { _ in .active }
         )
         let authorization = BrowserExtensionNativeMessagingAuthorization(
-            grantedPermissions: ["nativeMessaging", "notifications"],
-            clientID: clientID
+            grantedPermissions: ["notifications"],
+            clientID: clientID,
+            allowsInternalCapabilityBroker: true
         )
 
         let create = await capabilityResponse(

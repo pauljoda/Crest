@@ -32,6 +32,11 @@ final class BrowserExtensionRestorationController {
         var loaded = 0
         var skippedMissingSpace = 0
         var failed = 0
+        var backgroundWarmUps:
+            [(
+                extensionID: String,
+                task: Task<BrowserExtensionBackgroundWarmUp.Outcome, Never>
+            )] = []
 
         for installation in installations {
             guard installation.isEnabled else {
@@ -53,10 +58,23 @@ final class BrowserExtensionRestorationController {
                 continue
             }
             do {
-                _ = try await runtime.loadInstallation(
+                let context = try await runtime.loadInstallation(
                     installation,
                     in: space
                 )
+                if context.webExtension.hasBackgroundContent {
+                    backgroundWarmUps.append(
+                        (
+                            extensionID: installation.id,
+                            task: Task { @MainActor [runtime] in
+                                await runtime
+                                    .prepareBackgroundForInitialContentScriptTraffic(
+                                        context
+                                    )
+                            }
+                        )
+                    )
+                }
                 loaded += 1
                 BrowserExtensionStartupLog.loaded(
                     extensionID: installation.id,
@@ -73,6 +91,24 @@ final class BrowserExtensionRestorationController {
                     installation: installation,
                     nativeMessagingCapability:
                         runtime.nativeMessagingCapability
+                )
+            }
+        }
+
+        for warmUp in backgroundWarmUps {
+            switch await warmUp.task.value {
+            case .loaded:
+                BrowserExtensionStartupLog.backgroundReady(
+                    extensionID: warmUp.extensionID
+                )
+            case .failed(let error):
+                BrowserExtensionStartupLog.backgroundFailed(
+                    extensionID: warmUp.extensionID,
+                    error: error
+                )
+            case .timedOut:
+                BrowserExtensionStartupLog.backgroundTimedOut(
+                    extensionID: warmUp.extensionID
                 )
             }
         }
@@ -107,10 +143,13 @@ final class BrowserExtensionRestorationController {
             )
             installation.isEnabled = true
             do {
-                _ = try await runtime.loadInstallation(
+                let context = try await runtime.loadInstallation(
                     installation,
                     in: space
                 )
+                _ =
+                    await runtime
+                    .prepareBackgroundForInitialContentScriptTraffic(context)
             } catch {
                 persistence.recordRestoreFailure(
                     error,
@@ -184,7 +223,13 @@ final class BrowserExtensionRestorationController {
         }
 
         do {
-            _ = try await runtime.loadInstallation(installation, in: space)
+            let context = try await runtime.loadInstallation(
+                installation,
+                in: space
+            )
+            _ =
+                await runtime
+                .prepareBackgroundForInitialContentScriptTraffic(context)
         } catch {
             persistence.recordRestoreFailure(
                 error,

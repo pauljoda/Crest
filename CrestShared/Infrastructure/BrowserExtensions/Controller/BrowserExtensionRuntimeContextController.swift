@@ -1,8 +1,123 @@
 import Foundation
 import WebKit
 
+/// Makes an extension background ready before another extension context sends
+/// its first runtime message or opens its first Port.
+///
+/// Chrome starts an MV3 worker and retains that initial message while the
+/// worker evaluates its first-turn listeners. WebKit can instead reject the
+/// message immediately when a context is loaded but its background has not
+/// finished evaluating. A deadline preserves startup for a genuinely broken
+/// background, while the settlement window covers asynchronous application
+/// bootstrap that continues after WebKit reports top-level evaluation done.
+@MainActor
+final class BrowserExtensionBackgroundWarmUp {
+    enum Outcome {
+        case loaded
+        case failed(any Error)
+        case timedOut
+    }
+
+    typealias Load =
+        @MainActor (@escaping @MainActor ((any Error)?) -> Void) -> Void
+
+    nonisolated static let defaultDeadline = Duration.milliseconds(3000)
+    nonisolated static let nonpersistentBackgroundSettlementDelay =
+        Duration.milliseconds(750)
+
+    private let deadline: Duration
+    private let settlementDelay: Duration
+    private let load: Load
+    private var hasFinished = false
+    private var hasLoadReported = false
+
+    init(
+        deadline: Duration = BrowserExtensionBackgroundWarmUp.defaultDeadline,
+        settlementDelay: Duration = .zero,
+        load: @escaping Load
+    ) {
+        self.deadline = deadline
+        self.settlementDelay = settlementDelay
+        self.load = load
+    }
+
+    convenience init(
+        context: WKWebExtensionContext?,
+        deadline: Duration = BrowserExtensionBackgroundWarmUp.defaultDeadline
+    ) {
+        let settlementDelay =
+            if let context,
+                context.webExtension.hasBackgroundContent,
+                !context.webExtension.hasPersistentBackgroundContent
+            {
+                Self.nonpersistentBackgroundSettlementDelay
+            } else {
+                Duration.zero
+            }
+        self.init(
+            deadline: deadline,
+            settlementDelay: settlementDelay
+        ) { loaded in
+            guard let context else {
+                loaded(nil)
+                return
+            }
+            guard context.webExtension.hasBackgroundContent else {
+                loaded(nil)
+                return
+            }
+            context.loadBackgroundContent { error in
+                MainActor.assumeIsolated { loaded(error) }
+            }
+        }
+    }
+
+    func prepare(
+        _ body: @escaping @MainActor (Outcome) -> Void
+    ) {
+        load { [self] error in
+            hasLoadReported = true
+            if let error {
+                finish(.failed(error), body)
+                return
+            }
+            guard settlementDelay != .zero else {
+                finish(.loaded, body)
+                return
+            }
+            Task { @MainActor [self] in
+                try? await Task.sleep(for: settlementDelay)
+                finish(.loaded, body)
+            }
+        }
+        Task { @MainActor [self] in
+            try? await Task.sleep(for: deadline)
+            guard !hasLoadReported else { return }
+            finish(.timedOut, body)
+        }
+    }
+
+    func prepare() async -> Outcome {
+        await withCheckedContinuation { continuation in
+            prepare { outcome in
+                continuation.resume(returning: outcome)
+            }
+        }
+    }
+
+    private func finish(
+        _ outcome: Outcome,
+        _ body: @MainActor (Outcome) -> Void
+    ) {
+        guard !hasFinished else { return }
+        hasFinished = true
+        body(outcome)
+    }
+}
+
 struct BrowserExtensionPageConfiguration {
     let baseURL: URL
+    let context: WKWebExtensionContext
     let webViewConfiguration: WKWebViewConfiguration
 }
 
@@ -118,6 +233,12 @@ final class BrowserExtensionRuntimeContextController {
         internalGrantedPermissionsBySpace[spaceID]?[extensionID] ?? []
     }
 
+    func prepareBackgroundForInitialContentScriptTraffic(
+        _ context: WKWebExtensionContext
+    ) async -> BrowserExtensionBackgroundWarmUp.Outcome {
+        await BrowserExtensionBackgroundWarmUp(context: context).prepare()
+    }
+
     func extensionPageConfiguration(
         for extensionURL: URL,
         in spaceID: SpaceID
@@ -133,6 +254,7 @@ final class BrowserExtensionRuntimeContextController {
             context.webViewConfiguration.map {
                 BrowserExtensionPageConfiguration(
                     baseURL: context.baseURL,
+                    context: context,
                     webViewConfiguration: $0
                 )
             }
@@ -147,7 +269,9 @@ final class BrowserExtensionRuntimeContextController {
         permissionSnapshot: BrowserExtensionPermissionSnapshot,
         persistsRuntimeSummary: Bool,
         source: BrowserExtensionInstallationSource?,
-        internalGrantedPermissions: Set<String> = []
+        internalGrantedPermissions: Set<String> = [],
+        capabilityBrokerGrantedPermissions: Set<String> = [],
+        allowsInternalCapabilityBroker: Bool = false
     ) async throws -> WKWebExtensionContext {
         if let existingContext = loadedContext(
             extensionID: extensionID,
@@ -166,7 +290,10 @@ final class BrowserExtensionRuntimeContextController {
             permissionSnapshot: permissionSnapshot,
             persistsRuntimeSummary: persistsRuntimeSummary,
             source: source,
-            internalGrantedPermissions: internalGrantedPermissions
+            internalGrantedPermissions: internalGrantedPermissions,
+            capabilityBrokerGrantedPermissions:
+                capabilityBrokerGrantedPermissions,
+            allowsInternalCapabilityBroker: allowsInternalCapabilityBroker
         )
     }
 
@@ -228,13 +355,16 @@ final class BrowserExtensionRuntimeContextController {
         permissionSnapshot: BrowserExtensionPermissionSnapshot,
         persistsRuntimeSummary: Bool,
         source: BrowserExtensionInstallationSource?,
-        internalGrantedPermissions: Set<String> = []
+        internalGrantedPermissions: Set<String> = [],
+        capabilityBrokerGrantedPermissions: Set<String> = [],
+        allowsInternalCapabilityBroker: Bool = false
     ) throws -> WKWebExtensionContext {
+        let authoredRequestedPermissions = webExtension.requestedPermissions
+            .map(\.rawValue)
+            .filter { !internalGrantedPermissions.contains($0) }
         let compatibility = BrowserExtensionCompatibilityPolicy.assess(
             extensionID: extensionID,
-            requestedPermissions: webExtension.requestedPermissions
-                .map(\.rawValue)
-                .filter { !internalGrantedPermissions.contains($0) },
+            requestedPermissions: authoredRequestedPermissions,
             source: BrowserExtensionCompatibilitySource(
                 installationSource: source
             ),
@@ -269,12 +399,31 @@ final class BrowserExtensionRuntimeContextController {
         )
         context.uniqueIdentifier = runtimeIdentity.uniqueIdentifier
         context.baseURL = runtimeIdentity.baseURL
-        context.unsupportedAPIs = unsupportedAPIs
+        let platformUnsupportedAPIs: Set<String>
+        switch source {
+        case .some(.safariWebExtension):
+            platformUnsupportedAPIs = []
+        default:
+            platformUnsupportedAPIs =
+                BrowserExtensionAPICompatibilityMatrix
+                .unsupportedWebKitAPIs(
+                    requestedPermissions: authoredRequestedPermissions
+                )
+        }
+        context.unsupportedAPIs = unsupportedAPIs.union(
+            platformUnsupportedAPIs
+        )
         let restoreError = permissions.apply(permissionSnapshot, to: context)
         for permissionName in internalGrantedPermissions {
+            let permission =
+                if permissionName == "nativeMessaging" {
+                    WKWebExtension.Permission.nativeMessaging
+                } else {
+                    WKWebExtension.Permission(rawValue: permissionName)
+                }
             context.setPermissionStatus(
                 .grantedExplicitly,
-                for: WKWebExtension.Permission(rawValue: permissionName)
+                for: permission
             )
         }
         let nativeMessagingIdentity: BrowserExtensionNativeMessagingIdentity?
@@ -292,15 +441,21 @@ final class BrowserExtensionRuntimeContextController {
         default:
             nativeMessagingIdentity = nil
         }
+        var authorizedPermissions = Set(
+            permissionSnapshot.grantedPermissions.keys
+        )
+        authorizedPermissions.formUnion(
+            capabilityBrokerGrantedPermissions
+        )
         let nativeMessagingAuthorization =
             BrowserExtensionNativeMessagingAuthorization(
-                grantedPermissions: Set(
-                    permissionSnapshot.grantedPermissions.keys
-                ),
+                grantedPermissions: authorizedPermissions,
                 clientID: .scoped(
                     extensionID: extensionID,
                     spaceID: space.id
-                )
+                ),
+                allowsInternalCapabilityBroker:
+                    allowsInternalCapabilityBroker
             )
         if let nativeMessagingIdentity {
             tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
@@ -308,14 +463,12 @@ final class BrowserExtensionRuntimeContextController {
                 authorization: nativeMessagingAuthorization,
                 for: context
             )
-        } else if permissionSnapshot.grantedPermissions["contextMenus"] != nil
-            || permissionSnapshot.grantedPermissions["menus"] != nil,
-            internalGrantedPermissions.contains("nativeMessaging")
-        {
+        } else if allowsInternalCapabilityBroker {
             tabWindowCoordinator.registerCapabilityBrokerAuthorization(
                 BrowserExtensionNativeMessagingAuthorization(
-                    grantedPermissions: ["contextMenus"],
-                    clientID: nativeMessagingAuthorization.clientID
+                    grantedPermissions: authorizedPermissions,
+                    clientID: nativeMessagingAuthorization.clientID,
+                    allowsInternalCapabilityBroker: true
                 ),
                 for: context
             )
@@ -517,7 +670,11 @@ final class BrowserExtensionRuntimeContextController {
             persistsRuntimeSummary: true,
             source: installation.source,
             internalGrantedPermissions:
-                preparedResource.internalGrantedPermissions
+                preparedResource.internalGrantedPermissions,
+            capabilityBrokerGrantedPermissions:
+                preparedResource.capabilityBrokerGrantedPermissions,
+            allowsInternalCapabilityBroker:
+                preparedResource.allowsInternalCapabilityBroker
         )
         if let retainedAccess = preparedResource.retainedAccess {
             retainRuntimeResourceAccess(

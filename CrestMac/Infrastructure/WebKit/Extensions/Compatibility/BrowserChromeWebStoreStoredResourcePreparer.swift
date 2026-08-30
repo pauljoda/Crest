@@ -63,7 +63,11 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
             resourceURL: preparedPackage.resourceURL,
             retainedAccess: preparedPackage,
             internalGrantedPermissions:
-                preparedPackage.internalGrantedPermissions
+                preparedPackage.internalGrantedPermissions,
+            capabilityBrokerGrantedPermissions:
+                preparedPackage.capabilityBrokerGrantedPermissions,
+            allowsInternalCapabilityBroker:
+                preparedPackage.allowsInternalCapabilityBroker
         )
     }
 }

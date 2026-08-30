@@ -8,7 +8,8 @@ enum BrowserExtensionExternalNavigationPolicy {
         isAppInitiated: Bool
     ) -> Bool {
         guard let currentScheme = currentURL?.scheme?.lowercased(),
-            currentScheme == "webkit-extension" || currentScheme == "crest-extension",
+            ["chrome-extension", "crest-extension", "webkit-extension"]
+                .contains(currentScheme),
             let scheme = destinationURL?.scheme?.lowercased(),
             scheme == "http" || scheme == "https"
         else { return false }

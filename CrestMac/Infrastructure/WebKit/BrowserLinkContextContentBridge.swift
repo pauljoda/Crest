@@ -91,13 +91,15 @@ enum BrowserLinkContextContentBridge {
             );
           };
 
-          const post = (event, href, imageURL) => {
+          const post = (event, href, media) => {
             try {
               webkit.messageHandlers.crestLinkContext.postMessage({
                 version: 3,
                 token: ++sequence,
                 href,
-                imageURL,
+                imageURL: media?.type === "image" ? media.sourceURL : null,
+                sourceURL: media?.sourceURL ?? null,
+                mediaType: media?.type ?? null,
                 selectionText: selectionText(event),
                 editable: isEditable(event)
               });
@@ -162,28 +164,37 @@ enum BrowserLinkContextContentBridge {
             return resolved.href;
           };
 
-          const imageDestination = (event) => {
-            const image = elementFromEvent(
+          const mediaDestination = (event) => {
+            const media = elementFromEvent(
               event,
-              "img, input[type='image'], svg image"
+              "audio, img, input[type='image'], svg image, video"
             );
-            if (!image) return null;
-            const raw = image.currentSrc
-              || (typeof image.src === "string" ? image.src : null)
-              || image.href?.baseVal
-              || image.getAttribute("href")
-              || image.getAttribute("src");
-            if (!raw) return null;
+            if (!media) return null;
+            const localName = media.localName?.toLowerCase();
+            const type = localName === "audio"
+              ? "audio"
+              : localName === "video"
+                ? "video"
+                : "image";
+            const raw = media.currentSrc
+              || (typeof media.src === "string" ? media.src : null)
+              || media.href?.baseVal
+              || media.getAttribute("href")
+              || media.getAttribute("src");
+            if (!raw) return { type, sourceURL: null };
             let resolved;
             try {
-              resolved = new URL(raw, image.baseURI || document.baseURI);
+              resolved = new URL(raw, media.baseURI || document.baseURI);
             } catch (_) {
-              return null;
+              return { type, sourceURL: null };
             }
             if (!["http:", "https:", "blob:", "data:"].includes(resolved.protocol)) {
-              return null;
+              return { type, sourceURL: null };
             }
-            return resolved.href.length <= 4096 ? resolved.href : null;
+            return {
+              type,
+              sourceURL: resolved.href.length <= 4096 ? resolved.href : null
+            };
           };
 
           globalThis.addEventListener("pointerdown", (event) => {
@@ -198,7 +209,7 @@ enum BrowserLinkContextContentBridge {
 
           globalThis.addEventListener("contextmenu", (event) => {
             if (!event.isTrusted) return;
-            post(event, destination(event), imageDestination(event));
+            post(event, destination(event), mediaDestination(event));
           }, { capture: true, passive: true });
         })();
         """#

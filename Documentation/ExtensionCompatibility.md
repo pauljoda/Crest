@@ -5,6 +5,12 @@ promise based only on a manifest. A package can verify, install, and load while
 one of its optional or background features still reaches an API WebKit does not
 implement.
 
+The pinned platform specifications, process boundaries, and Crest routing
+decision for every supported namespace live in
+[`ExtensionAPICompatibilityMatrix.md`](ExtensionAPICompatibilityMatrix.md).
+That matrix is the compatibility contract; individual extension behavior is
+end-to-end acceptance evidence, not a source of package-specific routing.
+
 ## Public lead
 
 **Install most standards-based Chrome extensions** directly from their Chrome
@@ -145,17 +151,35 @@ The package layer currently loads before supported Manifest V2 and V3
 background forms, declared content scripts, and packaged HTML extension pages.
 That last category intentionally includes internal routes reached from a popup
 or options page even when the manifest does not name them directly; manifest
-sandbox pages remain untouched. A Manifest V3 service worker remains a
-Manifest V3 service worker. Crest points the temporary manifest at a generated
-bootstrap of the same worker type, which loads the compatibility runtime before
-the package's declared worker. The extension sees its authored manifest through
+sandbox pages remain untouched. Manifest V3 service workers remain native
+service workers: Crest points the temporary manifest at a generated bootstrap
+of the same worker type, which loads the compatibility runtime before the
+package's declared worker. Module workers use module imports and classic workers
+use `importScripts`. Keeping that native boundary is required for WebKit to
+deliver popup and content-script messages with native Port lifetime and sender
+identity. A generated background document can participate in same-origin web
+channels, but WebKit does not route native `runtime.connect` or
+`runtime.sendMessage` traffic into it. Per-Space extension origins prevent the
+service-worker registration reuse that the discarded document conversion had
+worked around. The extension sees its authored manifest through
 `runtime.getManifest()`.
 
-Generated runtime and service-worker filenames include a digest of the runtime
-source. A runtime change therefore gives WebKit a new worker URL and forces its
-registration to refresh, while the context identifier and extension storage
-remain stable. Without that content address, WebKit can continue running a
-previously registered bootstrap after Crest itself has been updated.
+Generated runtime and service-worker filenames include a digest of their source.
+A runtime change therefore gives WebKit a new runtime URL and forces its
+background content to refresh, while the context identifier and extension
+storage remain stable. Without that content address, WebKit can continue
+running previously prepared background content after Crest itself has been
+updated.
+
+The prepared package itself also keeps one resource-base URL for the lifetime
+of the stored installation and Space. Crest prepares into a staging directory,
+compares a digest of the complete result, and reuses the existing directory
+when the result is unchanged. Releasing or recreating a WebKit context does not
+delete that resource base. This is required because WebKit keys persistent
+service workers, dynamic content scripts, permissions, and storage to the
+extension resource identity; presenting the same installed package at a new
+temporary URL on every launch makes it look like an update and can remove those
+stores while the restored extension is starting.
 
 The runtime preserves WebKit's native roots and `runtime` object. It copies a
 missing namespace from the other native `chrome`/`browser` root where possible
@@ -174,6 +198,34 @@ remain WebKit-owned. If WebKit supplies only one root, the missing global name
 becomes an alias to that same native object. An offscreen document uses the
 extension-supplied URL rather than a package-specific path.
 
+WebKit 27's `webNavigation` surface omits the standard
+`onCreatedNavigationTarget`, `onHistoryStateUpdated`,
+`onReferenceFragmentUpdated`, and `onTabReplaced` events. Crest exposes
+standards-shaped, presence-only event objects for those four member routes so
+portable background initialization can register optional listeners without
+aborting. The native `browser` and `chrome` roots remain untouched, and any
+future native WebKit member wins over the fallback. Crest does not yet claim
+delivery semantics for these events; Arc-level parity requires engine-backed
+tab-opener, per-frame history, fragment, and tab-replacement dispatch.
+
+The same matrix exposes the full Chromium/Firefox `privacy.network`,
+`privacy.services`, and `privacy.websites` group shape. WebKit has no privacy
+namespace, so Crest reports conservative platform values with
+`levelOfControl: "not_controllable"`; `set` and `clear` settle without claiming
+that Crest changed an engine or system preference. This lets portable packages
+restore optional privacy settings without turning one missing group into a
+background-startup exception.
+
+Classic workers can also receive a lexical facade that hides WebKit's
+foreground-only live-`Window` methods without replacing the native global root.
+Static ES-module imports cannot inherit that lexical binding, and WebKit's
+module-worker namespace rejects property-level overrides. Crest therefore keeps
+the native module root so Port routing remains correct; WebKit still exposes
+`extension.getViews` there even though Chrome does not. Replacing the module
+root, or wrapping its runtime object, deterministically disconnects native
+Ports, so this remaining engine mismatch is not papered over with a second
+message router.
+
 An earlier experimental build could save its generated worker prelude inside
 an unpacked stored package. The current preparer recognizes that Crest-owned
 prelude and removes it only from the temporary runtime copy. It never rewrites
@@ -185,6 +237,115 @@ source. Engine-owned behavior such as isolated-world creation, CSP, request
 interception, and WebAuthn remains WebKit's responsibility. See
 `Documentation/ExtensionEmulationServices.md` for the runtime and native broker
 boundary.
+
+### Background WebSockets on WebKit 27
+
+On August 27, 2026, a classic Manifest V3 background worker that constructed a
+WebSocket stopped its entire WebContent process. WebKit marked the process
+unresponsive, and a process sample showed the worker-side WebSocket channel
+synchronously waiting for work on that same process's main thread. Any popup
+sharing the process could then show only its empty AppKit shell.
+
+Crest handles the capability, not a package identity: if a classic worker
+references the `WebSocket` global, the temporary compatibility copy installs a
+WebSocket-compatible deferred constructor before the authored worker loads. It
+registers the worker's listeners first and constructs the native socket on the
+next task, avoiding the measured synchronous WebKit wait without changing the
+service-worker environment. The verified archive and installed bytes remain
+unchanged. Workers without that capability receive the native constructor
+directly.
+
+`BrowserChromeWebStoreTests.testCompatibilityLayerDefersClassicWorkerWebSocketsWithoutLeavingWorker`
+pins that manifest and script contract. Live validation with the current signed
+LastPass 4.155.1 package rendered its real login popup, accepted and submitted
+account credentials, reached the service's trusted-device email challenge,
+retained that state after dismiss/reopen, and produced no WebKit
+unresponsive-process event. The implementation contains no LastPass identifier,
+name, URL, or source patch.
+
+### Chrome package identity, storage events, and native runtime messaging
+
+A verified Chrome Web Store package must select its Chrome code path even when
+WebKit supplies the host navigator. Crest preserves WebKit's complete native
+user agent and appends only the unversioned ` Chrome/` family marker. This is
+enough for ordinary family detection without claiming a fabricated Chrome
+feature version. The previous `Chromium/` suffix was not recognized by packages
+that distinguish Chrome from Safari, which could send a Chrome package into a
+Safari native-companion path and leave its background code polling at full CPU.
+
+WebKit extension namespaces are exotic objects: inherited native methods may be
+callable even when `Reflect.ownKeys` does not report them. The compatibility
+facade therefore resolves an otherwise unknown native property once, caches the
+result, and continues to delegate native APIs ahead of fallbacks. Manifest
+permissions are also normalized after Crest adds an internal transport
+permission, so one capability cannot remain in both required and optional
+permission lists.
+
+WebKit can complete and persist an extension-storage mutation without reliably
+delivering the corresponding `storage.onChanged` event either to the writing
+page or to another extension page. A state provider can therefore read a
+missing value, subscribe for its initialization, and wait forever even though a
+background worker subsequently writes the value. Crest normalizes every
+available storage area, preserves the native get/set/remove/clear APIs, emits
+spec-shaped root and area events in the writing page, and relays the same event
+to the extension's other pages over its trusted same-origin channel. A short
+signature window suppresses duplicates when WebKit also reports a mutation.
+
+Runtime messaging stays entirely on WebKit's native path. The compatibility
+facade may expose that native runtime through the `browser` spelling, but it
+does not replace Chrome's root, runtime object, event objects, Ports, or sender
+metadata. Each Space also receives a stable, distinct worker origin while the
+extension-visible ID remains the verified store ID. This prevents one Space's
+service-worker registration from being reused for another Space and lets
+WebKit retain ownership of popup, background, and content-script routing.
+
+`BrowserExtensionControllerPoolTests.testModuleWorkerUsesWebKitsContentTabIdentity`
+and `testClassicWebSocketWorkerUsesWebKitsContentTabIdentity` pin one-shot and
+Port delivery plus native tab, frame, and document sender identity. Live
+validation with Bitwarden 2026.8.0 confirmed that the corrected Chrome path
+remained idle after its animated onboarding tab closed, its welcome and login
+popups rendered, and its region changed immediately in the writing popup. A
+fresh first login then completed authentication, received background state
+initialization in the already-open popup, moved
+directly from `/login` to `/tabs/vault` without a restart, and remained
+interactive on the Generator route. Before the cross-page storage event was
+restored, the same write reached WebKit's storage database but the popup's route
+guard remained subscribed to the old missing value; reopening Crest only hid
+that race by reading the persisted value at startup.
+
+`BrowserChromeWebStoreTests.testCompatibilityLayerDispatchesStorageChangesInTheWritingPage`
+pins callback and Promise mutations, root and area listeners, change values,
+and removal/clear behavior when the native writing page reports no event.
+`BrowserChromeWebStoreTests.testCompatibilityLayerBridgesStorageChangesAcrossExtensionPages`
+pins delivery to an already-open extension page, including a stored `false`
+value of the kind that exposed the first-login deadlock.
+
+### Extension-created popup windows
+
+WebKit's `windows.create({ type: "popup" })` result is context-dependent. An
+extension page can reach Crest's window delegate, while the same call from a
+toolbar action popup can settle with a window-shaped value without presenting
+a host window or invoking the delegate. Accepting that value leaves the
+extension believing its popout opened even though no window exists.
+
+Crest therefore owns the browser-generic single-URL popup case. The compatibility
+runtime sends the unchanged create data to Crest's capability broker, which
+presents the page through the normal auxiliary-window coordinator. The runtime
+then asks WebKit for the published popup and returns WebKit's real window and
+tab identifiers; it never fabricates an ID. Focus, update, removal, and close
+events consequently use the same objects as every other extension window.
+Multi-tab and non-popup window requests stay on WebKit's native path.
+
+The foreground extension page contacts that host-owned broker directly. It
+does not relay through an MV3 service worker: a broadcast channel cannot wake a
+suspended worker, and a toolbar popover can disappear while a relayed request
+is still pending. Native authorization remains scoped to the installed
+extension and reviewed permissions, exactly as it is for a background worker.
+
+`BrowserChromeWebStoreTests.testCompatibilityWindowsCreateUsesCapabilityBrokerForSingleURLPopupAndReturnsNativeWindow`
+pins the page contract, and
+`BrowserExtensionControllerPoolTests.testCapabilityBrokerPresentsARejectedPopupAsANativeExtensionWindow`
+pins native presentation and controller ownership.
 
 ## Native companion distribution boundary
 
@@ -469,18 +630,17 @@ the background page is torn down, after which it recovers on its own.
 `Documentation/WebKitExtensionWorkerReport.md` carries the full measurements,
 the log correlations, and the reproduction instructions.
 
-### Messaging does not require an extension-specific wake-up
+### Messaging stays split at the engine-owned content-script boundary
 
 Popup warm-up remains useful because Crest directly controls popup creation.
 It is not the compatibility transport for ordinary extension messages.
 
-The generated runtime does not transport extension messages. WebKit's native
-`runtime.sendMessage`, `runtime.connect`, and `tabs.sendMessage` paths already
-provide the Chrome/Firefox contract, including callback and Promise replies,
-Port lifetime, and sender tab/frame/document identity, when Crest preserves the
-objects and announces each web view at the correct time. Replacing a native
-root or recursively rewriting its event objects prevents WebKit from delivering
-those events, so the compatibility layer treats their identity as immutable.
+All extension-page and content-script `runtime.sendMessage`, `runtime.connect`,
+and `tabs.sendMessage` traffic stays on WebKit's native path so WebKit retains
+callback and Promise replies, Port lifetime, and sender tab/frame/document
+identity. Replacing a native root or recursively rewriting its event objects
+prevents WebKit from delivering those events, so the compatibility layer keeps
+the Chrome runtime object and event identity intact.
 
 This is capability mapping rather than a patch to Dark Reader, 1Password, or
 any other extension. It also avoids maintaining a second message router whose
@@ -583,7 +743,8 @@ site, popup, update, or optional workflow.
 | uBlock Origin Lite | 2026.812.1211 | Loads cleanly | Declarative Net Request package loaded without a startup error |
 | 1Password | 8.12.32.33 | Worker clean / signed-browser authorization pending | The generic MV3 worker reaches 1Password's native core and sends its account request. An unsigned development copy is rejected as `UnknownBrowser`; the installed Developer ID build must be added through 1Password's supported **Add Browser** flow before popup and field-fill certification |
 | SponsorBlock | 6.1.6 | Loads cleanly | No manifest or startup runtime error observed |
-| Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load. Crest now supplies the missing notification lifecycle and click events through its verified capability broker; account unlock/autofill has not been certified |
+| Bitwarden | 2026.8.0 | Login, vault, popout, and autofill verified | The signed Chrome package completed fresh device verification and login, opened its vault, unlocked again after a real Crest relaunch, presented a native auxiliary popout, exposed its in-page menu, and filled the selected test credential on fill.dev. CPU returned to idle after synchronization |
+| LastPass | 4.155.1 | Login, vault, relaunch, and autofill verified | The signed Chrome package accepted the account login, reopened signed in after a real Crest relaunch, listed its matching fill.dev item in the action popup, injected its in-field integration, and filled both credential fields at idle CPU |
 | Grammarly | 14.1320.0 | Partial / experimental | The worker loads; account-cookie access and an initial tab-creation request still report runtime failures |
 | React Developer Tools | 7.0.1 | Partial / experimental | `chrome.scripting.ExecutionWorld.ISOLATED` is unavailable |
 | Tampermonkey | 5.5.0 | Partial / experimental | WebKit rejects its `tabs.onUpdated` startup registration. Crest now reports loading and reader-mode changes to that event, but the rejected registration is a WebKit boundary and is unchanged |
@@ -714,7 +875,7 @@ account, site, popup, update, or optional workflow.
 | Extension | Version tested | Initial result | Measured boundary |
 | --- | --- | --- | --- |
 | Dark Reader | 4.9.129 | Loads cleanly | No manifest or runtime error observed, and no unsupported API reported |
-| uBlock Origin | 1.73.0 | Partial / experimental | The shared runtime now gets the MV2 background page and popup running; the popup displayed live page statistics and working controls. On the August 16 ad-block test, uBlock reported 89 blocked requests while the page itself confirmed only 33 of 132 tests blocked and still displayed an ad. Full cancellation, redirect, header modification, filter-list behavior, and cosmetic blocking remain uncertified because WebKit does not provide uBlock's blocking `webRequest` contract |
+| uBlock Origin | 1.73.0 | Partial / experimental | The shared runtime gets the MV2 background page and popup running with live page statistics and working controls. Crest also repairs WebKit's child-document request classification: a document carrying a non-root `parentFrameId` is exposed as `sub_frame` instead of `main_frame`, preventing an iframe policy decision from being mistaken for a whole-tab navigation. In the August 30 live run with Crest's built-in blocker disabled, the test site stayed in the tab, completed at 48/100, and uBlock reported 14 blocked decisions with 0 of 8 domains connected; the same page in Arc completed at 39/100. Full cancellation, redirect, header modification, and authentication response parity remain unavailable because WebKit does not consume blocking `webRequest` responses |
 | Bitwarden | 2026.7.0 | Partial / experimental | The signed package and core worker load, and Crest supplies the missing notification lifecycle and click events through its verified capability broker. The Firefox build does not request `nativeMessaging`; account unlock/autofill remains uncertified |
 | 1Password | 8.12.32.33 | Background clean / signed-browser authorization pending | The MV2 background page loads without a manifest, runtime, or unsupported-API error. Its Firefox native-host registration matches the package's Gecko ID; the same explicit 1Password browser trust and real popup, fill, save, restart, and passkey validation remain required |
 

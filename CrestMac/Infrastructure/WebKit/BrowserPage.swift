@@ -96,6 +96,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The extension origin whose context supplied this page's WebKit
     /// configuration. Nil identifies an ordinary browsing page.
     @ObservationIgnored let extensionBaseURL: URL?
+    @ObservationIgnored private var extensionBackgroundActivityLease: BrowserExtensionBackgroundActivityLease?
     @ObservationIgnored let navigationDecider: BrowserNavigationDecider
     @ObservationIgnored let popupCoordinator: BrowserPopupCoordinator
     @ObservationIgnored let externalSchemeCoordinator: BrowserExternalSchemeCoordinator
@@ -199,6 +200,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         profileID: UUID,
         spaceName: String,
         extensionBaseURL: URL? = nil,
+        extensionContext: WKWebExtensionContext? = nil,
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
         ownsUserContentController: Bool = true,
@@ -262,6 +264,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.profileID = profileID
         self.spaceName = spaceName
         self.extensionBaseURL = extensionBaseURL
+        extensionBackgroundActivityLease = extensionContext.map {
+            BrowserExtensionBackgroundActivityLease(
+                context: $0,
+                isActive: { true }
+            )
+        }
         self.ownsUserContentController = ownsUserContentController
         supportsCredentialAccess = allowsCredentialAccess
         self.isCredentialAccessEnabled =
@@ -469,6 +477,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 await self?.markMozillaAddonInstalled(slug)
             }
         }
+        extensionBackgroundActivityLease?.start()
     }
 
     /// Records that web content opened this page and that WebKit still owes it a
@@ -702,6 +711,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func prepareForSpaceDeletion() {
         focusRestoration.invalidate()
+        extensionBackgroundActivityLease?.cancel()
+        extensionBackgroundActivityLease = nil
         mediaSessionCoordinator?.prepareForRemoval()
         chromeWebStoreTask?.cancel()
         chromeWebStoreTask = nil

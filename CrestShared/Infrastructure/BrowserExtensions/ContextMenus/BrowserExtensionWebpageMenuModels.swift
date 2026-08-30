@@ -7,6 +7,12 @@ enum BrowserExtensionWebpageMenuItemType: String, Equatable, Sendable {
     case separator
 }
 
+enum BrowserExtensionWebpageMenuMediaType: String, Equatable, Sendable {
+    case audio
+    case image
+    case video
+}
+
 struct BrowserExtensionWebpageMenuDefinition: Equatable, Sendable {
     let id: String
     let parentID: String?
@@ -24,9 +30,30 @@ struct BrowserExtensionWebpageMenuContext: Equatable, Sendable {
     let documentURL: URL
     let linkURL: URL?
     let sourceURL: URL?
+    let mediaType: BrowserExtensionWebpageMenuMediaType?
     let selectionText: String?
     let isEditable: Bool
     let isMainFrame: Bool
+
+    init(
+        pageURL: URL,
+        documentURL: URL,
+        linkURL: URL?,
+        sourceURL: URL?,
+        mediaType: BrowserExtensionWebpageMenuMediaType? = nil,
+        selectionText: String?,
+        isEditable: Bool,
+        isMainFrame: Bool
+    ) {
+        self.pageURL = pageURL
+        self.documentURL = documentURL
+        self.linkURL = linkURL
+        self.sourceURL = sourceURL
+        self.mediaType = mediaType
+        self.selectionText = selectionText
+        self.isEditable = isEditable
+        self.isMainFrame = isMainFrame
+    }
 
     var targetURL: URL? {
         linkURL ?? sourceURL
@@ -35,7 +62,7 @@ struct BrowserExtensionWebpageMenuContext: Equatable, Sendable {
     var declaredContexts: Set<String> {
         var result: Set<String> = []
         if linkURL != nil { result.insert("link") }
-        if sourceURL != nil { result.insert("image") }
+        if let mediaType { result.insert(mediaType.rawValue) }
         if selectionText?.isEmpty == false { result.insert("selection") }
         if isEditable { result.insert("editable") }
         if !isMainFrame { result.insert("frame") }

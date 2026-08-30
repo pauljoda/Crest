@@ -34,6 +34,10 @@ struct CrestApp: App {
         let usesIsolatedLaunch = BrowserLaunchIsolationPolicy.requiresIsolation(
             launchEnvironment
         )
+        let usesEphemeralProfileStorage =
+            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(
+                launchEnvironment
+            )
         BrowserAutomaticQuoteSubstitutionPreference.registerDefault()
         BrowserWebKitFeatureFlagStore.configureForLaunch(
             usesIsolatedLaunch: usesIsolatedLaunch
@@ -77,7 +81,8 @@ struct CrestApp: App {
             usesIsolatedLaunch
             ? BrowserExtensionControllerPool(
                 storedResourcePreparer:
-                    BrowserStoreWebExtensionStoredResourcePreparer()
+                    BrowserStoreWebExtensionStoredResourcePreparer(),
+                usesEphemeralWebKitStorage: usesEphemeralProfileStorage
             )
             : BrowserExtensionControllerPool.production(
                 storedResourcePreparer:
@@ -168,7 +173,7 @@ struct CrestApp: App {
         )
         let pages = BrowserPagePool(
             monitorsMemoryPressure: !usesIsolatedLaunch,
-            usesEphemeralWebsiteDataStores: usesIsolatedLaunch,
+            usesEphemeralWebsiteDataStores: usesEphemeralProfileStorage,
             extensionControllerPool: extensionControllerPool,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter,

@@ -153,7 +153,13 @@ extension BrowserExtensionInstallationController {
                 persistsRuntimeSummary: false,
                 source: source,
                 internalGrantedPermissions:
-                    compatibilityPackage?.internalGrantedPermissions ?? []
+                    compatibilityPackage?.internalGrantedPermissions ?? [],
+                capabilityBrokerGrantedPermissions:
+                    compatibilityPackage?
+                    .capabilityBrokerGrantedPermissions ?? [],
+                allowsInternalCapabilityBroker:
+                    compatibilityPackage?.allowsInternalCapabilityBroker
+                    ?? false
             )
             didLoadNewContext = true
             var runtimeSummary = runtime.summary(
@@ -296,7 +302,13 @@ extension BrowserExtensionInstallationController {
                 persistsRuntimeSummary: false,
                 source: source,
                 internalGrantedPermissions:
-                    compatibilityPackage?.internalGrantedPermissions ?? []
+                    compatibilityPackage?.internalGrantedPermissions ?? [],
+                capabilityBrokerGrantedPermissions:
+                    compatibilityPackage?
+                    .capabilityBrokerGrantedPermissions ?? [],
+                allowsInternalCapabilityBroker:
+                    compatibilityPackage?.allowsInternalCapabilityBroker
+                    ?? false
             )
             didLoadNewContext = true
             var runtimeSummary = runtime.summary(
@@ -438,7 +450,13 @@ extension BrowserExtensionInstallationController {
                 persistsRuntimeSummary: false,
                 source: source,
                 internalGrantedPermissions:
-                    compatibilityPackage?.internalGrantedPermissions ?? []
+                    compatibilityPackage?.internalGrantedPermissions ?? [],
+                capabilityBrokerGrantedPermissions:
+                    compatibilityPackage?
+                    .capabilityBrokerGrantedPermissions ?? [],
+                allowsInternalCapabilityBroker:
+                    compatibilityPackage?.allowsInternalCapabilityBroker
+                    ?? false
             )
             didLoadNewContext = true
             var runtimeSummary = runtime.summary(

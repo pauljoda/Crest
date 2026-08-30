@@ -65,7 +65,7 @@ const config = {
       items: [
         {type: 'docSidebar', sidebarId: 'helpSidebar', position: 'left', label: 'Guides'},
         {to: '/keyboard-shortcuts/', label: 'Shortcuts', position: 'left'},
-        {to: '/extension-compatibility/', label: 'Compatibility', position: 'left'},
+        {to: '/extension-api-compatibility/', label: 'Compatibility', position: 'left'},
         {href: 'https://github.com/pauljoda/Crest/releases/latest', label: 'Download for Mac', position: 'right'},
         {href: 'https://crestbrowser.com/support/', label: 'Support', position: 'right'},
         {href: 'https://crestbrowser.com/', label: 'Product site', position: 'right'},
@@ -94,7 +94,7 @@ const config = {
             {label: 'All guides', to: '/'},
             {label: 'Keyboard shortcuts', to: '/keyboard-shortcuts/'},
             {label: 'Split View', to: '/split-view/'},
-            {label: 'Extension compatibility', to: '/extension-compatibility/'},
+            {label: 'Extension compatibility', to: '/extension-api-compatibility/'},
             {label: 'Support', href: 'https://crestbrowser.com/support/'},
           ],
         },

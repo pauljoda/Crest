@@ -313,6 +313,10 @@
     "2026-08-27-newest-eligible-software-update": {
       "category": "fixed",
       "message": "Refresh available updates to the newest eligible build before downloading"
+    },
+    "2026-08-30-webextension-compatibility-layer": {
+      "category": "improved",
+      "message": "Improve sign-in, popups, page integration, relaunch behavior, and browser API compatibility for Chrome and Firefox extensions"
     }
   }
 }

@@ -4,30 +4,36 @@ import WebKit
 @MainActor
 final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
     let spaceID: SpaceID
+    let windowType: WKWebExtension.WindowType
+    let isPrimary: Bool
     private weak var coordinator: BrowserExtensionTabWindowCoordinator?
 
     init(
         spaceID: SpaceID,
+        windowType: WKWebExtension.WindowType = .normal,
+        isPrimary: Bool = true,
         coordinator: BrowserExtensionTabWindowCoordinator
     ) {
         self.spaceID = spaceID
+        self.windowType = windowType
+        self.isPrimary = isPrimary
         self.coordinator = coordinator
     }
 
     func tabs(for context: WKWebExtensionContext) -> [any WKWebExtensionTab] {
-        coordinator?.tabs(in: spaceID, context: context) ?? []
+        coordinator?.tabs(in: self, context: context) ?? []
     }
 
     func activeTab(
         for context: WKWebExtensionContext
     ) -> (any WKWebExtensionTab)? {
-        coordinator?.activeTab(in: spaceID, context: context)
+        coordinator?.activeTab(in: self, context: context)
     }
 
     func windowType(
         for context: WKWebExtensionContext
     ) -> WKWebExtension.WindowType {
-        .normal
+        windowType
     }
 
     func windowState(
@@ -61,7 +67,7 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
             return
         }
         coordinator.focus(
-            spaceID: spaceID,
+            window: self,
             completionHandler: completionHandler
         )
     }
@@ -70,7 +76,16 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
         for context: WKWebExtensionContext,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        completionHandler(coordinator?.adapterError(.unsupportedOperation))
+        guard let coordinator,
+            coordinator.owns(context: context, spaceID: spaceID)
+        else {
+            completionHandler(coordinator?.adapterError(.windowUnavailable))
+            return
+        }
+        coordinator.close(
+            window: self,
+            completionHandler: completionHandler
+        )
     }
 
     private func geometry(
@@ -81,6 +96,6 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
         else {
             return .unavailable
         }
-        return coordinator.windowGeometry(for: spaceID)
+        return coordinator.windowGeometry(for: self)
     }
 }

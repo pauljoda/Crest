@@ -29,7 +29,7 @@ final class BrowserExtensionInstallationController {
         source: BrowserExtensionInstallationSource?,
         permissionSnapshot: BrowserExtensionPermissionSnapshot
     ) async throws -> WKWebExtensionContext {
-        try await runtime.loadExtension(
+        let context = try await runtime.loadExtension(
             at: resourceBaseURL,
             extensionID: extensionID,
             in: space,
@@ -38,6 +38,10 @@ final class BrowserExtensionInstallationController {
             persistsRuntimeSummary: false,
             source: source
         )
+        _ = await runtime.prepareBackgroundForInitialContentScriptTraffic(
+            context
+        )
+        return context
     }
 
     func loadUnpackedExtension(
@@ -107,7 +111,14 @@ final class BrowserExtensionInstallationController {
                 persistsRuntimeSummary: false,
                 source: source,
                 internalGrantedPermissions:
-                    preparedResource.internalGrantedPermissions
+                    preparedResource.internalGrantedPermissions,
+                capabilityBrokerGrantedPermissions:
+                    preparedResource.capabilityBrokerGrantedPermissions,
+                allowsInternalCapabilityBroker:
+                    preparedResource.allowsInternalCapabilityBroker
+            )
+            _ = await runtime.prepareBackgroundForInitialContentScriptTraffic(
+                context
             )
             didLoadNewContext = true
             var summary = runtime.summary(
@@ -337,7 +348,14 @@ final class BrowserExtensionInstallationController {
             return
         }
         if previous.isEnabled {
-            _ = try? await runtime.loadInstallation(previous, in: space)
+            if let context = try? await runtime.loadInstallation(
+                previous,
+                in: space
+            ) {
+                _ =
+                    await runtime
+                    .prepareBackgroundForInitialContentScriptTraffic(context)
+            }
         } else {
             persistence.updateSummary(
                 persistence.summary(

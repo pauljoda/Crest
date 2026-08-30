@@ -77,6 +77,24 @@ enum BrowserExtensionStartupLog {
         )
     }
 
+    static func backgroundReady(extensionID: String) {
+        log.notice(
+            "restore background ready \(extensionID, privacy: .public)"
+        )
+    }
+
+    static func backgroundFailed(extensionID: String, error: any Error) {
+        log.error(
+            "restore background failed \(extensionID, privacy: .public): \(String(describing: error), privacy: .public)"
+        )
+    }
+
+    static func backgroundTimedOut(extensionID: String) {
+        log.error(
+            "restore background timed out \(extensionID, privacy: .public)"
+        )
+    }
+
     static func failed(extensionID: String, error: any Error) {
         log.error(
             """

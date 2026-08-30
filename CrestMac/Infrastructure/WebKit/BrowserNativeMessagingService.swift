@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import os
 import WebKit
 
 enum BrowserExtensionCapabilityBrokerError: LocalizedError, Equatable {
@@ -369,6 +370,11 @@ private final class BrowserExtensionSystemIdleStateMonitor: NSObject {
 final class BrowserNativeMessagingService:
     BrowserExtensionNativeMessagingHandling
 {
+    private static let log = Logger(
+        subsystem: "com.pauldavis.crest",
+        category: "extension-native-messaging"
+    )
+
     static let capabilityBrokerIdentifier =
         BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier
 
@@ -437,6 +443,15 @@ final class BrowserNativeMessagingService:
             return
         }
         if applicationIdentifier == Self.capabilityBrokerIdentifier {
+            guard authorization.allowsInternalCapabilityBroker else {
+                replyHandler(
+                    nil,
+                    BrowserExtensionCapabilityBrokerError.permissionDenied(
+                        "internalCapabilityBroker"
+                    )
+                )
+                return
+            }
             Task { @MainActor in
                 do {
                     replyHandler(
@@ -512,13 +527,10 @@ final class BrowserNativeMessagingService:
             return
         }
         if port.applicationIdentifier == Self.capabilityBrokerIdentifier {
-            guard
-                authorization.grants("nativeMessaging")
-                    || authorization.grants("contextMenus")
-            else {
+            guard authorization.allowsInternalCapabilityBroker else {
                 completionHandler(
                     BrowserExtensionCapabilityBrokerError.permissionDenied(
-                        "nativeMessaging"
+                        "internalCapabilityBroker"
                     )
                 )
                 return
@@ -551,6 +563,11 @@ final class BrowserNativeMessagingService:
                 do {
                     try connection.receive(message ?? NSNull())
                 } catch {
+                    let api = (message as? [String: Any])?["api"] as? String
+                        ?? "unknown"
+                    Self.log.error(
+                        "capability broker rejected \(api, privacy: .public): \(String(describing: error), privacy: .public)"
+                    )
                     self.removeCapabilityConnection(for: key)
                     if !port.isDisconnected {
                         port.disconnect()
@@ -675,9 +692,9 @@ final class BrowserNativeMessagingService:
         else {
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         }
-        guard authorization.grants("nativeMessaging") else {
+        guard authorization.allowsInternalCapabilityBroker else {
             throw BrowserExtensionCapabilityBrokerError.permissionDenied(
-                "nativeMessaging"
+                "internalCapabilityBroker"
             )
         }
         switch api {

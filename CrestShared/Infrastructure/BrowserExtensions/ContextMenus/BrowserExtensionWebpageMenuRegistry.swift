@@ -182,7 +182,7 @@ final class BrowserExtensionWebpageMenuRegistry {
         message["linkURL"] = context.linkURL?.absoluteString
         message["sourceURL"] = context.sourceURL?.absoluteString
         message["selectionText"] = context.selectionText
-        message["mediaType"] = context.sourceURL == nil ? nil : "image"
+        message["mediaType"] = context.mediaType?.rawValue
         let publishers =
             clickPublishersByClient[clientID]?.values.map({ $0 })
             ?? []
@@ -239,7 +239,10 @@ final class BrowserExtensionWebpageMenuRegistry {
             let title = item["title"] as? String,
             let contexts = item["contexts"] as? [String],
             !contexts.isEmpty,
-            contexts.allSatisfy(Self.supportedContexts.contains),
+            contexts.allSatisfy(
+                BrowserExtensionAPICompatibilityMatrix.contextMenuContexts
+                    .contains
+            ),
             let documentURLPatterns = item["documentUrlPatterns"] as? [String],
             let targetURLPatterns = item["targetUrlPatterns"] as? [String],
             let enabled = item["enabled"] as? Bool,
@@ -272,14 +275,4 @@ final class BrowserExtensionWebpageMenuRegistry {
         )
     }
 
-    private static let supportedContexts: Set<String> = [
-        "all",
-        "editable",
-        "frame",
-        "image",
-        "link",
-        "page",
-        "selection",
-        "tab",
-    ]
 }

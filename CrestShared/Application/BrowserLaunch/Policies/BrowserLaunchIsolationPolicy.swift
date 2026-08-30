@@ -20,4 +20,15 @@ enum BrowserLaunchIsolationPolicy {
             || environment.performanceBaseURLString != nil
             || environment.isolatedSoftwareUpdateFeedURL != nil
     }
+
+    /// Keeps page and extension WebKit storage in the same privacy class.
+    /// WebKit treats a nonpersistent page store as private data and denies a
+    /// persistent extension context access unless private-data access is
+    /// granted. Named isolated profiles intentionally persist both sides.
+    static func usesEphemeralProfileStorage(
+        _ environment: BrowserLaunchEnvironment
+    ) -> Bool {
+        requiresIsolation(environment)
+            && environment.persistentIsolationID == nil
+    }
 }

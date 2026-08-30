@@ -1,8 +1,8 @@
 ---
 title: Extension compatibility and known limitations
-description: The measured startup boundary for current Chrome, Firefox, Safari, unpacked, native-companion, and popular extensions in Crest.
+description: Known platform and package limits for extensions in Crest.
 slug: /extension-compatibility
-sidebar_label: Compatibility matrix
+sidebar_label: Known limitations
 sidebar_position: 8
 keywords: [extension compatibility, WebKit, Chrome extension, Firefox extension, Safari extension, partial compatibility, audit]
 ---
@@ -10,6 +10,8 @@ keywords: [extension compatibility, WebKit, Chrome extension, Firefox extension,
 # Extension compatibility and known limitations
 
 **Install most standards-based Chrome Web Store extensions, Firefox Add-ons, and Safari Web Extensions on Mac.** Compatibility varies where an extension depends on a browser-specific API, a native companion, or an Apple-managed capability.
+
+Start with the [full extension and API compatibility matrix](./api-compatibility-matrix.md) for current Bitwarden, LastPass, Dark Reader, uBlock Origin, runtime-type, and namespace-level results. This page explains the platform boundaries behind those statuses.
 
 :::info Desktop today
 Extension installation, actions, options, shortcuts, and management are currently available in Crest for Mac. Installations and settings remain per Space and per device.
@@ -32,7 +34,7 @@ See [Direct build, App Store, and native companions](./native-companion-limits.m
 
 ## Signed-package audit
 
-Validated on August 10, 2026:
+Validated through August 30, 2026:
 
 <table className="guide-responsive-table guide-compatibility-table">
   <thead>
@@ -43,7 +45,8 @@ Validated on August 10, 2026:
     <tr><td data-label="Extension">uBlock Origin Lite</td><td data-label="Version">2026.804.1652</td><td data-label="Startup result">Loads cleanly</td><td data-label="Measured boundary">Declarative Net Request package loaded without a startup error.</td></tr>
     <tr><td data-label="Extension">1Password</td><td data-label="Version">8.12.30.21</td><td data-label="Startup result">Production-signature gated</td><td data-label="Measured boundary">Setup, sign-in navigation, BrowserSupport launch, persistent messaging, and browser authorization were verified. The Apple Development build was rejected as <code>BrowserSignatureInvalid</code>; Developer ID pairing and autofill remain.</td></tr>
     <tr><td data-label="Extension">SponsorBlock</td><td data-label="Version">6.1.6</td><td data-label="Startup result">Loads cleanly</td><td data-label="Measured boundary">No manifest or startup runtime error observed.</td></tr>
-    <tr><td data-label="Extension">Bitwarden</td><td data-label="Version">2026.7.0</td><td data-label="Startup result">Partial / experimental</td><td data-label="Measured boundary">The package and core worker load. Notification-click handling is unsupported; account unlock and autofill are not yet certified.</td></tr>
+    <tr><td data-label="Extension">Bitwarden</td><td data-label="Version">2026.8.0</td><td data-label="Startup result">Verified end to end</td><td data-label="Measured boundary">Device verification, login, vault, relaunch unlock, native popout, page injector, and autofill were verified directly.</td></tr>
+    <tr><td data-label="Extension">LastPass</td><td data-label="Version">4.155.1</td><td data-label="Startup result">Verified end to end</td><td data-label="Measured boundary">Login, vault, relaunch persistence, matching-item popup, in-field integration, and autofill were verified directly.</td></tr>
     <tr><td data-label="Extension">Grammarly</td><td data-label="Version">14.1319.0</td><td data-label="Startup result">Partial / experimental</td><td data-label="Measured boundary">Managed storage, cookie, and telemetry limits are reported.</td></tr>
     <tr><td data-label="Extension">React Developer Tools</td><td data-label="Version">7.0.1</td><td data-label="Startup result">Partial / experimental</td><td data-label="Measured boundary">Isolated execution world is unsupported.</td></tr>
     <tr><td data-label="Extension">Tampermonkey</td><td data-label="Version">5.5.0</td><td data-label="Startup result">Partial / experimental</td><td data-label="Measured boundary">WebKit rejects <code>tabs.onUpdated</code> startup registration.</td></tr>
@@ -63,7 +66,7 @@ Validated on August 13, 2026. Crest verifies each add-on against the checksum, s
   </thead>
   <tbody>
     <tr><td data-label="Extension">Dark Reader</td><td data-label="Version">4.9.129</td><td data-label="Startup result">Loads cleanly</td><td data-label="Measured boundary">No manifest or runtime error observed, and no unsupported API reported.</td></tr>
-    <tr><td data-label="Extension">uBlock Origin</td><td data-label="Version">1.73.0</td><td data-label="Startup result">Partial / experimental</td><td data-label="Measured boundary">One <code>commands</code> manifest entry is rejected and the background script stops early. Its request-blocking model is not implemented by WebKit; uBlock Origin Lite from the Chrome Web Store is the working alternative.</td></tr>
+    <tr><td data-label="Extension">uBlock Origin</td><td data-label="Version">1.73.0</td><td data-label="Startup result">Partial / engine limited</td><td data-label="Measured boundary">The MV2 background page, popup controls and statistics, page integration, and child-frame classification work. WebKit does not consume blocking <code>webRequest</code> listener responses, so full request cancellation, redirect, header mutation, and authentication parity remain unavailable.</td></tr>
     <tr><td data-label="Extension">Bitwarden</td><td data-label="Version">2026.7.0</td><td data-label="Startup result">Partial / experimental</td><td data-label="Measured boundary">The package and core worker load. Notification-click handling is unsupported. The Firefox build does not request a native companion, so it is not blocked before installation.</td></tr>
   </tbody>
 </table>

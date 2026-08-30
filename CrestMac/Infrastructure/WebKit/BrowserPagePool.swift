@@ -168,7 +168,7 @@ final class BrowserPagePool:
         monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
-            BrowserLaunchIsolationPolicy.requiresIsolation(.current),
+            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(.current),
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         extensionControllerPool: BrowserExtensionControllerPool = BrowserExtensionControllerPool(),
         chromeWebStoreProvider: BrowserChromeWebStoreProvider =
@@ -1117,13 +1117,27 @@ final class BrowserPagePool:
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         guard canHostTransientPage(matching: assignment) else { return nil }
         let tabID = TabID()
+        let makeTransientPage = { [weak self] () -> BrowserPage? in
+            guard let self,
+                canHostTransientPage(matching: assignment)
+            else { return nil }
+            return makePage(
+                space: space,
+                extensionConfiguration:
+                    extensionControllerPool.extensionPageConfiguration(
+                        for: url,
+                        in: space.id
+                    )
+            )
+        }
+        guard let initialPage = makeTransientPage() else { return nil }
         // Announce the page before the lease's initializer navigates it. WebKit
         // injects content scripts during that load and answers their `runtime`
         // messages only for a web view it can map onto an announced tab, so a
         // page announced afterwards leaves its first script unanswered for the
         // life of the document — the state a reload is otherwise needed to clear.
         announceTransientExtensionPage(
-            makePage(space: space),
+            initialPage,
             as: tabID,
             url: url,
             in: space.id
@@ -1136,12 +1150,7 @@ final class BrowserPagePool:
             contentBlockingPolicy:
                 space.browsingPreferences.contentBlockingPolicy,
             balancedContentRuleLists: balancedContentRuleLists ?? [],
-            rebuild: { [weak self] in
-                guard let self,
-                    canHostTransientPage(matching: assignment)
-                else { return nil }
-                return makePage(space: space)
-            },
+            rebuild: makeTransientPage,
             userActivity: onUserActivity,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation,
             extensionPageDidChange: { [weak self] page in
@@ -1776,6 +1785,7 @@ final class BrowserPagePool:
             profileID: space.profile.id,
             spaceName: space.name,
             extensionBaseURL: extensionConfiguration?.baseURL,
+            extensionContext: extensionConfiguration?.context,
             contentRuleLists: contentRuleLists,
             ownsUserContentController: adoptedConfiguration == nil
                 && extensionConfiguration == nil,

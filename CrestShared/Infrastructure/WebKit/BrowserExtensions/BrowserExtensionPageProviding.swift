@@ -1,5 +1,23 @@
 import WebKit
 
+struct BrowserExtensionWindowPresentationRequest {
+    let url: URL
+    let title: String
+    let frame: CGRect
+    let windowType: WKWebExtension.WindowType
+    let windowState: WKWebExtension.WindowState
+    let shouldFocus: Bool
+}
+
+@MainActor
+protocol BrowserExtensionWindowPresentation: AnyObject {
+    var extensionTabID: TabID { get }
+    var geometry: BrowserExtensionWindowGeometry { get }
+
+    func focus()
+    func close()
+}
+
 @MainActor
 protocol BrowserExtensionPageProviding:
     BrowserExtensionPageSelectionProviding,
@@ -36,6 +54,16 @@ protocol BrowserExtensionPageProviding:
     func extensionWindowGeometry(
         in spaceID: SpaceID
     ) -> BrowserExtensionWindowGeometry
+
+    /// Presents a browser-owned native window for a one-page WebExtension
+    /// popup. The page must use the owning Space's extension controller and
+    /// data store, and must be announced as a tab before its first navigation.
+    func presentExtensionWindow(
+        _ request: BrowserExtensionWindowPresentationRequest,
+        in space: BrowserSpace,
+        didFocus: @escaping (TabID) -> Void,
+        didClose: @escaping (TabID) -> Void
+    ) -> (any BrowserExtensionWindowPresentation)?
 }
 
 extension BrowserExtensionPageProviding {
@@ -47,5 +75,14 @@ extension BrowserExtensionPageProviding {
     ) {
         extensionWebView(for: tabID, in: spaceID)?
             .load(URLRequest(url: url))
+    }
+
+    func presentExtensionWindow(
+        _ request: BrowserExtensionWindowPresentationRequest,
+        in space: BrowserSpace,
+        didFocus: @escaping (TabID) -> Void,
+        didClose: @escaping (TabID) -> Void
+    ) -> (any BrowserExtensionWindowPresentation)? {
+        nil
     }
 }
