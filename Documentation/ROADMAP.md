@@ -62,7 +62,6 @@ the live status for each issue.
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
 - [ ] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62)
-- [ ] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63)
 - [ ] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
 - [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
 - [ ] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68)
@@ -73,6 +72,7 @@ the live status for each issue.
 
 #### Completed
 
+- [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
 - [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
 
 <!-- crest-roadmap-sync:end -->
