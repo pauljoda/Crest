@@ -422,11 +422,6 @@ struct CrestApp: App {
                         )
                     }
                 }
-                .background(
-                    BrowserSoftwareUpdateWindowPresenter(
-                        model: softwareUpdates.model
-                    )
-                )
                 .task { await cloudSync.start() }
             } else {
                 EmptyView()
@@ -560,18 +555,20 @@ struct CrestApp: App {
         .restorationBehavior(.disabled)
 
         Window(
-            "Software Update",
-            id: BrowserSceneID.softwareUpdate.rawValue
+            "What's New in Crest",
+            id: BrowserSceneID.softwareUpdateDetails.rawValue
         ) {
             if presentsInstalledApplicationUI {
-                BrowserSoftwareUpdateView(model: softwareUpdates.model)
+                BrowserSoftwareUpdateDetailsView(model: softwareUpdates.model)
                     .tint(CrestBrandTheme.accent)
             } else {
                 EmptyView()
             }
         }
-        .defaultSize(width: 620, height: 440)
+        .defaultSize(width: 620, height: 520)
         .windowResizability(.contentMinSize)
+        // Release notes are opened from the update card on purpose; restoring
+        // them would recreate the same unsolicited window this scene replaces.
         .restorationBehavior(.disabled)
 
         Window("Crest Setup", id: BrowserOnboardingCoordinator.sceneID) {

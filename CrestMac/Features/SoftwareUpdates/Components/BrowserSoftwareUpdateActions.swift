@@ -21,7 +21,6 @@ struct BrowserSoftwareUpdateActions: View {
             case .updateAvailable:
                 Button("Skip This Version", action: model.skipUpdate)
                 Spacer()
-                Button("Later", action: model.deferUpdatePresentation)
                 if model.isInformationOnly, let informationURL = model.informationURL {
                     Link("View Release", destination: informationURL)
                         .buttonStyle(.borderedProminent)
@@ -30,7 +29,6 @@ struct BrowserSoftwareUpdateActions: View {
                         .buttonStyle(.borderedProminent)
                 }
             case .readyToInstall:
-                Button("Later", action: model.deferUpdatePresentation)
                 Spacer()
                 Button("Install and Relaunch", action: model.installAndRelaunchNow)
                     .buttonStyle(.borderedProminent)
@@ -44,7 +42,7 @@ struct BrowserSoftwareUpdateActions: View {
                 }
             case .upToDate, .failed, .installed:
                 Spacer()
-                Button("OK", action: model.acknowledge)
+                Button("Dismiss", action: model.acknowledge)
                     .keyboardShortcut(.defaultAction)
             case .idle, .extracting:
                 EmptyView()

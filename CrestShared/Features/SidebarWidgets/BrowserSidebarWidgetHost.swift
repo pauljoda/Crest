@@ -1147,6 +1147,8 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
     let update: BrowserSoftwareUpdateWidgetSnapshot
     let perform: (BrowserSidebarWidgetAction, BrowserSidebarWidgetID) -> Void
 
+    @Environment(\.openWindow) private var openWindow
+
     var body: some View {
         VStack(alignment: .leading, spacing: BrowserSidebarWidgetDeckStyle.contentSpacing) {
             headerRow
@@ -1163,7 +1165,7 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
 
             VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 HStack(spacing: CrestSpacing.extraSmall) {
-                    Text("Update Available")
+                    headerTitle
                         .font(.subheadline.weight(.semibold))
                     if update.isFixture {
                         Text("TEST")
@@ -1187,6 +1189,17 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
                         .font(CrestTypography.metadata)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                }
+
+                if hasDetails {
+                    Button("What's New") {
+                        openWindow(id: BrowserSoftwareUpdateSceneID.details)
+                    }
+                    .buttonStyle(.plain)
+                    .font(CrestTypography.metadata.weight(.medium))
+                    .foregroundStyle(CrestBrandTheme.accent)
+                    .accessibilityLabel("Review update details")
+                    .help("Review update details")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1216,7 +1229,7 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
             .accessibilityLabel(statusLabel)
         }
 
-        if let message = update.message, update.phase == .failed {
+        if let message = update.message, showsMessage {
             Text(verbatim: message)
                 .font(CrestTypography.metadata)
                 .foregroundStyle(.secondary)
@@ -1228,6 +1241,14 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
     private var actions: some View {
         if !instance.availableActions.isEmpty {
             HStack(spacing: CrestSpacing.small) {
+                if instance.availableActions.contains(.declineAutomaticUpdateChecks) {
+                    actionButton(
+                        .declineAutomaticUpdateChecks,
+                        label: "Not Now",
+                        emphasis: .quiet
+                    )
+                }
+
                 if instance.availableActions.contains(.dismissExactUpdate) {
                     actionButton(
                         .dismissExactUpdate,
@@ -1236,7 +1257,16 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
                     )
                 }
 
-                if instance.availableActions.contains(.installUpdate) {
+                if instance.availableActions.contains(.viewUpdateInformation),
+                    let informationURL = update.informationURL
+                {
+                    Link("View Release", destination: informationURL)
+                        .buttonStyle(
+                            BrowserSidebarWidgetActionButtonStyle(
+                                emphasis: .prominent
+                            )
+                        )
+                } else if instance.availableActions.contains(.installUpdate) {
                     actionButton(
                         .installUpdate,
                         label: "Download Update",
@@ -1254,9 +1284,21 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
                         label: "Cancel Download",
                         emphasis: .quiet
                     )
-                } else if instance.availableActions.contains(.acknowledgeError) {
+                } else if instance.availableActions.contains(.retryUpdateInstallation) {
                     actionButton(
-                        .acknowledgeError,
+                        .retryUpdateInstallation,
+                        label: "Try Quitting Again",
+                        emphasis: .prominent
+                    )
+                } else if instance.availableActions.contains(.enableAutomaticUpdateChecks) {
+                    actionButton(
+                        .enableAutomaticUpdateChecks,
+                        label: "Check Automatically",
+                        emphasis: .prominent
+                    )
+                } else if instance.availableActions.contains(.acknowledgeUpdateStatus) {
+                    actionButton(
+                        .acknowledgeUpdateStatus,
                         label: "Dismiss",
                         emphasis: .quiet
                     )
@@ -1284,6 +1326,38 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
         update.phase == .downloading || update.phase == .extracting
     }
 
+    private var hasDetails: Bool {
+        if let releaseNotes = update.releaseNotes, !releaseNotes.isEmpty {
+            return true
+        }
+        return update.informationURL != nil
+    }
+
+    private var headerTitle: Text {
+        switch update.phase {
+        case .permission: Text("Keep Crest Up to Date")
+        case .checking: Text("Checking for Updates")
+        case .available: Text(verbatim: update.title)
+        case .downloading: Text("Downloading Update")
+        case .extracting: Text("Preparing Update")
+        case .readyToInstall: Text("Ready to Install")
+        case .installing: Text("Installing Update")
+        case .upToDate: Text("Crest Is Up to Date")
+        case .failed: Text("Update Check Failed")
+        case .installed: Text("Update Installed")
+        case .unavailable: Text("Software Update Unavailable")
+        }
+    }
+
+    private var showsMessage: Bool {
+        switch update.phase {
+        case .checking, .downloading, .extracting:
+            false
+        default:
+            true
+        }
+    }
+
     private var versionLine: String? {
         switch (update.version, update.build) {
         case (let version?, let build?) where version != build:
@@ -1299,13 +1373,16 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
 
     private var statusLabel: String {
         switch update.phase {
+        case .permission: "Permission required"
         case .checking: "Checking"
         case .available: update.isInformationOnly ? "Website release" : "Ready to download"
         case .downloading: "Downloading"
         case .extracting: "Preparing"
         case .readyToInstall: "Ready to install"
         case .installing: "Installing"
+        case .upToDate: "Up to date"
         case .failed: "Update error"
+        case .installed: "Installed"
         case .unavailable: "Unavailable"
         }
     }

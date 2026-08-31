@@ -820,6 +820,8 @@ final class BrowserSidebarWidgetRuntimeTests: XCTestCase {
                     title: "Crest Update",
                     version: "0.5.0",
                     build: build,
+                    releaseNotes: nil,
+                    informationURL: nil,
                     message: nil,
                     progress: nil,
                     isInformationOnly: false,
@@ -827,6 +829,7 @@ final class BrowserSidebarWidgetRuntimeTests: XCTestCase {
                     allowsSkipping: true,
                     allowsCancellation: false,
                     allowsInstallAndRelaunch: false,
+                    allowsInstallationRetry: false,
                     isFixture: true
                 )
             ),

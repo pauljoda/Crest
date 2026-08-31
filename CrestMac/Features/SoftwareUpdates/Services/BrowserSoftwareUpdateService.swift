@@ -124,13 +124,19 @@ final class BrowserSoftwareUpdateService {
         let state = components.first ?? "available"
         let version = components.count > 1 ? components[1] : "0.5.99"
         let build = components.count > 2 ? components[2] : "599"
+        let releaseNotes = """
+            ## What's New
+
+            - Software update progress stays visible in the sidebar.
+            - Release notes open only when you ask to review them.
+            """
         model.presentUpdate(
             title: "Crest \(version)",
             version: version,
             build: build,
+            releaseNotes: releaseNotes,
             isInformationOnly: false,
             isFixture: true,
-            suppressesWindowPresentation: true,
             install: {},
             skip: {}
         )
@@ -142,7 +148,7 @@ final class BrowserSoftwareUpdateService {
                 title: "Crest \(version)",
                 version: version,
                 build: build,
-                releaseNotes: nil,
+                releaseNotes: releaseNotes,
                 informationURL: nil,
                 isFixture: true
             )
@@ -155,7 +161,7 @@ final class BrowserSoftwareUpdateService {
                 title: "Crest \(version)",
                 version: version,
                 build: build,
-                releaseNotes: nil,
+                releaseNotes: releaseNotes,
                 informationURL: nil,
                 isFixture: true,
                 installAndRelaunch: { [weak model] in

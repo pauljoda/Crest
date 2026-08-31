@@ -162,7 +162,163 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(model.phase, .downloading)
     }
 
-    func testDeferringAManuallyFoundUpdateKeepsItsWidgetActionable() async throws {
+    func testEveryNonIdleUpdaterStateHasASidebarPresentation() {
+        XCTAssertFalse(
+            BrowserSceneID.allCases.map(\.rawValue).contains("software-update"),
+            "Software updates must not own an auxiliary window scene."
+        )
+
+        let model = BrowserSoftwareUpdateModel()
+
+        model.presentPermissionRequest(response: { _ in })
+        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .permission)
+
+        model.presentChecking(cancellation: {})
+        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .checking)
+
+        model.presentNoUpdate(message: "Crest is up to date.", acknowledgement: {})
+        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .upToDate)
+
+        model.presentError(message: "The update check failed.", acknowledgement: {})
+        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .failed)
+
+        model.presentInstalled(relaunched: true, acknowledgement: {})
+        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .installed)
+
+        model.dismissInstallation()
+        XCTAssertNil(model.sidebarWidgetSnapshot)
+    }
+
+    func testChangelogUsesAnExplicitDetailsSceneInsteadOfTheOldUpdateWindow() {
+        let sceneIDs = Set(BrowserSceneID.allCases.map(\.rawValue))
+
+        XCTAssertFalse(sceneIDs.contains("software-update"))
+        XCTAssertTrue(
+            sceneIDs.contains("software-update-details"),
+            "The sidebar needs an explicit destination for reviewing update notes."
+        )
+        XCTAssertEqual(
+            BrowserSceneID.softwareUpdateDetails.rawValue,
+            BrowserSoftwareUpdateSceneID.details
+        )
+    }
+
+    func testDownloadedReleaseNotesRefreshTheSidebarDetailsLink() async throws {
+        let source = BrowserSoftwareUpdateWidgetSource()
+        let model = BrowserSoftwareUpdateModel(widgetSource: source)
+        var iterator = source.events().makeAsyncIterator()
+        _ = await iterator.next()
+
+        model.presentUpdate(
+            title: "Crest 1.0",
+            version: "1.0.0",
+            build: "100",
+            isInformationOnly: false,
+            install: {},
+            skip: {}
+        )
+        let initialEmission = await iterator.next()
+        guard
+            case .softwareUpdate(let initial) = try XCTUnwrap(
+                initialEmission?.first
+            ).presentation
+        else { return XCTFail("Expected the update card") }
+        XCTAssertNil(initial.releaseNotes)
+
+        model.setReleaseNotes("## What's New\n\n- Sidebar updates")
+
+        let refreshedEmission = await iterator.next()
+        guard
+            case .softwareUpdate(let refreshed) = try XCTUnwrap(
+                refreshedEmission?.first
+            ).presentation
+        else { return XCTFail("Expected refreshed update details") }
+        XCTAssertEqual(
+            refreshed.releaseNotes,
+            "## What's New\n\n- Sidebar updates"
+        )
+    }
+
+    func testAutomaticUpdatePublishesThroughTheActiveSidebarRuntime() async throws {
+        let source = BrowserSoftwareUpdateWidgetSource()
+        let model = BrowserSoftwareUpdateModel(widgetSource: source)
+        let presenter = BrowserAutomaticSoftwareUpdatePresenter(model: model)
+        let runtime = BrowserSidebarWidgetRuntime(
+            registrations: [.softwareUpdate],
+            sources: [source]
+        )
+        runtime.activateHost(
+            id: BrowserWindowID(),
+            capabilities: [.persistentSidebar, .directSoftwareUpdates]
+        )
+        for _ in 0..<4 { await Task.yield() }
+
+        let update = BrowserSoftwareUpdateMetadata(
+            title: "Crest 1.0",
+            version: "1.0.0",
+            build: "100",
+            releaseNotes: nil,
+            informationURL: nil
+        )
+        presenter.downloadDidBegin(update)
+        for _ in 0..<4 { await Task.yield() }
+
+        var visible = runtime.instances(
+            capabilities: [.persistentSidebar, .directSoftwareUpdates]
+        )
+        guard
+            case .softwareUpdate(let downloading) = try XCTUnwrap(visible.first).presentation
+        else { return XCTFail("Expected the download in the sidebar runtime") }
+        XCTAssertEqual(downloading.phase, .downloading)
+
+        presenter.installationDidBecomeReady(update, installAndRelaunch: {})
+        for _ in 0..<4 { await Task.yield() }
+
+        visible = runtime.instances(
+            capabilities: [.persistentSidebar, .directSoftwareUpdates]
+        )
+        guard case .softwareUpdate(let ready) = try XCTUnwrap(visible.first).presentation
+        else { return XCTFail("Expected the ready update in the sidebar runtime") }
+        XCTAssertEqual(ready.phase, .readyToInstall)
+        XCTAssertEqual(visible.first?.availableActions, [.installAndRelaunch])
+    }
+
+    func testSidebarWidgetRoutesPermissionAndStatusActions() async throws {
+        let source = BrowserSoftwareUpdateWidgetSource()
+        let model = BrowserSoftwareUpdateModel(widgetSource: source)
+        var iterator = source.events().makeAsyncIterator()
+        _ = await iterator.next()
+        var automaticChecksChoice: Bool?
+        var acknowledgementCount = 0
+
+        model.presentPermissionRequest { automaticChecksChoice = $0 }
+        let permissionEmission = await iterator.next()
+        let permission = try XCTUnwrap(permissionEmission?.first)
+        XCTAssertEqual(
+            permission.availableActions,
+            [.declineAutomaticUpdateChecks, .enableAutomaticUpdateChecks]
+        )
+
+        source.perform(.enableAutomaticUpdateChecks, on: permission.id)
+        XCTAssertEqual(automaticChecksChoice, true)
+        let dismissedPermission = await iterator.next()
+        XCTAssertEqual(dismissedPermission, [])
+
+        model.presentNoUpdate(
+            message: "Crest is up to date.",
+            acknowledgement: { acknowledgementCount += 1 }
+        )
+        let statusEmission = await iterator.next()
+        let status = try XCTUnwrap(statusEmission?.first)
+        XCTAssertEqual(status.availableActions, [.acknowledgeUpdateStatus])
+
+        source.perform(.acknowledgeUpdateStatus, on: status.id)
+        XCTAssertEqual(acknowledgementCount, 1)
+        let dismissedStatus = await iterator.next()
+        XCTAssertEqual(dismissedStatus, [])
+    }
+
+    func testManuallyFoundUpdateStaysWidgetActionableUntilChoice() async throws {
         let source = BrowserSoftwareUpdateWidgetSource()
         let model = BrowserSoftwareUpdateModel(widgetSource: source)
         var iterator = source.events().makeAsyncIterator()
@@ -180,13 +336,8 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         )
         let availableEmission = await iterator.next()
         let available = try XCTUnwrap(availableEmission?.first)
-        XCTAssertEqual(model.presentationRevision, 1)
-
-        model.deferUpdatePresentation()
-        model.deferUpdatePresentation()
 
         XCTAssertEqual(model.phase, .updateAvailable)
-        XCTAssertEqual(model.dismissalRevision, 1)
         XCTAssertNotNil(model.sidebarWidgetSnapshot)
         XCTAssertEqual(installationCount, 0)
         XCTAssertEqual(skipCount, 0)
@@ -205,7 +356,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(snapshot.phase, .downloading)
     }
 
-    func testBackgroundDiscoveryPublishesWidgetWithoutOpeningWindow() async throws {
+    func testBackgroundDiscoveryPublishesWidget() async throws {
         let source = BrowserSoftwareUpdateWidgetSource()
         let model = BrowserSoftwareUpdateModel(widgetSource: source)
         var iterator = source.events().makeAsyncIterator()
@@ -216,19 +367,12 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
             version: "1.0.0",
             build: "100",
             isInformationOnly: false,
-            suppressesWindowPresentation: true,
             install: {},
             skip: {}
         )
 
         let backgroundEmission = await iterator.next()
         XCTAssertNotNil(backgroundEmission?.first)
-        XCTAssertEqual(model.presentationRevision, 0)
-        XCTAssertEqual(model.dismissalRevision, 0)
-
-        model.focus()
-
-        XCTAssertEqual(model.presentationRevision, 1)
     }
 
     func testAutomaticDownloadOwnsWidgetThroughRestartReadiness() async throws {
@@ -257,7 +401,6 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(download.build, "100")
         XCTAssertEqual(downloading.availableActions, [])
         XCTAssertTrue(model.isAutomaticUpdate)
-        XCTAssertEqual(model.presentationRevision, 0)
 
         presenter.extractionDidBegin(update)
 
@@ -389,24 +532,19 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertNotEqual(newer.id, first.id)
     }
 
-    func testIsolatedSidebarFixtureDoesNotPresentTheUpdaterWindow() async throws {
+    func testIsolatedSidebarFixturePublishesOnlyTheWidgetState() async throws {
         let service = BrowserSoftwareUpdateService(
             isEnabled: false,
             preferences: nil
         )
         var iterator = service.widgetSource.events().makeAsyncIterator()
         _ = await iterator.next()
-        let initialPresentationRevision = service.model.presentationRevision
 
         service.presentIsolatedSidebarWidgetFixture("available:0.5.99:599")
 
         let emission = await iterator.next()
         let instance = try XCTUnwrap(emission?.first)
         XCTAssertEqual(instance.id.instanceID, "599")
-        XCTAssertEqual(
-            service.model.presentationRevision,
-            initialPresentationRevision
-        )
     }
 
     func testSidebarWidgetRoutesInstallProgressReadyAndErrorActions() async throws {
@@ -461,7 +599,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         )
         let failedEmission = await iterator.next()
         let failed = try XCTUnwrap(failedEmission?.first)
-        source.perform(.acknowledgeError, on: failed.id)
+        source.perform(.acknowledgeUpdateStatus, on: failed.id)
         XCTAssertEqual(acknowledgementCount, 1)
         let acknowledged = await iterator.next()
         XCTAssertEqual(acknowledged, [])

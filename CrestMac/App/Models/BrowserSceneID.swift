@@ -4,5 +4,5 @@ enum BrowserSceneID: String, CaseIterable, Sendable {
     case quickWindow = "quick-window"
     case privateBrowser = "private-browser"
     case settings
-    case softwareUpdate = "software-update"
+    case softwareUpdateDetails = "software-update-details"
 }

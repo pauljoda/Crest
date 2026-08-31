@@ -154,7 +154,6 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
             releaseNotes: appcastItem.itemDescription,
             informationURL: appcastItem.infoURL,
             isInformationOnly: appcastItem.isInformationOnlyUpdate,
-            suppressesWindowPresentation: !state.userInitiated,
             install: { reply(.install) },
             skip: { reply(.skip) },
             dismiss: { reply(.dismiss) }
@@ -254,7 +253,8 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     }
 
     func showUpdateInFocus() {
-        model.focus()
+        // The sidebar source is authoritative and immediately replays its
+        // current card whenever a browser window mounts a widget host.
     }
 
     func updater(

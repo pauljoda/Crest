@@ -45,6 +45,10 @@ final class BrowserSoftwareUpdateWidgetSource:
     ) {
         guard instanceID == currentInstance?.id, let model else { return }
         switch action {
+        case .declineAutomaticUpdateChecks:
+            model.chooseAutomaticChecks(false)
+        case .enableAutomaticUpdateChecks:
+            model.chooseAutomaticChecks(true)
         case .installUpdate:
             model.installUpdate()
         case .dismissExactUpdate:
@@ -56,7 +60,9 @@ final class BrowserSoftwareUpdateWidgetSource:
             model.cancelCurrentOperation()
         case .installAndRelaunch:
             model.installAndRelaunchNow()
-        case .acknowledgeError:
+        case .retryUpdateInstallation:
+            model.retryApplicationTermination()
+        case .acknowledgeUpdateStatus:
             model.acknowledge()
         default:
             break
@@ -68,11 +74,19 @@ final class BrowserSoftwareUpdateWidgetSource:
     ) -> BrowserSidebarWidgetInstance {
         var actions: Set<BrowserSidebarWidgetAction> = []
         switch snapshot.phase {
+        case .permission:
+            actions = [
+                .declineAutomaticUpdateChecks,
+                .enableAutomaticUpdateChecks,
+            ]
         case .checking:
             if snapshot.allowsCancellation { actions.insert(.cancelUpdate) }
         case .available:
             if snapshot.allowsSkipping { actions.insert(.dismissExactUpdate) }
             if snapshot.allowsInstallation { actions.insert(.installUpdate) }
+            if snapshot.isInformationOnly, snapshot.informationURL != nil {
+                actions.insert(.viewUpdateInformation)
+            }
         case .downloading:
             if snapshot.allowsCancellation { actions.insert(.cancelUpdate) }
         case .readyToInstall:
@@ -81,8 +95,14 @@ final class BrowserSoftwareUpdateWidgetSource:
             }
             if snapshot.allowsSkipping { actions.insert(.dismissExactUpdate) }
         case .failed:
-            actions = [.acknowledgeError]
-        case .extracting, .installing, .unavailable:
+            actions = [.acknowledgeUpdateStatus]
+        case .installing:
+            if snapshot.allowsInstallationRetry {
+                actions.insert(.retryUpdateInstallation)
+            }
+        case .upToDate, .installed:
+            actions = [.acknowledgeUpdateStatus]
+        case .extracting, .unavailable:
             break
         }
         return BrowserSidebarWidgetInstance(

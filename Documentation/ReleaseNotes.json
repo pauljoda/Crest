@@ -345,6 +345,10 @@
     "2026-08-31-cohesive-start-page-new-tabs": {
       "category": "fixed",
       "message": "Keep the Start Page cohesive when opening a new tab"
+    },
+    "2026-08-31-sidebar-software-updates": {
+      "category": "fixed",
+      "message": "Keep software update progress and actions in the sidebar, with release notes available on demand"
     }
   }
 }

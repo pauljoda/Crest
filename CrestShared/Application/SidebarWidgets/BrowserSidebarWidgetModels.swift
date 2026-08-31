@@ -7,6 +7,10 @@ struct BrowserSidebarWidgetKindID: RawRepresentable, Hashable, Sendable {
     static let softwareUpdate = Self(rawValue: "crest.software-update")
 }
 
+enum BrowserSoftwareUpdateSceneID {
+    static let details = "software-update-details"
+}
+
 struct BrowserSidebarWidgetID: Hashable, Identifiable, Sendable {
     let kindID: BrowserSidebarWidgetKindID
     let instanceID: String
@@ -294,13 +298,16 @@ struct BrowserMediaSessionSnapshot: Equatable, Identifiable, Sendable {
 }
 
 enum BrowserSoftwareUpdateWidgetPhase: Equatable, Sendable {
+    case permission
     case checking
     case available
     case downloading
     case extracting
     case readyToInstall
     case installing
+    case upToDate
     case failed
+    case installed
     case unavailable
 }
 
@@ -309,6 +316,8 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
     let title: String
     let version: String?
     let build: String?
+    let releaseNotes: String?
+    let informationURL: URL?
     let message: String?
     let progress: Double?
     let isInformationOnly: Bool
@@ -316,6 +325,7 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
     let allowsSkipping: Bool
     let allowsCancellation: Bool
     let allowsInstallAndRelaunch: Bool
+    let allowsInstallationRetry: Bool
     let isFixture: Bool
 }
 
@@ -336,10 +346,14 @@ enum BrowserSidebarWidgetAction: Hashable, Sendable {
     /// Hides this session's card until its tab plays again. Widget-level only.
     case dismissMediaSession
     case installUpdate
+    case viewUpdateInformation
     case dismissExactUpdate
     case cancelUpdate
     case installAndRelaunch
-    case acknowledgeError
+    case retryUpdateInstallation
+    case declineAutomaticUpdateChecks
+    case enableAutomaticUpdateChecks
+    case acknowledgeUpdateStatus
 }
 
 struct BrowserSidebarWidgetInstance: Equatable, Identifiable, Sendable {

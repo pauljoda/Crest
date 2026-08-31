@@ -107,14 +107,12 @@ final class BrowserSoftwareUpdateRefreshTests: XCTestCase {
 
         XCTAssertEqual(feed.dismissedBuilds, ["1051"])
         XCTAssertEqual(updater.backgroundCheckCount, 0)
-        XCTAssertEqual(model.presentationRevision, 0)
 
         updater.sessionInProgress = false
         coordinator.updateCycleDidFinish()
 
         XCTAssertEqual(updater.backgroundCheckCount, 1)
         XCTAssertEqual(model.updateBuild, "1052")
-        XCTAssertEqual(model.presentationRevision, 0)
         XCTAssertEqual(feed.skippedBuilds, [])
         XCTAssertEqual(feed.installedBuilds, [])
     }
@@ -343,7 +341,6 @@ private final class TestSignedUpdateFeed {
             version: item.version,
             build: item.build,
             isInformationOnly: false,
-            suppressesWindowPresentation: !userInitiated,
             install: { [weak self] in self?.installedBuilds.append(item.build) },
             skip: { [weak self] in self?.skippedBuilds.append(item.build) },
             dismiss: { [weak self] in self?.dismissedBuilds.append(item.build) }

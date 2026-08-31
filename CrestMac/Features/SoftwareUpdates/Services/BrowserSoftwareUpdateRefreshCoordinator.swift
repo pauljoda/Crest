@@ -58,11 +58,7 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
 
         guard updater.sessionInProgress else { return }
         pendingCheck = updater.automaticallyChecksForUpdates ? .background : nil
-        guard
-            model.beginRefreshingAvailableUpdate(
-                suppressesWindowPresentation: true
-            )
-        else {
+        guard model.beginRefreshingAvailableUpdate() else {
             pendingCheck = nil
             return
         }
@@ -101,11 +97,8 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
     @discardableResult
     private func request(_ check: PendingCheck) -> Bool {
         if updater.sessionInProgress {
-            let suppressesWindow = check == .background
             pendingCheck = check
-            if model.beginRefreshingAvailableUpdate(
-                suppressesWindowPresentation: suppressesWindow
-            ) {
+            if model.beginRefreshingAvailableUpdate() {
                 return true
             }
 
@@ -113,8 +106,6 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
             if check == .userInitiated {
                 if updater.canCheckForUpdates {
                     updater.checkForUpdates()
-                } else {
-                    model.focus()
                 }
             }
             return false

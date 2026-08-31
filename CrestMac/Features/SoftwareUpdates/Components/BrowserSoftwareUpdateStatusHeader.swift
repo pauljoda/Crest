@@ -45,7 +45,8 @@ struct BrowserSoftwareUpdateStatusHeader: View {
         case .failed: "exclamationmark.triangle.fill"
         case .upToDate, .installed: "checkmark.circle.fill"
         case .downloading: "arrow.down.circle.fill"
-        case .readyToInstall, .installing: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill"
+        case .readyToInstall, .installing:
+            "arrow.trianglehead.2.clockwise.rotate.90.circle.fill"
         default: "arrow.trianglehead.2.clockwise.rotate.90"
         }
     }
