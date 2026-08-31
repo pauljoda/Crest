@@ -1151,7 +1151,7 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
         VStack(alignment: .leading, spacing: BrowserSidebarWidgetDeckStyle.contentSpacing) {
             headerRow
             progressZone
-            primaryAction
+            actions
         }
         .accessibilityLabel("Crest software update")
     }
@@ -1191,22 +1191,6 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
-
-            dismissButton
-        }
-    }
-
-    @ViewBuilder
-    private var dismissButton: some View {
-        if instance.availableActions.contains(.dismissExactUpdate) {
-            Button {
-                perform(.dismissExactUpdate, instance.id)
-            } label: {
-                Image(systemName: "xmark")
-            }
-            .buttonStyle(BrowserSidebarWidgetQuietControlStyle())
-            .accessibilityLabel("Ignore this update build")
-            .help("Ignore this update build")
         }
     }
 
@@ -1241,15 +1225,43 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
     }
 
     @ViewBuilder
-    private var primaryAction: some View {
-        if instance.availableActions.contains(.installUpdate) {
-            actionButton(.installUpdate, label: "Download Update", emphasis: .prominent)
-        } else if instance.availableActions.contains(.installAndRelaunch) {
-            actionButton(.installAndRelaunch, label: "Restart and Update", emphasis: .prominent)
-        } else if instance.availableActions.contains(.cancelUpdate) {
-            actionButton(.cancelUpdate, label: "Cancel Download", emphasis: .quiet)
-        } else if instance.availableActions.contains(.acknowledgeError) {
-            actionButton(.acknowledgeError, label: "Dismiss", emphasis: .quiet)
+    private var actions: some View {
+        if !instance.availableActions.isEmpty {
+            HStack(spacing: CrestSpacing.small) {
+                if instance.availableActions.contains(.dismissExactUpdate) {
+                    actionButton(
+                        .dismissExactUpdate,
+                        label: "Skip This Version",
+                        emphasis: .quiet
+                    )
+                }
+
+                if instance.availableActions.contains(.installUpdate) {
+                    actionButton(
+                        .installUpdate,
+                        label: "Download Update",
+                        emphasis: .prominent
+                    )
+                } else if instance.availableActions.contains(.installAndRelaunch) {
+                    actionButton(
+                        .installAndRelaunch,
+                        label: "Restart and Update",
+                        emphasis: .prominent
+                    )
+                } else if instance.availableActions.contains(.cancelUpdate) {
+                    actionButton(
+                        .cancelUpdate,
+                        label: "Cancel Download",
+                        emphasis: .quiet
+                    )
+                } else if instance.availableActions.contains(.acknowledgeError) {
+                    actionButton(
+                        .acknowledgeError,
+                        label: "Dismiss",
+                        emphasis: .quiet
+                    )
+                }
+            }
         }
     }
 
@@ -1313,8 +1325,8 @@ private struct BrowserSoftwareUpdateApplicationIcon: View {
     }
 }
 
-/// Every secondary glyph control on a card — transport, volume, and both dismiss
-/// buttons — stays visually bare until pointer hover, keyboard focus, or press.
+/// Every secondary glyph control on a card — transport, volume, and media
+/// dismissal — stays visually bare until pointer hover, keyboard focus, or press.
 /// The primary play/pause action owns the persistent control surface instead.
 private struct BrowserSidebarWidgetQuietControlStyle: ButtonStyle {
     var alignment: Alignment = .center

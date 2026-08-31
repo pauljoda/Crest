@@ -823,6 +823,10 @@ final class BrowserSidebarWidgetRuntimeTests: XCTestCase {
                     message: nil,
                     progress: nil,
                     isInformationOnly: false,
+                    allowsInstallation: true,
+                    allowsSkipping: true,
+                    allowsCancellation: false,
+                    allowsInstallAndRelaunch: false,
                     isFixture: true
                 )
             ),

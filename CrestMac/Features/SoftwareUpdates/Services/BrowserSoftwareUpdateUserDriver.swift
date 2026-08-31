@@ -1,6 +1,104 @@
 import Foundation
 import Sparkle
 
+struct BrowserSoftwareUpdateMetadata: Equatable, Sendable {
+    let title: String
+    let version: String?
+    let build: String
+    let releaseNotes: String?
+    let informationURL: URL?
+
+    init(
+        title: String,
+        version: String?,
+        build: String,
+        releaseNotes: String?,
+        informationURL: URL?
+    ) {
+        self.title = title
+        self.version = version
+        self.build = build
+        self.releaseNotes = releaseNotes
+        self.informationURL = informationURL
+    }
+
+    init(appcastItem: SUAppcastItem) {
+        title =
+            appcastItem.title
+            ?? "Crest \(appcastItem.displayVersionString)"
+        version = appcastItem.displayVersionString
+        build = appcastItem.versionString
+        releaseNotes = appcastItem.itemDescription
+        informationURL = appcastItem.infoURL
+    }
+}
+
+/// Adapts Sparkle's silent automatic-update delegate callbacks to the same
+/// observable state used by Crest's manual user driver and sidebar widget.
+@MainActor
+final class BrowserAutomaticSoftwareUpdatePresenter {
+    private let model: BrowserSoftwareUpdateModel
+    private var activeUpdate: BrowserSoftwareUpdateMetadata?
+
+    init(model: BrowserSoftwareUpdateModel) {
+        self.model = model
+    }
+
+    func downloadDidBegin(_ update: BrowserSoftwareUpdateMetadata) {
+        guard
+            model.presentAutomaticDownload(
+                title: update.title,
+                version: update.version,
+                build: update.build,
+                releaseNotes: update.releaseNotes,
+                informationURL: update.informationURL
+            )
+        else { return }
+        activeUpdate = update
+    }
+
+    func extractionDidBegin(_ update: BrowserSoftwareUpdateMetadata) {
+        if activeUpdate?.build != update.build {
+            downloadDidBegin(update)
+        }
+        guard activeUpdate?.build == update.build else { return }
+        model.presentExtraction()
+    }
+
+    func installationDidBecomeReady(
+        _ update: BrowserSoftwareUpdateMetadata,
+        installAndRelaunch: @escaping () -> Void
+    ) {
+        activeUpdate = update
+        model.presentAutomaticUpdateReady(
+            title: update.title,
+            version: update.version,
+            build: update.build,
+            releaseNotes: update.releaseNotes,
+            informationURL: update.informationURL,
+            installAndRelaunch: installAndRelaunch
+        )
+    }
+
+    func updateDidFail(_ error: any Error) {
+        guard let activeUpdate else { return }
+        self.activeUpdate = nil
+        let error = error as NSError
+        let message = [
+            error.localizedDescription,
+            error.localizedRecoverySuggestion,
+        ]
+        .compactMap { $0 }
+        .joined(separator: " ")
+        model.presentAutomaticUpdateFailure(
+            title: activeUpdate.title,
+            version: activeUpdate.version,
+            build: activeUpdate.build,
+            message: message
+        )
+    }
+}
+
 @MainActor
 final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     SPUUpdaterDelegate
@@ -9,6 +107,7 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     var channel: BrowserSoftwareUpdateChannel
     var updateCycleDidFinish: (() -> Void)?
     private let feedURLOverride: URL?
+    private let automaticUpdatePresenter: BrowserAutomaticSoftwareUpdatePresenter
 
     init(
         model: BrowserSoftwareUpdateModel,
@@ -18,6 +117,9 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         self.model = model
         self.channel = channel
         self.feedURLOverride = feedURLOverride
+        self.automaticUpdatePresenter = BrowserAutomaticSoftwareUpdatePresenter(
+            model: model
+        )
         super.init()
     }
 
@@ -161,6 +263,51 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         error: (any Error)?
     ) {
         updateCycleDidFinish?()
+    }
+
+    func updater(
+        _ updater: SPUUpdater,
+        willDownloadUpdate item: SUAppcastItem,
+        with request: NSMutableURLRequest
+    ) {
+        automaticUpdatePresenter.downloadDidBegin(
+            BrowserSoftwareUpdateMetadata(appcastItem: item)
+        )
+    }
+
+    func updater(
+        _ updater: SPUUpdater,
+        failedToDownloadUpdate item: SUAppcastItem,
+        error: any Error
+    ) {
+        automaticUpdatePresenter.updateDidFail(error)
+    }
+
+    func updater(
+        _ updater: SPUUpdater,
+        willExtractUpdate item: SUAppcastItem
+    ) {
+        automaticUpdatePresenter.extractionDidBegin(
+            BrowserSoftwareUpdateMetadata(appcastItem: item)
+        )
+    }
+
+    func updater(
+        _ updater: SPUUpdater,
+        willInstallUpdateOnQuit item: SUAppcastItem,
+        immediateInstallationBlock immediateInstallHandler: @escaping () -> Void
+    ) -> Bool {
+        automaticUpdatePresenter.installationDidBecomeReady(
+            BrowserSoftwareUpdateMetadata(appcastItem: item),
+            installAndRelaunch: immediateInstallHandler
+        )
+        // Crest owns the immediate-restart affordance. Sparkle still installs
+        // this prepared update whenever the application terminates normally.
+        return true
+    }
+
+    func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
+        automaticUpdatePresenter.updateDidFail(error)
     }
 
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {

@@ -137,10 +137,34 @@ final class BrowserSoftwareUpdateService {
         switch state {
         case "checking":
             model.presentChecking(cancellation: {})
+        case "automatic-downloading":
+            model.presentAutomaticDownload(
+                title: "Crest \(version)",
+                version: version,
+                build: build,
+                releaseNotes: nil,
+                informationURL: nil,
+                isFixture: true
+            )
         case "downloading":
             model.presentDownload(cancellation: {})
             model.setExpectedDownloadLength(100)
             model.receiveDownloadedBytes(42)
+        case "automatic-ready":
+            model.presentAutomaticUpdateReady(
+                title: "Crest \(version)",
+                version: version,
+                build: build,
+                releaseNotes: nil,
+                informationURL: nil,
+                isFixture: true,
+                installAndRelaunch: { [weak model] in
+                    model?.presentInstalling(
+                        applicationTerminated: true,
+                        retryTermination: {}
+                    )
+                }
+            )
         case "ready":
             model.presentReadyToInstall(
                 install: { [weak model] in

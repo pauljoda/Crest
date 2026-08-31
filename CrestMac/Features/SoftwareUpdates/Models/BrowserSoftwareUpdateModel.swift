@@ -15,6 +15,7 @@ final class BrowserSoftwareUpdateModel {
     private(set) var message: String?
     private(set) var progress: Double?
     private(set) var isInformationOnly = false
+    private(set) var isAutomaticUpdate = false
     private(set) var didRelaunch = false
     private(set) var canRetryTermination = false
     private(set) var isFixture = false
@@ -83,6 +84,7 @@ final class BrowserSoftwareUpdateModel {
         self.releaseNotes = releaseNotes
         self.informationURL = informationURL
         self.isInformationOnly = isInformationOnly
+        self.isAutomaticUpdate = false
         self.isFixture = isFixture
         self.suppressesWindowPresentation = suppressesWindowPresentation
         self.install = install
@@ -92,6 +94,90 @@ final class BrowserSoftwareUpdateModel {
             isInformationOnly
             ? "This release is available from the Crest website."
             : "A new version of Crest is ready to download."
+        present()
+    }
+
+    /// Starts tracking Sparkle's silent automatic-download path. A manual
+    /// download reaches the updater delegate first too, so preserve the
+    /// cancellable user-driver session when it already owns this build.
+    @discardableResult
+    func presentAutomaticDownload(
+        title: String,
+        version: String?,
+        build: String,
+        releaseNotes: String?,
+        informationURL: URL?,
+        isFixture: Bool = false
+    ) -> Bool {
+        guard
+            !(phase == .downloading
+                && updateBuild == build
+                && !isAutomaticUpdate)
+        else { return false }
+
+        resetCallbacks()
+        phase = .downloading
+        updateTitle = title
+        updateVersion = version
+        updateBuild = build
+        self.releaseNotes = releaseNotes
+        self.informationURL = informationURL
+        message = "Downloading the update automatically…"
+        progress = nil
+        isInformationOnly = false
+        isAutomaticUpdate = true
+        self.isFixture = isFixture
+        suppressesWindowPresentation = true
+        expectedDownloadLength = nil
+        receivedDownloadLength = 0
+        present()
+        return true
+    }
+
+    func presentAutomaticUpdateReady(
+        title: String,
+        version: String?,
+        build: String,
+        releaseNotes: String?,
+        informationURL: URL?,
+        isFixture: Bool = false,
+        installAndRelaunch: @escaping () -> Void
+    ) {
+        resetCallbacks()
+        phase = .readyToInstall
+        updateTitle = title
+        updateVersion = version
+        updateBuild = build
+        self.releaseNotes = releaseNotes
+        self.informationURL = informationURL
+        message =
+            "The update is ready. Restart Crest now, or quit normally to install it the next time Crest opens."
+        progress = nil
+        isInformationOnly = false
+        isAutomaticUpdate = true
+        self.isFixture = isFixture
+        suppressesWindowPresentation = true
+        self.installAndRelaunch = installAndRelaunch
+        present()
+    }
+
+    func presentAutomaticUpdateFailure(
+        title: String,
+        version: String?,
+        build: String,
+        message: String
+    ) {
+        resetCallbacks()
+        phase = .failed
+        updateTitle = title
+        updateVersion = version
+        updateBuild = build
+        self.message = message
+        progress = nil
+        isInformationOnly = false
+        isAutomaticUpdate = true
+        suppressesWindowPresentation = true
+        acknowledgement = { [weak self] in self?.reset() }
         present()
     }
 
@@ -336,6 +422,7 @@ final class BrowserSoftwareUpdateModel {
         message = nil
         progress = nil
         isInformationOnly = false
+        isAutomaticUpdate = false
         isFixture = false
         suppressesWindowPresentation = false
         didRelaunch = false
@@ -387,6 +474,10 @@ final class BrowserSoftwareUpdateModel {
             message: message,
             progress: progress,
             isInformationOnly: isInformationOnly,
+            allowsInstallation: install != nil && !isInformationOnly,
+            allowsSkipping: skip != nil,
+            allowsCancellation: cancellation != nil,
+            allowsInstallAndRelaunch: installAndRelaunch != nil,
             isFixture: isFixture
         )
     }

@@ -312,6 +312,10 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
     let message: String?
     let progress: Double?
     let isInformationOnly: Bool
+    let allowsInstallation: Bool
+    let allowsSkipping: Bool
+    let allowsCancellation: Bool
+    let allowsInstallAndRelaunch: Bool
     let isFixture: Bool
 }
 

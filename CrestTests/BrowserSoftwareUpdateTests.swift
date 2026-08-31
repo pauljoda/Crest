@@ -231,6 +231,102 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(model.presentationRevision, 1)
     }
 
+    func testAutomaticDownloadOwnsWidgetThroughRestartReadiness() async throws {
+        let source = BrowserSoftwareUpdateWidgetSource()
+        let model = BrowserSoftwareUpdateModel(widgetSource: source)
+        let presenter = BrowserAutomaticSoftwareUpdatePresenter(model: model)
+        let update = BrowserSoftwareUpdateMetadata(
+            title: "Crest 1.0",
+            version: "1.0.0",
+            build: "100",
+            releaseNotes: "Automatic update notes",
+            informationURL: nil
+        )
+        var iterator = source.events().makeAsyncIterator()
+        _ = await iterator.next()
+        var relaunchCount = 0
+
+        presenter.downloadDidBegin(update)
+
+        let downloadingEmission = await iterator.next()
+        let downloading = try XCTUnwrap(downloadingEmission?.first)
+        guard case .softwareUpdate(let download) = downloading.presentation else {
+            return XCTFail("Expected an automatic download widget")
+        }
+        XCTAssertEqual(download.phase, .downloading)
+        XCTAssertEqual(download.build, "100")
+        XCTAssertEqual(downloading.availableActions, [])
+        XCTAssertTrue(model.isAutomaticUpdate)
+        XCTAssertEqual(model.presentationRevision, 0)
+
+        presenter.extractionDidBegin(update)
+
+        let extractingEmission = await iterator.next()
+        let extracting = try XCTUnwrap(extractingEmission?.first)
+        guard case .softwareUpdate(let extraction) = extracting.presentation else {
+            return XCTFail("Expected an automatic extraction widget")
+        }
+        XCTAssertEqual(extraction.phase, .extracting)
+        XCTAssertEqual(extracting.availableActions, [])
+
+        presenter.installationDidBecomeReady(
+            update,
+            installAndRelaunch: { relaunchCount += 1 }
+        )
+
+        let readyEmission = await iterator.next()
+        let ready = try XCTUnwrap(readyEmission?.first)
+        guard case .softwareUpdate(let prepared) = ready.presentation else {
+            return XCTFail("Expected an automatic restart widget")
+        }
+        XCTAssertEqual(prepared.phase, .readyToInstall)
+        XCTAssertEqual(ready.availableActions, [.installAndRelaunch])
+
+        source.perform(.installAndRelaunch, on: ready.id)
+
+        XCTAssertEqual(relaunchCount, 1)
+        XCTAssertEqual(model.phase, .installing)
+    }
+
+    func testManualUpdateWidgetOffersDownloadAndExplicitVersionSkip() async throws {
+        let source = BrowserSoftwareUpdateWidgetSource()
+        let model = BrowserSoftwareUpdateModel(widgetSource: source)
+        let presenter = BrowserAutomaticSoftwareUpdatePresenter(model: model)
+        let update = BrowserSoftwareUpdateMetadata(
+            title: "Crest 1.0",
+            version: "1.0.0",
+            build: "100",
+            releaseNotes: nil,
+            informationURL: nil
+        )
+        var iterator = source.events().makeAsyncIterator()
+        _ = await iterator.next()
+
+        model.presentUpdate(
+            title: update.title,
+            version: update.version,
+            build: update.build,
+            isInformationOnly: false,
+            install: {},
+            skip: {}
+        )
+
+        let availableEmission = await iterator.next()
+        let available = try XCTUnwrap(availableEmission?.first)
+        XCTAssertEqual(
+            available.availableActions,
+            [.installUpdate, .dismissExactUpdate]
+        )
+        XCTAssertFalse(model.isAutomaticUpdate)
+
+        source.perform(.installUpdate, on: available.id)
+        _ = await iterator.next()
+        presenter.downloadDidBegin(update)
+
+        XCTAssertFalse(model.isAutomaticUpdate)
+        XCTAssertEqual(model.phase, .downloading)
+    }
+
     func testInstallationRetryIsOnlyAvailableWhileCrestIsStillRunning() {
         let model = BrowserSoftwareUpdateModel()
         var retryCount = 0

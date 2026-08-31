@@ -69,14 +69,17 @@ final class BrowserSoftwareUpdateWidgetSource:
         var actions: Set<BrowserSidebarWidgetAction> = []
         switch snapshot.phase {
         case .checking:
-            actions = [.cancelUpdate]
+            if snapshot.allowsCancellation { actions.insert(.cancelUpdate) }
         case .available:
-            actions = [.dismissExactUpdate]
-            if !snapshot.isInformationOnly { actions.insert(.installUpdate) }
+            if snapshot.allowsSkipping { actions.insert(.dismissExactUpdate) }
+            if snapshot.allowsInstallation { actions.insert(.installUpdate) }
         case .downloading:
-            actions = [.cancelUpdate]
+            if snapshot.allowsCancellation { actions.insert(.cancelUpdate) }
         case .readyToInstall:
-            actions = [.installAndRelaunch, .dismissExactUpdate]
+            if snapshot.allowsInstallAndRelaunch {
+                actions.insert(.installAndRelaunch)
+            }
+            if snapshot.allowsSkipping { actions.insert(.dismissExactUpdate) }
         case .failed:
             actions = [.acknowledgeError]
         case .extracting, .installing, .unavailable:
