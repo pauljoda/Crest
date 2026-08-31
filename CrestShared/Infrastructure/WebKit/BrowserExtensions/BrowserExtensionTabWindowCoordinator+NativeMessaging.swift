@@ -30,9 +30,29 @@ extension BrowserExtensionTabWindowCoordinator {
     }
 
     func unregisterNativeMessagingIdentity(
-        for context: WKWebExtensionContext
+        for context: WKWebExtensionContext,
+        in owningSpaceID: SpaceID? = nil
     ) {
         let key = ObjectIdentifier(context)
+        let resolvedSpaceID: SpaceID?
+        if let owningSpaceID {
+            resolvedSpaceID = owningSpaceID
+        } else if let controller = context.webExtensionController,
+            let (spaceID, _) = verifiedSpaceAndEntry(
+                controller: controller,
+                context: context
+            )
+        {
+            resolvedSpaceID = spaceID
+        } else {
+            resolvedSpaceID = nil
+        }
+        if let resolvedSpaceID {
+            pageProvider?.closeExtensionOffscreenDocument(
+                extensionBaseURL: context.baseURL,
+                in: resolvedSpaceID
+            )
+        }
         verifiedNativeMessagingIdentities[key] = nil
         verifiedNativeMessagingAuthorizations[key] = nil
     }
@@ -44,6 +64,24 @@ extension BrowserExtensionTabWindowCoordinator {
         for extensionContext: WKWebExtensionContext,
         replyHandler: @escaping (Any?, (any Error)?) -> Void
     ) {
+        if handleCapabilityBrokerOffscreen(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerDownload(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
         if handleCapabilityBrokerWindowCreate(
             message,
             applicationIdentifier: applicationIdentifier,
@@ -87,6 +125,215 @@ extension BrowserExtensionTabWindowCoordinator {
             authorization: authorization,
             replyHandler: replyHandler
         )
+    }
+
+    private func handleCapabilityBrokerOffscreen(
+        _ message: Any,
+        applicationIdentifier: String?,
+        controller: WKWebExtensionController,
+        extensionContext: WKWebExtensionContext,
+        replyHandler: @escaping (Any?, (any Error)?) -> Void
+    ) -> Bool {
+        guard
+            applicationIdentifier
+                == BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            let payload = message as? [String: Any],
+            let api = payload["api"] as? String,
+            [
+                "offscreen.createDocument",
+                "offscreen.closeDocument",
+                "offscreen.hasDocument",
+            ].contains(api)
+        else {
+            return false
+        }
+        guard
+            let authorization = verifiedNativeMessagingAuthorizations[
+                ObjectIdentifier(extensionContext)
+            ]
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
+            return true
+        }
+        guard authorization.allowsInternalCapabilityBroker,
+            authorization.grants("offscreen")
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionCapabilityBrokerError.permissionDenied(
+                    "offscreen"
+                )
+            )
+            return true
+        }
+        guard
+            let (spaceID, _) = verifiedSpaceAndEntry(
+                controller: controller,
+                context: extensionContext
+            ),
+            let pageProvider
+        else {
+            replyHandler(nil, BrowserExtensionOffscreenDocumentError.unavailable)
+            return true
+        }
+
+        switch api {
+        case "offscreen.createDocument":
+            let request: BrowserExtensionOffscreenDocumentRequest
+            do {
+                request = try BrowserExtensionOffscreenDocumentRequest(
+                    message: payload,
+                    extensionBaseURL: extensionContext.baseURL
+                )
+            } catch {
+                replyHandler(nil, error)
+                return true
+            }
+            Task { @MainActor in
+                do {
+                    try await pageProvider.createExtensionOffscreenDocument(
+                        at: request.url,
+                        extensionBaseURL: extensionContext.baseURL,
+                        in: spaceID
+                    )
+                    replyHandler(["created": true], nil)
+                } catch {
+                    replyHandler(nil, error)
+                }
+            }
+        case "offscreen.closeDocument":
+            pageProvider.closeExtensionOffscreenDocument(
+                extensionBaseURL: extensionContext.baseURL,
+                in: spaceID
+            )
+            replyHandler(["closed": true], nil)
+        case "offscreen.hasDocument":
+            replyHandler(
+                [
+                    "hasDocument":
+                        pageProvider
+                        .hasExtensionOffscreenDocument(
+                            extensionBaseURL: extensionContext.baseURL,
+                            in: spaceID
+                        )
+                ],
+                nil
+            )
+        default:
+            replyHandler(
+                nil,
+                BrowserExtensionCapabilityBrokerError.invalidRequest
+            )
+        }
+        return true
+    }
+
+    private func handleCapabilityBrokerDownload(
+        _ message: Any,
+        applicationIdentifier: String?,
+        controller: WKWebExtensionController,
+        extensionContext: WKWebExtensionContext,
+        replyHandler: @escaping (Any?, (any Error)?) -> Void
+    ) -> Bool {
+        guard
+            applicationIdentifier
+                == BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            let payload = message as? [String: Any],
+            payload["api"] as? String == "downloads.download"
+        else {
+            return false
+        }
+        guard
+            let authorization = verifiedNativeMessagingAuthorizations[
+                ObjectIdentifier(extensionContext)
+            ]
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
+            return true
+        }
+        guard authorization.allowsInternalCapabilityBroker,
+            authorization.grants("downloads"),
+            let clientID = authorization.clientID
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionCapabilityBrokerError.permissionDenied(
+                    "downloads"
+                )
+            )
+            return true
+        }
+        guard
+            let (spaceID, _) = verifiedSpaceAndEntry(
+                controller: controller,
+                context: extensionContext
+            ),
+            let pageProvider
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionDownloadExecutionError.unavailable
+            )
+            return true
+        }
+        let request: BrowserExtensionDownloadRequest
+        do {
+            request = try BrowserExtensionDownloadRequest(
+                message: payload,
+                extensionBaseURL: extensionContext.baseURL
+            )
+        } catch {
+            replyHandler(nil, error)
+            return true
+        }
+        let invocation = webpageMenuRegistry.consumeDownloadInvocation(
+            for: clientID
+        )
+        let targetTabID: TabID
+        if let invocation {
+            guard currentState?.space(spaceID)?.tab(invocation.tabID) != nil
+            else {
+                replyHandler(
+                    nil,
+                    BrowserExtensionDownloadExecutionError.unavailable
+                )
+                return true
+            }
+            targetTabID = invocation.tabID
+        } else {
+            guard
+                let selectedTabID = currentState?.space(spaceID)?.selectedTabID
+            else {
+                replyHandler(
+                    nil,
+                    BrowserExtensionDownloadExecutionError.unavailable
+                )
+                return true
+            }
+            targetTabID = selectedTabID
+        }
+        Task { @MainActor in
+            do {
+                let downloadID = try await pageProvider.startExtensionDownload(
+                    request,
+                    for: targetTabID,
+                    in: spaceID,
+                    isUserInitiated: invocation != nil
+                )
+                replyHandler(["downloadID": downloadID], nil)
+            } catch {
+                replyHandler(nil, error)
+            }
+        }
+        return true
     }
 
     func webExtensionController(

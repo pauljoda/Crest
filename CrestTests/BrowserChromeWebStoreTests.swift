@@ -1869,7 +1869,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "manifest_version": 3,
             "name": "Context Menu Transport Fixture",
             "version": "1.0",
-            "permissions": ["contextMenus", "sidePanel"],
+            "permissions": [
+                "contextMenus", "downloads", "offscreen", "sidePanel",
+            ],
             "background": ["service_worker": "background.js"],
         ]
         try Data("globalThis.started = true;".utf8).write(
@@ -1882,7 +1884,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             extensionID: "context-menu-fixture",
             uniqueIdentifier: "context-menu-fixture.space.personal",
             baseURL: try XCTUnwrap(
-                URL(string: "crest-extension://context-menu-fixture/")
+                URL(string: "about:blank")
             )
         )
         let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
@@ -1892,7 +1894,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(
             try preparer.installCompatibilityLayer(
                 in: root,
-                requestedPermissions: ["contextMenus", "sidePanel"],
+                requestedPermissions: [
+                    "contextMenus", "downloads", "offscreen", "sidePanel",
+                ],
                 runtimeIdentity: runtimeIdentity
             )
         )
@@ -1912,6 +1916,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 try {
                 const nativeCreates = [];
                 const brokerMessages = [];
+                const brokerRequests = [];
                 let brokerHost;
                 let brokerMessageListener;
                 let nativeClickListener;
@@ -1934,6 +1939,19 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     connectNative(host) {
                         brokerHost = host;
                         return port;
+                    },
+                    sendNativeMessage(host, message) {
+                        brokerRequests.push({ host, message });
+                        if (message.api === "offscreen.hasDocument") {
+                            return Promise.resolve({ hasDocument: true });
+                        }
+                        if (message.api === "offscreen.createDocument") {
+                            return Promise.resolve({ created: true });
+                        }
+                        if (message.api === "offscreen.closeDocument") {
+                            return Promise.resolve({ closed: true });
+                        }
+                        return Promise.resolve({ downloadID: 73 });
                     }
                 };
                 Object.defineProperty(nativeRuntime, "onInstalled", {
@@ -1987,6 +2005,19 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 } catch (error) {
                     sidePanelError = String(error);
                 }
+                await chrome.offscreen.createDocument({
+                    url: chrome.runtime.getURL("offscreen.html"),
+                    reasons: ["DOM_SCRAPING"],
+                    justification: "Convert an image"
+                });
+                const hasOffscreenDocument =
+                    await chrome.offscreen.hasDocument();
+                await chrome.offscreen.closeDocument();
+                const downloadID = await chrome.downloads.download({
+                    url: "data:image/jpeg;base64,/9j/2Q==",
+                    filename: "converted.jpg",
+                    saveAs: true
+                });
                 brokerMessageListener?.({
                     api: "runtime.onInstalled",
                     eventID: "fresh-install-event",
@@ -2084,6 +2115,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     chromeEventClick: chromeEventClicks[1],
                     installedReasons,
                     brokerAPIs: brokerMessages.map((message) => message.api),
+                    brokerRequests,
+                    downloadID,
+                    hasOffscreenDocument,
                     sidePanelError,
                     tabClick: eventClicks[2]
                 });
@@ -2126,6 +2160,64 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(
             result["sidePanelError"] as? String,
             "Error: Side panels are not available in Crest."
+        )
+        XCTAssertEqual(result["downloadID"] as? Int, 73)
+        XCTAssertEqual(result["hasOffscreenDocument"] as? Bool, true)
+        let brokerRequests = try XCTUnwrap(
+            result["brokerRequests"] as? [[String: Any]]
+        )
+        let offscreenCreateRequest = try XCTUnwrap(
+            brokerRequests.first {
+                ($0["message"] as? [String: Any])?["api"] as? String
+                    == "offscreen.createDocument"
+            }
+        )
+        let offscreenCreateMessage = try XCTUnwrap(
+            offscreenCreateRequest["message"] as? [String: Any]
+        )
+        XCTAssertEqual(
+            offscreenCreateMessage["url"] as? String,
+            "crest-extension://context-menu-fixture/offscreen.html"
+        )
+        XCTAssertEqual(
+            offscreenCreateMessage["reasons"] as? [String],
+            ["DOM_SCRAPING"]
+        )
+        XCTAssertEqual(
+            offscreenCreateMessage["justification"] as? String,
+            "Convert an image"
+        )
+        XCTAssertTrue(
+            brokerRequests.contains {
+                ($0["message"] as? [String: Any])?["api"] as? String
+                    == "offscreen.hasDocument"
+            }
+        )
+        XCTAssertTrue(
+            brokerRequests.contains {
+                ($0["message"] as? [String: Any])?["api"] as? String
+                    == "offscreen.closeDocument"
+            }
+        )
+        let downloadRequest = try XCTUnwrap(
+            brokerRequests.first {
+                ($0["message"] as? [String: Any])?["api"] as? String
+                    == "downloads.download"
+            }
+        )
+        XCTAssertEqual(
+            downloadRequest["host"] as? String,
+            BrowserNativeMessagingService.capabilityBrokerIdentifier
+        )
+        let downloadMessage = try XCTUnwrap(
+            downloadRequest["message"] as? [String: Any]
+        )
+        XCTAssertEqual(downloadMessage["api"] as? String, "downloads.download")
+        XCTAssertEqual(downloadMessage["filename"] as? String, "converted.jpg")
+        XCTAssertEqual(downloadMessage["saveAs"] as? Bool, true)
+        XCTAssertEqual(
+            downloadMessage["url"] as? String,
+            "data:image/jpeg;base64,/9j/2Q=="
         )
         let nativeCreate = try XCTUnwrap(
             result["nativeCreate"] as? [String: Any]

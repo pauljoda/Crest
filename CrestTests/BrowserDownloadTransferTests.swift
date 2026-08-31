@@ -1,5 +1,10 @@
+import AppKit
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
+import WebKit
 import XCTest
+
 @testable import Crest
 
 final class BrowserDownloadTransferTests: XCTestCase {
@@ -73,5 +78,95 @@ final class BrowserDownloadTransferTests: XCTestCase {
             .quarantineProperties
         XCTAssertNotNil(properties)
         XCTAssertFalse((properties?["LSQuarantineAgentName"] as? String)?.isEmpty ?? true)
+    }
+
+    @MainActor
+    func testExtensionJPEGUsesRequestedFilenameAndStandardCompletionLifecycle()
+        async throws
+    {
+        let root = FileManager.default.temporaryDirectory.appending(
+            path: "crest-extension-download-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let downloads = root.appending(path: "Downloads", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(
+            at: downloads,
+            withIntermediateDirectories: true
+        )
+        try Data("occupied".utf8).write(
+            to: downloads.appending(path: "converted.jpg")
+        )
+        var forcedDestinationPrompt = false
+        let center = BrowserDownloadCenter(
+            resolveDownloadDestination: { suggestedFilename, _, forcesPrompt in
+                forcedDestinationPrompt = forcesPrompt
+                return .destination(
+                    BrowserDownloadDestination.availableURL(
+                        suggestedFilename: suggestedFilename,
+                        directory: downloads,
+                        fileExists: {
+                            FileManager.default.fileExists(atPath: $0.path)
+                        }
+                    ),
+                    securityScopedURL: nil
+                )
+            }
+        )
+        let bitmap = try XCTUnwrap(
+            NSBitmapImageRep(
+                bitmapDataPlanes: nil,
+                pixelsWide: 2,
+                pixelsHigh: 2,
+                bitsPerSample: 8,
+                samplesPerPixel: 3,
+                hasAlpha: false,
+                isPlanar: false,
+                colorSpaceName: .deviceRGB,
+                bytesPerRow: 0,
+                bitsPerPixel: 0
+            )
+        )
+        bitmap.setColor(.systemBlue, atX: 0, y: 0)
+        let jpeg = try XCTUnwrap(
+            bitmap.representation(using: .jpeg, properties: [:])
+        )
+        let request = try BrowserExtensionDownloadRequest(
+            message: [
+                "api": "downloads.download",
+                "url": "data:image/jpeg;base64,\(jpeg.base64EncodedString())",
+                "filename": "converted.jpg",
+                "saveAs": true,
+            ],
+            extensionBaseURL: URL(string: "crest-extension://fixture/")!
+        )
+        let profileID = UUID()
+
+        let downloadID = await center.startExtensionDownload(
+            request,
+            in: WKWebView(),
+            profileID: profileID,
+            spaceID: SpaceID(rawValue: UUID()),
+            spaceName: "Fixture",
+            isUserInitiated: true
+        )
+        for _ in 0..<200 {
+            guard center.items.first?.state != .finished else { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        let item = try XCTUnwrap(center.items.first)
+        let destination = try XCTUnwrap(item.destinationURL)
+        XCTAssertEqual(downloadID, 1)
+        XCTAssertTrue(forcedDestinationPrompt)
+        XCTAssertEqual(item.profileID, profileID)
+        XCTAssertEqual(item.filename, "converted 1.jpg")
+        XCTAssertEqual(item.state, .finished)
+        XCTAssertEqual(destination.lastPathComponent, "converted 1.jpg")
+        let savedData = try Data(contentsOf: destination)
+        let source = try XCTUnwrap(
+            CGImageSourceCreateWithData(savedData as CFData, nil)
+        )
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.jpeg.identifier)
     }
 }

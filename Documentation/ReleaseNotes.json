@@ -333,6 +333,10 @@
     "2026-08-30-mobile-search-engine-settings": {
       "category": "fixed",
       "message": "Keep Search Engine settings open and usable on iPhone and iPad with clear, evenly spaced provider controls"
+    },
+    "2026-08-31-webp-jpeg-extension-downloads": {
+      "category": "fixed",
+      "message": "Save converted WebP images as real JPEG files through the normal download flow"
     }
   }
 }

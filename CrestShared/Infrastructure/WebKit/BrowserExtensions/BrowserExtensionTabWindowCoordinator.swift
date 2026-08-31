@@ -10,15 +10,14 @@ struct BrowserExtensionControllerEntry {
 final class BrowserExtensionTabWindowCoordinator: NSObject {
 
     private let reportWindowFocus: (WKWebExtensionController, BrowserExtensionWindowAdapter?) -> Void
+    let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
 
     var controllers: [SpaceID: BrowserExtensionControllerEntry] = [:]
     var tabsBySpace: [SpaceID: [TabID: BrowserExtensionTabAdapter]] = [:]
     var transientTabsBySpace: [SpaceID: [BrowserExtensionTransientTab]] = [:]
-    var auxiliaryWindowsBySpace:
-        [SpaceID: [BrowserExtensionWindowAdapter]] = [:]
+    var auxiliaryWindowsBySpace: [SpaceID: [BrowserExtensionWindowAdapter]] = [:]
     var auxiliaryWindowByTabID: [TabID: BrowserExtensionWindowAdapter] = [:]
-    var auxiliaryPresentations:
-        [ObjectIdentifier: any BrowserExtensionWindowPresentation] = [:]
+    var auxiliaryPresentations: [ObjectIdentifier: any BrowserExtensionWindowPresentation] = [:]
     var pendingAuxiliaryWindow: BrowserExtensionWindowAdapter?
     var lastState: BrowserExtensionSessionState?
     weak var browser: (any BrowserExtensionTabWindowSessionHandling)?
@@ -29,10 +28,8 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
         var pendingActionPopupRequests: [ObjectIdentifier: BrowserExtensionActionPopupRequest] = [:]
-        var popupBackgroundWarmUpObservers:
-            [ObjectIdentifier: [BrowserExtensionPopupBackgroundWarmUpObserver]] = [:]
-        var popupBackgroundReadyUntil:
-            [ObjectIdentifier: ContinuousClock.Instant] = [:]
+        var popupBackgroundWarmUpObservers: [ObjectIdentifier: [BrowserExtensionPopupBackgroundWarmUpObserver]] = [:]
+        var popupBackgroundReadyUntil: [ObjectIdentifier: ContinuousClock.Instant] = [:]
         let popupBackgroundClock = ContinuousClock()
         var popupBackgroundWarmCacheDuration = Duration.seconds(15)
         /// How long a popup request gives its extension's background content
@@ -52,6 +49,8 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     private var reportedFocusedWindow: BrowserExtensionWindowAdapter?
 
     init(
+        webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
+            BrowserExtensionWebpageMenuRegistry(),
         reportWindowFocus:
             @escaping (
                 WKWebExtensionController,
@@ -60,6 +59,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
                 controller.didFocusWindow(window)
             }
     ) {
+        self.webpageMenuRegistry = webpageMenuRegistry
         self.reportWindowFocus = reportWindowFocus
         super.init()
     }
@@ -332,7 +332,8 @@ extension BrowserExtensionTabWindowCoordinator {
         }
         ensureAdapters(for: state)
         return state.tabs.compactMap { tab in
-            let assignedWindow = auxiliaryWindowByTabID[tab.id]
+            let assignedWindow =
+                auxiliaryWindowByTabID[tab.id]
                 ?? controllers[spaceID]?.window
             guard assignedWindow === window else { return nil }
             return tabsBySpace[spaceID]?[tab.id]
@@ -365,9 +366,11 @@ extension BrowserExtensionTabWindowCoordinator {
             }
             return adapter(for: selectedID, in: spaceID)
         }
-        guard let tabID = auxiliaryWindowByTabID.first(where: {
-            $0.value === window
-        })?.key else {
+        guard
+            let tabID = auxiliaryWindowByTabID.first(where: {
+                $0.value === window
+            })?.key
+        else {
             return nil
         }
         return adapter(for: tabID, in: spaceID)
@@ -923,9 +926,11 @@ extension BrowserExtensionTabWindowCoordinator {
             )
             return
         }
-        guard let presentation = auxiliaryPresentations[
-            ObjectIdentifier(window)
-        ] else {
+        guard
+            let presentation = auxiliaryPresentations[
+                ObjectIdentifier(window)
+            ]
+        else {
             completionHandler(adapterError(.windowUnavailable))
             return
         }

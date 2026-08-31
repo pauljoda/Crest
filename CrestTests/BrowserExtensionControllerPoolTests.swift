@@ -1,3 +1,4 @@
+import AppKit
 import WebKit
 import XCTest
 
@@ -9,6 +10,31 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         private(set) var preparedSessions: [BrowserSession] = []
         private(set) var selectedSessions: [BrowserSession] = []
         private(set) var readerModeRequests: [(TabID, Bool)] = []
+        private(set) var extensionDownloads:
+            [(
+                request: BrowserExtensionDownloadRequest,
+                tabID: TabID,
+                spaceID: SpaceID,
+                isUserInitiated: Bool
+            )] = []
+        private(set) var createdOffscreenDocuments: [(url: URL, extensionBaseURL: URL, spaceID: SpaceID)] = []
+        private(set) var closedOffscreenDocuments: [(extensionBaseURL: URL, spaceID: SpaceID)] = []
+        var hasOffscreenDocument = false
+        var startExtensionDownloadHandler:
+            (
+                @MainActor (
+                    BrowserExtensionDownloadRequest,
+                    TabID,
+                    SpaceID,
+                    Bool
+                ) async throws -> Int
+            )?
+        var createExtensionOffscreenDocumentHandler:
+            (
+                @MainActor (URL, URL, SpaceID) async throws -> Void
+            )?
+        var closeExtensionOffscreenDocumentHandler: (@MainActor (URL, SpaceID) -> Void)?
+        var hasExtensionOffscreenDocumentHandler: (@MainActor (URL, SpaceID) -> Bool)?
         var webViews: [TabID: WKWebView] = [:]
         var readerModeStates: [TabID: BrowserReaderModeState] = [:]
         var windowGeometry = BrowserExtensionWindowGeometry.unavailable
@@ -34,6 +60,73 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         ) async throws {
             readerModeRequests.append((tabID, isActive))
             readerModeStates[tabID] = isActive ? .active : .available
+        }
+
+        func startExtensionDownload(
+            _ request: BrowserExtensionDownloadRequest,
+            for tabID: TabID,
+            in spaceID: SpaceID,
+            isUserInitiated: Bool
+        ) async throws -> Int {
+            extensionDownloads.append(
+                (
+                    request: request,
+                    tabID: tabID,
+                    spaceID: spaceID,
+                    isUserInitiated: isUserInitiated
+                )
+            )
+            if let startExtensionDownloadHandler {
+                return try await startExtensionDownloadHandler(
+                    request,
+                    tabID,
+                    spaceID,
+                    isUserInitiated
+                )
+            }
+            return 41
+        }
+
+        func createExtensionOffscreenDocument(
+            at url: URL,
+            extensionBaseURL: URL,
+            in spaceID: SpaceID
+        ) async throws {
+            createdOffscreenDocuments.append(
+                (url: url, extensionBaseURL: extensionBaseURL, spaceID: spaceID)
+            )
+            if let createExtensionOffscreenDocumentHandler {
+                try await createExtensionOffscreenDocumentHandler(
+                    url,
+                    extensionBaseURL,
+                    spaceID
+                )
+            }
+            hasOffscreenDocument = true
+        }
+
+        func closeExtensionOffscreenDocument(
+            extensionBaseURL: URL,
+            in spaceID: SpaceID
+        ) {
+            closedOffscreenDocuments.append(
+                (extensionBaseURL: extensionBaseURL, spaceID: spaceID)
+            )
+            closeExtensionOffscreenDocumentHandler?(
+                extensionBaseURL,
+                spaceID
+            )
+            hasOffscreenDocument = false
+        }
+
+        func hasExtensionOffscreenDocument(
+            extensionBaseURL: URL,
+            in spaceID: SpaceID
+        ) -> Bool {
+            hasExtensionOffscreenDocumentHandler?(
+                extensionBaseURL,
+                spaceID
+            ) ?? hasOffscreenDocument
         }
 
         func extensionWindowGeometry(
@@ -387,7 +480,6 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             if popupText == "Ready" { break }
             try await Task.sleep(for: .milliseconds(10))
         }
-
         XCTAssertTrue(action.action.popupPopover?.isShown == true)
         XCTAssertEqual(popupText, "Ready")
 
@@ -746,6 +838,685 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertTrue(
             compatibilityErrors.isEmpty,
             "Compatibility errors: \(compatibilityErrors)"
+        )
+    }
+
+    func testVerifiedDownloadBrokerUsesFreshOwningTabAndSpaceOnce()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-download-capability-extension-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        let permissions = ["downloads"]
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Download Capability Test",
+            "version": "1.0",
+            "permissions": permissions,
+            "background": ["service_worker": "background.js"],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: extensionURL.appending(path: "manifest.json")
+        )
+        try Data(
+            """
+            void 0;
+            """.utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer()
+                .installCompatibilityLayer(
+                    in: extensionURL,
+                    requestedPermissions: permissions,
+                    runtimeIdentity: BrowserExtensionRuntimeIdentity(
+                        extensionID: extensionID.rawValue,
+                        uniqueIdentifier: "download-capability-test",
+                        baseURL: try XCTUnwrap(
+                            URL(
+                                string:
+                                    "crest-extension://download-capability-test/"
+                            )
+                        )
+                    )
+                )
+        )
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pageProvider = PageProviderSpy()
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let tab = try XCTUnwrap(browser.session.selectedTab)
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID.rawValue,
+            spaceID: space.id
+        )
+        registry.publishClick(
+            menuItemID: "string:save-jpeg",
+            context: BrowserExtensionWebpageMenuContext(
+                pageURL: URL(string: "https://example.com/gallery")!,
+                documentURL: URL(string: "https://example.com/gallery")!,
+                linkURL: nil,
+                sourceURL: URL(string: "https://cdn.example/photo.webp")!,
+                mediaType: .image,
+                selectionText: nil,
+                isEditable: false,
+                isMainFrame: true
+            ),
+            tabID: tab.id,
+            for: clientID
+        )
+        let pool = BrowserExtensionControllerPool(
+            webpageMenuRegistry: registry
+        )
+        pool.connect(browser: browser, pageProvider: pageProvider)
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: registry
+            )
+        )
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: try XCTUnwrap(
+                    URL(
+                        string:
+                            "https://chromewebstore.google.com/detail/test/\(extensionID.rawValue)"
+                    )
+                ),
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+
+        let context = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID.rawValue,
+            in: space,
+            source: source,
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: permissions,
+                    hosts: []
+                )
+        )
+        pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+            BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["downloads"],
+                clientID: clientID,
+                allowsInternalCapabilityBroker: true
+            ),
+            for: context
+        )
+        let receivedReply = expectation(description: "Download broker reply")
+        var reply: Any?
+        var replyError: Error?
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: [
+                "api": "downloads.download",
+                "url": "data:image/jpeg;base64,/9j/2Q==",
+                "filename": "converted.jpg",
+                "saveAs": true,
+            ],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { value, error in
+            reply = value
+            replyError = error
+            receivedReply.fulfill()
+        }
+        await fulfillment(of: [receivedReply], timeout: 2)
+
+        let download = try XCTUnwrap(pageProvider.extensionDownloads.first)
+        XCTAssertNil(replyError)
+        XCTAssertEqual((reply as? [String: Int])?["downloadID"], 41)
+        XCTAssertEqual(pageProvider.extensionDownloads.count, 1)
+        XCTAssertEqual(download.request.filename, "converted.jpg")
+        XCTAssertTrue(download.request.saveAs)
+        XCTAssertEqual(download.tabID, tab.id)
+        XCTAssertEqual(download.spaceID, space.id)
+        XCTAssertTrue(download.isUserInitiated)
+        XCTAssertNil(registry.consumeDownloadInvocation(for: clientID))
+    }
+
+    func testVerifiedOffscreenBrokerUsesOwningExtensionAndSpace()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-offscreen-capability-extension-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        let permissions = ["offscreen"]
+        try JSONSerialization.data(
+            withJSONObject: [
+                "manifest_version": 3,
+                "name": "Offscreen Capability Test",
+                "version": "1.0",
+                "permissions": permissions,
+            ] as [String: Any]
+        ).write(to: extensionURL.appending(path: "manifest.json"))
+        try Data("void 0;".utf8).write(
+            to: extensionURL.appending(path: "background.js")
+        )
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pageProvider = PageProviderSpy()
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID.rawValue,
+            spaceID: space.id
+        )
+        let pool = BrowserExtensionControllerPool(
+            webpageMenuRegistry: registry
+        )
+        pool.connect(browser: browser, pageProvider: pageProvider)
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: URL(
+                    string:
+                        "https://chromewebstore.google.com/detail/test/\(extensionID.rawValue)"
+                )!,
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+        let context = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID.rawValue,
+            in: space,
+            source: source,
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: permissions,
+                    hosts: []
+                )
+        )
+        pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+            BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["offscreen"],
+                clientID: clientID,
+                allowsInternalCapabilityBroker: true
+            ),
+            for: context
+        )
+
+        let createReply = expectation(description: "Offscreen create reply")
+        var createError: Error?
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: [
+                "api": "offscreen.createDocument",
+                "url": context.baseURL.appending(path: "offscreen.html")
+                    .absoluteString,
+                "reasons": ["DOM_SCRAPING"],
+                "justification": "Convert an image",
+            ],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { _, error in
+            createError = error
+            createReply.fulfill()
+        }
+        await fulfillment(of: [createReply], timeout: 2)
+
+        XCTAssertNil(createError)
+        let created = try XCTUnwrap(
+            pageProvider.createdOffscreenDocuments.first
+        )
+        XCTAssertEqual(
+            created.url,
+            context.baseURL.appending(path: "offscreen.html")
+        )
+        XCTAssertEqual(created.extensionBaseURL, context.baseURL)
+        XCTAssertEqual(created.spaceID, space.id)
+
+        let hasReply = expectation(description: "Offscreen has reply")
+        var hasValue: Any?
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: ["api": "offscreen.hasDocument"],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { value, _ in
+            hasValue = value
+            hasReply.fulfill()
+        }
+        await fulfillment(of: [hasReply], timeout: 2)
+        XCTAssertEqual(
+            (hasValue as? [String: Bool])?["hasDocument"],
+            true
+        )
+
+        let closeReply = expectation(description: "Offscreen close reply")
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: ["api": "offscreen.closeDocument"],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { _, _ in
+            closeReply.fulfill()
+        }
+        await fulfillment(of: [closeReply], timeout: 2)
+        XCTAssertEqual(pageProvider.closedOffscreenDocuments.count, 1)
+        XCTAssertEqual(
+            pageProvider.closedOffscreenDocuments.first?.spaceID,
+            space.id
+        )
+
+        let recreateReply = expectation(description: "Offscreen recreate reply")
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: [
+                "api": "offscreen.createDocument",
+                "url": context.baseURL.appending(path: "offscreen.html")
+                    .absoluteString,
+                "reasons": ["DOM_SCRAPING"],
+                "justification": "Convert another image",
+            ],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { _, _ in
+            recreateReply.fulfill()
+        }
+        await fulfillment(of: [recreateReply], timeout: 2)
+        XCTAssertEqual(pageProvider.createdOffscreenDocuments.count, 2)
+
+        try pool.controller(for: space).unload(context)
+        pool.runtimeContextController.releaseContext(
+            extensionID: extensionID.rawValue,
+            in: space.id
+        )
+
+        XCTAssertEqual(pageProvider.closedOffscreenDocuments.count, 2)
+        XCTAssertEqual(
+            pageProvider.closedOffscreenDocuments.last?.spaceID,
+            space.id
+        )
+    }
+
+    func testSyntheticWebPFixtureDispatchesOneClickThroughOffscreenConversionAndCompletesJPEGDownload()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webp-conversion-fixture-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        let extensionURL = root.appending(
+            path: "Extension",
+            directoryHint: .isDirectory
+        )
+        let downloadsURL = root.appending(
+            path: "Downloads",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        try fileManager.createDirectory(
+            at: downloadsURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        let permissions = ["contextMenus", "downloads", "offscreen"]
+        try JSONSerialization.data(
+            withJSONObject: [
+                "manifest_version": 3,
+                "name": "WebP Conversion Fixture",
+                "description": "Exercises offscreen image conversion.",
+                "version": "1.0",
+                "permissions": permissions,
+                "background": [
+                    "service_worker": "background.js",
+                    "type": "module",
+                ],
+            ] as [String: Any]
+        ).write(to: extensionURL.appending(path: "manifest.json"))
+        try Data(
+            """
+            chrome.contextMenus.create({
+                id: "convert",
+                title: "Save as JPG",
+                contexts: ["image"]
+            });
+            chrome.runtime.onMessage.addListener((message) => {
+                if (
+                    message?.target === "background"
+                    && message.operation === "img_download"
+                ) {
+                    chrome.downloads.download({
+                        url: message.url,
+                        filename: message.filename,
+                        saveAs: false
+                    });
+                }
+            });
+            chrome.contextMenus.onClicked.addListener(async (info) => {
+                if (
+                    info.menuItemId !== "convert"
+                    || info.mediaType !== "image"
+                    || !info.srcUrl
+                ) {
+                    return;
+                }
+                await chrome.offscreen.createDocument({
+                    url: chrome.runtime.getURL("offscreen.html"),
+                    reasons: ["DOM_SCRAPING"],
+                    justification: "Convert an image"
+                });
+                await chrome.runtime.sendMessage({
+                    target: "offscreen",
+                    operation: "img_convert",
+                    src: info.srcUrl,
+                    filename: "fixture-converted.jpg"
+                });
+            });
+            """.utf8
+        ).write(to: extensionURL.appending(path: "background.js"))
+        try Data(
+            """
+            <!doctype html>
+            <html><body><script src="offscreen.js"></script></body></html>
+            """.utf8
+        ).write(to: extensionURL.appending(path: "offscreen.html"))
+        try Data(
+            """
+            chrome.runtime.onMessage.addListener((message) => {
+                if (
+                    message?.target !== "offscreen"
+                    || message.operation !== "img_convert"
+                ) {
+                    return;
+                }
+                const image = new Image();
+                image.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    canvas.getContext("2d").drawImage(image, 0, 0);
+                    chrome.runtime.sendMessage({
+                        target: "background",
+                        operation: "img_download",
+                        url: canvas.toDataURL("image/jpeg"),
+                        filename: message.filename
+                    });
+                };
+                image.src = message.src;
+            });
+            """.utf8
+        ).write(to: extensionURL.appending(path: "offscreen.js"))
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let tab = try XCTUnwrap(browser.session.selectedTab)
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: extensionID,
+                storeURL: URL(
+                    string:
+                        "https://chromewebstore.google.com/detail/test/\(extensionID.rawValue)"
+                )!,
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer()
+                .installCompatibilityLayer(
+                    in: extensionURL,
+                    requestedPermissions: permissions,
+                    runtimeIdentity:
+                        BrowserExtensionRuntimeIdentifierPolicy.identity(
+                            extensionID: extensionID.rawValue,
+                            source: source,
+                            spaceID: space.id
+                        )
+                )
+        )
+        let center = BrowserDownloadCenter(
+            resolveDownloadDestination: { suggestedFilename, _, _ in
+                .destination(
+                    downloadsURL.appending(path: suggestedFilename),
+                    securityScopedURL: nil
+                )
+            }
+        )
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let pageProvider = PageProviderSpy()
+        let pool = BrowserExtensionControllerPool(
+            webpageMenuRegistry: registry
+        )
+        let offscreenPages = BrowserPagePool(
+            browsingMode: .standard,
+            usesEphemeralWebsiteDataStores: true,
+            extensionControllerPool: pool
+        )
+        pageProvider.createExtensionOffscreenDocumentHandler = {
+            url,
+            baseURL,
+            spaceID in
+            try await offscreenPages.createExtensionOffscreenDocument(
+                at: url,
+                extensionBaseURL: baseURL,
+                in: spaceID
+            )
+        }
+        pageProvider.closeExtensionOffscreenDocumentHandler = {
+            baseURL,
+            spaceID in
+            offscreenPages.closeExtensionOffscreenDocument(
+                extensionBaseURL: baseURL,
+                in: spaceID
+            )
+        }
+        pageProvider.hasExtensionOffscreenDocumentHandler = {
+            baseURL,
+            spaceID in
+            offscreenPages.hasExtensionOffscreenDocument(
+                extensionBaseURL: baseURL,
+                in: spaceID
+            )
+        }
+        let downloadWebView = WKWebView()
+        let profileID = UUID()
+        pageProvider.startExtensionDownloadHandler = {
+            request,
+            _,
+            spaceID,
+            isUserInitiated in
+            await center.startExtensionDownload(
+                request,
+                in: downloadWebView,
+                profileID: profileID,
+                spaceID: spaceID,
+                spaceName: "Fixture",
+                isUserInitiated: isUserInitiated
+            )
+        }
+        let clientID = BrowserExtensionServiceClientID.scoped(
+            extensionID: extensionID.rawValue,
+            spaceID: space.id
+        )
+        pool.connect(browser: browser, pageProvider: pageProvider)
+        pool.setNativeMessagingHandler(
+            BrowserNativeMessagingService(
+                capability: .available,
+                resolver: BrowserNativeMessagingHostManifestResolver(
+                    searchDirectories: []
+                ),
+                webpageMenuRegistry: registry
+            )
+        )
+        let context = try await pool.runtimeContextController.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID.rawValue,
+            in: space,
+            unsupportedAPIs: [],
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
+                .reviewedRequiredAccess(
+                    permissions: permissions,
+                    hosts: []
+                ),
+            persistsRuntimeSummary: false,
+            source: source,
+            internalGrantedPermissions:
+                BrowserWebExtensionCompatibilityPackagePreparer
+                .internalGrantedPermissions(
+                    requestedPermissions: permissions
+                ),
+            capabilityBrokerGrantedPermissions:
+                BrowserWebExtensionCompatibilityPackagePreparer
+                .capabilityBrokerGrantedPermissions(
+                    requestedPermissions: permissions
+                ),
+            allowsInternalCapabilityBroker: true
+        )
+        _ = await pool.runtimeContextController
+            .prepareBackgroundForInitialContentScriptTraffic(context)
+        for _ in 0..<200 {
+            if registry.definitions(for: clientID).contains(where: {
+                $0.id == "string:convert"
+            }) {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertTrue(
+            registry.definitions(for: clientID).contains(where: {
+                $0.id == "string:convert"
+            }),
+            "Definitions: \(registry.definitions(for: clientID)); errors: \(context.errors.map(\.localizedDescription))"
+        )
+        var clickMessages: [[String: Any]] = []
+        _ = registry.observeClicks(for: clientID) {
+            clickMessages.append($0)
+        }
+        let webPURL = try XCTUnwrap(
+            URL(
+                string:
+                    "data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACwAQCdASoCAAIAAgA0JaACdLoABDAAAP75k2//kB//kB//kB//ID/iF3sYUAAA"
+            )
+        )
+
+        let extensionTab = try XCTUnwrap(
+            pool.extensionTab(tab.id, in: space.id)
+        )
+        var nativeMenuItem: NSMenuItem?
+        for _ in 0..<200 {
+            nativeMenuItem = context.menuItems(for: extensionTab).first
+            if nativeMenuItem != nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let selectedNativeMenuItem = try XCTUnwrap(nativeMenuItem)
+        registry.publishClick(
+            menuItemID: "string:convert",
+            context: BrowserExtensionWebpageMenuContext(
+                pageURL: URL(string: "https://example.com/fixture")!,
+                documentURL: URL(string: "https://example.com/fixture")!,
+                linkURL: nil,
+                sourceURL: webPURL,
+                mediaType: .image,
+                selectionText: nil,
+                isEditable: false,
+                isMainFrame: true
+            ),
+            tabID: tab.id,
+            for: clientID
+        )
+        context.userGesturePerformed(in: extensionTab)
+        XCTAssertTrue(
+            NSApp.sendAction(
+                try XCTUnwrap(selectedNativeMenuItem.action),
+                to: selectedNativeMenuItem.target,
+                from: selectedNativeMenuItem
+            )
+        )
+
+        for _ in 0..<200 {
+            if center.items.first?.state == .finished { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertEqual(clickMessages.count, 1)
+        XCTAssertEqual(
+            clickMessages.first?["menuItemID"] as? String,
+            "string:convert"
+        )
+        XCTAssertEqual(clickMessages.first?["mediaType"] as? String, "image")
+        XCTAssertEqual(
+            clickMessages.first?["sourceURL"] as? String,
+            webPURL.absoluteString
+        )
+        XCTAssertEqual(pageProvider.createdOffscreenDocuments.count, 1)
+        XCTAssertTrue(
+            offscreenPages.hasExtensionOffscreenDocument(
+                extensionBaseURL: context.baseURL,
+                in: space.id
+            )
+        )
+        XCTAssertEqual(pageProvider.extensionDownloads.count, 1)
+        XCTAssertEqual(
+            pageProvider.extensionDownloads.first?.tabID,
+            tab.id
+        )
+        XCTAssertTrue(
+            pageProvider.extensionDownloads.first?.isUserInitiated == true
+        )
+        let item = try XCTUnwrap(center.items.first)
+        let destination = try XCTUnwrap(item.destinationURL)
+        XCTAssertEqual(item.filename, "fixture-converted.jpg")
+        XCTAssertEqual(item.state, .finished)
+        let data = try Data(contentsOf: destination)
+        XCTAssertEqual(Array(data.prefix(2)), [0xFF, 0xD8])
+        XCTAssertNotEqual(Array(data.prefix(4)), Array("RIFF".utf8))
+        offscreenPages.closeExtensionOffscreenDocument(
+            extensionBaseURL: context.baseURL,
+            in: space.id
         )
     }
 

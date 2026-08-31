@@ -138,8 +138,9 @@ enum BrowserExtensionAPICompatibilityMatrix {
             "downloads",
             permissions: ["downloads", "downloads.open"],
             webKit: .unavailable,
-            crest: .unavailable,
-            runtime: true
+            crest: .emulated,
+            runtime: true,
+            broker: ["downloads"]
         ),
         contract(
             "extension",
@@ -193,8 +194,10 @@ enum BrowserExtensionAPICompatibilityMatrix {
             "offscreen",
             permissions: ["offscreen"],
             firefox: .unavailable,
-            webKit: .partial,
-            crest: .native
+            webKit: .unavailable,
+            crest: .emulated,
+            runtime: true,
+            broker: ["offscreen"]
         ),
         contract(
             "omnibox",
@@ -239,7 +242,8 @@ enum BrowserExtensionAPICompatibilityMatrix {
             permissions: ["sidePanel"],
             firefox: .unavailable,
             webKit: .partial,
-            crest: .unavailable
+            crest: .emulated,
+            runtime: true
         ),
         contract(
             "sidebarAction",
@@ -308,7 +312,7 @@ enum BrowserExtensionAPICompatibilityMatrix {
         member(
             "downloads.download",
             webKit: .unavailable,
-            crest: .unavailable
+            crest: .emulated
         ),
         member("extension.getBackgroundPage", crest: .nativePatched),
         member("extension.getViews", crest: .nativePatched),
@@ -326,6 +330,31 @@ enum BrowserExtensionAPICompatibilityMatrix {
         ),
         member(
             "management.getSelf",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "offscreen.Reason",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "offscreen.closeDocument",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "offscreen.createDocument",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "offscreen.hasDocument",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "sidePanel.setPanelBehavior",
             webKit: .unavailable,
             crest: .emulated
         ),

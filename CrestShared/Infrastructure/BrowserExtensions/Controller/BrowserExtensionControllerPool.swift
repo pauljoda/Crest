@@ -40,7 +40,9 @@ final class BrowserExtensionControllerPool {
             BrowserExtensionWebpageMenuRegistry(),
         usesEphemeralWebKitStorage: Bool = true
     ) {
-        let tabWindowCoordinator = BrowserExtensionTabWindowCoordinator()
+        let tabWindowCoordinator = BrowserExtensionTabWindowCoordinator(
+            webpageMenuRegistry: webpageMenuRegistry
+        )
         let persistenceController = BrowserExtensionPersistenceController(
             packageStore: packageStore,
             registry: registry

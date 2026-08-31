@@ -9,6 +9,12 @@ enum BrowserExtensionInstallLifecycleReason: String, Equatable, Sendable {
     case update
 }
 
+struct BrowserExtensionWebpageMenuInvocation: Equatable, Sendable {
+    let tabID: TabID
+    let menuItemID: String
+    let context: BrowserExtensionWebpageMenuContext
+}
+
 private struct BrowserExtensionInstallLifecycleEvent: Equatable {
     let id: String
     let reason: BrowserExtensionInstallLifecycleReason
@@ -34,12 +40,18 @@ final class BrowserExtensionWebpageMenuRegistry {
         let message: [String: Any]
     }
 
+    private struct PendingDownloadInvocation {
+        let invocation: BrowserExtensionWebpageMenuInvocation
+        let expiresAt: Date
+    }
+
     private var definitionsByClient: [BrowserExtensionServiceClientID: [BrowserExtensionWebpageMenuDefinition]] = [:]
     private var clickPublishersByClient: [BrowserExtensionServiceClientID: [UUID: ClickPublisher]] = [:]
     private var pendingClicksByClient: [BrowserExtensionServiceClientID: [PendingClick]] = [:]
     private var pendingClickExpirationTasks: [BrowserExtensionServiceClientID: [UUID: Task<Void, Never>]] = [:]
     private var pendingInstallLifecycleByClient:
         [BrowserExtensionServiceClientID: BrowserExtensionInstallLifecycleEvent] = [:]
+    private var pendingDownloadInvocationsByClient: [BrowserExtensionServiceClientID: PendingDownloadInvocation] = [:]
 
     @discardableResult
     func prepareInstallLifecycle(
@@ -169,8 +181,20 @@ final class BrowserExtensionWebpageMenuRegistry {
     func publishClick(
         menuItemID: String,
         context: BrowserExtensionWebpageMenuContext,
+        tabID: TabID? = nil,
         for clientID: BrowserExtensionServiceClientID
     ) {
+        if let tabID {
+            pendingDownloadInvocationsByClient[clientID] =
+                PendingDownloadInvocation(
+                    invocation: BrowserExtensionWebpageMenuInvocation(
+                        tabID: tabID,
+                        menuItemID: menuItemID,
+                        context: context
+                    ),
+                    expiresAt: Date().addingTimeInterval(30)
+                )
+        }
         var message: [String: Any] = [
             "api": "contextMenus.click",
             "menuItemID": menuItemID,
@@ -202,6 +226,20 @@ final class BrowserExtensionWebpageMenuRegistry {
             }
     }
 
+    func consumeDownloadInvocation(
+        for clientID: BrowserExtensionServiceClientID,
+        now: Date = .now
+    ) -> BrowserExtensionWebpageMenuInvocation? {
+        guard
+            let pending = pendingDownloadInvocationsByClient.removeValue(
+                forKey: clientID
+            ), pending.expiresAt >= now
+        else {
+            return nil
+        }
+        return pending.invocation
+    }
+
     private func expirePendingClick(
         _ pendingClickID: UUID,
         for clientID: BrowserExtensionServiceClientID
@@ -222,6 +260,7 @@ final class BrowserExtensionWebpageMenuRegistry {
         definitionsByClient[clientID] = nil
         clickPublishersByClient[clientID] = nil
         pendingClicksByClient[clientID] = nil
+        pendingDownloadInvocationsByClient[clientID] = nil
         if let tasks = pendingClickExpirationTasks.removeValue(forKey: clientID) {
             for task in tasks.values {
                 task.cancel()

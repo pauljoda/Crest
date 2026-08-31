@@ -44,6 +44,13 @@ final class BrowserDownloadCenter: NSObject {
             String
         ) async -> BrowserSitePermissionPromptResponse
 
+    typealias DownloadDestinationResolver =
+        @MainActor (
+            String,
+            SpaceID,
+            Bool
+        ) async -> BrowserPlatformDownloadResolution
+
     private(set) var ledger = BrowserDownloadLedger()
     private(set) var feedbackEvents: [BrowserDownloadFeedbackEvent] = []
 
@@ -63,6 +70,9 @@ final class BrowserDownloadCenter: NSObject {
         [AutomaticDownloadScope: BrowserAutomaticDownloadSequence] = [:]
     @ObservationIgnored private var approvedRetryKeys: Set<ObjectIdentifier> = []
     @ObservationIgnored private var userInitiatedOverrideKeys: Set<ObjectIdentifier> = []
+    @ObservationIgnored private var requestedFilenames: [ObjectIdentifier: String] = [:]
+    @ObservationIgnored private var forceDestinationPromptKeys: Set<ObjectIdentifier> = []
+    @ObservationIgnored private var nextExtensionDownloadID = 1
     @ObservationIgnored private var retryContexts: [UUID: BrowserDownloadRetryContext] = [:]
     @ObservationIgnored private var retryLeases: [UUID: BrowserDownloadRetryLease] = [:]
     @ObservationIgnored private var authenticationSessions: [ObjectIdentifier: BrowserHTTPAuthenticationSession] = [:]
@@ -75,6 +85,7 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private let approveRiskyDownload: RiskApprovalHandler
     @ObservationIgnored private let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored private let approveAutomaticDownload: AutomaticDownloadApprovalHandler
+    @ObservationIgnored private let resolveDownloadDestination: DownloadDestinationResolver
 
     init(
         ledger: BrowserDownloadLedger = BrowserDownloadLedger(),
@@ -85,7 +96,18 @@ final class BrowserDownloadCenter: NSObject {
         approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _ in false },
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
         approveAutomaticDownload:
-            @escaping AutomaticDownloadApprovalHandler = { _, _, _ in .denyPersistently }
+            @escaping AutomaticDownloadApprovalHandler = { _, _, _ in .denyPersistently },
+        resolveDownloadDestination:
+            @escaping DownloadDestinationResolver = {
+                suggestedFilename,
+                spaceID,
+                forcesPrompt in
+                await BrowserPlatformDownloadDirectory.resolve(
+                    suggestedFilename: suggestedFilename,
+                    spaceID: spaceID,
+                    forcesPrompt: forcesPrompt
+                )
+            }
     ) {
         self.ledger = ledger
         self.promptForCredentials = promptForCredentials
@@ -95,6 +117,7 @@ final class BrowserDownloadCenter: NSObject {
         self.approveRiskyDownload = approveRiskyDownload
         self.permissionCenter = permissionCenter
         self.approveAutomaticDownload = approveAutomaticDownload
+        self.resolveDownloadDestination = resolveDownloadDestination
         super.init()
     }
 
@@ -239,10 +262,14 @@ final class BrowserDownloadCenter: NSObject {
         spaceID: SpaceID,
         spaceName: String,
         isUserInitiated: Bool? = nil,
-        feedbackSource: BrowserDownloadFeedbackSource? = nil
+        feedbackSource: BrowserDownloadFeedbackSource? = nil,
+        suggestedFilenameOverride: String? = nil,
+        forcesDestinationPrompt: Bool = false
     ) {
         guard downloads[ObjectIdentifier(download)] == nil else { return }
-        let requestedFilename = download.originalRequest?.url?.lastPathComponent
+        let requestedFilename =
+            suggestedFilenameOverride
+            ?? download.originalRequest?.url?.lastPathComponent
         let filename = requestedFilename.flatMap { $0.isEmpty ? nil : $0 } ?? "download"
         let itemID = ledger.begin(profileID: profileID, filename: filename)
         if let feedbackSource {
@@ -277,8 +304,39 @@ final class BrowserDownloadCenter: NSObject {
             spaceName: spaceName,
             sourceWebView: webView,
             isUserApprovedRetry: false,
-            isUserInitiatedOverride: isUserInitiated
+            isUserInitiatedOverride: isUserInitiated,
+            suggestedFilenameOverride: suggestedFilenameOverride,
+            forcesDestinationPrompt: forcesDestinationPrompt
         )
+    }
+
+    func startExtensionDownload(
+        _ request: BrowserExtensionDownloadRequest,
+        in webView: WKWebView,
+        profileID: UUID,
+        spaceID: SpaceID,
+        spaceName: String,
+        isUserInitiated: Bool
+    ) async -> Int {
+        let downloadID = nextExtensionDownloadID
+        nextExtensionDownloadID =
+            nextExtensionDownloadID == Int.max
+            ? 1
+            : nextExtensionDownloadID + 1
+        let download = await webView.startDownload(
+            using: URLRequest(url: request.url)
+        )
+        start(
+            download,
+            in: webView,
+            profileID: profileID,
+            spaceID: spaceID,
+            spaceName: spaceName,
+            isUserInitiated: isUserInitiated,
+            suggestedFilenameOverride: request.filename,
+            forcesDestinationPrompt: request.saveAs
+        )
+        return downloadID
     }
 
     @discardableResult
@@ -378,7 +436,9 @@ final class BrowserDownloadCenter: NSObject {
             spaceName: context.spaceName,
             sourceWebView: webView,
             isUserApprovedRetry: true,
-            isUserInitiatedOverride: nil
+            isUserInitiatedOverride: nil,
+            suggestedFilenameOverride: nil,
+            forcesDestinationPrompt: false
         )
         return true
     }
@@ -416,7 +476,9 @@ final class BrowserDownloadCenter: NSObject {
         spaceName: String,
         sourceWebView: WKWebView,
         isUserApprovedRetry: Bool,
-        isUserInitiatedOverride: Bool?
+        isUserInitiatedOverride: Bool?,
+        suggestedFilenameOverride: String?,
+        forcesDestinationPrompt: Bool
     ) {
         let key = ObjectIdentifier(download)
         guard downloads[key] == nil else { return }
@@ -428,6 +490,14 @@ final class BrowserDownloadCenter: NSObject {
         }
         if isUserInitiatedOverride == true {
             userInitiatedOverrideKeys.insert(key)
+        }
+        if let suggestedFilenameOverride {
+            requestedFilenames[key] = BrowserDownloadDestination.safeFilename(
+                from: suggestedFilenameOverride
+            )
+        }
+        if forcesDestinationPrompt {
+            forceDestinationPromptKeys.insert(key)
         }
         spaceNames[key] = spaceName
         spaceIDs[key] = spaceID
@@ -516,8 +586,10 @@ final class BrowserDownloadCenter: NSObject {
         }
 
         let key = ObjectIdentifier(download)
+        let effectiveSuggestedFilename =
+            requestedFilenames[key] ?? suggestedFilename
         let assessment = BrowserDownloadRiskAssessment.assess(
-            suggestedFilename: suggestedFilename,
+            suggestedFilename: effectiveSuggestedFilename,
             mimeType: response.mimeType
         )
         update(download) { ledger, itemID in
@@ -607,10 +679,10 @@ final class BrowserDownloadCenter: NSObject {
             release(download)
             return nil
         }
-        let resolution = await BrowserPlatformDownloadDirectory.resolve(
-            suggestedFilename: assessment.sanitizedFilename,
-            spaceID: spaceID,
-            fileManager: fileManager
+        let resolution = await resolveDownloadDestination(
+            assessment.sanitizedFilename,
+            spaceID,
+            forceDestinationPromptKeys.contains(key)
         )
         let destination: URL
         let securityScopedURL: URL?
@@ -657,7 +729,7 @@ final class BrowserDownloadCenter: NSObject {
 
         let staging = BrowserDownloadTransfer.stagingURL(
             itemID: itemID,
-            suggestedFilename: suggestedFilename,
+            suggestedFilename: effectiveSuggestedFilename,
             directory: stagingDirectory
         )
         stagingURLs[key] = staging
@@ -833,6 +905,8 @@ final class BrowserDownloadCenter: NSObject {
         sourceWebViewIDs.removeValue(forKey: key)
         approvedRetryKeys.remove(key)
         userInitiatedOverrideKeys.remove(key)
+        requestedFilenames.removeValue(forKey: key)
+        forceDestinationPromptKeys.remove(key)
     }
 
     func dismissFeedback(_ eventID: UUID) {

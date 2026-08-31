@@ -587,7 +587,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     ) throws -> [String] {
         let manifestURL = resourceURL.appending(path: "manifest.json")
         let data = try Data(contentsOf: manifestURL)
-        let manifest = try JSONSerialization.jsonObject(with: data)
+        let manifest =
+            try JSONSerialization.jsonObject(with: data)
             as? [String: Any]
         return manifest?["permissions"] as? [String] ?? []
     }
@@ -3067,6 +3068,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             return callbackOrPromise(args, undefined);
                         }
                     });
+                let activeOffscreenDocumentURL;
                 const serviceWorkerClients = Object.freeze({
                     async matchAll() {
                         // Chrome's WorkerGlobalScope.clients returns structured
@@ -3075,8 +3077,28 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         // exposes live cross-context DOMWindow wrappers. Those
                         // wrappers become stale as a popup reloads and can crash
                         // WebKit when worker code reads location or document.
-                        // An empty match is the only safe conservative fallback
-                        // until WebKit supplies real worker clients.
+                        // Crest owns emulated offscreen documents and can expose
+                        // their stable URL without handing the worker a live DOM
+                        // wrapper. This preserves the pre-runtime.getContexts
+                        // lifecycle check used by Chrome extensions while every
+                        // other unrepresentable client remains conservatively
+                        // absent.
+                        if (activeOffscreenDocumentURL) {
+                            try {
+                                const hasDocument = await requestCapability(
+                                    "offscreen.hasDocument",
+                                    {},
+                                    [],
+                                    (response) =>
+                                        response?.hasDocument === true
+                                );
+                                if (hasDocument) {
+                                    return [Object.freeze({
+                                        url: activeOffscreenDocumentURL
+                                    })];
+                                }
+                            } catch {}
+                        }
                         return [];
                     }
                 });
@@ -3387,6 +3409,135 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         });
                     }
                 };
+                const downloads = {
+                    download(...args) {
+                        const options = args[0];
+                        if (
+                            !options
+                            || typeof options !== "object"
+                            || typeof options.url !== "string"
+                            || options.url.length === 0
+                        ) {
+                            return rejectCallbackOrPromise(
+                                args,
+                                "downloads.download requires a URL."
+                            );
+                        }
+                        return requestCapability(
+                            "downloads.download",
+                            {
+                                url: options.url,
+                                filename:
+                                    typeof options.filename === "string"
+                                        ? options.filename
+                                        : undefined,
+                                saveAs: options.saveAs === true
+                            },
+                            args,
+                            (response) => {
+                                const downloadID = response?.downloadID;
+                                if (!Number.isSafeInteger(downloadID)) {
+                                    throw new Error(
+                                        "Crest returned an invalid download identifier."
+                                    );
+                                }
+                                return downloadID;
+                            }
+                        );
+                    }
+                };
+                const offscreenReasons = Object.freeze({
+                    TESTING: "TESTING",
+                    AUDIO_PLAYBACK: "AUDIO_PLAYBACK",
+                    IFRAME_SCRIPTING: "IFRAME_SCRIPTING",
+                    DOM_SCRAPING: "DOM_SCRAPING",
+                    BLOBS: "BLOBS",
+                    DOM_PARSER: "DOM_PARSER",
+                    USER_MEDIA: "USER_MEDIA",
+                    DISPLAY_MEDIA: "DISPLAY_MEDIA",
+                    WEB_RTC: "WEB_RTC",
+                    CLIPBOARD: "CLIPBOARD",
+                    LOCAL_STORAGE: "LOCAL_STORAGE",
+                    WORKERS: "WORKERS",
+                    BATTERY_STATUS: "BATTERY_STATUS",
+                    MATCH_MEDIA: "MATCH_MEDIA",
+                    GEOLOCATION: "GEOLOCATION"
+                });
+                const offscreen = {
+                    Reason: offscreenReasons,
+                    createDocument(...args) {
+                        const parameters = args[0];
+                        if (
+                            !parameters
+                            || typeof parameters !== "object"
+                            || typeof parameters.url !== "string"
+                            || parameters.url.length === 0
+                            || !Array.isArray(parameters.reasons)
+                            || parameters.reasons.length === 0
+                            || parameters.reasons.some(
+                                (reason) => typeof reason !== "string"
+                                    || reason.length === 0
+                            )
+                            || typeof parameters.justification !== "string"
+                            || parameters.justification.trim().length === 0
+                        ) {
+                            return rejectCallbackOrPromise(
+                                args,
+                                "offscreen.createDocument requires a bundled URL, reasons, and justification."
+                            );
+                        }
+                        const url = fallbackResourceURL(parameters.url);
+                        return requestCapability(
+                            "offscreen.createDocument",
+                            {
+                                url,
+                                reasons: parameters.reasons,
+                                justification: parameters.justification
+                            },
+                            args,
+                            (response) => {
+                                if (response?.created !== true) {
+                                    throw new Error(
+                                        "Crest did not create the offscreen document."
+                                    );
+                                }
+                                activeOffscreenDocumentURL = url;
+                            }
+                        );
+                    },
+                    closeDocument(...args) {
+                        return requestCapability(
+                            "offscreen.closeDocument",
+                            {},
+                            args,
+                            (response) => {
+                                if (response?.closed !== true) {
+                                    throw new Error(
+                                        "Crest did not close the offscreen document."
+                                    );
+                                }
+                                activeOffscreenDocumentURL = undefined;
+                            }
+                        );
+                    },
+                    hasDocument(...args) {
+                        return requestCapability(
+                            "offscreen.hasDocument",
+                            {},
+                            args,
+                            (response) =>
+                                response?.hasDocument === true
+                        );
+                    }
+                };
+                const sidePanel = {
+                    setPanelBehavior(...args) {
+                        return rejectCallbackOrPromise(
+                            args,
+                            "Side panels are not available in Crest."
+                        );
+                    }
+                };
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 let idleWatchPort;
@@ -3562,6 +3713,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         storage: { managed: storageManaged },
                         notifications,
                         management,
+                        downloads,
+                        offscreen,
+                        sidePanel,
                         idle,
                         webNavigation,
                         webRequest,

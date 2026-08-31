@@ -6,13 +6,14 @@ enum BrowserPlatformDownloadDirectory {
     static func resolve(
         suggestedFilename: String,
         spaceID: SpaceID,
+        forcesPrompt: Bool = false,
         fileManager: FileManager = .default
     ) async -> BrowserPlatformDownloadResolution {
         let safeFilename = BrowserDownloadDestination.safeFilename(
             from: suggestedFilename
         )
         let preferences = BrowserPlatformDownloadPreferences.shared
-        if preferences.asksWhereToSave(for: spaceID) {
+        if forcesPrompt || preferences.asksWhereToSave(for: spaceID) {
             let panel = NSSavePanel()
             panel.canCreateDirectories = true
             panel.nameFieldStringValue = safeFilename

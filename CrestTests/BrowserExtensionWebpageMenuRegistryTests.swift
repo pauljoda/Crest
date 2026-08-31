@@ -81,6 +81,7 @@ final class BrowserExtensionWebpageMenuRegistryTests: XCTestCase {
             documentURL: URL(string: "https://example.com/first")!,
             linkURL: nil,
             sourceURL: URL(string: "https://cdn.example.com/first.webp"),
+            mediaType: .image,
             selectionText: nil,
             isEditable: false,
             isMainFrame: true
@@ -140,6 +141,7 @@ final class BrowserExtensionWebpageMenuRegistryTests: XCTestCase {
             documentURL: URL(string: "https://example.com/article")!,
             linkURL: nil,
             sourceURL: URL(string: "https://cdn.example.com/photo.webp")!,
+            mediaType: .image,
             selectionText: nil,
             isEditable: false,
             isMainFrame: true
@@ -170,6 +172,41 @@ final class BrowserExtensionWebpageMenuRegistryTests: XCTestCase {
             "image"
         )
         XCTAssertTrue(secondConnectionMessages.isEmpty)
+    }
+
+    func testDownloadInvocationConsumesTheFreshOwningTabAndImageContextOnce()
+        throws
+    {
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let client = try XCTUnwrap(
+            BrowserExtensionServiceClientID("work.extension")
+        )
+        let tabID = TabID()
+        let context = BrowserExtensionWebpageMenuContext(
+            pageURL: URL(string: "https://example.com/article")!,
+            documentURL: URL(string: "https://frame.example/content")!,
+            linkURL: nil,
+            sourceURL: URL(string: "https://cdn.example/photo.webp")!,
+            mediaType: .image,
+            selectionText: nil,
+            isEditable: false,
+            isMainFrame: false
+        )
+
+        registry.publishClick(
+            menuItemID: "string:save-jpeg",
+            context: context,
+            tabID: tabID,
+            for: client
+        )
+
+        let invocation = try XCTUnwrap(
+            registry.consumeDownloadInvocation(for: client)
+        )
+        XCTAssertEqual(invocation.tabID, tabID)
+        XCTAssertEqual(invocation.menuItemID, "string:save-jpeg")
+        XCTAssertEqual(invocation.context, context)
+        XCTAssertNil(registry.consumeDownloadInvocation(for: client))
     }
 
     func testRemovingClientDropsDefinitionsAndClickObservers() throws {
@@ -271,5 +308,143 @@ final class BrowserExtensionWebpageMenuRegistryTests: XCTestCase {
                 ] as [String: Any]
             ],
         ]
+    }
+}
+
+final class BrowserExtensionDownloadRequestTests: XCTestCase {
+    func testAcceptsConvertedDataURLFilenameAndDestinationChoice() throws {
+        let request = try BrowserExtensionDownloadRequest(
+            message: [
+                "api": "downloads.download",
+                "url": "data:image/jpeg;base64,/9j/2Q==",
+                "filename": "converted/photo.jpg",
+                "saveAs": true,
+            ],
+            extensionBaseURL: URL(
+                string: "crest-extension://download-fixture/"
+            )!
+        )
+
+        XCTAssertEqual(request.url.scheme, "data")
+        XCTAssertEqual(request.filename, "converted/photo.jpg")
+        XCTAssertTrue(request.saveAs)
+    }
+
+    func testRejectsHostFilesystemAndScriptURLs() {
+        for rawURL in [
+            "file:///Users/example/secret.jpg",
+            "javascript:alert(1)",
+            "blob:https://example.com/not-transferable",
+        ] {
+            XCTAssertThrowsError(
+                try BrowserExtensionDownloadRequest(
+                    message: [
+                        "api": "downloads.download",
+                        "url": rawURL,
+                    ],
+                    extensionBaseURL: URL(
+                        string: "crest-extension://download-fixture/"
+                    )!
+                ),
+                "Unexpectedly accepted \(rawURL)"
+            )
+        }
+    }
+
+    func testAcceptsOwningExtensionResourcesButNotAnotherExtension() throws {
+        let baseURL = URL(
+            string: "crest-extension://download-fixture/"
+        )!
+
+        XCTAssertNoThrow(
+            try BrowserExtensionDownloadRequest(
+                message: [
+                    "api": "downloads.download",
+                    "url": "crest-extension://download-fixture/export.jpg",
+                ],
+                extensionBaseURL: baseURL
+            )
+        )
+        XCTAssertThrowsError(
+            try BrowserExtensionDownloadRequest(
+                message: [
+                    "api": "downloads.download",
+                    "url": "crest-extension://other-extension/export.jpg",
+                ],
+                extensionBaseURL: baseURL
+            )
+        )
+    }
+}
+
+final class BrowserExtensionOffscreenDocumentRequestTests: XCTestCase {
+    private let extensionBaseURL = URL(
+        string: "crest-extension://offscreen-owner/"
+    )!
+
+    func testAcceptsRelativeAndOwningExtensionDocumentURLs() throws {
+        let relative = try BrowserExtensionOffscreenDocumentRequest(
+            message: [
+                "api": "offscreen.createDocument",
+                "url": "offscreen.html",
+                "reasons": ["DOM_SCRAPING"],
+                "justification": "Convert an image",
+            ],
+            extensionBaseURL: extensionBaseURL
+        )
+        XCTAssertEqual(
+            relative.url,
+            extensionBaseURL.appending(path: "offscreen.html")
+        )
+        XCTAssertEqual(relative.reasons, ["DOM_SCRAPING"])
+        XCTAssertEqual(relative.justification, "Convert an image")
+
+        let absolute = try BrowserExtensionOffscreenDocumentRequest(
+            message: [
+                "api": "offscreen.createDocument",
+                "url": extensionBaseURL.appending(path: "worker.html")
+                    .absoluteString,
+                "reasons": ["WORKERS"],
+                "justification": "Run a worker",
+            ],
+            extensionBaseURL: extensionBaseURL
+        )
+        XCTAssertEqual(
+            absolute.url,
+            extensionBaseURL.appending(path: "worker.html")
+        )
+    }
+
+    func testRejectsForeignAndNonExtensionDocumentURLs() {
+        for url in [
+            "https://example.com/offscreen.html",
+            "crest-extension://another-extension/offscreen.html",
+        ] {
+            XCTAssertThrowsError(
+                try BrowserExtensionOffscreenDocumentRequest(
+                    message: [
+                        "api": "offscreen.createDocument",
+                        "url": url,
+                        "reasons": ["DOM_SCRAPING"],
+                        "justification": "Convert an image",
+                    ],
+                    extensionBaseURL: extensionBaseURL
+                )
+            )
+        }
+    }
+
+    func testRejectsMissingCreationPurpose() {
+        XCTAssertThrowsError(
+            try BrowserExtensionOffscreenDocumentRequest(
+                message: [
+                    "api": "offscreen.createDocument",
+                    "url": "offscreen.html",
+                    "reasons": [],
+                    "justification": "",
+                ],
+                extensionBaseURL: extensionBaseURL
+            )
+        )
     }
 }

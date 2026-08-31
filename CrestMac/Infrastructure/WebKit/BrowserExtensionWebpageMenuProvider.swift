@@ -179,6 +179,7 @@ private final class BrowserExtensionWebpageMenuAction: NSObject {
         registry.publishClick(
             menuItemID: menuItemID,
             context: webpageContext,
+            tabID: tab.tabID,
             for: clientID
         )
         extensionContext.userGesturePerformed(in: tab)

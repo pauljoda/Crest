@@ -59,6 +59,11 @@ final class BrowserPagePool:
     BrowserPageHosting,
     BrowserDefaultPageZoomObserving
 {
+    private struct ExtensionOffscreenDocumentKey: Hashable {
+        let spaceID: SpaceID
+        let extensionBaseURL: URL
+    }
+
     @ObservationIgnored private static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
         category: "WebKitLifecycle"
@@ -154,6 +159,8 @@ final class BrowserPagePool:
     /// Pages announced to extensions that no tab in the session owns, resolved
     /// for the adapters WebKit asks about them.
     @ObservationIgnored private var transientExtensionPages: [TabID: BrowserPage] = [:]
+    @ObservationIgnored private var extensionOffscreenDocuments:
+        [ExtensionOffscreenDocumentKey: BrowserExtensionOffscreenDocument] = [:]
     @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
     /// Where unloaded tabs leave their WebKit session state. Always nil for a
@@ -333,6 +340,83 @@ final class BrowserPagePool:
         in spaceID: SpaceID
     ) -> WKWebView? {
         extensionPage(for: tabID, in: spaceID)?.webView
+    }
+
+    func startExtensionDownload(
+        _ request: BrowserExtensionDownloadRequest,
+        for tabID: TabID,
+        in spaceID: SpaceID,
+        isUserInitiated: Bool
+    ) async throws -> Int {
+        guard let page = extensionPage(for: tabID, in: spaceID) else {
+            throw BrowserExtensionDownloadExecutionError.unavailable
+        }
+        return await downloadCenter.startExtensionDownload(
+            request,
+            in: page.webView,
+            profileID: page.profileID,
+            spaceID: page.spaceID,
+            spaceName: page.spaceName,
+            isUserInitiated: isUserInitiated
+        )
+    }
+
+    func createExtensionOffscreenDocument(
+        at url: URL,
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) async throws {
+        let key = ExtensionOffscreenDocumentKey(
+            spaceID: spaceID,
+            extensionBaseURL: extensionBaseURL
+        )
+        guard extensionOffscreenDocuments[key] == nil else {
+            throw BrowserExtensionOffscreenDocumentError.alreadyExists
+        }
+        guard
+            let configuration =
+                extensionControllerPool
+                .extensionPageConfiguration(for: url, in: spaceID),
+            configuration.baseURL == extensionBaseURL
+        else {
+            throw BrowserExtensionOffscreenDocumentError.unavailable
+        }
+        let document = BrowserExtensionOffscreenDocument(
+            configuration: configuration.webViewConfiguration
+        )
+        extensionOffscreenDocuments[key] = document
+        do {
+            try await document.load(url)
+        } catch {
+            if extensionOffscreenDocuments[key] === document {
+                extensionOffscreenDocuments[key] = nil
+            }
+            document.close()
+            throw error
+        }
+    }
+
+    func closeExtensionOffscreenDocument(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) {
+        let key = ExtensionOffscreenDocumentKey(
+            spaceID: spaceID,
+            extensionBaseURL: extensionBaseURL
+        )
+        extensionOffscreenDocuments.removeValue(forKey: key)?.close()
+    }
+
+    func hasExtensionOffscreenDocument(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) -> Bool {
+        extensionOffscreenDocuments[
+            ExtensionOffscreenDocumentKey(
+                spaceID: spaceID,
+                extensionBaseURL: extensionBaseURL
+            )
+        ] != nil
     }
 
     func loadExtensionURL(
@@ -1044,6 +1128,7 @@ final class BrowserPagePool:
         let tabIDs = Set(
             space.tabs.map(\.id) + space.archivedTabs.map(\.id)
         )
+        releaseExtensionOffscreenDocuments(in: space.id)
         let pageReleaseProbes =
             releasePages(for: tabIDs)
             + releaseTransientPages(in: space.id)
@@ -1063,6 +1148,7 @@ final class BrowserPagePool:
         guard browsingMode.isPrivate else { return }
         releasePages(for: Set(pages.keys))
         releaseAllTransientPages()
+        releaseAllExtensionOffscreenDocuments()
         for space in session.spaces {
             downloadCenter.deleteRecords(
                 profileID: space.profile.id,
@@ -2186,6 +2272,22 @@ final class BrowserPagePool:
         transientLeases.removeAll()
     }
 
+    private func releaseExtensionOffscreenDocuments(in spaceID: SpaceID) {
+        let matchingKeys = extensionOffscreenDocuments.keys.filter {
+            $0.spaceID == spaceID
+        }
+        for key in matchingKeys {
+            extensionOffscreenDocuments.removeValue(forKey: key)?.close()
+        }
+    }
+
+    private func releaseAllExtensionOffscreenDocuments() {
+        for document in extensionOffscreenDocuments.values {
+            document.close()
+        }
+        extensionOffscreenDocuments.removeAll()
+    }
+
     private func pruneTransientLeases() {
         transientLeases = transientLeases.filter { $0.value.value != nil }
     }
@@ -2207,5 +2309,91 @@ final class BrowserPagePool:
         }
         memoryPressureSource = source
         source.resume()
+    }
+}
+
+@MainActor
+private final class BrowserExtensionOffscreenDocument: NSObject,
+    WKNavigationDelegate
+{
+    private let webView: WKWebView
+    private var loadContinuation: CheckedContinuation<Void, any Error>?
+
+    init(configuration: WKWebViewConfiguration) {
+        webView = WKWebView(frame: .zero, configuration: configuration)
+        super.init()
+        webView.navigationDelegate = self
+        webView.isInspectable = true
+    }
+
+    func load(_ url: URL) async throws {
+        guard loadContinuation == nil else {
+            throw BrowserExtensionOffscreenDocumentError.alreadyExists
+        }
+        try await withCheckedThrowingContinuation { continuation in
+            loadContinuation = continuation
+            guard webView.load(URLRequest(url: url)) != nil else {
+                finishLoading(
+                    .failure(BrowserExtensionOffscreenDocumentError.unavailable)
+                )
+                return
+            }
+        }
+    }
+
+    func close() {
+        webView.stopLoading()
+        finishLoading(
+            .failure(BrowserExtensionOffscreenDocumentError.unavailable)
+        )
+        webView.navigationDelegate = nil
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
+        finishLoading(.success(()))
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        didFail navigation: WKNavigation?,
+        withError error: any Error
+    ) {
+        finishLoading(
+            .failure(
+                BrowserExtensionOffscreenDocumentError.loadFailed(
+                    error.localizedDescription
+                )
+            )
+        )
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation?,
+        withError error: any Error
+    ) {
+        finishLoading(
+            .failure(
+                BrowserExtensionOffscreenDocumentError.loadFailed(
+                    error.localizedDescription
+                )
+            )
+        )
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        finishLoading(
+            .failure(
+                BrowserExtensionOffscreenDocumentError.loadFailed(
+                    "The extension web content process stopped."
+                )
+            )
+        )
+    }
+
+    private func finishLoading(_ result: Result<Void, any Error>) {
+        guard let loadContinuation else { return }
+        self.loadContinuation = nil
+        loadContinuation.resume(with: result)
     }
 }

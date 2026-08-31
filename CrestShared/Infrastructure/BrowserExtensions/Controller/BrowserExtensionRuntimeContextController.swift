@@ -474,7 +474,8 @@ final class BrowserExtensionRuntimeContextController {
             try controller(for: space).load(context)
         } catch {
             tabWindowCoordinator.unregisterNativeMessagingIdentity(
-                for: context
+                for: context,
+                in: space.id
             )
             webpageMenuRegistry.removeClient(
                 .scoped(extensionID: extensionID, spaceID: space.id)
@@ -615,7 +616,10 @@ final class BrowserExtensionRuntimeContextController {
         else {
             return
         }
-        tabWindowCoordinator.unregisterNativeMessagingIdentity(for: context)
+        tabWindowCoordinator.unregisterNativeMessagingIdentity(
+            for: context,
+            in: spaceID
+        )
         contextObserver.stopObserving(context)
         if contextsBySpace[spaceID]?.isEmpty == true {
             contextsBySpace.removeValue(forKey: spaceID)
