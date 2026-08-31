@@ -65,9 +65,15 @@ the live status for each issue.
 - [ ] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63)
 - [ ] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
 - [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
-- [ ] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
 - [ ] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68)
 - [ ] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
+- [ ] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70)
+- [ ] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71)
+- [ ] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72)
+
+#### Completed
+
+- [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
 
 <!-- crest-roadmap-sync:end -->
 
