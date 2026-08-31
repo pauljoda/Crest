@@ -64,7 +64,6 @@ the live status for each issue.
 - [ ] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62)
 - [ ] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
 - [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
-- [ ] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68)
 - [ ] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
 - [ ] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70)
 - [ ] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72)
@@ -75,6 +74,7 @@ the live status for each issue.
 
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
 - [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
+- [x] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68) — [`3ec94181`](https://github.com/pauljoda/Crest/commit/3ec941810b3ebe38c628e17a06cbb418fa4b3634)
 - [x] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71) — [`807b4919`](https://github.com/pauljoda/Crest/commit/807b49199698b34b478ce531b2a66dbd0aa2f951)
 
 <!-- crest-roadmap-sync:end -->
