@@ -337,6 +337,10 @@
     "2026-08-31-webp-jpeg-extension-downloads": {
       "category": "fixed",
       "message": "Save converted WebP images as real JPEG files through the normal download flow"
+    },
+    "2026-08-31-stable-extension-package-refreshes": {
+      "category": "fixed",
+      "message": "Keep extension popups working when their packages are refreshed"
     }
   }
 }

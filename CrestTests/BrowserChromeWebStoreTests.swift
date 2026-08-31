@@ -2448,6 +2448,113 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertNil(storedBackground["page"])
     }
 
+    func testPreparedPackageKeepsPublishedWorkerResourcesAddressableAfterRefresh()
+        throws
+    {
+        let fileManager = FileManager.default
+        let source = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-version-refresh-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: source) }
+        try fileManager.createDirectory(
+            at: source,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.original = true;".utf8).write(
+            to: source.appending(path: "background.js")
+        )
+
+        func writeManifest(version: String) throws {
+            let manifest: [String: Any] = [
+                "manifest_version": 3,
+                "name": "Version Refresh Fixture",
+                "version": version,
+                "background": ["service_worker": "background.js"],
+            ]
+            try JSONSerialization.data(withJSONObject: manifest).write(
+                to: source.appending(path: "manifest.json"),
+                options: [.atomic]
+            )
+        }
+
+        func preparedManifest(at resourceURL: URL) throws -> [String: Any] {
+            try XCTUnwrap(
+                JSONSerialization.jsonObject(
+                    with: Data(
+                        contentsOf: resourceURL.appending(path: "manifest.json")
+                    )
+                ) as? [String: Any]
+            )
+        }
+
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        try writeManifest(version: "1.0")
+        let first = try XCTUnwrap(
+            preparer.prepareStoredResource(
+                source,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        defer {
+            try? fileManager.removeItem(
+                at: first.resourceURL.deletingLastPathComponent()
+            )
+        }
+        let firstManifest = try preparedManifest(at: first.resourceURL)
+        let firstBackground = try XCTUnwrap(
+            firstManifest["background"] as? [String: Any]
+        )
+        let firstBootstrap = try XCTUnwrap(
+            firstBackground["service_worker"] as? String
+        )
+        let firstCompatibility = try XCTUnwrap(
+            fileManager.contentsOfDirectory(
+                at: first.resourceURL,
+                includingPropertiesForKeys: nil
+            ).first {
+                $0.lastPathComponent.hasPrefix(
+                    "crest-webextension-compatibility-"
+                ) && $0.pathExtension == "js"
+            }?.lastPathComponent
+        )
+
+        try writeManifest(version: "1.1")
+        let refreshed = try XCTUnwrap(
+            preparer.prepareStoredResource(
+                source,
+                requestedPermissions: ["notifications"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let refreshedManifest = try preparedManifest(at: refreshed.resourceURL)
+        let refreshedBackground = try XCTUnwrap(
+            refreshedManifest["background"] as? [String: Any]
+        )
+        let refreshedBootstrap = try XCTUnwrap(
+            refreshedBackground["service_worker"] as? String
+        )
+
+        XCTAssertEqual(refreshed.resourceURL, first.resourceURL)
+        XCTAssertNotEqual(refreshedBootstrap, firstBootstrap)
+        XCTAssertTrue(
+            fileManager.fileExists(
+                atPath: refreshed.resourceURL.appending(path: firstBootstrap).path
+            )
+        )
+        XCTAssertTrue(
+            fileManager.fileExists(
+                atPath:
+                    refreshed.resourceURL.appending(path: firstCompatibility)
+                    .path
+            )
+        )
+    }
+
     func testCompatibilitySelectionUsesCapabilitiesInsteadOfExtensionIdentity() {
         XCTAssertTrue(
             BrowserChromeWebStoreCompatibilityPackagePreparer

@@ -185,6 +185,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             {
                 try? fileManager.removeItem(at: stagingRootURL)
             } else {
+                try retainPublishedCompatibilityResources(
+                    from: resourceURL,
+                    in: stagingResourceURL
+                )
                 try preparedDigest.write(
                     to: stagingRootURL.appending(
                         path: Self.preparedDigestFilename
@@ -214,6 +218,41 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         } catch {
             try? fileManager.removeItem(at: stagingRootURL)
             throw error
+        }
+    }
+
+    private func retainPublishedCompatibilityResources(
+        from publishedResourceURL: URL,
+        in stagingResourceURL: URL
+    ) throws {
+        guard fileManager.fileExists(atPath: publishedResourceURL.path)
+        else { return }
+
+        let publishedResources = try fileManager.contentsOfDirectory(
+            at: publishedResourceURL,
+            includingPropertiesForKeys: [.isRegularFileKey]
+        )
+        // WebKit can retain a service-worker registration after Crest prepares
+        // a newer compatibility generation. Generated resources are immutable
+        // and content-addressed, so carrying them forward keeps both the old
+        // registration and the newly published manifest resolvable.
+        for publishedResource in publishedResources
+        where publishedResource.lastPathComponent.hasPrefix(
+            "crest-webextension-"
+        ) {
+            let values = try publishedResource.resourceValues(
+                forKeys: [.isRegularFileKey]
+            )
+            guard values.isRegularFile == true else { continue }
+            let stagedResource = stagingResourceURL.appending(
+                path: publishedResource.lastPathComponent
+            )
+            guard !fileManager.fileExists(atPath: stagedResource.path)
+            else { continue }
+            try fileManager.copyItem(
+                at: publishedResource,
+                to: stagedResource
+            )
         }
     }
 
