@@ -329,6 +329,10 @@
     "2026-08-30-responsive-extension-popups": {
       "category": "improved",
       "message": "Open extension popups reliably with faster startup and clear loading feedback"
+    },
+    "2026-08-30-mobile-search-engine-settings": {
+      "category": "fixed",
+      "message": "Keep Search Engine settings open and usable on iPhone and iPad with clear, evenly spaced provider controls"
     }
   }
 }

@@ -6,6 +6,35 @@ import XCTest
 @MainActor
 final class BrowserSettingsPaneTests: XCTestCase {
 
+    func testMacSearchEnginePresentationAndProviderLabelsStayCompact() {
+        XCTAssertEqual(
+            BrowserSearchEngineEditorPresentationStyle.platformDefault,
+            .sheet
+        )
+        XCTAssertEqual(
+            BrowserSearchEngineEditorKeyboardDismissalStyle.platformDefault,
+            .focusOnly
+        )
+        XCTAssertFalse(
+            BrowserSearchEngineEditorKeyboardDismissalStyle.platformDefault
+                .repeatsDismissalAfterNavigation
+        )
+
+        let layout = BrowserSearchProviderIdentityLabelLayout.platformDefault
+        XCTAssertEqual(layout, .compact)
+        XCTAssertEqual(layout.iconSize, 20)
+        XCTAssertEqual(layout.spacing, 4)
+        XCTAssertEqual(layout.verticalPadding, 0)
+        XCTAssertEqual(
+            BrowserSpaceBrowsingPickerPresentationStyle.platformDefault,
+            .nativePicker
+        )
+        XCTAssertFalse(
+            BrowserSpaceBrowsingPickerPresentationStyle.platformDefault
+                .dismissesKeyboardAfterSelection
+        )
+    }
+
     func testMacWebTextAssistanceForcesEverySmartMutationOff() throws {
         let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

@@ -19,9 +19,16 @@ struct BrowserSpaceSettingsSections: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
     var capabilities = BrowserSpaceSettingsCapabilities()
+    var manageSearchEngines: (() -> Void)? = nil
+    var dismissKeyboard: @MainActor () -> Void = {}
 
     var body: some View {
-        BrowserSpaceBrowsingSection(browser: browser, space: space)
+        BrowserSpaceBrowsingSection(
+            browser: browser,
+            space: space,
+            manageSearchEngines: manageSearchEngines,
+            dismissKeyboard: dismissKeyboard
+        )
 
         if let downloads = capabilities.downloads {
             BrowserSpaceDownloadsSection(settings: downloads)

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MobileSpaceSettingsView: View {
     let browser: BrowserStore
@@ -6,6 +7,7 @@ struct MobileSpaceSettingsView: View {
     let dataDeleter: any BrowserSpaceDataDeleting
 
     @State private var selectedSpaceID: SpaceID?
+    @State private var managedSearchEngineSpace: BrowserSpace?
 
     var body: some View {
         BrowserSettingsPane(.spaces) {
@@ -28,7 +30,11 @@ struct MobileSpaceSettingsView: View {
                     browser: browser,
                     space: space,
                     spaceAccess: spaceAccess,
-                    dataDeleter: dataDeleter
+                    dataDeleter: dataDeleter,
+                    manageSearchEngines: {
+                        managedSearchEngineSpace = space
+                    },
+                    dismissKeyboard: dismissKeyboard
                 )
             } else if let space {
                 BrowserSettingsPrivateSpaceAccessSection(
@@ -39,6 +45,13 @@ struct MobileSpaceSettingsView: View {
             }
         }
         .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        .sheet(item: $managedSearchEngineSpace) { space in
+            BrowserSearchEngineManager(
+                browser: browser,
+                space: space,
+                dismissKeyboard: dismissKeyboard
+            )
+        }
     }
 
     private var space: BrowserSpace? {
@@ -51,5 +64,19 @@ struct MobileSpaceSettingsView: View {
             in: browser.liveSpace(space),
             accessController: spaceAccess
         )
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+            for window in scene.windows {
+                window.endEditing(true)
+            }
+        }
     }
 }

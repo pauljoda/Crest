@@ -375,6 +375,79 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
             ).body
         )
     }
+
+    /// A section inside the mobile Form is not a stable sheet presenter. The
+    /// Space page owns that presentation and the shared section delegates the
+    /// request to it; desktop can continue using the section's local default.
+    func testMobileSearchEngineManagementDelegatesToTheSpacePage() throws {
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.spaces.first)
+        var requestedManagement = false
+        let section = BrowserSpaceBrowsingSection(
+            browser: browser,
+            space: space,
+            manageSearchEngines: {
+                requestedManagement = true
+            }
+        )
+
+        section.requestSearchEngineManagement()
+
+        XCTAssertTrue(requestedManagement)
+    }
+
+    /// A sheet presented from the mobile manager replaces its containing sheet
+    /// on iPhone. The manager already owns a NavigationStack, so touch edits use
+    /// that stable route while macOS keeps its windowed sheet presentation.
+    func testMobileSearchEngineEditorUsesManagerNavigation() {
+        XCTAssertEqual(
+            BrowserSearchEngineEditorPresentationStyle.platformDefault,
+            .navigation
+        )
+        XCTAssertEqual(
+            BrowserSearchEngineEditorKeyboardDismissalStyle.platformDefault,
+            .resignFirstResponder
+        )
+        XCTAssertTrue(
+            BrowserSearchEngineEditorKeyboardDismissalStyle.platformDefault
+                .repeatsDismissalAfterNavigation
+        )
+    }
+
+    /// Provider artwork in a touch picker needs its own readable slot. The
+    /// compact desktop label remains smaller, but mobile gives the mark a clear
+    /// gap from the title and enough vertical breathing room to stay centered.
+    func testMobileSearchProviderLabelsUseRoomyTouchMetrics() {
+        let layout = BrowserSearchProviderIdentityLabelLayout.platformDefault
+
+        XCTAssertEqual(layout, .touch)
+        XCTAssertEqual(layout.iconSize, 28)
+        XCTAssertEqual(layout.spacing, 8)
+        XCTAssertEqual(layout.verticalPadding, 4)
+    }
+
+    /// A native menu Picker flattens the selected provider's composed label on
+    /// iOS, collapsing the artwork, title, and disclosure indicator together.
+    /// Touch settings use an explicitly laid-out menu value for both browsing
+    /// dropdowns so their trailing values stay aligned and comfortably spaced.
+    func testMobileBrowsingDropdownsUsePaddedMenuValueLabels() {
+        XCTAssertEqual(
+            BrowserSpaceBrowsingPickerPresentationStyle.platformDefault,
+            .paddedMenu
+        )
+        XCTAssertTrue(
+            BrowserSpaceBrowsingPickerPresentationStyle.platformDefault
+                .dismissesKeyboardAfterSelection
+        )
+
+        let layout = BrowserSpaceBrowsingPickerValueLayout.touch
+        XCTAssertEqual(layout.minimumLeadingGap, 16)
+        XCTAssertEqual(layout.providerTextSpacing, 10)
+        XCTAssertEqual(layout.disclosureSpacing, 8)
+        XCTAssertEqual(layout.verticalPadding, 5)
+        XCTAssertEqual(layout.providerTitleLineLimit, 1)
+        XCTAssertEqual(layout.minimumProviderTitleScale, 0.8)
+    }
 }
 
 /// A deleter for composition checks, which never reach the delete button.
