@@ -9,15 +9,10 @@ enum BrowserVisitedLinkStyler {
     )
 
     nonisolated static func supports(_ pageURL: URL) -> Bool {
-        guard pageURL.scheme?.lowercased() == "https",
-              pageURL.path == "/search",
-              let host = pageURL.host()?.lowercased() else { return false }
-        let labels = host.split(separator: ".").map(String.init)
-        guard let googleIndex = labels.lastIndex(of: "google") else { return false }
-        let prefix = labels[..<googleIndex]
-        let suffixCount = labels.distance(from: labels.index(after: googleIndex), to: labels.endIndex)
-        return (prefix.isEmpty || prefix.allSatisfy { $0 == "www" })
-            && (1...2).contains(suffixCount)
+        guard let scheme = pageURL.scheme?.lowercased(), pageURL.host() != nil else {
+            return false
+        }
+        return scheme == "http" || scheme == "https"
     }
 
     nonisolated static func normalizedVisitedURLStrings(
@@ -35,71 +30,133 @@ enum BrowserVisitedLinkStyler {
         to webView: WKWebView
     ) async {
         guard let pageURL = webView.url, supports(pageURL) else { return }
-        let visitedURLs = normalizedVisitedURLStrings(history)
-        guard !visitedURLs.isEmpty else { return }
-        _ = try? await webView.callAsyncJavaScript(
-            script,
-            arguments: ["visitedURLs": visitedURLs],
-            in: nil,
-            contentWorld: contentWorld
-        )
+        #if os(macOS)
+            guard let store = BrowserNativeVisitedLinkStore(webView: webView) else {
+                return
+            }
+            let visitedURLStrings = normalizedVisitedURLStrings(history)
+            store.replace(with: visitedURLStrings.compactMap(URL.init(string:)))
+            let pageURLVariants = await matchingPageURLVariants(
+                visitedURLStrings: visitedURLStrings,
+                in: webView
+            )
+            store.add(pageURLVariants)
+        #endif
     }
 
-    private static let script = #"""
-        const normalized = (rawValue) => {
-          try {
-            const url = new URL(rawValue, document.baseURI);
-            if (url.hostname.endsWith('.google.com') && url.pathname === '/url') {
-              const destination = url.searchParams.get('q') || url.searchParams.get('url');
-              if (destination) return normalized(destination);
+    #if os(macOS)
+        #if DEBUG
+            static func containsVisitedURL(_ url: URL, in webView: WKWebView) -> Bool {
+                BrowserNativeVisitedLinkStore(webView: webView)?.contains(url) == true
             }
-            if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-            url.hash = '';
-            return url.href;
-          } catch (_) {
-            return null;
-          }
-        };
+        #endif
 
-        const identityKeys = (rawValue) => {
-          const exact = normalized(rawValue);
-          if (!exact) return [];
-          const keys = [exact];
-          const queryless = new URL(exact);
-          const isGoogleSearch = queryless.pathname === '/search'
-            && (queryless.hostname === 'google.com'
-              || queryless.hostname.startsWith('google.')
-              || queryless.hostname.startsWith('www.google.'));
-          if (queryless.pathname !== '/' && !isGoogleSearch) {
-            queryless.search = '';
-            keys.push(queryless.href);
-          }
-          return keys;
-        };
-
-        globalThis.__crestVisitedURLs = new Set(
-          visitedURLs.flatMap(identityKeys)
-        );
-        const paintVisitedResults = () => {
-          for (const link of document.querySelectorAll('a[href]')) {
-            const visited = identityKeys(link.href).some(
-              (key) => globalThis.__crestVisitedURLs.has(key)
-            );
-            if (!visited) continue;
-            const title = link.querySelector('h3') || link;
-            title.style.setProperty('color', '#b88cff', 'important');
-            title.style.setProperty('-webkit-text-fill-color', '#b88cff', 'important');
-          }
-        };
-
-        paintVisitedResults();
-        if (!globalThis.__crestVisitedObserver) {
-          globalThis.__crestVisitedObserver = new MutationObserver(paintVisitedResults);
-          globalThis.__crestVisitedObserver.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-          });
+        private static func matchingPageURLVariants(
+            visitedURLStrings: [String],
+            in webView: WKWebView
+        ) async -> [URL] {
+            guard
+                let result = try? await webView.callAsyncJavaScript(
+                    pageURLVariantScript,
+                    arguments: ["visitedURLs": visitedURLStrings],
+                    in: nil,
+                    contentWorld: contentWorld
+                ) as? [String]
+            else { return [] }
+            return result.compactMap(URL.init(string:))
         }
-        return true;
-        """#
+
+        private static let pageURLVariantScript = #"""
+            const normalized = (rawValue) => {
+              try {
+                const url = new URL(rawValue, document.baseURI);
+                const labels = url.hostname.toLowerCase().split('.');
+                const googleIndex = labels.lastIndexOf('google');
+                const googlePrefix = labels.slice(0, googleIndex);
+                const googleSuffixCount = labels.length - googleIndex - 1;
+                const isGoogleRedirect = googleIndex >= 0
+                  && (googlePrefix.length === 0
+                    || googlePrefix.every((label) => label === 'www'))
+                  && googleSuffixCount >= 1
+                  && googleSuffixCount <= 2
+                  && url.pathname === '/url';
+                if (isGoogleRedirect) {
+                  const destination = url.searchParams.get('q') || url.searchParams.get('url');
+                  if (destination) return normalized(destination);
+                }
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+                url.hash = '';
+                return url.href;
+              } catch (_) {
+                return null;
+              }
+            };
+
+            const normalizedVisitedURLs = new Set(
+              visitedURLs.map(normalized).filter(Boolean)
+            );
+            return Array.from(document.querySelectorAll('a[href]'))
+              .map((link) => ({
+                destination: normalized(link.href),
+                source: link.href
+              }))
+              .filter(({ destination, source }) =>
+                destination !== source && normalizedVisitedURLs.has(destination)
+              )
+              .map(({ source }) => source);
+            """#
+    #endif
 }
+
+#if os(macOS)
+    /// Runtime access to WebKit's native visited-link store.
+    ///
+    /// WKWebView does not publish this browser-facing facility. Crest's directly
+    /// distributed macOS app already resolves WebKit browser SPI defensively;
+    /// keeping it out of the iOS build preserves App Store compatibility there.
+    @MainActor
+    private struct BrowserNativeVisitedLinkStore {
+        private typealias ContainsVisitedLink =
+            @convention(c) (
+                AnyObject,
+                Selector,
+                NSURL
+            ) -> Bool
+
+        private static let storeSelector = NSSelectorFromString("_visitedLinkStore")
+        private static let addSelector = NSSelectorFromString("addVisitedLinkWithURL:")
+        private static let containsSelector = NSSelectorFromString("containsVisitedLinkWithURL:")
+        private static let removeAllSelector = NSSelectorFromString("removeAll")
+
+        private let store: NSObject
+
+        init?(webView: WKWebView) {
+            let configuration = webView.configuration
+            guard configuration.responds(to: Self.storeSelector),
+                let store = configuration.perform(Self.storeSelector)?.takeUnretainedValue()
+                    as? NSObject,
+                store.responds(to: Self.addSelector),
+                store.responds(to: Self.containsSelector),
+                store.responds(to: Self.removeAllSelector)
+            else { return nil }
+            self.store = store
+        }
+
+        func replace(with urls: [URL]) {
+            store.perform(Self.removeAllSelector)
+            add(urls)
+        }
+
+        func add(_ urls: [URL]) {
+            for url in urls {
+                store.perform(Self.addSelector, with: url as NSURL)
+            }
+        }
+
+        func contains(_ url: URL) -> Bool {
+            let implementation = store.method(for: Self.containsSelector)
+            let contains = unsafeBitCast(implementation, to: ContainsVisitedLink.self)
+            return contains(store, Self.containsSelector, url as NSURL)
+        }
+    }
+#endif

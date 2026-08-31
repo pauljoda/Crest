@@ -353,6 +353,10 @@
     "2026-08-31-direct-media-link-playback": {
       "category": "fixed",
       "message": "Play direct audio and video file links reliably across browser windows and devices"
+    },
+    "2026-08-31-browser-wide-visited-links": {
+      "category": "fixed",
+      "message": "Show visited links accurately across websites without exposing each Space's history to webpages"
     }
   }
 }

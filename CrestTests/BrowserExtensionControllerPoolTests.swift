@@ -339,8 +339,21 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         window.contentView?.addSubview(sourceView)
         window.orderFront(nil)
-        defer {
-            action.action.closePopup()
+
+        func cleanUpPresentedPopup() async {
+            if action.action.popupPopover?.isShown == true {
+                pool.perform(
+                    action,
+                    popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
+                )
+                for _ in 0..<200 where action.action.popupPopover?.isShown == true {
+                    try? await Task.sleep(for: .milliseconds(10))
+                }
+            }
+            // AppKit can still be completing the popover window's close after
+            // `isShown` changes. Keep the test's autorelease pool alive until
+            // that work settles so XCTest's memory checker cannot race it.
+            try? await Task.sleep(for: .milliseconds(250))
             window.close()
         }
 
@@ -371,21 +384,27 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             true,
             "The popup was never presented after its background loaded."
         )
-        let popupWebView = try XCTUnwrap(action.action.popupWebView)
-        var popupText: String?
-        for _ in 0..<400 {
-            popupText =
-                try await popupWebView.evaluateJavaScript(
-                    "document.body.innerText"
-                ) as? String
-            if popupText == "Ready" { break }
-            try await Task.sleep(for: .milliseconds(10))
+        do {
+            let popupWebView = try XCTUnwrap(action.action.popupWebView)
+            var popupText: String?
+            for _ in 0..<400 {
+                popupText =
+                    try await popupWebView.evaluateJavaScript(
+                        "document.body.innerText"
+                    ) as? String
+                if popupText == "Ready" { break }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            XCTAssertEqual(
+                popupText,
+                "Ready",
+                "The presented popup never had its opening message answered."
+            )
+        } catch {
+            await cleanUpPresentedPopup()
+            throw error
         }
-        XCTAssertEqual(
-            popupText,
-            "Ready",
-            "The presented popup never had its opening message answered."
-        )
+        await cleanUpPresentedPopup()
     }
 
     func testPerformingToolbarPopupPresentsItsReadyExtensionDocument()

@@ -522,8 +522,14 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
                 "string:probe-image",
                 "string:probe-page",
             ])
-        XCTAssertEqual(definitions[1].contexts, ["image"])
-        XCTAssertEqual(definitions[2].contexts, ["page"])
+        XCTAssertEqual(
+            definitions.first { $0.id == "string:probe-image" }?.contexts,
+            ["image"]
+        )
+        XCTAssertEqual(
+            definitions.first { $0.id == "string:probe-page" }?.contexts,
+            ["page"]
+        )
 
         let tab = try XCTUnwrap(
             space.tabs.first { $0.id == space.selectedTabID }
