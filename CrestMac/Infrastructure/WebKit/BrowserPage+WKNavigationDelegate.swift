@@ -224,6 +224,20 @@ extension BrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
+        if let mediaNavigation = BrowserDirectMediaNavigation.classify(
+            canShowMIMEType: navigationResponse.canShowMIMEType,
+            isForMainFrame: navigationResponse.isForMainFrame,
+            response: navigationResponse.response
+        ) {
+            decisionHandler(.cancel)
+            Task { @MainActor [weak webView] in
+                webView?.loadSimulatedRequest(
+                    mediaNavigation.request,
+                    responseHTML: mediaNavigation.responseHTML
+                )
+            }
+            return
+        }
         decisionHandler(
             BrowserNavigationDecider.decidePolicy(
                 canShowMIMEType: navigationResponse.canShowMIMEType,

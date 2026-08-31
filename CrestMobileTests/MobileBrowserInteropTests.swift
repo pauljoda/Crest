@@ -303,6 +303,40 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
     }
 
+    func testDisplayableInlineDirectVideoUsesMobilePlaybackDocument() throws {
+        let url = try XCTUnwrap(
+            URL(string: "https://media.example/watch?id=mobile&quality=source")
+        )
+        let response = try XCTUnwrap(
+            HTTPURLResponse(
+                url: url,
+                statusCode: 206,
+                httpVersion: "HTTP/1.1",
+                headerFields: [
+                    "Content-Type": "video/mp4",
+                    "Content-Disposition": "inline",
+                ]
+            )
+        )
+
+        let navigation = try XCTUnwrap(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: response
+            )
+        )
+
+        XCTAssertEqual(navigation.url, url)
+        XCTAssertEqual(navigation.kind, .video)
+        XCTAssertTrue(navigation.responseHTML.contains("playsinline"))
+        XCTAssertTrue(
+            navigation.responseHTML.contains(
+                "https://media.example/watch?id=mobile&amp;quality=source"
+            )
+        )
+    }
+
     func testMobileCommandClickedWebLinksUseNativeBackgroundAndForegroundTabDisposition() throws {
         let url = try XCTUnwrap(URL(string: "https://example.com/reference"))
 

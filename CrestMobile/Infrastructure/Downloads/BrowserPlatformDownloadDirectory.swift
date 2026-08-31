@@ -4,6 +4,7 @@ enum BrowserPlatformDownloadDirectory {
     static func resolve(
         suggestedFilename: String,
         spaceID _: SpaceID,
+        forcesPrompt _: Bool = false,
         fileManager: FileManager = .default
     ) async -> BrowserPlatformDownloadResolution {
         let directory = URL.documentsDirectory

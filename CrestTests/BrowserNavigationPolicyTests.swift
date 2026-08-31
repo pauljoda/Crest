@@ -5,6 +5,171 @@ import XCTest
 @testable import Crest
 
 final class BrowserNavigationPolicyTests: XCTestCase {
+    func testInlineDirectVideoUsesBrowserOwnedPlaybackDocument() throws {
+        let url = try XCTUnwrap(
+            URL(string: "https://media.example/watch?id=direct&quality=source")
+        )
+        let response = try XCTUnwrap(
+            HTTPURLResponse(
+                url: url,
+                statusCode: 206,
+                httpVersion: "HTTP/1.1",
+                headerFields: [
+                    "Content-Type": "video/mp4",
+                    "Content-Disposition": "inline",
+                ]
+            )
+        )
+
+        let navigation = try XCTUnwrap(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: response
+            )
+        )
+
+        XCTAssertEqual(navigation.url, url)
+        XCTAssertEqual(navigation.kind, .video)
+        XCTAssertEqual(navigation.mimeType, "video/mp4")
+        XCTAssertTrue(navigation.responseHTML.contains("<video"))
+        XCTAssertTrue(navigation.responseHTML.contains("controls"))
+        XCTAssertTrue(navigation.responseHTML.contains("playsinline"))
+        XCTAssertTrue(navigation.responseHTML.contains("role=\"alert\""))
+        XCTAssertTrue(
+            navigation.responseHTML.contains(
+                "https://media.example/watch?id=direct&amp;quality=source"
+            )
+        )
+    }
+
+    func testDirectMediaUsesTheFinalResponseURLAfterRedirects() throws {
+        let finalURL = try XCTUnwrap(
+            URL(string: "https://cdn.example/assets/redirected.mp4?token=one&part=two")
+        )
+        let response = try XCTUnwrap(
+            HTTPURLResponse(
+                url: finalURL,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "video/mp4"]
+            )
+        )
+
+        let navigation = try XCTUnwrap(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: response
+            )
+        )
+
+        XCTAssertEqual(navigation.request.url, finalURL)
+        XCTAssertTrue(
+            navigation.responseHTML.contains(
+                "https://cdn.example/assets/redirected.mp4?token=one&amp;part=two"
+            )
+        )
+    }
+
+    func testDirectAudioUsesAnAudioElement() throws {
+        let url = try XCTUnwrap(URL(string: "https://media.example/listen"))
+        let response = try XCTUnwrap(
+            HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "audio/mpeg"]
+            )
+        )
+
+        let navigation = try XCTUnwrap(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: response
+            )
+        )
+
+        XCTAssertEqual(navigation.kind, .audio)
+        XCTAssertTrue(navigation.responseHTML.contains("<audio"))
+    }
+
+    func testOnlyDisplayableInlineTopLevelMediaUsesPlaybackDocument() throws {
+        let videoURL = try XCTUnwrap(URL(string: "https://media.example/movie.mp4"))
+        let pageURL = try XCTUnwrap(URL(string: "https://media.example/page"))
+        let attachment = try XCTUnwrap(
+            HTTPURLResponse(
+                url: videoURL,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: [
+                    "Content-Type": "video/mp4",
+                    "Content-Disposition": "attachment; filename=movie.mp4",
+                ]
+            )
+        )
+        let mismatched = try XCTUnwrap(
+            HTTPURLResponse(
+                url: videoURL,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/octet-stream"]
+            )
+        )
+        let ordinaryPage = try XCTUnwrap(
+            HTTPURLResponse(
+                url: pageURL,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "text/html"]
+            )
+        )
+
+        XCTAssertNil(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: false,
+                isForMainFrame: true,
+                response: attachment
+            )
+        )
+        XCTAssertNil(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: attachment
+            )
+        )
+        XCTAssertNil(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: mismatched
+            )
+        )
+        XCTAssertNil(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: true,
+                response: ordinaryPage
+            )
+        )
+        XCTAssertNil(
+            BrowserDirectMediaNavigation.classify(
+                canShowMIMEType: true,
+                isForMainFrame: false,
+                response: try XCTUnwrap(
+                    HTTPURLResponse(
+                        url: videoURL,
+                        statusCode: 200,
+                        httpVersion: "HTTP/1.1",
+                        headerFields: ["Content-Type": "video/mp4"]
+                    )
+                )
+            )
+        )
+    }
+
     func testUnsupportedResponseTypesBecomeDownloads() {
         XCTAssertEqual(
             BrowserNavigationDecider.decidePolicy(canShowMIMEType: false),

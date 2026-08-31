@@ -349,6 +349,10 @@
     "2026-08-31-sidebar-software-updates": {
       "category": "fixed",
       "message": "Keep software update progress and actions in the sidebar, with release notes available on demand"
+    },
+    "2026-08-31-direct-media-link-playback": {
+      "category": "fixed",
+      "message": "Play direct audio and video file links reliably across browser windows and devices"
     }
   }
 }
