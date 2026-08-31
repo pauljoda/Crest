@@ -6,33 +6,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.7</title>
-            <pubDate>Fri, 28 Aug 2026 20:17:54 +0000</pubDate>
+            <title>0.5.14</title>
+            <pubDate>Mon, 31 Aug 2026 16:15:40 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1056</sparkle:version>
-            <sparkle:shortVersionString>0.5.7</sparkle:shortVersionString>
+            <sparkle:version>1062</sparkle:version>
+            <sparkle:shortVersionString>0.5.14</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### Improved
+
+- Improve sign-in, popups, page integration, relaunch behavior, and browser API compatibility for Chrome and Firefox extensions
+- Check spelling on webpages without changing what you type
+- Open extension popups reliably with faster startup and clear loading feedback
+
 ### Fixed
 
-- Keep Space navigation centered and Archive controls reachable as more Spaces are added
-- Continue typing with the same caret or selection after returning to a webpage tab on Mac
-- Use compatible browser extension actions directly from webpage context menus
-- Keep mouse back and forward navigation within the webpage or sidebar under the pointer
-- Keep new-window links inside Peek and Quick Window instead of hiding them in background tabs
-- Start loading tabs opened from links right away, with an option to select them automatically
-- Refresh available updates to the newest eligible build before downloading
+- Keep Search Engine settings open and usable on iPhone and iPad with clear, evenly spaced provider controls
+- Save converted WebP images as real JPEG files through the normal download flow
+- Keep extension popups working when their packages are refreshed
+- Keep the Start Page cohesive when opening a new tab
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/e84edda4defdb507ab8844fbfd9d7abc4fbbccb2...e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.7-nightly-2026-08-28-e4b3a1e-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85...807b49199698b34b478ce531b2a66dbd0aa2f951) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.14-nightly-2026-08-31-807b491-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.7-nightly-2026-08-28-e4b3a1e-arm64.dmg" length="8781078" type="application/octet-stream" sparkle:edSignature="1WfDB7BZv49wGuzx09A7rTJnqBhoV9VjYqxgw7ZgTw3I5GS+8WL6a/qrmPdL0vF97/NTOp9W0p5cepY6y0wWAg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.14-nightly-2026-08-31-807b491-arm64.dmg" length="8928022" type="application/octet-stream" sparkle:edSignature="2AF6tDXfwf/vmLt++id3sC6/fleDOzlwIvNSWUHAaLZuOQpjn6/OcDaJ4zfJ1SRNo+EpQnZMzbZgT+B1GD7qBw=="/>
         </item>
         <item>
             <title>0.5.7</title>
@@ -78,6 +81,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: EdDvOyDXJKoGcYPksu6gx3dQ3MfOjGiZ58d5KkZ9699xiu60DIUvSOoXCo7dm/g9S4QklNDg2agl1wQHAhyyDg==
-length: 4678
+edSignature: ngDvfMRVzn65xzcZOMS4v18MLSjU5fvLQAqvcIffoVikuZKJN7imeNYv4jDTxH5xgMVrEtt4OF8oHjG9smpBBg==
+length: 4661
 -->
