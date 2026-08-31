@@ -242,6 +242,12 @@ extension BrowserRootModel {
         )
     }
 
+    func openNewTab() {
+        chrome.openNewTab(
+            isStartPageSelected: browser.selectedTab?.isStartPage == true
+        )
+    }
+
     func submitAddress() {
         guard
             let url = AddressResolver.resolve(

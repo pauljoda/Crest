@@ -33,7 +33,7 @@ struct BrowserRootSidebarContent: View {
                 addressFocusRequest: model.chrome.addressFocusRequest,
                 activateAddress: { model.chrome.openLocation(model.address) },
                 submitAddress: model.submitAddress,
-                openNewTab: model.chrome.presentCommandPalette,
+                openNewTab: model.openNewTab,
                 sidebarToggleAction:
                     model.sidebarPresentation.sidebarToggleAction,
                 toggleSidebar: {

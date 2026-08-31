@@ -341,6 +341,10 @@
     "2026-08-31-stable-extension-package-refreshes": {
       "category": "fixed",
       "message": "Keep extension popups working when their packages are refreshed"
+    },
+    "2026-08-31-cohesive-start-page-new-tabs": {
+      "category": "fixed",
+      "message": "Keep the Start Page cohesive when opening a new tab"
     }
   }
 }

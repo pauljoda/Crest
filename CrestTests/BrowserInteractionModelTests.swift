@@ -2071,6 +2071,34 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(chrome.startPageFocusRequest, focusedRequest)
     }
 
+    func testRootNewTabActionKeepsTheSelectedStartPageCohesive() throws {
+        let browser = BrowserStore.preview()
+        let pages = BrowserPagePool()
+        let chrome = BrowserChromeState()
+        let model = BrowserRootModel(
+            browser: browser,
+            pages: pages,
+            chrome: chrome,
+            spaceAccess: BrowserSpaceAccessController(),
+            windowState: nil,
+            startupBehavior: .showStartPage,
+            persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
+        )
+        let selectedSpaceID = try XCTUnwrap(browser.selectedSpace?.id)
+        let selectedTabID = try XCTUnwrap(browser.selectedTab?.id)
+        let currentTabs = try XCTUnwrap(browser.selectedSpace?.currentTabs.map(\.id))
+        let initialFocusRequest = chrome.startPageFocusRequest
+
+        model.openNewTab()
+        model.openNewTab()
+
+        XCTAssertEqual(browser.selectedSpace?.id, selectedSpaceID)
+        XCTAssertEqual(browser.selectedTab?.id, selectedTabID)
+        XCTAssertEqual(browser.selectedSpace?.currentTabs.map(\.id), currentTabs)
+        XCTAssertNil(chrome.commandPaletteMode)
+        XCTAssertEqual(chrome.startPageFocusRequest, initialFocusRequest + 2)
+    }
+
     func testStartPageHasADistinctIdentityFromTheNewTabAction() {
         let tab = BrowserTab.startPage()
 
