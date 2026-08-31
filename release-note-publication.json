@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-08-30-responsive-extension-popups",
+    "development": "2026-08-31-stable-extension-package-refreshes",
     "nightly": "2026-08-27-newest-eligible-software-update"
   }
 }

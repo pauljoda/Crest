@@ -6,32 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.10</title>
-            <pubDate>Mon, 31 Aug 2026 00:35:29 +0000</pubDate>
+            <title>0.5.13</title>
+            <pubDate>Mon, 31 Aug 2026 15:18:00 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1060</sparkle:version>
-            <sparkle:shortVersionString>0.5.10</sparkle:shortVersionString>
+            <sparkle:version>1061</sparkle:version>
+            <sparkle:shortVersionString>0.5.13</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### Fixed
 
-- Check spelling on webpages without changing what you type
-- Open extension popups reliably with faster startup and clear loading feedback
+- Keep Search Engine settings open and usable on iPhone and iPad with clear, evenly spaced provider controls
+- Save converted WebP images as real JPEG files through the normal download flow
+- Keep extension popups working when their packages are refreshed
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/f83a4e846ccffcffcea4e2061e4d60dc4a149de5...895bd020d8380a09c5a97a33db5d92bbb3daf44e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.10-development-2026-08-31-895bd02-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/895bd020d8380a09c5a97a33db5d92bbb3daf44e...bacb5d88b60931620d1dee0636d55c29c43fa7ef) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.13-development-2026-08-31-bacb5d8-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.10-development-2026-08-31-895bd02-arm64.dmg" length="8879391" type="application/octet-stream" sparkle:edSignature="k9jvZQt9HwWf9NvnikfESKCH0iR+GFp8c2SU2UM11PrvQX6S9ozQVHHFYmQiasPFNrBRTyAgn7WIkFCZlWIiDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.5.13-development-2026-08-31-bacb5d8-arm64.dmg" length="8924448" type="application/octet-stream" sparkle:edSignature="E8trxqKDTsxlewLg+VyAsIoFMwSzFvrMi2xb8OpGD75ojPoDsZT2RYU70rEwRLpL3FlZHC1W4OI0gG/j4SnfAg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: mCpi0m3Yh08vmzcSln6RpFjr3bxp/Vrci7F0AiO2/2qVPq+r7W9K8GNdMndf6KbY5XJEemSd+nxL/4It3KhbDA==
-length: 1921
+edSignature: cdk3FpWbF4t9ndbIu/++9Nc/fziaH9RlqNwSVh57YlNfGBXCfKvjsEWjcsgcBcciEUXcKc+nAbBCX1cApWbfCA==
+length: 2034
 -->
