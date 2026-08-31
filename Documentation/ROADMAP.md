@@ -69,6 +69,7 @@ the live status for each issue.
 - [ ] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70)
 - [ ] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71)
 - [ ] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72)
+- [ ] [Match visited links to exact history entries](https://github.com/pauljoda/Crest/issues/73)
 
 #### Completed
 
