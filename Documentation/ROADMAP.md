@@ -67,7 +67,6 @@ the live status for each issue.
 - [ ] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
 - [ ] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70)
 - [ ] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72)
-- [ ] [Match visited links to exact history entries](https://github.com/pauljoda/Crest/issues/73)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
 
 #### Completed
@@ -76,6 +75,7 @@ the live status for each issue.
 - [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
 - [x] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68) — [`3ec94181`](https://github.com/pauljoda/Crest/commit/3ec941810b3ebe38c628e17a06cbb418fa4b3634)
 - [x] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71) — [`807b4919`](https://github.com/pauljoda/Crest/commit/807b49199698b34b478ce531b2a66dbd0aa2f951)
+- [x] [Match visited links to exact history entries](https://github.com/pauljoda/Crest/issues/73) — [`fe50f3af`](https://github.com/pauljoda/Crest/commit/fe50f3afe1bb5403dcb6e705e2c978fec70d8fd7)
 
 <!-- crest-roadmap-sync:end -->
 
