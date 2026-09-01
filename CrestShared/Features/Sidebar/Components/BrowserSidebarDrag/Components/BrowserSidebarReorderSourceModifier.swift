@@ -19,6 +19,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
     let reorder: BrowserSidebarReorderContext
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
 
     /// Identity for this row's registration. A row that changes section keeps
     /// its item identity but is a different view on either side of the move, and
@@ -57,7 +58,8 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                         section: section,
                         frame: frame
                     ),
-                    owner: identity
+                    owner: identity,
+                    scrollRegionID: scrollRegionID
                 )
             }
             .onDisappear {

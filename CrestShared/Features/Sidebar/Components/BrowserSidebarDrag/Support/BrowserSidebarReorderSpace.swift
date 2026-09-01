@@ -11,3 +11,17 @@ enum BrowserSidebarReorderSpace {
 
     static var globalSpace: GlobalCoordinateSpace { .global }
 }
+
+/// Identifies the scroll viewport a reorder row or zone is rendered inside.
+/// Fixed chrome leaves this unset, which is how the registry can clip only the
+/// saved/current list geometry without clipping the pinned grid above it.
+private struct BrowserSidebarScrollRegionIDKey: EnvironmentKey {
+    static let defaultValue: UUID? = nil
+}
+
+extension EnvironmentValues {
+    var browserSidebarScrollRegionID: UUID? {
+        get { self[BrowserSidebarScrollRegionIDKey.self] }
+        set { self[BrowserSidebarScrollRegionIDKey.self] = newValue }
+    }
+}

@@ -111,6 +111,53 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
+    func testWindowHostedSidebarLiftKeepsLongListsClippedToTheirScrollRegion() {
+        XCTAssertTrue(
+            BrowserSidebarReorderVisuals.clipsScrollableRegion(
+                clipsWhenIdle: true,
+                isDragging: true
+            ),
+            "The window-level lift already travels outside the ScrollView; "
+                + "unclipping the lazy list exposes offscreen saved folders "
+                + "over the fixed Space header and pinned tabs."
+        )
+    }
+
+    func testSidebarDragAutoscrollOnlyRunsInsideTheVisibleEdgeBands() {
+        let viewport = CGRect(x: 10, y: 100, width: 280, height: 500)
+
+        XCTAssertLessThan(
+            BrowserSidebarReorderPolicy.autoscrollStep(
+                at: CGPoint(x: viewport.midX, y: viewport.minY + 1),
+                in: viewport
+            ),
+            0
+        )
+        XCTAssertGreaterThan(
+            BrowserSidebarReorderPolicy.autoscrollStep(
+                at: CGPoint(x: viewport.midX, y: viewport.maxY - 1),
+                in: viewport
+            ),
+            0
+        )
+        XCTAssertEqual(
+            BrowserSidebarReorderPolicy.autoscrollStep(
+                at: CGPoint(x: viewport.midX, y: viewport.midY),
+                in: viewport
+            ),
+            0
+        )
+        XCTAssertEqual(
+            BrowserSidebarReorderPolicy.autoscrollStep(
+                at: CGPoint(x: viewport.maxX + 1, y: viewport.minY + 1),
+                in: viewport
+            ),
+            0,
+            "A pointer over fixed chrome must target that chrome, not keep "
+                + "scrolling the list behind it."
+        )
+    }
+
     /// A folder header answers the lift that would land inside it, and the two
     /// answers are alternatives rather than layers: a tab is about to become one
     /// of the folder's rows, so it previews as a row's own selection, while a

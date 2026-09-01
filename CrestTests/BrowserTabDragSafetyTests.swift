@@ -1101,6 +1101,225 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertEqual(context.browser.session, original)
     }
 
+    func testOffscreenExpandedFolderCannotStealAPinnedDrop() {
+        let context = makeSplitContext()
+        let state = context.browser.sidebarReorderState
+        let scrollRegionID = UUID()
+        let viewport = CGRect(x: 8, y: 220, width: 374, height: 320)
+        let currentSection = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let savedSection = BrowserSidebarReorderSection.tabs(
+            placement: .saved,
+            folderID: nil
+        )
+        let pinnedSection = BrowserSidebarReorderSection.tabs(
+            placement: .pinned,
+            folderID: nil
+        )
+        let sourceFrame = CGRect(x: 8, y: 420, width: 374, height: 44)
+
+        state.register(scrollRegionFrame: viewport, for: scrollRegionID)
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(context.outsider.id),
+                space: context.assignment,
+                section: currentSection,
+                frame: sourceFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(savedSection),
+                frame: CGRect(x: 8, y: -600, width: 374, height: 1_000)
+            ),
+            for: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .folder(FolderID()),
+                frame: CGRect(x: 8, y: 64, width: 374, height: 44)
+            ),
+            for: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(pinnedSection),
+                frame: CGRect(x: 8, y: 48, width: 374, height: 96)
+            ),
+            for: UUID()
+        )
+
+        state.begin(
+            item: .tab(
+                BrowserTabDragItem(
+                    tabID: context.outsider.id,
+                    spaceID: context.assignment.spaceID,
+                    profileID: context.assignment.profileID
+                )
+            ),
+            section: currentSection,
+            at: CGPoint(x: sourceFrame.midX, y: sourceFrame.midY)
+        )
+        state.update(pointer: CGPoint(x: sourceFrame.midX, y: 86))
+
+        XCTAssertEqual(
+            state.resolvedTarget?.kind,
+            .insert(section: pinnedSection, beforeID: nil, index: 0),
+            "Expanded saved folders above the scroll viewport must not cover "
+                + "the fixed pinned grid in the drag registry."
+        )
+    }
+
+    func testScrollingDuringLiftMovesFrozenRowsAndAcceptsNewLazyRows() {
+        let context = makeSplitContext()
+        let state = context.browser.sidebarReorderState
+        let scrollRegionID = UUID()
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let sourceFrame = CGRect(x: 8, y: 300, width: 374, height: 44)
+        let neighbourFrame = CGRect(x: 8, y: 344, width: 374, height: 44)
+
+        state.register(
+            scrollRegionFrame: CGRect(x: 8, y: 200, width: 374, height: 300),
+            for: scrollRegionID
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(context.outsider.id),
+                space: context.assignment,
+                section: section,
+                frame: sourceFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        let neighbourID = BrowserSidebarReorderItemID.tab(Self.tabID(76))
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: neighbourID,
+                space: context.assignment,
+                section: section,
+                frame: neighbourFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.begin(
+            item: .tab(
+                BrowserTabDragItem(
+                    tabID: context.outsider.id,
+                    spaceID: context.assignment.spaceID,
+                    profileID: context.assignment.profileID
+                )
+            ),
+            section: section,
+            at: CGPoint(x: sourceFrame.midX, y: sourceFrame.midY)
+        )
+
+        state.scrollableContentDidMove(in: scrollRegionID, by: -80)
+        XCTAssertEqual(
+            state.frame(ofRow: neighbourID),
+            neighbourFrame.offsetBy(dx: 0, dy: -80)
+        )
+
+        let newlyVisibleID = BrowserSidebarReorderItemID.tab(Self.tabID(77))
+        let newlyVisibleFrame = CGRect(x: 8, y: 430, width: 374, height: 44)
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: newlyVisibleID,
+                space: context.assignment,
+                section: section,
+                frame: newlyVisibleFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+
+        XCTAssertEqual(state.frame(ofRow: newlyVisibleID), newlyVisibleFrame)
+    }
+
+    func testOffscreenRowsStillCountTowardAScrolledSectionsInsertionIndex() {
+        let context = makeSplitContext()
+        let state = context.browser.sidebarReorderState
+        let scrollRegionID = UUID()
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: .current,
+            folderID: nil
+        )
+        let viewport = CGRect(x: 8, y: 200, width: 374, height: 300)
+        let offscreenFrame = CGRect(x: 8, y: 100, width: 374, height: 44)
+        let sourceFrame = CGRect(x: 8, y: 300, width: 374, height: 44)
+        let targetFrame = CGRect(x: 8, y: 344, width: 374, height: 44)
+
+        state.register(scrollRegionFrame: viewport, for: scrollRegionID)
+        state.register(
+            zone: BrowserSidebarReorderZone(
+                target: .section(section),
+                frame: viewport
+            ),
+            for: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(Self.tabID(78)),
+                space: context.assignment,
+                section: section,
+                frame: offscreenFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(context.outsider.id),
+                space: context.assignment,
+                section: section,
+                frame: sourceFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(Self.tabID(79)),
+                space: context.assignment,
+                section: section,
+                frame: targetFrame
+            ),
+            owner: UUID(),
+            scrollRegionID: scrollRegionID
+        )
+
+        state.begin(
+            item: .tab(
+                BrowserTabDragItem(
+                    tabID: context.outsider.id,
+                    spaceID: context.assignment.spaceID,
+                    profileID: context.assignment.profileID
+                )
+            ),
+            section: section,
+            at: CGPoint(x: sourceFrame.midX, y: sourceFrame.midY)
+        )
+        state.update(pointer: CGPoint(x: targetFrame.midX, y: targetFrame.maxY))
+
+        XCTAssertEqual(
+            state.resolvedTarget?.kind,
+            .insert(section: section, beforeID: nil, index: 2),
+            "Offscreen predecessors remain part of the model order even though "
+                + "their zones cannot target fixed chrome outside the viewport."
+        )
+    }
+
     private func makeSplitContext(
         accessPolicy: BrowserSpaceAccessPolicy = .open
     ) -> SplitContext {

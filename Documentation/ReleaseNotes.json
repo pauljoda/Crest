@@ -357,6 +357,10 @@
     "2026-08-31-browser-wide-visited-links": {
       "category": "fixed",
       "message": "Show visited links accurately across websites without exposing each Space's history to webpages"
+    },
+    "2026-09-01-scroll-safe-sidebar-dragging": {
+      "category": "fixed",
+      "message": "Keep tab and folder dragging accurate while scrolling long sidebar lists"
     }
   }
 }

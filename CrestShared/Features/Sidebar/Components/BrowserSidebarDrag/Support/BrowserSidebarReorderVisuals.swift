@@ -9,13 +9,16 @@ enum BrowserSidebarReorderVisuals {
     /// is all that is left to say here.
     static let liftScale: CGFloat = 1.04
 
-    /// A lifted row travels outside the scrolling region — into the pinned grid
-    /// above, for instance — so the scroll clip has to be lifted for the
-    /// duration of the drag or the row is clipped away mid-gesture.
+    /// Whether the list keeps its normal scroll clip while a row is lifted.
+    ///
+    /// macOS draws the travelling copy in a window-level host, outside this
+    /// ScrollView. Unclipping the list cannot help that lift; it only exposes
+    /// lazy rows that are scrolled out of view, including expanded saved-folder
+    /// children, over the fixed Space header and pinned grid.
     static func clipsScrollableRegion(
         clipsWhenIdle: Bool,
-        isDragging: Bool
+        isDragging _: Bool
     ) -> Bool {
-        clipsWhenIdle && !isDragging
+        clipsWhenIdle
     }
 }

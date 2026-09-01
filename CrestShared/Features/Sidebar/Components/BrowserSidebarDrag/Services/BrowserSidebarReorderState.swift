@@ -30,7 +30,9 @@ final class BrowserSidebarReorderState {
     @ObservationIgnored
     private var rows: [BrowserSidebarReorderItemID: RegisteredRow] = [:]
     @ObservationIgnored
-    private var zones: [UUID: BrowserSidebarReorderZone] = [:]
+    private var zones: [UUID: RegisteredZone] = [:]
+    @ObservationIgnored
+    private var scrollRegions: [UUID: CGRect] = [:]
 
     /// A registered row together with the view that registered it, so a
     /// departing row cannot clear the registration its replacement just made.
@@ -45,7 +47,16 @@ final class BrowserSidebarReorderState {
     /// insertion line anchors on it, and drops aim straight past it.
     private struct RegisteredRow {
         let owner: UUID
-        let row: BrowserSidebarReorderRow
+        var row: BrowserSidebarReorderRow
+        let scrollRegionID: UUID?
+    }
+
+    /// A zone remembers whether it belongs to a scrolling list. Its measured
+    /// frame can extend far beyond that list when several saved folders are
+    /// expanded, but only the portion inside the viewport is a real target.
+    private struct RegisteredZone {
+        var zone: BrowserSidebarReorderZone
+        let scrollRegionID: UUID?
     }
 
     /// Where each presented card sits, in the same global space the zones and
@@ -172,13 +183,23 @@ final class BrowserSidebarReorderState {
 
     // MARK: - Geometry registration
 
-    func register(row: BrowserSidebarReorderRow, owner: UUID) {
+    func register(
+        row: BrowserSidebarReorderRow,
+        owner: UUID,
+        scrollRegionID: UUID? = nil
+    ) {
         // A drag offsets neighbouring rows without changing their layout slots.
         // Their global geometry therefore follows the presentation transform
         // while the animation runs. Freeze the resting registry at lift time so
         // those temporary frames cannot feed back into ordering and compound.
-        guard !isDragging else { return }
-        rows[row.id] = RegisteredRow(owner: owner, row: row)
+        // A lazy row first revealed by scrolling during the lift has no resting
+        // registration to freeze, though, so accept that first measurement.
+        guard !isDragging || rows[row.id] == nil else { return }
+        rows[row.id] = RegisteredRow(
+            owner: owner,
+            row: row,
+            scrollRegionID: scrollRegionID
+        )
     }
 
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
@@ -207,12 +228,80 @@ final class BrowserSidebarReorderState {
     /// pager keeps neighbouring pages alive, and every page registers the same
     /// targets. Keyed by target, whichever page registered last would clobber
     /// the visible page's frames with offscreen ones.
-    func register(zone: BrowserSidebarReorderZone, for id: UUID) {
-        zones[id] = zone
+    func register(
+        zone: BrowserSidebarReorderZone,
+        for id: UUID,
+        scrollRegionID: UUID? = nil
+    ) {
+        zones[id] = RegisteredZone(
+            zone: zone,
+            scrollRegionID: scrollRegionID
+        )
     }
 
     func removeZone(for id: UUID) {
         zones[id] = nil
+    }
+
+    /// Registers one visible ScrollView frame. Rows and zones beneath that
+    /// region carry its identity through the environment; fixed pinned chrome
+    /// does not, so it remains targetable while offscreen saved content is cut
+    /// away from the same global coordinate space.
+    func register(scrollRegionFrame frame: CGRect, for id: UUID) {
+        scrollRegions[id] = frame
+        if isDragging { resolveTarget() }
+    }
+
+    func removeScrollRegion(for id: UUID) {
+        scrollRegions[id] = nil
+        rows = rows.filter { $0.value.scrollRegionID != id }
+        zones = zones.filter { $0.value.scrollRegionID != id }
+        if isDragging { resolveTarget() }
+    }
+
+    /// Keeps frozen resting geometry aligned with a scroll that occurs during a
+    /// lift. Normal geometry callbacks remain frozen because neighbour offsets
+    /// are presentation transforms; the scroll observer reports the one uniform
+    /// translation that is safe to apply to every row and zone in the region.
+    func scrollableContentDidMove(in id: UUID, by offsetY: CGFloat) {
+        guard isDragging, offsetY != 0 else { return }
+
+        for key in Array(rows.keys) where rows[key]?.scrollRegionID == id {
+            guard var registration = rows[key] else { continue }
+            registration.row = BrowserSidebarReorderRow(
+                id: registration.row.id,
+                space: registration.row.space,
+                section: registration.row.section,
+                frame: registration.row.frame.offsetBy(dx: 0, dy: offsetY)
+            )
+            rows[key] = registration
+        }
+
+        for key in Array(zones.keys) where zones[key]?.scrollRegionID == id {
+            guard var registration = zones[key] else { continue }
+            registration.zone = BrowserSidebarReorderZone(
+                target: registration.zone.target,
+                frame: registration.zone.frame.offsetBy(dx: 0, dy: offsetY)
+            )
+            zones[key] = registration
+        }
+
+        resolveTarget()
+    }
+
+    private var visibleZones: [BrowserSidebarReorderZone] {
+        zones.values.compactMap { registration in
+            guard let regionID = registration.scrollRegionID else {
+                return registration.zone
+            }
+            guard let viewport = scrollRegions[regionID] else { return nil }
+            let visibleFrame = registration.zone.frame.intersection(viewport)
+            guard !visibleFrame.isNull, !visibleFrame.isEmpty else { return nil }
+            return BrowserSidebarReorderZone(
+                target: registration.zone.target,
+                frame: visibleFrame
+            )
+        }
     }
 
     /// Records where one presented card is, and which Space is presenting it. The
@@ -586,7 +675,7 @@ final class BrowserSidebarReorderState {
                 at: pointer,
                 // An empty frame is a hidden duplicate of a live zone — an
                 // offscreen pager page or a collapsed picker — never a target.
-                in: zones.values.filter { !$0.frame.isEmpty },
+                in: visibleZones.filter { !$0.frame.isEmpty },
                 accepting: lift.item
             )
         else {

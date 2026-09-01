@@ -22,6 +22,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// pages alive and they register the same targets, so registrations must not
     /// key on the target or offscreen pages clobber the visible one.
     @State private var identity = UUID()
+    @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
 
     func body(content: Content) -> some View {
         content
@@ -37,7 +38,8 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
                         target: target,
                         frame: resolvedFrame(frame)
                     ),
-                    for: identity
+                    for: identity,
+                    scrollRegionID: scrollRegionID
                 )
             }
             .onChange(of: isActive) { _, active in

@@ -8,6 +8,42 @@ enum BrowserSidebarReorderPolicy {
     /// selects a tab instead of starting a reorder.
     static let liftDistance: CGFloat = 4
 
+    /// Thickness of the bands inside the scroll viewport that advance a long
+    /// list while a lift is held at either vertical edge.
+    static let autoscrollEdgeBand: CGFloat = 56
+
+    /// Maximum document movement per display tick at the outer edge of a band.
+    static let autoscrollMaximumStep: CGFloat = 14
+
+    /// Signed document movement for a pointer in a scroll viewport. Negative
+    /// travels toward the beginning; positive travels toward the end.
+    ///
+    /// The horizontal containment check is intentional. Once the pointer leaves
+    /// the list for pinned tabs or other fixed chrome, that chrome owns the drop
+    /// and the list behind it must stop moving.
+    static func autoscrollStep(at point: CGPoint, in viewport: CGRect) -> CGFloat {
+        guard !viewport.isEmpty,
+            point.x >= viewport.minX,
+            point.x <= viewport.maxX,
+            point.y >= viewport.minY,
+            point.y <= viewport.maxY
+        else { return 0 }
+
+        let topDistance = point.y - viewport.minY
+        if topDistance < autoscrollEdgeBand {
+            return -autoscrollMaximumStep
+                * (1 - topDistance / autoscrollEdgeBand)
+        }
+
+        let bottomDistance = viewport.maxY - point.y
+        if bottomDistance < autoscrollEdgeBand {
+            return autoscrollMaximumStep
+                * (1 - bottomDistance / autoscrollEdgeBand)
+        }
+
+        return 0
+    }
+
     /// Whether the lifted row's pointer-chasing preview is Crest's to draw.
     ///
     /// macOS draws it, in a window-level host ordered above the browser window —
