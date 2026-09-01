@@ -1076,6 +1076,37 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertEqual(syncedTab.url, store.selectedTab?.url)
     }
 
+    func testProductionCompositionDoesNotBlockMainActorOnInitialSyncJournalSave() async {
+        let sessionPersistence = InMemoryBrowserSessionPersistence()
+        sessionPersistence.save(.preview)
+        let syncPersistence = DelayedBrowserSyncJournalPersistence(delay: 0.4)
+        let start = ContinuousClock.now
+
+        let store = BrowserStore.production(
+            persistence: sessionPersistence,
+            syncPersistence: syncPersistence,
+            credentialVault: InMemoryCredentialVault()
+        )
+        let elapsed = start.duration(to: .now)
+
+        XCTAssertLessThan(
+            elapsed,
+            .milliseconds(150),
+            "Initial sync staging must not hold the main actor during cold launch."
+        )
+        let recordsStart = ContinuousClock.now
+        let records = await store.cloudSyncRecords()
+        let recordsElapsed = recordsStart.duration(to: .now)
+
+        XCTAssertGreaterThanOrEqual(
+            recordsElapsed,
+            .milliseconds(250),
+            "Cloud sync must wait for the initial local snapshot instead of racing it."
+        )
+        XCTAssertFalse(records.isEmpty)
+        await store.flushPendingSyncPersistence()
+    }
+
     func testUserDefaultsPersistenceSerializesOffMainAndFlushesTheNewestSnapshot() async throws {
         let suiteName = "BrowserStoreTests.session-persistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -1790,6 +1821,24 @@ final class BrowserStoreTests: XCTestCase {
         )
     }
 
+    func testHeavyPerformanceFixtureCoversManyValidSpacesTabsFoldersAndHistoryRows() throws {
+        let session = try XCTUnwrap(
+            BrowserPerformanceSoakFixture.makeSession(
+                baseURLString: "http://127.0.0.1:18768/",
+                rawTabCount: "24",
+                isHeavy: true,
+                runID: "app-289-heavy"
+            )
+        )
+
+        XCTAssertEqual(session.spaces.count, 6)
+        XCTAssertEqual(session.spaces.flatMap(\.tabs).count, 144)
+        XCTAssertEqual(session.spaces.flatMap(\.folders).count, 48)
+        XCTAssertEqual(session.spaces.flatMap(\.history).count, 576)
+        XCTAssertTrue(session.spaces.allSatisfy { $0.folderTree.isValid })
+        XCTAssertTrue(session.spaces.allSatisfy { $0.selectedTabID != nil })
+    }
+
     func testReleaseSoakFixtureRejectsNonLoopbackAndMalformedInputs() {
         XCTAssertNil(
             BrowserPerformanceSoakFixture.makeSession(
@@ -1984,6 +2033,24 @@ private final class CountingBrowserSyncJournalPersistence: BrowserSyncJournalPer
     func save(_ journal: BrowserSyncJournal) throws {
         self.journal = journal
         saveCount += 1
+    }
+}
+
+private final class DelayedBrowserSyncJournalPersistence: BrowserSyncJournalPersisting {
+    private let delay: TimeInterval
+    private var journal: BrowserSyncJournal?
+
+    init(delay: TimeInterval) {
+        self.delay = delay
+    }
+
+    func load() throws -> BrowserSyncJournal? {
+        journal
+    }
+
+    func save(_ journal: BrowserSyncJournal) throws {
+        Thread.sleep(forTimeInterval: delay)
+        self.journal = journal
     }
 }
 

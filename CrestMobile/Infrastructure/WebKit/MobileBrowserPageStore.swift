@@ -26,6 +26,9 @@ final class MobileBrowserPageStore:
     typealias ResidencyDecisionProvider =
         @MainActor (MobileBrowserPage, Bool) async -> BrowserPageResidencyDecision
 
+    typealias ModifiedLinkOpener =
+        @MainActor (URL, SpaceID, Bool) -> BrowserSession?
+
     /// One resident page memory pressure may consider, with the idle stamp its
     /// least-recently-used ordering comes from.
     private typealias IdlePageCandidate = (
@@ -67,7 +70,7 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored private let openNewTab: (URL) -> Void
-    @ObservationIgnored private let openModifiedLink: (URL, SpaceID, Bool) -> Void
+    @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let stagePeek: ((BrowserPeekRequest) -> Void)?
     @ObservationIgnored private let commitPeek: ((BrowserPeekRequest) -> Void)?
@@ -117,7 +120,7 @@ final class MobileBrowserPageStore:
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         popupTabHost: BrowserPopupTabHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
-        openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
+        openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         stagePeek: ((BrowserPeekRequest) -> Void)? = nil,
         commitPeek: ((BrowserPeekRequest) -> Void)? = nil,
@@ -362,9 +365,31 @@ final class MobileBrowserPageStore:
         reconcileCredentialAccess(in: session)
     }
 
+    func selectAndLoad(
+        _ url: URL,
+        in session: BrowserSession,
+        at time: Date = .now
+    ) {
+        if prepareSelectedPage(
+            in: session,
+            at: time,
+            loadsInitialURL: false
+        ) {
+            activePage?.load(url)
+        } else {
+            deactivatePagePresentation(at: time)
+        }
+        reconcileCredentialAccess(in: session)
+    }
+
+    func activateOpenedLink(_ url: URL, in session: BrowserSession) {
+        selectAndLoad(url, in: session)
+    }
+
     private func prepareSelectedPage(
         in session: BrowserSession,
-        at time: Date
+        at time: Date,
+        loadsInitialURL: Bool = true
     ) -> Bool {
         guard let space = session.selectedSpace,
             let tab = session.selectedTab,
@@ -405,7 +430,11 @@ final class MobileBrowserPageStore:
             inactiveSinceByTabID[tab.id] = nil
         }
 
-        let page = makeResidentPage(for: tab, in: space)
+        let page = makeResidentPage(
+            for: tab,
+            in: space,
+            loadsInitialURL: loadsInitialURL
+        )
         pagesByTabID[tab.id] = page
         residencyRevision &+= 1
         activate(page, presenting: presented, at: time)
@@ -1212,13 +1241,14 @@ final class MobileBrowserPageStore:
     private func makeResidentPage(
         for tab: BrowserTab,
         in space: BrowserSpace,
-        adoptedConfiguration: WKWebViewConfiguration? = nil
+        adoptedConfiguration: WKWebViewConfiguration? = nil,
+        loadsInitialURL: Bool = true
     ) -> MobileBrowserPage {
         // Restoring WebKit's session state performs its own navigation, so the
         // page must not also start the tab's URL: whichever path runs, exactly one
         // navigation begins.
         let archivedState =
-            adoptedConfiguration == nil
+            loadsInitialURL && adoptedConfiguration == nil
             ? tab.url.flatMap {
                 archivedInteractionState(
                     for: tab,
@@ -1240,7 +1270,9 @@ final class MobileBrowserPageStore:
             allowsCredentialAccess: !browsingMode.isPrivate,
             isCredentialAccessEnabled: space.credentialPreferences.isEnabled,
             defaultPageZoom: pageZoomPreferences.defaultZoom,
-            loadsInitialURL: adoptedConfiguration == nil && archivedState == nil,
+            loadsInitialURL: loadsInitialURL
+                && adoptedConfiguration == nil
+                && archivedState == nil,
             loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
                 try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
             },

@@ -16,6 +16,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
                 "CREST_FORCE_ONBOARDING_SETUP": "1",
                 "CREST_PERFORMANCE_BASE_URL": "http://127.0.0.1:8080/",
                 "CREST_PERFORMANCE_TAB_COUNT": "12",
+                "CREST_PERFORMANCE_HEAVY_SESSION": "1",
                 "CREST_PERFORMANCE_RUN_ID": "run-42",
                 "CREST_UPDATE_WIDGET_FIXTURE": "ready:0.5.99:599",
                 "CREST_UPDATE_TEST_FEED_URL": "http://127.0.0.1:48151/appcast.xml",
@@ -37,6 +38,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
             "http://127.0.0.1:8080/"
         )
         XCTAssertEqual(environment.performanceTabCount, "12")
+        XCTAssertTrue(environment.performanceHeavySession)
         XCTAssertEqual(environment.performanceRunID, "run-42")
         XCTAssertEqual(
             environment.softwareUpdateWidgetFixture,
@@ -82,6 +84,7 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
 
         XCTAssertNil(environment.performanceBaseURLString)
         XCTAssertNil(environment.performanceTabCount)
+        XCTAssertFalse(environment.performanceHeavySession)
         XCTAssertEqual(environment.performanceRunID, "release-soak")
     }
 

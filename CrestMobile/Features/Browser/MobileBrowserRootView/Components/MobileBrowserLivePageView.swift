@@ -33,13 +33,13 @@ struct MobileBrowserLivePageView: View {
         .id(page.tabID)
         .opacity(
             BrowserPageSurfacePolicy.revealsWebContent(
-                completedNavigationCount: page.completedNavigationCount
+                committedNavigationCount: page.committedNavigationCount
             ) ? 1 : 0
         )
         .background(
             Color(
                 uiColor: BrowserPageSurfacePolicy.revealsWebContent(
-                    completedNavigationCount: page.completedNavigationCount
+                    committedNavigationCount: page.committedNavigationCount
                 )
                     ? page.themeColor
                         ?? page.webView.underPageBackgroundColor

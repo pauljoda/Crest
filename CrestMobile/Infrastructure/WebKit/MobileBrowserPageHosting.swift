@@ -9,6 +9,11 @@ import WebKit
 /// the page itself defers teardown requests until that callback has unwound.
 @MainActor
 protocol MobileBrowserPageHosting: AnyObject {
+    /// Activates a foreground tab that a modified link just created and issues
+    /// its one app-owned navigation without waiting for a SwiftUI observation
+    /// pass to reconcile the new selection.
+    func activateOpenedLink(_ url: URL, in session: BrowserSession)
+
     /// Adopts the web view WebKit pre-made for a popup into a new selected tab,
     /// or returns nil when this opener cannot host one.
     func adoptPopupWebView(

@@ -1715,6 +1715,16 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
         XCTAssertFalse(
             BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: 0
+            )
+        )
+        XCTAssertTrue(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: 1
+            )
+        )
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.revealsWebContent(
                 completedNavigationCount: 0
             )
         )

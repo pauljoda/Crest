@@ -151,11 +151,11 @@ extension MobileBrowserPage: WKNavigationDelegate {
         case .navigate:
             break
         case .backgroundTab(let url):
-            openModifiedLink(url, spaceID, false)
+            routeModifiedLink(url, selecting: false)
             decisionHandler(.cancel)
             return
         case .foregroundTab(let url):
-            openModifiedLink(url, spaceID, true)
+            routeModifiedLink(url, selecting: true)
             decisionHandler(.cancel)
             return
         }

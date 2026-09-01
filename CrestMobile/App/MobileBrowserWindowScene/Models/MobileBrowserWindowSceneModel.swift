@@ -71,7 +71,14 @@ final class MobileBrowserWindowSceneModel {
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
-                browser.openNewTab(url: url, in: spaceID, selecting: selecting)
+                guard
+                    browser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ) != nil
+                else { return nil }
+                return browser.session
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
             stagePeek: { request in transientBrowsing.stagePeek(request) },
@@ -91,7 +98,14 @@ final class MobileBrowserWindowSceneModel {
             popupTabHost: privateBrowser.popupTabHost,
             openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
-                privateBrowser.openNewTab(url: url, in: spaceID, selecting: selecting)
+                guard
+                    privateBrowser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ) != nil
+                else { return nil }
+                return privateBrowser.session
             },
             openPeek: { request in
                 privateTransientBrowsing.presentPeek(request)
@@ -222,8 +236,7 @@ final class MobileBrowserWindowSceneModel {
             else {
                 return false
             }
-            pages.select(session: browser.session)
-            pages.load(url)
+            pages.selectAndLoad(url, in: browser.session)
             navigation.selectTab()
         }
         return true

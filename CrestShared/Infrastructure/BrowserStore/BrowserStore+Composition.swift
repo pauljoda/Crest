@@ -11,33 +11,34 @@ extension BrowserStore {
         if BrowserLaunchIsolationPolicy.requiresIsolation(launchEnvironment) {
             return isolatedLaunch(launchEnvironment: launchEnvironment)
         }
-        let persistence = UserDefaultsBrowserSessionPersistence()
+        return production(
+            persistence: UserDefaultsBrowserSessionPersistence(),
+            syncPersistence: UserDefaultsBrowserSyncJournalPersistence(),
+            credentialVault: KeychainCredentialVault()
+        )
+    }
+
+    static func production(
+        persistence: any BrowserSessionPersisting,
+        syncPersistence: any BrowserSyncJournalPersisting,
+        credentialVault: any CredentialVault
+    ) -> BrowserStore {
         var session = persistence.load() ?? .freshInstallSeed
         session.repairRuntimeIntegrity()
         session.cleanupCurrentTabsUsingSpacePreferences()
         session.applyDataRetentionPolicies()
         session.selectDefaultSpaceForLaunch()
         let syncCoordinator = BrowserSyncCoordinator(
-            persistence: UserDefaultsBrowserSyncJournalPersistence()
+            persistence: syncPersistence
         )
-        var initialSyncErrorDescription: String?
-        if !session.hasDisposableSeedState {
-            do {
-                try syncCoordinator.stage(session: session, deletionReason: .retention)
-            } catch {
-                // Local browsing remains available when the journal cannot be written.
-                // The session remains authoritative and will be staged again next launch.
-                initialSyncErrorDescription = String(describing: error)
-            }
-        }
         persistence.save(session)
         let store = BrowserStore(
             session: session,
             persistence: persistence,
-            credentialVault: KeychainCredentialVault(),
+            credentialVault: credentialVault,
             syncCoordinator: syncCoordinator
         )
-        store.localSyncErrorDescription = initialSyncErrorDescription
+        store.beginInitialSyncStaging(session: session)
         return store
     }
 
@@ -70,16 +71,14 @@ extension BrowserStore {
         let syncCoordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence()
         )
-        _ = try? syncCoordinator.stage(
-            session: session,
-            deletionReason: .retention
-        )
-        return BrowserStore(
+        let store = BrowserStore(
             session: session,
             persistence: InMemoryBrowserSessionPersistence(),
             credentialVault: InMemoryCredentialVault(),
             syncCoordinator: syncCoordinator
         )
+        store.beginInitialSyncStaging(session: session)
+        return store
     }
 
     private static func persistentIsolatedLaunch(
@@ -92,7 +91,8 @@ extension BrowserStore {
             defaults: defaults,
             faviconStore: InMemoryBrowserFaviconStore()
         )
-        var session = persistence.load()
+        var session =
+            persistence.load()
             ?? isolatedFixtureSession(for: launchEnvironment)
         session.repairRuntimeIntegrity()
         session.cleanupCurrentTabsUsingSpacePreferences()
@@ -102,16 +102,14 @@ extension BrowserStore {
         let syncCoordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence()
         )
-        _ = try? syncCoordinator.stage(
-            session: session,
-            deletionReason: .retention
-        )
-        return BrowserStore(
+        let store = BrowserStore(
             session: session,
             persistence: persistence,
             credentialVault: KeychainCredentialVault(servicePrefix: namespace),
             syncCoordinator: syncCoordinator
         )
+        store.beginInitialSyncStaging(session: session)
+        return store
     }
 
     private static func isolatedFixtureSession(
@@ -121,6 +119,7 @@ extension BrowserStore {
             if let performanceSession = BrowserPerformanceSoakFixture.makeSession(
                 baseURLString: launchEnvironment.performanceBaseURLString,
                 rawTabCount: launchEnvironment.performanceTabCount,
+                isHeavy: launchEnvironment.performanceHeavySession,
                 runID: launchEnvironment.performanceRunID
             ) {
                 return performanceSession

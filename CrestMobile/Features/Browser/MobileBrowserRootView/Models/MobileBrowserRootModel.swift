@@ -186,8 +186,7 @@ extension MobileBrowserRootModel {
             )
         else { return false }
         browser.navigateSelectedTab(to: url)
-        pages.select(session: browser.session)
-        pages.load(url)
+        pages.selectAndLoad(url, in: browser.session)
         address = url.absoluteString
         navigation.selectTab()
         return true
@@ -611,8 +610,7 @@ extension MobileBrowserRootModel {
                 else { return false }
             }
         }
-        pages.select(session: browser.session)
-        pages.load(url)
+        pages.selectAndLoad(url, in: browser.session)
         address = url.absoluteString
         return true
     }

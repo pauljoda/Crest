@@ -95,7 +95,14 @@ struct CrestMobileApp: App {
             popupTabHost: browser.popupTabHost,
             openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
-                browser.openNewTab(url: url, in: spaceID, selecting: selecting)
+                guard
+                    browser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ) != nil
+                else { return nil }
+                return browser.session
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
             stagePeek: { request in transientBrowsing.stagePeek(request) },

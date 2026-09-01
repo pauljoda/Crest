@@ -43,4 +43,8 @@ enum BrowserPageSurfacePolicy {
     static func revealsWebContent(completedNavigationCount: Int) -> Bool {
         completedNavigationCount > 0
     }
+
+    static func revealsWebContent(committedNavigationCount: Int) -> Bool {
+        committedNavigationCount > 0
+    }
 }

@@ -64,7 +64,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let pullToRefreshControl = UIRefreshControl()
     @ObservationIgnored private let openNewTab: (URL) -> Void
-    @ObservationIgnored let openModifiedLink: (URL, SpaceID, Bool) -> Void
+    @ObservationIgnored private let openModifiedLink: MobileBrowserPageStore.ModifiedLinkOpener
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let serverTrustOverrides: BrowserServerTrustOverrideStore
@@ -74,6 +74,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The URL Crest asked this page to load, as opposed to one web content
     /// asked for. Only an app-initiated load may reach a `file:` URL.
     @ObservationIgnored private var appInitiatedURL: URL?
+    @ObservationIgnored private(set) var appInitiatedNavigationCount = 0
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let stagePeek: ((BrowserPeekRequest) -> Void)?
     @ObservationIgnored private let commitPeek: ((BrowserPeekRequest) -> Void)?
@@ -149,7 +150,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         saveHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.SaveCredential = { _ in },
         openNewTab: @escaping (URL) -> Void,
-        openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
+        openModifiedLink: @escaping MobileBrowserPageStore.ModifiedLinkOpener = {
+            _, _, _ in nil
+        },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         stagePeek: ((BrowserPeekRequest) -> Void)? = nil,
         commitPeek: ((BrowserPeekRequest) -> Void)? = nil,
@@ -369,10 +372,18 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func load(_ url: URL) {
+        appInitiatedNavigationCount &+= 1
         self.url = url
         appInitiatedURL = url
         prepareForNavigation(to: url)
         webView.load(URLRequest(url: url))
+    }
+
+    func routeModifiedLink(_ url: URL, selecting: Bool) {
+        guard let session = openModifiedLink(url, spaceID, selecting) else { return }
+        if selecting {
+            host?.activateOpenedLink(url, in: session)
+        }
     }
 
     /// WebKit's own opaque per-view session state: the back/forward list and the

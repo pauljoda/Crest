@@ -462,8 +462,7 @@ struct MobileBrowserDetailView: View {
             )
         ) {
             browser.navigateSelectedTab(to: url)
-            pages.select(session: browser.session)
-            pages.load(url)
+            pages.selectAndLoad(url, in: browser.session)
         }
         return true
     }

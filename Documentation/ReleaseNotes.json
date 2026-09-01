@@ -361,6 +361,10 @@
     "2026-09-01-scroll-safe-sidebar-dragging": {
       "category": "fixed",
       "message": "Keep tab and folder dragging accurate while scrolling long sidebar lists"
+    },
+    "2026-09-01-mobile-launch-and-navigation-reliability": {
+      "category": "fixed",
+      "message": "Launch reliably and keep Start Page searches and newly opened tabs responsive on iPhone and iPad"
     }
   }
 }

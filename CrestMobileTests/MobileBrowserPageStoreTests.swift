@@ -6,6 +6,69 @@ import XCTest
 @MainActor
 final class MobileBrowserPageStoreTests: XCTestCase {
 
+    func testStartPageCommandPaletteIssuesOneNavigationForAFreshPage() throws {
+        let store = BrowserStore(
+            session: makeSession(index: 0),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let url = try XCTUnwrap(URL(string: "https://example.com/search"))
+
+        store.navigateSelectedTab(to: url)
+        pages.selectAndLoad(url, in: store.session)
+
+        XCTAssertEqual(
+            try XCTUnwrap(pages.activePage).appInitiatedNavigationCount,
+            1,
+            "A Start Page submission must not ask a newly resident WebView to load twice."
+        )
+    }
+
+    func testForegroundModifiedLinkCreatesSelectsAndLoadsOneCurrentSpacePage() throws {
+        let store = BrowserStore(
+            session: makeSession(index: 90),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = makeLinkRoutingPageStore(browser: store)
+        let sourceSpaceID = try XCTUnwrap(store.selectedSpace?.id)
+        pages.select(session: store.session)
+        let sourcePage = try XCTUnwrap(pages.activePage)
+        let url = try XCTUnwrap(URL(string: "https://slow.crest.test/foreground"))
+
+        sourcePage.routeModifiedLink(url, selecting: true)
+
+        XCTAssertEqual(store.selectedSpace?.id, sourceSpaceID)
+        XCTAssertEqual(store.selectedTab?.url, url)
+        XCTAssertEqual(pages.activePage?.tabID, store.selectedTab?.id)
+        XCTAssertEqual(pages.activePage?.appInitiatedNavigationCount, 1)
+    }
+
+    func testBackgroundModifiedLinkWaitsForSelectionThenLoadsExactlyOnce() throws {
+        let store = BrowserStore(
+            session: makeSession(index: 91),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = makeLinkRoutingPageStore(browser: store)
+        pages.select(session: store.session)
+        let sourcePage = try XCTUnwrap(pages.activePage)
+        let sourceTabID = try XCTUnwrap(store.selectedTab?.id)
+        let url = try XCTUnwrap(URL(string: "http://127.0.0.1:9/offline"))
+
+        sourcePage.routeModifiedLink(url, selecting: false)
+
+        let openedTab = try XCTUnwrap(
+            store.selectedSpace?.tabs.first { $0.id != sourceTabID }
+        )
+        XCTAssertEqual(store.selectedTab?.id, sourceTabID)
+        XCTAssertFalse(pages.containsResidentPage(for: openedTab.id))
+
+        store.selectTab(openedTab.id)
+        pages.select(session: store.session)
+
+        XCTAssertEqual(pages.activePage?.tabID, openedTab.id)
+        XCTAssertEqual(pages.activePage?.appInitiatedNavigationCount, 1)
+    }
+
     // MARK: - Per-Space credential access
 
     func testCredentialAccessReconcilesAcrossAnExistingSpacePage() throws {
@@ -700,6 +763,24 @@ final class MobileBrowserPageStoreTests: XCTestCase {
                     isPlayingMedia: false,
                     isCapturingMedia: false
                 )
+            }
+        )
+    }
+
+    private func makeLinkRoutingPageStore(
+        browser: BrowserStore
+    ) -> MobileBrowserPageStore {
+        MobileBrowserPageStore(
+            usesEphemeralWebsiteDataStores: true,
+            openModifiedLink: { url, spaceID, selecting in
+                guard
+                    browser.openNewTab(
+                        url: url,
+                        in: spaceID,
+                        selecting: selecting
+                    ) != nil
+                else { return nil }
+                return browser.session
             }
         )
     }

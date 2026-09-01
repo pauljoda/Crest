@@ -194,6 +194,34 @@ extension BrowserStore {
         await syncStageTask?.value
     }
 
+    func beginInitialSyncStaging(
+        session snapshot: BrowserSession,
+        deletionReason: BrowserSyncTombstoneReason = .retention
+    ) {
+        guard let syncCoordinator, !snapshot.hasDisposableSeedState else { return }
+        let generation = syncStageGeneration
+        let storeRevision = BrowserStoreSyncRevision.initial
+        syncCoordinator.advanceStoreRevision(to: storeRevision)
+
+        syncStageTask = Task { @MainActor [weak self] in
+            do {
+                let staged = try await syncCoordinator.stageInBackground(
+                    session: snapshot,
+                    deletionReason: deletionReason,
+                    storeRevision: storeRevision
+                )
+                guard self?.syncStageGeneration == generation else { return }
+                self?.localSyncErrorDescription = nil
+                if staged {
+                    self?.cloudSyncChangeHandler?()
+                }
+            } catch {
+                guard self?.syncStageGeneration == generation else { return }
+                self?.localSyncErrorDescription = String(describing: error)
+            }
+        }
+    }
+
     /// Publishes to every window, stores the session, and stages sync.
     ///
     /// `scope` is what the mutation changed. It reaches storage only: the
@@ -276,11 +304,13 @@ extension BrowserStore {
 extension BrowserStore: BrowserCloudSyncModelGateway {
     func cloudSyncRecords() async -> [BrowserSyncRecord] {
         guard !session.hasDisposableSeedState else { return [] }
+        await syncStageTask?.value
         return syncCoordinator?.journal.records ?? []
     }
 
     func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> {
         guard !session.hasDisposableSeedState else { return [] }
+        await syncStageTask?.value
         return syncCoordinator?.journal.pendingRecordIDs ?? []
     }
 
