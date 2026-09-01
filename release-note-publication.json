@@ -3,6 +3,6 @@
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
     "development": "2026-08-31-stable-extension-package-refreshes",
-    "nightly": "2026-08-31-cohesive-start-page-new-tabs"
+    "nightly": "2026-08-31-direct-media-link-playback"
   }
 }
