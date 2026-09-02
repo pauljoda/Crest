@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct CrestApp: App {
@@ -77,17 +78,19 @@ struct CrestApp: App {
             ? BrowserSitePermissionCenter()
             : BrowserSitePermissionCenter.production(reset: shouldReset)
         let hostedNotificationCenter = BrowserHostedWebNotificationSystemCenter()
-        let extensionControllerPool =
-            usesIsolatedLaunch
-            ? BrowserExtensionControllerPool(
-                storedResourcePreparer:
-                    BrowserStoreWebExtensionStoredResourcePreparer(),
-                usesEphemeralWebKitStorage: usesEphemeralProfileStorage
-            )
-            : BrowserExtensionControllerPool.production(
-                storedResourcePreparer:
-                    BrowserStoreWebExtensionStoredResourcePreparer()
-            )
+        // Forwarding an extension's own console output is how a hang becomes
+        // readable: nothing throws, and the extension's log lines are the only
+        // trace. It wraps three console functions on every extension page, so
+        // a shipping launch does not carry it — a validation launch, or one
+        // asked for it by environment, does.
+        let capturesExtensionConsole =
+            usesIsolatedLaunch || launchEnvironment.capturesExtensionConsole
+        let extensionControllerPool = Self.launchExtensionControllerPool(
+            launchEnvironment: launchEnvironment,
+            usesIsolatedLaunch: usesIsolatedLaunch,
+            usesEphemeralProfileStorage: usesEphemeralProfileStorage,
+            capturesExtensionConsole: capturesExtensionConsole
+        )
         let privateExtensionControllerPool = BrowserExtensionControllerPool()
         extensionControllerPool.setNativeMessagingHandler(
             usesIsolatedLaunch
@@ -97,6 +100,16 @@ struct CrestApp: App {
                         .currentBuild,
                     resolver: BrowserNativeMessagingHostManifestResolver(
                         searchDirectories: []
+                    ),
+                    // An isolated launch refuses external native hosts, but
+                    // Crest's own capability broker must match production:
+                    // without a notification center every `notifications`
+                    // call is refused and validation runs diverge from the
+                    // installed app.
+                    notificationService: BrowserExtensionNotificationService(
+                        center: BrowserExtensionNotificationSystemCenter(
+                            center: .current()
+                        )
                     ),
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
@@ -372,6 +385,46 @@ struct CrestApp: App {
         pagePoolRegistry = BrowserPagePoolRegistry(primary: pages)
         self.systemNowPlaying = systemNowPlaying
         self.startupBehavior = startupBehavior
+    }
+
+    /// The extension pool this launch owns.
+    ///
+    /// A named isolated profile keeps its installed extensions the way the
+    /// installed app does. It already persists its browser session, its
+    /// keychain prefix, and its WebKit storage under one isolated name, so the
+    /// staged packages and the installation registry belong there too:
+    /// otherwise WebKit hands back the extension's storage on the next launch
+    /// while Crest has forgotten that anything was ever installed, and each
+    /// validation relaunch starts by re-adding the extension by hand.
+    /// Ephemeral isolated launches keep the in-memory registry and the
+    /// temporary package root that is discarded with the session.
+    private static func launchExtensionControllerPool(
+        launchEnvironment: BrowserLaunchEnvironment,
+        usesIsolatedLaunch: Bool,
+        usesEphemeralProfileStorage: Bool,
+        capturesExtensionConsole: Bool
+    ) -> BrowserExtensionControllerPool {
+        let storedResourcePreparer =
+            BrowserStoreWebExtensionStoredResourcePreparer(
+                enablesConsoleCapture: capturesExtensionConsole
+            )
+        guard usesIsolatedLaunch else {
+            return .production(
+                storedResourcePreparer: storedResourcePreparer
+            )
+        }
+        if let isolationID = launchEnvironment.persistentIsolationID,
+            let pool = BrowserExtensionControllerPool.isolated(
+                isolationID: isolationID,
+                storedResourcePreparer: storedResourcePreparer
+            )
+        {
+            return pool
+        }
+        return BrowserExtensionControllerPool(
+            storedResourcePreparer: storedResourcePreparer,
+            usesEphemeralWebKitStorage: usesEphemeralProfileStorage
+        )
     }
 
     private static func showcaseDownloadLedger(

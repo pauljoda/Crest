@@ -50,6 +50,28 @@ final class BrowserExtensionContextObserver {
                 Task { @MainActor in runtimeSummaryDidChange() }
             }
         )
+        // A fault the extension's own JavaScript reported is not in WebKit's
+        // error list, so `errorsDidUpdateNotification` never fires for it. The
+        // diagnostics log posts its own, keyed by unique identifier because
+        // the log holds no context references.
+        let contextIdentifier = context.uniqueIdentifier
+        tokens.append(
+            NotificationCenter.default.addObserver(
+                forName: BrowserExtensionDiagnosticsLog
+                    .didRecordNotification,
+                object: nil,
+                queue: .main
+            ) { notification in
+                guard
+                    notification.userInfo?[
+                        BrowserExtensionDiagnosticsLog.contextIdentifierKey
+                    ] as? String == contextIdentifier
+                else {
+                    return
+                }
+                Task { @MainActor in runtimeSummaryDidChange() }
+            }
+        )
         tokensByContext[ObjectIdentifier(context)] = tokens
     }
 

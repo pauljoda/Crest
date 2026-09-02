@@ -275,6 +275,194 @@ final class BrowserExtensionNotificationServiceTests: XCTestCase {
         )
     }
 
+    // MARK: - Updating
+
+    /// Chrome's `update` is a partial edit, so an extension that changes only
+    /// the message keeps the title and buttons it posted with.
+    func testUpdatingOneFieldKeepsEverythingItDidNotMention() async throws {
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let service = BrowserExtensionNotificationService(center: center)
+        let client = try XCTUnwrap(Fixture.alpha)
+        await service.post(
+            BrowserExtensionNotificationRequest(
+                identifier: "sync",
+                title: "Syncing",
+                message: "Ten percent.",
+                iconData: Data([0x01]),
+                buttonTitles: ["Pause", "Cancel"]
+            ),
+            from: client
+        )
+
+        let outcome = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "sync",
+                message: "Ninety percent."
+            ),
+            from: client
+        )
+
+        XCTAssertEqual(outcome, .updated)
+        let delivery = try XCTUnwrap(center.deliveries.first)
+        XCTAssertEqual(delivery.title, "Syncing")
+        XCTAssertEqual(delivery.body, "Ninety percent.")
+        XCTAssertEqual(delivery.buttonTitles, ["Pause", "Cancel"])
+        XCTAssertEqual(delivery.iconData, Data([0x01]))
+        XCTAssertEqual(center.deliveries.count, 1)
+    }
+
+    /// A later partial update merges over the previous update, not over the
+    /// content the notification was first created with.
+    func testSuccessiveUpdatesAccumulate() async throws {
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let service = BrowserExtensionNotificationService(center: center)
+        let client = try XCTUnwrap(Fixture.alpha)
+        await service.post(
+            BrowserExtensionNotificationRequest(
+                identifier: "sync",
+                title: "Syncing",
+                message: "Ten percent.",
+                buttonTitles: ["Pause"]
+            ),
+            from: client
+        )
+
+        _ = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "sync",
+                title: "Almost done"
+            ),
+            from: client
+        )
+        let outcome = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "sync",
+                buttonTitles: []
+            ),
+            from: client
+        )
+
+        XCTAssertEqual(outcome, .updated)
+        let delivery = try XCTUnwrap(center.deliveries.first)
+        XCTAssertEqual(delivery.title, "Almost done")
+        XCTAssertEqual(delivery.body, "Ten percent.")
+        XCTAssertEqual(delivery.buttonTitles, [])
+    }
+
+    func testUpdatingAnUnknownIdentifierChangesNothing() async throws {
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let service = BrowserExtensionNotificationService(center: center)
+
+        let outcome = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "never-posted",
+                message: "Nothing to edit."
+            ),
+            from: try XCTUnwrap(Fixture.alpha)
+        )
+
+        XCTAssertEqual(outcome, .unknownNotification)
+        XCTAssertTrue(center.deliveries.isEmpty)
+    }
+
+    /// One extension's notification identifiers are invisible to another, so
+    /// `update` cannot be used to edit — or to discover — someone else's.
+    func testOneExtensionCannotUpdateAnothersNotification() async throws {
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let service = BrowserExtensionNotificationService(center: center)
+        let alpha = try XCTUnwrap(Fixture.alpha)
+        let beta = try XCTUnwrap(Fixture.beta)
+        await service.post(
+            BrowserExtensionNotificationRequest(
+                identifier: "shared",
+                title: "Alpha",
+                message: "From alpha."
+            ),
+            from: alpha
+        )
+
+        let outcome = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "shared",
+                title: "Beta"
+            ),
+            from: beta
+        )
+
+        XCTAssertEqual(outcome, .unknownNotification)
+        XCTAssertEqual(center.deliveries.count, 1)
+        XCTAssertEqual(center.deliveries.first?.title, "Alpha")
+    }
+
+    /// A notification that has left the screen is not editable: `update` says
+    /// so rather than quietly presenting it again.
+    func testUpdatingAClearedOrDismissedNotificationReportsItIsGone()
+        async throws
+    {
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let service = BrowserExtensionNotificationService(center: center)
+        let client = try XCTUnwrap(Fixture.alpha)
+        await service.post(
+            BrowserExtensionNotificationRequest(
+                identifier: "cleared",
+                title: "Cleared",
+                message: "Gone."
+            ),
+            from: client
+        )
+        await service.post(
+            BrowserExtensionNotificationRequest(
+                identifier: "dismissed",
+                title: "Dismissed",
+                message: "Gone too."
+            ),
+            from: client
+        )
+        await service.clear(notificationIdentifier: "cleared", from: client)
+        center.simulate(
+            BrowserExtensionNotificationSystemEvent(
+                systemIdentifier:
+                    BrowserExtensionNotificationIdentityCodec
+                    .systemIdentifier(
+                        for: BrowserExtensionNotificationIdentity(
+                            client: client,
+                            notificationIdentifier: "dismissed"
+                        )
+                    ),
+                kind: .dismissed(byUser: true)
+            )
+        )
+        await center.removeDelivered(
+            systemIdentifiers: [
+                BrowserExtensionNotificationIdentityCodec.systemIdentifier(
+                    for: BrowserExtensionNotificationIdentity(
+                        client: client,
+                        notificationIdentifier: "dismissed"
+                    )
+                )
+            ]
+        )
+
+        let cleared = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "cleared",
+                message: "Back?"
+            ),
+            from: client
+        )
+        let dismissed = await service.update(
+            BrowserExtensionNotificationUpdate(
+                identifier: "dismissed",
+                message: "Back?"
+            ),
+            from: client
+        )
+
+        XCTAssertEqual(cleared, .unknownNotification)
+        XCTAssertEqual(dismissed, .unknownNotification)
+        XCTAssertTrue(center.deliveries.isEmpty)
+    }
+
     // MARK: - Clearing and enumeration
 
     func testClearingReportsWhetherTheNotificationWasPresented() async throws {

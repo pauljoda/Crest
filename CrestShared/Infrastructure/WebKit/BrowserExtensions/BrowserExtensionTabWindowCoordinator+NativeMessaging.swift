@@ -1,4 +1,6 @@
+import Foundation
 import WebKit
+import os
 
 extension BrowserExtensionTabWindowCoordinator {
     var nativeMessagingCapability: BrowserExtensionNativeMessagingCapability {
@@ -64,6 +66,14 @@ extension BrowserExtensionTabWindowCoordinator {
         for extensionContext: WKWebExtensionContext,
         replyHandler: @escaping (Any?, (any Error)?) -> Void
     ) {
+        if handleCapabilityBrokerDiagnostics(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
         if handleCapabilityBrokerOffscreen(
             message,
             applicationIdentifier: applicationIdentifier,
@@ -125,6 +135,178 @@ extension BrowserExtensionTabWindowCoordinator {
             authorization: authorization,
             replyHandler: replyHandler
         )
+    }
+
+    /// Records what an extension's own JavaScript reported about itself.
+    ///
+    /// Not a capability, so it is answered before every permission-gated
+    /// handler and asks for no grant: the payload is the extension's own error
+    /// text arriving over the broker it is already authorized to use, and
+    /// gating it behind a permission would silence exactly the extensions
+    /// whose failures are hardest to see. Authorization still matters — an
+    /// unverified context cannot file reports against a verified one.
+    private func handleCapabilityBrokerDiagnostics(
+        _ message: Any,
+        applicationIdentifier: String?,
+        extensionContext: WKWebExtensionContext,
+        replyHandler: @escaping (Any?, (any Error)?) -> Void
+    ) -> Bool {
+        guard
+            applicationIdentifier
+                == BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            let payload = message as? [String: Any],
+            payload["api"] as? String == "diagnostics.report"
+        else {
+            return false
+        }
+        guard
+            let authorization = verifiedNativeMessagingAuthorizations[
+                ObjectIdentifier(extensionContext)
+            ],
+            authorization.allowsInternalCapabilityBroker
+        else {
+            replyHandler(
+                nil,
+                BrowserExtensionNativeMessagingError.unverifiedExtension
+            )
+            return true
+        }
+        let reportedMessage = Self.diagnosticsText(payload["message"])
+        guard !reportedMessage.isEmpty else {
+            replyHandler(
+                nil,
+                BrowserExtensionCapabilityBrokerError.invalidRequest
+            )
+            return true
+        }
+        let rawKind = Self.diagnosticsText(payload["kind"], limit: 64)
+        let kind = BrowserExtensionDiagnosticsReportKind(rawValue: rawKind)
+        let source = Self.diagnosticsSourceLabel(payload["source"])
+        let displayName =
+            extensionContext.webExtension.displayName
+            ?? extensionContext.uniqueIdentifier
+        let identifier = extensionContext.uniqueIdentifier
+
+        switch kind {
+        case .consoleOutput:
+            let level = Self.diagnosticsText(payload["level"], limit: 16)
+            Self.diagnosticsLog.info(
+                """
+                \(displayName, privacy: .public) \
+                [\(identifier, privacy: .public)] console.\
+                \(level.isEmpty ? "log" : level, privacy: .public) at \
+                \(source, privacy: .public): \
+                \(reportedMessage, privacy: .public)
+                """
+            )
+        case .messageTrace:
+            // One line per message the extension sends or receives, so a
+            // sender that waits forever can be told from a listener that
+            // never claimed the reply.
+            let op = Self.diagnosticsText(payload["op"], limit: 64)
+            Self.diagnosticsLog.info(
+                """
+                \(displayName, privacy: .public) \
+                [\(identifier, privacy: .public)] trace \
+                \(op, privacy: .public) at \
+                \(source, privacy: .public): \
+                \(reportedMessage, privacy: .public)
+                """
+            )
+        case .suppressed:
+            Self.diagnosticsLog.notice(
+                """
+                \(displayName, privacy: .public) \
+                [\(identifier, privacy: .public)] \
+                \(reportedMessage, privacy: .public)
+                """
+            )
+        case .uncaughtError, .unhandledRejection, .uncheckedLastError, nil:
+            // The stack is the extension's own code trace, and the reason
+            // this channel exists at all: without it a report names the fault
+            // but not the line that raised it.
+            let stack = Self.diagnosticsText(payload["stack"])
+            Self.diagnosticsLog.error(
+                """
+                \(displayName, privacy: .public) \
+                [\(identifier, privacy: .public)] \
+                \(kind?.label ?? rawKind, privacy: .public) at \
+                \(source, privacy: .public): \
+                \(reportedMessage, privacy: .public)\
+                \(stack.isEmpty ? "" : " | \(stack)", privacy: .public)
+                """
+            )
+        }
+
+        if kind?.appendsToRuntimeSummaryErrors == true {
+            BrowserExtensionDiagnosticsLog.shared.record(
+                Self.runtimeSummaryEntry(
+                    kind: kind?.label ?? rawKind,
+                    message: reportedMessage,
+                    source: source,
+                    payload: payload
+                ),
+                forContext: identifier
+            )
+        }
+        replyHandler(["recorded": true], nil)
+        return true
+    }
+
+    private static let diagnosticsLog = Logger(
+        subsystem: ProductIdentity.serviceNamespace,
+        category: "extension-diagnostics"
+    )
+
+    private static let diagnosticsTextLimit = 2000
+
+    private static func diagnosticsText(
+        _ value: Any?,
+        limit: Int = diagnosticsTextLimit
+    ) -> String {
+        guard let text = value as? String else { return "" }
+        let collapsed = text.replacingOccurrences(
+            of: "\n",
+            with: " "
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(collapsed.prefix(limit))
+    }
+
+    /// The reporting document, with everything after its path removed.
+    ///
+    /// An extension page's query string and fragment can carry a page URL, an
+    /// account name, or a one-time token the extension put there. The path is
+    /// what identifies the popup or worker that failed, and it is all this
+    /// channel logs.
+    private static func diagnosticsSourceLabel(_ value: Any?) -> String {
+        let raw = diagnosticsText(value, limit: 512)
+        guard !raw.isEmpty else { return "unknown" }
+        guard var components = URLComponents(string: raw),
+            components.scheme != nil
+        else {
+            return raw == "worker" ? "worker" : "unknown"
+        }
+        components.query = nil
+        components.fragment = nil
+        components.user = nil
+        components.password = nil
+        return components.string ?? "unknown"
+    }
+
+    private static func runtimeSummaryEntry(
+        kind: String,
+        message: String,
+        source: String,
+        payload: [String: Any]
+    ) -> String {
+        let line = (payload["lineno"] as? NSNumber)?.intValue ?? 0
+        let column = (payload["colno"] as? NSNumber)?.intValue ?? 0
+        let location =
+            line > 0
+            ? "\(source):\(line):\(column)"
+            : source
+        return "\(kind) at \(location): \(message)"
     }
 
     private func handleCapabilityBrokerOffscreen(

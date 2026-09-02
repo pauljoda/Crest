@@ -13,8 +13,22 @@ import Foundation
 final class BrowserExtensionNotificationService: BrowserExtensionNotificationHandling {
     private typealias Subscribers = [UUID: AsyncStream<BrowserExtensionNotificationEvent>.Continuation]
 
+    /// How many posted notifications are remembered before the record is
+    /// reconciled against what the host still has on screen.
+    private static let postedRequestCapacity = 128
+
     private let center: any BrowserExtensionNotificationCentering
     private var subscribers: [BrowserExtensionServiceClientID: Subscribers] = [:]
+    /// What each presented notification was last posted with.
+    ///
+    /// The host center reports which notifications are on screen but not what
+    /// they say, and `chrome.notifications.update` is a partial edit that has to
+    /// be merged over the previous content. This is the only record of that
+    /// content, so it is kept until the notification leaves the screen — cleared
+    /// by the extension, or dismissed by the person.
+    private var postedRequests:
+        [BrowserExtensionNotificationIdentity:
+            BrowserExtensionNotificationRequest] = [:]
 
     init(center: any BrowserExtensionNotificationCentering) {
         self.center = center
@@ -61,9 +75,44 @@ final class BrowserExtensionNotificationService: BrowserExtensionNotificationHan
 
         do {
             try await center.add(delivery)
+            postedRequests[identity] = request
+            if postedRequests.count > Self.postedRequestCapacity {
+                await prunePostedRequests()
+            }
             return .presented(identity)
         } catch {
             return .rejected(description: error.localizedDescription)
+        }
+    }
+
+    func update(
+        _ update: BrowserExtensionNotificationUpdate,
+        from client: BrowserExtensionServiceClientID
+    ) async -> BrowserExtensionNotificationUpdateOutcome {
+        let identity = BrowserExtensionNotificationIdentity(
+            client: client,
+            notificationIdentifier: update.identifier
+        )
+        guard let previous = postedRequests[identity] else {
+            return .unknownNotification
+        }
+        // A notification the person dismissed from Notification Center is gone
+        // as far as Chrome's `update` is concerned, so it answers `false`
+        // rather than putting the notification back on screen.
+        guard
+            await presentedNotificationIdentifiers(for: client)
+                .contains(update.identifier)
+        else {
+            postedRequests.removeValue(forKey: identity)
+            return .unknownNotification
+        }
+        switch await post(update.applied(to: previous), from: client) {
+        case .presented:
+            return .updated
+        case .authorizationDenied:
+            return .authorizationDenied
+        case .rejected(let description):
+            return .rejected(description: description)
         }
     }
 
@@ -81,15 +130,18 @@ final class BrowserExtensionNotificationService: BrowserExtensionNotificationHan
             .systemIdentifier(for: identity)
         guard await center.deliveredSystemIdentifiers().contains(systemIdentifier)
         else {
+            postedRequests.removeValue(forKey: identity)
             return false
         }
 
         await center.removeDelivered(systemIdentifiers: [systemIdentifier])
+        postedRequests.removeValue(forKey: identity)
         return true
     }
 
     func clearAll(from client: BrowserExtensionServiceClientID) async {
         let owned = await ownedSystemIdentifiers(for: client)
+        postedRequests = postedRequests.filter { $0.key.client != client }
         guard !owned.isEmpty else { return }
         await center.removeDelivered(systemIdentifiers: owned)
     }
@@ -125,6 +177,23 @@ final class BrowserExtensionNotificationService: BrowserExtensionNotificationHan
         return await center.requestAuthorization()
     }
 
+    /// Drops the content of every notification the host is no longer showing.
+    ///
+    /// A notification can leave the screen without an interaction the host
+    /// reports — expiry, or a `Clear All` Crest never hears about — so the
+    /// record is reconciled against the host once it grows past the number of
+    /// notifications an extension could plausibly have on screen.
+    private func prunePostedRequests() async {
+        let delivered = Set(await center.deliveredSystemIdentifiers())
+        postedRequests = postedRequests.filter { identity, _ in
+            delivered.contains(
+                BrowserExtensionNotificationIdentityCodec.systemIdentifier(
+                    for: identity
+                )
+            )
+        }
+    }
+
     private func ownedSystemIdentifiers(
         for client: BrowserExtensionServiceClientID
     ) async -> [String] {
@@ -139,11 +208,17 @@ final class BrowserExtensionNotificationService: BrowserExtensionNotificationHan
         guard
             let identity =
                 BrowserExtensionNotificationIdentityCodec
-                .identity(fromSystemIdentifier: systemEvent.systemIdentifier),
-            let continuations = subscribers[identity.client]
+                .identity(fromSystemIdentifier: systemEvent.systemIdentifier)
         else {
             return
         }
+        // A notification that left the screen has no content left to merge an
+        // update into, and the record is dropped whether or not the extension
+        // happens to be listening for the interaction.
+        if case .dismissed = systemEvent.kind {
+            postedRequests.removeValue(forKey: identity)
+        }
+        guard let continuations = subscribers[identity.client] else { return }
 
         let event = BrowserExtensionNotificationEvent(
             identity: identity,

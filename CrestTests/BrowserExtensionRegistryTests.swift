@@ -400,6 +400,55 @@ final class BrowserExtensionRegistryTests: XCTestCase {
         )
     }
 
+    /// A named isolated profile files its installations in its own preferences
+    /// domain, so relaunching that profile finds them again instead of asking
+    /// for every extension to be added by hand.
+    func testInjectedDefaultsSuitePersistsInstallationsForAReconstruction()
+        throws
+    {
+        let suiteName =
+            "com.pauldavis.crest.tests.registry."
+            + UUID().uuidString.lowercased()
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let spaceID = SpaceID()
+        let otherSuiteName =
+            "com.pauldavis.crest.tests.registry."
+            + UUID().uuidString.lowercased()
+        let otherDefaults = try XCTUnwrap(
+            UserDefaults(suiteName: otherSuiteName)
+        )
+        defer { otherDefaults.removePersistentDomain(forName: otherSuiteName) }
+
+        let registry = BrowserExtensionRegistry.isolated(defaults: defaults)
+        registry.upsert(
+            installation(
+                id: "local.isolated",
+                spaceID: spaceID,
+                packageName: "isolated-package"
+            )
+        )
+
+        let relaunched = BrowserExtensionRegistry.isolated(defaults: defaults)
+        XCTAssertEqual(
+            relaunched.installations(in: spaceID).map(\.id),
+            ["local.isolated"]
+        )
+        XCTAssertEqual(
+            relaunched.installation(
+                extensionID: "local.isolated",
+                in: spaceID
+            )?.packageName,
+            "isolated-package"
+        )
+        // A different profile is a different domain: one named launch must
+        // never inherit another's extensions, or the installed app's.
+        XCTAssertTrue(
+            BrowserExtensionRegistry.isolated(defaults: otherDefaults)
+                .installations.isEmpty
+        )
+    }
+
     private func installation(
         id: String,
         spaceID: SpaceID,

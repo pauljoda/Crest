@@ -77,6 +77,9 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
         return state.url
     }
 
+    /// Chrome's `pinned` is the pinned strip and nothing else. Crest also has
+    /// saved tabs, which are neither pinned nor current, and reporting them as
+    /// pinned made every saved tab look like a member of a strip it is not in.
     func isPinned(for context: WKWebExtensionContext) -> Bool {
         guard
             let placement = coordinator?.state(
@@ -87,9 +90,14 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
         else {
             return false
         }
-        return placement != .current
+        return placement == .pinned
     }
 
+    /// `tabs.update({pinned: true})` on a saved tab pins it, because Crest's
+    /// own Pin Tab action is offered for saved tabs too. `pinned: false` only
+    /// acts on a tab that is actually in the pinned strip: a saved tab already
+    /// reports `pinned: false`, and pulling it out of the saved list would be
+    /// a move no caller asked for.
     func setPinned(
         _ pinned: Bool,
         for context: WKWebExtensionContext,
@@ -186,7 +194,8 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
     func takeSnapshot(
         using configuration: WKSnapshotConfiguration,
         for context: WKWebExtensionContext,
-        completionHandler: @escaping (BrowserExtensionSnapshotImage?, Error?) ->
+        completionHandler:
+            @escaping (BrowserExtensionSnapshotImage?, Error?) ->
             Void
     ) {
         guard let webView = webView(for: context) else {

@@ -106,6 +106,41 @@ final class BrowserExtensionControllerPool {
         )
     }
 
+    /// A pool for a named isolated profile
+    /// (`CREST_ISOLATED_PERSISTENCE_ID`).
+    ///
+    /// Such a profile persists its browser session and its WebKit storage, so
+    /// its extensions have to persist too: WebKit hands the same website data
+    /// store back on the next launch, and a pool that had forgotten the
+    /// installation would leave that storage stranded and make every
+    /// validation relaunch begin by re-adding the extension. Both records —
+    /// the staged package and the registry entry — live under the same
+    /// isolated name, never in the installed app's own state.
+    ///
+    /// `nil` when that name cannot be opened as a preferences domain, which
+    /// leaves the caller to fall back to an ephemeral pool.
+    static func isolated(
+        isolationID: String,
+        storedResourcePreparer:
+            any BrowserExtensionStoredResourcePreparing =
+            BrowserExtensionStoredResourceIdentityPreparer()
+    ) -> BrowserExtensionControllerPool? {
+        let suiteName = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+            isolationID: isolationID
+        )
+        guard let defaults = UserDefaults(suiteName: suiteName),
+            let packageStore = BrowserExtensionPackageStore.isolated(
+                isolationID: isolationID
+            )
+        else { return nil }
+        return BrowserExtensionControllerPool(
+            packageStore: packageStore,
+            registry: .isolated(defaults: defaults),
+            storedResourcePreparer: storedResourcePreparer,
+            usesEphemeralWebKitStorage: false
+        )
+    }
+
     func setCommandSettingsHandler(
         _ handler:
             @escaping (

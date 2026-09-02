@@ -10,6 +10,15 @@ enum BrowserExtensionCrestRoute: String, Sendable {
     case native
     case nativePatched
     case emulated
+    /// Crest supplies the member so feature detection succeeds, but nothing
+    /// can deliver it.
+    ///
+    /// This is not a patch and not an emulation: the object exists, accepts
+    /// listeners, and reports them back honestly, while warning once that no
+    /// event will ever arrive. Labelling these `nativePatched` claimed a
+    /// behaviour Crest does not have. A native implementation still wins —
+    /// the placeholder fills a gap rather than owning the contract.
+    case presenceOnly
     case unavailable
 }
 
@@ -52,6 +61,26 @@ struct BrowserExtensionAPIMemberContract: Sendable {
     let webKit: BrowserExtensionReferenceSupport
     let crest: BrowserExtensionCrestRoute
     let hidesWebKitMember: Bool
+    /// Removed from the namespace when the background is an MV3 service
+    /// worker.
+    ///
+    /// Chrome exposes these DOM-window APIs to foreground extension pages
+    /// only. WebKit also publishes them inside an MV3 worker, where their
+    /// cross-context `Window` wrappers can outlive a popup and crash during
+    /// reload. The axis is the background *environment*, not the process:
+    /// a background *document* legitimately has them, so this cannot be
+    /// expressed by dropping `.background` from `processes`.
+    let hiddenInBackgroundWorker: Bool
+
+    /// The namespace this member belongs to.
+    var namespace: String {
+        String(path.prefix { $0 != "." })
+    }
+
+    /// The member name without its namespace.
+    var memberName: String {
+        String(path.dropFirst(namespace.count + 1))
+    }
 }
 
 /// The browser contract Crest presents to portable WebExtensions.
@@ -190,11 +219,19 @@ enum BrowserExtensionAPICompatibilityMatrix {
             runtime: true,
             broker: ["notifications"]
         ),
+        // WebKit trunk enabled a native `offscreen` API on 2026-08-28 behind
+        // a pref that defaults on, so macOS 27 ships an implementation Crest
+        // has never run an extension against. Recording it as `.partial`
+        // rather than `.unavailable` is what makes `unsupportedWebKitAPIs`
+        // hide `browser.offscreen` from the native surface, which in turn
+        // keeps Crest's emulation — the one with a document lifecycle the
+        // capability broker actually manages — the implementation packages
+        // get, instead of it being silently displaced by an OS update.
         contract(
             "offscreen",
             permissions: ["offscreen"],
             firefox: .unavailable,
-            webKit: .unavailable,
+            webKit: .partial,
             crest: .emulated,
             runtime: true,
             broker: ["offscreen"]
@@ -237,13 +274,24 @@ enum BrowserExtensionAPICompatibilityMatrix {
             webKit: .unavailable,
             crest: .unavailable
         ),
+        // Absent, not stubbed. A portable package tests the namespace and
+        // then uses the schema in the same expression — Bitwarden's worker
+        // bootstrap is one `await` over
+        // `chrome.sidePanel !== undefined && chrome.sidePanel.setOptions(…)`.
+        // A `sidePanel` object carrying only the one member Crest had an
+        // opinion about turned that detection into a `TypeError` thrown
+        // inside the awaited bootstrap, and every later init step — including
+        // the handler the popup asks for its data — never ran. Firefox ships
+        // no `sidePanel` at all and the same packages handle its absence, so
+        // absence is the contract that works. `webKit: .partial` stays: it is
+        // what arms `unsupportedWebKitAPIs`, so WebKit's own partial
+        // implementation cannot leak the namespace back either.
         contract(
             "sidePanel",
             permissions: ["sidePanel"],
             firefox: .unavailable,
             webKit: .partial,
-            crest: .emulated,
-            runtime: true
+            crest: .unavailable
         ),
         contract(
             "sidebarAction",
@@ -294,13 +342,100 @@ enum BrowserExtensionAPICompatibilityMatrix {
         contract("windows", crest: .nativePatched, runtime: true),
     ]
 
+    /// The complete schema surface every `.emulated` namespace publishes.
+    ///
+    /// Chrome extensions feature-detect on the *namespace* and then use the
+    /// schema in the same expression. A namespace object carrying only the
+    /// members Crest implements is therefore worse than no namespace at all:
+    /// the detection succeeds and the very next member access throws inside
+    /// whatever awaited it, taking the rest of that bootstrap with it. So an
+    /// emulated namespace exposes every member its reference schema defines.
+    ///
+    /// A member listed here that also has a row in `routedMembers` keeps that
+    /// row and its real implementation. Every other one becomes a
+    /// `presenceOnly` filler that fails honestly — a rejected promise, or
+    /// `runtime.lastError` for the callback form — so this list is the single
+    /// place a schema member is added to an emulated namespace.
+    static let emulatedSurface: [String: [String]] = [
+        "downloads": [
+            "download",
+            "search",
+            "pause",
+            "resume",
+            "cancel",
+            "getFileIcon",
+            "open",
+            "show",
+            "showDefaultFolder",
+            "erase",
+            "removeFile",
+            "acceptDanger",
+            "setShelfEnabled",
+            "setUiOptions",
+            "onCreated",
+            "onErased",
+            "onChanged",
+            "onDeterminingFilename",
+        ],
+        "idle": [
+            "queryState",
+            "setDetectionInterval",
+            "onStateChanged",
+            "getAutoLockDelay",
+        ],
+        "management": [
+            "getSelf",
+            "getAll",
+            "get",
+            "getPermissionWarningsById",
+            "getPermissionWarningsByManifest",
+            "setEnabled",
+            "uninstall",
+            "uninstallSelf",
+            "launchApp",
+            "createAppShortcut",
+            "setLaunchType",
+            "generateAppForLink",
+            "onInstalled",
+            "onUninstalled",
+            "onEnabled",
+            "onDisabled",
+        ],
+        "notifications": [
+            "create",
+            "update",
+            "clear",
+            "getAll",
+            "getPermissionLevel",
+            "onClicked",
+            "onButtonClicked",
+            "onClosed",
+            "onPermissionLevelChanged",
+            "onShowSettings",
+        ],
+        "offscreen": [
+            "createDocument",
+            "closeDocument",
+            "hasDocument",
+            "Reason",
+        ],
+        "privacy": [
+            "network",
+            "services",
+            "websites",
+        ],
+    ]
+
     /// Member-level routes for every API Crest currently changes or owns.
     ///
     /// A namespace can stay native while an individual dynamic member is
     /// hidden and replaced. This is the smallest routing unit WebKit exposes
     /// through `unsupportedAPIs`, and prevents no-op placeholders from
     /// accidentally advertising unsupported capabilities.
-    static let members: [BrowserExtensionAPIMemberContract] = [
+    ///
+    /// Every member-level consumer reads `members`, which is this table plus
+    /// the `presenceOnly` fillers `emulatedSurface` implies.
+    private static let routedMembers: [BrowserExtensionAPIMemberContract] = [
         member("action.getUserSettings", crest: .nativePatched),
         member("alarms.onAlarm", crest: .nativePatched),
         member("contextMenus.create", crest: .nativePatched),
@@ -314,8 +449,16 @@ enum BrowserExtensionAPICompatibilityMatrix {
             webKit: .unavailable,
             crest: .emulated
         ),
-        member("extension.getBackgroundPage", crest: .nativePatched),
-        member("extension.getViews", crest: .nativePatched),
+        member(
+            "extension.getBackgroundPage",
+            crest: .nativePatched,
+            hiddenInBackgroundWorker: true
+        ),
+        member(
+            "extension.getViews",
+            crest: .nativePatched,
+            hiddenInBackgroundWorker: true
+        ),
         member(
             "i18n.getMessage",
             crest: .nativePatched,
@@ -335,38 +478,23 @@ enum BrowserExtensionAPICompatibilityMatrix {
         ),
         member(
             "offscreen.Reason",
-            webKit: .unavailable,
+            webKit: .partial,
             crest: .emulated
         ),
         member(
             "offscreen.closeDocument",
-            webKit: .unavailable,
+            webKit: .partial,
             crest: .emulated
         ),
         member(
             "offscreen.createDocument",
-            webKit: .unavailable,
+            webKit: .partial,
             crest: .emulated
         ),
         member(
             "offscreen.hasDocument",
-            webKit: .unavailable,
+            webKit: .partial,
             crest: .emulated
-        ),
-        member(
-            "sidePanel.setPanelBehavior",
-            webKit: .unavailable,
-            crest: .emulated
-        ),
-        member(
-            "management.getAll",
-            webKit: .unavailable,
-            crest: .unavailable
-        ),
-        member(
-            "management.setEnabled",
-            webKit: .unavailable,
-            crest: .unavailable
         ),
         member(
             "notifications.create",
@@ -424,6 +552,16 @@ enum BrowserExtensionAPICompatibilityMatrix {
             crest: .nativePatched,
             processes: [.background, .extensionPage, .contentScript]
         ),
+        // Every portable package reads its own identity from here, and the
+        // compatibility runtime carries a stable value for it. Without a row
+        // the routing filter drops that fallback before it is installed, so a
+        // runtime that publishes no `id` leaves the package unable to name
+        // itself. `nativePatched`: a runtime that does publish one keeps it.
+        member(
+            "runtime.id",
+            crest: .nativePatched,
+            processes: [.background, .extensionPage, .contentScript]
+        ),
         member(
             "runtime.onConnect",
             crest: .nativePatched,
@@ -433,6 +571,15 @@ enum BrowserExtensionAPICompatibilityMatrix {
             "runtime.onMessage",
             crest: .nativePatched,
             processes: [.background, .extensionPage, .contentScript]
+        ),
+        // The callback-form sibling of `extension.getBackgroundPage`, and it
+        // returns the same live `Window`. Chrome does not publish it to an MV3
+        // worker either.
+        member(
+            "runtime.getBackgroundPage",
+            crest: .nativePatched,
+            processes: [.background, .extensionPage],
+            hiddenInBackgroundWorker: true
         ),
         member("runtime.onUpdateAvailable", crest: .nativePatched),
         member("runtime.requestUpdateCheck", crest: .nativePatched),
@@ -464,36 +611,57 @@ enum BrowserExtensionAPICompatibilityMatrix {
             "webNavigation.getAllFrames",
             crest: .nativePatched
         ),
+        // Nothing is patched here. Crest supplies an event object so a
+        // portable package's feature detection succeeds, but it has no
+        // navigation source that can fire it. `presenceOnly` says exactly
+        // that; `nativePatched` claimed delivery Crest cannot perform.
         member(
             "webNavigation.onCreatedNavigationTarget",
             webKit: .unavailable,
-            crest: .nativePatched
+            crest: .presenceOnly
         ),
         member(
             "webNavigation.onHistoryStateUpdated",
             webKit: .unavailable,
-            crest: .nativePatched
+            crest: .presenceOnly
         ),
         member(
             "webNavigation.onReferenceFragmentUpdated",
             webKit: .unavailable,
-            crest: .nativePatched
+            crest: .presenceOnly
         ),
         member(
             "webNavigation.onTabReplaced",
             webKit: .unavailable,
-            crest: .nativePatched
+            crest: .presenceOnly
         ),
         member(
             "webRequest.handlerBehaviorChanged",
             webKit: .partial,
             crest: .nativePatched
         ),
+        // The webRequest event surface. The runtime normalizes each of these
+        // through one facade, and derives the list it walks from these rows so
+        // a member the matrix hides — `onAuthRequired` — cannot be resurrected
+        // by a literal list living beside the table that removed it.
+        member("webRequest.onBeforeRequest", crest: .nativePatched),
+        member("webRequest.onBeforeSendHeaders", crest: .nativePatched),
+        member("webRequest.onSendHeaders", crest: .nativePatched),
+        member("webRequest.onHeadersReceived", crest: .nativePatched),
         member(
             "webRequest.onAuthRequired",
             webKit: .partial,
             crest: .unavailable,
             hide: true
+        ),
+        member("webRequest.onBeforeRedirect", crest: .nativePatched),
+        member("webRequest.onResponseStarted", crest: .nativePatched),
+        member("webRequest.onCompleted", crest: .nativePatched),
+        member("webRequest.onErrorOccurred", crest: .nativePatched),
+        member(
+            "webRequest.onActionIgnored",
+            webKit: .unavailable,
+            crest: .nativePatched
         ),
         member(
             "windows.create",
@@ -501,6 +669,46 @@ enum BrowserExtensionAPICompatibilityMatrix {
         ),
         member("windows.update", crest: .nativePatched),
     ]
+
+    /// The declared-but-unimplemented half of every emulated namespace.
+    ///
+    /// These rows exist so the surface is complete and the documentation says
+    /// what each filler actually does. The WebKit column is inherited from the
+    /// namespace contract rather than invented per member: the namespace is
+    /// hidden from the native surface as a whole, so no member-level WebKit
+    /// audit took place and claiming one would be worse than repeating what
+    /// was reviewed.
+    private static let emulatedSurfaceFillerMembers =
+        emulatedSurfaceFillerMemberRows()
+
+    private static func emulatedSurfaceFillerMemberRows()
+        -> [BrowserExtensionAPIMemberContract]
+    {
+        let routedPaths = Set(routedMembers.map(\.path))
+        let contractsByNamespace = Dictionary(
+            uniqueKeysWithValues: contracts.map { ($0.namespace, $0) }
+        )
+        return emulatedSurface.keys.sorted().flatMap { namespace in
+            guard
+                let contract = contractsByNamespace[namespace],
+                contract.crest == .emulated
+            else { return [BrowserExtensionAPIMemberContract]() }
+            return (emulatedSurface[namespace] ?? []).compactMap { name in
+                let path = "\(namespace).\(name)"
+                guard !routedPaths.contains(path) else { return nil }
+                return member(
+                    path,
+                    webKit: contract.webKit,
+                    crest: .presenceOnly,
+                    processes: contract.processes
+                )
+            }
+        }
+    }
+
+    /// Every member-level route, stated or implied.
+    static let members: [BrowserExtensionAPIMemberContract] =
+        routedMembers + emulatedSurfaceFillerMembers
 
     static let compatibilityPermissionNames = Set(
         contracts.filter(\.usesCompatibilityRuntime)
@@ -517,11 +725,79 @@ enum BrowserExtensionAPICompatibilityMatrix {
         }
     )
 
+    /// Namespaces Chrome exposes without regard to the manifest, even though
+    /// the matrix records a permission name for them.
+    ///
+    /// `chrome.tabs` is always defined; the `tabs` permission widens the
+    /// fields a tab object carries rather than gating the namespace. There is
+    /// no `permissions` manifest permission at all — the entry in `contracts`
+    /// names the namespace, not a declaration an extension can make.
+    private static let unconditionallyExposedNamespaces: Set<String> = [
+        "permissions",
+        "tabs",
+    ]
+
+    /// The manifest permissions that gate each namespace's *exposure*.
+    ///
+    /// Chrome defines `chrome.<namespace>` only when the package declared one
+    /// of these permissions, and feature detection is how portable extensions
+    /// decide whether a capability exists. Crest's capability broker grants
+    /// only the permissions a package requested, so publishing an emulated
+    /// namespace nobody asked for produces an API where every call fails —
+    /// and, for the namespaces backed by a watch port, a reconnect the broker
+    /// refuses forever.
+    ///
+    /// An empty list means the namespace is exposed unconditionally. Optional
+    /// permissions count as declared: Chrome exposes the namespace before the
+    /// grant and fails the individual calls until the user allows them.
+    static let namespacePermissions: [String: [String]] = Dictionary(
+        uniqueKeysWithValues: contracts.map { contract in
+            (
+                contract.namespace,
+                unconditionallyExposedNamespaces.contains(contract.namespace)
+                    ? []
+                    : contract.permissionNames.sorted()
+            )
+        }
+    )
+
     static let memberRoutes = Dictionary(
         uniqueKeysWithValues: members.map {
             ($0.path, $0.crest.rawValue)
         }
     )
+
+    /// Every event member each namespace publishes, minus the ones Crest
+    /// removes from the surface.
+    ///
+    /// The compatibility runtime walks this list when it normalizes a
+    /// namespace's events. Deriving it here is what keeps a hidden member
+    /// hidden: `webRequest.onAuthRequired` is marked `hide` in `members`, and
+    /// a literal list in the runtime used to re-add the very event the matrix
+    /// had just removed from WebKit's surface. Declaration order is preserved
+    /// so the generated script stays stable across builds.
+    static let namespaceEventMembers: [String: [String]] = {
+        var result: [String: [String]] = [:]
+        for member in members
+        where
+            member.memberName.hasPrefix("on")
+            && !member.hidesWebKitMember
+            && member.crest != .unavailable
+        {
+            result[member.namespace, default: []].append(member.memberName)
+        }
+        return result
+    }()
+
+    /// Members the runtime removes from their namespace when the prepared
+    /// background is an MV3 service worker, keyed by namespace.
+    static let backgroundWorkerHiddenMembers: [String: [String]] = {
+        var result: [String: [String]] = [:]
+        for member in members where member.hiddenInBackgroundWorker {
+            result[member.namespace, default: []].append(member.memberName)
+        }
+        return result
+    }()
 
     static let namespaceProcesses = Dictionary(
         uniqueKeysWithValues: contracts.map {
@@ -616,14 +892,16 @@ enum BrowserExtensionAPICompatibilityMatrix {
             .background,
             .extensionPage,
         ],
-        hide: Bool = false
+        hide: Bool = false,
+        hiddenInBackgroundWorker: Bool = false
     ) -> BrowserExtensionAPIMemberContract {
         BrowserExtensionAPIMemberContract(
             path: path,
             processes: processes,
             webKit: webKit,
             crest: crest,
-            hidesWebKitMember: hide
+            hidesWebKitMember: hide,
+            hiddenInBackgroundWorker: hiddenInBackgroundWorker
         )
     }
 }

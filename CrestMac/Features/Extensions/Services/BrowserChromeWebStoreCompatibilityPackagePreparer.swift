@@ -85,13 +85,25 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
     private let fileManager: FileManager
     private let expandArchive: (URL, URL) throws -> Void
+    /// Whether the generated runtime forwards the extension's own
+    /// `console.warn`/`error`/`info` output to Crest's diagnostics channel.
+    ///
+    /// Off by default. Console forwarding is how a *hang* becomes readable —
+    /// nothing throws, and the extension's own log lines are the only trace —
+    /// but it wraps three functions every extension page calls, so a shipping
+    /// build does not pay for it. Flipping this changes the runtime's contents
+    /// and therefore its content-addressed filename, which is exactly the
+    /// invalidation the prepared-package digest already expects.
+    private let enablesConsoleCapture: Bool
 
     init(
         fileManager: FileManager = .default,
-        expandArchive: @escaping (URL, URL) throws -> Void = Self.expand
+        expandArchive: @escaping (URL, URL) throws -> Void = Self.expand,
+        enablesConsoleCapture: Bool = false
     ) {
         self.fileManager = fileManager
         self.expandArchive = expandArchive
+        self.enablesConsoleCapture = enablesConsoleCapture
     }
 
     func prepareStoredResource(
@@ -371,7 +383,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         let compatibilityScript = try Self.webExtensionCompatibilityScript(
             manifest: manifest,
             runtimeIdentity: runtimeIdentity,
-            failsWorkerWebSockets: failsWorkerWebSockets
+            failsWorkerWebSockets: failsWorkerWebSockets,
+            backgroundEnvironment: Self.preparedBackgroundEnvironment(
+                manifest
+            ),
+            enablesConsoleCapture: enablesConsoleCapture
         )
         Self.normalizeManifestForWebKit(&manifest)
         let compatibilityScriptName = Self.generatedJavaScriptName(
@@ -420,6 +436,26 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     ) -> Bool {
         let background = manifest["background"] as? [String: Any]
         return background?["service_worker"] is String
+    }
+
+    /// The environment the prepared background actually runs in.
+    ///
+    /// The authored manifest cannot answer this. A dual-environment package
+    /// declares both `service_worker` and `scripts`; preparation keeps the
+    /// document-ready scripts and drops the worker, so the compatibility
+    /// runtime must not assume a worker owns durable events such as alarms.
+    /// This mirrors the decision `installBackgroundCompatibility` makes.
+    static func preparedBackgroundEnvironment(
+        _ manifest: [String: Any]
+    ) -> String {
+        guard
+            let background = manifest["background"] as? [String: Any],
+            background["service_worker"] is String
+        else { return "document" }
+        if let scripts = background["scripts"] as? [String], !scripts.isEmpty {
+            return "document"
+        }
+        return "worker"
     }
 
     private func installBackgroundCompatibility(
@@ -722,43 +758,33 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             for: relativePath,
             in: resourceURL
         )
-        let storedSource = try String(contentsOf: pageURL, encoding: .utf8)
-        let emptyLocalizationAttributePattern =
-            #"(?i)(?<=\s)(?:aria-label|placeholder|data-i18n(?:-title|-tip)?)(?:\s*=\s*(?:"\s*"|'\s*'))?(?=\s|/?>)"#
-        var source = storedSource.replacingOccurrences(
-            of: emptyLocalizationAttributePattern,
-            with: "",
-            options: .regularExpression
-        )
+        // Injection is the whole contract here. An extension's own markup is
+        // vendor source: rewriting it — stripping attributes, normalizing
+        // whitespace — patches a package Crest does not own, and any such
+        // edit outlives the reason it was added.
+        var source = try String(contentsOf: pageURL, encoding: .utf8)
         let compatibilityTag =
             #"<script src="/\#(compatibilityScriptName)"></script>"#
-        var tags: [String] = []
-        if !source.contains(compatibilityTag) {
-            tags.append(compatibilityTag)
-        }
-        guard source != storedSource || !tags.isEmpty else { return false }
+        guard !source.contains(compatibilityTag) else { return false }
 
-        if !tags.isEmpty {
-            let injection = tags.joined(separator: "\n")
-            if let headStart = source.range(
-                of: "<head",
-                options: [.caseInsensitive]
-            ),
-                let headEnd = source.range(
-                    of: ">",
-                    range: headStart.lowerBound..<source.endIndex
-                )
-            {
-                source.insert(
-                    contentsOf: "\n\(injection)",
-                    at: headEnd.upperBound
-                )
-            } else {
-                source.insert(
-                    contentsOf: injection + "\n",
-                    at: source.startIndex
-                )
-            }
+        if let headStart = source.range(
+            of: "<head",
+            options: [.caseInsensitive]
+        ),
+            let headEnd = source.range(
+                of: ">",
+                range: headStart.lowerBound..<source.endIndex
+            )
+        {
+            source.insert(
+                contentsOf: "\n\(compatibilityTag)",
+                at: headEnd.upperBound
+            )
+        } else {
+            source.insert(
+                contentsOf: compatibilityTag + "\n",
+                at: source.startIndex
+            )
         }
         try source.write(to: pageURL, atomically: true, encoding: .utf8)
         return true
@@ -855,7 +881,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     private static func webExtensionCompatibilityScript(
         manifest: [String: Any],
         runtimeIdentity: BrowserExtensionRuntimeIdentity,
-        failsWorkerWebSockets: Bool
+        failsWorkerWebSockets: Bool,
+        backgroundEnvironment: String,
+        enablesConsoleCapture: Bool
     ) throws -> String {
         let manifestData = try JSONSerialization.data(
             withJSONObject: manifest,
@@ -913,6 +941,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             throw BrowserWebExtensionCompatibilityPackageError
                 .invalidBackgroundManifest
         }
+        let namespacePermissionsData = try JSONSerialization.data(
+            withJSONObject:
+                BrowserExtensionAPICompatibilityMatrix.namespacePermissions,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        guard
+            let namespacePermissionsLiteral = String(
+                data: namespacePermissionsData,
+                encoding: .utf8
+            )
+        else {
+            throw BrowserWebExtensionCompatibilityPackageError
+                .invalidBackgroundManifest
+        }
         let memberRoutesData = try JSONSerialization.data(
             withJSONObject:
                 BrowserExtensionAPICompatibilityMatrix.memberRoutes,
@@ -921,6 +963,35 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         guard
             let memberRoutesLiteral = String(
                 data: memberRoutesData,
+                encoding: .utf8
+            )
+        else {
+            throw BrowserWebExtensionCompatibilityPackageError
+                .invalidBackgroundManifest
+        }
+        let namespaceEventMembersData = try JSONSerialization.data(
+            withJSONObject:
+                BrowserExtensionAPICompatibilityMatrix.namespaceEventMembers,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        guard
+            let namespaceEventMembersLiteral = String(
+                data: namespaceEventMembersData,
+                encoding: .utf8
+            )
+        else {
+            throw BrowserWebExtensionCompatibilityPackageError
+                .invalidBackgroundManifest
+        }
+        let backgroundWorkerHiddenMembersData = try JSONSerialization.data(
+            withJSONObject:
+                BrowserExtensionAPICompatibilityMatrix
+                .backgroundWorkerHiddenMembers,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        guard
+            let backgroundWorkerHiddenMembersLiteral = String(
+                data: backgroundWorkerHiddenMembersData,
                 encoding: .utf8
             )
         else {
@@ -949,6 +1020,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         guard
             let memberProcessesLiteral = String(
                 data: memberProcessesData,
+                encoding: .utf8
+            )
+        else {
+            throw BrowserWebExtensionCompatibilityPackageError
+                .invalidBackgroundManifest
+        }
+        let emulatedSurfaceData = try JSONSerialization.data(
+            withJSONObject:
+                BrowserExtensionAPICompatibilityMatrix.emulatedSurface,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        guard
+            let emulatedSurfaceLiteral = String(
+                data: emulatedSurfaceData,
                 encoding: .utf8
             )
         else {
@@ -1004,6 +1089,115 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     return undefined;
                 };
+                // Chrome reports a failed callback-form call by publishing
+                // `runtime.lastError` for exactly the duration of that
+                // callback, and logging "Unchecked runtime.lastError" when the
+                // callback never reads it. Handing a callback `undefined` and
+                // discarding the reason — the previous behavior — left an
+                // extension unable to tell a failure from an empty result, and
+                // left the failure invisible in the console.
+                let missingLastErrorTargetLogged = false;
+                // Assigned by the diagnostics channel below, which installs
+                // only in privileged extension contexts. A context without one
+                // — every content script — reports nothing.
+                let reportRuntimeDiagnostics = () => {};
+                // Assigned only when console capture is on. Message tracing
+                // is the same instrument as console capture — it makes an
+                // invisible failure readable — so it rides the same gate, and
+                // with that gate off this stays a no-op that nothing calls.
+                let reportRuntimeTrace = () => {};
+                const lastErrorTargets = () => {
+                    const targets = [];
+                    const seen = new Set();
+                    for (const root of [
+                        globalThis.chrome,
+                        globalThis.browser,
+                        primaryRoot,
+                        nativeChrome,
+                        nativeBrowser
+                    ]) {
+                        let runtime;
+                        try { runtime = root?.runtime; } catch {}
+                        if (!runtime || seen.has(runtime)) continue;
+                        seen.add(runtime);
+                        targets.push(runtime);
+                    }
+                    return targets;
+                };
+                const invokeCallbackWithLastError = (
+                    callback,
+                    message,
+                    value
+                ) => {
+                    if (typeof callback !== "function") return;
+                    const lastError = Object.freeze({
+                        message: String(message)
+                    });
+                    let wasRead = false;
+                    const published = [];
+                    for (const target of lastErrorTargets()) {
+                        let previous;
+                        try {
+                            previous = Reflect.getOwnPropertyDescriptor(
+                                target,
+                                "lastError"
+                            );
+                            Object.defineProperty(target, "lastError", {
+                                get() {
+                                    wasRead = true;
+                                    return lastError;
+                                },
+                                configurable: true,
+                                enumerable: previous?.enumerable ?? true
+                            });
+                        } catch {
+                            continue;
+                        }
+                        published.push([target, previous]);
+                    }
+                    if (
+                        published.length === 0
+                        && !missingLastErrorTargetLogged
+                    ) {
+                        missingLastErrorTargetLogged = true;
+                        try {
+                            console.warn(
+                                "Crest could not publish runtime.lastError on this extension runtime; failed callbacks are reported on the console instead."
+                            );
+                        } catch {}
+                    }
+                    try {
+                        callback(value);
+                    } finally {
+                        for (const [target, previous] of published) {
+                            try {
+                                if (previous) {
+                                    Object.defineProperty(
+                                        target,
+                                        "lastError",
+                                        previous
+                                    );
+                                } else {
+                                    delete target.lastError;
+                                }
+                            } catch {}
+                        }
+                        if (!wasRead) {
+                            const uncheckedMessage =
+                                `Unchecked runtime.lastError: ${lastError.message}`;
+                            // Reported before the console call, so the console
+                            // capture wrapper's copy of the same text dedupes
+                            // against this one rather than doubling it.
+                            reportRuntimeDiagnostics(
+                                "lastError",
+                                uncheckedMessage
+                            );
+                            try {
+                                console.error(uncheckedMessage);
+                            } catch {}
+                        }
+                    }
+                };
                 const declaredManifest = Object.freeze(\(manifestLiteral));
                 const backgroundPagePath =
                     declaredManifest.background?.page;
@@ -1024,18 +1218,47 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     declaredManifest.manifest_version === 3
                     && typeof declaredManifest.background?.service_worker
                         === "string";
+                // The environment the PREPARED background runs in. A
+                // dual-environment manifest still declares a service worker,
+                // but preparation collapses it to a background document, so
+                // the authored manifest cannot answer who owns durable events.
+                const backgroundEnvironment = \(javascriptStringLiteral(backgroundEnvironment));
                 const compatibilityPermissionNames = new Set(
                     \(compatibilityPermissionsLiteral)
                 );
                 const namespaceRoutes = Object.freeze(
                     \(namespaceRoutesLiteral)
                 );
+                const namespacePermissions = Object.freeze(
+                    \(namespacePermissionsLiteral)
+                );
                 const memberRoutes = Object.freeze(\(memberRoutesLiteral));
+                const namespaceEventMembers = Object.freeze(
+                    \(namespaceEventMembersLiteral)
+                );
+                const backgroundWorkerHiddenMembers = Object.freeze(
+                    \(backgroundWorkerHiddenMembersLiteral)
+                );
+                const eventMembersOf = (namespace) =>
+                    namespaceEventMembers[namespace] ?? [];
+                const backgroundWorkerHiddenMembersOf = (namespace) =>
+                    new Set(backgroundWorkerHiddenMembers[namespace] ?? []);
                 const namespaceProcesses = Object.freeze(
                     \(namespaceProcessesLiteral)
                 );
                 const memberProcesses = Object.freeze(
                     \(memberProcessesLiteral)
+                );
+                // Every member the reference schema defines for a namespace
+                // Crest emulates. A portable package tests the namespace and
+                // then uses the schema in the same expression, so a namespace
+                // object holding only the members Crest implements turns a
+                // successful feature detection into a `TypeError` thrown
+                // inside whatever awaited it. The runtime therefore publishes
+                // this whole list and fills the unimplemented half with
+                // honest placeholders — see `presenceOnlyMember`.
+                const emulatedSurface = Object.freeze(
+                    \(emulatedSurfaceLiteral)
                 );
                 const executionProcess = isBackgroundContext
                     ? "background"
@@ -1045,18 +1268,75 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const supportsProcess = (processes) =>
                     Array.isArray(processes)
                     && processes.includes(executionProcess);
+                const declaredPermissionNames = new Set(
+                    [
+                        ...(Array.isArray(declaredManifest.permissions)
+                            ? declaredManifest.permissions
+                            : []),
+                        ...(Array.isArray(
+                            declaredManifest.optional_permissions
+                        )
+                            ? declaredManifest.optional_permissions
+                            : [])
+                    ].filter(
+                        (permission) => typeof permission === "string"
+                    )
+                );
+                // Chrome defines a permission-gated namespace only when the
+                // package declared one of its permissions, and portable
+                // extensions feature-detect exactly that. Publishing an
+                // emulated namespace nobody asked for hands an extension an
+                // API whose every call the capability broker denies. Optional
+                // permissions count: Chrome exposes the namespace before the
+                // grant and fails the individual calls until it arrives.
+                const namespaceIsDeclared = (namespace) => {
+                    const permissions = namespacePermissions[namespace];
+                    if (
+                        !Array.isArray(permissions)
+                        || permissions.length === 0
+                    ) {
+                        return true;
+                    }
+                    return permissions.some(
+                        (permission) =>
+                            declaredPermissionNames.has(permission)
+                    );
+                };
                 const namespaceUsesCompatibility = (namespace) =>
-                    supportsProcess(namespaceProcesses[namespace])
+                    namespaceIsDeclared(namespace)
+                    && supportsProcess(namespaceProcesses[namespace])
                     && (
                         namespaceRoutes[namespace] === "nativePatched"
                         || namespaceRoutes[namespace] === "emulated"
                     );
+                // `presenceOnly` installs like an emulation — Crest supplies
+                // the object — but it does not own the contract: see
+                // `crestOwnsPath` below, where a native implementation still
+                // displaces the placeholder.
                 const memberUsesCompatibility = (path) =>
                     supportsProcess(memberProcesses[path])
                     && (
                         memberRoutes[path] === "nativePatched"
                         || memberRoutes[path] === "emulated"
+                        || memberRoutes[path] === "presenceOnly"
                     );
+                // Who wins is a routing decision, not an accident of which
+                // properties WebKit happens to define today. `emulated` means
+                // Crest's implementation IS the contract: it must replace a
+                // native property that appears in a later OS release, which is
+                // the entire reason the route exists. Every other route lets
+                // the native implementation stand and fills only what is
+                // missing.
+                const routeFor = (path) =>
+                    memberRoutes[path] ?? namespaceRoutes[path];
+                const crestOwnsPath = (path) => routeFor(path) === "emulated";
+                // A namespace Crest owns outright must never be satisfied by
+                // copying WebKit's implementation across the `chrome`/`browser`
+                // roots, and a namespace routed `unavailable` must never be
+                // aliased into existence at all.
+                const namespaceIsAliasable = (namespace) =>
+                    namespaceRoutes[namespace] !== "emulated"
+                    && namespaceRoutes[namespace] !== "unavailable";
                 const extensionID = \(javascriptStringLiteral(runtimeIdentity.extensionID));
                 const failsWorkerWebSockets = \(failsWorkerWebSockets ? "true" : "false");
                 const scopedCompatibilityAPIName = \(javascriptStringLiteral(scopedCompatibilityAPIName));
@@ -1068,6 +1348,319 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     String(path),
                     extensionBaseURL
                 ).href;
+
+                // Chrome records an extension's uncaught exceptions and
+                // unhandled promise rejections on the extension's own error
+                // page. WebKit reports only what an API callback throws, so a
+                // popup that dies mid-render — Bitwarden's, after a two-factor
+                // sign-in — leaves nothing behind unless someone happened to
+                // have Web Inspector attached. This channel reports them to
+                // Crest instead.
+                //
+                // It is telemetry from the extension's own code, so it must
+                // never change what that code observes: every send is
+                // best-effort, an absent transport is not an error, nothing
+                // here throws or rejects, and the channel never reports its
+                // own failures. Content scripts install nothing at all — they
+                // run on the page's origin, where the page itself would be
+                // handed the reports.
+                const capturesExtensionConsole = \(enablesConsoleCapture ? "true" : "false");
+                const diagnosticsReportLimit = 20;
+                const diagnosticsConsoleReportLimit = 200;
+                const diagnosticsTraceReportLimit = 2000;
+                const diagnosticsDedupeWindow = 1000;
+                const diagnosticsMessageLimit = 2000;
+                const installDiagnosticsChannel = () => {
+                    if (!isPrivilegedExtensionContext) return;
+                    let reportCount = 0;
+                    let consoleReportCount = 0;
+                    let traceReportCount = 0;
+                    let reportedSuppression = false;
+                    let reportedConsoleSuppression = false;
+                    let reportedTraceSuppression = false;
+                    let isReporting = false;
+                    const recentReports = new Map();
+                    const diagnosticsSource = () => {
+                        try {
+                            const href = String(
+                                globalThis.location?.href ?? ""
+                            );
+                            return href === "" ? "worker" : href;
+                        } catch {
+                            return "worker";
+                        }
+                    };
+                    const boundedText = (value) => {
+                        let text;
+                        try {
+                            text = typeof value === "string"
+                                ? value
+                                : String(value ?? "");
+                        } catch {
+                            return "";
+                        }
+                        return text.length > diagnosticsMessageLimit
+                            ? text.slice(0, diagnosticsMessageLimit)
+                            : text;
+                    };
+                    const post = (report) => {
+                        // Resolve the transport at send time, exactly as
+                        // `requestCapability` does: WebKit can replace the
+                        // runtime facade after this script starts. Unlike
+                        // `requestCapability`, a missing transport is silent.
+                        const runtime = nativeRuntimeWithMethod(
+                            "sendNativeMessage"
+                        );
+                        const sendNativeMessage = runtime?.sendNativeMessage;
+                        if (typeof sendNativeMessage !== "function") return;
+                        try {
+                            const returned = Reflect.apply(
+                                sendNativeMessage,
+                                runtime,
+                                [capabilityBrokerHost, report]
+                            );
+                            // A refused diagnostics send must not become an
+                            // unhandled rejection of its own.
+                            if (returned?.then instanceof Function) {
+                                returned.then(() => {}, () => {});
+                            }
+                        } catch {}
+                    };
+                    // Chrome collapses a burst of identical errors, and an
+                    // extension that throws inside a tight event handler would
+                    // otherwise spend the whole budget on one fault.
+                    const isRepeatedReport = (message, source, at) => {
+                        const key = `${message}\\u0000${source}`;
+                        const previous = recentReports.get(key);
+                        if (
+                            previous !== undefined
+                            && at - previous < diagnosticsDedupeWindow
+                        ) {
+                            return true;
+                        }
+                        recentReports.set(key, at);
+                        if (recentReports.size > 64) {
+                            for (const staleKey of recentReports.keys()) {
+                                recentReports.delete(staleKey);
+                                if (recentReports.size <= 32) break;
+                            }
+                        }
+                        return false;
+                    };
+                    const report = (kind, message, stack, lineno, colno) => {
+                        if (isReporting) return;
+                        isReporting = true;
+                        try {
+                            const at = Date.now();
+                            const source = diagnosticsSource();
+                            const reportedMessage = boundedText(message);
+                            if (isRepeatedReport(reportedMessage, source, at)) {
+                                return;
+                            }
+                            if (reportCount >= diagnosticsReportLimit) {
+                                if (reportedSuppression) return;
+                                reportedSuppression = true;
+                                post({
+                                    api: "diagnostics.report",
+                                    kind: "suppressed",
+                                    message: `Crest suppressed further reports from this extension context after ${diagnosticsReportLimit}.`,
+                                    stack: "",
+                                    source,
+                                    lineno: 0,
+                                    colno: 0,
+                                    at
+                                });
+                                return;
+                            }
+                            reportCount += 1;
+                            post({
+                                api: "diagnostics.report",
+                                kind,
+                                message: reportedMessage,
+                                stack: boundedText(stack),
+                                source,
+                                lineno: Number.isFinite(lineno) ? lineno : 0,
+                                colno: Number.isFinite(colno) ? colno : 0,
+                                at
+                            });
+                        } catch {
+                        } finally {
+                            isReporting = false;
+                        }
+                    };
+                    // A hang throws nothing. Bitwarden's popup waits forever on
+                    // a port reply while logging exactly why through
+                    // `console.warn`, so console output is the only trace some
+                    // failures leave. It is verbose, so a build opts in.
+                    const reportConsole = (level, args) => {
+                        if (isReporting) return;
+                        isReporting = true;
+                        try {
+                            const at = Date.now();
+                            const source = diagnosticsSource();
+                            const message = boundedText(
+                                Array.prototype.map.call(args, (value) => {
+                                    if (typeof value === "string") return value;
+                                    if (value instanceof Error) {
+                                        return String(value.stack ?? value);
+                                    }
+                                    if (
+                                        value !== null
+                                        && typeof value === "object"
+                                    ) {
+                                        try {
+                                            return JSON.stringify(value)
+                                                ?? String(value);
+                                        } catch {
+                                            return String(value);
+                                        }
+                                    }
+                                    return String(value);
+                                }).join(" ")
+                            );
+                            if (message === "") return;
+                            if (isRepeatedReport(message, source, at)) return;
+                            if (
+                                consoleReportCount
+                                    >= diagnosticsConsoleReportLimit
+                            ) {
+                                if (reportedConsoleSuppression) return;
+                                reportedConsoleSuppression = true;
+                                post({
+                                    api: "diagnostics.report",
+                                    kind: "suppressed",
+                                    message: `Crest suppressed further console output from this extension context after ${diagnosticsConsoleReportLimit}.`,
+                                    stack: "",
+                                    source,
+                                    lineno: 0,
+                                    colno: 0,
+                                    at
+                                });
+                                return;
+                            }
+                            consoleReportCount += 1;
+                            post({
+                                api: "diagnostics.report",
+                                kind: "console",
+                                level,
+                                message,
+                                source,
+                                at
+                            });
+                        } catch {
+                        } finally {
+                            isReporting = false;
+                        }
+                    };
+                    try {
+                        self.addEventListener("error", (event) => {
+                            const error = event?.error;
+                            report(
+                                "error",
+                                error?.message
+                                    ?? event?.message
+                                    ?? "Uncaught error",
+                                error?.stack,
+                                event?.lineno,
+                                event?.colno
+                            );
+                        });
+                    } catch {}
+                    try {
+                        self.addEventListener(
+                            "unhandledrejection",
+                            (event) => {
+                                const reason = event?.reason;
+                                report(
+                                    "unhandledrejection",
+                                    reason?.message
+                                        ?? reason
+                                        ?? "Unhandled promise rejection",
+                                    reason?.stack,
+                                    0,
+                                    0
+                                );
+                            }
+                        );
+                    } catch {}
+                    reportRuntimeDiagnostics = (kind, message) => {
+                        report(kind, message, "", 0, 0);
+                    };
+                    if (!capturesExtensionConsole) return;
+                    // Deliberately not deduped: a repeated send is the signal.
+                    // Bitwarden's popup sends `fullSync` and waits for a
+                    // `syncCompleted` broadcast the worker sends back the same
+                    // way, and when neither side logs, which half of that
+                    // exchange never happened is the only question worth
+                    // answering.
+                    reportRuntimeTrace = (op, detail) => {
+                        if (isReporting) return;
+                        isReporting = true;
+                        try {
+                            const at = Date.now();
+                            const source = diagnosticsSource();
+                            if (
+                                traceReportCount >= diagnosticsTraceReportLimit
+                            ) {
+                                if (reportedTraceSuppression) return;
+                                reportedTraceSuppression = true;
+                                post({
+                                    api: "diagnostics.report",
+                                    kind: "suppressed",
+                                    message: `Crest suppressed further message traces from this extension context after ${diagnosticsTraceReportLimit}.`,
+                                    stack: "",
+                                    source,
+                                    lineno: 0,
+                                    colno: 0,
+                                    at
+                                });
+                                return;
+                            }
+                            traceReportCount += 1;
+                            let rendered;
+                            try {
+                                rendered = JSON.stringify(detail) ?? "";
+                            } catch {
+                                rendered = "";
+                            }
+                            post({
+                                api: "diagnostics.report",
+                                kind: "trace",
+                                op: boundedText(op),
+                                message: boundedText(`${op} ${rendered}`),
+                                source,
+                                at
+                            });
+                        } catch {
+                        } finally {
+                            isReporting = false;
+                        }
+                    };
+                    const consoleObject = globalThis.console;
+                    if (!consoleObject) return;
+                    for (const level of ["error", "warn", "info"]) {
+                        let original;
+                        try {
+                            original = consoleObject[level];
+                        } catch {}
+                        if (typeof original !== "function") continue;
+                        const wrapper = function (...args) {
+                            try {
+                                reportConsole(level, args);
+                            } catch {}
+                            return Reflect.apply(original, this, args);
+                        };
+                        try {
+                            Object.defineProperty(consoleObject, level, {
+                                value: wrapper,
+                                configurable: true,
+                                writable: true,
+                                enumerable: false
+                            });
+                        } catch {}
+                    }
+                };
+                installDiagnosticsChannel();
 
                 const installChromiumNavigatorFamilyMarker = () => {
                     if (!appendsChromiumNavigatorFamilyMarker) return;
@@ -1321,6 +1914,201 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
                 const topFrameMessageTransportKey =
                     "__crestWebExtensionTopFrameMessage";
+                // Everything below to `traceRuntimeMessaging` is inert unless
+                // console capture is on: each caller checks the gate first.
+                // A content script's traffic is the extension's too, and on a
+                // busy site it is almost all of it: Bitwarden's page scripts
+                // spend a `collectPageDetailsResponse` and a
+                // `checkIsFieldCurrentlyFocused` per field, which exhausted
+                // the whole trace budget inside a minute and buried the
+                // popup↔worker exchange the trace exists to see. Only
+                // extension-origin senders are traced.
+                const traceExtensionOriginPrefix =
+                    extensionBaseURL.replace(/[/]+$/, "");
+                const traceIsExtensionOriginSender = (sender) => {
+                    if (!sender || typeof sender !== "object") return true;
+                    let isAttributed = false;
+                    for (const key of ["origin", "url"]) {
+                        let value;
+                        try { value = sender[key]; } catch {}
+                        if (typeof value !== "string" || value === "") {
+                            continue;
+                        }
+                        isAttributed = true;
+                        if (
+                            value === traceExtensionOriginPrefix
+                            || value.startsWith(
+                                `${traceExtensionOriginPrefix}/`
+                            )
+                        ) {
+                            return true;
+                        }
+                    }
+                    // An unattributed delivery is kept. The noise this filter
+                    // exists to drop always names a page origin, and dropping
+                    // the unknown case could hide the exchange being hunted.
+                    return !isAttributed;
+                };
+                const traceErrorText = (error) => {
+                    try {
+                        return String(error?.message ?? error ?? "");
+                    } catch {
+                        return "";
+                    }
+                };
+                // Names the message without quoting its contents. A password
+                // manager's traffic carries vault data, so a trace records the
+                // command and the shape — the top-level keys — and no values.
+                const traceMessageSummary = (value) => {
+                    if (value === null || typeof value !== "object") {
+                        return typeof value;
+                    }
+                    let name = "(unnamed)";
+                    for (const key of ["command", "kind", "type", "name"]) {
+                        let candidate;
+                        try { candidate = value[key]; } catch {}
+                        if (typeof candidate === "string" && candidate !== "") {
+                            name = `${key}=${candidate}`;
+                            break;
+                        }
+                    }
+                    // Bitwarden pairs a request with its response by
+                    // `requestId`, which is what makes one `fullSync` round
+                    // trip followable across the popup and the worker.
+                    let requestId;
+                    try {
+                        const candidate = value.requestId;
+                        if (
+                            typeof candidate === "string"
+                            || typeof candidate === "number"
+                        ) {
+                            requestId = String(candidate);
+                        }
+                    } catch {}
+                    let keys = [];
+                    try {
+                        keys = Object.keys(value).slice(0, 24);
+                    } catch {}
+                    const identity = requestId === undefined
+                        ? name
+                        : `${name} requestId=${requestId}`;
+                    return `${identity} keys:[${keys.join(",")}]`;
+                };
+                const traceSenderSummary = (sender) => {
+                    if (!sender || typeof sender !== "object") return undefined;
+                    const summary = {};
+                    try {
+                        if (typeof sender.origin === "string") {
+                            summary.origin = sender.origin;
+                        }
+                    } catch {}
+                    try {
+                        if (sender.frameId !== undefined) {
+                            summary.frameId = Number(sender.frameId);
+                        }
+                    } catch {}
+                    try {
+                        summary.hasTab = sender.tab !== undefined
+                            && sender.tab !== null;
+                    } catch {}
+                    return summary;
+                };
+                const tracePortName = (value) => {
+                    try {
+                        const name = value?.name;
+                        return typeof name === "string" ? name : "";
+                    } catch {
+                        return "";
+                    }
+                };
+                const tracePortNameFromArguments = (args) => {
+                    for (const value of args) {
+                        if (value === null || typeof value !== "object") {
+                            continue;
+                        }
+                        const name = tracePortName(value);
+                        if (name !== "") return name;
+                    }
+                    return "";
+                };
+                // `sendMessage` accepts an optional leading extension ID.
+                const traceSentMessage = (args) => (
+                    typeof args[0] === "string" && args.length > 1
+                        ? args[1]
+                        : args[0]
+                );
+                const tracedMessagingFunctions = new WeakSet();
+                // Wraps the two entry points an extension sends through,
+                // without touching what either one means: the receiver is
+                // forwarded verbatim (WebKit's implementations check it), the
+                // native return value is handed back unchanged, and a second
+                // pass over the same runtime re-wraps nothing.
+                const traceRuntimeMessaging = (nativeRuntime) => {
+                    for (const property of ["sendMessage", "connect"]) {
+                        let native;
+                        let descriptor;
+                        try {
+                            native = nativeRuntime[property];
+                            descriptor = Reflect.getOwnPropertyDescriptor(
+                                nativeRuntime,
+                                property
+                            );
+                        } catch {}
+                        if (
+                            typeof native !== "function"
+                            || tracedMessagingFunctions.has(native)
+                        ) {
+                            continue;
+                        }
+                        const op = property;
+                        const wrapper = function (...args) {
+                            const detail = {
+                                context: executionProcess,
+                                summary: op === "connect"
+                                    ? tracePortNameFromArguments(args)
+                                    : traceMessageSummary(
+                                        traceSentMessage(args)
+                                    )
+                            };
+                            reportRuntimeTrace(op, detail);
+                            const result = Reflect.apply(native, this, args);
+                            if (result?.then instanceof Function) {
+                                // The caller gets the ORIGINAL promise back;
+                                // these observers only watch it. Attaching
+                                // them does mark it handled, so while tracing
+                                // is on a rejection the extension ignores is
+                                // reported here instead of as an unhandled
+                                // rejection. That trade is confined to a
+                                // console-capture build.
+                                try {
+                                    result.then(
+                                        () => reportRuntimeTrace(
+                                            `${op}Resolved`,
+                                            detail
+                                        ),
+                                        (error) => reportRuntimeTrace(
+                                            `${op}Rejected`,
+                                            {
+                                                ...detail,
+                                                error: traceErrorText(error)
+                                            }
+                                        )
+                                    );
+                                } catch {}
+                            }
+                            return result;
+                        };
+                        tracedMessagingFunctions.add(wrapper);
+                        try {
+                            Object.defineProperty(nativeRuntime, property, {
+                                value: wrapper,
+                                writable: true,
+                                configurable: true,
+                                enumerable: descriptor?.enumerable ?? true
+                            });
+                        } catch {}
+                    }
+                };
                 const normalizedRuntimeMessageEvents = new WeakSet();
                 const normalizeRuntimeMessageEvent = (nativeEvent) => {
                     if (
@@ -1341,6 +2129,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
 
                     const wrappedListeners = new WeakMap();
+                    // Maintained only while tracing. A count is what
+                    // separates "no listener was ever attached" from "a
+                    // listener ran and claimed nothing".
+                    const tracedMessageListeners = new Set();
                     const wrapperFor = (listener) => {
                         let wrapped = wrappedListeners.get(listener);
                         if (wrapped) return wrapped;
@@ -1359,6 +2151,19 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 }
                                 deliveredMessage = message.message;
                             }
+                            const isTracedDelivery =
+                                capturesExtensionConsole
+                                && traceIsExtensionOriginSender(sender);
+                            if (isTracedDelivery) {
+                                reportRuntimeTrace("onMessage", {
+                                    context: executionProcess,
+                                    summary: traceMessageSummary(
+                                        deliveredMessage
+                                    ),
+                                    sender: traceSenderSummary(sender),
+                                    listeners: tracedMessageListeners.size
+                                });
+                            }
                             let didRespond = false;
                             let resolveResponse;
                             const response = new Promise((resolve) => {
@@ -1374,6 +2179,30 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 sender,
                                 sendResponse
                             );
+                            if (isTracedDelivery) {
+                                // Whether a logical listener claimed the
+                                // response — returned a Promise, returned
+                                // true, or answered synchronously. A delivery
+                                // nobody claims is precisely the shape of a
+                                // sender that waits forever.
+                                const settled =
+                                    result?.then instanceof Function
+                                        ? result
+                                        : result === true || didRespond
+                                            ? response
+                                            : undefined;
+                                reportRuntimeTrace("onMessageResult", {
+                                    context: executionProcess,
+                                    kept: settled !== undefined
+                                });
+                                const responded = () => reportRuntimeTrace(
+                                    "onMessageResponded",
+                                    { context: executionProcess }
+                                );
+                                try {
+                                    settled?.then(responded, responded);
+                                } catch {}
+                            }
                             if (
                                 result
                                 && typeof result.then === "function"
@@ -1397,6 +2226,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     };
                     const addListener = (listener) => {
                         if (typeof listener !== "function") return;
+                        if (capturesExtensionConsole) {
+                            tracedMessageListeners.add(listener);
+                        }
                         return Reflect.apply(
                             nativeAddListener,
                             nativeEvent,
@@ -1404,6 +2236,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                     };
                     const removeListener = (listener) => {
+                        if (capturesExtensionConsole) {
+                            tracedMessageListeners.delete(listener);
+                        }
                         const wrapped = wrappedListeners.get(listener)
                             ?? listener;
                         const result = Reflect.apply(
@@ -1480,6 +2315,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     };
                     const bridge = (port) => {
                         if (!port) return;
+                        if (
+                            capturesExtensionConsole
+                            && traceIsExtensionOriginSender(port?.sender)
+                        ) {
+                            reportRuntimeTrace("onConnect", {
+                                context: executionProcess,
+                                summary: tracePortName(port),
+                                sender: traceSenderSummary(port?.sender),
+                                listeners: listeners.size
+                            });
+                        }
                         activePorts.add(port);
                         const remove = () => {
                             activePorts.delete(port);
@@ -1566,11 +2412,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     try {
                         Object.defineProperty(nativeRuntime, "getURL", {
                             value: getURL,
+                            writable: true,
                             configurable: true,
                             enumerable: descriptor?.enumerable ?? true
                         });
                     } catch {
                         try { nativeRuntime.getURL = getURL; } catch {}
+                    }
+                    // Debug-build only, and the last thing installed on the
+                    // native runtime so it wraps WebKit's own implementations
+                    // rather than a compatibility shim.
+                    if (capturesExtensionConsole) {
+                        try {
+                            traceRuntimeMessaging(nativeRuntime);
+                        } catch {}
                     }
                     try {
                         normalizeRuntimeMessageEvent(nativeRuntime.onMessage);
@@ -1871,6 +2726,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
 
                 const normalizedWebRequestEvents = new WeakMap();
+                const warnedBlockingWebRequestEvents = new Set();
                 const normalizeWebRequestDetails = (details) => {
                     if (
                         !details
@@ -1890,7 +2746,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // extension evaluates its filtering policy.
                     return { ...details, type: "sub_frame" };
                 };
-                const normalizeWebRequestEvent = (nativeEvent) => {
+                const normalizeWebRequestEvent = (nativeEvent, eventName) => {
                     if (!nativeEvent) return nativeEvent;
                     if (normalizedWebRequestEvents.has(nativeEvent)) {
                         return normalizedWebRequestEvents.get(nativeEvent);
@@ -1928,11 +2784,34 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         listeners.set(listener, wrapped);
                         return wrapped;
                     };
-                    const addListener = (listener, ...args) => Reflect.apply(
-                        nativeAddListener,
-                        nativeEvent,
-                        [wrappedListener(listener), ...args]
-                    );
+                    const addListener = (listener, ...args) => {
+                        // WebKit registers a blocking listener and then
+                        // ignores what it returns. Registration still buys the
+                        // extension observation, so keep it — but say plainly
+                        // that the request will not be cancelled, redirected,
+                        // or have its headers rewritten. Silence here reads as
+                        // a working content blocker that quietly blocks
+                        // nothing.
+                        const extraInfoSpec = args.find(Array.isArray);
+                        if (
+                            Array.isArray(extraInfoSpec)
+                            && (extraInfoSpec.includes("blocking")
+                                || extraInfoSpec.includes("asyncBlocking"))
+                            && !warnedBlockingWebRequestEvents.has(eventName)
+                        ) {
+                            warnedBlockingWebRequestEvents.add(eventName);
+                            try {
+                                console.warn(
+                                    `webRequest.${eventName}: WebKit does not consume blocking responses. The listener still observes requests, but its return value cannot cancel, redirect, or rewrite them.`
+                                );
+                            } catch {}
+                        }
+                        return Reflect.apply(
+                            nativeAddListener,
+                            nativeEvent,
+                            [wrappedListener(listener), ...args]
+                        );
+                    };
                     const removeListener = (listener) => {
                         if (typeof nativeRemoveListener !== "function") {
                             return;
@@ -2005,22 +2884,19 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
 
                     const overlays = new Map();
-                    for (const property of [
-                        "onBeforeRequest",
-                        "onBeforeSendHeaders",
-                        "onSendHeaders",
-                        "onHeadersReceived",
-                        "onAuthRequired",
-                        "onBeforeRedirect",
-                        "onResponseStarted",
-                        "onCompleted",
-                        "onErrorOccurred",
-                        "onActionIgnored"
-                    ]) {
+                    // Derived from the matrix, which is also what decides
+                    // which members are hidden from WebKit's surface before
+                    // this context loads. A literal list here used to
+                    // re-normalize `onAuthRequired` — an event the matrix
+                    // hides precisely because Crest cannot honor a blocking
+                    // credential prompt — and so handed it back to packages
+                    // through the facade.
+                    for (const property of eventMembersOf("webRequest")) {
                         let nativeEvent;
                         try { nativeEvent = nativeWebRequest[property]; } catch {}
                         const normalizedEvent = normalizeWebRequestEvent(
-                            nativeEvent
+                            nativeEvent,
+                            property
                         );
                         if (normalizedEvent !== nativeEvent) {
                             overlays.set(property, normalizedEvent);
@@ -2081,6 +2957,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     try {
                         Object.defineProperty(nativeI18n, "getMessage", {
                             value: getMessage,
+                            writable: true,
                             configurable: true,
                             enumerable: descriptor?.enumerable ?? true
                         });
@@ -2113,48 +2990,105 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     hasListener() { return false; },
                     hasListeners() { return false; }
                 });
+                // The object behind a `presenceOnly` route. Feature detection
+                // and registration succeed — a portable package that guards on
+                // `typeof event.addListener === "function"` takes the same
+                // branch it takes in Chrome — but Crest has no source that can
+                // fire it. Two things follow: the registry has to be real, so
+                // `hasListener` cannot deny a listener the caller just added
+                // and can still see in `removeListener`; and the silence has
+                // to be said out loud once, because an event that accepts
+                // listeners and never delivers is otherwise indistinguishable
+                // from a Crest bug.
+                const presenceOnlyEvent = (path) => {
+                    const listeners = new Set();
+                    let warned = false;
+                    const warnOnce = () => {
+                        if (warned) return;
+                        warned = true;
+                        try {
+                            console.warn(
+                                "Crest: browser." + path + " is registered "
+                                + "for feature detection only. Crest cannot "
+                                + "deliver this event, so no listener added "
+                                + "to it will ever run."
+                            );
+                        } catch {}
+                    };
+                    return Object.freeze({
+                        addListener(listener) {
+                            if (typeof listener !== "function") return;
+                            warnOnce();
+                            listeners.add(listener);
+                        },
+                        removeListener(listener) {
+                            listeners.delete(listener);
+                        },
+                        hasListener(listener) {
+                            return listeners.has(listener);
+                        },
+                        hasListeners() { return listeners.size > 0; }
+                    });
+                };
+                // Chrome answers a call either way, never both: supplying a
+                // callback opts out of the promise entirely.
                 const callbackOrPromise = (args, value) => {
                     const callback = args.at(-1);
                     if (typeof callback === "function") {
                         queueMicrotask(() => callback(value));
+                        return undefined;
                     }
                     return Promise.resolve(value);
                 };
                 const rejectCallbackOrPromise = (args, message) => {
-                    const error = new Error(message);
                     const callback = args.at(-1);
                     if (typeof callback === "function") {
-                        queueMicrotask(() => callback(undefined));
+                        queueMicrotask(
+                            () => invokeCallbackWithLastError(
+                                callback,
+                                message
+                            )
+                        );
                         return undefined;
                     }
-                    return Promise.reject(error);
+                    return Promise.reject(new Error(message));
                 };
-                const supportedMenuPattern = (pattern) =>
-                    pattern === "<all_urls>"
-                    || /^(?:\\*|https?|wss?|ftp|file|data):\\/\\//
-                        .test(String(pattern));
-                const normalizedMenuProperties = (properties) => {
-                    if (!properties || typeof properties !== "object") {
-                        return properties;
+                // The filler for a member `emulatedSurface` declares and
+                // Crest does not implement. It is not a no-op: a no-op
+                // reports success for work that never happened, which is how
+                // an extension ends up waiting forever on a download it
+                // believes it started. The member exists, so feature
+                // detection and property access take the Chrome branch, and
+                // then it fails the way an unavailable capability fails.
+                //
+                // The schema shape is read off the name, which is the same
+                // convention every WebExtension schema uses: `onFoo` is an
+                // event, an initial capital is an enum, anything else is a
+                // method. Methods answer whichever form the caller used —
+                // a rejected promise, or `runtime.lastError` plus a callback.
+                const presenceOnlyMember = (path, name) => {
+                    if (/^on[A-Z]/.test(name)) {
+                        return presenceOnlyEvent(path);
                     }
-                    let normalized = properties;
-                    for (const property of [
-                        "documentUrlPatterns",
-                        "targetUrlPatterns"
-                    ]) {
-                        const patterns = properties[property];
-                        if (!Array.isArray(patterns)) continue;
-                        const supported = patterns.filter(
-                            supportedMenuPattern
-                        );
-                        if (supported.length === patterns.length) continue;
-                        if (normalized === properties) {
-                            normalized = { ...properties };
-                        }
-                        normalized[property] = supported;
+                    if (/^[A-Z]/.test(name)) {
+                        return Object.freeze({});
                     }
-                    return normalized;
+                    return (...args) => rejectCallbackOrPromise(
+                        args,
+                        path + " is not available in Crest."
+                    );
                 };
+                // Authored menu URL patterns are forwarded whole. Filtering
+                // out the ones WebKit cannot parse emptied the list whenever
+                // every pattern was unsupported, and an empty pattern list
+                // means "the extension authored no restriction" — so a menu
+                // item scoped to one site became a menu item on every site.
+                // Swift decides what an unparseable pattern matches, which is
+                // nothing.
+                const authoredMenuPatterns = (patterns) =>
+                    Array.isArray(patterns)
+                        ? patterns.map((pattern) => String(pattern))
+                        : [];
                 const installEventFacade = (nativeEvent, facade) => {
                     if (!nativeEvent) return false;
                     for (const [property, value] of Object.entries(facade)) {
@@ -2271,9 +3205,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return Number.isFinite(number) ? number : undefined;
                     };
                     const definition = (id, properties, existing) => {
-                        const normalized = normalizedMenuProperties(
-                            properties
-                        ) ?? {};
+                        const normalized =
+                            properties && typeof properties === "object"
+                                ? properties
+                                : {};
                         const authored = {
                             ...(existing?.authored ?? {}),
                             ...normalized
@@ -2291,20 +3226,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 && authored.contexts.length > 0
                                 ? authored.contexts
                                 : ["page"],
-                            documentUrlPatterns: Array.isArray(
+                            documentUrlPatterns: authoredMenuPatterns(
                                 authored.documentUrlPatterns
-                            )
-                                ? authored.documentUrlPatterns.filter(
-                                    supportedMenuPattern
-                                )
-                                : [],
-                            targetUrlPatterns: Array.isArray(
+                            ),
+                            targetUrlPatterns: authoredMenuPatterns(
                                 authored.targetUrlPatterns
-                            )
-                                ? authored.targetUrlPatterns.filter(
-                                    supportedMenuPattern
-                                )
-                                : [],
+                            ),
                             enabled: authored.enabled ?? true,
                             visible: authored.visible ?? true,
                             onclick: typeof authored.onclick === "function"
@@ -2800,7 +3727,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const nativePermissionBoolean = (
                     nativePermissions,
                     nativeMethod,
-                    request
+                    request,
+                    failure
                 ) => new Promise((resolve) => {
                     let settled = false;
                     const settle = (value) => {
@@ -2813,9 +3741,18 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // their callback or promise. Permissions are local state,
                     // so a bounded false result is safer than holding an
                     // extension's startup forever or issuing a destructive
-                    // follow-up against state it never confirmed.
+                    // follow-up against state it never confirmed. The bound is
+                    // Crest's invention rather than an answer, so a
+                    // callback-form caller is told through runtime.lastError
+                    // that `false` here means "unanswered", not "not granted".
                     const timeout = globalThis.setTimeout(
-                        () => settle(false),
+                        () => {
+                            if (failure) {
+                                failure.message =
+                                    "WebKit did not answer this permissions query in time.";
+                            }
+                            settle(false);
+                        },
                         250
                     );
                     if (typeof nativeMethod !== "function") {
@@ -2842,12 +3779,31 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         settle(returned);
                     }
                 });
-                const permissionCallbackOrPromise = (args, operation) => {
+                const permissionCallbackOrPromise = (
+                    args,
+                    operation,
+                    failure
+                ) => {
                     const callback = args.at(-1);
                     if (typeof callback === "function") {
                         operation.then(
-                            (value) => callback(value),
-                            () => callback(false)
+                            (value) => {
+                                if (failure?.message) {
+                                    invokeCallbackWithLastError(
+                                        callback,
+                                        failure.message,
+                                        value
+                                    );
+                                    return;
+                                }
+                                callback(value);
+                            },
+                            (error) => invokeCallbackWithLastError(
+                                callback,
+                                error?.message
+                                    ?? "Crest could not complete this permissions request.",
+                                false
+                            )
                         );
                         return undefined;
                     }
@@ -2884,7 +3840,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return nativePermissions;
                     }
 
-                    const containsOperation = (request) => {
+                    const containsOperation = (request, failure) => {
                         if (permissionRequestContainsInternalAccess(request)) {
                             return Promise.resolve(false);
                         }
@@ -2900,14 +3856,19 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return nativePermissionBoolean(
                             nativePermissions,
                             nativeContains,
-                            partition.nativeRequest
+                            partition.nativeRequest,
+                            failure
                         );
                     };
-                    const contains = (...args) => permissionCallbackOrPromise(
-                        args,
-                        containsOperation(args[0])
-                    );
-                    const getAllOperation = () => new Promise((resolve) => {
+                    const contains = (...args) => {
+                        const failure = {};
+                        return permissionCallbackOrPromise(
+                            args,
+                            containsOperation(args[0], failure),
+                            failure
+                        );
+                    };
+                    const getAllOperation = (failure) => new Promise((resolve) => {
                         let settled = false;
                         const settle = (value) => {
                             if (settled) return;
@@ -2931,7 +3892,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             resolve(result);
                         };
                         const timeout = globalThis.setTimeout(
-                            () => settle({permissions: [], origins: []}),
+                            () => {
+                                if (failure) {
+                                    failure.message =
+                                        "WebKit did not answer permissions.getAll in time.";
+                                }
+                                settle({permissions: [], origins: []});
+                            },
                             250
                         );
                         if (typeof nativeGetAll !== "function") {
@@ -2958,25 +3925,37 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             settle(returned);
                         }
                     });
-                    const getAll = (...args) => permissionCallbackOrPromise(
-                        args,
-                        getAllOperation()
-                    );
+                    const getAll = (...args) => {
+                        const failure = {};
+                        return permissionCallbackOrPromise(
+                            args,
+                            getAllOperation(failure),
+                            failure
+                        );
+                    };
                     const remove = (...args) => {
                         const request = args[0];
+                        const failure = {};
                         const operation = permissionRequestRemovesRequiredAccess(
                             request
                         )
                             ? Promise.resolve(false)
-                            : containsOperation(request).then((isGranted) => {
-                                if (!isGranted) return false;
-                                return nativePermissionBoolean(
-                                    nativePermissions,
-                                    nativeRemove,
-                                    request
-                                );
-                            });
-                        return permissionCallbackOrPromise(args, operation);
+                            : containsOperation(request, failure).then(
+                                (isGranted) => {
+                                    if (!isGranted) return false;
+                                    return nativePermissionBoolean(
+                                        nativePermissions,
+                                        nativeRemove,
+                                        request,
+                                        failure
+                                    );
+                                }
+                            );
+                        return permissionCallbackOrPromise(
+                            args,
+                            operation,
+                            failure
+                        );
                     };
                     const overlays = new Map([
                         ["contains", contains],
@@ -2997,6 +3976,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 methodName,
                                 {
                                     value: method,
+                                    writable: true,
                                     configurable: true,
                                     enumerable: descriptor?.enumerable ?? true
                                 }
@@ -3085,7 +4065,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     if (typeof callback === "function") {
                         response.then(
                             (value) => callback(value),
-                            () => callback(undefined)
+                            (error) => invokeCallbackWithLastError(
+                                callback,
+                                error?.message
+                                    ?? `Crest's ${api} capability failed.`
+                            )
                         );
                         return undefined;
                     }
@@ -3145,6 +4129,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     try {
                         Object.defineProperty(globalThis, "clients", {
                             value: serviceWorkerClients,
+                            writable: true,
                             configurable: true
                         });
                     } catch {
@@ -3169,13 +4154,148 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 }
 
+                // A capability watch is the only long-lived native connection
+                // this runtime opens, and the broker drops it immediately when
+                // the package never requested the matching permission. A fixed
+                // one-second retry therefore reconnected forever against a
+                // refusal that will never change. Back off, and stop asking.
+                const capabilityWatch = ({
+                    api,
+                    hasListeners,
+                    onMessage,
+                    subscription
+                }) => {
+                    const initialRetryDelay = 1000;
+                    const maximumRetryDelay = 60000;
+                    const maximumFailures = 6;
+                    let port;
+                    let reconnectHandle;
+                    let failures = 0;
+                    let abandoned = false;
+                    let hadListeners = false;
+                    const clearReconnect = () => {
+                        globalThis.clearTimeout(reconnectHandle);
+                        reconnectHandle = undefined;
+                    };
+                    // Abandonment must not outlive the reason for it.
+                    //
+                    // The broker refuses a watch the package has no permission
+                    // for, and an OPTIONAL permission is exposed before it is
+                    // granted: six refusals during that window used to retire
+                    // the watch for the life of the context, so the grant the
+                    // user then gave never delivered a single event. A fresh
+                    // `addListener` — the listener count rising from zero — is
+                    // a new statement of intent and the moment the answer can
+                    // have changed, so it restores the budget.
+                    //
+                    // Merely obtaining a port does not: `connectNative`
+                    // returns one synchronously and the broker disconnects it
+                    // afterwards when it refuses, so resetting there would
+                    // reconnect forever against a permanent no. What proves
+                    // the watch works is a delivered message, which resets
+                    // below.
+                    const observeListeners = () => {
+                        const listening = hasListeners();
+                        if (listening && !hadListeners) {
+                            abandoned = false;
+                            failures = 0;
+                        }
+                        hadListeners = listening;
+                        return listening;
+                    };
+                    const scheduleReconnect = () => {
+                        if (abandoned) return;
+                        failures += 1;
+                        clearReconnect();
+                        if (failures >= maximumFailures) {
+                            abandoned = true;
+                            try {
+                                console.warn(
+                                    `Crest stopped reconnecting the ${api} watch after ${maximumFailures} consecutive failures. Events for that API will not arrive in this context.`
+                                );
+                            } catch {}
+                            return;
+                        }
+                        reconnectHandle = globalThis.setTimeout(
+                            connect,
+                            Math.min(
+                                maximumRetryDelay,
+                                initialRetryDelay * (2 ** (failures - 1))
+                            )
+                        );
+                    };
+                    const resubscribe = () => {
+                        if (!port) return;
+                        try {
+                            port.postMessage(subscription());
+                        } catch {}
+                    };
+                    const connect = () => {
+                        const listening = observeListeners();
+                        if (
+                            abandoned
+                            || !isPrivilegedExtensionContext
+                            || port
+                            || !listening
+                        ) {
+                            return;
+                        }
+                        const runtime = nativeRuntimeWithMethod(
+                            "connectNative"
+                        );
+                        const connectNative = runtime?.connectNative;
+                        if (typeof connectNative !== "function") return;
+                        let connected;
+                        try {
+                            connected = Reflect.apply(
+                                connectNative,
+                                runtime,
+                                [capabilityBrokerHost]
+                            );
+                        } catch {
+                            connected = undefined;
+                        }
+                        if (!connected) {
+                            scheduleReconnect();
+                            return;
+                        }
+                        port = connected;
+                        port.onMessage?.addListener((message) => {
+                            // A delivered event proves the watch works, so the
+                            // next disconnect starts a fresh budget.
+                            failures = 0;
+                            onMessage(message);
+                        });
+                        port.onDisconnect?.addListener(() => {
+                            port = undefined;
+                            if (!hasListeners()) return;
+                            scheduleReconnect();
+                        });
+                        resubscribe();
+                    };
+                    const disconnect = () => {
+                        clearReconnect();
+                        const current = port;
+                        port = undefined;
+                        // An explicit teardown ends the episode the failures
+                        // were counted against; whatever reconnects next
+                        // starts from zero.
+                        failures = 0;
+                        abandoned = false;
+                        hadListeners = false;
+                        try { current?.disconnect(); } catch {}
+                    };
+                    return Object.freeze({
+                        connect,
+                        disconnect,
+                        resubscribe
+                    });
+                };
                 const notificationListeners = Object.freeze({
                     clicked: new Set(),
                     buttonClicked: new Set(),
                     closed: new Set()
                 });
-                let notificationWatchPort;
-                let notificationWatchReconnectHandle;
                 const notificationListenerCount = () =>
                     Object.values(notificationListeners).reduce(
                         (count, listeners) => count + listeners.size,
@@ -3215,67 +4335,22 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try { listener(...argumentsForListeners); } catch {}
                     }
                 };
-                const connectNotificationWatch = () => {
-                    if (
-                        !isPrivilegedExtensionContext
-                        ||
-                        notificationWatchPort
-                        || notificationListenerCount() === 0
-                    ) {
-                        return;
-                    }
-                    const runtime = nativeRuntimeWithMethod(
-                        "connectNative"
-                    );
-                    const connectNative = runtime?.connectNative;
-                    if (typeof connectNative !== "function") return;
-                    try {
-                        notificationWatchPort = Reflect.apply(
-                            connectNative,
-                            runtime,
-                            [capabilityBrokerHost]
-                        );
-                    } catch {
-                        notificationWatchPort = undefined;
-                        return;
-                    }
-                    notificationWatchPort?.onMessage?.addListener(
-                        publishNotificationEvent
-                    );
-                    notificationWatchPort?.onDisconnect?.addListener(() => {
-                        notificationWatchPort = undefined;
-                        if (notificationListenerCount() === 0) return;
-                        globalThis.clearTimeout(
-                            notificationWatchReconnectHandle
-                        );
-                        notificationWatchReconnectHandle =
-                            globalThis.setTimeout(
-                                connectNotificationWatch,
-                                1000
-                            );
-                    });
-                    try {
-                        notificationWatchPort?.postMessage({
-                            api: "notifications.watch"
-                        });
-                    } catch {}
-                };
+                const notificationWatch = capabilityWatch({
+                    api: "notifications",
+                    hasListeners: () => notificationListenerCount() > 0,
+                    onMessage: publishNotificationEvent,
+                    subscription: () => ({ api: "notifications.watch" })
+                });
                 const notificationEvent = (kind) => Object.freeze({
                     addListener(listener) {
                         if (typeof listener !== "function") return;
                         notificationListeners[kind].add(listener);
-                        connectNotificationWatch();
+                        notificationWatch.connect();
                     },
                     removeListener(listener) {
                         notificationListeners[kind].delete(listener);
                         if (notificationListenerCount() > 0) return;
-                        globalThis.clearTimeout(
-                            notificationWatchReconnectHandle
-                        );
-                        notificationWatchReconnectHandle = undefined;
-                        const port = notificationWatchPort;
-                        notificationWatchPort = undefined;
-                        try { port?.disconnect(); } catch {}
+                        notificationWatch.disconnect();
                     },
                     hasListener(listener) {
                         return notificationListeners[kind].has(listener);
@@ -3284,11 +4359,62 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return notificationListeners[kind].size > 0;
                     }
                 });
+                // Crest presents extension notifications through the system
+                // notification centre, which carries a title, a body, and
+                // buttons and nothing else. Chrome's richer options are not
+                // rejected — a notification the person can still act on beats
+                // no notification — but dropping them without a word made an
+                // extension's image, progress bar, or priority look delivered.
+                const unsupportedNotificationOptions = Object.freeze([
+                    "iconUrl",
+                    "items",
+                    "progress",
+                    "imageUrl",
+                    "requireInteraction",
+                    "silent",
+                    "priority",
+                    "eventTime",
+                    "contextMessage"
+                ]);
+                const warnedNotificationOptions = new Set();
+                const warnUnsupportedNotificationOptions = (
+                    method,
+                    options
+                ) => {
+                    if (!options || typeof options !== "object") return;
+                    const warnOnce = (key, description) => {
+                        if (warnedNotificationOptions.has(key)) return;
+                        warnedNotificationOptions.add(key);
+                        try {
+                            console.warn(
+                                `notifications.${method}: Crest ignores ${description}.`
+                            );
+                        } catch {}
+                    };
+                    for (const key of unsupportedNotificationOptions) {
+                        if (options[key] === undefined) continue;
+                        warnOnce(key, `the "${key}" option`);
+                    }
+                    if (
+                        options.type !== undefined
+                        && options.type !== "basic"
+                    ) {
+                        warnOnce(
+                            "type",
+                            `the "${options.type}" notification type and presents a basic notification instead`
+                        );
+                    }
+                };
                 const notifications = Object.freeze({
                     onClicked: notificationEvent("clicked"),
                     onButtonClicked: notificationEvent("buttonClicked"),
                     onClosed: notificationEvent("closed"),
-                    onPermissionLevelChanged: noopEvent,
+                    // `onPermissionLevelChanged` is supplied by the
+                    // `emulatedSurface` filler, which hands back a
+                    // `presenceOnlyEvent`. A `noopEvent` used to sit here and
+                    // its `hasListener` denied listeners the caller had just
+                    // added, so a package could not tell registration apart
+                    // from a Crest bug.
                     create(...args) {
                         const hasIdentifier = typeof args[0] === "string";
                         const options = args[hasIdentifier ? 1 : 0] ?? {};
@@ -3296,6 +4422,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             ? args[0]
                             : `crest-${Date.now()}-${Math.random()
                                 .toString(36).slice(2)}`;
+                        warnUnsupportedNotificationOptions("create", options);
                         return requestCapability(
                             "notifications.create",
                             {
@@ -3352,19 +4479,30 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     },
                     update(...args) {
                         const options = args[1] ?? {};
+                        warnUnsupportedNotificationOptions("update", options);
+                        // Chrome's update is a partial edit: an omitted field
+                        // keeps its current value. Send only the fields the
+                        // caller supplied; the broker merges them over the
+                        // notification it last posted. An explicit empty
+                        // string is a legitimate value (an extension may blank
+                        // a title), so only `undefined` means "keep".
+                        const update = {
+                            notificationIdentifier: String(args[0] ?? "")
+                        };
+                        if (options.title !== undefined) {
+                            update.title = String(options.title);
+                        }
+                        if (options.message !== undefined) {
+                            update.message = String(options.message);
+                        }
+                        if (Array.isArray(options.buttons)) {
+                            update.buttonTitles = options.buttons.map(
+                                (button) => String(button?.title ?? "")
+                            );
+                        }
                         return requestCapability(
                             "notifications.update",
-                            {
-                                notificationIdentifier:
-                                    String(args[0] ?? ""),
-                                title: String(options.title ?? ""),
-                                message: String(options.message ?? ""),
-                                buttonTitles: Array.isArray(options.buttons)
-                                    ? options.buttons.map((button) =>
-                                        String(button?.title ?? "")
-                                    )
-                                    : []
-                            },
+                            update,
                             args,
                             (response) => Boolean(response?.updated)
                         );
@@ -3569,18 +4707,16 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                     }
                 };
-                const sidePanel = {
-                    setPanelBehavior(...args) {
-                        return rejectCallbackOrPromise(
-                            args,
-                            "Side panels are not available in Crest."
-                        );
-                    }
-                };
+                // There is deliberately no `sidePanel` fallback. The matrix
+                // routes the namespace `unavailable`, so nothing here — and
+                // no cross-root alias, which `namespaceIsAliasable` refuses
+                // for an unavailable route — publishes it. A one-member stub
+                // used to live here, and a package that detected the
+                // namespace and then called the rest of the schema threw
+                // inside its own bootstrap. Firefox ships none, and the same
+                // packages handle that.
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
-                let idleWatchPort;
-                let idleWatchReconnectHandle;
                 const isIdleState = (state) =>
                     state === "active"
                     || state === "idle"
@@ -3592,67 +4728,26 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try { listener(state); } catch {}
                     }
                 };
-                const postIdleWatchConfiguration = () => {
-                    try {
-                        idleWatchPort?.postMessage({
-                            api: "idle.watch",
-                            detectionIntervalInSeconds:
-                                idleDetectionIntervalInSeconds
-                        });
-                    } catch {}
-                };
-                const connectIdleWatch = () => {
-                    if (
-                        !isPrivilegedExtensionContext
-                        ||
-                        idleWatchPort
-                        || idleStateChangeListeners.size === 0
-                    ) {
-                        return;
-                    }
-                    const runtime = nativeRuntimeWithMethod(
-                        "connectNative"
-                    );
-                    const connectNative = runtime?.connectNative;
-                    if (typeof connectNative !== "function") return;
-                    try {
-                        idleWatchPort = Reflect.apply(
-                            connectNative,
-                            runtime,
-                            [capabilityBrokerHost]
-                        );
-                    } catch {
-                        idleWatchPort = undefined;
-                        return;
-                    }
-                    idleWatchPort?.onMessage?.addListener(
-                        publishIdleStateChange
-                    );
-                    idleWatchPort?.onDisconnect?.addListener(() => {
-                        idleWatchPort = undefined;
-                        if (idleStateChangeListeners.size === 0) return;
-                        globalThis.clearTimeout(idleWatchReconnectHandle);
-                        idleWatchReconnectHandle = globalThis.setTimeout(
-                            connectIdleWatch,
-                            1000
-                        );
-                    });
-                    postIdleWatchConfiguration();
-                };
+                const idleWatch = capabilityWatch({
+                    api: "idle",
+                    hasListeners: () => idleStateChangeListeners.size > 0,
+                    onMessage: publishIdleStateChange,
+                    subscription: () => ({
+                        api: "idle.watch",
+                        detectionIntervalInSeconds:
+                            idleDetectionIntervalInSeconds
+                    })
+                });
                 const idleStateChangedEvent = Object.freeze({
                     addListener(listener) {
                         if (typeof listener !== "function") return;
                         idleStateChangeListeners.add(listener);
-                        connectIdleWatch();
+                        idleWatch.connect();
                     },
                     removeListener(listener) {
                         idleStateChangeListeners.delete(listener);
                         if (idleStateChangeListeners.size > 0) return;
-                        globalThis.clearTimeout(idleWatchReconnectHandle);
-                        idleWatchReconnectHandle = undefined;
-                        const port = idleWatchPort;
-                        idleWatchPort = undefined;
-                        try { port?.disconnect(); } catch {}
+                        idleWatch.disconnect();
                     },
                     hasListener(listener) {
                         return idleStateChangeListeners.has(listener);
@@ -3698,8 +4793,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                         idleDetectionIntervalInSeconds = value;
                         if (idleStateChangeListeners.size > 0) {
-                            connectIdleWatch();
-                            postIdleWatchConfiguration();
+                            idleWatch.connect();
+                            idleWatch.resubscribe();
                         }
                     }
                 };
@@ -3710,16 +4805,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 // WebKit 27 exposes the core navigation lifecycle and frame
                 // query methods, but omits four events present in both the
-                // Chromium and Firefox schemas. Preserve feature registration
-                // without claiming delivery semantics. Native members always
-                // win, so a future WebKit implementation replaces these
-                // presence-only fallbacks automatically.
-                const webNavigation = {
-                    onCreatedNavigationTarget: noopEvent,
-                    onHistoryStateUpdated: noopEvent,
-                    onReferenceFragmentUpdated: noopEvent,
-                    onTabReplaced: noopEvent
-                };
+                // Chromium and Firefox schemas. The matrix routes these
+                // `presenceOnly`: registration is preserved, delivery is never
+                // claimed. A `presenceOnly` route does not own its member, so
+                // a future WebKit implementation replaces the placeholder
+                // rather than being displaced by it.
+                const webNavigation = Object.fromEntries(
+                    eventMembersOf("webNavigation").map((member) => [
+                        member,
+                        presenceOnlyEvent(`webNavigation.${member}`)
+                    ])
+                );
                 const runtime = {
                     id: extensionID,
                     onUpdateAvailable: noopEvent,
@@ -3737,8 +4833,18 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return Promise.resolve({ status: "no_update" });
                     }
                 };
+                // The routed fallback set does not depend on which root asks
+                // for it — routes, processes, and declared permissions are
+                // fixed for the life of this context. Computing it once means
+                // `chrome.idle` and `browser.idle` are the SAME Crest object,
+                // as they are one namespace in Chrome, and it lets a caller
+                // recognize a namespace Crest has already installed by
+                // identity instead of re-installing an equivalent copy over
+                // references extensions may already hold.
+                let routedFallbackCache;
                 const fallbacksFor = (nativeRoot) => {
                     void nativeRoot;
+                    if (routedFallbackCache) return routedFallbackCache;
                     const fallbacks = {
                         action,
                         browserAction: action,
@@ -3754,7 +4860,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         management,
                         downloads,
                         offscreen,
-                        sidePanel,
                         idle,
                         webNavigation,
                         webRequest,
@@ -3772,68 +4877,75 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 )
                             )
                         );
+                        // Complete the namespace. An emulated namespace is
+                        // published whole or not at all: what Crest
+                        // implements above, plus an honest placeholder for
+                        // every other member the reference schema defines.
+                        // The implemented members were just filtered by
+                        // route and process, and each filler is filtered the
+                        // same way, so a member the matrix removes stays
+                        // removed and a background-only member does not
+                        // appear in a content script.
+                        for (
+                            const member of emulatedSurface[namespace] ?? []
+                        ) {
+                            if (member in members) continue;
+                            const path = `${namespace}.${member}`;
+                            if (!memberUsesCompatibility(path)) continue;
+                            members[member] = presenceOnlyMember(path, member);
+                        }
                         if (Object.keys(members).length > 0) {
                             routedFallbacks.push([namespace, members]);
                         }
                     }
-                    return Object.fromEntries(routedFallbacks);
+                    routedFallbackCache = Object.fromEntries(routedFallbacks);
+                    return routedFallbackCache;
                 };
+                // `pathPrefix` is the matrix path of `nativeValue` itself: the
+                // empty string at an extension root, then the namespace, then
+                // `namespace.member` as the walk descends. It is what lets the
+                // route — not `existing === undefined` — decide the winner.
+                //
+                // Nothing installed here is pinned. Crest used to redefine
+                // every surviving native property non-configurable, which
+                // broke extensions that legitimately monkeypatch `chrome.*`;
+                // Chrome's own API objects are writable and configurable, so
+                // both the native properties Crest leaves alone and the ones
+                // it installs stay that way.
                 const installFallbacks = (
                     nativeValue,
                     fallbacks,
-                    pinExisting = true
+                    pathPrefix = ""
                 ) => {
                     if (!nativeValue) return;
 
                     for (const [property, fallback] of Object.entries(fallbacks)) {
+                        const path = pathPrefix
+                            ? `${pathPrefix}.${property}`
+                            : property;
                         let existing;
                         try { existing = nativeValue[property]; } catch { continue; }
 
-                        if (existing === undefined) {
+                        if (existing === undefined || crestOwnsPath(path)) {
                             try {
                                 Object.defineProperty(nativeValue, property, {
                                     value: fallback,
-                                    writable: false,
-                                    configurable: false,
+                                    writable: true,
+                                    configurable: true,
                                     enumerable: true
                                 });
                             } catch {
                                 try { nativeValue[property] = fallback; } catch {}
                             }
-                        } else {
-                            try {
-                                const descriptor =
-                                    Reflect.getOwnPropertyDescriptor(
-                                        nativeValue,
-                                        property
-                                    );
-                                if (pinExisting && descriptor?.configurable) {
-                                    Object.defineProperty(
-                                        nativeValue,
-                                        property,
-                                        {
-                                            value: existing,
-                                            writable:
-                                                descriptor.writable ?? false,
-                                            configurable: false,
-                                            enumerable:
-                                                descriptor.enumerable ?? true
-                                        }
-                                    );
-                                }
-                            } catch {}
-                            if (
-                                fallback
-                                && typeof fallback === "object"
-                                && (typeof existing === "object"
-                                    || typeof existing === "function")
-                            ) {
-                                installFallbacks(
-                                    existing,
-                                    fallback,
-                                    pinExisting
-                                );
-                            }
+                            continue;
+                        }
+                        if (
+                            fallback
+                            && typeof fallback === "object"
+                            && (typeof existing === "object"
+                                || typeof existing === "function")
+                        ) {
+                            installFallbacks(existing, fallback, path);
                         }
                     }
                 };
@@ -3849,6 +4961,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "i18n", {
                                 value: normalizedI18n,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3867,6 +4980,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, property, {
                                 value: normalizedMenus,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3887,6 +5001,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "webRequest", {
                                 value: normalizedWebRequest,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3909,6 +5024,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "permissions", {
                                 value: normalizedPermissions,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3929,6 +5045,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "windows", {
                                 value: normalizedWindows,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3947,6 +5064,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "extension", {
                                 value: normalizedExtension,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3967,6 +5085,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "alarms", {
                                 value: normalizedAlarms,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -3987,6 +5106,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(nativeRoot, "storage", {
                                 value: normalizedStorage,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -4002,7 +5122,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     installFallbacks(
                         nativeRoot.runtime,
                         runtimeFallback,
-                        false
+                        "runtime"
                     );
                     if (nativeRoot.runtime) {
                         // The prepared manifest can contain host-owned grants
@@ -4025,6 +5145,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 "getManifest",
                                 {
                                     value: () => declaredManifest,
+                                    writable: true,
                                     configurable: true,
                                     enumerable: descriptor?.enumerable ?? true
                                 }
@@ -4281,10 +5402,19 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // can outlive a popup and crash during reload/teardown.
                     // Preserve the rest of the native extension namespace but
                     // make the worker capability surface match Chrome exactly.
-                    const foregroundOnlyMethods = new Set([
-                        "getViews",
-                        "getBackgroundPage"
-                    ]);
+                    // The list is the matrix's, not a literal: a background
+                    // *document* keeps these members, so the axis is the
+                    // background environment and the guards above are what
+                    // restrict this to an MV3 worker.
+                    const foregroundOnlyMethods =
+                        backgroundWorkerHiddenMembersOf("extension");
+                    if (foregroundOnlyMethods.size === 0) {
+                        normalizedExtensionNamespaces.set(
+                            nativeExtension,
+                            nativeExtension
+                        );
+                        return nativeExtension;
+                    }
                     const normalized = namespaceFacade(
                         nativeExtension,
                         {},
@@ -4321,11 +5451,22 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // live Window. Chrome does not expose it to MV3 workers;
                     // keep it outside the worker boundary while preserving the
                     // native runtime object as every bound method's receiver.
+                    // The matrix names the member, next to the sibling it
+                    // shares a hazard with.
+                    const workerHiddenRuntimeMembers =
+                        backgroundWorkerHiddenMembersOf("runtime");
+                    if (workerHiddenRuntimeMembers.size === 0) {
+                        normalizedWorkerRuntimeNamespaces.set(
+                            nativeRuntime,
+                            nativeRuntime
+                        );
+                        return nativeRuntime;
+                    }
                     const normalized = namespaceFacade(
                         nativeRuntime,
                         {},
                         new Map(),
-                        new Set(["getBackgroundPage"])
+                        workerHiddenRuntimeMembers
                     );
                     normalizedWorkerRuntimeNamespaces.set(
                         nativeRuntime,
@@ -4347,6 +5488,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const alarmBridgeMarker =
                     "__crestWebExtensionAlarmBridgeV1";
                 let alarmBridge;
+                let alarmBridgeUnavailable = false;
                 let nativeAlarmBridgeInstalled = false;
                 const dispatchAlarm = (alarm) => {
                     for (const listener of Array.from(alarmListeners)) {
@@ -4370,11 +5512,21 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 });
                 const installAlarmBroadcastBridge = () => {
-                    if (alarmBridge) return;
+                    if (alarmBridge) return true;
+                    if (alarmBridgeUnavailable) return false;
                     try {
                         alarmBridge = new BroadcastChannel(
                             alarmBridgeMarker
                         );
+                    } catch {
+                        // Without a transport a virtual event can never be
+                        // fed. Report the failure so the caller keeps native
+                        // alarm delivery instead of installing a silent event.
+                        alarmBridge = undefined;
+                        alarmBridgeUnavailable = true;
+                        return false;
+                    }
+                    try {
                         if (!isBackgroundWorker) {
                             alarmBridge.addEventListener(
                                 "message",
@@ -4402,13 +5554,19 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             );
                         }
                     } catch {}
+                    return true;
                 };
                 const normalizeAlarmsNamespace = (nativeAlarms) => {
                     if (
                         !namespaceUsesCompatibility("alarms")
                         || !nativeAlarms
-                        || !hasMV3ServiceWorker
+                        || backgroundEnvironment !== "worker"
                     ) {
+                        // Only a worker background owns alarms durably. When
+                        // preparation collapsed a dual-environment package to
+                        // a background document, that document is the alarm
+                        // owner and must keep native onAlarm: nothing would
+                        // ever feed a virtual event in its place.
                         return nativeAlarms;
                     }
                     if (normalizedAlarmNamespaces.has(nativeAlarms)) {
@@ -4441,7 +5599,15 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // and fan the event out to live page contexts in JavaScript.
                     // Native create/get/clear methods remain untouched, which
                     // preserves WebKit's persistence, clamping, and worker wake.
-                    installAlarmBroadcastBridge();
+                    if (!installAlarmBroadcastBridge()) {
+                        // No BroadcastChannel means no feeder for a virtual
+                        // event. Native delivery is the only path left.
+                        normalizedAlarmNamespaces.set(
+                            nativeAlarms,
+                            nativeAlarms
+                        );
+                        return nativeAlarms;
+                    }
                     if (isBackgroundWorker && !nativeAlarmBridgeInstalled) {
                         const receiveNativeAlarm = (alarm) => {
                             dispatchAlarm(alarm);
@@ -4463,6 +5629,16 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             );
                             nativeAlarmBridgeInstalled = true;
                         } catch {}
+                        if (!nativeAlarmBridgeInstalled) {
+                            // The worker owns native delivery. Without it the
+                            // virtual event has no source at all, so keep the
+                            // native event rather than a silent addListener.
+                            normalizedAlarmNamespaces.set(
+                                nativeAlarms,
+                                nativeAlarms
+                            );
+                            return nativeAlarms;
+                        }
                     }
 
                     // Do not patch WebKit's exotic event object in place.
@@ -4691,7 +5867,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (callback) {
                             operation.then(
                                 (value) => callback(value),
-                                () => callback(undefined)
+                                (error) => invokeCallbackWithLastError(
+                                    callback,
+                                    error?.message
+                                        ?? "WebKit did not answer windows.create."
+                                )
                             );
                             return undefined;
                         }
@@ -4785,6 +5965,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                         Object.defineProperty(nativeWindows, "create", {
                             value: create,
+                            writable: true,
                             configurable: true,
                             enumerable: descriptor?.enumerable ?? true
                         });
@@ -4801,6 +5982,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                         Object.defineProperty(nativeWindows, "update", {
                             value: update,
+                            writable: true,
                             configurable: true,
                             enumerable: descriptor?.enumerable ?? true
                         });
@@ -4829,7 +6011,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
                     const rootListeners = new Set();
                     const areaListeners = new Map();
-                    const recentChanges = new Map();
                     const event = (listeners) => Object.freeze({
                         addListener(listener) {
                             if (typeof listener === "function") {
@@ -4854,42 +6035,162 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     };
                     const rootEvent = event(rootListeners);
                     const areaEvents = new Map();
-                    const changeSignature = (changes, areaName) => {
+                    // Chrome fires storage.onChanged for every write, even one
+                    // that stores an identical value, so a value signature can
+                    // never decide whether an event is a duplicate. Correlate
+                    // by area and key set instead, and only across the two
+                    // delivery paths: a Crest-originated event (this context's
+                    // own mutation, or one relayed from a sibling extension
+                    // page) and WebKit's native event. Two events from the same
+                    // path are always two real writes.
+                    const changeWindowMilliseconds = 250;
+                    const recentEmissions = [];
+                    const nativeObservedAreas = new Set();
+                    const changeKeySignature = (changes, areaName) => {
                         try {
                             return JSON.stringify([
                                 areaName,
-                                Object.keys(changes ?? {}).sort().map(
-                                    (key) => [key, changes[key]]
-                                )
+                                Object.keys(changes ?? {}).sort()
                             ]);
                         } catch {
                             return undefined;
                         }
                     };
-                    const dispatchStorageChange = (changes, areaName) => {
+                    const pruneEmissions = (now) => {
+                        while (
+                            recentEmissions.length > 0
+                            && now - recentEmissions[0].at
+                                > changeWindowMilliseconds
+                        ) {
+                            recentEmissions.shift();
+                        }
+                    };
+                    // Storage tracing rides the same gate as console capture
+                    // and message tracing: with it off `reportRuntimeTrace` is
+                    // the no-op assigned at the top of this runtime and these
+                    // helpers return before touching anything. A storage call
+                    // that never settles is otherwise completely silent —
+                    // Bitwarden's worker takes `doFullSync` and goes quiet
+                    // with a pending `storage.local.set` behind it — so the
+                    // dispatch, the completion, and a synthesized completion
+                    // have to be told apart.
+                    //
+                    // Names only, never values: this area IS the vault.
+                    const storageTraceKeyLimit = 24;
+                    const storageTraceKeyNames = (input) => {
+                        if (Array.isArray(input)) {
+                            return input.filter(
+                                (key) => typeof key === "string"
+                            );
+                        }
+                        if (typeof input === "string") return [input];
+                        if (input && typeof input === "object") {
+                            return Object.keys(input);
+                        }
+                        // `get(null)`, `get()` and `clear()` all address the
+                        // whole area rather than a key list.
+                        return undefined;
+                    };
+                    const storageTraceKeyText = (input) => {
+                        let names;
+                        try {
+                            names = storageTraceKeyNames(input);
+                        } catch {
+                            return "(unreadable)";
+                        }
+                        if (names === undefined) return "(all)";
+                        if (names.length === 0) return "(none)";
+                        const shown = names.slice(0, storageTraceKeyLimit);
+                        const remainder = names.length - shown.length;
+                        return shown.join(",")
+                            + (remainder > 0 ? `,+${remainder} more` : "");
+                    };
+                    const traceStorage = (op, message) => {
+                        if (!capturesExtensionConsole) return;
+                        reportRuntimeTrace(op, {
+                            context: executionProcess,
+                            message
+                        });
+                    };
+                    const dispatchStorageChange = (
+                        changes,
+                        areaName,
+                        origin
+                    ) => {
                         if (!changes || typeof changes !== "object") return;
                         if (Object.keys(changes).length === 0) return;
                         const normalizedAreaName = typeof areaName === "string"
                             ? areaName
                             : "local";
-                        const signature = changeSignature(
+                        const path = origin === "native" ? "native" : "crest";
+                        if (capturesExtensionConsole) {
+                            traceStorage(
+                                `storage.${normalizedAreaName}.onChanged`,
+                                `path=${origin} keys=${
+                                    storageTraceKeyText(changes)
+                                }`
+                            );
+                        }
+                        const ownMutation = origin === "ownMutation";
+                        const signature = changeKeySignature(
                             changes,
                             normalizedAreaName
                         );
                         const now = Date.now();
-                        for (const [key, timestamp] of recentChanges) {
-                            if (now - timestamp > 250) {
-                                recentChanges.delete(key);
-                            }
-                        }
-                        if (
-                            signature !== undefined
-                            && recentChanges.has(signature)
-                        ) {
-                            return;
-                        }
+                        pruneEmissions(now);
                         if (signature !== undefined) {
-                            recentChanges.set(signature, now);
+                            // Correlation runs in one direction only: a native
+                            // event may cancel a Crest emission that ALREADY
+                            // happened, never a later one. A native event for
+                            // key X raised by another context used to leave a
+                            // token that swallowed this context's own next
+                            // write of X — the exact case the relay exists for,
+                            // where WebKit does not echo a context's own write,
+                            // so the listener saw nothing at all. Only Crest
+                            // emissions are recorded, and only a native arrival
+                            // consumes one.
+                            if (path === "native") {
+                                const index = recentEmissions.findIndex(
+                                    (entry) => entry.signature === signature
+                                );
+                                if (index >= 0) {
+                                    const [matched] = recentEmissions.splice(
+                                        index,
+                                        1
+                                    );
+                                    if (matched.ownMutation) {
+                                        // WebKit delivered this context's own
+                                        // write natively. The relay only exists
+                                        // to fill that gap, so stop
+                                        // synthesizing for this area for the
+                                        // life of the context.
+                                        nativeObservedAreas.add(
+                                            normalizedAreaName
+                                        );
+                                    }
+                                    if (capturesExtensionConsole) {
+                                        traceStorage(
+                                            `storage.${
+                                                normalizedAreaName
+                                            }.onChangedCoalesced`,
+                                            `path=native matched=${
+                                                matched.ownMutation
+                                                    ? "ownMutation"
+                                                    : "relay"
+                                            } keys=${
+                                                storageTraceKeyText(changes)
+                                            }`
+                                        );
+                                    }
+                                    return;
+                                }
+                            } else {
+                                recentEmissions.push({
+                                    signature,
+                                    ownMutation,
+                                    at: now
+                                });
+                            }
                         }
                         for (const listener of Array.from(rootListeners)) {
                             try {
@@ -4904,32 +6205,56 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     };
                     const storageBridgeMarker =
                         "__crestWebExtensionStorageBridgeV1";
+                    // A BroadcastChannel is scoped to the context's own
+                    // origin. In a content script that origin is the HOST
+                    // PAGE, so relaying there would hand every stored value to
+                    // the page, let the page forge storage.onChanged, and let
+                    // two extensions on one tab hear each other. Chrome
+                    // delivers storage.onChanged to content scripts natively,
+                    // so the relay exists only for privileged extension
+                    // contexts, whose origin is the extension itself.
+                    const storageBridgeScope = (() => {
+                        try {
+                            return new URL(extensionBaseURL).host
+                                || extensionBaseURL;
+                        } catch {
+                            return extensionBaseURL;
+                        }
+                    })();
+                    const storageBridgeChannelName =
+                        storageBridgeMarker + ":" + storageBridgeScope;
                     let storageBridge;
-                    try {
-                        storageBridge = new BroadcastChannel(
-                            storageBridgeMarker
-                        );
-                        storageBridge.addEventListener(
-                            "message",
-                            (event) => {
-                                const payload = event.data
-                                    ?.[storageBridgeMarker];
-                                if (
-                                    payload?.version !== 1
-                                    || payload.kind !== "storage-change"
-                                    || typeof payload.areaName !== "string"
-                                    || !payload.changes
-                                    || typeof payload.changes !== "object"
-                                ) {
-                                    return;
+                    if (isPrivilegedExtensionContext) {
+                        try {
+                            storageBridge = new BroadcastChannel(
+                                storageBridgeChannelName
+                            );
+                            storageBridge.addEventListener(
+                                "message",
+                                (event) => {
+                                    const payload = event.data
+                                        ?.[storageBridgeMarker];
+                                    if (
+                                        payload?.version !== 1
+                                        || payload.kind !== "storage-change"
+                                        || payload.origin !== extensionBaseURL
+                                        || typeof payload.areaName !== "string"
+                                        || !payload.changes
+                                        || typeof payload.changes !== "object"
+                                    ) {
+                                        return;
+                                    }
+                                    dispatchStorageChange(
+                                        payload.changes,
+                                        payload.areaName,
+                                        "relay"
+                                    );
                                 }
-                                dispatchStorageChange(
-                                    payload.changes,
-                                    payload.areaName
-                                );
-                            }
-                        );
-                    } catch {}
+                            );
+                        } catch {
+                            storageBridge = undefined;
+                        }
+                    }
                     const broadcastStorageChange = (changes, areaName) => {
                         if (!storageBridge) return;
                         if (!changes || typeof changes !== "object") return;
@@ -4939,6 +6264,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 [storageBridgeMarker]: {
                                     version: 1,
                                     kind: "storage-change",
+                                    origin: extensionBaseURL,
                                     changes,
                                     areaName
                                 }
@@ -4996,7 +6322,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         args,
                         completion,
                         completionFallbackDelay,
-                        usesPromiseForm = false
+                        usesPromiseForm = false,
+                        // Diagnostics only. Called from the fallback timer,
+                        // just before the synthesized completion, so a trace
+                        // reader can tell WebKit's own answer from Crest's
+                        // stand-in. A no-op when tracing is off.
+                        traceFallbackTimeout
                     ) => {
                         let completed = false;
                         let completionFallback;
@@ -5049,7 +6380,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             // substituting an empty result while it is pending
                             // fabricates missing extension state.
                             completionFallback = setTimeout(
-                                () => finish(undefined, undefined),
+                                () => {
+                                    if (
+                                        typeof traceFallbackTimeout
+                                            === "function"
+                                    ) {
+                                        try {
+                                            traceFallbackTimeout();
+                                        } catch {}
+                                    }
+                                    finish(undefined, undefined);
+                                },
                                 completionFallbackDelay
                             );
                         }
@@ -5068,13 +6409,18 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             for (const [key, newValue] of Object.entries(
                                 newValues
                             )) {
-                                const change = { newValue };
+                                // Chrome and WebKit both order the change
+                                // object as { oldValue, newValue }. Match it so
+                                // a serialized Crest change is byte-identical
+                                // to a native one.
+                                const change = {};
                                 if (Object.prototype.hasOwnProperty.call(
                                     oldValues,
                                     key
                                 )) {
                                     change.oldValue = oldValues[key];
                                 }
+                                change.newValue = newValue;
                                 changes[key] = change;
                             }
                         } else {
@@ -5097,16 +6443,50 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                         return changes;
                     };
-                    const read = (nativeArea, nativeGet) => (...args) => {
+                    const read = (
+                        nativeArea,
+                        areaName,
+                        operation,
+                        nativeGet
+                    ) => (...args) => {
                         const callback = typeof args.at(-1) === "function"
                             ? args.pop()
                             : undefined;
+                        const traceOp = `storage.${areaName}.${operation}`;
+                        const keysText = capturesExtensionConsole
+                            ? storageTraceKeyText(args[0])
+                            : "";
+                        traceStorage(
+                            traceOp,
+                            `keys=${keysText} form=${
+                                callback ? "callback" : "promise"
+                            }`
+                        );
                         const promise = new Promise((resolve, reject) => {
                             invokeNative(
                                 nativeArea,
                                 nativeGet,
                                 args,
                                 (value, error) => {
+                                    if (error) {
+                                        traceStorage(
+                                            `${traceOp}Rejected`,
+                                            `keys=${keysText} error=${
+                                                traceErrorText(error)
+                                            }`
+                                        );
+                                    } else {
+                                        traceStorage(
+                                            `${traceOp}Resolved`,
+                                            `keys=${keysText} returned=${
+                                                capturesExtensionConsole
+                                                    ? storageTraceKeyText(
+                                                        value
+                                                    )
+                                                    : ""
+                                            }`
+                                        );
+                                    }
                                     const result = value
                                         && typeof value === "object"
                                         ? value
@@ -5122,7 +6502,15 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     else resolve(result);
                                 },
                                 250,
-                                true
+                                true,
+                                () => traceStorage(
+                                    `${traceOp}FallbackTimeout`,
+                                    `keys=${keysText} the native call returned`
+                                        + " neither a promise nor a value and"
+                                        + " no callback fired; Crest"
+                                        + " synthesized an empty result after"
+                                        + " 250ms"
+                                )
                             );
                         });
                         if (callback) {
@@ -5153,6 +6541,16 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                         : {}
                                 )
                                 : input;
+                        const traceOp = `storage.${areaName}.${operation}`;
+                        const keysText = capturesExtensionConsole
+                            ? storageTraceKeyText(readKeys)
+                            : "";
+                        traceStorage(
+                            traceOp,
+                            `keys=${keysText} form=${
+                                callback ? "callback" : "promise"
+                            }`
+                        );
                         const promise = new Promise((resolve, reject) => {
                             const performMutation = (previous) => {
                                 invokeNative(
@@ -5160,16 +6558,36 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     nativeMutation,
                                     args,
                                     (_, error) => {
+                                        if (error) {
+                                            traceStorage(
+                                                `${traceOp}Rejected`,
+                                                `keys=${keysText} error=${
+                                                    traceErrorText(error)
+                                                }`
+                                            );
+                                        } else {
+                                            traceStorage(
+                                                `${traceOp}Resolved`,
+                                                `keys=${keysText}`
+                                            );
+                                        }
                                         if (!error) {
                                             const changes = storageChanges(
                                                 operation,
                                                 input,
                                                 previous
                                             );
-                                            dispatchStorageChange(
-                                                changes,
-                                                areaName
-                                            );
+                                            if (
+                                                !nativeObservedAreas.has(
+                                                    areaName
+                                                )
+                                            ) {
+                                                dispatchStorageChange(
+                                                    changes,
+                                                    areaName,
+                                                    "ownMutation"
+                                                );
+                                            }
                                             broadcastStorageChange(
                                                 changes,
                                                 areaName
@@ -5186,22 +6604,70 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                         else resolve(undefined);
                                     },
                                     250,
-                                    true
+                                    true,
+                                    () => traceStorage(
+                                        `${traceOp}FallbackTimeout`,
+                                        `keys=${keysText} the native call`
+                                            + " returned neither a promise nor"
+                                            + " a value and no callback fired;"
+                                            + " Crest synthesized completion"
+                                            + " after 250ms"
+                                    )
                                 );
                             };
                             if (!nativeGet) {
+                                traceStorage(
+                                    `${traceOp}PriorReadSkipped`,
+                                    `keys=${keysText} this area exposes no`
+                                        + " native get"
+                                );
                                 performMutation({});
                                 return;
                             }
+                            // The mutation cannot start until this read
+                            // settles, so a read that never answers is
+                            // indistinguishable, from the caller's side, from
+                            // a write that never lands. Trace it separately.
+                            traceStorage(
+                                `${traceOp}PriorRead`,
+                                `keys=${keysText}`
+                            );
                             invokeNative(
                                 nativeArea,
                                 nativeGet,
                                 [readKeys],
                                 (previous, error) => {
+                                    if (error) {
+                                        traceStorage(
+                                            `${traceOp}PriorReadRejected`,
+                                            `keys=${keysText} error=${
+                                                traceErrorText(error)
+                                            }`
+                                        );
+                                    } else {
+                                        traceStorage(
+                                            `${traceOp}PriorReadResolved`,
+                                            `keys=${keysText} returned=${
+                                                capturesExtensionConsole
+                                                    ? storageTraceKeyText(
+                                                        previous
+                                                    )
+                                                    : ""
+                                            }`
+                                        );
+                                    }
                                     performMutation(error ? {} : previous);
                                 },
                                 250,
-                                true
+                                true,
+                                () => traceStorage(
+                                    `${traceOp}PriorReadFallbackTimeout`,
+                                    `keys=${keysText} the native get returned`
+                                        + " neither a promise nor a value and"
+                                        + " no callback fired; Crest"
+                                        + " synthesized an empty result after"
+                                        + " 250ms"
+                                )
                             );
                         });
                         if (callback) {
@@ -5224,7 +6690,14 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             Reflect.apply(
                                 nativeRootAddListener,
                                 nativeRootOnChanged,
-                                [dispatchStorageChange]
+                                [
+                                    (changes, areaName) =>
+                                        dispatchStorageChange(
+                                            changes,
+                                            areaName,
+                                            "native"
+                                        )
+                                ]
                             );
                         } catch {}
                     }
@@ -5257,7 +6730,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                     [
                                         (changes) => dispatchStorageChange(
                                             changes,
-                                            areaName
+                                            areaName,
+                                            "native"
                                         )
                                     ]
                                 );
@@ -5271,7 +6745,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (nativeGet) {
                             areaOverlays.set(
                                 "get",
-                                read(nativeArea, nativeGet)
+                                read(nativeArea, areaName, "get", nativeGet)
                             );
                         }
                         for (const operation of [
@@ -5314,9 +6788,21 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     return facade;
                 };
                 const nativeCapabilityNames = \(availableNamespacesLiteral);
+                // WebKit publishes `chrome` and `browser` as two facades over
+                // one extension context, and either can carry a namespace the
+                // other lacks. Copying across closes that gap for the routes
+                // where WebKit's implementation is the one packages should
+                // get. It must not run for a namespace routed `emulated`:
+                // there, Crest's object is the contract, and `installFallbacks`
+                // below installs it on both roots — aliasing first would let a
+                // native implementation reach one root and win by arriving
+                // earlier. `nativeCapabilityNames` already excludes namespaces
+                // routed `unavailable`; the guard states it rather than
+                // relying on that.
                 const installNativeAliases = (target, source) => {
                     if (!target || !source || target === source) return;
                     for (const property of nativeCapabilityNames) {
+                        if (!namespaceIsAliasable(property)) continue;
                         let current;
                         let nativeValue;
                         try {
@@ -5331,6 +6817,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             Object.defineProperty(target, property, {
                                 value: nativeValue,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
@@ -5339,7 +6826,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 installNativeAliases(nativeChrome, nativeBrowser);
                 installNativeAliases(nativeBrowser, nativeChrome);
+                // The same rule one level down. Every storage area is routed
+                // `nativePatched` today, so all four cross-copy; an area moved
+                // to `emulated` would stop, because Crest's area object would
+                // then be the contract rather than a gap filler.
                 const installStorageAreaAliases = (targetRoot, sourceRoot) => {
+                    if (!namespaceIsAliasable("storage")) return;
                     let targetStorage;
                     let sourceStorage;
                     try {
@@ -5350,6 +6842,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     for (const areaName of [
                         "local", "sync", "session", "managed"
                     ]) {
+                        if (crestOwnsPath(`storage.${areaName}`)) continue;
                         let currentArea;
                         let sourceArea;
                         try {
@@ -5370,6 +6863,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 areaName,
                                 {
                                     value: sourceArea,
+                                    writable: true,
                                     configurable: true,
                                     enumerable: true
                                 }
@@ -5387,6 +6881,36 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     installedRoots.add(root);
                     installCompatibility(root);
                 }
+                // This must never wrap a namespace WebKit owns.
+                //
+                // WebKit resolves extension event targets by reading each
+                // frame's live `chrome` / `browser` global and unwrapping the
+                // NATIVE object behind the namespace property. A JavaScript
+                // Proxy has no native wrapper, so a facade installed over a
+                // live native namespace strands every listener registered
+                // through it — the same failure the root-level comment below
+                // records, one level down, and the one that broke WebKit
+                // message routing outright on 2026-08-29 when a root was
+                // replaced with a Proxy.
+                //
+                // So a `native` or `nativePatched` namespace that already
+                // exists is left exactly as WebKit published it. Its missing
+                // members were filled in place by `installFallbacks` above,
+                // which is the only augmentation that survives WebKit's
+                // unwrapping. Only an `emulated` namespace may be replaced,
+                // and it is replaced with Crest's own plain object — never a
+                // Proxy over the native one. The handful of namespaces that
+                // genuinely cannot be augmented in place keep their existing
+                // `normalize*Namespace` path, unchanged; no new wrapping is
+                // introduced here.
+                //
+                // This function looked like it did more until 2026-09, but
+                // `installFallbacks` pinned every namespace it touched
+                // non-configurable, so each `defineProperty` below threw and
+                // was swallowed: facades were never installed over existing
+                // native namespaces. Removing that pinning — it broke
+                // extensions that legitimately monkeypatch `chrome.*` — must
+                // not resurrect the wrapping it was suppressing by accident.
                 const installNamespaceFacades = (root, alternateRoot) => {
                     if (!root) return;
                     const fallbacks = fallbacksFor(root);
@@ -5399,7 +6923,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (property === "runtime") continue;
                         let nativeValue;
                         try { nativeValue = root[property]; } catch {}
-                        if (nativeValue === undefined && alternateRoot) {
+                        if (
+                            nativeValue === undefined
+                            && alternateRoot
+                            && namespaceIsAliasable(property)
+                        ) {
                             try {
                                 nativeValue = alternateRoot[property];
                             } catch {}
@@ -5418,6 +6946,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 try {
                                     Object.defineProperty(root, property, {
                                         value: nativeValue,
+                                        writable: true,
                                         configurable: true,
                                         enumerable: true
                                     });
@@ -5435,6 +6964,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 try {
                                     Object.defineProperty(root, property, {
                                         value: nativeValue,
+                                        writable: true,
                                         configurable: true,
                                         enumerable: true
                                     });
@@ -5445,31 +6975,21 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                         const fallback = fallbacks[property];
                         if (fallback === undefined) continue;
-                        const explicitOverlays = property === "runtime"
-                            ? new Map()
-                            : new Map();
-                        let facade = namespaceFacade(
-                            nativeValue,
-                            fallback,
-                            explicitOverlays
-                        );
-                        if (facade === nativeValue) continue;
+                        // `native` and `nativePatched`: WebKit's object
+                        // stands, whole. Nothing to do — see above.
+                        if (!crestOwnsPath(property)) continue;
+                        // `emulated`: Crest's plain object, and only if
+                        // `installFallbacks` has not already put it there.
+                        if (nativeValue === fallback) continue;
                         try {
                             Object.defineProperty(root, property, {
-                                get() { return facade; },
-                                set(value) {
-                                    nativeValue = value;
-                                    facade = namespaceFacade(
-                                        nativeValue,
-                                        fallback,
-                                        explicitOverlays
-                                    );
-                                },
+                                value: fallback,
+                                writable: true,
                                 configurable: true,
                                 enumerable: true
                             });
                         } catch {
-                            try { root[property] = facade; } catch {}
+                            try { root[property] = fallback; } catch {}
                         }
                     }
                 };
@@ -5480,7 +7000,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     try {
                         Object.defineProperty(globalThis, name, {
                             value: root,
-                            configurable: true
+                            writable: true,
+                            configurable: true,
+                            enumerable: true
                         });
                     } catch {
                         try { globalThis[name] = root; } catch {}
@@ -5508,7 +7030,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     };
                     const currentNamespace = (property) => {
                         let value = directNamespace(property);
-                        if (value === undefined && alternateRoot) {
+                        if (
+                            value === undefined
+                            && alternateRoot
+                            && namespaceIsAliasable(property)
+                        ) {
                             try { value = alternateRoot[property]; } catch {}
                         }
                         return value;
@@ -5605,43 +7131,29 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 const workerScopedRoot = (root, alternateRoot) => {
                     if (!root) return root;
-                    let nativeExtension;
-                    let workerRuntime;
-                    let workerTabs;
-                    let workerWebNavigation;
-                    let workerWebRequest;
-                    try { nativeExtension = root.extension; } catch {}
-                    try { workerRuntime = root.runtime; } catch {}
-                    try { workerTabs = root.tabs; } catch {}
-                    try {
-                        workerWebNavigation = root.webNavigation;
-                    } catch {}
-                    try { workerWebRequest = root.webRequest; } catch {}
-                    if (nativeExtension === undefined && alternateRoot) {
-                        try {
-                            nativeExtension = alternateRoot.extension;
-                        } catch {}
-                    }
-                    if (workerRuntime === undefined && alternateRoot) {
-                        try { workerRuntime = alternateRoot.runtime; } catch {}
-                    }
-                    if (workerTabs === undefined && alternateRoot) {
-                        try { workerTabs = alternateRoot.tabs; } catch {}
-                    }
-                    if (
-                        workerWebNavigation === undefined
-                        && alternateRoot
-                    ) {
-                        try {
-                            workerWebNavigation =
-                                alternateRoot.webNavigation;
-                        } catch {}
-                    }
-                    if (workerWebRequest === undefined && alternateRoot) {
-                        try {
-                            workerWebRequest = alternateRoot.webRequest;
-                        } catch {}
-                    }
+                    // Reading a namespace off this root, falling back to
+                    // the sibling facade only where the route says WebKit's
+                    // implementation is the one packages should get. A
+                    // namespace Crest owns (`emulated`) or refuses
+                    // (`unavailable`) is never borrowed across roots.
+                    const workerNamespace = (property) => {
+                        let value;
+                        try { value = root[property]; } catch {}
+                        if (
+                            value === undefined
+                            && alternateRoot
+                            && namespaceIsAliasable(property)
+                        ) {
+                            try { value = alternateRoot[property]; } catch {}
+                        }
+                        return value;
+                    };
+                    const nativeExtension = workerNamespace("extension");
+                    const workerRuntime = workerNamespace("runtime");
+                    const workerTabs = workerNamespace("tabs");
+                    const workerWebNavigation =
+                        workerNamespace("webNavigation");
+                    const workerWebRequest = workerNamespace("webRequest");
                     const normalizedExtension =
                         normalizeExtensionNamespace(nativeExtension);
                     const normalizedRuntime =
@@ -5673,13 +7185,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         ) {
                             continue;
                         }
-                        let nativeValue;
-                        try { nativeValue = root[property]; } catch {}
-                        if (nativeValue === undefined && alternateRoot) {
-                            try {
-                                nativeValue = alternateRoot[property];
-                            } catch {}
-                        }
+                        const nativeValue = workerNamespace(property);
                         const preparedValue = namespaceFacade(
                             nativeValue,
                             fallback

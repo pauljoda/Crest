@@ -31,4 +31,15 @@ enum BrowserLaunchIsolationPolicy {
         requiresIsolation(environment)
             && environment.persistentIsolationID == nil
     }
+
+    /// The preferences domain a named isolated profile persists into.
+    ///
+    /// Every owner of that profile's state — the browser session, the
+    /// credential vault prefix, the extension registry — is addressed through
+    /// this one name, so a relaunch with the same
+    /// `CREST_ISOLATED_PERSISTENCE_ID` finds all of it again and none of it
+    /// lands in the installed app's own domain.
+    static func isolatedDefaultsSuiteName(isolationID: String) -> String {
+        "\(ProductIdentity.serviceNamespace).isolated.\(isolationID)"
+    }
 }

@@ -44,7 +44,8 @@ extension BrowserExtensionInstallationController {
         var runtimeSummary = runtime.summary(
             for: context,
             extensionID: extensionID,
-            isEnabled: true
+            isEnabled: true,
+            source: .safariWebExtension(candidate.source)
         )
         runtimeSummary.sourceDisplayName = candidate.applicationDisplayName
         runtimeSummary.iconPayload = candidate.iconPayload
@@ -143,7 +144,10 @@ extension BrowserExtensionInstallationController {
                     ?? package.resourceURL,
                 extensionID: extensionID,
                 in: space,
-                unsupportedAPIs: Set(previous?.unsupportedAPIs ?? []),
+                // Matrix-derived hides are recomputed by the runtime on
+                // every load, so the previous record's list is not replayed;
+                // doing so would freeze an old routing decision in place.
+                unsupportedAPIs: [],
                 permissionSnapshot: previous?.permissionSnapshot
                     ?? BrowserExtensionInstallationPermissionPolicy
                     .reviewedRequiredAccess(
@@ -165,7 +169,8 @@ extension BrowserExtensionInstallationController {
             var runtimeSummary = runtime.summary(
                 for: context,
                 extensionID: extensionID,
-                isEnabled: true
+                isEnabled: true,
+                source: source
             )
             runtimeSummary.sourceDisplayName = "Chrome Web Store"
             runtimeSummary.iconPayload = candidate.iconPayload
@@ -206,9 +211,9 @@ extension BrowserExtensionInstallationController {
                 retaining: package.packageName,
                 in: space.id
             )
-            if let compatibilityPackage {
+            if let retainedAccess = compatibilityPackage?.retainedAccess {
                 runtime.retainRuntimeResourceAccess(
-                    compatibilityPackage,
+                    retainedAccess,
                     extensionID: extensionID,
                     in: space.id
                 )
@@ -292,7 +297,10 @@ extension BrowserExtensionInstallationController {
                     ?? package.resourceURL,
                 extensionID: extensionID,
                 in: space,
-                unsupportedAPIs: Set(previous?.unsupportedAPIs ?? []),
+                // Matrix-derived hides are recomputed by the runtime on
+                // every load, so the previous record's list is not replayed;
+                // doing so would freeze an old routing decision in place.
+                unsupportedAPIs: [],
                 permissionSnapshot: previous?.permissionSnapshot
                     ?? BrowserExtensionInstallationPermissionPolicy
                     .reviewedRequiredAccess(
@@ -314,7 +322,8 @@ extension BrowserExtensionInstallationController {
             var runtimeSummary = runtime.summary(
                 for: context,
                 extensionID: extensionID,
-                isEnabled: true
+                isEnabled: true,
+                source: source
             )
             runtimeSummary.sourceDisplayName = Self.mozillaAddonsDisplayName
             runtimeSummary.iconPayload = candidate.iconPayload
@@ -355,9 +364,9 @@ extension BrowserExtensionInstallationController {
                 retaining: package.packageName,
                 in: space.id
             )
-            if let compatibilityPackage {
+            if let retainedAccess = compatibilityPackage?.retainedAccess {
                 runtime.retainRuntimeResourceAccess(
-                    compatibilityPackage,
+                    retainedAccess,
                     extensionID: extensionID,
                     in: space.id
                 )
@@ -440,7 +449,10 @@ extension BrowserExtensionInstallationController {
                     ?? package.resourceURL,
                 extensionID: extensionID,
                 in: space,
-                unsupportedAPIs: Set(previous?.unsupportedAPIs ?? []),
+                // Matrix-derived hides are recomputed by the runtime on
+                // every load, so the previous record's list is not replayed;
+                // doing so would freeze an old routing decision in place.
+                unsupportedAPIs: [],
                 permissionSnapshot: previous?.permissionSnapshot
                     ?? BrowserExtensionInstallationPermissionPolicy
                     .reviewedRequiredAccess(
@@ -462,7 +474,8 @@ extension BrowserExtensionInstallationController {
             var runtimeSummary = runtime.summary(
                 for: context,
                 extensionID: extensionID,
-                isEnabled: true
+                isEnabled: true,
+                source: source
             )
             runtimeSummary.sourceDisplayName =
                 candidate.format.sourceDisplayName
@@ -505,9 +518,9 @@ extension BrowserExtensionInstallationController {
                 retaining: package.packageName,
                 in: space.id
             )
-            if let compatibilityPackage {
+            if let retainedAccess = compatibilityPackage?.retainedAccess {
                 runtime.retainRuntimeResourceAccess(
-                    compatibilityPackage,
+                    retainedAccess,
                     extensionID: extensionID,
                     in: space.id
                 )
@@ -536,25 +549,26 @@ extension BrowserExtensionInstallationController {
 
     private static var mozillaAddonsDisplayName: String { "Firefox Add-ons" }
 
+    /// Prepares the staged package through the pool's configured preparer so
+    /// a fresh install and a later restore produce the same runtime. A
+    /// default-constructed preparer here once dropped launch-time options
+    /// such as console capture on the install path only.
     private func prepareCompatibilityPackage(
         _ package: BrowserExtensionPackage,
         extensionID: String,
         source: BrowserExtensionInstallationSource,
         spaceID: SpaceID,
         requestedPermissions: [String]
-    ) throws -> BrowserWebExtensionPreparedPackage? {
-        try BrowserWebExtensionCompatibilityPackagePreparer()
-            .prepareStoredResource(
-                package.resourceURL,
-                requestedPermissions: requestedPermissions,
-                runtimeIdentity:
-                    BrowserExtensionRuntimeIdentifierPolicy
-                    .identity(
-                        extensionID: extensionID,
-                        source: source,
-                        spaceID: spaceID
-                    )
+    ) throws -> BrowserExtensionStoredResource? {
+        try storedResourcePreparer.prepare(
+            resourceURL: package.resourceURL,
+            request: BrowserExtensionStoredResourcePreparationRequest(
+                extensionID: extensionID,
+                source: source,
+                spaceID: spaceID,
+                requestedPermissions: requestedPermissions
             )
+        )
     }
 
 }

@@ -59,66 +59,190 @@ The route describes who owns the result:
 
 - **Native** keeps WebKit's implementation unchanged.
 - **Native + patch** preserves WebKit object identity while filling or normalizing a specific contract gap.
-- **Emulated** is implemented by Crest, with native broker access scoped to the extension's reviewed permissions.
-- **Partial** is useful but does not match every Chrome or Firefox semantic.
+- **Emulated** is implemented by Crest, with native broker access scoped to the extension's reviewed permissions. An emulated namespace always presents its complete schema, because extensions check for the namespace and then use everything behind it; the parts Crest cannot do report a clear error instead of being missing.
 - **Unavailable** is intentionally absent; Crest does not return false success.
 
-### Actions, runtime, and browser UI
+The two tables below are generated directly from Crest's executable routing matrix, so they describe the shipping build rather than a hand-maintained summary. Plain-language limits follow them.
 
-| API | Chrome / Firefox | WebKit substrate | Crest route | Current boundary |
+{/* BEGIN GENERATED: BrowserExtensionAPICompatibilityMatrix */}
+### Pinned revisions
+
+| Source | Pinned revision |
+| --- | --- |
+| Chromium schemas | `209681af9aaea48aa172a1a9eb1eb2cdc63c1e67` |
+| Firefox schemas | `5836a062726f715fda621338a17b51aff30d0a8c` |
+| WebKit extension IDL | `e4856c6696f58bae6f5cf1e864d0550f9eff09f8` |
+| Apple SDK | Xcode 27.0 (27A5237l), macOS 27.0 SDK |
+
+### Namespace routes
+
+Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity kept, one contract gap filled), **Emulated** (Crest owns the implementation), and **Unavailable** (no false success). Processes are **BG** (background worker or page), **EP** (extension page or popup), **CS** (content script), and **DT** (DevTools page). Permissions lists the manifest permissions the matrix associates with the namespace; Exposure is the narrower question the compatibility runtime actually asks before it publishes `browser.<namespace>` at all, and the two differ where Chrome defines a namespace regardless of the manifest. Broker lists the permissions the Crest capability broker will authorize for that namespace.
+
+| Namespace | Chrome | Firefox | WebKit | Crest route | Processes | Permissions | Exposure | Broker |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `action` | Native | Native | Native | Native + patch | BG, EP | — | Always | — |
+| `alarms` | Native | Native | Native | Native + patch | BG, EP | — | Always | — |
+| `bookmarks` | Native | Native | Unavailable | Unavailable | BG, EP | `bookmarks` | `bookmarks` | — |
+| `browserAction` | Native | Native | Native | Native + patch | BG, EP | — | Always | — |
+| `commands` | Native | Native | Native | Native + patch | BG, EP | — | Always | — |
+| `contextMenus` | Native | Native | Native | Native + patch | BG, EP | `contextMenus`, `menus` | `contextMenus`, `menus` | `contextMenus`, `menus` |
+| `cookies` | Native | Native | Native | Native | BG, EP | `cookies` | `cookies` | — |
+| `declarativeNetRequest` | Native | Native | Partial | Native | BG, EP | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | — |
+| `devtools` | Native | Native | Partial | Native | DT | — | Always | — |
+| `dom` | Native | Unavailable | Native | Native | EP, CS | — | Always | — |
+| `downloads` | Native | Native | Unavailable | Emulated | BG, EP | `downloads`, `downloads.open` | `downloads`, `downloads.open` | `downloads` |
+| `extension` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
+| `history` | Native | Native | Unavailable | Unavailable | BG, EP | `history` | `history` | — |
+| `i18n` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
+| `identity` | Native | Partial | Unavailable | Unavailable | BG, EP | `identity`, `identity.email` | `identity`, `identity.email` | — |
+| `idle` | Native | Native | Unavailable | Emulated | BG, EP | `idle` | `idle` | `idle` |
+| `management` | Native | Native | Unavailable | Emulated | BG, EP | `management` | `management` | — |
+| `notifications` | Native | Native | Partial | Emulated | BG, EP | `notifications` | `notifications` | `notifications` |
+| `offscreen` | Native | Unavailable | Partial | Emulated | BG, EP | `offscreen` | `offscreen` | `offscreen` |
+| `omnibox` | Native | Native | Unavailable | Unavailable | BG, EP | `omnibox` | `omnibox` | — |
+| `pageAction` | Native | Native | Native | Native | BG, EP | — | Always | — |
+| `permissions` | Native | Native | Native | Native + patch | BG, EP | `permissions` | Always | — |
+| `privacy` | Native | Native | Unavailable | Emulated | BG, EP | `privacy` | `privacy` | — |
+| `runtime` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
+| `scripting` | Native | Native | Native | Native + patch | BG, EP | `scripting` | `scripting` | — |
+| `sessions` | Native | Native | Unavailable | Unavailable | BG, EP | `sessions` | `sessions` | — |
+| `sidePanel` | Native | Unavailable | Partial | Unavailable | BG, EP | `sidePanel` | `sidePanel` | — |
+| `sidebarAction` | Unavailable | Native | Partial | Unavailable | BG, EP | — | Always | — |
+| `storage` | Native | Native | Native | Native + patch | BG, EP, CS | `storage`, `unlimitedStorage` | `storage`, `unlimitedStorage` | — |
+| `tabs` | Native | Native | Native | Native + patch | BG, EP | `tabs` | Always | — |
+| `test` | Unavailable | Unavailable | Native | Unavailable | BG, EP, CS | — | Always | — |
+| `topSites` | Native | Native | Unavailable | Unavailable | BG, EP | `topSites` | `topSites` | — |
+| `userScripts` | Native | Native | Unavailable | Unavailable | BG, EP | `userScripts` | `userScripts` | — |
+| `webNavigation` | Native | Native | Native | Native + patch | BG, EP | `webNavigation` | `webNavigation` | — |
+| `webRequest` | Native | Native | Partial | Native + patch | BG, EP | `webRequest`, `webRequestBlocking` | `webRequest`, `webRequestBlocking` | — |
+| `windows` | Native | Native | Native | Native + patch | BG, EP | — | Always | — |
+
+### Member routes
+
+A namespace can stay native while a single dynamic member is replaced. **Hidden from WebKit** marks the members Crest removes from the native surface before the extension context loads.
+
+| Member | WebKit | Crest route | Processes | Hidden from WebKit |
 | --- | --- | --- | --- | --- |
-| <code>action</code>, <code>browserAction</code>, <code>pageAction</code> | Native | Native | Native + patch | Popup lifecycle and user-settings shape normalization. |
-| <code>commands</code> | Native | Native | Native + patch | Manifest command normalization. |
-| <code>contextMenus</code> / <code>menus</code> | Native | Native | Native + patch | Crest registry and native webpage-menu presentation; contexts are normalized across Chrome and Firefox. |
-| <code>notifications</code> | Native | Partial | Emulated | Native notifications plus create, update, clear, query, click, button, and close events. |
-| <code>windows</code> | Native | Native | Native + patch | Tabs and primary windows are native adapters; a single-URL popup request can become an auxiliary Crest window. |
-| <code>offscreen</code> | Chrome native / Firefox unavailable | New, conditional native API | Native | Uses WebKit's document implementation; Crest does not substitute a hidden page. |
-| <code>sidePanel</code> / <code>sidebarAction</code> | Platform-specific | Partial | Unavailable | Crest has no extension-owned sidebar surface yet. |
-| <code>omnibox</code> | Native | Unavailable | Unavailable | No extension keyword surface yet. |
+| `action.getUserSettings` | Native | Native + patch | BG, EP | — |
+| `alarms.onAlarm` | Native | Native + patch | BG, EP | — |
+| `browserAction.getUserSettings` | Native | Native + patch | BG, EP | — |
+| `contextMenus.create` | Native | Native + patch | BG, EP | — |
+| `contextMenus.onClicked` | Native | Native + patch | BG, EP | — |
+| `contextMenus.remove` | Native | Native + patch | BG, EP | — |
+| `contextMenus.removeAll` | Native | Native + patch | BG, EP | — |
+| `contextMenus.update` | Native | Native + patch | BG, EP | — |
+| `downloads.acceptDanger` | Unavailable | Presence only | BG, EP | — |
+| `downloads.cancel` | Unavailable | Presence only | BG, EP | — |
+| `downloads.download` | Unavailable | Emulated | BG, EP | — |
+| `downloads.erase` | Unavailable | Presence only | BG, EP | — |
+| `downloads.getFileIcon` | Unavailable | Presence only | BG, EP | — |
+| `downloads.onChanged` | Unavailable | Presence only | BG, EP | — |
+| `downloads.onCreated` | Unavailable | Presence only | BG, EP | — |
+| `downloads.onDeterminingFilename` | Unavailable | Presence only | BG, EP | — |
+| `downloads.onErased` | Unavailable | Presence only | BG, EP | — |
+| `downloads.open` | Unavailable | Presence only | BG, EP | — |
+| `downloads.pause` | Unavailable | Presence only | BG, EP | — |
+| `downloads.removeFile` | Unavailable | Presence only | BG, EP | — |
+| `downloads.resume` | Unavailable | Presence only | BG, EP | — |
+| `downloads.search` | Unavailable | Presence only | BG, EP | — |
+| `downloads.setShelfEnabled` | Unavailable | Presence only | BG, EP | — |
+| `downloads.setUiOptions` | Unavailable | Presence only | BG, EP | — |
+| `downloads.show` | Unavailable | Presence only | BG, EP | — |
+| `downloads.showDefaultFolder` | Unavailable | Presence only | BG, EP | — |
+| `extension.getBackgroundPage` | Native | Native + patch | BG, EP | — |
+| `extension.getViews` | Native | Native + patch | BG, EP | — |
+| `i18n.getMessage` | Native | Native + patch | BG, EP, CS | — |
+| `idle.getAutoLockDelay` | Unavailable | Presence only | BG, EP | — |
+| `idle.onStateChanged` | Unavailable | Emulated | BG, EP | — |
+| `idle.queryState` | Unavailable | Emulated | BG, EP | — |
+| `idle.setDetectionInterval` | Unavailable | Emulated | BG, EP | — |
+| `management.createAppShortcut` | Unavailable | Presence only | BG, EP | — |
+| `management.generateAppForLink` | Unavailable | Presence only | BG, EP | — |
+| `management.get` | Unavailable | Presence only | BG, EP | — |
+| `management.getAll` | Unavailable | Presence only | BG, EP | — |
+| `management.getPermissionWarningsById` | Unavailable | Presence only | BG, EP | — |
+| `management.getPermissionWarningsByManifest` | Unavailable | Presence only | BG, EP | — |
+| `management.getSelf` | Unavailable | Emulated | BG, EP | — |
+| `management.launchApp` | Unavailable | Presence only | BG, EP | — |
+| `management.onDisabled` | Unavailable | Presence only | BG, EP | — |
+| `management.onEnabled` | Unavailable | Presence only | BG, EP | — |
+| `management.onInstalled` | Unavailable | Presence only | BG, EP | — |
+| `management.onUninstalled` | Unavailable | Presence only | BG, EP | — |
+| `management.setEnabled` | Unavailable | Presence only | BG, EP | — |
+| `management.setLaunchType` | Unavailable | Presence only | BG, EP | — |
+| `management.uninstall` | Unavailable | Presence only | BG, EP | — |
+| `management.uninstallSelf` | Unavailable | Presence only | BG, EP | — |
+| `notifications.clear` | Partial | Emulated | BG, EP | — |
+| `notifications.create` | Partial | Emulated | BG, EP | — |
+| `notifications.getAll` | Partial | Emulated | BG, EP | — |
+| `notifications.getPermissionLevel` | Partial | Emulated | BG, EP | — |
+| `notifications.onButtonClicked` | Partial | Emulated | BG, EP | — |
+| `notifications.onClicked` | Partial | Emulated | BG, EP | — |
+| `notifications.onClosed` | Partial | Emulated | BG, EP | — |
+| `notifications.onPermissionLevelChanged` | Partial | Presence only | BG, EP | — |
+| `notifications.onShowSettings` | Partial | Presence only | BG, EP | — |
+| `notifications.update` | Partial | Emulated | BG, EP | — |
+| `offscreen.Reason` | Partial | Emulated | BG, EP | — |
+| `offscreen.closeDocument` | Partial | Emulated | BG, EP | — |
+| `offscreen.createDocument` | Partial | Emulated | BG, EP | — |
+| `offscreen.hasDocument` | Partial | Emulated | BG, EP | — |
+| `permissions.contains` | Native | Native + patch | BG, EP | — |
+| `permissions.getAll` | Native | Native + patch | BG, EP | — |
+| `permissions.remove` | Native | Native + patch | BG, EP | — |
+| `privacy.network` | Unavailable | Emulated | BG, EP | — |
+| `privacy.services` | Unavailable | Emulated | BG, EP | — |
+| `privacy.websites` | Unavailable | Emulated | BG, EP | — |
+| `runtime.getBackgroundPage` | Native | Native + patch | BG, EP | — |
+| `runtime.getManifest` | Native | Native + patch | BG, EP, CS | — |
+| `runtime.getURL` | Native | Native + patch | BG, EP, CS | — |
+| `runtime.id` | Native | Native + patch | BG, EP, CS | — |
+| `runtime.onConnect` | Native | Native + patch | BG, EP, CS | — |
+| `runtime.onMessage` | Native | Native + patch | BG, EP, CS | — |
+| `runtime.onUpdateAvailable` | Native | Native + patch | BG, EP | — |
+| `runtime.requestUpdateCheck` | Native | Native + patch | BG, EP | — |
+| `scripting.ExecutionWorld` | Native | Native + patch | BG, EP | — |
+| `storage.local` | Native | Native + patch | BG, EP, CS | — |
+| `storage.managed` | Native | Native + patch | BG, EP, CS | — |
+| `storage.session` | Native | Native + patch | BG, EP, CS | — |
+| `storage.sync` | Native | Native + patch | BG, EP, CS | — |
+| `tabs.get` | Native | Native + patch | BG, EP | — |
+| `tabs.query` | Native | Native + patch | BG, EP | — |
+| `tabs.sendMessage` | Native | Native + patch | BG, EP | — |
+| `webNavigation.getAllFrames` | Native | Native + patch | BG, EP | — |
+| `webNavigation.onCreatedNavigationTarget` | Unavailable | Presence only | BG, EP | — |
+| `webNavigation.onHistoryStateUpdated` | Unavailable | Presence only | BG, EP | — |
+| `webNavigation.onReferenceFragmentUpdated` | Unavailable | Presence only | BG, EP | — |
+| `webNavigation.onTabReplaced` | Unavailable | Presence only | BG, EP | — |
+| `webRequest.handlerBehaviorChanged` | Partial | Native + patch | BG, EP | — |
+| `webRequest.onActionIgnored` | Unavailable | Native + patch | BG, EP | — |
+| `webRequest.onAuthRequired` | Partial | Unavailable | BG, EP | Yes |
+| `webRequest.onBeforeRedirect` | Native | Native + patch | BG, EP | — |
+| `webRequest.onBeforeRequest` | Native | Native + patch | BG, EP | — |
+| `webRequest.onBeforeSendHeaders` | Native | Native + patch | BG, EP | — |
+| `webRequest.onCompleted` | Native | Native + patch | BG, EP | — |
+| `webRequest.onErrorOccurred` | Native | Native + patch | BG, EP | — |
+| `webRequest.onHeadersReceived` | Native | Native + patch | BG, EP | — |
+| `webRequest.onResponseStarted` | Native | Native + patch | BG, EP | — |
+| `webRequest.onSendHeaders` | Native | Native + patch | BG, EP | — |
+| `windows.create` | Native | Native + patch | BG, EP | — |
+| `windows.update` | Native | Native + patch | BG, EP | — |
+{/* END GENERATED */}
 
-### Runtime, lifecycle, and state
+### Where the boundaries are
 
-| API | Chrome / Firefox | WebKit substrate | Crest route | Current boundary |
-| --- | --- | --- | --- | --- |
-| <code>runtime</code> | Native | Native | Native + patch | Authored manifest/base URL, update-check shape, and worker boundaries are normalized without replacing native messaging or Port objects. |
-| <code>extension</code> | Native | Native | Native + patch | View and background-page members are restricted to the processes where reference browsers expose them. |
-| <code>alarms</code> | Native | Native | Native + patch | MV3 listener and alarm delivery normalization. |
-| <code>idle</code> | Native | Unavailable | Emulated | macOS session/input state with query, interval, and transition events. |
-| <code>management</code> | Native | Unavailable | Emulated, partial | <code>getSelf</code> only; no cross-extension discovery or mutation. |
-| <code>storage</code> | Native | Native | Native + patch | Native local, sync, session, and managed areas with cross-context/event normalization. |
-| <code>permissions</code> | Native | Native | Native + patch | Internal transport grants are hidden from extension-authored permission queries. Live optional grants for Crest-emulated APIs are not fully supported yet. |
-| <code>i18n</code> | Native | Native | Native + patch | Message lookup and empty-token normalization. |
-
-### Tabs, navigation, and requests
-
-| API | Chrome / Firefox | WebKit substrate | Crest route | Current boundary |
-| --- | --- | --- | --- | --- |
-| <code>tabs</code> | Native | Native | Native + patch | Crest tab/window adapters are authoritative; query/get/message results are normalized. |
-| <code>webNavigation</code> | Native | Partial | Native + patch, partial | Frame queries and core lifecycle are native. Four standard events are presence-only until Crest has engine-backed dispatch. |
-| <code>webRequest</code> | Native | Observe-only | Native + patch, partial | Request metadata and child-frame type are normalized. Blocking responses and credential-supplying authentication are unavailable. |
-| <code>declarativeNetRequest</code> | Native | Partial | Native, partial | WebKit translates supported rules into content blocking; the translation is not lossless. |
-| <code>cookies</code> | Native | Native | Native | Constrained by reviewed host permissions. |
-| <code>history</code> | Native | Unavailable | Unavailable | Not implemented. |
-| <code>sessions</code> | Native | Unavailable | Unavailable | Not implemented. |
-| <code>topSites</code> | Native | Unavailable | Unavailable | Not implemented. |
-
-### Page code, data, and platform services
-
-| API | Chrome / Firefox | WebKit substrate | Crest route | Current boundary |
-| --- | --- | --- | --- | --- |
-| <code>scripting</code> | Native | Native | Native + patch | Execution-world enum and member normalization; actual injection remains native. |
-| <code>userScripts</code> | Native | Unavailable | Unavailable | Dynamic user-script registration is not implemented. |
-| <code>dom</code> | Chrome/WebKit only | Native | Native | Extension-page and content-script surface. |
-| <code>privacy</code> | Native | Unavailable | Emulated, partial | Complete group shape with conservative values reported as <code>not_controllable</code>; no false claim of changing system policy. |
-| <code>bookmarks</code> | Native | Unavailable | Unavailable | Not implemented. |
-| <code>downloads</code> | Native | Unavailable | Unavailable | Extension-initiated downloads and vault export are not implemented. |
-| <code>identity</code> | Chrome native / Firefox partial | Unavailable | Unavailable | Browser-specific OAuth redirect contract is not implemented. |
-| <code>devtools</code> | Native | Partial | Native, partial | WebKit's subset only. |
+- **Browser data stores.** Bookmarks, history, top sites, and sessions are not exposed to extensions at all.
+- **Downloads.** An extension can start a download through <code>downloads.download</code>; Crest applies its own destination and safety policy. The rest of the namespace, including search and download history, is present but reports that Crest cannot do it, so an extension gets an error rather than a broken page.
+- **Offscreen documents.** Crest hosts the hidden document itself, using the page the extension bundles, so Chrome extensions that depend on an offscreen worker keep working.
+- **Side panels.** Crest has no extension-owned panel surface, so the <code>sidePanel</code> API is absent rather than stubbed — the same as Firefox, which extensions already handle. Firefox's <code>sidebarAction</code> is unavailable too.
+- **Request blocking.** WebKit reports requests but does not consume blocking <code>webRequest</code> responses, so cancellation, redirection, header mutation, and authentication parity are unavailable. Declarative rules are translated by WebKit, and that translation is not lossless.
+- **Sign-in redirects.** <code>identity.launchWebAuthFlow</code> needs a browser-owned authentication window Crest does not have yet.
+- **Extension management.** An extension can read its own record. Listing, enabling, or removing other extensions is refused.
+- **Keyword search.** There is no extension omnibox keyword surface.
 
 ## What this coverage means
 
-Crest currently routes **36 namespace contracts** through one executable matrix. Twenty-five are available in some form and eleven are intentionally unavailable. The strongest coverage is around the flows used by password managers, page modifiers, and extension popups: runtime messaging, storage, tabs, injection, actions, auxiliary windows, permissions, notifications, menus, and lifecycle.
+Crest currently routes **36 namespace contracts** and 103 individual members through one executable matrix. Twenty-six namespaces are available in some form and ten are intentionally unavailable. The strongest coverage is around the flows used by password managers, page modifiers, and extension popups: runtime messaging, storage, tabs, injection, actions, auxiliary windows, permissions, notifications, menus, and lifecycle.
 
-The remaining gaps cluster around three areas: browser-owned data stores such as bookmarks/history/downloads; browser-chrome surfaces such as side panels and omnibox; and request interception semantics WebKit does not expose. Those gaps are documented instead of being replaced with extension-specific shims or successful no-ops.
+The remaining gaps cluster around three areas: browser-owned data stores such as bookmarks, history, and sessions; browser-chrome surfaces such as side panels and the omnibox; and request interception semantics WebKit does not expose. Those gaps are documented instead of being replaced with extension-specific shims or successful no-ops.
 
 For the implementation-level contract and pinned Chromium, Firefox, WebKit, and SDK revisions, see the [technical API matrix](https://github.com/pauljoda/Crest/blob/main/Documentation/ExtensionAPICompatibilityMatrix.md). For package-specific native limits, continue with [Direct build, App Store, and native companions](./native-companion-limits.md).

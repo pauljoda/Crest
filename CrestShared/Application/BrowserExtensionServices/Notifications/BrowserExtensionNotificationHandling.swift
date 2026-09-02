@@ -26,6 +26,19 @@ protocol BrowserExtensionNotificationHandling: AnyObject {
         from client: BrowserExtensionServiceClientID
     ) async -> BrowserExtensionNotificationPostOutcome
 
+    /// Merges `update` into one of `client`'s presented notifications and
+    /// re-presents it. Backs `chrome.notifications.update`.
+    ///
+    /// Fields the update left out keep the value the notification was last
+    /// posted with, so an extension that edits only the message does not blank
+    /// its own title and buttons. An identifier this service has not posted, or
+    /// one the person has already dismissed, answers
+    /// ``BrowserExtensionNotificationUpdateOutcome/unknownNotification``.
+    func update(
+        _ update: BrowserExtensionNotificationUpdate,
+        from client: BrowserExtensionServiceClientID
+    ) async -> BrowserExtensionNotificationUpdateOutcome
+
     /// Withdraws one of `client`'s notifications, reporting whether it was
     /// presented. Backs `chrome.notifications.clear`.
     @discardableResult

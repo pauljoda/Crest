@@ -445,7 +445,12 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         let preparedPermissions = try XCTUnwrap(
             preparedManifest["permissions"] as? [String]
         )
-        XCTAssertTrue(preparedPermissions.contains("nativeMessaging"))
+        // The transport is a host grant, not an authored permission, and the
+        // package manifest is left alone: writing `nativeMessaging` into it
+        // would let an extension light up an optional native-companion path
+        // solely because Crest needs private transport. The grant is applied
+        // to the loaded context instead.
+        XCTAssertFalse(preparedPermissions.contains("nativeMessaging"))
         XCTAssertEqual(
             prepared.internalGrantedPermissions,
             ["nativeMessaging"]
@@ -491,7 +496,14 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
                 ),
             persistsRuntimeSummary: false,
             source: source,
-            internalGrantedPermissions: prepared.internalGrantedPermissions
+            internalGrantedPermissions: prepared.internalGrantedPermissions,
+            // The install path hands the runtime these alongside the
+            // internal grant: without them the capability broker refuses
+            // the port, and no menu definition ever reaches the registry.
+            capabilityBrokerGrantedPermissions:
+                prepared.capabilityBrokerGrantedPermissions,
+            allowsInternalCapabilityBroker:
+                prepared.allowsInternalCapabilityBroker
         )
         let summary = pool.runtimeContextController.summary(
             for: context,
@@ -578,6 +590,11 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         let provider = BrowserExtensionWebpageMenuProvider(
             extensionControllerPool: pool
         )
+        // A source URL alone is not a media context. The hit-test result
+        // reports the media kind separately, and the live capture carries it
+        // through `BrowserLinkContext.mediaType`, so a click on an image has
+        // to say so here too — otherwise this is a plain `page` click and the
+        // page items are the correct answer.
         let imageContext = BrowserExtensionWebpageMenuContext(
             pageURL: try XCTUnwrap(URL(string: "https://example.com/page")),
             documentURL: try XCTUnwrap(URL(string: "https://example.com/page")),
@@ -585,6 +602,7 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
             sourceURL: try XCTUnwrap(
                 URL(string: "https://example.com/photo.webp")
             ),
+            mediaType: .image,
             selectionText: nil,
             isEditable: false,
             isMainFrame: true
@@ -672,7 +690,14 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
                 ),
             persistsRuntimeSummary: false,
             source: source,
-            internalGrantedPermissions: prepared.internalGrantedPermissions
+            internalGrantedPermissions: prepared.internalGrantedPermissions,
+            // The install path hands the runtime these alongside the
+            // internal grant: without them the capability broker refuses
+            // the port, and no menu definition ever reaches the registry.
+            capabilityBrokerGrantedPermissions:
+                prepared.capabilityBrokerGrantedPermissions,
+            allowsInternalCapabilityBroker:
+                prepared.allowsInternalCapabilityBroker
         )
 
         let clientID = BrowserExtensionServiceClientID.scoped(
@@ -782,7 +807,14 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
                 ),
             persistsRuntimeSummary: false,
             source: source,
-            internalGrantedPermissions: prepared.internalGrantedPermissions
+            internalGrantedPermissions: prepared.internalGrantedPermissions,
+            // The install path hands the runtime these alongside the
+            // internal grant: without them the capability broker refuses
+            // the port, and no menu definition ever reaches the registry.
+            capabilityBrokerGrantedPermissions:
+                prepared.capabilityBrokerGrantedPermissions,
+            allowsInternalCapabilityBroker:
+                prepared.allowsInternalCapabilityBroker
         )
         pool.reconcileExtensionState(in: browser.session)
         let adapter = try XCTUnwrap(
@@ -830,6 +862,9 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         let imageItems = provider.items(
             for: tab.id,
             in: space.id,
+            // See the image context above: the media kind is reported
+            // separately from the source URL, so an image click has to
+            // declare it.
             context: BrowserExtensionWebpageMenuContext(
                 pageURL: pageURL,
                 documentURL: pageURL,
@@ -837,6 +872,7 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
                 sourceURL: try XCTUnwrap(
                     URL(string: "http://127.0.0.1:8765/photo.webp")
                 ),
+                mediaType: .image,
                 selectionText: nil,
                 isEditable: false,
                 isMainFrame: true

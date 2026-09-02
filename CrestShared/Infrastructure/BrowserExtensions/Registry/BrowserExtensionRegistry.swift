@@ -40,6 +40,19 @@ final class BrowserExtensionRegistry {
         )
     }
 
+    /// A registry that records installations in `defaults` rather than in the
+    /// installed app's own preferences domain.
+    ///
+    /// Used by named isolated profiles, whose whole point is to survive a
+    /// relaunch without ever writing into the shipping app's state.
+    static func isolated(defaults: UserDefaults) -> BrowserExtensionRegistry {
+        BrowserExtensionRegistry(
+            persistence: UserDefaultsBrowserExtensionRegistryPersistence(
+                defaults: defaults
+            )
+        )
+    }
+
     func installations(
         in spaceID: SpaceID
     ) -> [BrowserExtensionInstallation] {

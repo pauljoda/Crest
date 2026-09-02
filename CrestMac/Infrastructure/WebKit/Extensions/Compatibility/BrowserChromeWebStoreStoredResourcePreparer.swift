@@ -5,10 +5,14 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
 {
     private let compatibilityPreparer: BrowserWebExtensionCompatibilityPackagePreparer
 
-    init(fileManager: FileManager = .default) {
+    init(
+        fileManager: FileManager = .default,
+        enablesConsoleCapture: Bool = false
+    ) {
         compatibilityPreparer =
             BrowserWebExtensionCompatibilityPackagePreparer(
-                fileManager: fileManager
+                fileManager: fileManager,
+                enablesConsoleCapture: enablesConsoleCapture
             )
     }
 

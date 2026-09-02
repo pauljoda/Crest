@@ -6,7 +6,7 @@ final class BrowserExtensionInstallationController {
     let persistence: BrowserExtensionPersistenceController
     let runtime: BrowserExtensionRuntimeContextController
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
-    private let storedResourcePreparer: any BrowserExtensionStoredResourcePreparing
+    let storedResourcePreparer: any BrowserExtensionStoredResourcePreparing
 
     init(
         persistence: BrowserExtensionPersistenceController,
@@ -124,7 +124,8 @@ final class BrowserExtensionInstallationController {
             var summary = runtime.summary(
                 for: context,
                 extensionID: package.extensionID,
-                isEnabled: true
+                isEnabled: true,
+                source: source
             )
             summary.isPinned = previous?.isPinned == true
             let now = Date.now
