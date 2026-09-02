@@ -92,6 +92,7 @@ struct BrowserRootPageSurface: View {
                         )
                     } else {
                         BrowserDetailView(
+                            presentation: presentation,
                             browser: model.browser,
                             pages: model.pages,
                             spaceAccess: model.spaceAccess,

@@ -274,7 +274,9 @@ extension BrowserRootModel {
         guard hasRestoredExtensions else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
-        guard BrowserSpaceContentSelectionPolicy.rootObserverDefersSpaceChanges else {
+        if !BrowserSpaceContentSelectionPolicy.rootObserverDefersSpaceChanges,
+            selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.session)
+        {
             synchronizeSelection()
             return
         }

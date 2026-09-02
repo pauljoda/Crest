@@ -81,6 +81,34 @@ final class BrowserWebHostViewTests: XCTestCase {
         )
     }
 
+    func testAttachingAResidentPageToANewHostPreservesItsViewport() {
+        let host = BrowserWebHostView()
+        let viewport = NSRect(x: 0, y: 0, width: 720, height: 540)
+        let webView = WKWebView(frame: viewport)
+
+        host.attach(webView)
+
+        XCTAssertEqual(webView.frame.size, viewport.size)
+        host.setFrameSize(NSSize(width: 900, height: 600))
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(webView.frame, host.bounds)
+    }
+
+    func testAnEmptyHostLayoutDoesNotDiscardAResidentViewport() {
+        let viewport = NSRect(x: 0, y: 0, width: 720, height: 540)
+        let host = BrowserWebHostView(frame: viewport)
+        let webView = WKWebView(frame: viewport)
+        host.attach(webView)
+
+        host.setFrameSize(.zero)
+        host.layoutSubtreeIfNeeded()
+
+        XCTAssertEqual(webView.frame.size, viewport.size)
+        host.setFrameSize(NSSize(width: 900, height: 600))
+        host.layoutSubtreeIfNeeded()
+        XCTAssertEqual(webView.frame, host.bounds)
+    }
+
     func testLayoutRepairsAnAttachedPreloadedWebViewsStaleGeometry() {
         let host = BrowserWebHostView(
             frame: NSRect(x: 0, y: 0, width: 720, height: 540)

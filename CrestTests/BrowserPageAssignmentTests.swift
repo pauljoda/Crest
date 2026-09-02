@@ -4,6 +4,77 @@ import XCTest
 
 @MainActor
 final class BrowserPageAssignmentTests: XCTestCase {
+    func testCurrentSelectionRequiresACompletePresentedRuntime() throws {
+        let session = BrowserSession.preview
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        XCTAssertFalse(pool.isPresentingSelection(in: session))
+
+        pool.select(session: session)
+        XCTAssertTrue(pool.isPresentingSelection(in: session))
+
+        let space = try XCTUnwrap(session.selectedSpace)
+        let replacement = BrowserSpace(
+            id: space.id, profile: BrowsingProfile(), name: space.name,
+            symbol: space.symbol, accent: space.accent, folders: space.folders,
+            tabs: space.tabs, selectedTabID: space.selectedTabID
+        )
+        let differentProfile = BrowserSession(
+            spaces: [replacement], selectedSpaceID: replacement.id
+        )
+        XCTAssertFalse(pool.isPresentingSelection(in: differentProfile))
+
+        pool.deactivatePagePresentation()
+        XCTAssertFalse(pool.isPresentingSelection(in: session))
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testCurrentSelectionRejectsChangedSplitMembershipAndFocus() {
+        let group = SplitGroupID()
+        let first = BrowserTab(title: "First", url: nil, placement: .current, splitGroupID: group)
+        let second = BrowserTab(title: "Second", url: nil, placement: .current, splitGroupID: group)
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Split",
+            symbol: "circle", accent: .indigo, folders: [],
+            tabs: [first, second], selectedTabID: first.id
+        )
+        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        pool.select(session: session)
+        XCTAssertTrue(pool.isPresentingSelection(in: session))
+
+        session.spaces[0].selectedTabID = second.id
+        XCTAssertFalse(pool.isPresentingSelection(in: session))
+        session.spaces[0].selectedTabID = first.id
+        session.spaces[0].tabs.reverse()
+        XCTAssertFalse(pool.isPresentingSelection(in: session))
+        session.spaces[0].tabs = [first]
+        XCTAssertFalse(pool.isPresentingSelection(in: session))
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testPreparingAnExtensionSelectionStillOwesItsInitialNavigation() throws {
+        var session = BrowserSession.preview
+        let spaceIndex = try XCTUnwrap(
+            session.spaces.firstIndex {
+                $0.id == session.selectedSpaceID
+            })
+        let tabIndex = try XCTUnwrap(
+            session.spaces[spaceIndex].tabs.firstIndex {
+                $0.id == session.spaces[spaceIndex].selectedTabID
+            })
+        session.spaces[spaceIndex].tabs[tabIndex].url = try XCTUnwrap(
+            URL(string: "about:blank#extension-preparation")
+        )
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+
+        pool.prepareExtensionSelection(session: session)
+        XCTAssertFalse(pool.isPresentingSelection(in: session))
+
+        pool.select(session: session)
+        XCTAssertTrue(pool.isPresentingSelection(in: session))
+        pool.reconcile(validTabIDs: [])
+    }
+
     func testActivePageMatchingRequiresTheExactTabSpaceAndProfileAssignment() throws {
         let session = BrowserSession.preview
         let tab = try XCTUnwrap(session.selectedTab)

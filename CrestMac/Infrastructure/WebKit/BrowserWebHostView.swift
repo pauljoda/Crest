@@ -273,7 +273,18 @@ final class BrowserWebHostView: NSView {
 
     override func layout() {
         super.layout()
-        guard let hostedWebView,
+        layoutHostedWebView()
+    }
+
+    override func resizeSubviews(withOldSize oldSize: NSSize) {
+        // SwiftUI can give an entering or departing host an empty frame. Do
+        // not send that transient viewport to WebKit's rendering process.
+        layoutHostedWebView()
+    }
+
+    private func layoutHostedWebView() {
+        guard !bounds.isEmpty,
+            let hostedWebView,
             hostedWebView.superview === self,
             hostedWebView.frame != bounds
         else { return }
@@ -334,7 +345,9 @@ final class BrowserWebHostView: NSView {
         // host and ending up mounted but visually blank.
         webView.translatesAutoresizingMaskIntoConstraints = true
         webView.autoresizingMask = [.width, .height]
-        webView.frame = bounds
+        if !bounds.isEmpty {
+            webView.frame = bounds
+        }
 
         let addInterval = Self.lifecycleSignposter.beginInterval(
             "Add WKWebView Subview"

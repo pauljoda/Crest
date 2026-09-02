@@ -65,6 +65,44 @@ final class BrowserPageSurfaceBranchPolicyTests: XCTestCase {
         )
     }
 
+    func testSingleSurfaceKeepsTheTabChosenByItsPresentation() {
+        let first = makeTab("First")
+        let second = makeTab("Second")
+        var space = makeSpace(tabs: [first, second])
+        let presentation = BrowserPageSurfacePresentation.single(
+            space: space,
+            cardTabID: second.id
+        )
+
+        space.selectedTabID = first.id
+        space.tabs.removeAll { $0.id == second.id }
+
+        XCTAssertEqual(presentation.singleTab, second)
+        XCTAssertEqual(presentation.presentingSpace?.profile.id, space.profile.id)
+    }
+
+    func testColumnsAndUnavailableSurfacesCannotSupplyASinglePage() {
+        let tab = makeTab("Column")
+        let columns = BrowserPageSurfacePresentation.columns(
+            space: makeSpace(tabs: [tab]),
+            members: [tab],
+            placeholderIndex: nil
+        )
+
+        XCTAssertNil(columns.singleTab)
+        XCTAssertNil(BrowserPageSurfacePresentation.unavailable.singleTab)
+    }
+
+    func testMissingSingleTabDoesNotFallBackToTheSpaceSelection() {
+        let tab = makeTab("Selected")
+        let presentation = BrowserPageSurfacePresentation.single(
+            space: makeSpace(tabs: [tab]),
+            cardTabID: TabID()
+        )
+
+        XCTAssertNil(presentation.singleTab)
+    }
+
     func testAGroupOfMoreThanOneMemberOpensColumnsInSessionOrder() {
         let group = SplitGroupID()
         let head = makeTab("Head", group: group)

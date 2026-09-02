@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BrowserDetailView: View {
+    let presentation: BrowserPageSurfacePresentation
     let browser: BrowserStore
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
@@ -9,11 +10,12 @@ struct BrowserDetailView: View {
     let isCommandPalettePresented: Bool
 
     var body: some View {
-        let page = selectedPage
+        let tab = presentation.singleTab
+        let page = selectedPage(for: tab)
         BrowserDetailContent(
             page: page,
-            tab: browser.selectedTab,
-            pagePresentation: pagePresentation(for: page),
+            tab: tab,
+            pagePresentation: pagePresentation(for: page, tab: tab),
             browser: browser,
             pages: pages,
             spaceAccess: spaceAccess,
@@ -24,11 +26,13 @@ struct BrowserDetailView: View {
     }
 
     private func pagePresentation(
-        for page: BrowserPage?
+        for page: BrowserPage?,
+        tab: BrowserTab?
     ) -> BrowserPagePresentation {
         BrowserPagePresentationPolicy.resolve(
             BrowserPagePresentationInput(
-                selection: selectionPresentation,
+                selection: tab.map { $0.isStartPage ? .startPage : .webPage }
+                    ?? .none,
                 hasActivePage: page != nil,
                 hasNavigationFailure: page?.navigationFailure != nil,
                 hasProcessFailure: page?.webContentFailureMessage != nil,
@@ -37,14 +41,9 @@ struct BrowserDetailView: View {
         )
     }
 
-    private var selectionPresentation: BrowserPagePresentationSelection {
-        guard let tab = browser.selectedTab else { return .none }
-        return tab.isStartPage ? .startPage : .webPage
-    }
-
-    private var selectedPage: BrowserPage? {
-        guard let tab = browser.selectedTab,
-            let space = browser.selectedSpace
+    private func selectedPage(for tab: BrowserTab?) -> BrowserPage? {
+        guard let tab,
+            let space = presentation.presentingSpace
         else { return nil }
         return pages.activePage(
             matching: BrowserTabRuntimeAssignment(

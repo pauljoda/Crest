@@ -47,4 +47,13 @@ enum BrowserPageSurfacePresentation: Equatable, Sendable {
         guard case .single(_, let cardTabID) = self else { return nil }
         return cardTabID
     }
+
+    /// The single surface's captured tab, not a later store selection that may
+    /// already belong to a different layout while this surface disappears.
+    var singleTab: BrowserTab? {
+        guard case .single(let space, let tabID) = self, let tabID else {
+            return nil
+        }
+        return space.tabs.first { $0.id == tabID }
+    }
 }
