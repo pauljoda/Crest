@@ -5,6 +5,8 @@ import XCTest
 
 @MainActor
 final class BrowserPageNavigationMarkerTests: XCTestCase {
+    private var navigationSource: WKWebView?
+
     func testEmptyPageBackgroundIsClearUntilWebKitFinishesContent() throws {
         let page = try makePage()
 
@@ -17,6 +19,54 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
         page.webView(page.webView, didFinish: nil)
 
         XCTAssertNotEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
+    }
+
+    func testFreshPageRevealsAtCommitBeforeNavigationFinishes() throws {
+        let page = try makePage()
+        let navigation = try makeNavigation()
+
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: page.committedNavigationCount
+            )
+        )
+
+        page.webView(page.webView, didStartProvisionalNavigation: navigation)
+        page.webView(page.webView, didCommit: navigation)
+
+        XCTAssertEqual(page.committedNavigationCount, 1)
+        XCTAssertEqual(page.completedNavigationCount, 0)
+        XCTAssertTrue(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: page.committedNavigationCount
+            )
+        )
+    }
+
+    func testSupersededCommitCannotRevealAFreshPage() throws {
+        let page = try makePage()
+        let superseded = try makeNavigation()
+        let current = try makeNavigation()
+
+        page.webView(page.webView, didStartProvisionalNavigation: superseded)
+        page.webView(page.webView, didStartProvisionalNavigation: current)
+        page.webView(page.webView, didCommit: superseded)
+
+        XCTAssertEqual(page.committedNavigationCount, 0)
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: page.committedNavigationCount
+            )
+        )
+
+        page.webView(page.webView, didCommit: current)
+
+        XCTAssertEqual(page.committedNavigationCount, 1)
+        XCTAssertTrue(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: page.committedNavigationCount
+            )
+        )
     }
 
     func testTheAppInitiatedMarkerIsConsumedByTheNavigationItAuthorized() throws {
@@ -134,6 +184,14 @@ final class BrowserPageNavigationMarkerTests: XCTestCase {
         let pool = BrowserPagePool()
         pool.select(tab: tab, space: space)
         return try XCTUnwrap(pool.activePage)
+    }
+
+    private func makeNavigation() throws -> WKNavigation {
+        let source =
+            navigationSource
+            ?? WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        navigationSource = source
+        return try XCTUnwrap(source.loadHTMLString("<html></html>", baseURL: nil))
     }
 }
 

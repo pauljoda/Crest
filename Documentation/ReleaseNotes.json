@@ -365,6 +365,10 @@
     "2026-09-01-mobile-launch-and-navigation-reliability": {
       "category": "fixed",
       "message": "Launch reliably and keep Start Page searches and newly opened tabs responsive on iPhone and iPad"
+    },
+    "2026-09-01-progressive-page-loading": {
+      "category": "improved",
+      "message": "Show webpages as soon as they begin loading, with clear progress while content arrives"
     }
   }
 }

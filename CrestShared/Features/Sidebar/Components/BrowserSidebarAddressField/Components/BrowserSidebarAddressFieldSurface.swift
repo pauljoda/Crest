@@ -53,7 +53,10 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     }
 
     private var loadingProgress: CGFloat {
-        isLoading ? CGFloat(min(max(progress, 0.04), 1)) : 0
+        BrowserPageSurfacePolicy.loadingProgress(
+            estimatedProgress: progress,
+            isNavigating: isLoading
+        )
     }
 
     private var fieldShape: RoundedRectangle {

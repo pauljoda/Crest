@@ -2,6 +2,8 @@ import CoreGraphics
 
 enum BrowserWebPageSurfaceMetrics {
     static let overlayPadding = CrestSpacing.medium
+    static let initialLoadingSpacing = CrestSpacing.small
+    static let loadingProgressHeight: CGFloat = 2
     static let regionCaptureZIndex: Double = 20
     static let feedbackZIndex: Double = 30
     static let feedbackHorizontalPadding: CGFloat = 14

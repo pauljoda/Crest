@@ -40,11 +40,23 @@ enum BrowserPageSurfacePolicy {
             || completedNavigationCount == 0
     }
 
-    static func revealsWebContent(completedNavigationCount: Int) -> Bool {
-        completedNavigationCount > 0
-    }
-
     static func revealsWebContent(committedNavigationCount: Int) -> Bool {
         committedNavigationCount > 0
+    }
+
+    static func showsInitialLoadingStatus(
+        isNavigating: Bool,
+        committedNavigationCount: Int,
+        hasFailure: Bool
+    ) -> Bool {
+        isNavigating && committedNavigationCount == 0 && !hasFailure
+    }
+
+    static func loadingProgress(
+        estimatedProgress: Double,
+        isNavigating: Bool
+    ) -> CGFloat {
+        guard isNavigating else { return 0 }
+        return CGFloat(min(max(estimatedProgress, 0.04), 1))
     }
 }

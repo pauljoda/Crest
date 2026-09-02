@@ -1723,16 +1723,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
                 committedNavigationCount: 1
             )
         )
-        XCTAssertFalse(
-            BrowserPageSurfacePolicy.revealsWebContent(
-                completedNavigationCount: 0
-            )
-        )
-        XCTAssertTrue(
-            BrowserPageSurfacePolicy.revealsWebContent(
-                completedNavigationCount: 1
-            )
-        )
         XCTAssertGreaterThan(BrowserPageSurfacePolicy.shadowOpacity, 0)
         XCTAssertGreaterThan(BrowserPageSurfacePolicy.shadowRadius, 0)
         XCTAssertGreaterThan(BrowserPageSurfacePolicy.shadowYOffset, 0)
@@ -1757,6 +1747,68 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertEqual(
             BrowserPageSurfacePolicy.boundaryStrokeOpacity,
             CrestOpacity.border
+        )
+    }
+
+    func testFreshLoadingPageShowsOpeningStatusUntilItsFirstCommit() {
+        XCTAssertTrue(
+            BrowserPageSurfacePolicy.showsInitialLoadingStatus(
+                isNavigating: true,
+                committedNavigationCount: 0,
+                hasFailure: false
+            )
+        )
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.showsInitialLoadingStatus(
+                isNavigating: false,
+                committedNavigationCount: 0,
+                hasFailure: false
+            )
+        )
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.showsInitialLoadingStatus(
+                isNavigating: true,
+                committedNavigationCount: 1,
+                hasFailure: false
+            )
+        )
+        XCTAssertFalse(
+            BrowserPageSurfacePolicy.showsInitialLoadingStatus(
+                isNavigating: true,
+                committedNavigationCount: 0,
+                hasFailure: true
+            )
+        )
+    }
+
+    func testPageLoadingProgressStartsVisibleAndStaysWithinItsTrack() {
+        XCTAssertEqual(
+            BrowserPageSurfacePolicy.loadingProgress(
+                estimatedProgress: 0,
+                isNavigating: true
+            ),
+            0.04
+        )
+        XCTAssertEqual(
+            BrowserPageSurfacePolicy.loadingProgress(
+                estimatedProgress: 0.42,
+                isNavigating: true
+            ),
+            0.42
+        )
+        XCTAssertEqual(
+            BrowserPageSurfacePolicy.loadingProgress(
+                estimatedProgress: 2,
+                isNavigating: true
+            ),
+            1
+        )
+        XCTAssertEqual(
+            BrowserPageSurfacePolicy.loadingProgress(
+                estimatedProgress: 0.42,
+                isNavigating: false
+            ),
+            0
         )
     }
 

@@ -17,9 +17,11 @@ struct BrowserWebPageSurface: View {
             .accessibilityLabel(page.title.isEmpty ? "Web page" : page.title)
             .opacity(
                 BrowserPageSurfacePolicy.revealsWebContent(
-                    completedNavigationCount: page.completedNavigationCount
+                    committedNavigationCount: page.committedNavigationCount
                 ) ? 1 : 0
             )
+
+            BrowserPageLoadingPresentation(page: page)
 
             if page.isFindPresented {
                 BrowserFindBar(
@@ -113,5 +115,90 @@ struct BrowserWebPageSurface: View {
     /// aimed at with a finger.
     private var capabilities: BrowserInteractionCapabilities {
         BrowserInteractionCapabilities()
+    }
+}
+
+private struct BrowserPageLoadingPresentation: View {
+    let page: BrowserPage
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+                if showsInitialStatus {
+                    initialStatus
+                }
+            }
+            .overlay(alignment: .top) {
+                loadingProgress
+            }
+            .allowsHitTesting(false)
+    }
+
+    private var initialStatus: some View {
+        VStack(spacing: BrowserWebPageSurfaceMetrics.initialLoadingSpacing) {
+            ProgressView()
+                .controlSize(.small)
+                .accessibilityHidden(true)
+            openingLabel
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("browser-initial-loading-status")
+    }
+
+    private var loadingProgress: some View {
+        Rectangle()
+            .fill(.tint)
+            .frame(height: BrowserWebPageSurfaceMetrics.loadingProgressHeight)
+            .scaleEffect(x: progress, anchor: .leading)
+            .opacity(isNavigating ? 1 : 0)
+            .animation(
+                BrowserVisualAccessibilityPolicy.animation(
+                    CrestMotion.loadingProgress,
+                    reduceMotion: reduceMotion
+                ),
+                value: progress
+            )
+            .accessibilityHidden(true)
+    }
+
+    private var openingLabel: Text {
+        guard let host = page.displayURL?.host(), !host.isEmpty else {
+            return Text(
+                "Opening page…",
+                comment: "Initial status while a web page begins navigating."
+            )
+        }
+        return Text(
+            "Opening \(host)…",
+            comment: "Initial page loading status; the value is the destination host."
+        )
+    }
+
+    private var isNavigating: Bool {
+        page.isLoading || page.pendingNavigationURL != nil
+    }
+
+    private var hasFailure: Bool {
+        page.navigationFailure != nil || page.webContentFailureMessage != nil
+    }
+
+    private var showsInitialStatus: Bool {
+        BrowserPageSurfacePolicy.showsInitialLoadingStatus(
+            isNavigating: isNavigating,
+            committedNavigationCount: page.committedNavigationCount,
+            hasFailure: hasFailure
+        )
+    }
+
+    private var progress: CGFloat {
+        BrowserPageSurfacePolicy.loadingProgress(
+            estimatedProgress: page.estimatedProgress,
+            isNavigating: isNavigating
+        )
     }
 }
