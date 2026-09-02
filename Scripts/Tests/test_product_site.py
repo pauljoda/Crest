@@ -219,9 +219,12 @@ class ProductSiteTests(unittest.TestCase):
         self.assertIn("real separation between contexts", self.homepage)
         self.assertIn("Mac, iPad, and iPhone", self.homepage)
         self.assertIn("https://github.com/pauljoda/Crest/releases/latest", self.homepage)
-        self.assertIn("Download the latest release", self.homepage)
-        self.assertIn("https://testflight.apple.com/join/vV1CM49Q", self.homepage)
-        self.assertIn('src="assets/testflight-icon.webp" alt="" width="32" height="32"', self.homepage)
+        hero = re.search(r'<section class="hero".*?</section>', self.homepage, re.DOTALL).group()
+        self.assertIn("Download for Mac", hero)
+        self.assertIn("https://apps.apple.com/us/app/crest-browser/id6797335023", hero)
+        self.assertIn("Download for iPhone &amp; iPad", hero)
+        self.assertIn('src="assets/app-store-official.png"', hero)
+        self.assertNotIn("testflight", hero.lower())
         self.assertNotIn("banner-glyph", self.homepage + self.styles)
 
         work_crest = (WEBSITE_ROOT / "assets/space-crest-work.svg").read_text()
@@ -253,7 +256,7 @@ class ProductSiteTests(unittest.TestCase):
 
     def test_early_access_and_community_links_are_branded_and_safe(self) -> None:
         self.assertIn("https://github.com/pauljoda/Crest/releases", self.homepage)
-        self.assertIn("Direct on Mac. TestFlight on iPhone and iPad.", self.homepage)
+        self.assertIn("Direct on Mac. App Store on iPhone and iPad.", self.homepage)
         self.assertIn("Direct · signed · notarized · automatic updates", self.homepage)
         self.assertIn("https://testflight.apple.com/join/vV1CM49Q", self.homepage)
         self.assertIn("https://www.reddit.com/r/CrestBrowser", self.homepage)
@@ -270,6 +273,7 @@ class ProductSiteTests(unittest.TestCase):
             (400, 400),
         )
         self.assertIn("View in TestFlight", self.homepage)
+        self.assertIn("Beta releases through TestFlight", self.homepage)
         self.assertIn("Visit Reddit", self.homepage)
 
     def test_arc_parity_matrix_and_carried_forward_story_are_explicit(self) -> None:
