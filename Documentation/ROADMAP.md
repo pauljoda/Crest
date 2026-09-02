@@ -63,11 +63,14 @@ the live status for each issue.
 - [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
 - [ ] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
 - [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
-- [ ] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
 - [ ] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70)
 - [ ] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
 - [ ] [Preview link destinations on hover](https://github.com/pauljoda/Crest/issues/75)
+- [ ] [Clarify link and tab context-menu destinations](https://github.com/pauljoda/Crest/issues/78)
+- [ ] [Make the mobile sidebar control unmistakable](https://github.com/pauljoda/Crest/issues/79)
+- [ ] [Diagnose blurry Google Docs canvas rendering on macOS 26](https://github.com/pauljoda/Crest/issues/80)
+- [ ] [Profile and eliminate Space-switching hitches](https://github.com/pauljoda/Crest/issues/81)
 
 #### Completed
 
@@ -75,8 +78,10 @@ the live status for each issue.
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
 - [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
 - [x] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68) — [`3ec94181`](https://github.com/pauljoda/Crest/commit/3ec941810b3ebe38c628e17a06cbb418fa4b3634)
+- [x] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
 - [x] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71) — [`807b4919`](https://github.com/pauljoda/Crest/commit/807b49199698b34b478ce531b2a66dbd0aa2f951)
 - [x] [Match visited links to exact history entries](https://github.com/pauljoda/Crest/issues/73) — [`fe50f3af`](https://github.com/pauljoda/Crest/commit/fe50f3afe1bb5403dcb6e705e2c978fec70d8fd7)
+- [x] [Reveal page progress before navigation finishes](https://github.com/pauljoda/Crest/issues/77) — [`a8e2f29e`](https://github.com/pauljoda/Crest/commit/a8e2f29ee2a9dcd955b03d738e32e79683110933)
 
 <!-- crest-roadmap-sync:end -->
 
