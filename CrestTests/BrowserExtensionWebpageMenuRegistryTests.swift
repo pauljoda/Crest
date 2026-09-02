@@ -289,6 +289,66 @@ final class BrowserExtensionWebpageMenuRegistryTests: XCTestCase {
         )
     }
 
+    /// An unsupported pattern must not cost an extension its whole menu
+    /// transaction, and must not silently widen the item it scopes.
+    ///
+    /// The registry keeps every authored pattern, records the ones WebKit
+    /// cannot parse, and restores them verbatim — a filtered list would arrive
+    /// empty, and an empty list means "unrestricted".
+    func testUnparseablePatternsAreRecordedRatherThanDroppedOrRejected()
+        throws
+    {
+        let registry = BrowserExtensionWebpageMenuRegistry()
+        let client = try XCTUnwrap(
+            BrowserExtensionServiceClientID("work.extension")
+        )
+
+        try registry.replaceDefinitions(
+            message: [
+                "api": "contextMenus.replace",
+                "items": [
+                    [
+                        "id": "scoped",
+                        "type": "normal",
+                        "title": "Scoped",
+                        "contexts": ["page"],
+                        "documentUrlPatterns": [
+                            "not a match pattern",
+                            "https://example.com/*",
+                        ],
+                        "targetUrlPatterns": [],
+                        "enabled": true,
+                        "visible": true,
+                    ] as [String: Any]
+                ],
+            ],
+            for: client
+        )
+
+        let definition = try XCTUnwrap(
+            registry.definitions(for: client).first
+        )
+        XCTAssertEqual(
+            definition.documentURLPatterns,
+            ["not a match pattern", "https://example.com/*"]
+        )
+        XCTAssertEqual(
+            definition.unsupportedURLPatterns,
+            ["not a match pattern"]
+        )
+        XCTAssertFalse(definition.matchesNothing)
+        XCTAssertNotNil(definition.unsupportedURLPatternDiagnostic)
+
+        let restoration = try XCTUnwrap(
+            registry.restorationMessage(for: client)
+        )
+        let items = try XCTUnwrap(restoration["items"] as? [[String: Any]])
+        XCTAssertEqual(
+            items.first?["documentUrlPatterns"] as? [String],
+            ["not a match pattern", "https://example.com/*"]
+        )
+    }
+
     private func makeMessage(
         id: String,
         contexts: [String]

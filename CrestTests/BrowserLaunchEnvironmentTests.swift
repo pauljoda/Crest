@@ -226,6 +226,121 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         )
     }
 
+    /// A named isolated profile persists its WebKit storage, so it has to
+    /// persist the record of what is installed as well. An anonymous isolated
+    /// launch keeps forgetting both.
+    func testOnlyANamedIsolatedProfileKeepsPersistentProfileStorage() {
+        let named = BrowserLaunchEnvironment(
+            values: [
+                "CREST_ISOLATED_SESSION": "1",
+                "CREST_ISOLATED_PERSISTENCE_ID": "app-252-verification",
+            ],
+            isXCTestRuntime: false
+        )
+        let anonymous = BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1"],
+            isXCTestRuntime: false
+        )
+
+        XCTAssertTrue(BrowserLaunchIsolationPolicy.requiresIsolation(named))
+        XCTAssertFalse(
+            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(named)
+        )
+        XCTAssertTrue(
+            BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(anonymous)
+        )
+        XCTAssertEqual(
+            BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                isolationID: "app-252-verification"
+            ),
+            "\(ProductIdentity.serviceNamespace).isolated.app-252-verification"
+        )
+        XCTAssertNotEqual(
+            BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                isolationID: "app-252-verification"
+            ),
+            BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                isolationID: "app-283-verification"
+            )
+        )
+    }
+
+    /// The extension pool a named isolated launch composes keeps its
+    /// installations, so a validation relaunch does not begin by re-adding
+    /// every extension while WebKit still holds their storage.
+    @MainActor
+    func testNamedIsolatedLaunchComposesPersistentExtensionStores() throws {
+        let isolationID = "crest-test-\(UInt64.random(in: 0..<1_000_000_000))"
+        let suiteName = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+            isolationID: isolationID
+        )
+        defer {
+            UserDefaults(suiteName: suiteName)?.removePersistentDomain(
+                forName: suiteName
+            )
+            var isolatedRoot = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
+            isolatedRoot =
+                isolatedRoot?
+                .appending(path: "Crest", directoryHint: .isDirectory)
+                .appending(path: "Isolated", directoryHint: .isDirectory)
+                .appending(path: isolationID, directoryHint: .isDirectory)
+            if let isolatedRoot {
+                try? FileManager.default.removeItem(at: isolatedRoot)
+            }
+        }
+        let spaceID = SpaceID()
+        let installed = BrowserExtensionInstallation(
+            id: "local.isolated-probe",
+            spaceID: spaceID,
+            packageName: "isolated-probe-package",
+            displayName: "Isolated Probe",
+            version: "1.0",
+            requestedPermissions: [],
+            requestedHosts: [],
+            unsupportedAPIs: [],
+            errors: [],
+            isEnabled: true,
+            permissionSnapshot: .empty,
+            installedAt: Date(timeIntervalSince1970: 50),
+            modifiedAt: Date(timeIntervalSince1970: 100)
+        )
+
+        let pool = try XCTUnwrap(
+            BrowserExtensionControllerPool.isolated(isolationID: isolationID)
+        )
+        XCTAssertTrue(pool.persistenceController.upsert(installed))
+
+        let relaunched = try XCTUnwrap(
+            BrowserExtensionControllerPool.isolated(isolationID: isolationID)
+        )
+        XCTAssertEqual(
+            relaunched.persistenceController.installations.map(\.id),
+            ["local.isolated-probe"]
+        )
+        // An anonymous isolated launch stays in memory, so the same record
+        // must not follow it.
+        XCTAssertTrue(
+            BrowserExtensionControllerPool().persistenceController
+                .installations.isEmpty
+        )
+    }
+
+    /// A profile name is a directory name too, so anything that could climb
+    /// out of the isolated root is refused rather than staged.
+    func testIsolatedPackageStoreRefusesAProfileNameThatIsNotAPathComponent() {
+        for isolationID in ["", "..", "a/b", "Upper", "space name"] {
+            XCTAssertNil(
+                BrowserExtensionPackageStore.isolated(
+                    isolationID: isolationID
+                ),
+                "\(isolationID) must not become an isolated package root."
+            )
+        }
+    }
+
     func testExplicitIsolationAndPerformanceFixturesCannotCancelEachOther() {
         XCTAssertTrue(
             BrowserLaunchIsolationPolicy.requiresIsolation(

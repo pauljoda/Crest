@@ -1,4 +1,6 @@
 import Foundation
+import WebKit
+import os
 
 enum BrowserExtensionWebpageMenuRegistryError: Error, Equatable {
     case invalidReplacement
@@ -44,6 +46,11 @@ final class BrowserExtensionWebpageMenuRegistry {
         let invocation: BrowserExtensionWebpageMenuInvocation
         let expiresAt: Date
     }
+
+    private static let log = Logger(
+        subsystem: "com.pauldavis.crest",
+        category: "extension-menus"
+    )
 
     private var definitionsByClient: [BrowserExtensionServiceClientID: [BrowserExtensionWebpageMenuDefinition]] = [:]
     private var clickPublishersByClient: [BrowserExtensionServiceClientID: [UUID: ClickPublisher]] = [:]
@@ -113,6 +120,11 @@ final class BrowserExtensionWebpageMenuRegistry {
             })
         else {
             throw BrowserExtensionWebpageMenuRegistryError.invalidReplacement
+        }
+        for diagnostic in definitions.compactMap(
+            \.unsupportedURLPatternDiagnostic
+        ) {
+            Self.log.notice("\(diagnostic, privacy: .public)")
         }
         definitionsByClient[clientID] = definitions
     }
@@ -310,8 +322,31 @@ final class BrowserExtensionWebpageMenuRegistry {
             documentURLPatterns: documentURLPatterns,
             targetURLPatterns: targetURLPatterns,
             enabled: enabled,
-            visible: visible
+            visible: visible,
+            unsupportedURLPatterns: unsupportedURLPatterns(
+                in: documentURLPatterns + targetURLPatterns
+            )
         )
+    }
+
+    /// The authored patterns WebKit refuses to parse.
+    ///
+    /// An unsupported pattern is not a reason to reject the whole menu
+    /// transaction — one bad pattern must not cost an extension its complete
+    /// menu replacement — but it is a reason to say so, because such an item
+    /// silently never appears.
+    private static func unsupportedURLPatterns(
+        in patterns: [String]
+    ) -> [String] {
+        var unsupported: [String] = []
+        var seen: Set<String> = []
+        for pattern in patterns where seen.insert(pattern).inserted {
+            guard
+                (try? WKWebExtension.MatchPattern(string: pattern)) == nil
+            else { continue }
+            unsupported.append(pattern)
+        }
+        return unsupported
     }
 
 }

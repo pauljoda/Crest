@@ -263,6 +263,304 @@ final class BrowserNativeMessagingTests: XCTestCase {
         }
     }
 
+    /// Diagnostics are telemetry from the extension's own code, not a
+    /// capability: the report is the extension's own error text, and gating it
+    /// behind a permission would silence exactly the extensions whose failures
+    /// are hardest to see. An authorized broker context is the whole gate.
+    @MainActor
+    func testDiagnosticsReportIsRecordedWithoutAnyPermissionGrant()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-diagnostics-extension-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        try JSONSerialization.data(
+            withJSONObject: [
+                "manifest_version": 3,
+                "name": "Diagnostics Reporter",
+                "version": "1.0",
+            ] as [String: Any]
+        ).write(to: extensionURL.appending(path: "manifest.json"))
+        try Data("void 0;".utf8).write(
+            to: extensionURL.appending(path: "background.js")
+        )
+        // A fresh identifier per run keeps this test's entries out of every
+        // other context's ring in the process-wide diagnostics log.
+        let extensionID = "diagnostics-\(UUID().uuidString.lowercased())"
+        let pool = BrowserExtensionControllerPool()
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let context = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID,
+            in: space
+        )
+        pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+            BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: [],
+                clientID: .scoped(
+                    extensionID: extensionID,
+                    spaceID: space.id
+                ),
+                allowsInternalCapabilityBroker: true
+            ),
+            for: context
+        )
+
+        var value: Any?
+        var error: Error?
+        let recordedReply = expectation(description: "Diagnostics reply")
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: [
+                "api": "diagnostics.report",
+                "kind": "error",
+                "message": "TypeError: undefined is not an object",
+                "stack": "at popup.js:12",
+                "source": context.baseURL.absoluteString
+                    + "popup.html?token=secret#state",
+                "lineno": 12,
+                "colno": 7,
+                "at": 1,
+            ],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { replyValue, replyError in
+            value = replyValue
+            error = replyError
+            recordedReply.fulfill()
+        }
+        await fulfillment(of: [recordedReply], timeout: 2)
+
+        XCTAssertNil(error)
+        XCTAssertEqual((value as? [String: Bool])?["recorded"], true)
+        let summary = pool.runtimeContextController.summary(
+            for: context,
+            extensionID: extensionID,
+            isEnabled: true
+        )
+        let recorded = try XCTUnwrap(
+            summary.errors.first {
+                $0.contains("undefined is not an object")
+            },
+            "A reported fault belongs in the extension's Needs attention list."
+        )
+        XCTAssertTrue(recorded.hasPrefix("Uncaught error at "))
+        XCTAssertTrue(recorded.contains("popup.html:12:7"))
+        XCTAssertFalse(
+            recorded.contains("token=secret") || recorded.contains("#state"),
+            """
+            An extension page's query and fragment can carry a page URL, an
+            account name, or a one-time token. Only the path is recorded.
+            """
+        )
+        XCTAssertTrue(summary.needsAttention)
+
+        // Console output is routine even in a healthy extension, so it is
+        // logged and left out of the errors a person is asked to act on.
+        var consoleValue: Any?
+        var consoleError: Error?
+        let consoleReply = expectation(description: "Console reply")
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: [
+                "api": "diagnostics.report",
+                "kind": "console",
+                "level": "warn",
+                "message":
+                    "[BrowserApi] Message sender is not from the top frame",
+                "source": context.baseURL.absoluteString + "popup.html",
+                "at": 2,
+            ],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { replyValue, replyError in
+            consoleValue = replyValue
+            consoleError = replyError
+            consoleReply.fulfill()
+        }
+        await fulfillment(of: [consoleReply], timeout: 2)
+        XCTAssertNil(consoleError)
+        XCTAssertEqual((consoleValue as? [String: Bool])?["recorded"], true)
+        XCTAssertEqual(
+            pool.runtimeContextController.summary(
+                for: context,
+                extensionID: extensionID,
+                isEnabled: true
+            ).errors,
+            summary.errors
+        )
+    }
+
+    /// A context Crest never authorized for its broker cannot file reports
+    /// against a verified extension.
+    @MainActor
+    func testDiagnosticsReportFromAnUnauthorizedContextIsRefused()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let extensionURL = fileManager.temporaryDirectory.appending(
+            path: "crest-diagnostics-unauthorized-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: extensionURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: extensionURL) }
+        try JSONSerialization.data(
+            withJSONObject: [
+                "manifest_version": 3,
+                "name": "Unauthorized Reporter",
+                "version": "1.0",
+            ] as [String: Any]
+        ).write(to: extensionURL.appending(path: "manifest.json"))
+        let extensionID = "diagnostics-\(UUID().uuidString.lowercased())"
+        let pool = BrowserExtensionControllerPool()
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let context = try await pool.loadExtension(
+            at: extensionURL,
+            extensionID: extensionID,
+            in: space
+        )
+
+        var value: Any?
+        var error: Error?
+        let refusedReply = expectation(description: "Refused diagnostics reply")
+        pool.tabWindowCoordinator.webExtensionController(
+            pool.controller(for: space),
+            sendMessage: [
+                "api": "diagnostics.report",
+                "kind": "error",
+                "message": "forged",
+            ],
+            toApplicationWithIdentifier:
+                BrowserExtensionNativeMessagingApplication
+                .capabilityBrokerIdentifier,
+            for: context
+        ) { replyValue, replyError in
+            value = replyValue
+            error = replyError
+            refusedReply.fulfill()
+        }
+        await fulfillment(of: [refusedReply], timeout: 2)
+
+        XCTAssertNil(value)
+        XCTAssertEqual(
+            error as? BrowserExtensionNativeMessagingError,
+            .unverifiedExtension
+        )
+        XCTAssertTrue(
+            pool.runtimeContextController.summary(
+                for: context,
+                extensionID: extensionID,
+                isEnabled: true
+            ).errors.allSatisfy { !$0.contains("forged") }
+        )
+    }
+
+    @MainActor
+    func testCapabilityBrokerAnswersInASandboxedBuild() async throws {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let service = BrowserNativeMessagingService(
+            capability: .unavailableInAppSandbox,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            ),
+            idleStateProvider: { _ in .locked }
+        )
+        let response = expectation(description: "Sandboxed broker response")
+        var received: Any?
+        var receivedError: Error?
+
+        service.sendMessage(
+            [
+                "api": "idle.queryState",
+                "detectionIntervalInSeconds": 60,
+            ],
+            applicationIdentifier:
+                "com.pauldavis.crest.webextension-compatibility",
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["idle"],
+                allowsInternalCapabilityBroker: true
+            )
+        ) { value, error in
+            received = value
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 1)
+
+        XCTAssertNil(receivedError)
+        XCTAssertEqual(
+            (received as? [String: String])?["state"],
+            "locked",
+            "The in-process broker spawns nothing, so App Sandbox cannot stop it."
+        )
+    }
+
+    @MainActor
+    func testExternalNativeHostStaysUnavailableInASandboxedBuild()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let service = BrowserNativeMessagingService(
+            capability: .unavailableInAppSandbox,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            )
+        )
+        let response = expectation(description: "Rejected external host")
+        var received: Any?
+        var receivedError: Error?
+
+        service.sendMessage(
+            ["ping": "pong"],
+            applicationIdentifier: "com.example.native-host",
+            extensionIdentity: .chromeWebStore(extensionID),
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["nativeMessaging"],
+                allowsInternalCapabilityBroker: true
+            )
+        ) { value, error in
+            received = value
+            receivedError = error
+            response.fulfill()
+        }
+        await fulfillment(of: [response], timeout: 1)
+
+        XCTAssertNil(received)
+        guard
+            case .unavailable? =
+                receivedError as? BrowserExtensionNativeMessagingError
+        else {
+            return XCTFail(
+                "A sandboxed build must still refuse to launch a native host."
+            )
+        }
+    }
+
     @MainActor
     func testIdleWatchPublishesOnlyRealStateTransitions() throws {
         var sampledInterval: TimeInterval?
@@ -505,6 +803,127 @@ final class BrowserNativeMessagingTests: XCTestCase {
             (clearAgain.value as? [String: Bool])?["cleared"],
             false
         )
+    }
+
+    /// `chrome.notifications.update` is a partial edit: an extension that
+    /// sends only a new message must not blank the title and the buttons its
+    /// notification is showing, and an identifier it never posted answers
+    /// `false` instead of creating one.
+    @MainActor
+    func testCrestCapabilityBrokerMergesAPartialNotificationUpdate()
+        async throws
+    {
+        let extensionID = try XCTUnwrap(
+            BrowserChromeExtensionID(
+                "abcdefghijklmnopabcdefghijklmnop"
+            )
+        )
+        let clientID = try XCTUnwrap(
+            BrowserExtensionServiceClientID("extension.space")
+        )
+        let center = InMemoryBrowserExtensionNotificationCenter()
+        let service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(
+                searchDirectories: []
+            ),
+            notificationService: BrowserExtensionNotificationService(
+                center: center
+            ),
+            idleStateProvider: { _ in .active }
+        )
+        let authorization = BrowserExtensionNativeMessagingAuthorization(
+            grantedPermissions: ["notifications"],
+            clientID: clientID,
+            allowsInternalCapabilityBroker: true
+        )
+
+        let create = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.create",
+                "notificationIdentifier": "sync",
+                "title": "Syncing",
+                "message": "Ten percent.",
+                "buttonTitles": ["Pause", "Cancel"],
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(create.error)
+
+        let messageOnly = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.update",
+                "notificationIdentifier": "sync",
+                "message": "Ninety percent.",
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(messageOnly.error)
+        XCTAssertEqual(
+            (messageOnly.value as? [String: Bool])?["updated"],
+            true
+        )
+        XCTAssertEqual(center.deliveries.count, 1)
+        XCTAssertEqual(center.deliveries.first?.title, "Syncing")
+        XCTAssertEqual(center.deliveries.first?.body, "Ninety percent.")
+        XCTAssertEqual(
+            center.deliveries.first?.buttonTitles,
+            ["Pause", "Cancel"]
+        )
+
+        // An explicit null reads the same as an omitted field: keep.
+        let nullTitle = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.update",
+                "notificationIdentifier": "sync",
+                "title": NSNull(),
+                "buttonTitles": ["Resume"],
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(nullTitle.error)
+        XCTAssertEqual(
+            (nullTitle.value as? [String: Bool])?["updated"],
+            true
+        )
+        XCTAssertEqual(center.deliveries.first?.title, "Syncing")
+        XCTAssertEqual(center.deliveries.first?.buttonTitles, ["Resume"])
+
+        let unknown = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.update",
+                "notificationIdentifier": "never-posted",
+                "message": "Nothing to edit.",
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNil(unknown.error)
+        XCTAssertEqual(
+            (unknown.value as? [String: Bool])?["updated"],
+            false
+        )
+        XCTAssertEqual(center.deliveries.count, 1)
+
+        // A field that is present with the wrong type is still malformed.
+        let malformed = await capabilityResponse(
+            from: service,
+            message: [
+                "api": "notifications.update",
+                "notificationIdentifier": "sync",
+                "message": 7,
+            ],
+            extensionID: extensionID,
+            authorization: authorization
+        )
+        XCTAssertNotNil(malformed.error)
     }
 
     @MainActor

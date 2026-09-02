@@ -32,6 +32,12 @@ struct BrowserExtensionNativeMessagingAuthorization: Equatable, Sendable {
 
 @MainActor
 protocol BrowserExtensionNativeMessagingHandling: AnyObject {
+    /// Whether Crest may launch an **external** native host process on behalf
+    /// of an extension. This is the App Sandbox question, and it says nothing
+    /// about `BrowserExtensionNativeMessagingApplication
+    /// .capabilityBrokerIdentifier`, which is Crest's own in-process
+    /// emulation broker: that transport spawns nothing and stays available in
+    /// every build, including the sandboxed App Store one.
     var capability: BrowserExtensionNativeMessagingCapability { get }
 
     func sendMessage(

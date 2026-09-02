@@ -45,20 +45,131 @@ struct BrowserExtensionRuntimeReport {
     }
 }
 
+/// What the compatibility runtime's diagnostics channel reported.
+///
+/// The kinds are the extension's own faults, not Crest's: an uncaught
+/// exception, an unhandled promise rejection, a `runtime.lastError` nobody
+/// read, and — when a build enables console capture — the extension's own
+/// console output and a trace of the messages it sends and receives, which
+/// together are the only trace a *hang* leaves behind.
+enum BrowserExtensionDiagnosticsReportKind: String {
+    case uncaughtError = "error"
+    case unhandledRejection = "unhandledrejection"
+    case uncheckedLastError = "lastError"
+    case consoleOutput = "console"
+    case messageTrace = "trace"
+    case suppressed
+
+    var label: String {
+        switch self {
+        case .uncaughtError: "Uncaught error"
+        case .unhandledRejection: "Unhandled promise rejection"
+        case .uncheckedLastError: "Unchecked runtime.lastError"
+        case .consoleOutput: "Console"
+        case .messageTrace: "Message trace"
+        case .suppressed: "Diagnostics suppressed"
+        }
+    }
+
+    /// Whether this report belongs in the extension's *Needs attention*
+    /// errors.
+    ///
+    /// Only the two kinds that mean the extension's code actually stopped
+    /// running. Console output and message traces are routine even in a
+    /// healthy extension, an unread `runtime.lastError` is a callback-hygiene
+    /// warning rather than a failure, and the suppression notice is about
+    /// Crest's own budget — none of them should light up a working
+    /// extension's row in settings, so they stay in the log only.
+    var appendsToRuntimeSummaryErrors: Bool {
+        switch self {
+        case .uncaughtError, .unhandledRejection: true
+        case .uncheckedLastError, .consoleOutput, .messageTrace, .suppressed:
+            false
+        }
+    }
+}
+
+/// What an extension's own JavaScript reported about itself.
+///
+/// WebKit hands `WKWebExtensionContext.errors` only what an API callback threw.
+/// An uncaught exception or an unhandled rejection in a popup, an extension
+/// page, or a background worker reaches nobody — Chrome records exactly those
+/// on the extension's error page, and their absence is why a Bitwarden popup
+/// could go blank after a two-factor sign-in with nothing to read afterwards.
+/// The runtime's diagnostics channel sends them to Crest's capability broker,
+/// which files them here so `summary(for:)` can merge them into the errors the
+/// Extensions settings screen already shows under *Needs attention*.
+///
+/// Deliberately in memory only, and bounded per context: this is a live
+/// troubleshooting aid, not an installation record. Whatever a runtime summary
+/// already persists it keeps persisting — nothing here writes to the registry
+/// on its own.
+@MainActor
+final class BrowserExtensionDiagnosticsLog {
+    /// One log for the process. The writer is a WebKit delegate callback on a
+    /// coordinator that holds no persistence, and the reader is the summary
+    /// builder; both address entries by `WKWebExtensionContext
+    /// .uniqueIdentifier`, which is already scoped to one extension in one
+    /// Space. Every injection point defaults to this instance, so a test can
+    /// still supply its own.
+    static let shared = BrowserExtensionDiagnosticsLog()
+
+    /// Posted after `record`, carrying the affected context's unique
+    /// identifier in `contextIdentifierKey`. `BrowserExtensionContextObserver`
+    /// turns it into the same runtime-summary refresh WebKit's own
+    /// `errorsDidUpdateNotification` drives.
+    static let didRecordNotification = Notification.Name(
+        "BrowserExtensionDiagnosticsLogDidRecord"
+    )
+    static let contextIdentifierKey = "contextIdentifier"
+
+    private static let capacity = 20
+
+    private var entriesByContext: [String: [String]] = [:]
+
+    /// Files one entry, dropping the oldest once the context is at capacity.
+    func record(_ entry: String, forContext contextIdentifier: String) {
+        guard !entry.isEmpty, !contextIdentifier.isEmpty else { return }
+        var entries = entriesByContext[contextIdentifier] ?? []
+        entries.append(entry)
+        if entries.count > Self.capacity {
+            entries.removeFirst(entries.count - Self.capacity)
+        }
+        entriesByContext[contextIdentifier] = entries
+        NotificationCenter.default.post(
+            name: Self.didRecordNotification,
+            object: nil,
+            userInfo: [Self.contextIdentifierKey: contextIdentifier]
+        )
+    }
+
+    /// Oldest first, matching the order the extension reported them in.
+    func entries(forContext contextIdentifier: String) -> [String] {
+        entriesByContext[contextIdentifier] ?? []
+    }
+
+    func removeEntries(forContext contextIdentifier: String) {
+        entriesByContext.removeValue(forKey: contextIdentifier)
+    }
+}
+
 @Observable
 @MainActor
 final class BrowserExtensionPersistenceController {
     @ObservationIgnored private let packageStore: any BrowserExtensionPackageStoring
     @ObservationIgnored private let registry: BrowserExtensionRegistry
+    @ObservationIgnored private let diagnosticsLog: BrowserExtensionDiagnosticsLog
 
     private(set) var summariesBySpace: [SpaceID: [BrowserExtensionSummary]] = [:]
 
     init(
         packageStore: any BrowserExtensionPackageStoring,
-        registry: BrowserExtensionRegistry
+        registry: BrowserExtensionRegistry,
+        diagnosticsLog: BrowserExtensionDiagnosticsLog = .shared
     ) {
         self.packageStore = packageStore
         self.registry = registry
+        self.diagnosticsLog = diagnosticsLog
     }
 
     var installations: [BrowserExtensionInstallation] {
@@ -258,25 +369,51 @@ final class BrowserExtensionPersistenceController {
         extensionID: String,
         isEnabled: Bool,
         permissionSnapshot: BrowserExtensionPermissionSnapshot,
-        excluding excludedPermissions: Set<String> = []
+        excluding excludedPermissions: Set<String> = [],
+        source: BrowserExtensionInstallationSource? = nil
     ) -> BrowserExtensionSummary {
         let runtimeReport = BrowserExtensionRuntimeReport(
             errors: context.webExtension.errors + context.errors
+        )
+        // What the extension's own JavaScript reported about itself, which
+        // WebKit's error list never carries. Appended after WebKit's entries
+        // and in report order, so the newest fault reads last.
+        let reportedDiagnostics = diagnosticsLog.entries(
+            forContext: context.uniqueIdentifier
+        ).filter { !runtimeReport.errors.contains($0) }
+        let requestedPermissions = context.webExtension.requestedPermissions
+            .map(\.rawValue)
+            .filter { !excludedPermissions.contains($0) }
+            .sorted()
+        // The runtime hides two different things through one WebKit property.
+        // Everything the compatibility matrix contributes is a Crest routing
+        // decision, recomputed from these permissions on every load. It is
+        // dropped here so it never reaches the installation record — a
+        // persisted hide would be unioned back forever and no later matrix
+        // change could un-hide it — and so the extension's "Unsupported APIs"
+        // list shows only entries a person can act on.
+        //
+        // This has to ask the same question `load` asked, on the same axis. A
+        // Safari-sourced extension gets no matrix hides at all, so subtracting
+        // them here would delete entries WebKit itself reported and leave that
+        // extension's "Unsupported APIs" list falsely empty.
+        let platformUnsupportedAPIs = Self.platformUnsupportedWebKitAPIs(
+            requestedPermissions: requestedPermissions,
+            source: source
         )
         return BrowserExtensionSummary(
             id: extensionID,
             displayName: context.webExtension.displayName ?? extensionID,
             version: context.webExtension.displayVersion
                 ?? context.webExtension.version,
-            requestedPermissions: context.webExtension.requestedPermissions
-                .map(\.rawValue)
-                .filter { !excludedPermissions.contains($0) }
-                .sorted(),
+            requestedPermissions: requestedPermissions,
             requestedHosts: context.webExtension.allRequestedMatchPatterns
                 .map(\.string)
                 .sorted(),
-            unsupportedAPIs: context.unsupportedAPIs.sorted(),
-            errors: runtimeReport.errors,
+            unsupportedAPIs: context.unsupportedAPIs
+                .subtracting(platformUnsupportedAPIs)
+                .sorted(),
+            errors: runtimeReport.errors + reportedDiagnostics,
             diagnostics: runtimeReport.diagnostics,
             isEnabled: isEnabled,
             isLoaded: context.isLoaded,
@@ -322,6 +459,26 @@ final class BrowserExtensionPersistenceController {
         )
     }
 
+    /// The hides Crest itself contributes to `context.unsupportedAPIs`.
+    ///
+    /// The one place that answers the question, so the summary can never
+    /// subtract a set the loader did not add. Mirrors the switch in
+    /// `BrowserExtensionRuntimeContextController.load`.
+    static func platformUnsupportedWebKitAPIs(
+        requestedPermissions: [String],
+        source: BrowserExtensionInstallationSource?
+    ) -> Set<String> {
+        switch source {
+        case .some(.safariWebExtension):
+            []
+        default:
+            BrowserExtensionAPICompatibilityMatrix
+                .unsupportedWebKitAPIs(
+                    requestedPermissions: requestedPermissions
+                )
+        }
+    }
+
     func summary(
         for context: WKWebExtensionContext,
         installation: BrowserExtensionInstallation,
@@ -333,7 +490,8 @@ final class BrowserExtensionPersistenceController {
             extensionID: installation.id,
             isEnabled: installation.isEnabled,
             permissionSnapshot: permissionSnapshot,
-            excluding: excludedPermissions
+            excluding: excludedPermissions,
+            source: installation.source
         )
         runtimeSummary.sourceDisplayName = installation.sourceDisplayName
         runtimeSummary.compatibilitySource =

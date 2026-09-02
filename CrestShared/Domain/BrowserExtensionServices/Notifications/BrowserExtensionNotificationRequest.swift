@@ -47,6 +47,64 @@ struct BrowserExtensionNotificationRequest: Equatable, Hashable, Sendable {
     }
 }
 
+/// One `chrome.notifications.update` payload: the fields the extension actually
+/// supplied, and nothing more.
+///
+/// Chrome's `update` is a partial edit — an omitted option keeps whatever the
+/// notification is already showing — so an absent field here means "keep" and
+/// never "clear". That distinction cannot be expressed by a
+/// ``BrowserExtensionNotificationRequest``, whose fields are all present by
+/// construction, which is why the merge takes this type instead.
+struct BrowserExtensionNotificationUpdate: Equatable, Hashable, Sendable {
+    /// The extension-authored identifier of the notification being edited.
+    let identifier: String
+    let title: String?
+    let message: String?
+    /// Button titles in the order the extension declared them, when the update
+    /// restated the buttons at all.
+    let buttonTitles: [String]?
+
+    init(
+        identifier: String,
+        title: String? = nil,
+        message: String? = nil,
+        buttonTitles: [String]? = nil
+    ) {
+        self.identifier = identifier
+        self.title = title
+        self.message = message
+        self.buttonTitles = buttonTitles
+    }
+
+    /// `request` with every supplied field overwritten and the rest untouched.
+    ///
+    /// The identifier comes from `request`: an update addresses a notification
+    /// that already exists and cannot rename it.
+    func applied(
+        to request: BrowserExtensionNotificationRequest
+    ) -> BrowserExtensionNotificationRequest {
+        BrowserExtensionNotificationRequest(
+            identifier: request.identifier,
+            title: title ?? request.title,
+            message: message ?? request.message,
+            iconData: request.iconData,
+            buttonTitles: buttonTitles ?? request.buttonTitles
+        )
+    }
+}
+
+/// The result of an update attempt.
+///
+/// ``unknownNotification`` is the answer Chrome gives for an identifier the
+/// extension no longer has on screen: `update` reports `false` rather than
+/// quietly creating a notification the extension never asked to re-post.
+enum BrowserExtensionNotificationUpdateOutcome: Equatable, Hashable, Sendable {
+    case updated
+    case unknownNotification
+    case authorizationDenied
+    case rejected(description: String)
+}
+
 /// A notification resolved down to the flat identifiers and content the host
 /// notification center needs.
 ///

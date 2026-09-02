@@ -418,10 +418,11 @@ final class BrowserNativeMessagingService:
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
-        guard capability == .available else {
-            replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
-            return
-        }
+        // Two capabilities share this entry point. `capability` answers whether
+        // Crest may launch an external native host process, which App Sandbox
+        // forbids. The capability broker is Crest's own in-process emulation
+        // transport: it spawns nothing, so it is answered before that guard and
+        // works in every build, sandboxed App Store one included.
         if applicationIdentifier == Self.capabilityBrokerIdentifier {
             guard authorization.allowsInternalCapabilityBroker else {
                 replyHandler(
@@ -445,6 +446,10 @@ final class BrowserNativeMessagingService:
                     replyHandler(nil, error)
                 }
             }
+            return
+        }
+        guard capability == .available else {
+            replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
             return
         }
         guard authorization.grants("nativeMessaging") else {
@@ -500,12 +505,11 @@ final class BrowserNativeMessagingService:
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        guard capability == .available else {
-            completionHandler(
-                BrowserExtensionNativeMessagingError.unavailable
-            )
-            return
-        }
+        // As in `sendMessage`, the in-process capability broker is answered
+        // before the external-host capability guard. A sandboxed build cannot
+        // launch a host, but it can still serve its own emulation transport,
+        // and gating it here made every brokered API fail and reconnect
+        // forever in the App Store build.
         if port.applicationIdentifier == Self.capabilityBrokerIdentifier {
             guard authorization.allowsInternalCapabilityBroker else {
                 completionHandler(
@@ -559,6 +563,12 @@ final class BrowserNativeMessagingService:
                 self?.removeCapabilityConnection(for: key)
             }
             completionHandler(nil)
+            return
+        }
+        guard capability == .available else {
+            completionHandler(
+                BrowserExtensionNativeMessagingError.unavailable
+            )
             return
         }
         guard authorization.grants("nativeMessaging") else {
@@ -757,21 +767,14 @@ final class BrowserNativeMessagingService:
             let (service, client) = try notificationCapability(
                 authorization: authorization
             )
-            let notificationRequest = try notificationRequest(from: request)
-            let presented = await service.presentedNotificationIdentifiers(
-                for: client
-            )
-            guard presented.contains(notificationRequest.identifier) else {
-                return ["updated": false]
-            }
-            let outcome = await service.post(
-                notificationRequest,
+            let outcome = await service.update(
+                try notificationUpdate(from: request),
                 from: client
             )
             switch outcome {
-            case .presented:
+            case .updated:
                 return ["updated": true]
-            case .authorizationDenied:
+            case .unknownNotification, .authorizationDenied:
                 return ["updated": false]
             case .rejected(let description):
                 throw BrowserExtensionCapabilityBrokerError.serviceFailure(
@@ -800,6 +803,50 @@ final class BrowserNativeMessagingService:
             message: notificationMessage,
             buttonTitles: buttonTitles
         )
+    }
+
+    /// Reads the fields a `chrome.notifications.update` call actually supplied.
+    ///
+    /// Unlike `create`, every content field is optional: Chrome's `update`
+    /// edits only what it was given, so a field that is absent — or explicitly
+    /// null — is reported as "keep" rather than defaulted to an empty value
+    /// that would blank the presented notification. A field that is present
+    /// with the wrong type is still a malformed request.
+    private func notificationUpdate(
+        from request: [String: Any]
+    ) throws -> BrowserExtensionNotificationUpdate {
+        let notificationIdentifier = try notificationIdentifier(from: request)
+        return BrowserExtensionNotificationUpdate(
+            identifier: notificationIdentifier,
+            title: try optionalString(named: "title", in: request),
+            message: try optionalString(named: "message", in: request),
+            buttonTitles: try optionalStringArray(
+                named: "buttonTitles",
+                in: request
+            )
+        )
+    }
+
+    private func optionalString(
+        named key: String,
+        in request: [String: Any]
+    ) throws -> String? {
+        guard let value = request[key], !(value is NSNull) else { return nil }
+        guard let string = value as? String else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+        return string
+    }
+
+    private func optionalStringArray(
+        named key: String,
+        in request: [String: Any]
+    ) throws -> [String]? {
+        guard let value = request[key], !(value is NSNull) else { return nil }
+        guard let strings = value as? [String] else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+        return strings
     }
 
     private func notificationIdentifier(

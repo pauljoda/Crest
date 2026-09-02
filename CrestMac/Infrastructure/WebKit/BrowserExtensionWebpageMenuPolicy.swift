@@ -147,6 +147,14 @@ enum BrowserExtensionWebpageMenuPolicy {
         return clone
     }
 
+    /// Whether an authored pattern list admits `url`.
+    ///
+    /// Only an *absent* list is unrestricted. A list the extension authored
+    /// restricts the item to what it names, so a pattern WebKit cannot parse
+    /// admits nothing rather than everything: an item whose every pattern is
+    /// unsupported never appears. The compatibility runtime forwards authored
+    /// patterns whole precisely so this distinction survives — filtering them
+    /// there turned "only this site" into "every site".
     private static func patterns(
         _ patterns: [String],
         match url: URL?

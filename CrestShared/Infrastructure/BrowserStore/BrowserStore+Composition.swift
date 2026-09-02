@@ -85,7 +85,9 @@ extension BrowserStore {
         launchEnvironment: BrowserLaunchEnvironment,
         isolationID: String
     ) -> BrowserStore? {
-        let namespace = "\(ProductIdentity.serviceNamespace).isolated.\(isolationID)"
+        let namespace = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+            isolationID: isolationID
+        )
         guard let defaults = UserDefaults(suiteName: namespace) else { return nil }
         let persistence = UserDefaultsBrowserSessionPersistence(
             defaults: defaults,

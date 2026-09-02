@@ -24,9 +24,10 @@ delegates to that native method before using a bounded fallback.
 3. **Crest capability broker.** APIs that need application state call one
    permission-checked broker. The broker resolves the extension and Space from
    the loaded context; JavaScript never supplies or overrides that identity.
-4. **App-side services.** Notifications, history/top sites, web
-   authentication, and omnibox behavior live behind framework-neutral ports.
-   They do not import WebKit or know how a package was acquired.
+4. **App-side services.** Behavior that needs the app rather than the engine
+   lives behind framework-neutral ports. They do not import WebKit or know how
+   a package was acquired. Notifications is the one service built this way
+   today; the rest of the broker's surface is served in place.
 
 Package preparation is selected from manifest shape and requested
 capabilities, never an extension ID, name, vendor, or hard-coded resource path.
@@ -72,8 +73,9 @@ checks. It supports:
   receiver-safe `runtime.getURL`, empty-message i18n semantics even for a
   non-augmentable native namespace, idle-callback scheduling, optional
   navigation events, `webRequest.handlerBehaviorChanged()` acknowledgement,
-  a document-backed offscreen-page adapter that uses the URL supplied by the
-  extension, and broker-backed `idle` and `notifications` APIs.
+  and the broker-backed `idle`, `notifications`, `contextMenus`, `offscreen`,
+  and `downloads.download` APIs. The offscreen document is hosted by Crest at
+  the URL supplied by the extension.
 
 For a Manifest V3 package that enters this layer, the temporary host manifest
 stays Manifest V3. Only its `background.service_worker` path is redirected to a
@@ -83,7 +85,10 @@ registration without changing the extension's context identity or storage.
 Only the temporary copy is prepared; verified store bytes are never rewritten.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
-The app-service broker currently connects system idle state and notifications.
+The capability broker currently connects notifications, system idle state,
+context menus and the install lifecycle, Crest-hosted offscreen documents, and
+`downloads.download`. Of those, only notifications is a port-backed app-side
+service; the rest are answered where the state already lives.
 Every request is authorized from the verified loaded context, and persistent
 event ports select one permission-checked capability after connection. Until
 another app-side service is connected, its local adapter must stay bounded or
@@ -149,10 +154,49 @@ path. A lower-priority duplicate does not bypass a higher-priority
 registration. Exactly one distinct authorized host must remain; otherwise the
 request is rejected. There is no vendor list or extension-specific fallback.
 
+Two different capabilities travel over the same WebKit delegate. Launching an
+external host is the one App Sandbox forbids, and a sandboxed build reports it
+as unavailable. Requests addressed to Crest's own broker identifier are not
+that: they are the in-process emulation transport for notifications, idle,
+the contextMenus relay, and the `runtime.onInstalled` acknowledgement, and they
+spawn no process at all. The broker is therefore answered before the
+external-host capability is consulted and stays available in every build,
+including the sandboxed App Store one.
+
 This boundary is sufficient for 1Password's official `1Password-BrowserSupport`
 process. It is not sufficient for uBlock Origin because uBlock's missing
 contract is synchronous request cancellation and mutation inside the browser,
 not a background computation process.
+
+## Extension diagnostics
+
+WebKit records only what an extension's API callbacks throw, so an uncaught
+exception or an unhandled promise rejection in a popup, an extension page, or a
+background worker reaches nobody — which is why a Bitwarden popup could go
+blank after a two-factor sign-in leaving nothing to read. Chrome keeps those on
+the extension's own error page; Crest's equivalent is a diagnostics channel in
+the generated runtime. In privileged extension contexts only — never a content
+script, whose origin is the page's — it installs `error` and
+`unhandledrejection` listeners plus a report for the runtime's own "Unchecked
+runtime.lastError" console line, and sends each as a `diagnostics.report`
+message over the same in-process capability broker. The broker answers it for
+any authorized broker context with no permission grant at all, because the
+payload is the extension's own error text rather than a capability: each report
+is logged under subsystem `com.pauldavis.crest`, category
+`extension-diagnostics`, with the source URL trimmed to its path so a query
+string or fragment an extension page carries is never logged, and the uncaught
+errors and rejections are also appended to a bounded in-memory ring (20 per
+context, newest wins) that the extension's runtime summary merges into the
+errors shown under *Needs attention → Technical Details*. A build may also
+enable console capture (`CREST_EXTENSION_CONSOLE_CAPTURE=1`, and always in an
+isolated launch), which forwards the extension's own `console.warn`/`error`/
+`info` calls as `kind: "console"` reports logged at `.info` and never added to
+those errors — the only trace a *hang* leaves, since nothing throws. The
+channel is strictly one-way telemetry and must never change what an extension
+observes: a missing transport is silent, nothing it does throws or rejects, it
+never reports its own failures, identical reports within a second are
+collapsed, and it stops after 20 reports (200 console lines) per context with a
+single notice that the rest were dropped.
 
 ## Request interception broker — required, not implemented
 
@@ -189,23 +233,28 @@ still needs an enforceable request hook.
 
 ## App-side service layout
 
-Each service is a port protocol with an adapter behind it, and each has an
-in-memory double that ships in the app target so tests, SwiftUI previews, and
-isolated launches all use the same seam.
+**One app-side service exists today: notifications.** Everything else the
+capability broker answers is implemented where it is used rather than behind a
+port, and this section says so plainly so the layout below is read as the
+current tree and not as a plan.
 
-## Layout
+| Concern | Where it lives | Shape |
+| --- | --- | --- |
+| Notifications | `CrestShared/Domain/BrowserExtensionServices/Notifications/`, `CrestShared/Application/BrowserExtensionServices/Notifications/`, `CrestShared/Infrastructure/BrowserExtensionServices/Notifications/`, `CrestMac/Infrastructure/BrowserExtensionServices/` | Full port/adapter/double service: `BrowserExtensionNotificationHandling` and `BrowserExtensionNotificationCentering` ports, `BrowserExtensionNotificationService`, the `BrowserExtensionNotificationSystemCenter` platform adapter, and the `InMemoryBrowserExtensionNotificationCenter` double |
+| Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
+| Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
+| Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
 
-| Concern | Ports | Service / adapter | Double |
-| --- | --- | --- | --- |
-| Notifications | `CrestShared/Application/BrowserExtensionServices/Notifications/Ports/` | `BrowserExtensionNotificationService` (Application), `BrowserExtensionNotificationSystemCenter` (CrestMac) | `InMemoryBrowserExtensionNotificationCenter` |
-| History and top sites | `CrestShared/Application/BrowserExtensionServices/History/Ports/` | `BrowserStoreExtensionHistoryService` (Application) | `InMemoryBrowserExtensionHistoryStore` |
-| Web auth | `CrestShared/Application/BrowserExtensionServices/WebAuthentication/Ports/` | `BrowserExtensionWebAuthenticationService` (Application), `BrowserExtensionWebAuthenticationSystemSession` (CrestMac) | `InMemoryBrowserExtensionWebAuthenticationSession` |
-| Omnibox | `CrestShared/Application/BrowserExtensionServices/Omnibox/Ports/` | `BrowserOmniboxRegistry` (Application) plus command-palette integration | `InMemoryBrowserOmniboxProvider` |
+There is no history, top-sites, web-authentication, or omnibox service in the
+tree. The design notes for those are kept at the end of this document, marked
+as unbuilt.
 
 Domain values live under `CrestShared/Domain/BrowserExtensionServices/`. The
 Application layer may import only Foundation, Dispatch, and Observation, so
 every framework seam is expressed in Crest's own types and implemented in a
-platform root.
+platform root. A new service adopts the notifications shape: a port protocol,
+an adapter behind it, and an in-memory double that ships in the app target so
+tests, SwiftUI previews, and isolated launches all use the same seam.
 
 Extensions are identified to these services by
 `BrowserExtensionServiceClientID`, an opaque non-empty string. It is deliberately
@@ -250,7 +299,22 @@ rest of the process.
 notification the person dismissed from Notification Center disappears from
 `getAll`.
 
-## History — `chrome.history` and `chrome.topSites`
+## Design notes for services not yet built
+
+Nothing below this heading exists in the tree. `chrome.history`,
+`chrome.topSites`, `identity.launchWebAuthFlow`, and `chrome.omnibox` are all
+routed **Unavailable** by `BrowserExtensionAPICompatibilityMatrix`, and no
+port, service, adapter, or double for them is present. The notes are kept
+because the constraints they work through — Crest's per-Space history shape,
+`ASWebAuthenticationSession`'s callback rules, and the command palette's
+synchronous result pipeline — are the real reasons those services are hard, and
+rediscovering them later would be waste.
+
+Two store primitives named below did land ahead of their service:
+`BrowserSession.removeHistory(...)` and `BrowserStore.deleteHistory(...)`
+exist. Everything else is a description of work that has not been done.
+
+### History — `chrome.history` and `chrome.topSites`
 
 Crest has **no history database**. History is a `[BrowserHistoryEntry]` array on
 each `BrowserSpace`, owned by `BrowserStore` and persisted as per-Space JSON
@@ -292,7 +356,7 @@ visit count alone would pin a site somebody used heavily last spring above one
 they use daily now, so counts are weighted by recency — the frecency shape
 Firefox popularized.
 
-## Web auth — `identity.launchWebAuthFlow`
+### Web auth — `identity.launchWebAuthFlow`
 
 This is the service with a hard platform constraint, and it is worth stating
 plainly.
@@ -335,7 +399,7 @@ The presentation anchor follows the house pattern: `NSApp.keyWindow ??
 NSApp.mainWindow`, resolved before the session starts, held weakly, and a
 missing window fails with `.presentationFailure` instead of trapping.
 
-## Omnibox — `chrome.omnibox`
+### Omnibox — `chrome.omnibox`
 
 Crest's address bar renders no suggestions of its own; everything the person
 sees comes from `BrowserCommandPalette`. Its sources are `static func`s appended

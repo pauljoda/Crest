@@ -135,6 +135,11 @@ unimplemented on purpose rather than faked:
 - **Tab audio.** Crest tracks no per-tab audio state, so `mutedInfo` and
   `audible` are not reported and muting is unavailable.
 - **Parent tabs.** Crest records no opener relationship between tabs.
+- **Saved tabs.** Crest's saved tabs are a third placement Chrome has no name
+  for. They report `pinned: false`, because `pinned` means the pinned strip and
+  nothing else. `tabs.update({pinned: true})` moves a saved tab into that strip,
+  matching Crest's own Pin Tab action; `pinned: false` leaves it saved rather
+  than pulling it out of the list.
 - **New tab page override.** `chrome_url_overrides.newtab` is not honored. A new
   tab on macOS opens Crest's command palette rather than loading a page, so
   there is no URL for an extension to replace.
@@ -1010,6 +1015,15 @@ Action-popup startup is covered separately by
 after both a fresh install and a launch restoration, and fails when any host
 call the popup depends on does not settle. These tests share the
 `CREST_RUN_CHROME_STORE_INTEGRATION` gate.
+
+A named isolated profile — `CREST_ISOLATED_SESSION=1` together with
+`CREST_ISOLATED_PERSISTENCE_ID=<name>` — keeps its installed extensions across
+relaunches, so a repeated audit does not begin by re-adding every extension
+under test. That profile stages its packages under
+`~/Library/Application Support/Crest/Isolated/<name>/Extensions` and records
+the installations in the `<bundle id>.isolated.<name>` preferences domain,
+which is the same boundary its browser session and WebKit storage already use
+and is never the installed app's own state.
 
 Readiness assertions in these suites must treat a **missing** loader element as
 not-ready. A popup document that has not parsed yet has no loader, so accepting

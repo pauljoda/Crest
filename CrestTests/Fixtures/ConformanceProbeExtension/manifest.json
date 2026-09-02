@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Crest Conformance Probe",
+  "version": "1.0.0",
+  "description": "Exercises WebExtension behaviours that differ between Chromium, Orion and Crest, then renders a self-explanatory report.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "idle"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_title": "Conformance Probe"
+  },
+  "options_ui": {
+    "page": "results.html",
+    "open_in_tab": true
+  }
+}

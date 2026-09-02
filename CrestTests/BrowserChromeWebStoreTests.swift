@@ -32,6 +32,28 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         return try XCTUnwrap(matches.first)
     }
 
+    /// A web view whose document really is an extension page.
+    ///
+    /// The compatibility runtime works out which process it is running in from
+    /// `location.href`: a document served from the extension's own base URL is
+    /// an extension page, and anything else is a content script, where a
+    /// background-only namespace such as `idle` is legitimately absent. A bare
+    /// `WKWebView` sits at `about:blank`, so a test that means to exercise the
+    /// extension-page contract has to load one.
+    private func extensionPageWebView(
+        at baseURL: URL
+    ) async throws -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(
+            ChromeWebStoreTestSchemeHandler(),
+            forURLScheme: try XCTUnwrap(baseURL.scheme)
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let navigation = ChromeWebStoreNavigationWaiter(webView: webView)
+        try await navigation.load(URLRequest(url: baseURL))
+        return webView
+    }
+
     func testStoreItemRecognizesDarkReaderAndRejectsUntrustedLookalikes() throws {
         let item = try XCTUnwrap(
             BrowserChromeWebStoreItem(
@@ -299,7 +321,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    func testCompatibilityLayerHostsAModuleWorkerInABackgroundDocument()
+    /// A module worker stays a worker.
+    ///
+    /// Preparation used to host it in a generated background document; it now
+    /// keeps WebKit's native worker boundary and points `service_worker` at a
+    /// generated bootstrap that imports the compatibility layer before the
+    /// extension's own module. Extension pages still receive the layer through
+    /// an injected `<script src>` and nothing else — their markup is vendor
+    /// source and is not rewritten.
+    func testCompatibilityLayerKeepsAModuleWorkerBehindItsBootstrapAndInjectsPages()
         throws
     {
         let fileManager = FileManager.default
@@ -389,12 +419,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let background = try XCTUnwrap(
             updated["background"] as? [String: Any]
         )
-        let backgroundDocumentName = try XCTUnwrap(
-            background["page"] as? String
+        let backgroundBootstrapName = try XCTUnwrap(
+            background["service_worker"] as? String
         )
-        XCTAssertNil(background["service_worker"])
+        XCTAssertNil(background["page"])
         XCTAssertNil(background["scripts"])
-        XCTAssertNil(background["type"])
+        // The bootstrap is an ES module: it `import`s the compatibility layer
+        // and then the extension's own module worker, so the prepared manifest
+        // has to keep declaring the module type.
+        XCTAssertEqual(background["type"] as? String, "module")
         XCTAssertNil(background["preferred_environment"])
         let updatedContentScripts = try XCTUnwrap(
             updated["content_scripts"] as? [[String: Any]]
@@ -418,16 +451,11 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "Open the dashboard"
         )
         XCTAssertTrue(
-            backgroundDocumentName.hasPrefix(
-                "crest-webextension-background-"
-            )
-        )
-        XCTAssertFalse(
-            backgroundDocumentName.hasPrefix(
+            backgroundBootstrapName.hasPrefix(
                 "crest-webextension-background-bootstrap-"
             )
         )
-        XCTAssertTrue(backgroundDocumentName.hasSuffix(".html"))
+        XCTAssertTrue(backgroundBootstrapName.hasSuffix(".js"))
         XCTAssertTrue(
             compatibilityScriptName.hasPrefix(
                 "crest-webextension-compatibility-"
@@ -441,36 +469,37 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertEqual(preparedWorker, "globalThis.started = true;")
 
-        let backgroundDocument = try String(
+        let backgroundBootstrap = try String(
             contentsOf: root.appending(
-                path: backgroundDocumentName
+                path: backgroundBootstrapName
             ),
             encoding: .utf8
         )
-        let compatibilityTag =
-            #"<script src="/\#(compatibilityScriptName)"></script>"#
+        let compatibilityImport =
+            #"import "./\#(compatibilityScriptName)";"#
         XCTAssertEqual(
-            backgroundDocument.components(
-                separatedBy: compatibilityTag
+            backgroundBootstrap.components(
+                separatedBy: compatibilityImport
             ).count,
             2,
-            "The background document must load the compatibility layer exactly once."
+            "The bootstrap must import the compatibility layer exactly once."
         )
-        let workerTag =
-            #"<script type="module" src="/background/background.js"></script>"#
-        XCTAssertTrue(backgroundDocument.contains(workerTag))
+        let workerImport = #"import "./background/background.js";"#
+        XCTAssertTrue(backgroundBootstrap.contains(workerImport))
         let compatibilityRange = try XCTUnwrap(
-            backgroundDocument.range(of: compatibilityTag)
+            backgroundBootstrap.range(of: compatibilityImport)
         )
         let workerRange = try XCTUnwrap(
-            backgroundDocument.range(of: workerTag)
+            backgroundBootstrap.range(of: workerImport)
         )
         XCTAssertLessThan(
             compatibilityRange.lowerBound,
             workerRange.lowerBound,
             "The compatibility layer must load before the worker module."
         )
-        XCTAssertFalse(backgroundDocument.contains("__crest"))
+        // A module bootstrap has no scoped-API handoff: `import` shares one
+        // module scope, unlike the `importScripts` bootstrap.
+        XCTAssertFalse(backgroundBootstrap.contains("__crest"))
 
         let compatibilityScript = try String(
             contentsOf: root.appending(
@@ -485,18 +514,22 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             compatibilityScriptName,
             "crest-webextension-compatibility-\(compatibilityFingerprint).js"
         )
-        let backgroundDocumentFingerprint = Data(
-            SHA256.hash(data: Data(backgroundDocument.utf8)).prefix(8)
+        let backgroundBootstrapFingerprint = Data(
+            SHA256.hash(data: Data(backgroundBootstrap.utf8)).prefix(8)
         ).hexString
         XCTAssertEqual(
-            backgroundDocumentName,
-            "crest-webextension-background-\(backgroundDocumentFingerprint).html"
+            backgroundBootstrapName,
+            "crest-webextension-background-bootstrap-\(backgroundBootstrapFingerprint).js"
         )
+        // A coarse guard that the generated runtime still carries every
+        // surface a portable package leans on. `addHostAccessRequest` and
+        // `wrappedJSObject` are deliberately absent: the runtime no longer
+        // publishes members it cannot deliver, so feature detection reports
+        // them missing and packages take their own fallback path.
         for requiredSurface in [
             "notifications",
             "onCreatedNavigationTarget",
             "getUserSettings",
-            "addHostAccessRequest",
             "passwordSavingEnabled",
             "storageManaged",
             "onChanged",
@@ -505,7 +538,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "installNamespaceFacades",
             "installNativeAliases",
             "installMissingRoot",
-            "get() { return facade; }",
+            "installEventFacade",
             "serviceWorkerClients",
             "skipWaiting",
             "offscreen",
@@ -518,7 +551,6 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "requestUpdateCheck",
             "onUpdateAvailable",
             "normalizeMenuNamespace",
-            "wrappedJSObject",
         ] {
             XCTAssertTrue(
                 compatibilityScript.contains(requiredSurface),
@@ -526,7 +558,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             )
         }
         XCTAssertTrue(compatibilityScript.contains("declaredManifest"))
-        XCTAssertTrue(compatibilityScript.contains("options?.url"))
+        XCTAssertTrue(compatibilityScript.contains("options.url"))
         XCTAssertFalse(
             compatibilityScript.contains(
                 "aeblfdkhhhdcdjpifhhbdiojplfjncoa"
@@ -544,12 +576,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 #"src="/\#(compatibilityScriptName)""#
             )
         )
-        XCTAssertFalse(preparedPopup.contains("<body aria-label"))
-        XCTAssertFalse(preparedPopup.contains("placeholder=\"\""))
-        XCTAssertFalse(preparedPopup.contains("data-i18n-title='  '"))
+        // The extension's own markup is vendor source. Injection is the only
+        // edit preparation makes to it: attributes, empty or not, survive.
+        XCTAssertTrue(preparedPopup.contains("<body aria-label"))
+        XCTAssertTrue(preparedPopup.contains("placeholder=\"\""))
+        XCTAssertTrue(preparedPopup.contains("data-i18n-title='  '"))
         XCTAssertTrue(
             preparedPopup.contains(#"aria-label="Known message""#)
         )
+        XCTAssertTrue(preparedPopup.contains(#"<script src="popup.js">"#))
         let preparedAppPage = try String(
             contentsOf: appPageURL,
             encoding: .utf8
@@ -797,6 +832,603 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         _ = try await WKWebView().evaluateJavaScript(source)
     }
 
+    /// Builds a package whose only background is a plain document script and
+    /// returns its generated compatibility runtime.
+    ///
+    /// `permissions` and `optionalPermissions` are what the fixture manifest
+    /// declares, which is what decides whether a permission-gated namespace is
+    /// published at all.
+    private func storageFixtureCompatibilityRuntime(
+        named name: String,
+        permissions: [String] = ["storage"],
+        optionalPermissions: [String] = []
+    ) throws -> (root: URL, source: String) {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "\(name)-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try Data("globalThis.contentStarted = true;".utf8).write(
+            to: root.appending(path: "content.js")
+        )
+        var manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Storage Fixture",
+            "version": "1.0",
+            "permissions": permissions,
+            "background": ["scripts": ["background.js"]],
+            "content_scripts": [
+                [
+                    "matches": ["https://example.com/*"],
+                    "js": ["content.js"],
+                ]
+            ],
+        ]
+        if !optionalPermissions.isEmpty {
+            manifest["optional_permissions"] = optionalPermissions
+        }
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: permissions + optionalPermissions,
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        return (
+            root,
+            try String(
+                contentsOf: generatedJavaScriptURL(
+                    in: root,
+                    prefix: "crest-webextension-compatibility"
+                ),
+                encoding: .utf8
+            )
+        )
+    }
+
+    /// A non-extension `location` makes this the content-script contract.
+    private static let storageFixtureNativeRoot = """
+        const channelNames = [];
+        const NativeBroadcastChannel = globalThis.BroadcastChannel;
+        Object.defineProperty(globalThis, "BroadcastChannel", {
+            configurable: true,
+            value: class extends NativeBroadcastChannel {
+                constructor(name) {
+                    super(name);
+                    channelNames.push(name);
+                }
+            }
+        });
+        const stored = {};
+        const nativeLocal = {
+            get(keys, callback) {
+                const result = {};
+                if (keys === null || keys === undefined) {
+                    Object.assign(result, stored);
+                } else if (Array.isArray(keys)) {
+                    for (const key of keys) {
+                        if (key in stored) result[key] = stored[key];
+                    }
+                } else if (typeof keys === "string") {
+                    if (keys in stored) result[keys] = stored[keys];
+                } else if (keys && typeof keys === "object") {
+                    for (const key of Object.keys(keys)) {
+                        result[key] = key in stored
+                            ? stored[key]
+                            : keys[key];
+                    }
+                }
+                if (callback) {
+                    callback(result);
+                    return;
+                }
+                return Promise.resolve(result);
+            },
+            set(items, callback) {
+                Object.assign(stored, items);
+                if (callback) {
+                    callback();
+                    return;
+                }
+                return Promise.resolve();
+            },
+            onChanged: {
+                addListener() {},
+                removeListener() {}
+            }
+        };
+        Object.defineProperty(globalThis, "chrome", {
+            configurable: true,
+            value: {
+                runtime: {
+                    getManifest() { return { manifest_version: 3 }; },
+                    id: "fixture-extension-id"
+                },
+                storage: { local: nativeLocal }
+            }
+        });
+        """
+
+    /// A content script runs on the HOST PAGE origin. A BroadcastChannel
+    /// opened there would publish every stored value to the page, let the page
+    /// forge `storage.onChanged`, and let two extensions on one tab hear each
+    /// other. Chrome delivers `storage.onChanged` to content scripts natively,
+    /// so the relay must exist only in privileged extension contexts.
+    func testCompatibilityLayerKeepsTheStorageRelayOutOfContentScripts()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try storageFixtureCompatibilityRuntime(
+            named: "crest-webextension-storage-content-script-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.storageFixtureNativeRoot)
+            \(fixture.source)
+            const events = [];
+            chrome.storage.onChanged.addListener((changes, areaName) => {
+                events.push({ changes, areaName });
+            });
+            await chrome.storage.local.set({ token: "one" });
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            return JSON.stringify({
+                href: String(globalThis.location?.href ?? ""),
+                channelNames,
+                eventCount: events.length,
+                areaName: events[0]?.areaName
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+        XCTAssertFalse(
+            try XCTUnwrap(result["href"] as? String).hasPrefix(
+                fixtureRuntimeIdentity.baseURL.absoluteString
+            ),
+            "The fixture must run outside the extension origin."
+        )
+        XCTAssertEqual(
+            result["channelNames"] as? [String],
+            [],
+            "A content script must never open the storage relay channel."
+        )
+        XCTAssertEqual(result["eventCount"] as? Int, 1)
+        XCTAssertEqual(result["areaName"] as? String, "local")
+
+        // A privileged relay stays scoped to one extension origin and refuses
+        // a payload that claims a different one.
+        XCTAssertTrue(
+            fixture.source.contains(
+                "storageBridgeMarker + \":\" + storageBridgeScope"
+            )
+        )
+        XCTAssertTrue(
+            fixture.source.contains(
+                "payload.origin !== extensionBaseURL"
+            )
+        )
+        XCTAssertTrue(
+            fixture.source.contains("if (isPrivilegedExtensionContext) {")
+        )
+    }
+
+    /// Chrome defines a permission-gated namespace only when the manifest
+    /// asked for it, and portable extensions feature-detect exactly that.
+    ///
+    /// Publishing an emulated namespace nobody requested hands an extension an
+    /// API whose every call the capability broker refuses — and, for the
+    /// namespaces backed by a watch port, a reconnect it refuses forever.
+    func testAnUndeclaredPermissionKeepsItsNamespaceOffTheCompatibilityLayer()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try storageFixtureCompatibilityRuntime(
+            named: "crest-webextension-undeclared-namespace-test",
+            permissions: []
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.storageFixtureNativeRoot)
+            \(fixture.source)
+            return JSON.stringify({
+                onChanged: typeof chrome.storage.onChanged,
+                managed: typeof chrome.storage.managed,
+                runtime: typeof chrome.runtime.getURL
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+        XCTAssertEqual(
+            result["onChanged"] as? String,
+            "undefined",
+            "A package that never declared \"storage\" must keep WebKit's own storage surface."
+        )
+        XCTAssertEqual(result["managed"] as? String, "undefined")
+        XCTAssertEqual(
+            result["runtime"] as? String,
+            "function",
+            "runtime needs no permission, so it must stay compatible."
+        )
+    }
+
+    /// Chrome publishes a namespace an extension listed under
+    /// `optional_permissions` before the grant arrives; the individual calls
+    /// fail until it does. Presence in either list is therefore enough.
+    func testAnOptionalPermissionStillPublishesItsNamespace() async throws {
+        let fileManager = FileManager.default
+        let fixture = try storageFixtureCompatibilityRuntime(
+            named: "crest-webextension-optional-namespace-test",
+            permissions: [],
+            optionalPermissions: ["storage"]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.storageFixtureNativeRoot)
+            \(fixture.source)
+            return typeof chrome.storage.onChanged;
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        XCTAssertEqual(evaluatedResult as? String, "object")
+    }
+
+    /// The runtime must say what it cannot do rather than fail quietly.
+    ///
+    /// Every construct below replaced a silent drop: a discarded error, a
+    /// dropped URL pattern, an ignored notification option, a blocking
+    /// listener whose return value goes nowhere, and a watch port that
+    /// reconnected forever against a refusal that will never change.
+    func testCompatibilityRuntimeReportsWhatItCannotHonor() throws {
+        let fileManager = FileManager.default
+        let fixture = try storageFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        for construct in [
+            "const namespacePermissions",
+            "const namespaceIsDeclared",
+            "declaredManifest.optional_permissions",
+            "const invokeCallbackWithLastError",
+            "Unchecked runtime.lastError",
+            "const capabilityWatch",
+            "stopped reconnecting",
+            "does not consume blocking responses",
+            "warnUnsupportedNotificationOptions",
+            "const authoredMenuPatterns",
+        ] {
+            XCTAssertTrue(
+                fixture.source.contains(construct),
+                "Missing diagnostic construct: \(construct)"
+            )
+        }
+        for removed in [
+            "supportedMenuPattern",
+            "connectNotificationWatch",
+            "connectIdleWatch",
+        ] {
+            XCTAssertFalse(
+                fixture.source.contains(removed),
+                "Superseded construct still present: \(removed)"
+            )
+        }
+    }
+
+    /// Chrome fires `storage.onChanged` for every `set`, including one that
+    /// stores an identical value. A value-signature suppression window
+    /// swallowed the second write, so dedup must correlate delivery paths
+    /// instead of values.
+    /// A foreign native event must not swallow this context's own next write.
+    ///
+    /// Cross-path correlation exists because WebKit can echo a write this
+    /// context already reported. It ran in both directions, so a native event
+    /// for key X raised by a SIBLING context left a token that cancelled this
+    /// context's own write of X for the next 250 ms — and in the exact case
+    /// the relay exists for, where WebKit does not echo a context's own write,
+    /// the listener then saw nothing at all. A native arrival may only consume
+    /// a Crest emission that already happened.
+    func testAForeignNativeChangeDoesNotSwallowThisContextsOwnWrite()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try storageFixtureCompatibilityRuntime(
+            named: "crest-webextension-storage-foreign-native-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let webView = WKWebView()
+        let evaluatedResult = try await webView.callAsyncJavaScript(
+            """
+            const stored = {};
+            const nativeChangeListeners = new Set();
+            const nativeLocal = {
+                get(keys, callback) {
+                    const result = {};
+                    if (keys === null || keys === undefined) {
+                        Object.assign(result, stored);
+                    } else if (typeof keys === "string") {
+                        if (keys in stored) result[keys] = stored[keys];
+                    } else if (Array.isArray(keys)) {
+                        for (const key of keys) {
+                            if (key in stored) result[key] = stored[key];
+                        }
+                    } else if (keys && typeof keys === "object") {
+                        for (const key of Object.keys(keys)) {
+                            result[key] = key in stored
+                                ? stored[key]
+                                : keys[key];
+                        }
+                    }
+                    if (callback) { callback(result); return; }
+                    return Promise.resolve(result);
+                },
+                set(items, callback) {
+                    Object.assign(stored, items);
+                    if (callback) { callback(); return; }
+                    return Promise.resolve();
+                },
+                onChanged: { addListener() {}, removeListener() {} }
+            };
+            const nativeRootChanged = {
+                addListener(listener) {
+                    nativeChangeListeners.add(listener);
+                },
+                removeListener(listener) {
+                    nativeChangeListeners.delete(listener);
+                },
+                hasListener(listener) {
+                    return nativeChangeListeners.has(listener);
+                }
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; },
+                        id: "fixture-extension-id"
+                    },
+                    storage: {
+                        local: nativeLocal,
+                        onChanged: nativeRootChanged
+                    }
+                }
+            });
+            \(fixture.source)
+            const events = [];
+            chrome.storage.onChanged.addListener((changes) => {
+                events.push(Object.keys(changes ?? {}).join("+"));
+            });
+            // A sibling context wrote `token`; WebKit reports that natively.
+            for (const listener of Array.from(nativeChangeListeners)) {
+                listener(
+                    { token: { newValue: "elsewhere" } },
+                    "local"
+                );
+            }
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            const afterForeignNative = events.length;
+            // This context now writes the same key, inside the window.
+            await chrome.storage.local.set({ token: "mine" });
+            await new Promise((resolve) => setTimeout(resolve, 40));
+            const afterOwnWrite = events.length;
+            // Identical consecutive writes still each fire.
+            await chrome.storage.local.set({ token: "mine" });
+            await new Promise((resolve) => setTimeout(resolve, 40));
+            return JSON.stringify({
+                afterForeignNative,
+                afterOwnWrite,
+                total: events.length,
+                keys: events
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(result["afterForeignNative"] as? Int, 1)
+        XCTAssertEqual(
+            result["afterOwnWrite"] as? Int,
+            2,
+            "The context's own write must reach its own listener."
+        )
+        XCTAssertEqual(result["total"] as? Int, 3)
+        XCTAssertEqual(
+            result["keys"] as? [String],
+            ["token", "token", "token"]
+        )
+    }
+
+    func testIdenticalConsecutiveStorageWritesEachDispatchOneChange()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try storageFixtureCompatibilityRuntime(
+            named: "crest-webextension-storage-duplicate-write-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.storageFixtureNativeRoot)
+            \(fixture.source)
+            const events = [];
+            chrome.storage.onChanged.addListener((changes, areaName) => {
+                events.push({ changes, areaName });
+            });
+            const areaEvents = [];
+            chrome.storage.local.onChanged.addListener((changes) => {
+                areaEvents.push(changes);
+            });
+            await chrome.storage.local.set({ token: "one" });
+            await chrome.storage.local.set({ token: "one" });
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            return JSON.stringify({
+                eventCount: events.length,
+                areaEventCount: areaEvents.length,
+                firstChange: events[0]?.changes?.token,
+                secondChange: events[1]?.changes?.token,
+                secondChangeKeys: Object.keys(
+                    events[1]?.changes?.token ?? {}
+                )
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+        XCTAssertEqual(
+            result["eventCount"] as? Int,
+            2,
+            "Two identical writes are two events in Chrome."
+        )
+        XCTAssertEqual(result["areaEventCount"] as? Int, 2)
+        XCTAssertEqual(
+            result["firstChange"] as? [String: String],
+            ["newValue": "one"]
+        )
+        XCTAssertEqual(
+            result["secondChange"] as? [String: String],
+            ["oldValue": "one", "newValue": "one"]
+        )
+        XCTAssertEqual(
+            result["secondChangeKeys"] as? [String],
+            ["oldValue", "newValue"],
+            "A Crest change object must carry Chrome's key order."
+        )
+    }
+
+    /// A dual-environment MV3 package still declares a service worker, but
+    /// preparation collapses it to a background document. The runtime has to
+    /// read the prepared shape, otherwise it virtualizes `alarms.onAlarm`
+    /// with no worker left to feed it.
+    func testDualEnvironmentBackgroundDeclaresTheDocumentAlarmOwner() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-dual-environment-test-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+
+        let dualManifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Dual Environment Fixture",
+            "version": "1.0",
+            "permissions": ["alarms"],
+            "background": [
+                "service_worker": "background.js",
+                "scripts": ["background.js"],
+                "preferred_environment": ["service_worker"],
+            ],
+        ]
+        XCTAssertEqual(
+            BrowserChromeWebStoreCompatibilityPackagePreparer
+                .preparedBackgroundEnvironment(dualManifest),
+            "document"
+        )
+        XCTAssertEqual(
+            BrowserChromeWebStoreCompatibilityPackagePreparer
+                .preparedBackgroundEnvironment([
+                    "manifest_version": 3,
+                    "background": ["service_worker": "background.js"],
+                ]),
+            "worker"
+        )
+
+        try JSONSerialization.data(withJSONObject: dualManifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: ["alarms"],
+                runtimeIdentity: fixtureRuntimeIdentity
+            )
+        )
+        let preparedManifest = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: try Data(
+                    contentsOf: root.appending(path: "manifest.json")
+                )
+            ) as? [String: Any]
+        )
+        let preparedBackground = try XCTUnwrap(
+            preparedManifest["background"] as? [String: Any]
+        )
+        XCTAssertNil(preparedBackground["service_worker"])
+        XCTAssertNotNil(preparedBackground["scripts"])
+
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+        XCTAssertTrue(
+            source.contains(#"backgroundEnvironment = "document""#),
+            "A dual-environment package runs its background as a document."
+        )
+        XCTAssertTrue(
+            source.contains(#"backgroundEnvironment !== "worker""#),
+            "Alarms must virtualize only for a real worker background."
+        )
+        XCTAssertFalse(
+            source.contains(#"backgroundEnvironment = "worker""#)
+        )
+    }
+
     func testManifestDiagnosticsHideOnlyTheValidEmptyActionCommandWarning()
         async throws
     {
@@ -888,7 +1520,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["contextMenus", "storage"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -967,6 +1599,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["optionalContains"] as? Bool, false)
         XCTAssertEqual(result["optionalRemoved"] as? Bool, false)
         XCTAssertEqual(result["requiredRemoved"] as? Bool, false)
+        // Three native probes, and the fourth call deliberately makes none:
+        // the two authored `contains` calls, plus the removal of the OPTIONAL
+        // grant, which asks WebKit what is actually held before deciding and
+        // settles to `false` when — as here — the native reply never arrives.
+        // Removing `*://api.example.test/*` asks nothing: the manifest lists
+        // it under `host_permissions`, so it is required access and is refused
+        // from the manifest alone. Neither removal reaches native `remove`.
         XCTAssertEqual(result["nativeContainsCalls"] as? Int, 3)
         XCTAssertEqual(result["nativeRemoveCalls"] as? Int, 0)
     }
@@ -988,6 +1627,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "manifest_version": 3,
             "name": "Privacy Settings Fixture",
             "version": "1.0",
+            // The runtime publishes a permission-gated namespace only when the
+            // manifest declares one of its permissions, the way Chrome does.
+            "permissions": ["privacy"],
             "background": ["service_worker": "background.js"],
         ]
         try Data("globalThis.started = true;".utf8).write(
@@ -1004,7 +1646,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["privacy"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -1120,7 +1762,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["nativeMessaging", "notifications"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -1288,7 +1930,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["nativeMessaging", "notifications"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -1435,7 +2077,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["idle", "nativeMessaging"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -1499,6 +2141,164 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    /// Giving up on a watch must not outlive the reason for giving up.
+    ///
+    /// The broker refuses a watch whose permission the package does not hold,
+    /// and an OPTIONAL permission is exposed before it is granted. Six
+    /// refusals during that window used to retire the watch for the life of
+    /// the context, so the grant the user then gave never delivered a single
+    /// event. A fresh `addListener` restores the budget; simply obtaining a
+    /// port does not, because `connectNative` returns one even for a refusal
+    /// the broker completes by dropping it.
+    func testAnAbandonedCapabilityWatchRetriesAfterAFreshListener()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "crest-webextension-idle-watch-retry-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let permissions = ["idle", "nativeMessaging"]
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Idle Watch Retry Fixture",
+            "version": "1.0",
+            "optional_permissions": permissions,
+            "background": ["service_worker": "background.js"],
+        ]
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: permissions,
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
+            )
+        )
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(
+                in: root,
+                prefix: "crest-webextension-compatibility"
+            ),
+            encoding: .utf8
+        )
+
+        let webView = WKWebView()
+        let evaluatedResult = try await webView.callAsyncJavaScript(
+            """
+            // Collapse the backoff so six refusals fit in a test.
+            const nativeSetTimeout = globalThis.setTimeout.bind(globalThis);
+            globalThis.setTimeout = (fn, delay, ...rest) =>
+                nativeSetTimeout(fn, Math.min(Number(delay) || 0, 1), ...rest);
+            let connectCount = 0;
+            let refuse = true;
+            const makePort = () => {
+                const disconnectListeners = new Set();
+                const port = {
+                    onMessage: {
+                        addListener() {},
+                        removeListener() {}
+                    },
+                    onDisconnect: {
+                        addListener(listener) {
+                            disconnectListeners.add(listener);
+                        },
+                        removeListener(listener) {
+                            disconnectListeners.delete(listener);
+                        }
+                    },
+                    postMessage() {},
+                    disconnect() {},
+                    drop() {
+                        for (const listener of Array.from(
+                            disconnectListeners
+                        )) {
+                            listener(port);
+                        }
+                    }
+                };
+                return port;
+            };
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: {
+                    runtime: {
+                        getManifest() { return { manifest_version: 3 }; },
+                        connectNative() {
+                            connectCount += 1;
+                            const port = makePort();
+                            if (refuse) {
+                                // The broker answers a refusal by dropping the
+                                // port it just handed back.
+                                nativeSetTimeout(() => port.drop(), 0);
+                            }
+                            return port;
+                        }
+                    }
+                }
+            });
+            \(source)
+            const settle = () =>
+                new Promise((resolve) => nativeSetTimeout(resolve, 60));
+            const listener = () => {};
+            browser.idle.onStateChanged.addListener(listener);
+            for (let attempt = 0; attempt < 12; attempt += 1) {
+                await settle();
+            }
+            const afterRefusals = connectCount;
+            await settle();
+            const stillAbandoned = connectCount;
+            // The user grants the optional permission; the package
+            // re-registers its listener.
+            refuse = false;
+            browser.idle.onStateChanged.removeListener(listener);
+            browser.idle.onStateChanged.addListener(listener);
+            await settle();
+            return JSON.stringify({
+                afterRefusals,
+                stillAbandoned,
+                afterRegrant: connectCount
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let resultJSON = try XCTUnwrap(evaluatedResult as? String)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(resultJSON.utf8))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(
+            result["afterRefusals"] as? Int,
+            6,
+            "The watch stops after six consecutive refusals."
+        )
+        XCTAssertEqual(
+            result["stillAbandoned"] as? Int,
+            6,
+            "It must not keep reconnecting against a standing refusal."
+        )
+        XCTAssertEqual(
+            result["afterRegrant"] as? Int,
+            7,
+            "A fresh addListener is a new intent, and retries once more."
+        )
+    }
+
     func testIdleStateChangeUsesTheCrestCapabilityBrokerPort() async throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -1531,7 +2331,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["idle", "nativeMessaging"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -1627,10 +2427,18 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             at: root,
             withIntermediateDirectories: true
         )
+        // A namespace is published only when the manifest declares one of its
+        // permissions, so the fixture declares every namespace this test then
+        // reads back.
+        let fixturePermissions = [
+            "menus", "nativeMessaging", "notifications", "webNavigation",
+            "webRequest",
+        ]
         let manifest: [String: Any] = [
             "manifest_version": 3,
             "name": "Runtime Identity Fixture",
             "version": "1.0",
+            "permissions": fixturePermissions,
             "background": ["service_worker": "background.js"],
         ]
         try Data("globalThis.started = true;".utf8).write(
@@ -1653,7 +2461,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(
             try preparer.installCompatibilityLayer(
                 in: root,
-                requestedPermissions: ["nativeMessaging", "notifications"],
+                requestedPermissions: fixturePermissions,
                 runtimeIdentity: runtimeIdentity
             )
         )
@@ -1664,7 +2472,10 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             ),
             encoding: .utf8
         )
-        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+        let webView = try await extensionPageWebView(
+            at: runtimeIdentity.baseURL
+        )
+        let evaluatedResult = try await webView.callAsyncJavaScript(
             """
             const nativeRuntime = {
                 getManifest() { return { manifest_version: 3 }; },
@@ -1693,20 +2504,26 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             const nativeCommittedEvent = Object.freeze({
                 receiver: "native-event"
             });
-            const nativeWebNavigation = Object.preventExtensions({
+            // WebKit's own namespaces are ordinary extensible objects, and
+            // Crest fills its missing members in on them rather than wrapping
+            // them: a Proxy has no native wrapper, so wrapping a live
+            // namespace strands every listener registered through it. A
+            // sealed stand-in would therefore be testing a shape WebKit never
+            // presents.
+            const nativeWebNavigation = {
                 onCommitted: nativeCommittedEvent,
                 getFrame() {
                     return this === nativeWebNavigation
                         ? { receiver: "native-namespace" }
                         : undefined;
                 }
-            });
+            };
             const nativeRequestEvent = Object.freeze({
                 receiver: "native-request-event"
             });
-            const nativeWebRequest = Object.preventExtensions({
+            const nativeWebRequest = {
                 onBeforeRequest: nativeRequestEvent
-            });
+            };
             const createdMenus = [];
             const nativeMenus = Object.freeze({
                 create(properties) {
@@ -1720,10 +2537,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 webNavigation: nativeWebNavigation,
                 webRequest: nativeWebRequest
             };
-            Object.defineProperty(nativeRoot, "i18n", {
-                configurable: false,
-                value: nativeI18n
-            });
+            nativeRoot.i18n = nativeI18n;
             Object.defineProperty(globalThis, "chrome", {
                 configurable: true,
                 value: nativeRoot
@@ -1848,7 +2662,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             result["menuTargetPatterns"] as? [String],
             []
         )
-        XCTAssertEqual(result["wrappedJSObjectType"] as? String, "object")
+        // Crest used to publish an empty `wrappedJSObject` so a Firefox-shaped
+        // feature probe would not throw. The runtime no longer answers a probe
+        // for a privilege it cannot grant: an extension that finds the name
+        // missing takes its script-injection fallback, which is what it would
+        // do in Chrome.
+        XCTAssertEqual(
+            result["wrappedJSObjectType"] as? String,
+            "undefined"
+        )
         XCTAssertNil(result["wrappedSentinel"])
     }
 
@@ -1997,14 +2819,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     value: nativeChrome
                 });
                 \(source)
-                let sidePanelError;
-                try {
-                    await chrome.sidePanel.setPanelBehavior({
-                        openPanelOnActionClick: true
-                    });
-                } catch (error) {
-                    sidePanelError = String(error);
-                }
+                // `sidePanel` is absent by design, on both roots, even
+                // though this fixture requests the permission. A one-member
+                // stub used to answer here and it is what broke a package
+                // that detected the namespace and then used the rest of the
+                // schema in the same awaited expression.
+                const sidePanelType = typeof chrome.sidePanel;
+                const sidePanelBrowserType = typeof browser.sidePanel;
                 await chrome.offscreen.createDocument({
                     url: chrome.runtime.getURL("offscreen.html"),
                     reasons: ["DOM_SCRAPING"],
@@ -2118,7 +2939,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     brokerRequests,
                     downloadID,
                     hasOffscreenDocument,
-                    sidePanelError,
+                    sidePanelType,
+                    sidePanelBrowserType,
                     tabClick: eventClicks[2]
                 });
                 } catch (error) {
@@ -2158,8 +2980,18 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(brokerAPIs.contains("contextMenus.ready"))
         XCTAssertTrue(brokerAPIs.contains("runtime.onInstalled.ack"))
         XCTAssertEqual(
-            result["sidePanelError"] as? String,
-            "Error: Side panels are not available in Crest."
+            result["sidePanelType"] as? String,
+            "undefined",
+            """
+            A requested `sidePanel` permission must not produce a namespace. \
+            Feature detection is how a portable package decides whether the \
+            whole schema is there.
+            """
+        )
+        XCTAssertEqual(
+            result["sidePanelBrowserType"] as? String,
+            "undefined",
+            "Absence has to hold on the `browser` root too."
         )
         XCTAssertEqual(result["downloadID"] as? Int, 73)
         XCTAssertEqual(result["hasOffscreenDocument"] as? Bool, true)
@@ -2292,7 +3124,19 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    func testCompatibilityFacadeSurvivesNativeNamespaceRefresh() async throws {
+    /// A missing event is filled in on the live native namespace itself.
+    ///
+    /// Crest used to publish each namespace behind an accessor that rebuilt a
+    /// facade on every read, so a member deleted from the native object came
+    /// back. Wrapping a live native namespace is now forbidden — WebKit
+    /// resolves an extension event target by unwrapping the native object
+    /// behind the namespace, and a Proxy has no native wrapper, so the wrap
+    /// stranded every listener registered through it (see
+    /// `testNativeNamespacesAreNeverReplacedWithAFacade`). The placeholder is
+    /// therefore an ordinary configurable property on WebKit's own object: it
+    /// is installed once, it leaves the native events untouched, and a later
+    /// `delete` really deletes it.
+    func testCompatibilityMembersInstallOnTheLiveNativeNamespace() async throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
             path: "crest-webextension-namespace-refresh-test-\(UUID().uuidString)",
@@ -2307,6 +3151,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             "manifest_version": 3,
             "name": "Namespace Refresh Fixture",
             "version": "1.0",
+            // A permission-gated namespace is published only when the manifest
+            // declares one of its permissions, the way Chrome does.
+            "permissions": ["webNavigation"],
             "background": ["service_worker": "background.js"],
         ]
         try Data("globalThis.started = true;".utf8).write(
@@ -2323,7 +3170,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             try preparer.installCompatibilityLayer(
                 in: root,
                 requestedPermissions: ["webNavigation"],
-                runtimeIdentity: fixtureRuntimeIdentity
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
             )
         )
         let source = try String(
@@ -2349,18 +3196,26 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 }
             });
             \(source)
-            const installedBeforeRefresh =
+            const installed =
                 typeof chrome.webNavigation
                     .onCreatedNavigationTarget?.addListener;
+            const descriptor = Reflect.getOwnPropertyDescriptor(
+                nativeWebNavigation,
+                "onCreatedNavigationTarget"
+            );
             Reflect.deleteProperty(
                 nativeWebNavigation,
                 "onCreatedNavigationTarget"
             );
             return JSON.stringify({
-                installedBeforeRefresh,
-                installedAfterRefresh:
+                installed,
+                installedOnTheNativeObject: descriptor !== undefined,
+                configurable: descriptor?.configurable === true,
+                afterDeletion:
                     typeof chrome.webNavigation
                         .onCreatedNavigationTarget?.addListener,
+                namespaceIsNative:
+                    chrome.webNavigation === nativeWebNavigation,
                 preservedNativeEvent:
                     chrome.webNavigation.onCommitted
                         === nativeCommittedEvent
@@ -2375,8 +3230,19 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 as? [String: Any]
         )
 
-        XCTAssertEqual(result["installedBeforeRefresh"] as? String, "function")
-        XCTAssertEqual(result["installedAfterRefresh"] as? String, "function")
+        XCTAssertEqual(result["installed"] as? String, "function")
+        XCTAssertEqual(result["installedOnTheNativeObject"] as? Bool, true)
+        XCTAssertEqual(
+            result["configurable"] as? Bool,
+            true,
+            "Chrome's own API members are configurable; pinning ours broke extensions that monkeypatch them."
+        )
+        XCTAssertEqual(
+            result["afterDeletion"] as? String,
+            "undefined",
+            "Nothing re-materializes a deleted member: there is no facade in front of the native namespace."
+        )
+        XCTAssertEqual(result["namespaceIsNative"] as? Bool, true)
         XCTAssertEqual(result["preservedNativeEvent"] as? Bool, true)
     }
 
@@ -2421,16 +3287,18 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
 
         XCTAssertNotEqual(prepared.resourceURL, source)
-        let preparedBackgroundDocuments =
+        // A module worker keeps WebKit's worker boundary: preparation writes a
+        // module bootstrap beside the copy rather than a background document.
+        let preparedBackgroundBootstraps =
             try FileManager.default.contentsOfDirectory(
                 at: prepared.resourceURL,
                 includingPropertiesForKeys: nil
             ).filter {
                 $0.lastPathComponent.hasPrefix(
-                    "crest-webextension-background-"
-                ) && $0.pathExtension == "html"
+                    "crest-webextension-background-bootstrap-"
+                ) && $0.pathExtension == "js"
             }
-        XCTAssertEqual(preparedBackgroundDocuments.count, 1)
+        XCTAssertEqual(preparedBackgroundBootstraps.count, 1)
         let storedManifest = try XCTUnwrap(
             JSONSerialization.jsonObject(
                 with: Data(
@@ -2555,7 +3423,14 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    func testCompatibilitySelectionUsesCapabilitiesInsteadOfExtensionIdentity() {
+    /// Every portable package receives the same browser contract.
+    ///
+    /// The permission list cannot answer whether preparation is needed:
+    /// runtime, action, window, and worker APIs require no manifest
+    /// permission, so a package declaring nothing interesting still depends on
+    /// the layer. The selection is therefore unconditional — and, just as
+    /// importantly, still not a function of extension identity.
+    func testCompatibilityLayerAppliesToEveryPortablePackage() {
         XCTAssertTrue(
             BrowserChromeWebStoreCompatibilityPackagePreparer
                 .requiresCompatibilityLayer(
@@ -2565,7 +3440,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     ]
                 )
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             BrowserChromeWebStoreCompatibilityPackagePreparer
                 .requiresCompatibilityLayer(
                     requestedPermissions: ["storage", "alarms"]
@@ -3464,6 +4339,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 removesRootOnDeinit: false
             ),
             registry: BrowserExtensionRegistry(),
+            // The Mac install path prepares the compatibility package through
+            // the pool's own stored-resource preparer, which is what
+            // production wires. A pool left on the default identity preparer
+            // installs no compatibility layer, so the extension's declared
+            // menus and its onInstalled ack never appear.
+            storedResourcePreparer:
+                BrowserStoreWebExtensionStoredResourcePreparer(
+                    fileManager: fileManager
+                ),
             webpageMenuRegistry: webpageMenuRegistry
         )
         pool.setNativeMessagingHandler(
@@ -3554,7 +4438,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 rootURL: root,
                 removesRootOnDeinit: false
             ),
-            registry: registry
+            registry: registry,
+            // Production wires this preparer, and the Mac install path
+            // prepares the compatibility package through it. A live audit run
+            // on the default identity preparer would measure a runtime the
+            // app never ships.
+            storedResourcePreparer:
+                BrowserStoreWebExtensionStoredResourcePreparer(
+                    fileManager: fileManager
+                )
         )
         pool.setNativeMessagingHandler(AuditNativeMessagingHandler())
         let testURL = try XCTUnwrap(URL(string: "https://example.com/"))
@@ -3871,7 +4763,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 rootURL: root,
                 removesRootOnDeinit: false
             ),
-            registry: registry
+            registry: registry,
+            // Production wires this preparer, and the Mac install path
+            // prepares the compatibility package through it. A live audit run
+            // on the default identity preparer would measure a runtime the
+            // app never ships.
+            storedResourcePreparer:
+                BrowserStoreWebExtensionStoredResourcePreparer(
+                    fileManager: fileManager
+                )
         )
         pool.setNativeMessagingHandler(AuditNativeMessagingHandler())
         let space = BrowserSession.preview.spaces[0]
@@ -4211,6 +5111,1360 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         let crxData: Data
         let zipData: Data
     }
+
+    // MARK: - Route-driven ownership
+
+    /// A runtime identity whose extension origin is `about:blank`.
+    ///
+    /// The compatibility runtime decides it is in a privileged extension
+    /// context by comparing `location.href` against the extension's base URL.
+    /// A bare `WKWebView` is already an `about:blank` document, so naming that
+    /// as the base URL puts the runtime on the extension-page path without a
+    /// navigation — which is the only way to reach the broker-backed
+    /// namespaces at all, since none of them are published to content scripts.
+    private var privilegedFixtureRuntimeIdentity: BrowserExtensionRuntimeIdentity {
+        BrowserExtensionRuntimeIdentity(
+            extensionID: "fixture-extension-id",
+            uniqueIdentifier: "fixture-extension-id.space.personal",
+            baseURL: URL(string: "about:blank")!
+        )
+    }
+
+    /// Builds a package whose compatibility runtime will run as an extension
+    /// page, and returns its generated source.
+    private func privilegedFixtureCompatibilityRuntime(
+        named name: String,
+        permissions: [String]
+    ) throws -> (root: URL, source: String) {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "\(name)-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        let manifest: [String: Any] = [
+            "manifest_version": 3,
+            "name": "Route Fixture",
+            "version": "1.0",
+            "permissions": permissions,
+            "background": ["scripts": ["background.js"]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(
+            to: root.appending(path: "manifest.json")
+        )
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in }
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: permissions,
+                runtimeIdentity: privilegedFixtureRuntimeIdentity
+            )
+        )
+        return (
+            root,
+            try String(
+                contentsOf: generatedJavaScriptURL(
+                    in: root,
+                    prefix: "crest-webextension-compatibility"
+                ),
+                encoding: .utf8
+            )
+        )
+    }
+
+    /// A WebKit 27 shaped root: `idle` and `action` both already exist, and
+    /// each carries the member Crest also implements.
+    private static let routeFixtureNativeRoot = """
+        globalThis.fixture = {};
+        fixture.nativeQueryState = function queryState() {
+            return "native-implementation";
+        };
+        fixture.nativeGetUserSettings = function getUserSettings() {
+            return "native-implementation";
+        };
+        fixture.nativeGetAll = function getAll() {
+            return "native-implementation";
+        };
+        fixture.idle = {
+            queryState: fixture.nativeQueryState,
+            setDetectionInterval() {},
+            onStateChanged: {
+                addListener() {},
+                removeListener() {},
+                hasListener() { return false; }
+            }
+        };
+        fixture.action = { getUserSettings: fixture.nativeGetUserSettings };
+        fixture.commands = { getAll: fixture.nativeGetAll };
+        Object.defineProperty(globalThis, "chrome", {
+            configurable: true,
+            value: {
+                runtime: {
+                    id: "fixture-extension-id",
+                    getURL(path = "") { return "about:blank#" + path; },
+                    getManifest() { return { manifest_version: 3 }; },
+                    sendNativeMessage() {
+                        return Promise.reject(new Error("no broker"));
+                    }
+                },
+                idle: fixture.idle,
+                action: fixture.action,
+                commands: fixture.commands
+            }
+        });
+        """
+
+    /// An `emulated` route means Crest's implementation IS the contract, so it
+    /// has to replace a native property rather than defer to it.
+    ///
+    /// `installFallbacks` used to install only where the native property was
+    /// `undefined`, which made every emulated API a hostage to the next OS
+    /// release: the day WebKit defines `idle.queryState`, an extension would
+    /// silently get an implementation Crest has never authorized through its
+    /// capability broker, and the matrix row saying otherwise would be wrong.
+    func testEmulatedRouteReplacesAPreExistingNativeMember() async throws {
+        let fileManager = FileManager.default
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-webextension-emulated-route-test",
+            permissions: ["idle"]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.routeFixtureNativeRoot)
+            \(fixture.source)
+            let queryStateResult;
+            let queryStateKind;
+            try {
+                queryStateResult = chrome.idle.queryState(60);
+                if (
+                    queryStateResult
+                    && typeof queryStateResult.then === "function"
+                ) {
+                    queryStateKind = "promise";
+                    // Crest answers through the capability broker, which this
+                    // fixture does not provide. Settle it so the rejection is
+                    // handled rather than escaping the page.
+                    queryStateResult.then(() => {}, () => {});
+                } else {
+                    queryStateKind = String(queryStateResult);
+                }
+            } catch {
+                queryStateKind = "threw";
+            }
+            let rejectedNegativeInterval = false;
+            try {
+                chrome.idle.setDetectionInterval(-1);
+            } catch {
+                rejectedNegativeInterval = true;
+            }
+            return JSON.stringify({
+                queryStateKind,
+                memberIsNotNative:
+                    chrome.idle.queryState !== fixture.nativeQueryState,
+                namespaceIsNotNative: chrome.idle !== fixture.idle,
+                rejectedNegativeInterval
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [String: Any]
+        )
+        XCTAssertNotEqual(
+            result["queryStateKind"] as? String,
+            "native-implementation",
+            """
+            A native idle.queryState answered the call. The emulated route \
+            must own the member even when WebKit defines it.
+            """
+        )
+        XCTAssertEqual(result["queryStateKind"] as? String, "promise")
+        XCTAssertEqual(result["memberIsNotNative"] as? Bool, true)
+        XCTAssertEqual(result["namespaceIsNotNative"] as? Bool, true)
+        XCTAssertEqual(
+            result["rejectedNegativeInterval"] as? Bool,
+            true,
+            """
+            Crest's idle.setDetectionInterval rejects a negative interval and \
+            the fixture's native one does not, so this is what proves the \
+            surviving implementation is Crest's.
+            """
+        )
+    }
+
+    /// The mirror image: a `nativePatched` route keeps WebKit's implementation
+    /// and its identity, and fills only what is missing.
+    func testNativePatchedRouteKeepsAPreExistingNativeMethod() async throws {
+        let fileManager = FileManager.default
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-webextension-native-patched-route-test",
+            permissions: ["idle"]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.routeFixtureNativeRoot)
+            \(fixture.source)
+            return JSON.stringify({
+                // The native namespace object itself is never rewritten.
+                nativeIdentityKept:
+                    fixture.action.getUserSettings
+                        === fixture.nativeGetUserSettings,
+                // A namespace with no Crest-owned member is passed through
+                // untouched, identity and all.
+                untouchedIdentityKept:
+                    chrome.commands.getAll === fixture.nativeGetAll,
+                // And the native implementation is the one that runs.
+                answeredBy: String(chrome.action.getUserSettings())
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [String: Any]
+        )
+        XCTAssertEqual(result["nativeIdentityKept"] as? Bool, true)
+        XCTAssertEqual(result["untouchedIdentityKept"] as? Bool, true)
+        XCTAssertEqual(
+            result["answeredBy"] as? String,
+            "native-implementation"
+        )
+    }
+
+    /// WebKit trunk enabled a native `offscreen` API on 2026-08-28 behind a
+    /// pref that defaults on.
+    ///
+    /// The hiding rule fires only for a namespace WebKit actually provides, so
+    /// the row had to move from Unavailable to Partial. Without this, a macOS
+    /// update replaces a broker-managed document lifecycle with an untested
+    /// native one and nothing in the product notices.
+    func testOffscreenIsHiddenFromTheNativeSurfaceWhenRequested() throws {
+        let hidden =
+            BrowserExtensionAPICompatibilityMatrix
+            .unsupportedWebKitAPIs(requestedPermissions: ["offscreen"])
+        XCTAssertTrue(
+            hidden.contains("browser.offscreen"),
+            """
+            A package requesting `offscreen` must not see WebKit's native \
+            implementation: Crest's emulation owns the document lifecycle.
+            """
+        )
+
+        // A package that never asked for the permission is unaffected: Chrome
+        // does not define the namespace for it either.
+        XCTAssertFalse(
+            BrowserExtensionAPICompatibilityMatrix
+                .unsupportedWebKitAPIs(requestedPermissions: [])
+                .contains("browser.offscreen")
+        )
+    }
+
+    /// `sidePanel` is absent, and absence has to hold on both roots.
+    ///
+    /// Crest has no extension-owned panel surface, and WebKit 27 ships a
+    /// partial `sidePanel` of its own. The matrix routes the namespace
+    /// `unavailable` so Crest publishes nothing, and keeps `webKit: .partial`
+    /// so the same request that would have reached a Crest stub cannot reach
+    /// WebKit's half-implementation instead. Both halves of that are the
+    /// contract: a namespace that exists at all is a namespace a portable
+    /// package will use in full.
+    func testSidePanelIsHiddenFromTheNativeSurfaceWhenRequested() throws {
+        XCTAssertEqual(
+            BrowserExtensionAPICompatibilityMatrix
+                .namespaceRoutes["sidePanel"],
+            "unavailable"
+        )
+        XCTAssertTrue(
+            BrowserExtensionAPICompatibilityMatrix
+                .unsupportedWebKitAPIs(requestedPermissions: ["sidePanel"])
+                .contains("browser.sidePanel"),
+            """
+            A package requesting `sidePanel` must not reach WebKit's partial \
+            implementation either. Absence is the contract, so it has to hold \
+            on the native root as well as in the compatibility runtime.
+            """
+        )
+        XCTAssertTrue(
+            BrowserExtensionAPICompatibilityMatrix.memberRoutes.keys
+                .filter { $0.hasPrefix("sidePanel.") }
+                .isEmpty,
+            """
+            A member row for an unavailable namespace is a member the runtime \
+            would install, which is exactly what made the namespace detectable.
+            """
+        )
+    }
+
+    /// A namespace Crest refuses is never published, however it is reached.
+    ///
+    /// Bitwarden's worker bootstrap is one awaited expression:
+    /// `chrome.sidePanel !== undefined && await chrome.sidePanel.setOptions(…)`.
+    /// A `sidePanel` object carrying only `setPanelBehavior` passed the
+    /// detection and threw a `TypeError` on the next member, inside the
+    /// `await` — so every later initialization step, including the message
+    /// handler the popup asks for its data, never ran. Firefox publishes no
+    /// `sidePanel` at all and the same packages handle that, so absence is
+    /// the honest contract.
+    func testARefusedNamespaceIsAbsentFromBothExtensionRoots() async throws {
+        let fileManager = FileManager.default
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-webextension-refused-namespace-test",
+            permissions: ["sidePanel"]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            const nativeRuntime = {
+                id: "fixture-extension-id",
+                getURL(path = "") { return "about:blank#" + path; },
+                getManifest() { return { manifest_version: 3 }; },
+                sendNativeMessage() {
+                    return Promise.reject(new Error("no broker"));
+                }
+            };
+            // Two roots over one context, which is what WebKit publishes.
+            // Neither carries `sidePanel`, because `unsupportedWebKitAPIs`
+            // hides it — so a namespace appearing here could only have come
+            // from Crest, or from Crest aliasing one root onto the other.
+            Object.defineProperty(globalThis, "chrome", {
+                configurable: true,
+                value: { runtime: nativeRuntime }
+            });
+            Object.defineProperty(globalThis, "browser", {
+                configurable: true,
+                value: { runtime: nativeRuntime }
+            });
+            \(fixture.source)
+            return JSON.stringify({
+                chromeType: typeof chrome.sidePanel,
+                browserType: typeof browser.sidePanel,
+                chromeInOperator: "sidePanel" in chrome,
+                browserInOperator: "sidePanel" in browser,
+                chromeKeys: Object.keys(chrome).filter(
+                    (key) => key.toLowerCase().includes("sidepanel")
+                ),
+                // The namespaces the manifest did ask for and Crest does
+                // implement are still there, so this is absence by route
+                // rather than a runtime that failed to install.
+                runtimeInstalled: typeof chrome.runtime.getURL
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [String: Any]
+        )
+        XCTAssertEqual(result["runtimeInstalled"] as? String, "function")
+        XCTAssertEqual(result["chromeType"] as? String, "undefined")
+        XCTAssertEqual(result["browserType"] as? String, "undefined")
+        XCTAssertEqual(result["chromeInOperator"] as? Bool, false)
+        XCTAssertEqual(result["browserInOperator"] as? Bool, false)
+        XCTAssertEqual(result["chromeKeys"] as? [String], [])
+        XCTAssertFalse(
+            fixture.source.contains("setPanelBehavior"),
+            """
+            The generated runtime must carry no `sidePanel` implementation \
+            at all. A member the runtime knows how to install is a member \
+            some later routing change can publish by accident.
+            """
+        )
+    }
+
+    /// An emulated namespace publishes its whole schema or nothing.
+    ///
+    /// Chrome extensions feature-detect on the namespace and then assume the
+    /// schema behind it, so a partial namespace is worse than an absent one:
+    /// the guard passes and the next member access throws inside whatever
+    /// awaited it. Every member `emulatedSurface` declares is therefore
+    /// present, the ones Crest cannot deliver fail honestly — a rejected
+    /// promise, or `runtime.lastError` for the callback form — and the events
+    /// among them accept listeners and report them back.
+    func testEveryEmulatedNamespacePublishesItsCompleteSchemaSurface()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let matrix = BrowserExtensionAPICompatibilityMatrix.self
+        let surface = matrix.emulatedSurface
+
+        XCTAssertEqual(
+            Set(surface.keys),
+            Set(
+                matrix.contracts.filter { $0.crest == .emulated }
+                    .map(\.namespace)
+            ),
+            """
+            Every emulated namespace declares its surface, and only an \
+            emulated namespace does. A namespace missing from \
+            `emulatedSurface` publishes whatever the runtime happens to \
+            implement, which is the shape this rule exists to prevent.
+            """
+        )
+
+        for namespace in surface.keys.sorted() {
+            let declared = try XCTUnwrap(surface[namespace])
+            let fixture = try privilegedFixtureCompatibilityRuntime(
+                named: "crest-webextension-emulated-surface-\(namespace)",
+                permissions: matrix.namespacePermissions[namespace] ?? []
+            )
+            defer { try? fileManager.removeItem(at: fixture.root) }
+
+            // The members Crest does not implement, as the matrix routes
+            // them. Probing one of each shape is what distinguishes a filler
+            // that fails honestly from a no-op that reports success for work
+            // that never happened.
+            let placeholders = declared.filter {
+                matrix.memberRoutes["\(namespace).\($0)"] == "presenceOnly"
+            }
+            let methodProbe = placeholders.first { !$0.hasPrefix("on") }
+            let eventProbe = placeholders.first { $0.hasPrefix("on") }
+
+            let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+                """
+                \(Self.emulatedSurfaceFixtureNativeRoot)
+                \(fixture.source)
+                const namespace = \(Self.javaScriptLiteral(namespace));
+                const declared = \(Self.javaScriptLiteral(declared));
+                const methodProbe = \(Self.javaScriptLiteralOrNull(methodProbe));
+                const eventProbe = \(Self.javaScriptLiteralOrNull(eventProbe));
+                const object = chrome[namespace];
+                if (!object) {
+                    return JSON.stringify({ published: false });
+                }
+                const result = {
+                    published: true,
+                    missing: declared.filter((member) => !(member in object)),
+                    keys: Object.keys(object)
+                };
+                if (methodProbe) {
+                    const returned = object[methodProbe]();
+                    result.promiseRejection =
+                        returned && typeof returned.then === "function"
+                            ? await returned.then(
+                                () => "RESOLVED",
+                                (error) => String(error?.message ?? error)
+                            )
+                            : "NOT A PROMISE: " + String(returned);
+                    result.callbackLastError = await new Promise(
+                        (resolve) => {
+                            object[methodProbe](() => resolve(
+                                String(
+                                    chrome.runtime.lastError?.message ?? ""
+                                )
+                            ));
+                        }
+                    );
+                }
+                if (eventProbe) {
+                    const listener = () => {};
+                    const event = object[eventProbe];
+                    event.addListener(listener);
+                    result.event = {
+                        addListener: typeof event.addListener,
+                        removeListener: typeof event.removeListener,
+                        hasListener: event.hasListener(listener)
+                    };
+                }
+                return JSON.stringify(result);
+                """,
+                arguments: [:],
+                contentWorld: .page
+            )
+            let result = try XCTUnwrap(
+                JSONSerialization.jsonObject(
+                    with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+                ) as? [String: Any]
+            )
+            XCTAssertEqual(
+                result["published"] as? Bool,
+                true,
+                "`chrome.\(namespace)` was requested and must be published."
+            )
+            XCTAssertEqual(
+                result["missing"] as? [String],
+                [],
+                """
+                `chrome.\(namespace)` is missing members its reference schema \
+                defines. A package that detects the namespace will call them.
+                """
+            )
+            let keys = Set(try XCTUnwrap(result["keys"] as? [String]))
+            XCTAssertTrue(
+                keys.isSuperset(of: declared),
+                "`chrome.\(namespace)` keys \(keys.sorted()) ⊉ \(declared)"
+            )
+
+            if let methodProbe {
+                XCTAssertEqual(
+                    result["promiseRejection"] as? String,
+                    "\(namespace).\(methodProbe) is not available in Crest.",
+                    """
+                    `\(namespace).\(methodProbe)` must reject and say why. A \
+                    resolved promise leaves an extension waiting on work \
+                    Crest never started.
+                    """
+                )
+                XCTAssertEqual(
+                    result["callbackLastError"] as? String,
+                    "\(namespace).\(methodProbe) is not available in Crest.",
+                    """
+                    The callback form reports the same failure through \
+                    `runtime.lastError`, which is where Chrome puts it.
+                    """
+                )
+            }
+            if let eventProbe {
+                let event = try XCTUnwrap(
+                    result["event"] as? [String: Any],
+                    "`\(namespace).\(eventProbe)` must be an event object."
+                )
+                XCTAssertEqual(event["addListener"] as? String, "function")
+                XCTAssertEqual(event["removeListener"] as? String, "function")
+                XCTAssertEqual(
+                    event["hasListener"] as? Bool,
+                    true,
+                    """
+                    A presence-only event keeps a real registry: \
+                    `hasListener` cannot deny a listener just added, or a \
+                    package cannot tell registration from a Crest bug.
+                    """
+                )
+            }
+        }
+    }
+
+    /// A WebKit root with none of the emulated namespaces on it, which is
+    /// what `unsupportedWebKitAPIs` leaves behind for a package that
+    /// requested them.
+    private static let emulatedSurfaceFixtureNativeRoot = """
+        const nativeRuntime = {
+            id: "fixture-extension-id",
+            getURL(path = "") { return "about:blank#" + path; },
+            getManifest() { return { manifest_version: 3 }; },
+            sendNativeMessage() {
+                return Promise.reject(new Error("no broker"));
+            }
+        };
+        Object.defineProperty(globalThis, "chrome", {
+            configurable: true,
+            value: { runtime: nativeRuntime }
+        });
+        Object.defineProperty(globalThis, "browser", {
+            configurable: true,
+            value: { runtime: nativeRuntime }
+        });
+        """
+
+    /// A JSON value is a JavaScript expression, which is all these fixtures
+    /// need to carry a matrix-derived list into the evaluated runtime.
+    private static func javaScriptLiteral(_ value: Any) -> String {
+        guard
+            let data = try? JSONSerialization.data(
+                withJSONObject: value,
+                options: [.fragmentsAllowed, .withoutEscapingSlashes]
+            ),
+            let literal = String(data: data, encoding: .utf8)
+        else { return "null" }
+        return literal
+    }
+
+    /// The absent case is a JavaScript `null`, which the fixtures test for.
+    private static func javaScriptLiteralOrNull(_ value: String?) -> String {
+        guard let value else { return "null" }
+        return javaScriptLiteral(value)
+    }
+
+    /// The runtime's webRequest event list is derived from the matrix.
+    ///
+    /// It used to be a literal beside the table that hides
+    /// `webRequest.onAuthRequired`, so the runtime normalized — and handed
+    /// back — the very event Crest removes from WebKit's surface because it
+    /// cannot honor a blocking credential prompt.
+    func testWebRequestEventListExcludesTheHiddenAuthEvent() throws {
+        let fileManager = FileManager.default
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-webextension-webrequest-event-list-test",
+            permissions: ["webRequest"]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let events = try XCTUnwrap(
+            BrowserExtensionAPICompatibilityMatrix
+                .namespaceEventMembers["webRequest"]
+        )
+        XCTAssertFalse(events.contains("onAuthRequired"))
+        XCTAssertTrue(events.contains("onBeforeRequest"))
+        XCTAssertTrue(events.contains("onCompleted"))
+
+        // The generated script must consult that list rather than carry its
+        // own copy.
+        XCTAssertTrue(
+            fixture.source.contains(#"eventMembersOf("webRequest")"#)
+        )
+        let publishedEvents = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(
+                    try XCTUnwrap(
+                        Self.generatedJSONLiteral(
+                            named: "namespaceEventMembers",
+                            in: fixture.source
+                        )
+                    ).utf8
+                )
+            ) as? [String: [String]]
+        )
+        XCTAssertEqual(publishedEvents["webRequest"], events)
+        XCTAssertFalse(
+            try XCTUnwrap(publishedEvents["webRequest"])
+                .contains("onAuthRequired")
+        )
+    }
+
+    /// A root carrying a native object for every namespace the routed
+    /// fallback set touches.
+    private static let identityFixtureNativeRoot = """
+        globalThis.fixture = {};
+        const fixtureEvent = () => ({
+            addListener() {},
+            removeListener() {},
+            hasListener() { return false; },
+            hasListeners() { return false; }
+        });
+        fixture.nativeGetCalls = 0;
+        fixture.nativeLocalGet = function get(keys, callback) {
+            fixture.nativeGetCalls += 1;
+            callback?.({});
+            return Promise.resolve({});
+        };
+        fixture.storage = {
+            local: {
+                get: fixture.nativeLocalGet,
+                set(items, callback) {
+                    callback?.();
+                    return Promise.resolve();
+                },
+                onChanged: fixtureEvent()
+            },
+            onChanged: fixtureEvent()
+        };
+        fixture.action = { getUserSettings() {}, setIcon() {} };
+        fixture.webNavigation = {
+            getAllFrames() {},
+            onCommitted: fixtureEvent()
+        };
+        fixture.webRequest = {
+            onBeforeRequest: fixtureEvent(),
+            onCompleted: fixtureEvent()
+        };
+        fixture.permissions = {
+            contains() {},
+            getAll() {},
+            request() {},
+            remove() {}
+        };
+        fixture.scripting = { executeScript() {} };
+        fixture.idle = {
+            queryState() { return "native-implementation"; },
+            setDetectionInterval() {},
+            onStateChanged: fixtureEvent()
+        };
+        Object.defineProperty(globalThis, "chrome", {
+            configurable: true,
+            value: {
+                runtime: {
+                    id: "fixture-extension-id",
+                    getURL(path = "") { return "about:blank#" + path; },
+                    getManifest() { return { manifest_version: 3 }; },
+                    sendNativeMessage() {
+                        return Promise.reject(new Error("no broker"));
+                    }
+                },
+                storage: fixture.storage,
+                action: fixture.action,
+                webNavigation: fixture.webNavigation,
+                webRequest: fixture.webRequest,
+                permissions: fixture.permissions,
+                scripting: fixture.scripting,
+                idle: fixture.idle
+            }
+        });
+        """
+
+    /// WebKit resolves an extension event target by reading the frame's live
+    /// `chrome` / `browser` global and unwrapping the native object behind the
+    /// namespace. A Proxy has no native wrapper, so wrapping a live namespace
+    /// strands every listener registered through it — which is how a root
+    /// Proxy broke message routing outright on 2026-08-29.
+    ///
+    /// `installFallbacks` used to pin each namespace it touched
+    /// non-configurable, which made `installNamespaceFacades` fail silently
+    /// and never wrap an existing native namespace. Removing that pinning
+    /// would have resurrected the wrapping by accident, so the rule is now
+    /// stated in the code instead of being an emergent property of a pin.
+    func testNativeNamespacesAreNeverReplacedWithAFacade() async throws {
+        let fileManager = FileManager.default
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-webextension-native-identity-test",
+            permissions: [
+                "storage", "webNavigation", "webRequest", "scripting", "idle",
+            ]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.identityFixtureNativeRoot)
+            \(fixture.source)
+            let idleIsCrest = false;
+            try {
+                // Crest's implementation validates the interval; the
+                // fixture's native one does not.
+                chrome.idle.setDetectionInterval(-1);
+            } catch {
+                idleIsCrest = true;
+            }
+            await chrome.storage.local.get("token");
+            return JSON.stringify({
+                action: chrome.action === fixture.action,
+                webNavigation:
+                    chrome.webNavigation === fixture.webNavigation,
+                webRequest: chrome.webRequest === fixture.webRequest,
+                permissions: chrome.permissions === fixture.permissions,
+                scripting: chrome.scripting === fixture.scripting,
+                idleIsNative: chrome.idle === fixture.idle,
+                idleIsCrest,
+                storageDelegatesToNative: fixture.nativeGetCalls > 0
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [String: Any]
+        )
+
+        for namespace in [
+            "action", "webNavigation", "webRequest", "permissions",
+            "scripting",
+        ] {
+            XCTAssertEqual(
+                result[namespace] as? Bool,
+                true,
+                """
+                chrome.\(namespace) is no longer WebKit's own object. A \
+                facade over a live native namespace has no native wrapper, \
+                so WebKit cannot dispatch events to listeners registered \
+                through it.
+                """
+            )
+        }
+
+        // The emulated route is the one exception, and it installs Crest's
+        // plain object rather than a Proxy over the native one.
+        XCTAssertEqual(result["idleIsNative"] as? Bool, false)
+        XCTAssertEqual(result["idleIsCrest"] as? Bool, true)
+
+        // `storage` is the one namespace that genuinely cannot be augmented
+        // in place: its cross-context `onChanged` relay predates this rule
+        // and does overlay the namespace. That path is deliberately
+        // unchanged, and it still delegates to WebKit's implementation
+        // rather than replacing it.
+        XCTAssertEqual(result["storageDelegatesToNative"] as? Bool, true)
+    }
+
+    // MARK: - Extension diagnostics
+
+    /// A native root that records every capability-broker message.
+    ///
+    /// The diagnostics channel is the only part of the runtime that sends
+    /// without being asked, so the recorder is what proves it reported at all.
+    private static let diagnosticsFixtureNativeRoot = """
+        globalThis.brokerRequests = [];
+        Object.defineProperty(globalThis, "chrome", {
+            configurable: true,
+            value: {
+                runtime: {
+                    id: "fixture-extension-id",
+                    getURL(path = "") { return "about:blank#" + path; },
+                    getManifest() { return { manifest_version: 3 }; },
+                    sendNativeMessage(host, message) {
+                        globalThis.brokerRequests.push({ host, message });
+                        return Promise.resolve({ recorded: true });
+                    }
+                }
+            }
+        });
+        globalThis.diagnosticsReports = () => globalThis.brokerRequests
+            .filter((entry) => entry.message?.api === "diagnostics.report")
+            .map((entry) => entry.message);
+        """
+
+    /// Builds a package whose generated runtime is the one under test, with
+    /// console capture on or off.
+    ///
+    /// The identity decides which process the runtime believes it is in. The
+    /// default names `about:blank` as the extension origin, which puts a bare
+    /// `WKWebView` on the extension-page path without a navigation; passing
+    /// `fixtureRuntimeIdentity` instead makes that same web view a content
+    /// script, and makes a document actually served from that base URL a real
+    /// extension page.
+    private func diagnosticsFixtureCompatibilityRuntime(
+        named name: String,
+        enablesConsoleCapture: Bool = false,
+        runtimeIdentity: BrowserExtensionRuntimeIdentity? = nil
+    ) throws -> (root: URL, source: String) {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory.appending(
+            path: "\(name)-\(UUID().uuidString)",
+            directoryHint: .isDirectory
+        )
+        try fileManager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try Data("globalThis.started = true;".utf8).write(
+            to: root.appending(path: "background.js")
+        )
+        let permissions = ["idle"]
+        try JSONSerialization.data(
+            withJSONObject: [
+                "manifest_version": 3,
+                "name": "Diagnostics Fixture",
+                "version": "1.0",
+                "permissions": permissions,
+                "background": ["scripts": ["background.js"]],
+            ] as [String: Any]
+        ).write(to: root.appending(path: "manifest.json"))
+        let preparer = BrowserChromeWebStoreCompatibilityPackagePreparer(
+            fileManager: fileManager,
+            expandArchive: { _, _ in },
+            enablesConsoleCapture: enablesConsoleCapture
+        )
+        XCTAssertTrue(
+            try preparer.installCompatibilityLayer(
+                in: root,
+                requestedPermissions: permissions,
+                runtimeIdentity: runtimeIdentity
+                    ?? privilegedFixtureRuntimeIdentity
+            )
+        )
+        return (
+            root,
+            try String(
+                contentsOf: generatedJavaScriptURL(
+                    in: root,
+                    prefix: "crest-webextension-compatibility"
+                ),
+                encoding: .utf8
+            )
+        )
+    }
+
+    private func evaluatedDiagnosticsReports(
+        source: String,
+        trigger: String
+    ) async throws -> [[String: Any]] {
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.diagnosticsFixtureNativeRoot)
+            \(source)
+            \(trigger)
+            await new Promise((resolve) => setTimeout(resolve, 60));
+            return JSON.stringify({
+                reports: globalThis.diagnosticsReports(),
+                hosts: globalThis.brokerRequests.map((entry) => entry.host)
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [String: Any]
+        )
+        return try XCTUnwrap(result["reports"] as? [[String: Any]])
+    }
+
+    /// Serves an extension page whose own inline scripts install the runtime
+    /// and then throw.
+    ///
+    /// The document has to come from the extension's origin. WebKit sanitizes
+    /// an error raised by script it cannot attribute to an origin — anything
+    /// injected through `evaluateJavaScript` into `about:blank` arrives as
+    /// `ErrorEvent{message: "Script error.", error: null}` — so only a real
+    /// same-origin document reproduces what a popup actually reports, stack
+    /// included. The scripts are inlined rather than linked because the
+    /// generated runtime contains no `<script>`, `</script>`, or `<!--`
+    /// sequence for the HTML parser to trip over.
+    private func diagnosticsExtensionPageWebView(
+        at baseURL: URL,
+        scripts: [String]
+    ) async throws -> WKWebView {
+        let inlined =
+            scripts
+            .map { "<script>\n\($0)\n</script>" }
+            .joined(separator: "\n")
+        let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(
+            ChromeWebStoreDocumentSchemeHandler(
+                html: "<html><head>\(inlined)</head><body></body></html>"
+            ),
+            forURLScheme: try XCTUnwrap(baseURL.scheme)
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let navigation = ChromeWebStoreNavigationWaiter(webView: webView)
+        try await navigation.load(URLRequest(url: baseURL))
+        return webView
+    }
+
+    /// WebKit reports only what an extension's API callbacks throw. An
+    /// uncaught exception in a popup — the shape that left a Bitwarden popup
+    /// blank after a two-factor sign-in with nothing to read — reaches nobody,
+    /// so the runtime reports it over the capability broker instead.
+    ///
+    /// This runs on a document actually served from the extension's own
+    /// origin, and throws for real from a timer. Both details matter: a
+    /// synthetic `ErrorEvent` carries no `error` object, and a throw from
+    /// script WebKit cannot attribute to an origin is sanitized to
+    /// `"Script error."` with no error object either. Only this shape proves
+    /// a report reaches Crest with the stack that names the failing line.
+    func testDiagnosticsChannelReportsAnUncaughtExtensionError() async throws {
+        let fileManager = FileManager.default
+        let fixture = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-error-test",
+            runtimeIdentity: fixtureRuntimeIdentity
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let webView = try await diagnosticsExtensionPageWebView(
+            at: fixtureRuntimeIdentity.baseURL,
+            scripts: [
+                Self.diagnosticsFixtureNativeRoot,
+                fixture.source,
+                """
+                globalThis.setTimeout(() => {
+                    throw new Error("fixture boom");
+                }, 0);
+                """,
+            ]
+        )
+        let evaluatedResult = try await webView.callAsyncJavaScript(
+            """
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            return JSON.stringify(globalThis.diagnosticsReports());
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let reports = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [[String: Any]]
+        )
+
+        XCTAssertEqual(
+            reports.count,
+            1,
+            "One fault must produce exactly one diagnostics report."
+        )
+        let report = try XCTUnwrap(reports.first)
+        let reportedMessage = try XCTUnwrap(report["message"] as? String)
+        let reportedStack = try XCTUnwrap(report["stack"] as? String)
+        XCTAssertEqual(report["kind"] as? String, "error")
+        XCTAssertTrue(
+            reportedMessage.contains("fixture boom"),
+            """
+            The report must carry the failing error's own text. \
+            Observed message: \(reportedMessage)
+            """
+        )
+        XCTAssertEqual(
+            report["source"] as? String,
+            fixtureRuntimeIdentity.baseURL.absoluteString
+        )
+        XCTAssertFalse(
+            reportedStack.isEmpty,
+            """
+            A report carries the failing stack, bounded to 2000 characters. \
+            It is the whole reason this channel exists: the message alone \
+            names the fault but not the line that raised it. \
+            Observed message: \(reportedMessage). \
+            Observed stack: \(reportedStack)
+            """
+        )
+    }
+
+    /// An extension that throws the same fault from a hot handler must not
+    /// spend its whole report budget on one broken line, so identical text
+    /// from the same document inside a second is reported once.
+    func testDiagnosticsChannelCollapsesRepeatedIdenticalFaults()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-dedupe-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let reports = try await evaluatedDiagnosticsReports(
+            source: fixture.source,
+            trigger: """
+                for (let index = 0; index < 2; index += 1) {
+                    globalThis.setTimeout(() => {
+                        throw new Error("repeated fixture boom");
+                    }, 0);
+                }
+                """
+        )
+
+        XCTAssertEqual(
+            reports.count,
+            1,
+            "Two identical faults inside the dedupe window report once."
+        )
+        XCTAssertEqual(reports.first?["kind"] as? String, "error")
+    }
+
+    /// A content script runs on the page's origin. Installing the handlers
+    /// there would report the *page's* exceptions as the extension's, and
+    /// would hand a hostile page a channel into Crest's broker.
+    func testDiagnosticsChannelStaysOutOfContentScripts() async throws {
+        let fileManager = FileManager.default
+        let fixture = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-content-script-test",
+            enablesConsoleCapture: true,
+            runtimeIdentity: fixtureRuntimeIdentity
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let reports = try await evaluatedDiagnosticsReports(
+            source: fixture.source,
+            trigger: """
+                globalThis.dispatchEvent(new ErrorEvent("error", {
+                    message: "page boom",
+                    error: new Error("page boom")
+                }));
+                console.warn("page warning");
+                """
+        )
+
+        XCTAssertTrue(
+            reports.isEmpty,
+            "A content script installs no diagnostics handlers at all."
+        )
+    }
+
+    /// An extension that throws inside a hot event handler must not be able to
+    /// turn the diagnostics channel into a message loop of its own.
+    func testDiagnosticsChannelStopsAfterItsReportBudget() async throws {
+        let fileManager = FileManager.default
+        let fixture = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-rate-limit-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let reports = try await evaluatedDiagnosticsReports(
+            source: fixture.source,
+            trigger: """
+                for (let index = 0; index < 25; index += 1) {
+                    globalThis.dispatchEvent(new ErrorEvent("error", {
+                        message: `fixture boom ${index}`,
+                        error: new Error(`fixture boom ${index}`)
+                    }));
+                }
+                """
+        )
+
+        XCTAssertEqual(
+            reports.count,
+            21,
+            "Twenty reports, then one notice that the rest were dropped."
+        )
+        XCTAssertEqual(
+            reports.prefix(20).compactMap { $0["kind"] as? String },
+            Array(repeating: "error", count: 20)
+        )
+        let notice = try XCTUnwrap(reports.last)
+        XCTAssertEqual(notice["kind"] as? String, "suppressed")
+        XCTAssertTrue(
+            try XCTUnwrap(notice["message"] as? String)
+                .contains("suppressed further reports")
+        )
+    }
+
+    /// A hang throws nothing. Bitwarden's popup waits forever on a port reply
+    /// while logging exactly why through `console.warn`, so the extension's
+    /// own console output is the only trace that failure leaves — and it is
+    /// verbose enough that a build has to ask for it.
+    func testDiagnosticsChannelForwardsConsoleOutputOnlyWhenEnabled()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let captured = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-console-test",
+            enablesConsoleCapture: true
+        )
+        defer { try? fileManager.removeItem(at: captured.root) }
+        let uncaptured = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-diagnostics-console-disabled-test"
+        )
+        defer { try? fileManager.removeItem(at: uncaptured.root) }
+
+        let trigger = """
+            console.warn("captured console warning");
+            """
+        let capturedReports = try await evaluatedDiagnosticsReports(
+            source: captured.source,
+            trigger: trigger
+        )
+        let uncapturedReports = try await evaluatedDiagnosticsReports(
+            source: uncaptured.source,
+            trigger: trigger
+        )
+
+        let consoleReports = capturedReports.filter {
+            ($0["message"] as? String) == "captured console warning"
+        }
+        XCTAssertEqual(consoleReports.count, 1)
+        let report = try XCTUnwrap(consoleReports.first)
+        XCTAssertEqual(report["kind"] as? String, "console")
+        XCTAssertEqual(report["level"] as? String, "warn")
+        XCTAssertEqual(report["source"] as? String, "about:blank")
+        XCTAssertTrue(
+            uncapturedReports.isEmpty,
+            "A build without console capture forwards no console output."
+        )
+        XCTAssertTrue(
+            captured.source.contains(
+                "const capturesExtensionConsole = true;"
+            )
+        )
+        XCTAssertTrue(
+            uncaptured.source.contains(
+                "const capturesExtensionConsole = false;"
+            ),
+            """
+            The disabled runtime carries the disabling literal, so the
+            content-addressed filename differs between the two builds.
+            """
+        )
+    }
+
+    /// A native root that records who called its messaging entry points and
+    /// with which receiver, so a wrapper that changed either is visible.
+    private static let diagnosticsTraceFixtureNativeRoot = """
+        globalThis.brokerRequests = [];
+        globalThis.messagingCalls = [];
+        const nativeRuntime = {
+            id: "fixture-extension-id",
+            getURL(path = "") { return "about:blank#" + path; },
+            getManifest() { return { manifest_version: 3 }; },
+            sendNativeMessage(host, message) {
+                globalThis.brokerRequests.push({ host, message });
+                return Promise.resolve({ recorded: true });
+            },
+            sendMessage(...args) {
+                globalThis.messagingCalls.push({
+                    op: "sendMessage",
+                    receiverIsRuntime: this === nativeRuntime,
+                    argumentCount: args.length
+                });
+                return Promise.resolve("native-reply");
+            },
+            connect(connectInfo) {
+                globalThis.messagingCalls.push({
+                    op: "connect",
+                    receiverIsRuntime: this === nativeRuntime
+                });
+                return { name: connectInfo?.name, native: true };
+            }
+        };
+        globalThis.nativeSendMessage = nativeRuntime.sendMessage;
+        Object.defineProperty(globalThis, "chrome", {
+            configurable: true,
+            value: { runtime: nativeRuntime }
+        });
+        globalThis.diagnosticsReports = () => globalThis.brokerRequests
+            .filter((entry) => entry.message?.api === "diagnostics.report")
+            .map((entry) => entry.message);
+        """
+
+    private func evaluatedTraceFixtureResult(
+        source: String
+    ) async throws -> [String: Any] {
+        let evaluatedResult = try await WKWebView().callAsyncJavaScript(
+            """
+            \(Self.diagnosticsTraceFixtureNativeRoot)
+            \(source)
+            const reply = await chrome.runtime.sendMessage({
+                command: "fullSync",
+                token: "secret-vault-token"
+            });
+            const port = chrome.runtime.connect({ name: "bw-popup" });
+            await new Promise((resolve) => setTimeout(resolve, 60));
+            return JSON.stringify({
+                reply,
+                portName: port?.name,
+                portIsNative: port?.native === true,
+                calls: globalThis.messagingCalls,
+                reports: globalThis.diagnosticsReports(),
+                wrapsSendMessage:
+                    chrome.runtime.sendMessage
+                        !== globalThis.nativeSendMessage
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        return try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluatedResult as? String).utf8)
+            ) as? [String: Any]
+        )
+    }
+
+    /// Bitwarden's popup unlocks, sends `fullSync`, and waits for a
+    /// `syncCompleted` broadcast the worker sends back the same way. Neither
+    /// side logged anything, so which half of that exchange never happened
+    /// was unanswerable — the trace answers it, and must do so without
+    /// changing what either half means.
+    func testMessageTraceReportsSendsWithoutChangingTheirContract()
+        async throws
+    {
+        let fileManager = FileManager.default
+        let fixture = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-message-trace-test",
+            enablesConsoleCapture: true
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let result = try await evaluatedTraceFixtureResult(
+            source: fixture.source
+        )
+
+        // The contract first: the native implementation runs, with the
+        // original receiver, and its return value is handed back untouched.
+        XCTAssertEqual(result["wrapsSendMessage"] as? Bool, true)
+        XCTAssertEqual(result["reply"] as? String, "native-reply")
+        XCTAssertEqual(result["portName"] as? String, "bw-popup")
+        XCTAssertEqual(result["portIsNative"] as? Bool, true)
+        let calls = try XCTUnwrap(result["calls"] as? [[String: Any]])
+        XCTAssertEqual(
+            calls.map { $0["op"] as? String },
+            ["sendMessage", "connect"]
+        )
+        XCTAssertTrue(
+            calls.allSatisfy { $0["receiverIsRuntime"] as? Bool == true },
+            "The receiver must reach the native function verbatim."
+        )
+        XCTAssertEqual(calls.first?["argumentCount"] as? Int, 1)
+
+        let traces = try XCTUnwrap(result["reports"] as? [[String: Any]])
+            .filter { $0["kind"] as? String == "trace" }
+        XCTAssertEqual(
+            traces.map { $0["op"] as? String },
+            ["sendMessage", "sendMessageResolved", "connect"],
+            """
+            A send is traced as it happens and again when its promise \
+            settles — the observer is attached before the caller's own \
+            continuation, so it runs first — while a `connect` returns a \
+            port rather than a promise and settles nothing.
+            """
+        )
+        let sendTrace = try XCTUnwrap(traces.first?["message"] as? String)
+        XCTAssertTrue(sendTrace.contains("command=fullSync"), sendTrace)
+        XCTAssertTrue(sendTrace.contains("keys:[command,token]"), sendTrace)
+        XCTAssertFalse(
+            sendTrace.contains("secret-vault-token"),
+            """
+            A trace records the command and the message's shape, never its \
+            values: this is a password manager's traffic. Observed: \
+            \(sendTrace)
+            """
+        )
+        XCTAssertTrue(
+            try XCTUnwrap(traces[2]["message"] as? String)
+                .contains("bw-popup"),
+            "A connect trace names the port."
+        )
+    }
+
+    /// The trace rides the console-capture gate, and a build without it must
+    /// not carry so much as a wrapper: `runtime.sendMessage` stays the object
+    /// WebKit installed.
+    func testMessageTraceIsAbsentWithoutConsoleCapture() async throws {
+        let fileManager = FileManager.default
+        let fixture = try diagnosticsFixtureCompatibilityRuntime(
+            named: "crest-webextension-message-trace-disabled-test"
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        let result = try await evaluatedTraceFixtureResult(
+            source: fixture.source
+        )
+
+        XCTAssertEqual(
+            result["wrapsSendMessage"] as? Bool,
+            false,
+            "A gated-off build replaces no messaging entry point."
+        )
+        XCTAssertEqual(result["reply"] as? String, "native-reply")
+        XCTAssertEqual(
+            try XCTUnwrap(result["reports"] as? [[String: Any]]).count,
+            0
+        )
+    }
+
+    /// Reads the JSON object a `const <name> = Object.freeze({...});`
+    /// declaration publishes into the generated runtime.
+    private static func generatedJSONLiteral(
+        named name: String,
+        in source: String
+    ) -> String? {
+        guard
+            let declaration = source.range(
+                of: "const \(name) = Object.freeze("
+            ),
+            let open = source[declaration.upperBound...].firstIndex(of: "{")
+        else { return nil }
+        var depth = 0
+        var index = open
+        while index < source.endIndex {
+            if source[index] == "{" { depth += 1 }
+            if source[index] == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return String(source[open...index])
+                }
+            }
+            index = source.index(after: index)
+        }
+        return nil
+    }
 }
 
 @MainActor
@@ -4313,6 +6567,49 @@ private final class ChromeWebStoreNavigationWaiter:
         continuation?.resume(throwing: error)
         continuation = nil
     }
+}
+
+/// Serves one document for every request on the extension's scheme.
+///
+/// `ChromeWebStoreTestSchemeHandler` answers with an empty document, which is
+/// all the runtime-identity test needs. A diagnostics test needs the page's
+/// own inline scripts to be the ones that throw, so it supplies the body.
+private final class ChromeWebStoreDocumentSchemeHandler:
+    NSObject,
+    WKURLSchemeHandler
+{
+    private let html: String
+
+    init(html: String) {
+        self.html = html
+        super.init()
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        start urlSchemeTask: any WKURLSchemeTask
+    ) {
+        guard let url = urlSchemeTask.request.url else {
+            urlSchemeTask.didFailWithError(
+                BrowserChromeWebStoreTestError.releasedWebView
+            )
+            return
+        }
+        let response = URLResponse(
+            url: url,
+            mimeType: "text/html",
+            expectedContentLength: -1,
+            textEncodingName: "utf-8"
+        )
+        urlSchemeTask.didReceive(response)
+        urlSchemeTask.didReceive(Data(html.utf8))
+        urlSchemeTask.didFinish()
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        stop urlSchemeTask: any WKURLSchemeTask
+    ) {}
 }
 
 private final class ChromeWebStoreTestSchemeHandler:

@@ -327,7 +327,11 @@ extension BrowserSession {
         else {
             return false
         }
-        let wasPinned = spaces[spaceIndex].tabs[sourceIndex].placement != .current
+        // Only the pinned strip counts as pinned. A saved tab is neither
+        // pinned nor current, so pinning it moves it into the strip the way
+        // Crest's own Pin Tab action does, and unpinning it is a no-op rather
+        // than a move out of the saved list.
+        let wasPinned = spaces[spaceIndex].tabs[sourceIndex].placement == .pinned
         guard wasPinned != pinned else { return true }
         if pinned,
             spaces[spaceIndex].pinnedTabs.count >= BrowserSpace.maximumPinnedTabs

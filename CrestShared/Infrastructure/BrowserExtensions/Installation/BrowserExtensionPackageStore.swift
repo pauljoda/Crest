@@ -54,6 +54,47 @@ final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
         )
     }
 
+    /// A store for a named isolated profile
+    /// (`CREST_ISOLATED_PERSISTENCE_ID`).
+    ///
+    /// Rooted beside the installed app's packages rather than inside them, and
+    /// kept across relaunches: WebKit already persists the extension's own
+    /// storage for a named profile, so a package root that vanished with the
+    /// process would leave that storage behind with nothing installed to read
+    /// it, and every validation relaunch would start by re-adding the
+    /// extension.
+    static func isolated(
+        isolationID: String,
+        fileManager: FileManager = .default
+    ) -> BrowserExtensionPackageStore? {
+        let applicationSupport =
+            fileManager.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
+        // The profile name becomes a directory name, so it is held to the same
+        // shape `BrowserLaunchEnvironment` normalizes it into rather than
+        // trusted to be free of path separators.
+        guard let applicationSupport,
+            !isolationID.isEmpty,
+            isolationID.allSatisfy({
+                $0.isASCII
+                    && ($0.isLetter && $0.isLowercase || $0.isNumber
+                        || $0 == "-")
+            })
+        else { return nil }
+        return BrowserExtensionPackageStore(
+            fileManager: fileManager,
+            rootURL:
+                applicationSupport
+                .appending(path: "Crest", directoryHint: .isDirectory)
+                .appending(path: "Isolated", directoryHint: .isDirectory)
+                .appending(path: isolationID, directoryHint: .isDirectory)
+                .appending(path: "Extensions", directoryHint: .isDirectory),
+            removesRootOnDeinit: false
+        )
+    }
+
     deinit {
         guard removesRootOnDeinit else { return }
         try? fileManager.removeItem(at: rootURL)

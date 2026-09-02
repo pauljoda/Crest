@@ -369,6 +369,10 @@
     "2026-09-01-progressive-page-loading": {
       "category": "improved",
       "message": "Show webpages as soon as they begin loading, with clear progress while content arrives"
+    },
+    "2026-09-02-extension-layer-hardening": {
+      "category": "improved",
+      "message": "Improve extension compatibility across background messaging, notifications, page menus, and installation"
     }
   }
 }

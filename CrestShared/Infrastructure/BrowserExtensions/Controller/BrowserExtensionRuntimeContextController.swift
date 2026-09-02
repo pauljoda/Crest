@@ -324,7 +324,12 @@ final class BrowserExtensionRuntimeContextController {
                 webExtension: resource.webExtension,
                 extensionID: installation.id,
                 in: space,
-                unsupportedAPIs: Set(installation.unsupportedAPIs),
+                // The record's hide list is not re-fed: every hide Crest
+                // applies comes from the matrix, which `load` recomputes.
+                // Replaying the stored list would make an old matrix decision
+                // permanent, and the summary written back here clears any
+                // entry an earlier build persisted.
+                unsupportedAPIs: [],
                 permissionSnapshot: installation.permissionSnapshot,
                 persistsRuntimeSummary: true,
                 source: installation.source
@@ -407,6 +412,9 @@ final class BrowserExtensionRuntimeContextController {
                     requestedPermissions: authoredRequestedPermissions
                 )
         }
+        // The runtime still sees both sets. Only the persisted summary drops
+        // the matrix half, so the routing table stays authoritative on every
+        // launch instead of being ratcheted into the installation record.
         context.unsupportedAPIs = unsupportedAPIs.union(
             platformUnsupportedAPIs
         )
@@ -540,7 +548,8 @@ final class BrowserExtensionRuntimeContextController {
     func summary(
         for context: WKWebExtensionContext,
         extensionID: String,
-        isEnabled: Bool
+        isEnabled: Bool,
+        source: BrowserExtensionInstallationSource? = nil
     ) -> BrowserExtensionSummary {
         let internalPermissions = internalGrantedPermissions(for: context)
         return persistence.summary(
@@ -551,7 +560,10 @@ final class BrowserExtensionRuntimeContextController {
                 for: context,
                 excluding: internalPermissions
             ),
-            excluding: internalPermissions
+            excluding: internalPermissions,
+            // `load` decided on this axis which matrix hides to add; the
+            // summary has to subtract on the same one.
+            source: source
         )
     }
 
@@ -666,7 +678,9 @@ final class BrowserExtensionRuntimeContextController {
             at: preparedResource.resourceURL,
             extensionID: installation.id,
             in: space,
-            unsupportedAPIs: Set(installation.unsupportedAPIs),
+            // See `loadInstallation`: matrix hides are recomputed on every
+            // load and never replayed from the record.
+            unsupportedAPIs: [],
             permissionSnapshot: installation.permissionSnapshot,
             persistsRuntimeSummary: true,
             source: installation.source,
