@@ -180,7 +180,11 @@ private struct BrowserPageLoadingPresentation: View {
     }
 
     private var isNavigating: Bool {
-        page.isLoading || page.pendingNavigationURL != nil
+        BrowserPageSurfacePolicy.isNavigating(
+            isLoading: page.isLoading,
+            hasPendingNavigation: page.pendingNavigationURL != nil,
+            committedNavigationCount: page.committedNavigationCount
+        )
     }
 
     private var hasFailure: Bool {

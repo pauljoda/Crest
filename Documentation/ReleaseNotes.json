@@ -377,6 +377,10 @@
     "2026-09-02-sharp-canvas-rendering": {
       "category": "fixed",
       "message": "Keep high-resolution canvas-based editors sharp on Retina displays"
+    },
+    "2026-09-02-clear-completed-page-progress": {
+      "category": "fixed",
+      "message": "Prevent the page loading bar from staying visible after in-page navigation"
     }
   }
 }

@@ -1781,6 +1781,72 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
+    func testPendingNavigationShowsProgressBeforeTheFirstCommit() {
+        let isNavigating = BrowserPageSurfacePolicy.isNavigating(
+            isLoading: false,
+            hasPendingNavigation: true,
+            committedNavigationCount: 0
+        )
+
+        XCTAssertTrue(isNavigating)
+        XCTAssertEqual(
+            BrowserPageSurfacePolicy.loadingProgress(
+                estimatedProgress: 0,
+                isNavigating: isNavigating
+            ),
+            0.04
+        )
+    }
+
+    func testCompletedPageHidesProgressDespiteAPendingDestination() {
+        // Same-document navigation can leave a destination without another load.
+        let isNavigating = BrowserPageSurfacePolicy.isNavigating(
+            isLoading: false,
+            hasPendingNavigation: true,
+            committedNavigationCount: 1
+        )
+
+        XCTAssertFalse(isNavigating)
+        XCTAssertEqual(
+            BrowserPageSurfacePolicy.loadingProgress(
+                estimatedProgress: 1,
+                isNavigating: isNavigating
+            ),
+            0
+        )
+    }
+
+    func testRealLoadsKeepProgressVisibleAfterTheFirstCommit() {
+        for hasPendingNavigation in [false, true] {
+            let isNavigating = BrowserPageSurfacePolicy.isNavigating(
+                isLoading: true,
+                hasPendingNavigation: hasPendingNavigation,
+                committedNavigationCount: 1
+            )
+
+            XCTAssertTrue(isNavigating)
+            XCTAssertEqual(
+                BrowserPageSurfacePolicy.loadingProgress(
+                    estimatedProgress: 1,
+                    isNavigating: isNavigating
+                ),
+                1
+            )
+        }
+    }
+
+    func testIdlePagesWithoutPendingNavigationHideProgress() {
+        for committedNavigationCount in [0, 1] {
+            XCTAssertFalse(
+                BrowserPageSurfacePolicy.isNavigating(
+                    isLoading: false,
+                    hasPendingNavigation: false,
+                    committedNavigationCount: committedNavigationCount
+                )
+            )
+        }
+    }
+
     func testPageLoadingProgressStartsVisibleAndStaysWithinItsTrack() {
         XCTAssertEqual(
             BrowserPageSurfacePolicy.loadingProgress(

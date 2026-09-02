@@ -44,6 +44,16 @@ enum BrowserPageSurfacePolicy {
         committedNavigationCount > 0
     }
 
+    static func isNavigating(
+        isLoading: Bool,
+        hasPendingNavigation: Bool,
+        committedNavigationCount: Int
+    ) -> Bool {
+        // Same-document destinations can remain pending without a WebKit load.
+        // Only use the destination to bridge a fresh page's initial loading gap.
+        isLoading || (hasPendingNavigation && committedNavigationCount == 0)
+    }
+
     static func showsInitialLoadingStatus(
         isNavigating: Bool,
         committedNavigationCount: Int,
