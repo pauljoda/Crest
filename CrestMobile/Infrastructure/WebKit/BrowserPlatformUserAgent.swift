@@ -1,7 +1,9 @@
+import Foundation
+
 enum BrowserPlatformUserAgent {
-    static func applicationName(
-        operatingSystemMajorVersion: Int
-    ) -> String {
-        "Version/\(operatingSystemMajorVersion).0 Safari/604.1"
-    }
+    static let applicationName: String? = {
+        let operatingSystemMajorVersion =
+            ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        return "Version/\(operatingSystemMajorVersion).0 Safari/604.1"
+    }()
 }

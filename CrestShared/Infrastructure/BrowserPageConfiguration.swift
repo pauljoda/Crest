@@ -112,13 +112,10 @@ enum BrowserPageConfiguration {
         return configuration
     }
 
-    static var safariCompatibleApplicationName: String {
-        let operatingSystemMajorVersion = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+    static var safariCompatibleApplicationName: String? {
         // WKWebView omits Safari's browser tokens. Supply the platform's native
         // compatibility suffix without an app token so sign-in providers evaluate
         // Crest as the user-driven browser it is instead of an embedded app flow.
-        return BrowserPlatformUserAgent.applicationName(
-            operatingSystemMajorVersion: operatingSystemMajorVersion
-        )
+        return BrowserPlatformUserAgent.applicationName
     }
 }

@@ -7,7 +7,6 @@ import XCTest
 final class BrowserPageConfigurationTests: XCTestCase {
     func testProductionConfigurationUsesTheSpacesPersistentStoreAndDesktopBrowserDefaults() {
         let profile = BrowsingProfile()
-        let operatingSystemMajorVersion = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
 
         let configuration = BrowserPageConfiguration.make(
             for: profile,
@@ -17,7 +16,7 @@ final class BrowserPageConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.websiteDataStore.identifier, profile.id)
         XCTAssertEqual(
             configuration.applicationNameForUserAgent,
-            "Version/\(operatingSystemMajorVersion).0 Safari/605.1.15"
+            BrowserPlatformUserAgent.applicationName
         )
         XCTAssertEqual(configuration.defaultWebpagePreferences.preferredContentMode, .desktop)
         XCTAssertTrue(configuration.defaultWebpagePreferences.allowsContentJavaScript)
@@ -65,7 +64,7 @@ final class BrowserPageConfigurationTests: XCTestCase {
 
     func testProductionWebViewAdvertisesDesktopSafariCompatibility() async throws {
         let profile = BrowsingProfile()
-        let operatingSystemMajorVersion = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        let applicationName = try XCTUnwrap(BrowserPlatformUserAgent.applicationName)
         let webView = WKWebView(
             frame: .zero,
             configuration: BrowserPageConfiguration.make(for: profile)
@@ -74,12 +73,32 @@ final class BrowserPageConfigurationTests: XCTestCase {
         let userAgent = try await webView.evaluateJavaScript("navigator.userAgent") as? String
 
         XCTAssertEqual(
-            userAgent?.hasSuffix(
-                "Version/\(operatingSystemMajorVersion).0 Safari/605.1.15"
-            ),
+            userAgent?.hasSuffix(applicationName),
             true
         )
         XCTAssertFalse(userAgent?.contains("Crest/") == true)
+    }
+
+    func testSafariCompatibilityUsesTheInstalledSafariVersion() {
+        XCTAssertEqual(
+            BrowserPlatformUserAgent.applicationName(safariVersion: "26.6.2"),
+            "Version/26.6.2 Safari/605.1.15"
+        )
+        XCTAssertEqual(
+            BrowserPlatformUserAgent.applicationName(safariVersion: " 18.6 \n"),
+            "Version/18.6 Safari/605.1.15"
+        )
+    }
+
+    func testSafariCompatibilityRejectsMissingOrMalformedVersions() {
+        XCTAssertNil(BrowserPlatformUserAgent.applicationName(safariVersion: nil))
+        XCTAssertNil(BrowserPlatformUserAgent.applicationName(safariVersion: ""))
+        XCTAssertNil(
+            BrowserPlatformUserAgent.applicationName(safariVersion: "26.6 Beta")
+        )
+        XCTAssertNil(
+            BrowserPlatformUserAgent.applicationName(safariVersion: "26..6")
+        )
     }
 
     func testDesktopWebViewAcceptsTheClickThatActivatesItsWindow() {

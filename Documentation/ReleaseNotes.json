@@ -373,6 +373,10 @@
     "2026-09-02-extension-layer-hardening": {
       "category": "improved",
       "message": "Improve extension compatibility across background messaging, notifications, page menus, and installation"
+    },
+    "2026-09-02-sharp-canvas-rendering": {
+      "category": "fixed",
+      "message": "Keep high-resolution canvas-based editors sharp on Retina displays"
     }
   }
 }
