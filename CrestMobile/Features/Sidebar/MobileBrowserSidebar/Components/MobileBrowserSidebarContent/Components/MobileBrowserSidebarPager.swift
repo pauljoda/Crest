@@ -10,14 +10,17 @@ struct MobileBrowserSidebarPager: View {
                     .ignoresSafeArea()
             }
 
-            BrowserSidebarSpacePager(
-                context: configuration.context
-            ) { space, isSelected in
-                MobileBrowserSidebarSpaceSurface(
-                    configuration: configuration,
-                    space: space,
-                    isSelected: isSelected
-                )
+            GeometryReader { geometry in
+                BrowserSidebarSpacePager(
+                    context: configuration.context
+                ) { space, isSelected in
+                    MobileBrowserSidebarSpaceSurface(
+                        configuration: configuration,
+                        space: space,
+                        isSelected: isSelected,
+                        contentInsets: geometry.safeAreaInsets
+                    )
+                }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 MobileBrowserSidebarChrome(configuration: configuration)

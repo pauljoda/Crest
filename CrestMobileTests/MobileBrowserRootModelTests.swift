@@ -329,13 +329,16 @@ final class MobileBrowserRootModelTests: XCTestCase {
         fixture.model.activateSelectedTab()
         fixture.navigation.completePagePresentation()
         fixture.navigation.toggleCompactSidebar()
+        let originalPage = try XCTUnwrap(fixture.pages.activePage)
         let unlocked = fixture.model.lockSnapshot(presentation: .compact)
 
-        access.lock(protectedSpace.id)
+        access.lockAllForInactiveScene()
+        fixture.model.relockProtectedSpaces(fixture.model.lockedSpaceIDs)
         let locked = fixture.model.lockSnapshot(presentation: .compact)
         fixture.model.synchronizeLockTransition(from: unlocked, to: locked)
 
         XCTAssertNil(fixture.pages.activePage)
+        XCTAssertTrue(fixture.pages.containsResidentPage(for: originalPage.tabID))
         XCTAssertTrue(fixture.navigation.compactShowsPage)
         XCTAssertEqual(fixture.navigation.regularSidebarPresentation, .floating)
 
@@ -345,6 +348,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
         fixture.model.synchronizeLockTransition(from: locked, to: unlockedAgain)
 
         XCTAssertEqual(fixture.pages.activePage?.spaceID, protectedSpace.id)
+        XCTAssertTrue(fixture.pages.activePage === originalPage)
         XCTAssertTrue(fixture.navigation.compactShowsPage)
         XCTAssertEqual(fixture.navigation.regularSidebarPresentation, .floating)
     }

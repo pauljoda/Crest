@@ -1,10 +1,32 @@
+import AppKit
 import Observation
+import SwiftUI
 import XCTest
 
 @testable import Crest
 
 @MainActor
 final class BrowserSpaceAccessTests: XCTestCase {
+    func testUnlockLabelKeepsItsSizeDuringAuthentication() {
+        for width: CGFloat in [180, 280] {
+            for textSize: DynamicTypeSize in [.large, .accessibility5] {
+                let idle = NSHostingView(
+                    rootView: BrowserSpaceAccessActionLabel(isAuthenticating: false)
+                        .environment(\.dynamicTypeSize, textSize)
+                        .frame(width: width)
+                )
+                let authenticating = NSHostingView(
+                    rootView: BrowserSpaceAccessActionLabel(isAuthenticating: true)
+                        .environment(\.dynamicTypeSize, textSize)
+                        .frame(width: width)
+                )
+
+                XCTAssertGreaterThan(idle.fittingSize.height, 0)
+                XCTAssertEqual(idle.fittingSize, authenticating.fittingSize)
+            }
+        }
+    }
+
     func testChosenDefaultSpaceBecomesTheLaunchSelection() throws {
         var session = BrowserSession.preview
         let work = try XCTUnwrap(session.spaces.first)
@@ -215,6 +237,55 @@ final class BrowserSpaceAccessTests: XCTestCase {
         XCTAssertEqual(access.failure, .authenticationDenied)
     }
 
+    func testPendingAuthenticationRejectsDuplicateAndOtherSpaceAttempts() async throws {
+        var space = try XCTUnwrap(BrowserSession.preview.spaces.first)
+        var other = try XCTUnwrap(BrowserSession.preview.spaces.last)
+        space.accessPolicy = .deviceOwnerAuthentication
+        other.accessPolicy = .deviceOwnerAuthentication
+        let authenticator = SuspendedBrowserDeviceAuthenticator()
+        let access = BrowserSpaceAccessController(authenticator: authenticator)
+        let pending = Task { await access.unlock(space) }
+        await Task.yield()
+
+        let duplicate = await access.unlock(space)
+        let otherAttempt = await access.unlock(other)
+
+        XCTAssertFalse(duplicate)
+        XCTAssertFalse(otherAttempt)
+        XCTAssertTrue(access.isAuthenticating(space))
+        XCTAssertFalse(access.isAuthenticating(other))
+        XCTAssertTrue(access.isLocked(space))
+        XCTAssertTrue(access.isLocked(other))
+        XCTAssertEqual(authenticator.attemptCount, 1)
+        authenticator.complete(with: true)
+        let unlocked = await pending.value
+        XCTAssertTrue(unlocked)
+        XCTAssertTrue(access.isLocked(other))
+    }
+
+    func testUnavailableAuthenticationKeepsTheSpaceLockedAndAllowsRetry() async throws {
+        var space = try XCTUnwrap(BrowserSession.preview.spaces.first)
+        space.accessPolicy = .deviceOwnerAuthentication
+        let authenticator = BrowserDeviceAuthenticatorStub(
+            results: [.failure(CancellationError()), .success(true)]
+        )
+        let access = BrowserSpaceAccessController(authenticator: authenticator)
+
+        let cancelled = await access.unlock(space)
+
+        XCTAssertFalse(cancelled)
+        XCTAssertTrue(access.isLocked(space))
+        XCTAssertNil(access.authenticatingAssignment)
+        XCTAssertEqual(access.failure, .authenticationUnavailable)
+
+        let retried = await access.unlock(space)
+
+        XCTAssertTrue(retried)
+        XCTAssertNil(access.failure)
+        XCTAssertNil(access.authenticatingAssignment)
+        XCTAssertEqual(authenticator.reasons.count, 2)
+    }
+
     func testStorePersistsDefaultAndPrivateSpacePolicies() throws {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(
@@ -272,9 +343,11 @@ private final class BrowserDeviceAuthenticatorStub: BrowserDeviceAuthenticating 
 @MainActor
 private final class SuspendedBrowserDeviceAuthenticator: BrowserDeviceAuthenticating {
     private var continuation: CheckedContinuation<Bool, Never>?
+    private(set) var attemptCount = 0
 
     func authenticate(reason: String) async throws -> Bool {
-        await withCheckedContinuation { continuation in
+        attemptCount += 1
+        return await withCheckedContinuation { continuation in
             self.continuation = continuation
         }
     }

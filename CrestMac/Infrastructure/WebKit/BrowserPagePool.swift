@@ -1553,13 +1553,8 @@ final class BrowserPagePool:
         return true
     }
 
-    /// Releases only the resident WebKit pages owned by one Space. Ordinary
-    /// Space selection never calls this; it is the residency half of a protected
-    /// Space returning to its locked state, so its content cannot stay resident.
-    ///
-    /// Nothing is archived on the way out, unlike an idle or manual unload: a locked Space is
-    /// meant to leave nothing behind, and `relockProtectedSpace(_:)` is the
-    /// entry point that also clears what earlier unloads already wrote.
+    /// Releases a Space's resident pages without archiving them. Normal Space
+    /// switching and locking preserve residency and do not call this teardown.
     func unloadPages(in spaceID: SpaceID) {
         let tabIDs = Set(
             pages.compactMap { tabID, page in
@@ -1570,25 +1565,20 @@ final class BrowserPagePool:
         _ = releaseTransientPages(in: spaceID)
     }
 
-    /// Takes a protected Space back to its locked state: releases its resident
-    /// pages, then purges every tab state archived under its profile.
+    /// Hides a protected Space without unloading its tabs. Unlocking can reuse
+    /// the same WebKit pages, including scroll position and unsaved form state.
+    /// Resident pages remain subject to normal idle and memory-pressure limits.
     ///
-    /// Unloading alone only settles what is in memory *now*. Unloads taken while
-    /// the Space was unlocked — the idle timeout or a hand unload — each left an
-    /// `interactionState` blob on disk, and those
-    /// blobs carry scroll offsets, form values, and the full back/forward list
-    /// of pages the lock is supposed to put away. The session JSON keeps URLs
-    /// either way, so this is not about hiding that the Space was used; it is
-    /// about not leaving page-level residue readable while the Space is locked,
-    /// which costs nothing but a reload after the next unlock.
-    ///
-    /// The purge is enqueued after the release, and the archive's writes are
-    /// serialized, so a state archived a moment ago cannot outrun it. An
-    /// unlocked Space is left entirely alone — including its archive — so this
-    /// is safe to call for any Space the lock sweep hands over.
+    /// Previously archived state is still purged from disk. This preserves only
+    /// live pages, not a disk snapshot of a protected Space. The access views
+    /// gate ordinary and transient content until authentication succeeds.
     func relockProtectedSpace(_ space: BrowserSpace) {
-        unloadPages(in: space.id)
         guard space.accessPolicy.requiresAuthentication else { return }
+        if activePage?.spaceID == space.id
+            || presentedTabIDs.contains(where: { pages[$0]?.spaceID == space.id })
+        {
+            deactivatePagePresentation()
+        }
         tabStateArchive?.removeStates(profileID: space.profile.id)
     }
 

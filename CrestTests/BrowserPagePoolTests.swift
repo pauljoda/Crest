@@ -1941,7 +1941,7 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertTrue(pool.retainedTabIDs.isEmpty)
     }
 
-    func testRelockingASpaceDropsEveryCardOfAnOpenSplit() {
+    func testRelockingASpaceHidesEveryCardOfAnOpenSplitWithoutUnloading() {
         let groupID = SplitGroupID()
         let first = BrowserTab(
             title: "First secret",
@@ -1975,8 +1975,8 @@ final class BrowserPagePoolTests: XCTestCase {
             "Locking a Space must take every card away, not just the focused one."
         )
         XCTAssertNil(pool.activeTabID)
-        XCTAssertFalse(pool.containsResidentPage(for: first.id))
-        XCTAssertFalse(pool.containsResidentPage(for: second.id))
+        XCTAssertTrue(pool.containsResidentPage(for: first.id))
+        XCTAssertTrue(pool.containsResidentPage(for: second.id))
         XCTAssertTrue(pool.containsResidentPage(for: openTab.id))
     }
 
@@ -2363,7 +2363,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
     }
 
-    func testRelockingAProtectedSpaceReleasesOnlyItsOwnResidentPages() throws {
+    func testRelockingAProtectedSpacePreservesItsResidentPageAndOtherPresentation() throws {
         let secret = BrowserTab(title: "Secret", url: nil, placement: .current)
         let protectedSpace = makeSpace(
             tabs: [secret],
@@ -2376,12 +2376,58 @@ final class BrowserPagePoolTests: XCTestCase {
 
         pool.select(tab: openTab, space: openSpace)
         pool.select(tab: secret, space: protectedSpace)
+        let secretPage = try XCTUnwrap(pool.activePage)
         XCTAssertTrue(pool.containsResidentPage(for: secret.id))
 
         pool.relockProtectedSpace(protectedSpace)
 
-        XCTAssertFalse(pool.containsResidentPage(for: secret.id))
+        XCTAssertNil(pool.activePage)
+        XCTAssertTrue(pool.presentedTabIDs.isEmpty)
+        XCTAssertTrue(pool.containsResidentPage(for: secret.id))
         XCTAssertTrue(pool.containsResidentPage(for: openTab.id))
+
+        pool.select(tab: secret, space: protectedSpace)
+        XCTAssertTrue(pool.activePage === secretPage)
+        pool.select(tab: openTab, space: openSpace)
+        let openPage = pool.activePage
+        pool.relockProtectedSpace(protectedSpace)
+        XCTAssertTrue(pool.activePage === openPage)
+        XCTAssertEqual(pool.presentedTabIDs, [openTab.id])
+    }
+
+    func testRepeatedRelockingPreservesLoadedPageScrollFormsAndHistory() async throws {
+        let firstURL = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
+        let secondURL = try XCTUnwrap(URL(string: "https://state.crest.test/two"))
+        var tab = BrowserTab(title: "Secret", url: nil, placement: .current)
+        let space = makeSpace(
+            tabs: [tab], selectedTabID: tab.id, accessPolicy: .deviceOwnerAuthentication
+        )
+        let pool = BrowserPagePool()
+        pool.select(tab: tab, space: space)
+        let original = try XCTUnwrap(pool.activePage)
+        try await load(firstURL, in: original)
+        try await load(secondURL, in: original)
+        _ = try await original.webView.evaluateJavaScript(
+            "document.body.innerHTML += '<input id=note>'; document.getElementById('note').value = 'draft'; window.scrollTo(0, 850);"
+        )
+        let scrollValue = try await original.webView.evaluateJavaScript("window.scrollY")
+        let scroll = try XCTUnwrap(scrollValue as? Double)
+        XCTAssertGreaterThan(scroll, 0)
+        tab.url = secondURL
+
+        for _ in 0..<3 {
+            pool.relockProtectedSpace(space)
+            XCTAssertNil(pool.activePage)
+            XCTAssertTrue(pool.presentedTabIDs.isEmpty)
+            pool.select(tab: tab, space: space)
+            XCTAssertTrue(pool.activePage === original)
+            XCTAssertTrue(original.webView.canGoBack)
+            let currentScroll = try await original.webView.evaluateJavaScript("window.scrollY")
+            let draft = try await original.webView.evaluateJavaScript("document.getElementById('note').value")
+            XCTAssertEqual(currentScroll as? Double, scroll)
+            XCTAssertEqual(draft as? String, "draft")
+        }
+        pool.reconcile(validTabIDs: [])
     }
 
     func testAPurgedTabComesBackWithAPlainLoadAfterTheSpaceUnlocks() async throws {

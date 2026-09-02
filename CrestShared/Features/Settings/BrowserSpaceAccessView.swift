@@ -8,18 +8,20 @@ struct BrowserSpaceAccessView: View {
     var presentation: BrowserSpaceAccessPresentation = .standalone
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                accessContent
-                    .frame(maxWidth: BrowserSpaceAccessLayout.maximumContentWidth)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, presentation == .contentOverlay ? 28 : 44)
-                    .frame(minHeight: geometry.size.height, alignment: .center)
-            }
+        ScrollView {
+            accessContent
+                .frame(maxWidth: BrowserSpaceAccessLayout.maximumContentWidth)
+                .padding(24)
+                .frame(maxWidth: .infinity)
         }
+        .defaultScrollAnchor(.top, for: .initialOffset)
+        .defaultScrollAnchor(
+            dynamicTypeSize.isAccessibilitySize ? .top : .center,
+            for: .alignment
+        )
         .background {
             accessBackground
         }
@@ -28,8 +30,8 @@ struct BrowserSpaceAccessView: View {
     }
 
     private var accessContent: some View {
-        VStack(spacing: 28) {
-            VStack(spacing: 14) {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
                 BrowserSpaceSymbolArtwork(
                     space: space,
                     size: BrowserSpaceAccessLayout.iconSize,
@@ -38,55 +40,61 @@ struct BrowserSpaceAccessView: View {
 
                 VStack(spacing: 6) {
                     Text(space.name)
-                        .font(.largeTitle.weight(.semibold))
+                        .font(.title.weight(.semibold))
                         .multilineTextAlignment(.center)
+                        .accessibilityAddTraits(.isHeader)
 
-                    Label("Private Space", systemImage: "hand.raised.fill")
-                        .font(.headline)
+                    Label("Space Locked", systemImage: "lock.fill")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
-                Text(
-                    "Unlock with Face ID, Touch ID, or your device passcode or password. Until then, this Space’s tabs, site data, and credentials stay hidden."
-                )
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+                Text("Unlock to view your tabs.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(spacing: 12) {
                 Button {
                     Task { await accessController.unlock(space) }
                 } label: {
-                    Label("Unlock \(space.name)", systemImage: "lock.open.fill")
-                        .frame(maxWidth: .infinity)
+                    BrowserSpaceAccessActionLabel(
+                        isAuthenticating: accessController.isAuthenticating(space)
+                    )
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+                .frame(
+                    maxWidth: dynamicTypeSize.isAccessibilitySize
+                        ? .infinity : BrowserSpaceAccessLayout.maximumActionWidth
+                )
                 .disabled(accessController.authenticatingAssignment != nil)
+                .accessibilityLabel(
+                    accessController.isAuthenticating(space)
+                        ? Text("Authenticating…") : Text("Unlock \(space.name)")
+                )
                 .accessibilityIdentifier("unlock-private-space")
 
-                if accessController.isAuthenticating(space) {
-                    ProgressView("Authenticating…")
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                if let failure = accessController.failure {
-                    Label {
-                        Text(failure.message)
-                    } icon: {
-                        Image(systemName: "exclamationmark.lock.fill")
+                ZStack {
+                    // Centered layouts reserve retry space. Accessibility layouts
+                    // start at the top, so an error below cannot shift the button
+                    // and empty message space need not lengthen the scroll.
+                    if !dynamicTypeSize.isAccessibilitySize {
+                        Text(BrowserSpaceAccessFailure.authenticationUnavailable.message)
+                            .hidden()
                     }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if let failure = accessController.failure {
+                        Text(failure.message)
+                    }
                 }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
                 if presentation.showsSpaceMenu, spaces.count > 1 {
-                    Divider()
-
                     Menu {
                         ForEach(spaces.filter { $0.id != space.id }) { candidate in
                             Button {
@@ -99,16 +107,10 @@ struct BrowserSpaceAccessView: View {
                         }
                         .crestMenuActionLabelStyle()
                     } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "square.grid.2x2")
-                            Text("Switch Space")
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity)
+                        Label("Switch Space", systemImage: "square.grid.2x2")
                     }
                     .crestMenuActionLabelStyle()
                     .buttonStyle(.bordered)
-                    .controlSize(.large)
                     .accessibilityIdentifier("switch-private-space")
                 }
             }

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2D498C7707DDF8B33648A7E5 /* BrowserSpaceAccessActionLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */; };
+		CF203DA5A214D4FC577D8FCA /* BrowserSpaceAccessActionLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */; };
 		65F6389FF492BBB9B2F880FA /* BrowserSoftwareUpdateReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85449328134EADEA2DDFB98F /* BrowserSoftwareUpdateReleaseNotes.swift */; };
 		7376E5AEBBC517A809025065 /* BrowserSoftwareUpdateReleaseNoteBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36AFAE6B471938E37D045B92 /* BrowserSoftwareUpdateReleaseNoteBlock.swift */; };
 		C7E6B248528FC1D3DD130F6A /* BrowserSoftwareUpdateProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C94202EE12A3695C28EEFCE /* BrowserSoftwareUpdateProgress.swift */; };
@@ -3695,6 +3697,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSpaceAccessActionLabel.swift; sourceTree = "<group>"; };
 		2C94202EE12A3695C28EEFCE /* BrowserSoftwareUpdateProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSoftwareUpdateProgress.swift; sourceTree = "<group>"; };
 		36AFAE6B471938E37D045B92 /* BrowserSoftwareUpdateReleaseNoteBlock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSoftwareUpdateReleaseNoteBlock.swift; sourceTree = "<group>"; };
 		55CF7A6FFF4033DF5E347FB5 /* BrowserSoftwareUpdateDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSoftwareUpdateDetailsView.swift; sourceTree = "<group>"; };
@@ -6451,6 +6454,7 @@
 			children = (
 				BD0B11415857115DB43B2649 /* BrowserSettingsDestinationRouter.swift */,
 				C3A78BA6034D2AE72A25912A /* BrowserSettingsPane.swift */,
+				A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */,
 				687BA81B2C2014E76836012B /* CrestSpaceSelectionRepair.swift */,
 				9F57150093997B1C761BCE58 /* SyncSettingsFactRow.swift */,
 				CBB66E4009CFBDDD17B8716A /* BrowserSettingsPaneHeader */,
@@ -16477,6 +16481,7 @@
 				384BB23BCD4080D040161510 /* BrowserSpace+SplitGroups.swift in Sources */,
 				9953CFFC20F50DCBAD3CB62D /* BrowserSpace.swift in Sources */,
 				A0FE7558104A41484D6363A6 /* BrowserSpaceAccessController.swift in Sources */,
+				CF203DA5A214D4FC577D8FCA /* BrowserSpaceAccessActionLabel.swift in Sources */,
 				E2A9E494407E96A56E9D6434 /* BrowserSpaceAccessFailure+Presentation.swift in Sources */,
 				5773CAFABFA3B99C845D4282 /* BrowserSpaceAccessFailure.swift in Sources */,
 				EA1D1E43C5A20A6F4D949A01 /* BrowserSpaceAccessLayout.swift in Sources */,
@@ -18653,6 +18658,7 @@
 				8B30015EE5C7FD0777443519 /* BrowserSpace+SplitGroups.swift in Sources */,
 				66134FDB3CB4E9DAD94EF31A /* BrowserSpace.swift in Sources */,
 				B26E25166A6CED6757912FC4 /* BrowserSpaceAccessController.swift in Sources */,
+				2D498C7707DDF8B33648A7E5 /* BrowserSpaceAccessActionLabel.swift in Sources */,
 				D66792634239081413096911 /* BrowserSpaceAccessFailure+Presentation.swift in Sources */,
 				5FA24C80712D6F8D8492D342 /* BrowserSpaceAccessFailure.swift in Sources */,
 				D89FB0A28739ADFC159EA440 /* BrowserSpaceAccessLayout.swift in Sources */,

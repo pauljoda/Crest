@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import UIKit
 import UniformTypeIdentifiers
 import WebKit
 import XCTest
@@ -1161,7 +1162,7 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
     }
 
-    func testRelockingAProtectedSpaceReleasesOnlyItsOwnResidentPages() throws {
+    func testRelockingAProtectedSpacePreservesItsResidentPageAndOtherPresentation() throws {
         let secret = BrowserTab(title: "Secret", url: nil, placement: .current)
         let protectedSpace = makeStateSpace(
             tabs: [secret],
@@ -1179,12 +1180,75 @@ final class MobileBrowserInteropTests: XCTestCase {
         pages.select(session: session)
         session.selectSpace(protectedSpace.id)
         pages.select(session: session)
+        let secretPage = try XCTUnwrap(pages.activePage)
         XCTAssertTrue(pages.containsResidentPage(for: secret.id))
 
         pages.relockProtectedSpace(protectedSpace)
 
-        XCTAssertFalse(pages.containsResidentPage(for: secret.id))
+        XCTAssertNil(pages.activePage)
+        XCTAssertTrue(pages.presentedTabIDs.isEmpty)
+        XCTAssertTrue(pages.containsResidentPage(for: secret.id))
         XCTAssertTrue(pages.containsResidentPage(for: openTab.id))
+
+        pages.select(session: session)
+        XCTAssertTrue(pages.activePage === secretPage)
+        session.selectSpace(openSpace.id)
+        pages.select(session: session)
+        let openPage = pages.activePage
+        pages.relockProtectedSpace(protectedSpace)
+        XCTAssertTrue(pages.activePage === openPage)
+        XCTAssertEqual(pages.presentedTabIDs, [openTab.id])
+    }
+
+    func testRepeatedRelockingPreservesLoadedPageScrollFormsAndHistory() async throws {
+        let firstURL = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
+        let secondURL = try XCTUnwrap(URL(string: "https://state.crest.test/two"))
+        let tab = BrowserTab(title: "Secret", url: nil, placement: .current)
+        let space = makeStateSpace(
+            tabs: [tab], selectedTabID: tab.id, accessPolicy: .deviceOwnerAuthentication
+        )
+        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let pages = MobileBrowserPageStore()
+        pages.select(session: session)
+        let original = try XCTUnwrap(pages.activePage)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        let controller = UIViewController()
+        let host = MobileBrowserWebHostView(frame: window.bounds)
+        controller.view = host
+        window.rootViewController = controller
+        window.isHidden = false
+        host.attach(original.webView)
+        host.layoutIfNeeded()
+        defer {
+            host.detach(stopsLoading: false)
+            window.isHidden = true
+        }
+        try await load(firstURL, in: original)
+        try await load(secondURL, in: original)
+        _ = try await original.webView.evaluateJavaScript(
+            "document.body.innerHTML += '<input id=note>'; document.getElementById('note').value = 'draft'; window.scrollTo(0, 850);"
+        )
+        let scrollValue = try await original.webView.evaluateJavaScript("window.scrollY")
+        let scroll = try XCTUnwrap(scrollValue as? Double)
+        XCTAssertGreaterThan(scroll, 0)
+        session.spaces[0].tabs[0].url = secondURL
+
+        for _ in 0..<3 {
+            pages.relockProtectedSpace(space)
+            host.detach(stopsLoading: false)
+            XCTAssertNil(pages.activePage)
+            XCTAssertTrue(pages.presentedTabIDs.isEmpty)
+            pages.select(session: session)
+            host.attach(original.webView)
+            host.layoutIfNeeded()
+            XCTAssertTrue(pages.activePage === original)
+            XCTAssertTrue(original.webView.canGoBack)
+            let currentScroll = try await original.webView.evaluateJavaScript("window.scrollY")
+            let draft = try await original.webView.evaluateJavaScript("document.getElementById('note').value")
+            XCTAssertEqual(currentScroll as? Double, scroll)
+            XCTAssertEqual(draft as? String, "draft")
+        }
+        pages.reconcile(validTabIDs: [])
     }
 
     func testAPurgedTabComesBackWithAPlainLoadAfterTheSpaceUnlocks() async throws {

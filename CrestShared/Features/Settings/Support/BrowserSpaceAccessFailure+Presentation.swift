@@ -4,9 +4,9 @@ extension BrowserSpaceAccessFailure {
     var message: LocalizedStringResource {
         switch self {
         case .authenticationDenied:
-            "The Space remains locked."
+            "Authentication failed. Try again."
         case .authenticationUnavailable:
-            "Device authentication isn’t available right now."
+            "Authentication didn’t complete. Try again."
         }
     }
 }

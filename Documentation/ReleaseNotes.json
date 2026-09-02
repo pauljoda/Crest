@@ -385,6 +385,10 @@
     "2026-09-02-smooth-space-switching": {
       "category": "fixed",
       "message": "Switch Spaces without flashing blank pages on macOS"
+    },
+    "2026-09-02-private-space-unlock": {
+      "category": "fixed",
+      "message": "Unlock private Spaces comfortably at larger text sizes and keep loaded tabs in place when locking"
     }
   }
 }

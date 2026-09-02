@@ -4,6 +4,7 @@ struct MobileBrowserSidebarSpaceSurface: View {
     let configuration: MobileBrowserSidebarContentConfiguration
     let space: BrowserSpace
     let isSelected: Bool
+    let contentInsets: EdgeInsets
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -35,6 +36,11 @@ struct MobileBrowserSidebarSpaceSurface: View {
                     selectSpace: selectUnlockedSpace,
                     presentation: .contentOverlay
                 )
+                // The horizontal pager consumes the safe area. Carry its
+                // chrome clearances into this nested vertical lock scroller.
+                .padding(.top, contentInsets.top)
+                .padding(.bottom, contentInsets.bottom)
+                .containerRelativeFrame(.vertical)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
