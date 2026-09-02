@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-09-02-extension-layer-hardening",
+    "development": "2026-09-02-sharp-canvas-rendering",
     "nightly": "2026-09-01-scroll-safe-sidebar-dragging"
   }
 }
