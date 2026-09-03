@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-09-02-sharp-canvas-rendering",
+    "development": "2026-09-03-refresh-before-update-download",
     "nightly": "2026-09-02-smooth-space-switching"
   }
 }
