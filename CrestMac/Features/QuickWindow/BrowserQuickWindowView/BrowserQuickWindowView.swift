@@ -4,6 +4,7 @@ struct BrowserQuickWindowView: View {
     let spaceAccess: BrowserSpaceAccessController
     let pagePoolRegistry: BrowserPagePoolRegistry?
     let openBrowserWindow: () -> Void
+    private let request: BrowserQuickWindowRequest?
 
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var model: BrowserQuickWindowModel
@@ -19,6 +20,7 @@ struct BrowserQuickWindowView: View {
         supportsLivePagePromotion: Bool = false,
         preferences: BrowserTransientBrowsingPreferences = .production
     ) {
+        self.request = request
         self.spaceAccess = spaceAccess
         self.pagePoolRegistry = pagePoolRegistry
         self.openBrowserWindow = openBrowserWindow
@@ -40,6 +42,7 @@ struct BrowserQuickWindowView: View {
         spaceAccess: BrowserSpaceAccessController,
         openBrowserWindow: @escaping () -> Void = {}
     ) {
+        request = nil
         self.spaceAccess = spaceAccess
         pagePoolRegistry = nil
         self.openBrowserWindow = openBrowserWindow
@@ -54,6 +57,7 @@ struct BrowserQuickWindowView: View {
             dismiss: dismissQuickWindow,
             openBrowserWindow: openBrowserWindow
         )
+        .navigationTitle(Text(verbatim: model.windowTitle(for: request ?? model.presentedRequest)))
     }
 
     private func dismissQuickWindow() {

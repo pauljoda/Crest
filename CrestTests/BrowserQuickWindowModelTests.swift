@@ -1,3 +1,4 @@
+import Observation
 import WebKit
 import XCTest
 
@@ -5,6 +6,59 @@ import XCTest
 
 @MainActor
 final class BrowserQuickWindowModelTests: XCTestCase {
+    func testWindowTitleFollowsOnlyItsLeaseAndRedactsOnLock() async throws {
+        let context = try makeContext()
+        context.model.preparePage(isActive: true)
+        let page = try XCTUnwrap(context.model.page)
+        page.webView.loadHTMLString("<title>Quick page</title>", baseURL: context.model.presentedRequest.url)
+        try await waitUntil { page.title == "Quick page" && !page.isLoading }
+        XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
+        context.browser.updateSelectedTabFromPage(url: nil, title: "Unrelated selected tab")
+        XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Quick page")
+        let changed = expectation(description: "Quick Window observes document title")
+        withObservationTracking {
+            _ = context.model.windowTitle(for: context.requestBinding.request)
+        } onChange: {
+            changed.fulfill()
+        }
+        try await page.webView.evaluateJavaScript("document.title = 'Updated quick page'")
+        await fulfillment(of: [changed], timeout: 2)
+        XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Updated quick page")
+        context.browser.session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+        XCTAssertEqual(
+            context.model.windowTitle(for: context.requestBinding.request), String(localized: "Quick Window"))
+    }
+
+    func testStaleQuickRequestDoesNotExposeItsPageTitle() throws {
+        let context = try makeContext()
+        context.model.preparePage(isActive: true)
+        context.requestBinding.request = .empty(
+            spaceAssignment: BrowserSpaceRuntimeAssignment(space: context.destination)
+        )
+        XCTAssertEqual(
+            context.model.windowTitle(for: context.requestBinding.request), String(localized: "Quick Window"))
+    }
+
+    func testWindowTitleUsesSceneRequestInsteadOfAnActionTimeBindingRead() async throws {
+        let context = try makeContext()
+        context.model.preparePage(isActive: true)
+        let page = try XCTUnwrap(context.model.page)
+        page.webView.loadHTMLString("<title>Current scene page</title>", baseURL: context.model.presentedRequest.url)
+        try await waitUntil { page.title == "Current scene page" && !page.isLoading }
+        context.requestBinding.rejectActionReads = true
+        XCTAssertEqual(context.model.windowTitle(for: context.requestBinding.request), "Current scene page")
+    }
+
+    func testRetargetedSceneRequestRedactsThePreviousPageBeforeModelReconciliation() throws {
+        let context = try makeContext()
+        let retargeted = context.requestBinding.request.retargeted(
+            to: try XCTUnwrap(URL(string: "https://replacement.crest.test")),
+            assignment: context.model.presentedRequest.assignment
+        )
+        XCTAssertEqual(retargeted.id, context.model.presentedRequest.id)
+        XCTAssertEqual(context.model.windowTitle(for: retargeted), String(localized: "Quick Window"))
+    }
+
     func testTargetBlankNavigationStaysInTheExactQuickWindowLease() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
@@ -654,6 +708,7 @@ final class BrowserQuickWindowModelTests: XCTestCase {
     @MainActor
     private final class QuickWindowRequestBinding {
         var request: BrowserQuickWindowRequest
+        var rejectActionReads = false
 
         init(request: BrowserQuickWindowRequest) {
             self.request = request
@@ -662,8 +717,8 @@ final class BrowserQuickWindowModelTests: XCTestCase {
         var lifecycle: BrowserQuickWindowRequestLifecycle {
             BrowserQuickWindowRequestLifecycle(
                 isCurrent: { [weak self] expected in
-                    self?.request.hasSamePresentationIdentity(as: expected)
-                        == true
+                    self?.rejectActionReads == false
+                        && self?.request.hasSamePresentationIdentity(as: expected) == true
                 },
                 replace: { [weak self] expected, revised in
                     guard

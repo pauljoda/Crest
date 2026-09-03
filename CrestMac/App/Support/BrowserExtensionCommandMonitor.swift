@@ -30,7 +30,7 @@ final class BrowserExtensionCommandMonitor {
     private func handle(_ event: NSEvent) -> NSEvent? {
         guard event.type == .keyDown,
             !event.isARepeat,
-            NSApp.keyWindow?.title == ProductIdentity.name,
+            Self.acceptsWindow(NSApp.keyWindow),
             !(NSApp.keyWindow?.firstResponder is ShortcutRecorderButton),
             let shortcut = BrowserShortcut(event: event),
             shortcut.isValid,
@@ -55,4 +55,10 @@ final class BrowserExtensionCommandMonitor {
         key: .character(","),
         modifiers: .command
     )
+
+    /// Page titles are untrusted display text. Only the standard browser scene
+    /// owns this monitor's store and extension pool, not private or utility windows.
+    static func acceptsWindow(_ window: NSWindow?) -> Bool {
+        window?.identifier?.rawValue == BrowserSceneID.browser.rawValue
+    }
 }

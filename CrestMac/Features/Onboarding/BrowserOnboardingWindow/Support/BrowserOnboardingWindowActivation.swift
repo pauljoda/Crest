@@ -26,8 +26,7 @@ enum BrowserOnboardingWindowActivation {
         }
     }
 
-    private static func isSetupWindow(_ window: NSWindow) -> Bool {
+    static func isSetupWindow(_ window: NSWindow) -> Bool {
         window.identifier?.rawValue == BrowserOnboardingCoordinator.sceneID
-            || window.title == windowTitle
     }
 }

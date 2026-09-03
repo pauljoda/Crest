@@ -70,6 +70,7 @@ struct BrowserRootView: View {
                 persistSidebarWidth: persistSidebarWidth
             )
         )
+        .navigationTitle(Text(verbatim: model.windowTitle))
     }
 }
 

@@ -65,6 +65,21 @@ final class BrowserQuickWindowModel {
         pageLease?.page
     }
 
+    func windowTitle(for request: BrowserQuickWindowRequest) -> String {
+        let fallback = String(localized: "Quick Window")
+        // A Binding captured by the action lifecycle can read its older value
+        // during SwiftUI rendering. Compare the scene's current value directly.
+        guard presentedRequest.hasSamePresentationIdentity(as: request),
+            let space, !spaceAccess.isLocked(space)
+        else { return fallback }
+        return BrowserWindowTitle.resolve(
+            page: page,
+            storedTitle: releasedPageSnapshot?.title,
+            url: releasedPageSnapshot?.url ?? presentedRequest.initialURL,
+            fallback: fallback
+        )
+    }
+
     var availableSpaces: [BrowserSpace] {
         browser.session.spaces.filter {
             !browser.deletingSpaceIDs.contains($0.id)

@@ -192,6 +192,23 @@ extension BrowserRootModel {
 // MARK: - Page Synchronization
 
 extension BrowserRootModel {
+    var windowTitle: String {
+        guard let space = browser.selectedSpace,
+            !spaceAccess.isLocked(space),
+            let tab = browser.selectedTab
+        else { return ProductIdentity.name }
+        if tab.isStartPage { return String(localized: "Start Page") }
+        if let title = BrowserTab.resolvedCustomTitle(tab.customTitle) { return title }
+        // Selection can advance before the page pool does. Never read the
+        // previous tab's page, even for one update during a Space switch.
+        let page = pages.activePage(
+            matching: BrowserTabRuntimeAssignment(
+                tabID: tab.id, spaceID: space.id, profileID: space.profile.id
+            )
+        )
+        return BrowserWindowTitle.resolve(page: page, storedTitle: tab.title, url: tab.url)
+    }
+
     func synchronizePageMetadata() {
         guard let page = pages.activePage else { return }
         browser.updateSelectedTabFromPage(

@@ -594,6 +594,7 @@
 		28E14CE18B88AAB0702A9FE8 /* BrowserSidebarDropLocations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22081042CF244A5D24545428 /* BrowserSidebarDropLocations.swift */; };
 		293EA92963D9F90B5604617F /* BrowserExtensionWindowAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0917C43E8C2D155E9E2E2A /* BrowserExtensionWindowAdapter.swift */; };
 		2946807427F244C065A25D7F /* BrowserWindowAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5575ED329A0B8A93CA3CDEF5 /* BrowserWindowAccessibility.swift */; };
+		AA0290000000000000000004 /* BrowserWindowTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0290000000000000000003 /* BrowserWindowTitle.swift */; };
 		29531120C2F8BE9259D8CE70 /* BrowserExtensionUpdateChecking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8ADEAC669093C0A9BA375C /* BrowserExtensionUpdateChecking.swift */; };
 		2955DAB158F307581CF9B755 /* BrowserDownloadRiskReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5B535DACB26F8F808E167BD /* BrowserDownloadRiskReason.swift */; };
 		297785A830FA2F646A60FA41 /* BrowserPlatformPaletteExitCommandModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8CDBD37C6A983969838F84E /* BrowserPlatformPaletteExitCommandModifier.swift */; };
@@ -3457,6 +3458,7 @@
 		F30BB8D572DF754B486D1BDF /* BrowserPinnedExtensionActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB8B2253D3420893667F4D2 /* BrowserPinnedExtensionActionButton.swift */; };
 		F31F68BB5CAD1BE5BEA8345C /* BrowserHTMLTokenizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A16BAA81275F9E19CB44DE1 /* BrowserHTMLTokenizer.swift */; };
 		F331EBAF283CA599EABD2390 /* BrowserWindowTransparencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A247CD56EDD69DB15CB3395D /* BrowserWindowTransparencyTests.swift */; };
+		AA0290000000000000000002 /* BrowserWindowTitleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0290000000000000000001 /* BrowserWindowTitleTests.swift */; };
 		F340C6C9DF16FD60F4255F27 /* BrowserDataRetentionClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 077D1C08111C089B2D06BAF9 /* BrowserDataRetentionClock.swift */; };
 		F34695FB28437A4AA0F2E931 /* UserDefaultsBrowserCloudSyncStatePersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AA4486CC64548CEF40F1FEC /* UserDefaultsBrowserCloudSyncStatePersistence.swift */; };
 		F348DD13CFBC93C6166B4041 /* BrowserSourceImportSpaceHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499F4973AA7C563CAB3112EB /* BrowserSourceImportSpaceHeader.swift */; };
@@ -4491,6 +4493,7 @@
 		556ADF7E1F0E2C9123307697 /* MobileBrowserWindowSceneRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileBrowserWindowSceneRoute.swift; sourceTree = "<group>"; };
 		556EFA7D4441484ABC8BBD0F /* MobileBrowserTransientChromePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileBrowserTransientChromePolicy.swift; sourceTree = "<group>"; };
 		5575ED329A0B8A93CA3CDEF5 /* BrowserWindowAccessibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWindowAccessibility.swift; sourceTree = "<group>"; };
+		AA0290000000000000000003 /* BrowserWindowTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWindowTitle.swift; sourceTree = "<group>"; };
 		55BFB83D7CB3AB34A03DAE12 /* BrowserUtilityListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserUtilityListRow.swift; sourceTree = "<group>"; };
 		55D35CE9D5E99928774DA065 /* BrowserTabAccessibilityID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTabAccessibilityID.swift; sourceTree = "<group>"; };
 		561CAB2EF4E4117116C75923 /* BrowserWebKitFeatureFlagPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWebKitFeatureFlagPersistence.swift; sourceTree = "<group>"; };
@@ -5175,6 +5178,7 @@
 		A2277E78E1015A925515C963 /* MobileBrowserPage+WKNavigationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MobileBrowserPage+WKNavigationDelegate.swift"; sourceTree = "<group>"; };
 		A22AF7F3224371F8F7E54D27 /* BrowserExtensionInstallationControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserExtensionInstallationControllerTests.swift; sourceTree = "<group>"; };
 		A247CD56EDD69DB15CB3395D /* BrowserWindowTransparencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWindowTransparencyTests.swift; sourceTree = "<group>"; };
+		AA0290000000000000000001 /* BrowserWindowTitleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWindowTitleTests.swift; sourceTree = "<group>"; };
 		A2689C5E12DB1B9761C3ABD7 /* BrowserFullscreenChromeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserFullscreenChromeTests.swift; sourceTree = "<group>"; };
 		A26A0B9A5136689A350A2719 /* BrowserFindSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserFindSessionTests.swift; sourceTree = "<group>"; };
 		A26BC8261A67CD25F661675F /* BrowserSidebarReorderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSidebarReorderState.swift; sourceTree = "<group>"; };
@@ -6307,6 +6311,7 @@
 				3AA82ADBD8922FABBF039E3D /* BrowserWebsiteDataStoreTests.swift */,
 				DEDA76F35175C4C0522B6C2A /* BrowserWindowStateSplitLayoutTests.swift */,
 				A247CD56EDD69DB15CB3395D /* BrowserWindowTransparencyTests.swift */,
+				AA0290000000000000000001 /* BrowserWindowTitleTests.swift */,
 				17FB17C1FF0205B5F24B48BF /* KeychainCredentialVaultTests.swift */,
 				690425422B8544374CBF2562 /* PinnedTabGridLayoutTests.swift */,
 				D5B96E9E22CC49A06F3AD96F /* ProductIdentityTests.swift */,
@@ -13270,6 +13275,7 @@
 			isa = PBXGroup;
 			children = (
 				5575ED329A0B8A93CA3CDEF5 /* BrowserWindowAccessibility.swift */,
+				AA0290000000000000000003 /* BrowserWindowTitle.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -17377,6 +17383,7 @@
 				D70E2F08BBD477852B29DE83 /* BrowserWebsiteDataStoreTests.swift in Sources */,
 				4B4966F772C97AF4D030514E /* BrowserWindowStateSplitLayoutTests.swift in Sources */,
 				F331EBAF283CA599EABD2390 /* BrowserWindowTransparencyTests.swift in Sources */,
+				AA0290000000000000000002 /* BrowserWindowTitleTests.swift in Sources */,
 				526ADDD44D9398823D16BA6D /* KeychainCredentialVaultTests.swift in Sources */,
 				E9A0F778BE59A4DACB6BD6B5 /* PinnedTabGridLayoutTests.swift in Sources */,
 				548F4BD4216817BCA07FA047 /* ProductIdentityTests.swift in Sources */,
@@ -19013,6 +19020,7 @@
 				54A1960281C44AA9BFA2BCBC /* BrowserWebsiteDataStore.swift in Sources */,
 				E11FFBB8D3B88D9E24F78EC1 /* BrowserWebsiteDataStoreRemoving.swift in Sources */,
 				2946807427F244C065A25D7F /* BrowserWindowAccessibility.swift in Sources */,
+				AA0290000000000000000004 /* BrowserWindowTitle.swift in Sources */,
 				8E72A9C790D059F63829A870 /* BrowserWindowAccessibilityID.swift in Sources */,
 				61A69894AE4EB0AC471CDFB3 /* BrowserWindowAtmosphere.swift in Sources */,
 				D66ACD2CC3C240434467D275 /* BrowserWindowState.swift in Sources */,
