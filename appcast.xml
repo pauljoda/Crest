@@ -6,28 +6,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.18</title>
-            <pubDate>Wed, 02 Sep 2026 12:52:49 +0000</pubDate>
+            <title>0.5.24</title>
+            <pubDate>Thu, 03 Sep 2026 12:55:58 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1064</sparkle:version>
-            <sparkle:shortVersionString>0.5.18</sparkle:shortVersionString>
+            <sparkle:version>1067</sparkle:version>
+            <sparkle:shortVersionString>0.5.24</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### Improved
+
+- Show webpages as soon as they begin loading, with clear progress while content arrives
+- Improve extension compatibility across background messaging, notifications, page menus, and installation
+
 ### Fixed
 
-- Show visited links accurately across websites without exposing each Space's history to webpages
-- Keep tab and folder dragging accurate while scrolling long sidebar lists
+- Launch reliably and keep Start Page searches and newly opened tabs responsive on iPhone and iPad
+- Keep high-resolution canvas-based editors sharp on Retina displays
+- Prevent the page loading bar from staying visible after in-page navigation
+- Switch Spaces without flashing blank pages on macOS
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/3ec941810b3ebe38c628e17a06cbb418fa4b3634...804e0d81d7f2436f7c3609424a97b48b5acb32b7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.18-nightly-2026-09-02-804e0d8-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/804e0d81d7f2436f7c3609424a97b48b5acb32b7...176cf568bf586b5a2a8ed24afe330cfa9cb94f3c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.24-nightly-2026-09-03-176cf56-arm64.dmg)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.18-nightly-2026-09-02-804e0d8-arm64.dmg" length="8946454" type="application/octet-stream" sparkle:edSignature="ak9mdLagHTt6UE1Zo4P64+murmIkFfLLCQUPh71XMYwIEXOCocAsymNV+Tve8y9H0gTrh4ON6Ymdv17I8CeVBQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.24-nightly-2026-09-03-176cf56-arm64.dmg" length="9001238" type="application/octet-stream" sparkle:edSignature="iAdkSo8rCl0wEj4XOA/aOkCAD2u8hSRVmFE0uxXKqHtQunN0X1esFH6lSh09RwvTNovUKAg8fB/AYFkd+OCXDA=="/>
         </item>
         <item>
             <title>0.5.7</title>
@@ -73,6 +80,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: MEnKewdm/NSiIZ2vUmFyRiRf/p6ZzJChPiHRSpHjyXR+zrI36MWybHXPuuNLIixCofjO/u9XSgdA9OvkLMqSDQ==
-length: 4241
+edSignature: 8EiOAk+rQ4Tqd50tzZLZTJxljSqi/sQF+qzWjRZOdY+pIpu8JFOCHFMr9o/sj1/Ta4pkm2xmtSz56+Y7/fkNDQ==
+length: 4578
 -->
