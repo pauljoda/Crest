@@ -61,7 +61,7 @@ enum BrowserSidebarWidgetDeckStyle {
     static var quietControlHitTarget: CGFloat {
         max(quietControlDiameter, CrestLayout.minimumHitTarget)
     }
-    static let actionHeight: CGFloat = 32
+    static let actionHeight: CGFloat = 28
     static let headerTileSize: CGFloat = 30
     static let badgeVerticalPadding: CGFloat = 1
     static let stepperBadgeHorizontalPadding: CGFloat = 2
@@ -1155,6 +1155,7 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
             progressZone
             actions
         }
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("Crest software update")
     }
 
@@ -1240,86 +1241,112 @@ private struct BrowserSoftwareUpdateSidebarWidget: View {
     @ViewBuilder
     private var actions: some View {
         if !instance.availableActions.isEmpty {
-            HStack(spacing: CrestSpacing.small) {
-                if instance.availableActions.contains(.declineAutomaticUpdateChecks) {
-                    actionButton(
-                        .declineAutomaticUpdateChecks,
-                        label: "Not Now",
-                        emphasis: .quiet
-                    )
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: CrestSpacing.small) {
+                    actionButtons
                 }
-
-                if instance.availableActions.contains(.dismissExactUpdate) {
-                    actionButton(
-                        .dismissExactUpdate,
-                        label: "Skip This Version",
-                        emphasis: .quiet
-                    )
-                }
-
-                if instance.availableActions.contains(.viewUpdateInformation),
-                    let informationURL = update.informationURL
-                {
-                    Link("View Release", destination: informationURL)
-                        .buttonStyle(
-                            BrowserSidebarWidgetActionButtonStyle(
-                                emphasis: .prominent
-                            )
-                        )
-                } else if instance.availableActions.contains(.installUpdate) {
-                    actionButton(
-                        .installUpdate,
-                        label: "Download Update",
-                        emphasis: .prominent
-                    )
-                } else if instance.availableActions.contains(.installAndRelaunch) {
-                    actionButton(
-                        .installAndRelaunch,
-                        label: "Restart and Update",
-                        emphasis: .prominent
-                    )
-                } else if instance.availableActions.contains(.cancelUpdate) {
-                    actionButton(
-                        .cancelUpdate,
-                        label: "Cancel Download",
-                        emphasis: .quiet
-                    )
-                } else if instance.availableActions.contains(.retryUpdateInstallation) {
-                    actionButton(
-                        .retryUpdateInstallation,
-                        label: "Try Quitting Again",
-                        emphasis: .prominent
-                    )
-                } else if instance.availableActions.contains(.enableAutomaticUpdateChecks) {
-                    actionButton(
-                        .enableAutomaticUpdateChecks,
-                        label: "Check Automatically",
-                        emphasis: .prominent
-                    )
-                } else if instance.availableActions.contains(.acknowledgeUpdateStatus) {
-                    actionButton(
-                        .acknowledgeUpdateStatus,
-                        label: "Dismiss",
-                        emphasis: .quiet
-                    )
+                VStack(spacing: CrestSpacing.small) {
+                    actionButtons
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        if instance.availableActions.contains(.declineAutomaticUpdateChecks) {
+            actionButton(
+                .declineAutomaticUpdateChecks,
+                label: "Not Now",
+                symbol: "clock",
+                emphasis: .quiet
+            )
+        }
+
+        if instance.availableActions.contains(.dismissExactUpdate) {
+            actionButton(
+                .dismissExactUpdate,
+                label: "Skip",
+                symbol: "forward.end",
+                accessibilityLabel: "Skip This Version",
+                emphasis: .quiet
+            )
+        }
+
+        if instance.availableActions.contains(.viewUpdateInformation),
+            let informationURL = update.informationURL
+        {
+            Link(destination: informationURL) {
+                Label("View Release", systemImage: "arrow.up.right")
+            }
+            .buttonStyle(
+                BrowserSidebarWidgetActionButtonStyle(
+                    emphasis: .prominent
+                )
+            )
+        } else if instance.availableActions.contains(.installUpdate) {
+            actionButton(
+                .installUpdate,
+                label: "Download",
+                symbol: "arrow.down.circle",
+                accessibilityLabel: "Download Update",
+                emphasis: .prominent
+            )
+        } else if instance.availableActions.contains(.installAndRelaunch) {
+            actionButton(
+                .installAndRelaunch,
+                label: "Restart",
+                symbol: "arrow.down.to.line",
+                accessibilityLabel: "Restart and Update",
+                emphasis: .prominent
+            )
+        } else if instance.availableActions.contains(.cancelUpdate) {
+            actionButton(
+                .cancelUpdate,
+                label: "Cancel",
+                symbol: "xmark",
+                emphasis: .quiet
+            )
+        } else if instance.availableActions.contains(.retryUpdateInstallation) {
+            actionButton(
+                .retryUpdateInstallation,
+                label: "Retry",
+                symbol: "arrow.clockwise",
+                accessibilityLabel: "Try Quitting Again",
+                emphasis: .prominent
+            )
+        } else if instance.availableActions.contains(.enableAutomaticUpdateChecks) {
+            actionButton(
+                .enableAutomaticUpdateChecks,
+                label: "Check Automatically",
+                symbol: "arrow.trianglehead.2.clockwise.rotate.90",
+                emphasis: .prominent
+            )
+        } else if instance.availableActions.contains(.acknowledgeUpdateStatus) {
+            actionButton(
+                .acknowledgeUpdateStatus,
+                label: "Dismiss",
+                symbol: "xmark",
+                emphasis: .quiet
+            )
         }
     }
 
     private func actionButton(
         _ action: BrowserSidebarWidgetAction,
         label: LocalizedStringKey,
+        symbol: String,
+        accessibilityLabel: LocalizedStringKey? = nil,
         emphasis: BrowserSidebarWidgetActionEmphasis
     ) -> some View {
         Button {
             perform(action, instance.id)
         } label: {
-            Text(label)
+            Label(label, systemImage: symbol)
         }
         .buttonStyle(BrowserSidebarWidgetActionButtonStyle(emphasis: emphasis))
-        .accessibilityLabel(label)
-        .help(label)
+        .accessibilityLabel(accessibilityLabel ?? label)
+        .help(accessibilityLabel ?? label)
     }
 
     private var isTransferring: Bool {
@@ -1551,13 +1578,12 @@ private struct BrowserSidebarWidgetActionSurface: View {
 
     private var labeled: some View {
         configuration.label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: .semibold
-                )
-            )
-            .lineLimit(1)
+            .font(.subheadline.weight(.medium))
+            .labelStyle(.titleAndIcon)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, CrestSpacing.medium)
+            .padding(.vertical, CrestSpacing.extraSmall)
             .frame(
                 maxWidth: .infinity,
                 minHeight: BrowserSidebarWidgetDeckStyle.actionHeight

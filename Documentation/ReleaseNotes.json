@@ -401,6 +401,10 @@
     "2026-09-03-refresh-before-update-download": {
       "category": "fixed",
       "message": "Check for the newest build in your channel before downloading an update"
+    },
+    "2026-09-03-compact-software-update-actions": {
+      "category": "improved",
+      "message": "Keep sidebar update buttons compact and readable with shorter labels, icons, and more breathing room"
     }
   }
 }
