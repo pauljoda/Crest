@@ -74,6 +74,9 @@ final class BrowserSoftwareUpdateService {
         userDriver.updateCycleDidFinish = { [weak refreshCoordinator] in
             refreshCoordinator?.updateCycleDidFinish()
         }
+        userDriver.updateWasFound = { [weak refreshCoordinator] in
+            refreshCoordinator?.updateWasFound()
+        }
 
         guard isEnabled else { return }
         startUpdater()

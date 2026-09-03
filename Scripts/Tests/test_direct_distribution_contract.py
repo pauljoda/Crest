@@ -18,7 +18,6 @@ class DirectDistributionContractTests(unittest.TestCase):
         workflow = RELEASE_WORKFLOW.read_text()
 
         self.assertIn("preflight:", workflow)
-        self.assertIn('release_tag="nightly"', workflow)
         self.assertIn(
             'if [[ "$channel" == "nightly" && "$previous_commit" == "$GITHUB_SHA" ]]',
             workflow,
@@ -29,10 +28,11 @@ class DirectDistributionContractTests(unittest.TestCase):
             workflow,
         )
 
-    def test_rolling_channels_publish_one_clearly_named_asset_set(self) -> None:
+    def test_each_release_publishes_one_clearly_named_asset_set(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
 
-        self.assertIn('release_tag="nightly"', workflow)
+        self.assertNotIn('release_tag="nightly"', workflow)
+        self.assertNotIn('release_tag="development"', workflow)
         self.assertIn("maximum_versions=1", workflow)
         self.assertIn('installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"', workflow)
         self.assertIn('checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"', workflow)
@@ -40,7 +40,7 @@ class DirectDistributionContractTests(unittest.TestCase):
         self.assertIn('release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"', workflow)
         self.assertIn("generate-release-notes.py", workflow)
 
-    def test_interrupted_rolling_release_uses_the_last_published_appcast(self) -> None:
+    def test_interrupted_release_uses_the_last_published_appcast_and_retains_history(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
 
         self.assertIn("resolve-published-release.py", workflow)
@@ -48,8 +48,10 @@ class DirectDistributionContractTests(unittest.TestCase):
         self.assertIn('appcast_filename="appcast.xml"', workflow)
         self.assertIn('git show "FETCH_HEAD:${appcast_filename}"', workflow)
         self.assertIn("reconcile-release-assets.py", workflow)
-        self.assertIn("--prune-other-assets", workflow)
-        self.assertNotIn("gh release delete-asset", workflow)
+        self.assertNotIn("--prune-other-assets", workflow)
+        self.assertNotIn("gh release delete", workflow)
+        self.assertNotIn("gh release edit", workflow)
+        self.assertNotIn("force=true", workflow)
         self.assertNotIn("--clobber", workflow)
         self.assertIn("local attempt delay exit_code", workflow)
         self.assertNotIn("local attempt delay status", workflow)

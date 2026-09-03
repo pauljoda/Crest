@@ -14,15 +14,29 @@ build supports native extension companions.
 
 | Channel | Trigger | GitHub Release | Sparkle channel |
 | --- | --- | --- | --- |
-| Stable | Push an exact `v<marketing-version>` tag | Latest, non-prerelease | Default |
-| Nightly | Daily schedule or manual workflow dispatch | Rolling prerelease | `nightly` |
-| Development | Manual workflow dispatch after local validation | Rolling prerelease | `development` |
+| Stable | Push an exact `v<marketing-version>` tag | `v<version>`, Latest, non-prerelease | Default |
+| Nightly | Daily schedule or manual dispatch, only when the source commit changes | New `nightly-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `nightly` |
+| Development | Manual workflow dispatch after local validation | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
+
+Browse [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
+[Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
+[Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
+The README links to every channel, and each release's notes link to its own
+channel. GitHub's
+[release search](https://docs.github.com/en/repositories/releasing-projects-on-github/searching-a-repositorys-releases)
+accepts `prerelease:false`, `prerelease:true "Nightly builds"`, and
+`prerelease:true "Development builds"` to filter channels using their release-note
+descriptions. The links work for both the old channel releases and new tagged builds.
+Only stable releases receive GitHub's Latest designation. Manual dispatch
+offers development and nightly; stable publication requires a tag push.
 
 The marketing version comes from `Config/Version.xcconfig`. Stable tags must
 match it exactly. Distributed build numbers add the GitHub Actions run number
 to Crest's public-repository build epoch. The epoch keeps Sparkle ordering
 strictly increasing across the repository migration; the run number keeps every
-subsequent published update newer than the prior build.
+subsequent published update newer than the prior build. Preflight also reads
+both signed appcasts and raises the build number above every published build,
+so retries and delayed runs cannot publish an update that Sparkle considers older.
 
 The appcast is hosted at:
 
@@ -36,22 +50,29 @@ stable or nightly entries:
 The `updates` branch is workflow-owned. It contains the appcasts, a short
 README, and `release-note-publication.json`, whose independent stable, nightly,
 and development cursors record the last successfully published catalog entry.
-Stable binaries remain immutable GitHub Release assets. Nightly and development
-builds each reuse one rolling prerelease, retain only the current build's
-assets, and prefix the filenames with `Installer-`, `Checksum-`, or
-`Debug-Symbols-` so their purpose is visible before GitHub truncates the
-remaining name. Every filename still carries the version and, for rolling
-builds, the UTC date and source commit, so Sparkle never advances to an
-overwritten binary. GitHub Packages is not part of the desktop distribution
-path.
+Every build gets its own GitHub Release and retains its assets. Nightly and
+development tags include the version, UTC date, build number, workflow run, and
+attempt, such as `nightly-0.5.25-2026-09-03-1061-r61.1`. Each run and rerun gets
+a new tag, even after an interrupted appcast publication, so it cannot overwrite
+an earlier attempt's installer. Release titles put the
+channel first and include the version, date, and build. Each release therefore
+keeps its actual publication date.
+
+Asset filenames start with `Installer-`, `Checksum-`, or `Debug-Symbols-`
+so their purpose is visible before GitHub truncates the remaining name.
+Every filename carries the version; prerelease filenames also include the UTC
+date and source commit. The workflow never moves existing channel tags or
+deletes older releases. Existing `nightly` and `development` releases remain
+available for old appcast links. GitHub Packages is not part of desktop
+distribution.
 
 Before allocating the macOS signing runner, a nightly preflight compares the
-current source commit with the last nightly in the signed appcast. The appcast,
-rather than the mutable rolling tag, is the completed-publication boundary. An
+current source commit with the last nightly in the signed appcast. The appcast
+is the completed-publication boundary. An
 unchanged scheduled or manually dispatched nightly succeeds without building,
-notarizing, creating a release, or advancing an appcast. After the first
-successful rolling nightly publication, the workflow removes the superseded
-date-stamped nightly releases and tags.
+notarizing, creating a release, or advancing an appcast. If no nightly appcast
+exists, preflight builds even if a GitHub Release exists, because that release
+may belong to an interrupted publication.
 
 Release notes come from the explicit `Documentation/ReleaseNotes.json` catalog.
 Every product or architecture commit adds a stable entry ID, category, and
@@ -88,13 +109,21 @@ appcast nor its release-note cursor advances. An update therefore never points
 at an absent or unverified disk image, and the next successful attempt retains
 all unpublished release-note entries.
 
-Rolling publication is safe to repeat after an interrupted GitHub request. The
+Prerelease publication is safe to repeat after an interrupted GitHub request. The
 workflow reuses matching uploaded assets, removes only incomplete or mismatched
 assets for the target build, and retries each replacement with state
-verification. The prior complete build remains downloadable until the new
-signed appcast has been pushed. Only then does the workflow prune superseded
-assets. If a failure advances the rolling tag but not the appcast, the next run
-still builds release notes from the last successfully published channel cursor.
+verification. Older releases and their assets remain downloadable after the
+new signed appcast is pushed. If a release is created but its appcast fails to
+publish, the next run still uses the last successfully published channel cursor
+for release notes and the signed appcast for nightly deduplication.
+
+When a user chooses Download Update from an available update card, Crest ends
+that undownloaded offer and asks Sparkle to check the selected channel again.
+It downloads the newly selected compatible build without an extra click. A
+failed or cancelled check does not install the old offer. Sparkle continues to
+own signature verification, channel filtering, version selection, and installation.
+Already downloaded, extracting, or prepared updates retain Sparkle's existing
+installation lifecycle.
 
 ## GitHub production environment
 
@@ -130,8 +159,8 @@ Before publishing a stable tag:
    a manual update check and the normal relaunch path.
 
 Nightly and development builds use the same signing, notarization, and
-verification gates as a stable build. Both rolling prereleases keep only their
-current asset set after the signed appcast has advanced. Development
+verification gates as a stable build. Each prerelease retains its own
+asset set after the signed appcast has advanced. Development
 publication keeps only the latest queued public commit when dispatches arrive
 faster than Apple notarization. Every distributed build defaults to its own
 channel, while an existing user choice remains authoritative.

@@ -62,6 +62,8 @@ class ReleaseNotesTests(unittest.TestCase):
         current_commit: str,
         previous_commit: str | None = None,
         previous_entry: str | None = None,
+        channel: str = "nightly",
+        release_tag: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         arguments = [
             "python3",
@@ -71,7 +73,7 @@ class ReleaseNotesTests(unittest.TestCase):
             "--repository",
             "pauljoda/Crest",
             "--channel",
-            "nightly",
+            channel,
             "--current-ref",
             current_commit,
             "--asset-name",
@@ -81,12 +83,40 @@ class ReleaseNotesTests(unittest.TestCase):
             arguments.extend(["--previous-ref", previous_commit])
         if previous_entry is not None:
             arguments.extend(["--previous-entry", previous_entry])
+        if release_tag is not None:
+            arguments.extend(["--release-tag", release_tag])
         return subprocess.run(
             arguments,
             check=False,
             capture_output=True,
             text=True,
         )
+
+    def test_channel_links_and_installer_use_the_distinct_release_tag(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = pathlib.Path(temporary_directory)
+            self.run_git(repository, "init", "--initial-branch=main")
+            self.run_git(repository, "config", "user.name", "Crest Tests")
+            self.run_git(repository, "config", "user.email", "crest-tests@example.invalid")
+            previous = self.commit(repository, "Initial build")
+            current = self.commit(repository, "fix: Keep release history")
+            for channel in ("stable", "nightly", "development"):
+                with self.subTest(channel=channel):
+                    tag = "v0.5.25" if channel == "stable" else f"{channel}-0.5.25-2026-09-03-1061-r61.1"
+                    result = self.generate_notes(
+                        repository, current, previous,
+                        channel=channel, release_tag=tag,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn(f"/releases/download/{tag}/Installer-", result.stdout)
+                    query = (
+                        "prerelease%3Afalse" if channel == "stable"
+                        else f"prerelease%3Atrue+%22{channel.title()}+builds%22"
+                    )
+                    self.assertIn(
+                        f"[Browse {channel.title()} releases](https://github.com/pauljoda/Crest/releases?q={query})",
+                        result.stdout,
+                    )
 
     def test_catalog_controls_public_categories_and_copy(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

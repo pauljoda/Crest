@@ -14,7 +14,7 @@ engineering contracts needed to build and maintain it.
   mapping for release projects, issues, completion evidence, and the roadmap.
 - [Repository guardrails](RepositoryGuardrails.md) — source layout, validation,
   dependency, and public-tree contracts.
-- [Distribution](Distribution.md) — stable and rolling channels, signing,
+- [Distribution](Distribution.md) — release channels, signing,
   notarization, appcasts, and release verification.
 
 ## Browser and extension behavior

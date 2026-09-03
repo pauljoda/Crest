@@ -17,6 +17,9 @@ final class BrowserSoftwareUpdateModel {
     private(set) var didRelaunch = false
     private(set) var canRetryTermination = false
     private(set) var isFixture = false
+    private(set) var allowsOfferRefresh = true
+
+    @ObservationIgnored var refreshBeforeDownload: (() -> Void)?
 
     @ObservationIgnored private weak var widgetSource: BrowserSoftwareUpdateWidgetSource?
 
@@ -67,6 +70,7 @@ final class BrowserSoftwareUpdateModel {
         informationURL: URL? = nil,
         isInformationOnly: Bool,
         isFixture: Bool = false,
+        allowsOfferRefresh: Bool = true,
         install: @escaping () -> Void,
         skip: @escaping () -> Void,
         dismiss: @escaping () -> Void = {}
@@ -81,6 +85,7 @@ final class BrowserSoftwareUpdateModel {
         self.isInformationOnly = isInformationOnly
         self.isAutomaticUpdate = false
         self.isFixture = isFixture
+        self.allowsOfferRefresh = allowsOfferRefresh
         self.install = install
         self.skip = skip
         self.dismiss = dismiss
@@ -282,6 +287,15 @@ final class BrowserSoftwareUpdateModel {
     }
 
     func installUpdate() {
+        guard phase == .updateAvailable, !isInformationOnly, install != nil else { return }
+        if allowsOfferRefresh, !isFixture, let refreshBeforeDownload {
+            refreshBeforeDownload()
+            return
+        }
+        installPresentedUpdate()
+    }
+
+    func installPresentedUpdate() {
         guard !isInformationOnly, let install else { return }
         self.install = nil
         skip = nil
@@ -295,9 +309,10 @@ final class BrowserSoftwareUpdateModel {
     /// persists a version exclusion, and is unavailable once download or
     /// installation work has begun.
     @discardableResult
-    func beginRefreshingAvailableUpdate() -> Bool {
-        guard phase == .updateAvailable, let dismiss else { return false }
+    func beginRefreshingAvailableUpdate(cancellation: (() -> Void)? = nil) -> Bool {
+        guard phase == .updateAvailable, allowsOfferRefresh, let dismiss else { return false }
         resetCallbacks()
+        self.cancellation = cancellation
         phase = .checking
         message = "Checking whether a newer Crest update is available…"
         present()

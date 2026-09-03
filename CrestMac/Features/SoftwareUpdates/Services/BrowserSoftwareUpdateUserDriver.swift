@@ -106,6 +106,7 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
     let model: BrowserSoftwareUpdateModel
     var channel: BrowserSoftwareUpdateChannel
     var updateCycleDidFinish: (() -> Void)?
+    var updateWasFound: (() -> Void)?
     private let feedURLOverride: URL?
     private let automaticUpdatePresenter: BrowserAutomaticSoftwareUpdatePresenter
 
@@ -154,10 +155,12 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
             releaseNotes: appcastItem.itemDescription,
             informationURL: appcastItem.infoURL,
             isInformationOnly: appcastItem.isInformationOnlyUpdate,
+            allowsOfferRefresh: state.stage == .notDownloaded,
             install: { reply(.install) },
             skip: { reply(.skip) },
             dismiss: { reply(.dismiss) }
         )
+        updateWasFound?()
     }
 
     func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {

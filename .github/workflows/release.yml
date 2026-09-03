@@ -16,7 +16,6 @@ on:
         options:
           - development
           - nightly
-          - stable
 
 permissions:
   contents: write
@@ -81,13 +80,22 @@ jobs:
           build_number="$((build_epoch + GITHUB_RUN_NUMBER))"
           release_date="$(date -u +%Y-%m-%d)"
           short_sha="$(git rev-parse --short=7 "$GITHUB_SHA")"
+          retry_github git fetch origin updates
+          # Reruns and delayed runs must also outrank completed publications.
+          build_number="$(
+            python3 Scripts/next-release-build-number.py \
+              --git-ref FETCH_HEAD \
+              --minimum "$build_number"
+          )"
 
-          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_TYPE" == "tag" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             channel=stable
-          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            channel=development
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             channel="$REQUESTED_CHANNEL"
+            if [[ "$channel" != "development" && "$channel" != "nightly" ]]; then
+              printf 'Manual publication supports only development or nightly.\n' >&2
+              exit 1
+            fi
           else
             channel=nightly
           fi
@@ -99,15 +107,15 @@ jobs:
               exit 1
             fi
             release_tag="$expected_tag"
-            release_title="Crest ${marketing_version}"
+            release_title="Crest Stable ${marketing_version}"
             asset_base="Crest-${marketing_version}-arm64"
           elif [[ "$channel" == "nightly" ]]; then
-            release_tag="nightly"
-            release_title="Crest ${marketing_version} Nightly ${release_date} (${short_sha})"
+            release_tag="nightly-${marketing_version}-${release_date}-${build_number}-r${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            release_title="Crest Nightly ${marketing_version} · ${release_date} · Build ${build_number}"
             asset_base="Crest-${marketing_version}-nightly-${release_date}-${short_sha}-arm64"
           else
-            release_tag="development"
-            release_title="Crest ${marketing_version} Development ${release_date} (${short_sha})"
+            release_tag="development-${marketing_version}-${release_date}-${build_number}-r${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            release_title="Crest Development ${marketing_version} · ${release_date} · Build ${build_number}"
             asset_base="Crest-${marketing_version}-development-${release_date}-${short_sha}-arm64"
           fi
 
@@ -115,7 +123,6 @@ jobs:
           previous_tag=""
           release_note_state_filename="release-note-publication.json"
           previous_release_note_state="$RUNNER_TEMP/${release_note_state_filename}"
-          retry_github git fetch origin updates
           release_note_state_arguments=(
             marker
             --catalog Documentation/ReleaseNotes.json
@@ -133,11 +140,11 @@ jobs:
 
           if [[ "$channel" == "stable" ]]; then
             releases="$(
-              retry_github gh api \
+              retry_github gh api --paginate --slurp \
                 "repos/${GITHUB_REPOSITORY}/releases?per_page=100"
             )"
             previous_tag="$(
-              jq -r '[.[] | select(.draft == false and .prerelease == false)][0].tag_name // empty' \
+              jq -r '[.[][] | select(.draft == false and .prerelease == false)][0].tag_name // empty' \
                 <<< "$releases"
             )"
           else
@@ -159,25 +166,6 @@ jobs:
                   git rev-parse "${published_commit_prefix}^{commit}"
                 )"
               fi
-            fi
-
-            if [[ -z "$previous_commit" && "$channel" == "nightly" ]]; then
-              if gh release view nightly --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-                previous_tag=nightly
-              else
-                releases="$(
-                  retry_github gh api \
-                    "repos/${GITHUB_REPOSITORY}/releases?per_page=100"
-                )"
-                previous_tag="$(
-                  jq -r '[.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$")))][0].tag_name // empty' \
-                    <<< "$releases"
-                )"
-              fi
-            elif [[ -z "$previous_commit" ]] \
-                && gh release view development \
-                  --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              previous_tag=development
             fi
           fi
 
@@ -399,25 +387,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          retry_github() {
-            local attempt delay exit_code
-            delay=2
-            for attempt in 1 2 3 4 5 6; do
-              if "$@"; then
-                return 0
-              else
-                exit_code=$?
-              fi
-              if [[ "$attempt" == 6 ]]; then
-                return "$exit_code"
-              fi
-              print -u2 "GitHub request failed; retrying in ${delay} seconds."
-              sleep "$delay"
-              delay=$((delay * 2))
-            done
-          }
-
-          ensure_rolling_release() {
+          ensure_prerelease() {
             local attempt delay
             delay=2
             for attempt in 1 2 3 4 5 6; do
@@ -440,7 +410,7 @@ jobs:
                 return 1
               fi
               print -u2 \
-                "Unable to confirm the rolling release; retrying in ${delay} seconds."
+                "Unable to confirm the release; retrying in ${delay} seconds."
               sleep "$delay"
               delay=$((delay * 2))
             done
@@ -473,26 +443,13 @@ jobs:
           symbols_asset="$publish_path/$symbols_name"
 
           if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
-            ensure_rolling_release
+            ensure_prerelease
             python3 Scripts/reconcile-release-assets.py \
               --repository "$GITHUB_REPOSITORY" \
               --release-tag "$RELEASE_TAG" \
               --asset "$installer_asset" \
               --asset "$checksum_asset" \
               --asset "$symbols_asset"
-            retry_github gh api \
-              --method PATCH \
-              "repos/${GITHUB_REPOSITORY}/git/refs/tags/${RELEASE_TAG}" \
-              -f sha="$GITHUB_SHA" \
-              -F force=true \
-              >/dev/null
-            retry_github gh release edit \
-              "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$RELEASE_TITLE" \
-              --notes-file "$release_notes" \
-              --prerelease \
-              --latest=false
           else
             release_arguments=(
               "$RELEASE_TAG"
@@ -544,8 +501,6 @@ jobs:
           updates_checkout="$RUNNER_TEMP/crest-updates-branch"
           release_root="$RUNNER_TEMP/crest-release"
           installer_name="Installer-${RELEASE_ASSET_BASE}.dmg"
-          checksum_name="Checksum-${RELEASE_ASSET_BASE}.dmg.sha256"
-          symbols_name="Debug-Symbols-${RELEASE_ASSET_BASE}.dSYM.zip"
           release_notes_name="Installer-${RELEASE_ASSET_BASE}.md"
           release_note_state_filename="release-note-publication.json"
           mkdir -p "$sparkle_root" "$feed_source" "$updates_checkout"
@@ -633,30 +588,6 @@ jobs:
           git -C "$updates_checkout" commit \
             -m "chore(updates): publish ${RELEASE_TAG}"
           retry_github git -C "$updates_checkout" push origin HEAD:updates
-
-          if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
-            python3 Scripts/reconcile-release-assets.py \
-              --repository "$GITHUB_REPOSITORY" \
-              --release-tag "$RELEASE_TAG" \
-              --asset "$release_root/publish/$installer_name" \
-              --asset "$release_root/publish/$checksum_name" \
-              --asset "$release_root/publish/$symbols_name" \
-              --prune-other-assets
-          fi
-
-          if [[ "$RELEASE_CHANNEL" == "nightly" ]]; then
-            retry_github gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              --jq '.[] | select(.draft == false and (.tag_name | test("^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{7}$"))) | .tag_name' \
-              | while IFS= read -r legacy_nightly; do
-                  [[ -n "$legacy_nightly" ]] || continue
-                  retry_github gh release delete \
-                    "$legacy_nightly" \
-                    --repo "$GITHUB_REPOSITORY" \
-                    --cleanup-tag \
-                    --yes
-                done
-          fi
 
       - name: Remove generated release data
         if: always()

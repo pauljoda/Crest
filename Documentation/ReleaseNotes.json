@@ -393,6 +393,14 @@
     "2026-09-03-focused-tab-window-titles": {
       "category": "improved",
       "message": "Show the focused tab title in macOS window lists while keeping locked Spaces private"
+    },
+    "2026-09-03-distinct-channel-releases": {
+      "category": "improved",
+      "message": "Find builds by release channel with clear publication dates and a separate download for every build"
+    },
+    "2026-09-03-refresh-before-update-download": {
+      "category": "fixed",
+      "message": "Check for the newest build in your channel before downloading an update"
     }
   }
 }

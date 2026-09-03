@@ -330,6 +330,11 @@ def release_notes(
         ]
 
     repository_url = f"{server_url.rstrip('/')}/{repository}"
+    channel_query = (
+        "prerelease:false" if channel == "stable"
+        else f'prerelease:true "{channel.title()} builds"'
+    )
+    channel_url = f"{repository_url}/releases?{urllib.parse.urlencode({'q': channel_query})}"
     download_url = (
         f"{repository_url}/releases/download/"
         f"{urllib.parse.quote(release_tag, safe='.-_')}/"
@@ -367,6 +372,8 @@ def release_notes(
             CHANNEL_DESCRIPTIONS[channel],
             "",
             f"[{details_label}]({details_url}) · [Download the installer]({download_url})",
+            "",
+            f"[Browse {channel.title()} releases]({channel_url})",
             "",
         ]
     )

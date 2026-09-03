@@ -5,6 +5,124 @@ import XCTest
 
 @MainActor
 final class BrowserSoftwareUpdateRefreshTests: XCTestCase {
+    func testDownloadRefreshesAnOldOfferAndInstallsOnlyTheNewestBuild() {
+        let model = BrowserSoftwareUpdateModel()
+        let updater = TestSoftwareUpdateChecker()
+        let coordinator = BrowserSoftwareUpdateRefreshCoordinator(
+            updater: updater,
+            model: model
+        )
+        let feed = TestSignedUpdateFeed(item: .init(version: "0.5.20", build: "1064"))
+        feed.presentNewest(in: model, userInitiated: false)
+        updater.sessionInProgress = true
+        updater.onUserInitiatedCheck = {
+            feed.presentNewest(in: model, userInitiated: true)
+            coordinator.updateWasFound()
+        }
+        feed.item = .init(version: "0.5.22", build: "1066")
+
+        model.installUpdate()
+
+        XCTAssertEqual(model.phase, .checking)
+        XCTAssertEqual(feed.dismissedBuilds, ["1064"])
+        XCTAssertEqual(feed.installedBuilds, [])
+        updater.sessionInProgress = false
+        coordinator.updateCycleDidFinish()
+
+        XCTAssertEqual(updater.userInitiatedCheckCount, 1)
+        XCTAssertEqual(model.updateBuild, "1066")
+        XCTAssertEqual(model.phase, .downloading)
+        XCTAssertEqual(feed.installedBuilds, ["1066"])
+        XCTAssertEqual(feed.skippedBuilds, [])
+    }
+
+    func testCancellingDownloadRefreshNeverInstallsTheOldOffer() {
+        let model = BrowserSoftwareUpdateModel()
+        let updater = TestSoftwareUpdateChecker()
+        let coordinator = BrowserSoftwareUpdateRefreshCoordinator(updater: updater, model: model)
+        let feed = TestSignedUpdateFeed(item: .init(version: "0.5.20", build: "1064"))
+        feed.presentNewest(in: model, userInitiated: false)
+        updater.sessionInProgress = true
+
+        model.installUpdate()
+        model.cancelCurrentOperation()
+        updater.sessionInProgress = false
+        coordinator.updateCycleDidFinish()
+
+        XCTAssertEqual(feed.installedBuilds, [])
+        XCTAssertEqual(updater.userInitiatedCheckCount, 0)
+        XCTAssertEqual(model.phase, .idle)
+    }
+
+    func testFailedDownloadRefreshDoesNotCarryInstallIntentIntoALaterCheck() {
+        let model = BrowserSoftwareUpdateModel()
+        let updater = TestSoftwareUpdateChecker()
+        let coordinator = BrowserSoftwareUpdateRefreshCoordinator(updater: updater, model: model)
+        let feed = TestSignedUpdateFeed(item: .init(version: "0.5.20", build: "1064"))
+        feed.presentNewest(in: model, userInitiated: false)
+        updater.sessionInProgress = true
+        model.installUpdate()
+        updater.sessionInProgress = false
+        coordinator.updateCycleDidFinish()
+        model.presentError(message: "Feed unavailable", acknowledgement: {})
+        coordinator.updateCycleDidFinish()
+
+        feed.item = .init(version: "0.5.22", build: "1066")
+        feed.presentNewest(in: model, userInitiated: true)
+        coordinator.updateWasFound()
+
+        XCTAssertEqual(model.phase, .updateAvailable)
+        XCTAssertEqual(feed.installedBuilds, [])
+    }
+
+    func testActivationDoesNotReplaceAPendingDownloadWithABackgroundCheck() {
+        let model = BrowserSoftwareUpdateModel()
+        let updater = TestSoftwareUpdateChecker()
+        updater.automaticallyChecksForUpdates = true
+        let coordinator = BrowserSoftwareUpdateRefreshCoordinator(updater: updater, model: model)
+        let feed = TestSignedUpdateFeed(item: .init(version: "0.5.22", build: "1066"))
+        feed.presentNewest(in: model, userInitiated: false)
+        updater.sessionInProgress = true
+        updater.onUserInitiatedCheck = {
+            feed.presentNewest(in: model, userInitiated: true)
+            coordinator.updateWasFound()
+        }
+
+        model.installUpdate()
+        coordinator.applicationDidBecomeActive(at: .distantFuture)
+        updater.sessionInProgress = false
+        coordinator.updateCycleDidFinish()
+
+        XCTAssertEqual(updater.userInitiatedCheckCount, 1)
+        XCTAssertEqual(updater.backgroundCheckCount, 0)
+        XCTAssertEqual(feed.installedBuilds, ["1066"])
+    }
+
+    func testResumedDownloadedOfferIsNotDismissedIntoARefreshLoop() {
+        let model = BrowserSoftwareUpdateModel()
+        let updater = TestSoftwareUpdateChecker()
+        let coordinator = BrowserSoftwareUpdateRefreshCoordinator(updater: updater, model: model)
+        var installCount = 0
+        var dismissCount = 0
+        model.presentUpdate(
+            title: "Crest 0.5.22",
+            version: "0.5.22",
+            build: "1066",
+            isInformationOnly: false,
+            allowsOfferRefresh: false,
+            install: { installCount += 1 },
+            skip: {},
+            dismiss: { dismissCount += 1 }
+        )
+        updater.sessionInProgress = true
+        coordinator.checkForUpdates()
+        model.installUpdate()
+
+        XCTAssertEqual(dismissCount, 0)
+        XCTAssertEqual(installCount, 1)
+        XCTAssertEqual(model.phase, .downloading)
+    }
+
     func testManualCheckDismissesStaleOfferBeforeLoadingNewestGeneration() {
         let model = BrowserSoftwareUpdateModel()
         let updater = TestSoftwareUpdateChecker()
@@ -25,6 +143,7 @@ final class BrowserSoftwareUpdateRefreshTests: XCTestCase {
                 in: model,
                 userInitiated: true
             )
+            coordinator.updateWasFound()
         }
 
         feed.item = .init(version: "0.5.6", build: "1052")

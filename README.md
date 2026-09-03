@@ -21,6 +21,10 @@
   </p>
 </div>
 
+Browse Mac releases by channel: [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
+[Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
+[Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
+
 ![Crest open to the Personal Space, with its banner-colored sidebar and pinned sites](Website/assets/crest-personal-mac-clean.png)
 
 ## A browser with boundaries

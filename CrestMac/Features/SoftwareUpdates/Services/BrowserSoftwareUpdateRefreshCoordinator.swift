@@ -26,11 +26,13 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
     private enum PendingCheck {
         case userInitiated
         case background
+        case downloadLatest
     }
 
     private let updater: any BrowserSoftwareUpdateChecking
     private let model: BrowserSoftwareUpdateModel
     private var pendingCheck: PendingCheck?
+    private var downloadsNextOffer = false
     private var lastAutomaticRefreshRequestDate: Date?
 
     init(
@@ -39,6 +41,9 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
     ) {
         self.updater = updater
         self.model = model
+        model.refreshBeforeDownload = { [weak self] in
+            self?.downloadLatestUpdate()
+        }
     }
 
     func updaterDidStart(at date: Date = Date()) {
@@ -53,7 +58,18 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
         _ = request(.userInitiated)
     }
 
+    func updateWasFound() {
+        guard downloadsNextOffer else { return }
+        downloadsNextOffer = false
+        model.installPresentedUpdate()
+    }
+
+    private func downloadLatestUpdate() {
+        _ = request(.downloadLatest)
+    }
+
     func channelDidChange() {
+        downloadsNextOffer = false
         updater.resetUpdateCycleAfterShortDelay()
 
         guard updater.sessionInProgress else { return }
@@ -66,6 +82,7 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
 
     func updateCycleDidFinish() {
         guard let pendingCheck else {
+            downloadsNextOffer = false
             model.finishRefreshIfNeeded()
             return
         }
@@ -96,9 +113,20 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
 
     @discardableResult
     private func request(_ check: PendingCheck) -> Bool {
+        if let pendingCheck {
+            if check == .downloadLatest
+                || (check == .userInitiated && pendingCheck == .background)
+            {
+                self.pendingCheck = check
+            }
+            return true
+        }
         if updater.sessionInProgress {
             pendingCheck = check
-            if model.beginRefreshingAvailableUpdate() {
+            if model.beginRefreshingAvailableUpdate(cancellation: { [weak self] in
+                self?.pendingCheck = nil
+                self?.downloadsNextOffer = false
+            }) {
                 return true
             }
 
@@ -123,6 +151,9 @@ final class BrowserSoftwareUpdateRefreshCoordinator {
             updater.checkForUpdates()
         case .background:
             updater.checkForUpdatesInBackground()
+        case .downloadLatest:
+            downloadsNextOffer = true
+            updater.checkForUpdates()
         }
         return true
     }
