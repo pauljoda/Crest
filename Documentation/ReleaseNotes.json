@@ -417,6 +417,10 @@
     "2026-09-03-quiet-webpage-keyboard-controls": {
       "category": "fixed",
       "message": "Use webpage keyboard controls without unnecessary alert sounds on macOS"
+    },
+    "2026-09-03-space-return-editor-focus": {
+      "category": "fixed",
+      "message": "Continue typing where you left off in webpage editors after switching Spaces on macOS"
     }
   }
 }

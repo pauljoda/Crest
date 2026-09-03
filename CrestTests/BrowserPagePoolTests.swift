@@ -314,14 +314,19 @@ final class BrowserPagePoolTests: XCTestCase {
 
         pool.select(session: session)
         let originalPage = try XCTUnwrap(pool.activePage)
+        originalPage.focusRestoration.remember(originalPage.webView)
+        originalPage.focusRestoration.requestRestoration()
+        XCTAssertTrue(originalPage.focusRestoration.hasPendingRestoration)
 
         pool.deactivatePagePresentation()
 
         XCTAssertNil(pool.activePage)
         XCTAssertTrue(pool.containsResidentPage(for: selectedTabID))
+        XCTAssertFalse(originalPage.focusRestoration.hasPendingRestoration)
 
         pool.select(session: session)
         XCTAssertTrue(try XCTUnwrap(pool.activePage) === originalPage)
+        XCTAssertFalse(originalPage.focusRestoration.hasPendingRestoration)
     }
 
     func testReloadRestoresTheSelectedPageWhenItsWebViewIsNotResident() throws {
@@ -592,18 +597,23 @@ final class BrowserPagePoolTests: XCTestCase {
         pool.select(session: session)
         let sourcePage = try XCTUnwrap(pool.activePage)
         XCTAssertEqual(sourcePage.spaceID, source.id)
+        sourcePage.focusRestoration.remember(sourcePage.webView)
+        sourcePage.focusRestoration.requestRestoration()
+        XCTAssertTrue(sourcePage.focusRestoration.hasPendingRestoration)
 
         XCTAssertTrue(
             session.moveTab(tab.id, from: source.id, into: destination.id)
         )
         pool.reconcile(session: session)
         XCTAssertFalse(pool.retainedTabIDs.contains(tab.id))
+        XCTAssertFalse(sourcePage.focusRestoration.hasPendingRestoration)
 
         pool.select(session: session)
         let destinationPage = try XCTUnwrap(pool.activePage)
         XCTAssertFalse(sourcePage === destinationPage)
         XCTAssertEqual(destinationPage.spaceID, destination.id)
         XCTAssertEqual(destinationPage.profileID, destination.profile.id)
+        XCTAssertFalse(destinationPage.focusRestoration.hasPendingRestoration)
     }
 
     func testEveryActivatedPageStaysResidentWithoutACountBasedLimit() {
@@ -1681,6 +1691,128 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertTrue(pool.activePage === firstPage)
         XCTAssertTrue(pool.activePage?.webView === firstWebView)
         XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testSpaceFocusReturnRestoresOnlyThatSpacesResidentResponder() throws {
+        let first = BrowserTab(title: "First", url: nil, placement: .current)
+        let second = BrowserTab(title: "Second", url: nil, placement: .current)
+        let firstSpace = makeSpace(tabs: [first], selectedTabID: first.id)
+        let secondSpace = makeSpace(tabs: [second], selectedTabID: second.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: firstSpace)
+        let firstPage = try XCTUnwrap(pool.activePage)
+        let firstWebView = firstPage.webView
+        let mount = mountForFocus(firstPage)
+
+        XCTAssertNotEqual(firstSpace.profile.id, secondSpace.profile.id)
+        for _ in 0..<3 {
+            XCTAssertTrue(mount.window.makeFirstResponder(firstWebView))
+            pool.select(tab: second, space: secondSpace)
+            let secondPage = try XCTUnwrap(pool.activePage)
+            mount.host.attach(secondPage.webView, focusRestoration: secondPage.focusRestoration)
+            XCTAssertTrue(mount.window.makeFirstResponder(secondPage.webView))
+            pool.select(tab: first, space: firstSpace)
+
+            XCTAssertTrue(pool.activePage === firstPage)
+            XCTAssertTrue(firstPage.webView === firstWebView)
+            XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+            mount.host.attach(firstWebView, focusRestoration: firstPage.focusRestoration)
+            XCTAssertTrue(
+                firstPage.focusRestoration.restoreIfNeeded(
+                    in: mount.host,
+                    gate: .init(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false),
+                    applicationIsActive: true,
+                    accessibilityOwnsFocus: false,
+                    menuIsTracking: false,
+                    windowIsKey: true
+                )
+            )
+            XCTAssertTrue(mount.window.firstResponder === firstWebView)
+        }
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testRelockingABackgroundSpaceInvalidatesItsRememberedResponder() throws {
+        let secret = BrowserTab(title: "Secret", url: nil, placement: .current)
+        let protectedSpace = makeSpace(
+            tabs: [secret], selectedTabID: secret.id, accessPolicy: .deviceOwnerAuthentication
+        )
+        let other = BrowserTab(title: "Other", url: nil, placement: .current)
+        let otherSpace = makeSpace(tabs: [other], selectedTabID: other.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: secret, space: protectedSpace)
+        let secretPage = try XCTUnwrap(pool.activePage)
+        let mount = mountForFocus(secretPage)
+        XCTAssertTrue(mount.window.makeFirstResponder(secretPage.webView))
+        pool.select(tab: other, space: otherSpace)
+        let otherPage = try XCTUnwrap(pool.activePage)
+        otherPage.focusRestoration.remember(otherPage.webView)
+        otherPage.focusRestoration.requestRestoration()
+
+        pool.relockProtectedSpace(protectedSpace)
+        XCTAssertTrue(otherPage.focusRestoration.hasPendingRestoration)
+        pool.select(tab: secret, space: protectedSpace)
+
+        XCTAssertTrue(pool.activePage === secretPage)
+        XCTAssertFalse(secretPage.focusRestoration.hasPendingRestoration)
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testInvalidProfileAssignmentReleasesItsRememberedResponder() throws {
+        let tab = BrowserTab(title: "Editor", url: nil, placement: .current)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let replacement = BrowserSpace(
+            id: space.id, profile: BrowsingProfile(), name: space.name,
+            symbol: space.symbol, accent: space.accent, folders: [],
+            tabs: [tab], selectedTabID: tab.id
+        )
+        let pool = BrowserPagePool()
+        pool.select(tab: tab, space: space)
+        let original = try XCTUnwrap(pool.activePage)
+        original.focusRestoration.remember(original.webView)
+        original.focusRestoration.requestRestoration()
+
+        pool.reconcile(
+            session: BrowserSession(spaces: [replacement], selectedSpaceID: replacement.id)
+        )
+
+        XCTAssertFalse(pool.containsResidentPage(for: tab.id))
+        XCTAssertFalse(original.focusRestoration.hasPendingRestoration)
+        pool.reconcile(validTabIDs: [])
+    }
+
+    func testSpaceFocusReturnDoesNotDisplaceNativeChrome() throws {
+        let first = BrowserTab(title: "First", url: nil, placement: .current)
+        let second = BrowserTab(title: "Second", url: nil, placement: .current)
+        let firstSpace = makeSpace(tabs: [first], selectedTabID: first.id)
+        let secondSpace = makeSpace(tabs: [second], selectedTabID: second.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: firstSpace)
+        let firstPage = try XCTUnwrap(pool.activePage)
+        let mount = mountForFocus(firstPage)
+        XCTAssertTrue(mount.window.makeFirstResponder(firstPage.webView))
+        pool.select(tab: second, space: secondSpace)
+        let field = NSTextField(string: "Browser chrome")
+        mount.host.addSubview(field)
+        XCTAssertTrue(mount.window.makeFirstResponder(field))
+        let chromeResponder = mount.window.firstResponder
+
+        pool.select(tab: first, space: firstSpace)
+
+        XCTAssertTrue(firstPage.focusRestoration.hasPendingRestoration)
+        XCTAssertFalse(
+            firstPage.focusRestoration.restoreIfNeeded(
+                in: mount.host,
+                gate: .init(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false),
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertTrue(mount.window.firstResponder === chromeResponder)
+        XCTAssertFalse(firstPage.focusRestoration.hasPendingRestoration)
         pool.reconcile(validTabIDs: [])
     }
 

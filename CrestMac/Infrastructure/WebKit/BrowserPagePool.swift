@@ -1574,6 +1574,18 @@ final class BrowserPagePool:
     /// gate ordinary and transient content until authentication succeeds.
     func relockProtectedSpace(_ space: BrowserSpace) {
         guard space.accessPolicy.requiresAuthentication else { return }
+        // A background Space can still remember its editor after departure.
+        // Locking ends that focus session even though its pages stay resident.
+        let retainedPages =
+            Array(pages.values)
+            + suspendedPagesByTabID.values.flatMap { $0 }
+            + Array(runtimeBackPagesByTabID.values)
+            + Array(runtimeForwardPagesByTabID.values)
+            + Array(transientExtensionPages.values)
+            + transientLeases.values.compactMap { $0.value?.page }
+        for page in retainedPages where page.spaceID == space.id {
+            page.focusRestoration.invalidate()
+        }
         if activePage?.spaceID == space.id
             || presentedTabIDs.contains(where: { pages[$0]?.spaceID == space.id })
         {
@@ -2113,15 +2125,15 @@ final class BrowserPagePool:
     private func prepareFocusTransition(to destination: BrowserPage?) {
         let source = activePage
         guard source !== destination else { return }
-        guard let source, let destination,
-            source.spaceID == destination.spaceID,
-            source.profileID == destination.profileID
-        else {
+        guard let source, let destination else {
             source?.focusRestoration.invalidate()
             destination?.focusRestoration.invalidate()
             return
         }
 
+        // Each resident page owns its own responder. Switching Spaces does
+        // not change that ownership; moving a tab or replacing its profile
+        // recreates the page and invalidates the old responder separately.
         source.focusRestoration.captureBeforeDeparture()
         destination.focusRestoration.requestRestoration(
             displacing: source.webView

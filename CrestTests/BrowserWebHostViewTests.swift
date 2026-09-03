@@ -269,6 +269,30 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertFalse(
             restorationPolicyAllows(gate: allowed, windowIsKey: false)
         )
+        XCTAssertFalse(
+            restorationPolicyAllows(gate: allowed, applicationIsActive: false)
+        )
+    }
+
+    func testRememberedResponderCannotRestoreInAnotherWindow() {
+        let first = focusHostSetup()
+        let second = focusHostSetup()
+        first.controller.remember(first.webView)
+        first.controller.requestRestoration()
+        XCTAssertTrue(second.window.makeFirstResponder(second.webView))
+
+        XCTAssertFalse(
+            first.controller.restoreIfNeeded(
+                in: second.host,
+                gate: .init(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false),
+                applicationIsActive: true,
+                accessibilityOwnsFocus: false,
+                menuIsTracking: false,
+                windowIsKey: true
+            )
+        )
+        XCTAssertTrue(second.window.firstResponder === second.webView)
+        XCTAssertFalse(first.controller.hasPendingRestoration)
     }
 
     func testFocusCaptureRecordsOnlyAResponderInsideTheWebView() {
@@ -700,14 +724,15 @@ final class BrowserWebHostViewTests: XCTestCase {
         windowHasAttachedSheet: Bool = false,
         menuIsTracking: Bool = false,
         accessibilityOwnsFocus: Bool = false,
-        windowIsKey: Bool = true
+        windowIsKey: Bool = true,
+        applicationIsActive: Bool = true
     ) -> Bool {
         BrowserWebFocusRestorationPolicy.allowsRestoration(
             hasPendingCandidate: true,
             candidateBelongsToWebView: true,
             gate: gate,
             windowIsKey: windowIsKey,
-            applicationIsActive: true,
+            applicationIsActive: applicationIsActive,
             windowHasAttachedSheet: windowHasAttachedSheet,
             menuIsTracking: menuIsTracking,
             accessibilityOwnsFocus: accessibilityOwnsFocus,
