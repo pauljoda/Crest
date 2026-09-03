@@ -405,6 +405,14 @@
     "2026-09-03-compact-software-update-actions": {
       "category": "improved",
       "message": "Keep sidebar update buttons compact and readable with shorter labels, icons, and more breathing room"
+    },
+    "2026-09-03-sidebar-empty-space-new-tab": {
+      "category": "new",
+      "message": "Double-click or double-tap empty sidebar space to open a new tab"
+    },
+    "2026-09-03-command-palette-content-centering": {
+      "category": "fixed",
+      "message": "Keep the command palette centered over page content as the sidebar and search results change"
     }
   }
 }

@@ -91,6 +91,12 @@ struct SpaceSidebarBrowsingContent: View {
                 editSpace: editSpace,
                 createSpace: createSpace
             )
+            .modifier(
+                BrowserSidebarEmptySpaceNewTabGesture(
+                    tabActions: tabActions,
+                    openNewTab: openNewTab
+                )
+            )
         } content: {
             BrowserSidebarTabList(
                 space: space,

@@ -781,18 +781,6 @@ final class BrowserCommandPaletteLayoutTests: XCTestCase {
         )
     }
 
-    func testOverlayCardTopInsetDependsOnTheViewportRatherThanResultQuantity() {
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.overlayCardTopInset(availableHeight: 720),
-            130.5,
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.overlayCardTopInset(availableHeight: 500),
-            BrowserCommandPaletteMetrics.overlayCardPadding,
-            accuracy: 0.0001
-        )
-    }
 }
 
 @MainActor

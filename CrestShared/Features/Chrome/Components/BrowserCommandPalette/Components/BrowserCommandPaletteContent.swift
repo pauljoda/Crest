@@ -5,6 +5,7 @@ struct BrowserCommandPaletteContent: View {
     let presentation: BrowserCommandPalettePresentation
     let morphNamespace: Namespace.ID?
     let morphID: String?
+    let overlayContentLeadingInset: CGFloat
 
     @FocusState private var queryIsFocused: Bool
 
@@ -14,6 +15,7 @@ struct BrowserCommandPaletteContent: View {
             presentation: presentation,
             morphNamespace: morphNamespace,
             morphID: morphID,
+            overlayContentLeadingInset: overlayContentLeadingInset,
             queryIsFocused: $queryIsFocused
         )
         .task {

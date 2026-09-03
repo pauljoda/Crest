@@ -5,6 +5,7 @@ struct BrowserCommandPalettePresentationView: View {
     let presentation: BrowserCommandPalettePresentation
     let morphNamespace: Namespace.ID?
     let morphID: String?
+    let overlayContentLeadingInset: CGFloat
     let queryIsFocused: FocusState<Bool>.Binding
 
     @ViewBuilder
@@ -16,7 +17,7 @@ struct BrowserCommandPalettePresentationView: View {
                     BrowserCommandPaletteLayout
                     .overlayResultAreaHeight(availableHeight: availableHeight)
 
-                ZStack(alignment: .top) {
+                ZStack {
                     BrowserCommandPaletteScrim(dismiss: model.dismiss)
                     BrowserCommandPaletteCard(
                         model: model,
@@ -26,15 +27,11 @@ struct BrowserCommandPalettePresentationView: View {
                         morphID: morphID,
                         queryIsFocused: queryIsFocused
                     )
-                    .padding(.horizontal, BrowserCommandPaletteMetrics.overlayCardPadding)
-                    .padding(
-                        .top,
-                        BrowserCommandPaletteLayout.overlayCardTopInset(
-                            availableHeight: availableHeight
-                        )
-                    )
+                    .padding(BrowserCommandPaletteMetrics.overlayCardPadding)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.leading, overlayContentLeadingInset)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         } else {
             BrowserCommandPaletteCard(

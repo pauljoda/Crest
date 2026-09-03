@@ -17,7 +17,7 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let didPromoteTransientPage: () -> Void
     let compact: Compact
     let regular: (MobileRegularWindowLayout) -> Regular
-    let palette: Palette
+    let palette: (MobileRegularWindowLayout) -> Palette
 
     var body: some View {
         ZStack {
@@ -35,20 +35,17 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                 compact
             } else {
                 GeometryReader { proxy in
-                    regular(
-                        MobileRegularWindowLayoutPolicy.resolve(
-                            availableWidth: proxy.size.width,
-                            preferredSidebarWidth: preferredSidebarWidth
-                        )
+                    let layout = MobileRegularWindowLayoutPolicy.resolve(
+                        availableWidth: proxy.size.width,
+                        preferredSidebarWidth: preferredSidebarWidth
                     )
-                    .allowsHitTesting(!isCommandPalettePresented)
-                    .accessibilityHidden(isCommandPalettePresented)
+                    regular(layout)
+                        .allowsHitTesting(!isCommandPalettePresented)
+                        .accessibilityHidden(isCommandPalettePresented)
+                        .overlay {
+                            palette(layout)
+                        }
                 }
-            }
-        }
-        .overlay {
-            if presentation == .regular {
-                palette
             }
         }
         .overlay {

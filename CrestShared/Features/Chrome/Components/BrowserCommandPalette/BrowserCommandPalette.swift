@@ -6,6 +6,7 @@ struct BrowserCommandPalette: View {
     let presentation: BrowserCommandPalettePresentation
     let morphNamespace: Namespace.ID?
     let morphID: String?
+    let overlayContentLeadingInset: CGFloat
 
     @State private var model: BrowserCommandPaletteModel
 
@@ -25,11 +26,13 @@ struct BrowserCommandPalette: View {
         dismiss: @escaping () -> Void,
         presentation: BrowserCommandPalettePresentation = .overlay,
         morphNamespace: Namespace.ID? = nil,
-        morphID: String? = nil
+        morphID: String? = nil,
+        overlayContentLeadingInset: CGFloat = 0
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
         self.morphID = morphID
+        self.overlayContentLeadingInset = overlayContentLeadingInset
         _model = State(
             initialValue: BrowserCommandPaletteModel(
                 space: space,
@@ -49,7 +52,8 @@ struct BrowserCommandPalette: View {
             model: model,
             presentation: presentation,
             morphNamespace: morphNamespace,
-            morphID: morphID
+            morphID: morphID,
+            overlayContentLeadingInset: overlayContentLeadingInset
         )
     }
 }

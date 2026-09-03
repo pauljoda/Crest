@@ -29,6 +29,10 @@ struct BrowserRootCommandPaletteLayer: View {
                 morphNamespace: commandSurfaceNamespace,
                 morphID: BrowserRootCommandSurfaceID.address(
                     spaceID: model.browser.selectedSpace?.id
+                ),
+                overlayContentLeadingInset: model.sidebarPresentation.reservedWidth(
+                    for: model.sidebarWidth,
+                    whileApproachingDock: model.isSidebarApproachingDock
                 )
             )
             .id(

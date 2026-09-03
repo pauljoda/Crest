@@ -58,15 +58,4 @@ enum BrowserCommandPaletteLayout {
         )
     }
 
-    static func overlayCardTopInset(availableHeight: CGFloat) -> CGFloat {
-        let expandedCardHeight =
-            BrowserCommandPaletteMetrics.searchFieldMinimumHeight
-            + CrestLayout.hairline
-            + overlayResultAreaHeight(availableHeight: availableHeight)
-
-        return max(
-            BrowserCommandPaletteMetrics.overlayCardPadding,
-            (availableHeight - expandedCardHeight) / 2
-        )
-    }
 }

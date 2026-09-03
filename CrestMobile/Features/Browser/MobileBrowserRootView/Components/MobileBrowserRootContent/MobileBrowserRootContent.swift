@@ -304,20 +304,26 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     )
                 }
             },
-            palette: MobileBrowserCommandPaletteLayer(
-                mode: commandPaletteMode,
-                space: browser.selectedSpace,
-                selectedTabID: browser.selectedTab?.id,
-                commands: mobileBrowserCommandContext.paletteRegistry,
-                isPrivateBrowsing: browser.isPrivateBrowsing,
-                isSourceAvailable: model.isPaletteSourceAvailable,
-                selectTab: model.selectPaletteTab,
-                openURL: { source, url, mode in
-                    model.openPaletteURL(url, mode: mode, from: source)
-                },
-                dismiss: dismissCommandPalette,
-                morphNamespace: compactChromeNamespace
-            )
+            palette: { layout in
+                MobileBrowserCommandPaletteLayer(
+                    mode: commandPaletteMode,
+                    space: browser.selectedSpace,
+                    selectedTabID: browser.selectedTab?.id,
+                    commands: mobileBrowserCommandContext.paletteRegistry,
+                    isPrivateBrowsing: browser.isPrivateBrowsing,
+                    isSourceAvailable: model.isPaletteSourceAvailable,
+                    selectTab: model.selectPaletteTab,
+                    openURL: { source, url, mode in
+                        model.openPaletteURL(url, mode: mode, from: source)
+                    },
+                    dismiss: dismissCommandPalette,
+                    morphNamespace: compactChromeNamespace,
+                    overlayContentLeadingInset: layout.reservesSidebarWidth
+                        ? navigation.regularSidebarPresentation.reservedWidth(
+                            for: layout.sidebarWidth
+                        ) : 0
+                )
+            }
         )
         .focusedSceneValue(
             \.mobileBrowserCommandContext,

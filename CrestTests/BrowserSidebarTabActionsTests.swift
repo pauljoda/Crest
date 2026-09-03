@@ -8,6 +8,79 @@ import XCTest
 /// `MobileBrowserSidebarTabActionsTests`.
 @MainActor
 final class BrowserSidebarTabActionsTests: XCTestCase {
+    func testNewTabInvokesTheExistingCommandOnceWithoutEditingTheSession() {
+        let context = makeContext()
+        let action = makeActions(context, pullFavicon: { _, _ in nil })
+        let session = context.browser.session
+        var invocationCount = 0
+
+        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
+
+        XCTAssertEqual(invocationCount, 1)
+        XCTAssertEqual(context.browser.session, session)
+    }
+
+    func testNewTabIsRefusedAfterTheSelectionMoves() {
+        let context = makeContext()
+        let action = makeActions(context, pullFavicon: { _, _ in nil })
+        context.browser.selectSpace(context.otherSpace.id)
+        var invocationCount = 0
+
+        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
+
+        XCTAssertEqual(invocationCount, 0)
+        XCTAssertEqual(context.browser.selectedSpace?.id, context.otherSpace.id)
+    }
+
+    func testNewTabIsRefusedAfterTheProfileIsReplaced() {
+        let context = makeContext()
+        let action = makeActions(context, pullFavicon: { _, _ in nil })
+        context.browser.session.spaces[0] = replacingProfile(in: context.space)
+        var invocationCount = 0
+
+        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
+
+        XCTAssertEqual(invocationCount, 0)
+    }
+
+    func testNewTabIsRefusedWhenAProtectedSpaceIsLocked() async {
+        let context = makeContext(isProtected: true)
+        let action = makeActions(context, pullFavicon: { _, _ in nil })
+        var invocationCount = 0
+
+        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
+        let didUnlock = await context.access.unlock(context.space)
+        XCTAssertTrue(didUnlock)
+        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
+        context.access.lock(context.space.id)
+        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
+
+        XCTAssertEqual(invocationCount, 1)
+    }
+
+    func testNewTabIsRefusedDuringSidebarReordering() {
+        let context = makeContext()
+        let action = makeActions(context, pullFavicon: { _, _ in nil })
+        context.browser.sidebarReorderState.begin(
+            item: .tab(
+                BrowserTabDragItem(
+                    tabID: context.tab.id,
+                    spaceID: context.space.id,
+                    profileID: context.space.profile.id
+                )
+            ),
+            section: .tabs(placement: .saved, folderID: nil),
+            at: .zero
+        )
+        var invocationCount = 0
+
+        XCTAssertFalse(action.openNewTab { invocationCount += 1 })
+        context.browser.sidebarReorderState.cancel()
+        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
+
+        XCTAssertEqual(invocationCount, 1)
+    }
+
     func testFaviconPullCannotWriteAfterProfileReplacementDuringAwait() async throws {
         let context = makeContext()
         let expectedData = Data("replacement-race".utf8)

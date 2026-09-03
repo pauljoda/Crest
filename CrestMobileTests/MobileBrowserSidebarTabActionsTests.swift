@@ -9,6 +9,19 @@ import XCTest
 /// reconcile after a tab-list mutation.
 @MainActor
 final class MobileBrowserSidebarTabActionsTests: XCTestCase {
+    func testNewTabCallsTheMobileCommandOncePerRequestWithoutInsertingTabs() {
+        let context = makeContext()
+        let action = makeActions(context)
+        let session = context.browser.session
+        var invocationCount = 0
+
+        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
+        XCTAssertTrue(action.openNewTab { invocationCount += 1 })
+
+        XCTAssertEqual(invocationCount, 2)
+        XCTAssertEqual(context.browser.session, session)
+    }
+
     /// A tab holding no page has no favicon to report, and the store says so
     /// rather than leaving the row to write something stale.
     func testFaviconPullThroughTheStoreReportsNothingForATabWithNoPage() async throws {

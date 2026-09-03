@@ -64,7 +64,9 @@ struct MobileBrowserSpacePage: View {
             MobileBrowserSpaceTabListScroll(
                 space: space,
                 browser: browser,
-                compactPageIsFullyPresented: compactPageIsFullyPresented
+                compactPageIsFullyPresented: compactPageIsFullyPresented,
+                tabActions: tabActions,
+                openNewTab: openNewTab
             ) {
                 BrowserSidebarTabList(
                     space: space,

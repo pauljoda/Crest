@@ -81,6 +81,21 @@ struct BrowserSidebarTabActions {
         return true
     }
 
+    /// Routes an empty-background gesture through the host's existing New Tab
+    /// command. Recheck ownership when the gesture ends, after any Space change.
+    @discardableResult
+    func openNewTab(_ command: () -> Void) -> Bool {
+        guard !browser.sidebarReorderState.isDragging,
+            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: assignment,
+                in: browser,
+                accessController: spaceAccess
+            ) != nil
+        else { return false }
+        command()
+        return true
+    }
+
     private func ownsUnlockedTab(_ tabID: TabID) -> Bool {
         guard
             let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
