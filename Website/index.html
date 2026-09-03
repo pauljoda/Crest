@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101827">
-  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0f1c2c">
+  <meta name="color-scheme" content="light">
   <meta name="description" content="Crest is an independent browser for Mac, iPad, and iPhone, made by an Arc user who wanted Spaces, Peek, and the sidebar to have a future.">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="author" content="Paul Davis">
@@ -31,16 +31,12 @@
   <meta name="twitter:description" content="An independent browser made with a love for Arc's best ideas, including Spaces, a calm sidebar, and Peek.">
   <meta name="twitter:image" content="https://pauljoda.github.io/Crest-Website/assets/og-card-brand.jpg">
   <meta name="twitter:image:alt" content="Crest app icon beside the words Your internet, under your colors">
-
-  <title>Crest Browser for Mac, iPad, and iPhone</title>
   <link rel="icon" href="favicon.ico" sizes="32x32">
   <link rel="icon" type="image/svg+xml" href="assets/crest-logo.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/crest-icon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
   <link rel="mask-icon" href="assets/crest-logo.svg" color="#101827">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20260902-app-store-responsive-hero">
-  <script src="site.js" defer></script>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -75,529 +71,1149 @@
       ]
     }
   </script>
+  <title>Crest — The browser for life after Arc</title>
+<style>
+/* =============================================================== tokens */
+:root{
+  --paper:#f4efe4; --paper-2:#ebe4d4; --cream:#fbf8f1;
+  --ink:#0f1c2c; --ink-2:#3d4a5c; --ink-3:#6b7585;
+  --gold:#d2ad58; --gold-2:#bd8e27;
+  --rule:rgba(15,28,44,.12); --rule-2:rgba(15,28,44,.22);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --max:1120px; --wide:1300px;
+  --work-1:#0f1c2c; --work-2:#37699e; --work-3:#bd8e27; --work-fg:#f4f1ea;
+  --pers-1:#5f7f5e; --pers-2:#b7a582; --pers-3:#c84835; --pers-fg:#1d2b22;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html:not(.noanim){scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
+body::after{content:"";position:fixed;inset:0;z-index:90;pointer-events:none;opacity:.07;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+img{display:block;max-width:100%}
+a{color:inherit}
+h1,h2,h3,p,figure{margin:0}
+h1,h2,h3{font-family:var(--serif);font-weight:400;letter-spacing:-.02em;text-wrap:balance}
+button{font:inherit;color:inherit}
+.wrap{width:min(var(--max),calc(100% - 2.5rem));margin:0 auto}
+.wide{width:min(var(--wide),calc(100% - 2.5rem));margin:0 auto}
+.skip{position:absolute;left:1rem;top:-4rem;background:var(--ink);color:#fff;padding:.6rem .9rem;border-radius:.4rem;z-index:99}
+.skip:focus{top:1rem}
+:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:.3rem}
+.eyebrow{font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.h1{font-size:clamp(2.7rem,6.4vw,5rem);line-height:1;letter-spacing:-.025em}
+.h2{font-size:clamp(2rem,3.8vw,2.9rem);line-height:1.1}
+.lede{font-size:1.15rem;line-height:1.6;color:var(--ink-2);max-width:40rem}
+.lede strong{color:var(--ink);font-weight:600}
+.section{padding:clamp(4.5rem,9vw,8rem) 0;position:relative}
+.head{display:grid;gap:1rem;max-width:46rem;margin-bottom:clamp(2rem,4vw,3.4rem)}
+.fine{font-size:.85rem;color:var(--ink-3)}
+.btns{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:.65rem;min-height:50px;padding:.6rem 1.2rem .6rem .85rem;border-radius:12px;text-decoration:none;font-weight:600;font-size:.95rem;border:1px solid transparent;transition:transform .15s,background .15s,border-color .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn img{width:26px;height:26px}
+.btn small{display:block;font-size:.72rem;font-weight:500;opacity:.7;line-height:1.1}
+.btn b{display:block;line-height:1.15}
+.btn.paper{background:var(--paper);color:var(--ink)}
+.btn.paper:hover{background:#fff}
+.btn.ghost{color:#fff;border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.06)}
+.btn.ghost:hover{background:rgba(255,255,255,.12)}
+.rv{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.rv.in,html.noanim .rv{opacity:1;transform:none}
+
+/* =============================================================== nav */
+.nav{position:sticky;top:0;z-index:50;transition:background .25s,border-color .25s,color .25s;color:#fff}
+.nav.stuck{background:rgba(244,239,228,.86);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--rule);color:var(--ink)}
+.nav .wide{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:.6rem;text-decoration:none;font:600 1.05rem/1 var(--serif);letter-spacing:.01em}
+.brand img{width:30px;height:30px;border-radius:7px}
+.nav-links{display:flex;gap:1.5rem;align-items:center;font-size:.9rem}
+.nav-links a{text-decoration:none;opacity:.82}
+.nav-links a:hover{opacity:1}
+.nav-links .sep{width:1px;height:16px;background:currentColor;opacity:.3}
+.nav-links .cta{opacity:1;border:1px solid currentColor;padding:.45rem .95rem;border-radius:999px}
+.nav.stuck .cta:hover{background:var(--ink);color:#fff}
+@media (max-width:900px){.nav-links a:not(.cta),.nav-links .sep{display:none}}
+
+/* =============================================================== hero */
+.hero{position:relative;color:#fff;margin-top:-64px;padding:calc(64px + clamp(2.5rem,6vw,5rem)) 0 0;overflow:hidden;isolation:isolate;--f1:var(--work-1);--f2:var(--work-2);--f3:var(--work-3)}
+.hero[data-space=personal]{--f1:var(--pers-1);--f2:var(--pers-2);--f3:var(--pers-3)}
+.field{position:absolute;inset:0;z-index:-2;background:linear-gradient(172deg,var(--f1) 0 50%,var(--f2) 50% 65%,var(--f3) 65%)}
+.field.alt{opacity:0;transition:opacity .6s}
+.hero[data-space=personal] .field.alt{opacity:1}
+.field.alt{--f1:var(--pers-1);--f2:var(--pers-2);--f3:var(--pers-3)}
+.field.base{--f1:var(--work-1);--f2:var(--work-2);--f3:var(--work-3)}
+@media (max-width:700px){.field{background:linear-gradient(172deg,var(--f1) 0 58%,var(--f2) 58% 70%,var(--f3) 70%)}}
+.field-fade{position:absolute;inset:auto 0 0;height:14vh;z-index:-1;background:linear-gradient(180deg,transparent,var(--paper))}
+.field::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 40% at 50% 0%,rgba(255,255,255,.16),transparent 70%),linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.18) 100%)}
+.hero-light{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(48% 34% at 50% 26%,rgba(120,169,199,.22),transparent 70%)}
+.hero-crest{position:absolute;z-index:-1;pointer-events:none;width:min(46vw,620px);right:-6vw;top:-4vw;opacity:0;transition:opacity .6s;filter:grayscale(1) brightness(1.6);mix-blend-mode:soft-light}
+.hero[data-space=work] .hero-crest.work,.hero[data-space=personal] .hero-crest.personal{opacity:.22}
+@media (max-width:900px){.hero-crest{width:70vw;right:-20vw;top:0}}
+.hero .wrap{text-align:center;position:relative}
+.hero .eyebrow{color:rgba(255,255,255,.7)}
+.hero .h1{margin:0 auto 1.2rem;max-width:15ch;font-size:clamp(2.9rem,7vw,5.6rem);text-shadow:0 2px 30px rgba(0,0,0,.25)}
+.hero .lede{color:rgba(255,255,255,.8);margin:0 auto 1.9rem;font-size:1.2rem;max-width:34rem}
+.hero .lede strong{color:#fff}
+.hero .btns{justify-content:center}
+.hero .fine{color:rgba(255,255,255,.55);margin-top:1rem}
+.hero .fine .oss{color:#fff;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.4)}
+.hero .fine .oss:hover{text-decoration-color:#fff}
+.hero-stage{margin-top:clamp(2.6rem,5vw,4.2rem);position:relative;padding-bottom:1.5rem}
+html:not(.noanim) .hero-stage .mac{animation:rise 1s cubic-bezier(.2,.7,.2,1) both .1s}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.hint{text-align:center;margin:1.1rem 0 0;font-size:.9rem;color:var(--ink-3)}
+.hint b{color:var(--ink);font-weight:600}
+
+/* platform-aware calls to action */
+.cta{display:flex;flex-direction:column;align-items:center;gap:1rem}
+.cta .primary{min-height:56px;white-space:nowrap;padding:.7rem 1.5rem .7rem 1rem;font-size:1rem;box-shadow:0 18px 40px -18px rgba(0,0,0,.6)}
+.cta .primary img{width:30px;height:30px}
+.hero[data-plat=mac] .primary.for-ios,.hero[data-plat=mac] .sl.alt-mac{display:none}
+.hero[data-plat=ios] .primary.for-mac,.hero[data-plat=ios] .sl.alt-ios{display:none}
+.secondary{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}
+.sl{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .95rem .55rem .65rem;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);color:#fff;text-decoration:none;font-size:.88rem;font-weight:500}
+.sl:hover{background:rgba(255,255,255,.12)}
+.sl img{width:20px;height:20px;border-radius:5px}
+.sl .gh{width:18px;height:18px}
+
+/* =============================================================== MAC WINDOW (design 1329×768; --u = one point) */
+.mac{container-type:inline-size;width:100%;margin:0 auto;position:relative}
+.mac-win{--u:calc(100cqw/1329);--fg:var(--work-fg);--c1:var(--work-1);--c2:var(--work-2);--c3:var(--work-3);
+  font-family:var(--sans);font-size:calc(13*var(--u));line-height:1.25;color:var(--fg);
+  position:relative;width:100%;aspect-ratio:1329/768;border-radius:calc(13*var(--u));overflow:hidden;
+  background:linear-gradient(172deg,var(--c1) 0 47%,var(--c2) 47% 63%,var(--c3) 63%);
+  box-shadow:0 calc(40*var(--u)) calc(80*var(--u)) calc(-24*var(--u)) rgba(10,16,26,.55),0 0 0 calc(1*var(--u)) rgba(0,0,0,.35),inset 0 0 0 calc(.5*var(--u)) rgba(255,255,255,.12);
+  display:grid;grid-template-columns:calc(289*var(--u)) 1fr}
+.mac-win[data-space=personal]{--fg:var(--pers-fg);--c1:var(--pers-1);--c2:var(--pers-2);--c3:var(--pers-3)}
+.mac-win .mute{opacity:.62}
+.sb{position:relative;display:flex;flex-direction:column;padding:0 calc(8*var(--u)) calc(8*var(--u));min-width:0}
+.sb-title{height:calc(48*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));padding:0 calc(4*var(--u))}
+.lights{display:flex;gap:calc(8*var(--u));margin-right:calc(6*var(--u))}
+.lights i{width:calc(12*var(--u));height:calc(12*var(--u));border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.sb-title svg{width:calc(16*var(--u));height:calc(16*var(--u));fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.sb-title .navc{margin-left:auto;display:flex;gap:calc(14*var(--u));padding-right:calc(6*var(--u))}
+.addr{height:calc(36*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));padding:0 calc(10*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.08);font-size:calc(12*var(--u));min-width:0}
+.mac-win[data-space=personal] .addr,.mac-win[data-space=personal] .tile,.mac-win[data-space=personal] .row.act{background:rgba(0,0,0,.08);box-shadow:none}
+.addr svg{width:calc(13*var(--u));height:calc(13*var(--u));fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;flex:0 0 auto;opacity:.7}
+.addr .url{flex:1;text-align:center;line-height:1.15;font-weight:600;font-size:calc(11.5*var(--u));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.addr .url small{display:block;font-weight:400;opacity:.62;font-size:calc(9.5*var(--u))}
+.addr .url.left{text-align:left;font-weight:500}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(8*var(--u));margin:calc(10*var(--u)) 0 calc(12*var(--u))}
+.tile{height:calc(40*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.07);display:grid;place-items:center;font-size:calc(15*var(--u));font-style:normal}
+.row{height:calc(30*var(--u));display:flex;align-items:center;gap:calc(9*var(--u));padding:0 calc(9*var(--u));border-radius:calc(7*var(--u));font-size:calc(12*var(--u));white-space:nowrap;overflow:hidden}
+.row.space{font-weight:700;font-size:calc(12.5*var(--u));height:calc(34*var(--u))}
+.row.space img{width:calc(15*var(--u));height:calc(17*var(--u))}
+.row.space .more{margin-left:auto;letter-spacing:.08em;opacity:.7}
+.row .ic{width:calc(14*var(--u));text-align:center;font-style:normal;font-size:calc(12*var(--u));flex:0 0 auto}
+.row .ic svg{width:calc(14*var(--u));height:calc(14*var(--u));display:block}
+.row.fold{font-weight:600}
+.row.fold .chev{width:calc(10*var(--u));opacity:.7;font-size:calc(9*var(--u))}
+.row.child{padding-left:calc(30*var(--u));opacity:.62}
+.row.new{opacity:.62}
+.row.act{background:rgba(255,255,255,.13);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.1);font-weight:500}
+.row.act .x{margin-left:auto;opacity:.75;font-size:calc(11*var(--u))}
+.row.group{opacity:.62;font-size:calc(10.5*var(--u));height:calc(22*var(--u))}
+.sb .rule{height:1px;background:currentColor;opacity:.14;margin:calc(8*var(--u)) calc(4*var(--u))}
+.sb .grow{flex:1}
+.sb-foot{height:calc(40*var(--u));display:flex;align-items:center;justify-content:space-between;padding:0 calc(6*var(--u))}
+.sb-foot > svg{width:calc(15*var(--u));height:calc(15*var(--u));fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.picker{display:flex;gap:calc(2*var(--u));padding:calc(3*var(--u));border-radius:calc(9*var(--u));background:rgba(0,0,0,.18);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.08)}
+.picker button{appearance:none;border:0;background:transparent;width:calc(30*var(--u));height:calc(26*var(--u));border-radius:calc(7*var(--u));display:grid;place-items:center;cursor:pointer;padding:0;transition:background .2s}
+.picker button img{width:calc(15*var(--u));height:calc(17*var(--u));opacity:.7;transition:opacity .2s}
+.picker button[aria-pressed=true]{background:rgba(255,255,255,.2)}
+.picker button[aria-pressed=true] img,.picker button:hover img{opacity:1}
+.picker button:focus-visible{outline:calc(2*var(--u)) solid #fff;outline-offset:1px;border-radius:calc(7*var(--u))}
+.pg{position:relative;margin:calc(8*var(--u)) calc(8*var(--u)) calc(8*var(--u)) 0;border-radius:calc(13*var(--u));overflow:hidden;background:var(--pbg,#f2eee6);color:var(--pink,#172238);box-shadow:0 0 0 calc(1.5*var(--u)) rgba(0,0,0,.18);min-width:0}
+.pg.northstar{--pbg:#f2eee6;--pink:#172238;--pmute:#58627a;--pa:#3b6a9c;--pb:#c99a2e}
+.pg.fieldnotes{--pbg:#eef2e8;--pink:#20372d;--pmute:#5a6b60;--pa:#6f8f6b;--pb:#d9663f}
+.demo{position:absolute;inset:0;padding:calc(48*var(--u)) calc(90*var(--u)) 0 calc(88*var(--u))}
+.demo .kk{font-size:calc(9.5*var(--u));font-weight:800;letter-spacing:.17em;text-transform:uppercase}
+.demo h3{font:500 calc(66*var(--u))/.92 var(--serif);letter-spacing:-.045em;margin:calc(60*var(--u)) 0 0;max-width:11ch;color:var(--pink)}
+.demo .sub{position:absolute;right:calc(90*var(--u));top:calc(250*var(--u));width:calc(300*var(--u));font-size:calc(15*var(--u));line-height:1.45;color:var(--pmute)}
+.demo .cards{display:grid;grid-template-columns:repeat(4,1fr);margin-top:calc(56*var(--u));border:1px solid rgba(0,0,0,.14);position:relative}
+.demo .cards::before{content:"";position:absolute;left:-1px;right:-1px;top:calc(-7*var(--u));height:calc(6*var(--u));background:linear-gradient(90deg,var(--pa) 0 56%,var(--pb) 56%)}
+.demo .cards div{padding:calc(20*var(--u)) calc(18*var(--u)) calc(24*var(--u));border-left:1px solid rgba(0,0,0,.14);min-height:calc(140*var(--u))}
+.demo .cards div:first-child{border-left:0;background:var(--pa);color:#fff}
+.demo .cards small{display:block;font-size:calc(8*var(--u));letter-spacing:.14em;margin-bottom:calc(44*var(--u));opacity:.8}
+.demo .cards b{display:block;font:500 calc(22*var(--u))/1 var(--serif);letter-spacing:-.02em;margin-bottom:calc(8*var(--u))}
+.demo .cards span{font-size:calc(10*var(--u));opacity:.75}
+@container (max-width:640px){.demo .sub{display:none}}
+.pg.split{background:transparent;box-shadow:none;display:grid;grid-template-columns:1fr 1fr;gap:calc(10*var(--u))}
+.pg.split .card{border-radius:calc(13*var(--u));background:#eef2e8;color:#20372d;position:relative;overflow:hidden;box-shadow:0 0 0 calc(1.5*var(--u)) rgba(0,0,0,.14)}
+.pg.split .card.focus{box-shadow:0 0 0 calc(2*var(--u)) rgba(255,255,255,.85),0 0 0 calc(3.5*var(--u)) rgba(0,0,0,.12)}
+.pg.split .demo{padding:calc(46*var(--u)) calc(40*var(--u)) 0 calc(40*var(--u))}
+.pg.split .demo h3{font-size:calc(48*var(--u));margin-top:calc(60*var(--u));max-width:12ch}
+.pg.split .demo p{font-size:calc(14*var(--u));color:#56675e;margin-top:calc(22*var(--u));max-width:34em;line-height:1.5}
+.pg.split .pill{display:inline-block;margin-top:calc(34*var(--u));background:#1c3b2f;color:#fff;border-radius:999px;padding:calc(13*var(--u)) calc(20*var(--u));font-size:calc(13*var(--u));font-weight:600}
+.pg.split .note{margin-top:calc(34*var(--u));padding:calc(18*var(--u)) calc(20*var(--u));border:1px solid #b9c5b7;border-radius:calc(14*var(--u));background:rgba(255,255,255,.6);font-size:calc(13.5*var(--u));max-width:36em}
+.pg .dim{position:absolute;inset:0;background:rgba(40,48,60,.42)}
+.pk-actions{position:absolute;right:calc(10*var(--u));top:calc(20*var(--u));display:flex;gap:calc(10*var(--u))}
+.pk-actions span{display:flex;align-items:center;gap:calc(8*var(--u));height:calc(40*var(--u));padding:0 calc(28*var(--u));border-radius:999px;background:#5b6472;color:#fff;font-size:calc(12*var(--u));font-weight:600;box-shadow:0 calc(6*var(--u)) calc(16*var(--u)) rgba(0,0,0,.3)}
+.pk-actions span.pri{background:#1a2438;padding-right:calc(18*var(--u))}
+.pk-actions span.pri img{width:calc(14*var(--u));height:calc(16*var(--u))}
+.peek{position:absolute;left:calc(96*var(--u));right:calc(10*var(--u));top:calc(92*var(--u));bottom:calc(-4*var(--u));background:#eef2e8;color:#20372d;border-radius:calc(13*var(--u)) calc(13*var(--u)) 0 0;box-shadow:0 calc(-10*var(--u)) calc(40*var(--u)) rgba(0,0,0,.35),0 0 0 calc(1*var(--u)) rgba(0,0,0,.25);overflow:hidden;transform:translateY(0);transition:transform .55s cubic-bezier(.2,.7,.2,1)}
+html:not(.noanim) .mac.is-hidden .peek{transform:translateY(105%)}
+.pbar{height:calc(40*var(--u));display:flex;align-items:center;gap:calc(10*var(--u));padding:0 calc(16*var(--u));color:#dfe3ea;font:calc(12*var(--u))/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:repeating-linear-gradient(135deg,#2c3037 0 calc(6*var(--u)),#33373f calc(6*var(--u)) calc(12*var(--u)))}
+.pbar .i{width:calc(12*var(--u));height:calc(12*var(--u));border-radius:50%;border:1.4px solid currentColor;display:grid;place-items:center;font:700 calc(8*var(--u))/1 var(--sans)}
+.pbar .ics{margin-left:auto;display:flex;gap:calc(16*var(--u));opacity:.8}
+.pbar .ics svg{width:calc(14*var(--u));height:calc(14*var(--u));fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.pbody{padding:calc(60*var(--u)) calc(110*var(--u))}
+.pbody .kk{font-size:calc(9.5*var(--u));font-weight:800;letter-spacing:.17em}
+.pbody h4{font:500 calc(70*var(--u))/.92 var(--serif);letter-spacing:-.045em;margin:calc(46*var(--u)) 0 calc(22*var(--u));max-width:10ch}
+.pbody p{font-size:calc(15*var(--u));color:#56675e;max-width:34em;line-height:1.5}
+.pbody .note{margin-top:calc(42*var(--u));padding:calc(22*var(--u));border:1px solid #b9c5b7;border-radius:calc(16*var(--u));background:rgba(255,255,255,.6);font-size:calc(14*var(--u));max-width:40em}
+.cmd{position:absolute;left:50%;top:calc(70*var(--u));transform:translateX(-50%);width:calc(560*var(--u));background:rgba(250,250,252,.98);border-radius:calc(14*var(--u));box-shadow:0 calc(30*var(--u)) calc(70*var(--u)) rgba(0,0,0,.4),0 0 0 .5px rgba(0,0,0,.2);color:#1a2230;overflow:hidden}
+.cmd .in{display:flex;gap:calc(10*var(--u));align-items:center;height:calc(50*var(--u));padding:0 calc(18*var(--u));font-size:calc(17*var(--u));border-bottom:1px solid rgba(0,0,0,.08)}
+.cmd .in svg{width:calc(16*var(--u));height:calc(16*var(--u));fill:none;stroke:#667;stroke-width:2;stroke-linecap:round}
+.cmd .in span::after{content:"";display:inline-block;width:1.5px;height:1em;background:#1a2230;margin-left:1px;vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.cmd .sec{padding:calc(10*var(--u)) calc(18*var(--u)) calc(4*var(--u));font-size:calc(9.5*var(--u));font-weight:700;letter-spacing:.1em;color:#8a90a0}
+.cmd .it{display:flex;align-items:center;gap:calc(10*var(--u));height:calc(34*var(--u));padding:0 calc(18*var(--u));font-size:calc(13*var(--u))}
+.cmd .it.sel{background:#e9eef7}
+.cmd .it .ic{font-style:normal;width:calc(16*var(--u));text-align:center}
+.cmd .it .tag{margin-left:auto;font-size:calc(10.5*var(--u));color:#8a90a0;display:flex;gap:calc(6*var(--u));align-items:center}
+.cmd .it .tag img{width:calc(11*var(--u));height:calc(13*var(--u))}
+.cmd kbd{font:calc(10*var(--u)) ui-monospace,Menlo,monospace;background:#f0f1f4;border:1px solid #d9dbe2;border-radius:calc(4*var(--u));padding:calc(2*var(--u)) calc(6*var(--u));color:#555}
+.settings{position:absolute;inset:0;background:#ececee;color:#1d1d1f;font-size:calc(13*var(--u))}
+.settings .st-side{position:absolute;left:0;top:0;bottom:0;width:calc(220*var(--u));background:#e3e3e6;border-right:1px solid rgba(0,0,0,.08);padding:calc(56*var(--u)) calc(12*var(--u))}
+.settings .st-side div{height:calc(30*var(--u));display:flex;align-items:center;gap:calc(9*var(--u));padding:0 calc(10*var(--u));border-radius:calc(7*var(--u));font-size:calc(12.5*var(--u))}
+.settings .st-side div i{width:calc(18*var(--u));height:calc(18*var(--u));border-radius:calc(5*var(--u));background:#8e8e93;display:inline-block}
+.settings .st-side div.on{background:#2f6fde;color:#fff}
+.settings .st-side div.on i{background:rgba(255,255,255,.35)}
+.settings .st-main{position:absolute;left:calc(220*var(--u));right:0;top:0;bottom:0;padding:calc(40*var(--u))}
+.settings h4{font:600 calc(18*var(--u))/1.2 var(--sans);margin:0 0 calc(4*var(--u))}
+.settings .desc{color:#6e6e73;font-size:calc(12*var(--u));max-width:44em;margin-bottom:calc(20*var(--u))}
+.settings .grp{background:#fff;border-radius:calc(10*var(--u));box-shadow:0 0 0 .5px rgba(0,0,0,.12);overflow:hidden}
+.settings .grp .r{display:grid;grid-template-columns:1fr calc(110*var(--u)) calc(150*var(--u));gap:calc(12*var(--u));align-items:center;height:calc(40*var(--u));padding:0 calc(14*var(--u));border-top:.5px solid rgba(0,0,0,.1)}
+.settings .grp .r:first-child{border-top:0;height:calc(32*var(--u));font-size:calc(11*var(--u));color:#6e6e73;font-weight:600}
+.settings .grp .r code{font:calc(12*var(--u)) ui-monospace,Menlo,monospace}
+.settings .pop{height:calc(24*var(--u));display:flex;align-items:center;justify-content:space-between;gap:calc(6*var(--u));padding:0 calc(8*var(--u));border-radius:calc(6*var(--u));background:#fff;box-shadow:0 0 0 .5px rgba(0,0,0,.2),0 1px 1px rgba(0,0,0,.08);font-size:calc(12*var(--u))}
+.settings .pop img{width:calc(12*var(--u));height:calc(14*var(--u))}
+.settings .pop::after{content:"⌃⌄";font-size:calc(8*var(--u));color:#fff;background:#2f6fde;border-radius:calc(4*var(--u));padding:0 calc(3*var(--u));line-height:1;letter-spacing:-.4em;text-indent:-.05em}
+.settings .add{margin-top:calc(10*var(--u));display:inline-flex;align-items:center;gap:calc(6*var(--u));height:calc(26*var(--u));padding:0 calc(12*var(--u));border-radius:calc(6*var(--u));background:#fff;box-shadow:0 0 0 .5px rgba(0,0,0,.2),0 1px 1px rgba(0,0,0,.08);font-size:calc(12*var(--u))}
+.settings .foot{margin-top:calc(22*var(--u));font-size:calc(11.5*var(--u));color:#6e6e73;max-width:46em}
+
+/* =============================================================== QUICK WINDOW (720×460) */
+.qw{container-type:inline-size;width:100%}
+.qw-win{--u:calc(100cqw/720);font-family:var(--sans);font-size:calc(13*var(--u));width:100%;aspect-ratio:720/460;border-radius:calc(12*var(--u));overflow:hidden;position:relative;color:#e6e8ec;
+  background:linear-gradient(172deg,#5f7f5e 0 40%,#b7a582 40% 58%,#c84835 58%);box-shadow:0 calc(30*var(--u)) calc(60*var(--u)) calc(-20*var(--u)) rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.35)}
+.qw-win::before{content:"";position:absolute;inset:0;background:rgba(20,26,34,.72)}
+.qw-bar{position:relative;height:calc(56*var(--u));display:flex;align-items:center;gap:calc(10*var(--u));padding:0 calc(14*var(--u))}
+.qw-bar .lights i{width:calc(12*var(--u));height:calc(12*var(--u))}
+.qw-bar .sp{display:flex;align-items:center;gap:calc(7*var(--u));height:calc(34*var(--u));padding:0 calc(12*var(--u)) 0 calc(10*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.1);font-weight:600;font-size:calc(12.5*var(--u))}
+.qw-bar .sp img{width:calc(14*var(--u));height:calc(16*var(--u))}
+.qw-bar .qaddr{flex:1;height:calc(34*var(--u));display:flex;align-items:center;gap:calc(10*var(--u));padding:0 calc(12*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.08);font-size:calc(12*var(--u))}
+.qw-bar .qaddr .url{flex:1;text-align:center;font-weight:600;line-height:1.15}
+.qw-bar .qaddr .url small{display:block;font-weight:400;opacity:.6;font-size:calc(9.5*var(--u))}
+.qw-bar .qaddr svg{width:calc(13*var(--u));height:calc(13*var(--u));fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;opacity:.75}
+.qw-bar .open{height:calc(34*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));padding:0 calc(12*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.1);font-weight:600;font-size:calc(12.5*var(--u))}
+.qw-page{position:absolute;left:calc(10*var(--u));right:calc(10*var(--u));top:calc(72*var(--u));bottom:0;border-radius:calc(13*var(--u)) calc(13*var(--u)) 0 0;overflow:hidden;background:#eef2e8;color:#20372d}
+.qw-page .pbody{padding:calc(50*var(--u)) calc(56*var(--u))}
+.qw-page .pbody h4{font-size:calc(58*var(--u));margin:calc(40*var(--u)) 0 calc(20*var(--u));max-width:11ch}
+
+/* =============================================================== iPAD (1210×834pt) */
+.ipad{container-type:inline-size;width:100%}
+.ipad-dev{--u:calc(100cqw/1210);position:relative;width:100%;aspect-ratio:1210/834;border-radius:calc(56*var(--u));background:#111317;padding:calc(30*var(--u));box-shadow:0 calc(30*var(--u)) calc(70*var(--u)) calc(-24*var(--u)) rgba(0,0,0,.55),inset 0 0 0 calc(2*var(--u)) #3a3d44}
+.ipad-scr{position:relative;width:100%;height:100%;border-radius:calc(30*var(--u));overflow:hidden;color:var(--work-fg);font-family:var(--sans);font-size:calc(15*var(--u));
+  background:linear-gradient(172deg,var(--work-1) 0 46%,var(--work-2) 46% 60%,var(--work-3) 60%);display:grid;grid-template-columns:calc(254*var(--u)) 1fr;grid-template-rows:calc(46*var(--u)) 1fr}
+.ipad-status{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:0 calc(22*var(--u));font-size:calc(14*var(--u));font-weight:600}
+.ipad-status b{margin-left:calc(16*var(--u))}
+.ipad .sb{padding:0 calc(10*var(--u)) calc(14*var(--u))}
+.ipad .sb-title{height:calc(50*var(--u));font-weight:700;font-size:calc(17*var(--u))}
+.ipad .sb-title svg{width:calc(18*var(--u));height:calc(18*var(--u))}
+.ipad .addr{height:calc(44*var(--u));font-size:calc(14*var(--u));border-radius:calc(11*var(--u))}
+.ipad .addr .url{font-size:calc(14*var(--u))}
+.ipad .seg{display:grid;grid-template-columns:1fr 1fr;height:calc(44*var(--u));padding:calc(4*var(--u));border-radius:999px;background:rgba(255,255,255,.07);margin:calc(12*var(--u)) 0}
+.ipad .seg span{display:grid;place-items:center;border-radius:999px}
+.ipad .seg span.on{background:rgba(255,255,255,.28)}
+.ipad .seg img{width:calc(22*var(--u));height:calc(25*var(--u))}
+.ipad .seg span:not(.on) img{opacity:.7}
+.ipad .tiles{gap:calc(8*var(--u));margin:0 0 calc(14*var(--u))}
+.ipad .tile{height:calc(48*var(--u));border-radius:calc(11*var(--u));font-size:calc(19*var(--u))}
+.ipad .row{height:calc(40*var(--u));font-size:calc(15*var(--u));gap:calc(12*var(--u));padding:0 calc(10*var(--u))}
+.ipad .row.space{font-size:calc(16*var(--u));height:calc(44*var(--u))}
+.ipad .row.space img{width:calc(20*var(--u));height:calc(23*var(--u))}
+.ipad .row .ic{font-size:calc(15*var(--u));width:calc(18*var(--u))}
+.ipad .row.child{padding-left:calc(34*var(--u))}
+.ipad .row.act{border-radius:calc(10*var(--u));height:calc(44*var(--u))}
+.ipad .pilltb{margin:auto 0 0 auto;display:flex;gap:calc(22*var(--u));height:calc(52*var(--u));align-items:center;padding:0 calc(22*var(--u));border-radius:999px;background:rgba(0,0,0,.12);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2)}
+.ipad .pilltb svg{width:calc(20*var(--u));height:calc(20*var(--u));fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ipad .pg{margin:0 calc(10*var(--u)) calc(14*var(--u)) 0;border-radius:calc(16*var(--u))}
+.ipad .demo{padding:calc(56*var(--u)) calc(60*var(--u)) 0 calc(52*var(--u))}
+.ipad .demo h3{font-size:calc(74*var(--u));margin-top:calc(54*var(--u))}
+.ipad .demo .sub{right:calc(60*var(--u));top:calc(250*var(--u));width:calc(300*var(--u));font-size:calc(16*var(--u))}
+.ipad .demo .cards{margin-top:calc(50*var(--u))}
+.ipad .demo .cards div{min-height:calc(170*var(--u));padding:calc(24*var(--u)) calc(22*var(--u))}
+.ipad .demo .cards b{font-size:calc(28*var(--u))}
+.ipad .demo .cards span{font-size:calc(11.5*var(--u))}
+
+/* =============================================================== iPHONE (393×852pt) */
+.iphone{container-type:inline-size;width:100%}
+.ip-dev{--u:calc(100cqw/393);position:relative;width:100%;aspect-ratio:393/852;border-radius:calc(58*var(--u));background:#111317;padding:calc(12*var(--u));box-shadow:0 calc(30*var(--u)) calc(70*var(--u)) calc(-24*var(--u)) rgba(0,0,0,.55),inset 0 0 0 calc(2*var(--u)) #3a3d44}
+.ip{position:relative;width:100%;height:100%;border-radius:calc(48*var(--u));overflow:hidden;color:var(--work-fg);font-family:var(--sans);
+  background:linear-gradient(170deg,var(--work-1) 0 50%,var(--work-2) 50% 64%,var(--work-3) 64%);padding:calc(14*var(--u)) calc(12*var(--u));display:flex;flex-direction:column}
+.ip-status{display:flex;justify-content:space-between;align-items:center;height:calc(44*var(--u));padding:0 calc(22*var(--u)) 0 calc(28*var(--u));font-size:calc(16*var(--u));font-weight:600}
+.ip-island{position:absolute;left:50%;top:calc(11*var(--u));transform:translateX(-50%);width:calc(120*var(--u));height:calc(36*var(--u));border-radius:999px;background:#0a0b0e}
+.ip .seg{display:grid;grid-template-columns:1fr 1fr;height:calc(52*var(--u));padding:calc(4*var(--u));border-radius:999px;background:rgba(255,255,255,.07);margin:calc(12*var(--u)) 0 calc(14*var(--u))}
+.ip .seg span{display:grid;place-items:center;border-radius:999px}
+.ip .seg span.on{background:rgba(255,255,255,.28)}
+.ip .seg img{width:calc(26*var(--u));height:calc(30*var(--u))}
+.ip .seg span:not(.on) img{opacity:.7}
+.ip .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(8*var(--u));margin-bottom:calc(20*var(--u))}
+.ip .tile{height:calc(52*var(--u));border-radius:calc(12*var(--u));background:rgba(255,255,255,.07);display:grid;place-items:center;font-size:calc(22*var(--u));font-style:normal}
+.ip .row{height:calc(44*var(--u));display:flex;align-items:center;gap:calc(12*var(--u));padding:0 calc(10*var(--u));border-radius:calc(10*var(--u));font-size:calc(17*var(--u));white-space:nowrap}
+.ip .row.space{font-weight:700;height:calc(48*var(--u))}
+.ip .row.space img{width:calc(22*var(--u));height:calc(25*var(--u))}
+.ip .row.space .more{margin-left:auto;letter-spacing:.1em;opacity:.8}
+.ip .row .ic{width:calc(22*var(--u));text-align:center;font-style:normal;font-size:calc(17*var(--u))}
+.ip .row.fold{font-weight:600}
+.ip .row.child{padding-left:calc(38*var(--u));opacity:.62}
+.ip .row.new{opacity:.62}
+.ip .row.act{background:rgba(255,255,255,.16);font-weight:500}
+.ip .row.act .x{margin-left:auto;opacity:.8}
+.ip .rule{height:1px;background:currentColor;opacity:.14;margin:calc(10*var(--u)) calc(4*var(--u))}
+.ip .grow{flex:1}
+.ip .pilltb{margin-left:auto;display:flex;gap:calc(26*var(--u));align-items:center;height:calc(56*var(--u));padding:0 calc(24*var(--u));border-radius:999px;background:rgba(0,0,0,.12);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.22);margin-bottom:calc(10*var(--u))}
+.ip .pilltb svg{width:calc(22*var(--u));height:calc(22*var(--u));fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* =============================================================== name section */
+.name-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:clamp(2rem,5vw,5rem);align-items:center}
+@media (max-width:900px){.name-grid{grid-template-columns:1fr}}
+.name .lede{margin:1.1rem 0 1.6rem}
+.chips{display:flex;gap:.5rem;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--rule-2);background:transparent;border-radius:999px;padding:.42rem .95rem .42rem .5rem;cursor:pointer;font-size:.9rem;transition:background .15s}
+.chip img{width:18px;height:21px}
+.chip:hover{background:#fff}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hall{position:relative;display:grid;justify-content:center}
+.banner-wrap{position:relative;width:clamp(200px,24vw,290px);padding-top:8px}
+.rod{height:8px;border-radius:4px;background:linear-gradient(180deg,#e6c977,#9c7420);box-shadow:0 2px 3px rgba(0,0,0,.3);position:relative;z-index:2}
+.rod::before,.rod::after{content:"";position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f0d78c,#8a6418)}
+.rod::before{left:-6px}.rod::after{right:-6px}
+.banner{--c1:var(--work-1);--c2:var(--work-2);--c3:var(--work-3);--fg:var(--work-fg);
+  position:relative;margin:-2px 8px 0;aspect-ratio:200/330;color:var(--fg);
+  clip-path:polygon(0 0,100% 0,100% 88%,50% 100%,0 88%);
+  background:linear-gradient(172deg,var(--c1) 0 52%,var(--c2) 52% 68%,var(--c3) 68%);
+  transition:background .5s;transform-origin:50% 0;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:22%}
+html:not(.noanim) .banner{animation:sway 7s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-.6deg)}50%{transform:rotate(.6deg)}}
+.banner::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.18),rgba(255,255,255,.08) 18%,rgba(0,0,0,.06) 40%,rgba(255,255,255,.1) 62%,rgba(0,0,0,.16) 100%)}
+.banner::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 -40px 60px -30px rgba(0,0,0,.35)}
+.banner img{width:46%;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35));position:relative;z-index:1}
+.banner .bn{position:relative;z-index:1;margin-top:14%;font:600 .78rem/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;opacity:.9}
+.banner .bm{position:relative;z-index:1;margin-top:.6rem;font:italic 400 .95rem/1.3 var(--serif);opacity:.85;text-align:center;padding:0 12%}
+.banner-shadow{position:absolute;left:8%;right:8%;bottom:-18px;height:24px;border-radius:50%;background:radial-gradient(closest-side,rgba(15,28,44,.28),transparent)}
+.becomes-row{margin-top:clamp(2.5rem,5vw,4rem);padding-top:2rem;border-top:1px solid var(--rule);display:grid;grid-template-columns:1fr 2fr;gap:2rem;align-items:center}
+@media (max-width:900px){.becomes-row{grid-template-columns:1fr}}
+.becomes{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:1rem;align-items:center;max-width:640px}
+.becomes figure{margin:0;min-width:0;container-type:inline-size;aspect-ratio:1;border-radius:18px;background:var(--cream);box-shadow:inset 0 0 0 1px var(--rule);display:grid;place-items:center;position:relative;overflow:hidden}
+.becomes figcaption{position:absolute;left:0;right:0;bottom:6cqw;text-align:center;font-size:clamp(.68rem,5.5cqw,.82rem);color:var(--ink-3)}
+.becomes .arr{color:var(--ink-3);font-size:1.3rem}
+.mini{--c1:var(--work-1);--c2:var(--work-2);--c3:var(--work-3);--fg:var(--work-fg);width:36cqw;height:70cqw;margin-bottom:8cqw;border-radius:6cqw 3cqw 3cqw 6cqw;position:relative;overflow:hidden;background:linear-gradient(172deg,var(--c1) 0 47%,var(--c2) 47% 63%,var(--c3) 63%);transition:background .5s;box-shadow:0 8px 20px -10px rgba(15,28,44,.5)}
+.mini.ui::before{content:"";position:absolute;inset:0;opacity:.85;
+  background:
+    linear-gradient(var(--fg),var(--fg)) 12% 9%/76% 6% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 12% 19%/16% 6.5% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 32% 19%/16% 6.5% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 52% 19%/16% 6.5% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 72% 19%/16% 6.5% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 12% 31%/36% 2.2% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 12% 37%/50% 1.8% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 20% 42%/44% 1.8% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 20% 47%/38% 1.8% no-repeat,
+    linear-gradient(var(--fg),var(--fg)) 20% 52%/46% 1.8% no-repeat}
+.mini.ui::after{content:"";position:absolute;left:12%;right:12%;top:60%;height:5%;border-radius:2cqw;background:rgba(255,255,255,.2)}
+.realicon{width:64cqw;height:64cqw;margin-bottom:8cqw;border-radius:22%;box-shadow:0 14px 30px -18px rgba(15,28,44,.5)}
+.icon{--c1:var(--work-1);--c2:var(--work-2);--c3:var(--work-3);width:62cqw;height:62cqw;margin-bottom:8cqw;border-radius:22%;background:linear-gradient(135deg,#fffefa,#f0eee8);position:relative;box-shadow:0 0 0 1px rgba(15,28,44,.08),0 14px 30px -18px rgba(15,28,44,.5)}
+.icon .shade{position:absolute;left:27%;top:19%;width:46%;height:64%;clip-path:polygon(0 0,100% 0,100% 84%,50% 100%,0 84%);background:rgba(23,34,56,.12);filter:blur(3px)}
+.icon .bnr{position:absolute;left:29%;top:18%;width:42%;height:62%;display:grid;grid-template-columns:43% 57%;clip-path:polygon(0 0,100% 0,100% 84%,50% 100%,0 84%)}
+.icon .bnr i:first-child{background:#263a4d}
+.icon .bnr i:last-child{background:linear-gradient(172deg,var(--c1) 0 47%,var(--c2) 47% 63%,var(--c3) 63%);transition:background .5s}
+.forge-row{margin-top:clamp(2.5rem,5vw,4rem);padding-top:2rem;border-top:1px solid var(--rule);display:grid;grid-template-columns:1fr 1.6fr;gap:2rem;align-items:center}
+@media (max-width:900px){.forge-row{grid-template-columns:1fr}}
+.forge-row p{color:var(--ink-2)}
+.forge-row p b{color:var(--ink);font-weight:600}
+.shapes{display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem}
+.shapes figure{background:var(--cream);box-shadow:inset 0 0 0 1px var(--rule);border-radius:14px;padding:1.2rem .6rem .9rem;display:grid;justify-items:center;gap:.7rem}
+.shapes img{width:58%;filter:drop-shadow(0 6px 8px rgba(15,28,44,.2))}
+.shapes figcaption{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+
+/* =============================================================== spaces */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.two figcaption{margin-top:.9rem;font-size:.92rem;color:var(--ink-2)}
+.two figcaption b{color:var(--ink);font-weight:600}
+.two .mac-win{box-shadow:0 24px 50px -24px rgba(10,16,26,.45),0 0 0 1px rgba(0,0,0,.3)}
+.iso{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4rem 2rem;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--rule)}
+@media (max-width:900px){.iso{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.iso{grid-template-columns:1fr}}
+.iso b{display:block;font-weight:600;margin-bottom:.2rem}
+.iso p{color:var(--ink-2);font-size:.93rem}
+
+/* =============================================================== from arc (ink) */
+.dark{background:var(--ink);color:#f4f1ea}
+.dark::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 50% at 80% 0%,rgba(55,105,158,.25),transparent 70%),radial-gradient(50% 40% at 0% 100%,rgba(189,142,39,.18),transparent 70%);pointer-events:none}
+.dark .eyebrow{color:var(--gold)}
+.dark .lede{color:rgba(244,241,234,.72)}
+.dark .lede strong{color:#fff}
+.dark .wrap{position:relative}
+.deck{display:grid;gap:1.4rem}
+.deck-stage{position:relative;aspect-ratio:1329/768;max-height:72vh;margin-top:1.6rem}
+.deck-stage::before,.deck-stage::after{content:"";position:absolute;left:4%;right:4%;top:-14px;height:60%;border-radius:16px;background:rgba(244,241,234,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);z-index:0}
+.deck-stage::after{left:8%;right:8%;top:-28px;background:rgba(244,241,234,.035)}
+.deck-stage .pane{position:absolute;inset:0;display:grid;align-items:center;justify-items:center;transition:transform .55s cubic-bezier(.2,.7,.2,1),opacity .45s;opacity:0;transform:translateY(-22px) scale(.94);pointer-events:none}
+.deck-stage .pane.on{opacity:1;transform:none;pointer-events:auto;z-index:2}
+.deck-stage .pane.behind{opacity:0;transform:translateY(-28px) scale(.92);z-index:1}
+.deck-stage .pane:not(.on):not(.behind){transform:translateY(26px) scale(.98)}
+html.noanim .deck-stage .pane{transition:none}
+.deck-stage .pane > .mac{width:100%}
+.deck-stage .pane.shot img{max-width:100%;max-height:100%;width:auto;height:auto;border-radius:12px;box-shadow:0 40px 80px -30px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12)}
+.deck-stage .pane.shot[data-pane=quick] img{max-width:74%}
+.deck-tabs{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;padding:.4rem;border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);width:max-content;max-width:100%;margin:0 auto}
+.deck-tabs button{appearance:none;border:0;background:transparent;color:inherit;cursor:pointer;border-radius:999px;padding:.55rem 1rem;display:grid;text-align:center;line-height:1.15}
+.deck-tabs button b{font-weight:600;font-size:.92rem}
+.deck-tabs button span{font-size:.72rem;color:rgba(244,241,234,.55)}
+.deck-tabs button:hover{background:rgba(255,255,255,.06)}
+.deck-tabs button[aria-selected=true]{background:#f4f1ea;color:var(--ink)}
+.deck-tabs button[aria-selected=true] span{color:var(--ink-3)}
+@media (max-width:760px){.deck-tabs{border-radius:16px}.deck-tabs button span{display:none}}
+/* infographics */
+.pane.info{padding:clamp(.5rem,2vw,1.5rem);background:rgba(13,24,38,.94);border-radius:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 40px 80px -30px rgba(0,0,0,.6)}
+.flow{display:grid;grid-template-columns:1fr auto 1.5fr auto 1.1fr;gap:1rem;align-items:center;width:100%;max-width:1100px}
+@media (max-width:900px){.flow{grid-template-columns:1fr}.flow-arrow{display:none}}
+.flow .eyebrow{color:var(--gold);display:block;margin-bottom:.5rem}
+.flow-in,.flow-routes,.flow-out .fo{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);border-radius:16px;padding:1.1rem 1.2rem}
+.flow-in b{font:500 .95rem/1.4 ui-monospace,Menlo,monospace;word-break:break-all;color:#fff}
+.flow-arrow{width:2.4rem;height:2px;background:linear-gradient(90deg,rgba(210,173,88,.2),var(--gold));position:relative}
+.flow-arrow::after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left-color:var(--gold);border-right:0}
+.fr{display:grid;grid-template-columns:1fr auto auto;gap:.8rem;align-items:center;padding:.6rem 0;border-top:1px solid rgba(255,255,255,.1);font-size:.92rem}
+.fr:first-of-type{border-top:0}
+.fr code{font:.86rem ui-monospace,Menlo,monospace;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr em{font-style:normal;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:rgba(244,241,234,.6);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:.15rem .55rem}
+.fr span{display:inline-flex;align-items:center;gap:.4rem;font-weight:600}
+.fr span img{width:14px;height:16px}
+.flow-routes small{display:block;margin-top:.7rem;font-size:.78rem;color:rgba(244,241,234,.5)}
+.flow-out{display:grid;gap:.8rem}
+.fo b{display:flex;align-items:center;gap:.5rem;font-weight:600;color:#fff}
+.fo b img{width:16px;height:18px}
+.fo.hit{box-shadow:inset 0 0 0 1px var(--gold)}
+.fo small{display:block;margin-top:.4rem;font-size:.82rem;color:rgba(244,241,234,.6)}
+.cmdinfo{width:100%;max-width:760px;display:grid;gap:1.2rem}
+.ci-field{display:flex;align-items:center;gap:.8rem;height:64px;padding:0 1.2rem;border-radius:18px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 30px 60px -30px rgba(0,0,0,.6);font-size:1.15rem;color:#fff}
+.ci-ic{width:16px;height:16px;border:2px solid var(--gold);border-radius:50%;position:relative}
+.ci-ic::after{content:"";position:absolute;width:2px;height:7px;background:var(--gold);right:-4px;bottom:-5px;transform:rotate(-45deg)}
+.ci-field kbd{margin-left:auto;font:.85rem ui-monospace,Menlo,monospace;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:.15rem .5rem;color:rgba(244,241,234,.7)}
+.ci-lanes{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+@media (max-width:640px){.ci-lanes{grid-template-columns:1fr}}
+.ci-lane{position:relative;padding:1rem 1.1rem;border-radius:14px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.ci-lane b{display:block;font-weight:600;color:#fff;margin-bottom:.25rem}
+.ci-lane span{font-size:.9rem;color:rgba(244,241,234,.65)}
+.ci-crests{position:absolute;right:1rem;top:1rem;display:flex;gap:.3rem}
+.ci-crests img{width:16px;height:18px}
+.arc-note{margin-top:1.2rem;font-size:.98rem;color:rgba(244,241,234,.75);min-height:3.2em;max-width:60rem}
+.arc-note b{color:#fff;font-weight:600}
+.fulllist{margin-top:3rem;border-top:1px solid rgba(255,255,255,.14)}
+.fulllist summary{cursor:pointer;padding:1.2rem 0;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.fulllist summary::-webkit-details-marker{display:none}
+.fulllist summary::after{content:"+";font-size:1.4rem;color:var(--gold);font-weight:300}
+.fulllist[open] summary::after{content:"–"}
+.parity{width:100%;border-collapse:collapse;font-size:.95rem}
+.parity th{text-align:left;font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.2)}
+.parity td{padding:.85rem 1rem .85rem 0;border-bottom:1px solid rgba(255,255,255,.1);vertical-align:top}
+.parity td:first-child{color:rgba(244,241,234,.6);width:24%}
+.parity td:nth-child(2){font-weight:600;width:26%}
+.parity td small{display:block;color:rgba(244,241,234,.6);font-size:.85rem;margin-top:.15rem}
+@media (max-width:640px){.parity td:first-child,.parity th:first-child{display:none}}
+.dark .fine{color:rgba(244,241,234,.55)}
+
+/* =============================================================== devices */
+.devices{display:grid;grid-template-columns:1.6fr 1.25fr .62fr;gap:1.6rem;align-items:end}
+@media (max-width:900px){.devices{grid-template-columns:1fr 1fr}.devices .dev-mac{grid-column:1/-1}}
+@media (max-width:560px){.devices{grid-template-columns:1fr}.dev-phone{max-width:300px;justify-self:center}}
+.dev{min-width:0}
+.bezel{background:#111317;box-shadow:0 30px 70px -24px rgba(0,0,0,.55),inset 0 0 0 2px #3a3d44;overflow:hidden}
+.bezel img{display:block;width:100%;height:auto}
+.ipad-bz{border-radius:5.2% / 7.5%;padding:2.6%}
+.ipad-bz img{border-radius:2.6% / 3.8%}
+.phone-bz{border-radius:15% / 7%;padding:3.2%}
+.phone-bz img{border-radius:12.5% / 5.8%}
+.dev figcaption{margin-top:1rem;font-size:.92rem;color:var(--ink-2)}
+.dev figcaption b{display:block;color:var(--ink);font-weight:600}
+.sync{margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--rule);color:var(--ink-2);max-width:46rem}
+
+/* =============================================================== import */
+.imp-grid{display:grid;grid-template-columns:1fr 1.45fr;gap:clamp(2rem,4vw,4rem);align-items:center}
+@media (max-width:900px){.imp-grid{grid-template-columns:1fr}}
+.steps{list-style:none;padding:0;margin:1.6rem 0 0;display:grid;gap:.9rem;counter-reset:s}
+.steps li{display:grid;grid-template-columns:2rem 1fr;gap:.6rem;color:var(--ink-2)}
+.steps li::before{counter-increment:s;content:counter(s,decimal-leading-zero);font-size:.8rem;font-weight:600;color:var(--ink-3);padding-top:.25rem}
+.steps b{color:var(--ink);font-weight:600}
+.srcs{margin-top:1.6rem;border-top:1px solid var(--rule);font-size:.92rem}
+.srcs div{display:grid;grid-template-columns:5.5rem 1fr;gap:1rem;padding:.55rem 0;border-bottom:1px solid var(--rule);color:var(--ink-2)}
+.srcs b{color:var(--ink);font-weight:600}
+.setup{margin:0}
+.setup img{width:100%;height:auto;border-radius:12px;box-shadow:0 40px 80px -30px rgba(10,16,26,.5),0 0 0 1px rgba(0,0,0,.25)}
+.setup-win{--u:calc(100cqw/1000);font-family:var(--sans);font-size:calc(13*var(--u));color:#e9ecf3;width:100%;aspect-ratio:1000/694;border-radius:calc(12*var(--u));overflow:hidden;position:relative;background:#1f2a3f;box-shadow:0 calc(30*var(--u)) calc(60*var(--u)) calc(-22*var(--u)) rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.35)}
+.setup-win .top{height:calc(44*var(--u));display:flex;align-items:center;gap:calc(10*var(--u));padding:0 calc(20*var(--u));font-weight:700;font-size:calc(14*var(--u))}
+.setup-win .top img{width:calc(20*var(--u));height:calc(20*var(--u));border-radius:calc(5*var(--u));background:#fff}
+.setup-win .top .prog{margin-left:auto;display:flex;gap:calc(6*var(--u))}
+.setup-win .top .prog i{height:calc(5*var(--u));width:calc(18*var(--u));border-radius:3px;background:#e8c85c;display:block}
+.setup-win .top .prog i:last-child{width:calc(32*var(--u))}
+.setup-win .hd{display:flex;align-items:center;gap:calc(14*var(--u));padding:calc(10*var(--u)) calc(20*var(--u)) calc(18*var(--u));border-bottom:1px solid rgba(255,255,255,.08)}
+.setup-win .hd .arc{width:calc(30*var(--u));height:calc(30*var(--u));border-radius:calc(8*var(--u));background:linear-gradient(135deg,#7c4dff,#ff4d8d);display:grid;place-items:center;font-weight:900;font-size:calc(14*var(--u))}
+.setup-win .hd b{display:block;font-size:calc(15*var(--u))}
+.setup-win .hd small{color:#aab1c2;font-size:calc(11*var(--u))}
+.setup-win .hd .cust{margin-left:auto;height:calc(30*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));padding:0 calc(14*var(--u));border-radius:999px;border:1px solid rgba(255,255,255,.3);font-size:calc(12*var(--u));font-weight:600}
+.setup-win .body{display:grid;grid-template-columns:1fr calc(200*var(--u)) 1fr;gap:calc(20*var(--u));padding:calc(18*var(--u)) calc(40*var(--u)) 0;background:#1a2438;position:absolute;left:0;right:0;top:calc(106*var(--u));bottom:calc(58*var(--u))}
+.setup-win .lab{display:flex;justify-content:space-between;font-size:calc(11*var(--u));letter-spacing:.14em;font-weight:700;color:#c8cedb;margin-bottom:calc(10*var(--u))}
+.setup-win .lab span{letter-spacing:0;font-weight:400;color:#aab1c2}
+.setup-win .pane{border-radius:calc(16*var(--u));padding:calc(12*var(--u));height:calc(370*var(--u));overflow:hidden;font-size:calc(12*var(--u));color:#f1f1f5;position:relative}
+.setup-win .pane.before{background:#4a4870}
+.setup-win .pane.after{background:linear-gradient(172deg,#1e2a3a 0 52%,#4e6b60 52% 66%,#8a9a6e 66%);color:#fff}
+.setup-win .pane .srch{height:calc(30*var(--u));border-radius:calc(8*var(--u));background:rgba(255,255,255,.12);display:flex;align-items:center;padding:0 calc(10*var(--u));gap:calc(8*var(--u));font-size:calc(11.5*var(--u));color:rgba(255,255,255,.8)}
+.setup-win .pane .s{display:flex;justify-content:space-between;font-size:calc(10*var(--u));letter-spacing:.1em;font-weight:700;margin:calc(12*var(--u)) 0 calc(8*var(--u));opacity:.9}
+.setup-win .pane .s span{color:#f0a37a;letter-spacing:0}
+.setup-win .pane .g{display:grid;grid-template-columns:repeat(4,1fr);gap:calc(6*var(--u))}
+.setup-win .pane .g i{height:calc(30*var(--u));border-radius:calc(7*var(--u));background:rgba(255,255,255,.14);display:block;position:relative}
+.setup-win .pane .g i.off{background:rgba(255,90,90,.35)}
+.setup-win .pane .g i.off::after{content:"!";position:absolute;right:calc(3*var(--u));top:calc(2*var(--u));width:calc(9*var(--u));height:calc(9*var(--u));border-radius:50%;background:#e56;font:700 calc(7*var(--u))/calc(9*var(--u)) var(--sans);text-align:center;color:#fff}
+.setup-win .pane .g i.ok::after{content:"";position:absolute;right:calc(3*var(--u));top:calc(2*var(--u));width:calc(8*var(--u));height:calc(8*var(--u));border-radius:50%;background:#7fc47a}
+.setup-win .pane .r{height:calc(30*var(--u));display:flex;align-items:center;gap:calc(8*var(--u));padding:0 calc(9*var(--u));border-radius:calc(7*var(--u));background:rgba(255,255,255,.1);margin-top:calc(5*var(--u))}
+.setup-win .pane .r::after{content:"";margin-left:auto;width:calc(8*var(--u));height:calc(8*var(--u));border-radius:50%;background:#7fc47a}
+.setup-win .pane .r.h{background:transparent;font-weight:700;font-size:calc(12.5*var(--u))}
+.setup-win .pane .r.h::after{display:none}
+.setup-win .pane .r img{width:calc(13*var(--u));height:calc(15*var(--u))}
+.setup-win .mid{text-align:center;font-size:calc(11*var(--u));color:#c8cedb;padding-top:calc(90*var(--u))}
+.setup-win .mid .pk{display:grid;grid-template-columns:1fr auto 1fr;gap:calc(8*var(--u));align-items:center;margin:calc(8*var(--u)) 0 calc(18*var(--u))}
+.setup-win .mid .pk span{height:calc(26*var(--u));border-radius:calc(7*var(--u));background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;gap:calc(4*var(--u));color:#f0a37a;font-weight:600}
+.setup-win .mid .pk i{width:calc(26*var(--u));height:calc(26*var(--u));border-radius:50%;border:1px solid #f0a37a;display:grid;place-items:center;font-style:normal;color:#f0a37a}
+.setup-win .tog{width:calc(44*var(--u));height:calc(24*var(--u));border-radius:999px;background:#e07a5f;position:relative;margin:calc(6*var(--u)) auto}
+.setup-win .tog::after{content:"";position:absolute;right:calc(3*var(--u));top:calc(3*var(--u));width:calc(18*var(--u));height:calc(18*var(--u));border-radius:50%;background:#fff}
+.setup-win .mid .key{margin-top:calc(22*var(--u));font-weight:600;color:#fff}
+.setup-win .foot{position:absolute;left:0;right:0;bottom:0;height:calc(58*var(--u));display:flex;align-items:center;justify-content:space-between;padding:0 calc(20*var(--u));font-size:calc(12*var(--u));color:#c8cedb;background:#1f2a3f}
+.setup-win .foot .back{height:calc(32*var(--u));display:flex;align-items:center;padding:0 calc(16*var(--u));border-radius:999px;border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600}
+.setup-win .foot .next{height:calc(32*var(--u));display:flex;align-items:center;padding:0 calc(16*var(--u));border-radius:999px;background:#e8c85c;color:#1a2438;font-weight:700}
+
+/* =============================================================== scroll-pinned sections */
+.scrolly{position:relative;height:calc(var(--n,3) * 70svh + 100svh)}
+.scrolly .stage{position:sticky;top:64px;height:calc(100svh - 64px);display:flex;align-items:center}
+.stage-in{display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:1rem;height:min(100%,860px);width:min(var(--max),calc(100% - 2.5rem));margin:0 auto;padding:1.2rem 0}
+.visual{position:relative;min-height:0;display:grid;place-items:center}
+.visual > .mac{width:100%;max-height:100%}
+.visual .vis{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .45s;pointer-events:none}
+.visual .vis.on{opacity:1;pointer-events:auto}
+.visual .vis > .mac{width:100%;max-height:100%}
+.visual .vis > .mac .mac-win{max-height:100%}
+.visual .vis.shot img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 40px 80px -30px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12)}
+.visual .vis.shot[data-vis="3"] img{max-width:74%}
+.visual .vis.info{padding:clamp(.5rem,2vw,1.5rem);background:rgba(13,24,38,.94);border-radius:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.captions{position:relative;min-height:3.4em}
+.captions .cap{position:absolute;inset:0;margin:0;opacity:0;transition:opacity .4s;font-size:1rem;color:var(--ink-2);max-width:60rem}
+.captions .cap.on{opacity:1;position:relative}
+.captions .cap b{color:var(--ink);font-weight:600}
+.dark .captions .cap{color:rgba(244,241,234,.75)}
+.dark .captions .cap b{color:#fff}
+.captions.center{text-align:center;max-width:46rem;margin:0 auto}
+.dots{display:flex;gap:.5rem;justify-content:center}
+.dots button{appearance:none;border:0;width:8px;height:8px;border-radius:50%;background:var(--rule-2);cursor:pointer;padding:0}
+.dots button[aria-selected=true]{background:var(--ink);width:24px;border-radius:4px}
+.segs{display:flex;gap:.3rem;justify-content:center;flex-wrap:wrap;padding:.3rem;border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);width:max-content;max-width:100%;margin:0 auto}
+.segs button{appearance:none;border:0;background:transparent;color:inherit;cursor:pointer;border-radius:999px;padding:.5rem 1rem;font-size:.9rem;font-weight:500}
+.segs button:hover{background:rgba(255,255,255,.06)}
+.segs button[aria-selected=true]{background:#f4f1ea;color:var(--ink)}
+.segs.light{background:rgba(15,28,44,.06);box-shadow:inset 0 0 0 1px var(--rule)}
+.segs.light button:hover{background:rgba(15,28,44,.05)}
+.segs.light button[aria-selected=true]{background:var(--ink);color:#fff}
+@media (max-width:760px){.segs{border-radius:16px}}
+html.noanim .visual .vis,html.noanim .captions .cap{transition:none}
+@media (prefers-reduced-motion:reduce){.scrolly{height:auto}.scrolly .stage{position:static;height:auto}}
+/* =============================================================== device stack */
+.devstack{display:grid;gap:1.4rem;margin-top:clamp(1rem,3vw,2rem)}
+.ds-scene{position:relative;aspect-ratio:16/8.6;max-height:70vh}
+.ds-item{position:absolute;transition:transform .55s cubic-bezier(.2,.7,.2,1),filter .4s;cursor:pointer;filter:saturate(.85) brightness(.96)}
+.ds-mac{left:50%;top:0;width:76%;transform:translateX(-50%);z-index:1}
+.ds-ipad{left:0;bottom:0;width:36%;z-index:2}
+.ds-phone{right:3%;bottom:0;width:13%;z-index:3}
+.devstack[data-dev=mac] .ds-mac{z-index:4;filter:none;transform:translateX(-50%) translateY(-2%)}
+.devstack[data-dev=ipad] .ds-ipad{z-index:4;filter:none;transform:translate(6%,-6%) scale(1.05)}
+.devstack[data-dev=iphone] .ds-phone{z-index:4;filter:none;transform:translate(-12%,-6%) scale(1.12)}
+html.noanim .ds-item{transition:none}
+@media (max-width:760px){.ds-scene{aspect-ratio:4/3.6}.ds-mac{width:84%}.ds-ipad{width:46%}.ds-phone{width:20%}}
+/* =============================================================== import layout */
+.setup{margin:0}
+.setup img{width:100%;height:auto;border-radius:12px;box-shadow:0 40px 80px -30px rgba(10,16,26,.5),0 0 0 1px rgba(0,0,0,.25)}
+.imp3{display:grid;grid-template-columns:1fr 1.2fr;gap:2rem 4rem;margin-top:2.6rem;align-items:start}
+@media (max-width:900px){.imp3{grid-template-columns:1fr}}
+.imp3 .steps{margin:0}
+.imp3 .srcs{margin:0}
+
+/* =============================================================== feature tour */
+.tour{margin-top:clamp(1.6rem,3vw,2.6rem)}
+.tour .stage{height:auto;top:var(--stick,64px);align-items:flex-start;display:block}
+.tour-in{--grow:0;--maxw:calc((100vh - 64px - 5.5rem) * 1.7305);width:min(calc(min(1240px,100vw - 2.5rem) + (min(1520px,100vw - 2rem) - min(1240px,100vw - 2.5rem)) * var(--grow)),var(--maxw));margin:0 auto;display:grid;gap:.9rem;grid-template-rows:auto auto;max-height:100%}
+.tour-in .mac{max-height:calc(100svh - 64px - 6rem)}
+.tour-in{--maxw:calc((100svh - 64px - 6.5rem) * 1.7305)}
+.tour-segs{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);color:#f4f1ea}
+.tour-segs button:hover{background:rgba(255,255,255,.08)}
+.tour-segs button{font-size:.85rem;padding:.45rem .85rem}
+.tour-segs button[aria-selected=true]{background:#f4f1ea;color:var(--ink)}
+.hero .tour-segs{opacity:calc(var(--grow));transition:opacity .3s}
+@media (max-width:760px){.tour-segs{display:none}}
+.tour-cap,.tour-dots{display:none}
+@media (max-width:760px){
+  .tour-in{gap:.8rem}
+  .tour-cap{display:block;color:#fff;padding:.2rem .35rem 0;height:11.5rem;overflow:hidden}
+  .tour-cap .tc-step{display:none}
+  .tour-cap h3{font:400 1.5rem/1.15 var(--serif);letter-spacing:-.01em;margin-bottom:.5rem}
+  .tour-cap p{font-size:1rem;line-height:1.5;color:rgba(255,255,255,.8);margin:0}
+  .tour-cap.swap h3,.tour-cap.swap p{animation:capin .5s ease both}
+  @keyframes capin{from{opacity:0}to{opacity:1}}
+  .tour-dots{display:grid;gap:.45rem;position:absolute;right:.35rem;top:50%;transform:translateY(-50%)}
+  .tour-dots i{display:block;width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);transition:height .3s,background .3s}
+  .tour-dots i.on{height:18px;background:var(--gold)}
+  .tour .stage{position:sticky}
+}
+/* description pages rendered inside the webview */
+.pg.desc{--pbg:#f2eee6;--pink:#172238;--pmute:#58627a;--pa:#3b6a9c;--pb:#c99a2e}
+.pg.desc.personal{--pbg:#eef2e8;--pink:#20372d;--pmute:#5a6b60;--pa:#6f8f6b;--pb:#d9663f}
+.dsc{position:absolute;inset:0;padding:calc(56*var(--u)) calc(90*var(--u)) 0 calc(88*var(--u));display:grid;grid-template-columns:1.15fr .85fr;gap:calc(48*var(--u));align-content:start}
+.dsc .kk{grid-column:1/-1;font-size:calc(9.5*var(--u));font-weight:800;letter-spacing:.17em;text-transform:uppercase;color:var(--pmute)}
+.dsc h3{font:500 calc(60*var(--u))/.94 var(--serif);letter-spacing:-.04em;margin:calc(40*var(--u)) 0 0;max-width:12ch;color:var(--pink)}
+.dsc .body{margin-top:calc(46*var(--u));font-size:calc(16*var(--u));line-height:1.5;color:var(--pmute);display:grid;gap:calc(14*var(--u));align-self:start}
+.dsc .body p{margin:0}
+.dsc .body b{color:var(--pink);font-weight:600}
+.dsc .arcname{grid-column:1/-1;margin-top:calc(40*var(--u));padding-top:calc(18*var(--u));border-top:1px solid rgba(0,0,0,.12);font-size:calc(12*var(--u));color:var(--pmute);display:flex;gap:calc(24*var(--u))}
+.dsc .arcname b{color:var(--pink);font-weight:600}
+.dsc .list{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);margin-top:calc(40*var(--u));border:1px solid rgba(0,0,0,.14);position:relative}
+.dsc .list::before{content:"";position:absolute;left:-1px;right:-1px;top:calc(-7*var(--u));height:calc(6*var(--u));background:linear-gradient(90deg,var(--pa) 0 56%,var(--pb) 56%)}
+.dsc .list div{padding:calc(18*var(--u)) calc(16*var(--u)) calc(20*var(--u));border-left:1px solid rgba(0,0,0,.14)}
+.dsc .list div:first-child{border-left:0}
+.dsc .list b{display:block;font:500 calc(17*var(--u))/1.1 var(--serif);letter-spacing:-.01em;margin-bottom:calc(6*var(--u));color:var(--pink)}
+.dsc .list span{font-size:calc(11*var(--u));color:var(--pmute);line-height:1.4}
+.dsc .routes{grid-column:1/-1;margin-top:calc(36*var(--u));border:1px solid rgba(0,0,0,.14);background:rgba(255,255,255,.5)}
+.dsc .routes div{display:grid;grid-template-columns:1fr auto auto;gap:calc(16*var(--u));align-items:center;padding:calc(10*var(--u)) calc(16*var(--u));border-top:1px solid rgba(0,0,0,.1);font-size:calc(12.5*var(--u))}
+.dsc .routes div:first-child{border-top:0;font-size:calc(10*var(--u));letter-spacing:.12em;text-transform:uppercase;color:var(--pmute);font-weight:700}
+.dsc .routes code{font:calc(12*var(--u)) ui-monospace,Menlo,monospace}
+.dsc .routes em{font-style:normal;font-size:calc(9.5*var(--u));letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(0,0,0,.2);border-radius:999px;padding:calc(2*var(--u)) calc(8*var(--u))}
+.dsc .routes span{display:inline-flex;align-items:center;gap:calc(6*var(--u));font-weight:600}
+.dsc .routes img{width:calc(12*var(--u));height:calc(14*var(--u))}
+.pg.hasfloat .dsc{grid-template-columns:1fr 1fr}
+.pg.hasfloat .dsc h3,.pg.hasfloat .dsc .body{grid-column:1}
+.pg.hasfloat .dsc h3{font-size:calc(50*var(--u))}
+.pg.hasfloat .dsc .body{margin-top:calc(26*var(--u));font-size:calc(14.5*var(--u))}
+.pg .float{position:absolute;right:calc(44*var(--u));top:calc(120*var(--u));width:calc(46%);border-radius:calc(10*var(--u));box-shadow:0 calc(30*var(--u)) calc(60*var(--u)) calc(-20*var(--u)) rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.25)}
+.pg .float.qw{width:48%;border-radius:0;box-shadow:none}
+.pg .float.qw .qw-win{box-shadow:0 calc(30*var(--u)) calc(60*var(--u)) calc(-20*var(--u)) rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.25)}
+.pg .todo{position:absolute;right:calc(60*var(--u));bottom:calc(48*var(--u));width:calc(420*var(--u));padding:calc(14*var(--u)) calc(16*var(--u));border:1px dashed rgba(0,0,0,.3);border-radius:calc(8*var(--u));font-size:calc(11.5*var(--u));color:var(--pmute);background:rgba(255,255,255,.5)}
+.pbar.top{position:absolute;left:0;right:0;top:0}
+.pbody.lh{position:absolute;inset:calc(40*var(--u)) 0 0 0;padding:calc(64*var(--u)) calc(80*var(--u))}
+.pbody.lh h4{max-width:11ch}
+.pbody .pill{display:inline-block;margin-top:calc(34*var(--u));background:#1c3b2f;color:#fff;border-radius:999px;padding:calc(13*var(--u)) calc(20*var(--u));font-size:calc(13*var(--u));font-weight:600}
+.glass{position:absolute;left:calc(52*var(--u));top:calc(150*var(--u));width:calc(700*var(--u));height:calc(470*var(--u));border-radius:calc(18*var(--u));overflow:hidden;color:#e9eaee;
+  background:linear-gradient(180deg,rgba(74,78,86,.86),rgba(52,56,64,.9));backdrop-filter:blur(calc(30*var(--u))) saturate(1.2);-webkit-backdrop-filter:blur(calc(30*var(--u))) saturate(1.2);
+  box-shadow:0 calc(40*var(--u)) calc(90*var(--u)) calc(-20*var(--u)) rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.16),inset 0 1px 0 rgba(255,255,255,.22)}
+.glass .g-in{height:calc(62*var(--u));display:flex;align-items:center;gap:calc(12*var(--u));padding:0 calc(22*var(--u));font-size:calc(17*var(--u));color:rgba(255,255,255,.72);border-bottom:1px solid rgba(255,255,255,.1)}
+.glass .g-in svg{width:calc(17*var(--u));height:calc(17*var(--u));fill:none;stroke:rgba(255,255,255,.7);stroke-width:2;stroke-linecap:round}
+.glass .g-in span{flex:1;position:relative}
+.glass .g-in span::before{content:"";position:absolute;left:calc(-2*var(--u));top:calc(-2*var(--u));width:1.5px;height:calc(22*var(--u));background:#fff;animation:blink 1s steps(1) infinite}
+.glass .g-in .x{font-style:normal;font-size:calc(14*var(--u));opacity:.6}
+.glass .g-sec{padding:calc(14*var(--u)) calc(20*var(--u)) calc(6*var(--u));font-size:calc(10.5*var(--u));color:rgba(255,255,255,.55);font-weight:600}
+.glass .g-row{display:grid;grid-template-columns:calc(30*var(--u)) 1fr auto;gap:calc(12*var(--u));align-items:center;margin:0 calc(12*var(--u)) calc(8*var(--u));padding:calc(10*var(--u)) calc(12*var(--u));border-radius:calc(10*var(--u));background:rgba(255,255,255,.06)}
+.glass .g-row.sel{background:rgba(74,104,150,.62);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.glass .g-row i{font-style:normal;font-size:calc(17*var(--u));text-align:center}
+.glass .g-row b{display:block;font-size:calc(13.5*var(--u));color:#fff;font-weight:600}
+.glass .g-row small{display:block;font-size:calc(10*var(--u));color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(480*var(--u))}
+.glass .g-act{font-size:calc(10.5*var(--u));color:rgba(255,255,255,.62);display:flex;gap:calc(8*var(--u));align-items:center;white-space:nowrap}
+.glass .g-act b{color:rgba(255,255,255,.75);font-weight:500}
+.glass .g-act kbd{font:calc(10*var(--u)) ui-monospace,Menlo,monospace;opacity:.8}
+.glass .g-bar{position:absolute;right:calc(6*var(--u));top:calc(72*var(--u));width:calc(6*var(--u));height:calc(270*var(--u));border-radius:calc(3*var(--u));background:rgba(255,255,255,.45)}
+@container (max-width:720px){.dsc{grid-template-columns:1fr;padding:calc(40*var(--u)) calc(50*var(--u)) 0}.dsc .list{grid-template-columns:1fr 1fr}.pg .float,.pg .todo{display:none}.pg.hasfloat .dsc h3,.pg.hasfloat .dsc .body{grid-column:auto}}
+
+/* =============================================================== feature ticker */
+.ticker{width:100vw;margin-left:calc(50% - 50vw);overflow:hidden;display:grid;gap:1rem;padding:.5rem 0 1.5rem;
+  mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.trow{overflow:hidden}
+.tbelt{display:flex;width:max-content;animation:belt 110s linear infinite}
+.trow.rev .tbelt{animation-direction:reverse;animation-duration:130s}
+.ttrack{display:flex;gap:1rem;padding-right:1rem}
+.ticker:hover .tbelt,.ticker:focus-within .tbelt{animation-play-state:paused}
+@keyframes belt{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+html.noanim .tbelt{animation:none}
+@media (prefers-reduced-motion:reduce){.tbelt{animation:none}.trow{overflow-x:auto}}
+.fcard{width:280px;flex:0 0 auto;display:grid;gap:.4rem;align-content:start;padding:1.1rem 1.15rem 1.2rem;border-radius:16px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.fcard .fjob{font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.fcard small{font-size:.82rem;color:rgba(244,241,234,.6)}
+.fcard small b{color:rgba(244,241,234,.85);font-weight:500}
+.fcard h3{font:400 1.3rem/1.15 var(--serif);letter-spacing:-.01em;color:#fff;margin-top:.15rem}
+.fcard p{font-size:.88rem;color:rgba(244,241,234,.72);margin-top:.15rem}
+@media (max-width:640px){.fcard{width:240px}}
+
+/* =============================================================== rest */
+.rest{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem 2.5rem}
+@media (max-width:900px){.rest{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.rest{grid-template-columns:1fr}}
+.rest div{padding-top:1rem;border-top:1px solid var(--rule)}
+.rest b{display:block;font-weight:600;margin-bottom:.25rem}
+.rest p{color:var(--ink-2);font-size:.95rem}
+.rest .tag{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-left:.45rem;vertical-align:.12em}
+
+/* =============================================================== get */
+.get{overflow:hidden}
+.get .band{position:absolute;right:-6%;top:-10%;bottom:-10%;width:40%;background:linear-gradient(172deg,transparent 0 42%,var(--work-2) 42% 60%,var(--work-3) 60%);clip-path:polygon(22% 0,100% 0,100% 100%,0 100%);opacity:.95}
+@media (max-width:900px){.get .band{display:none}}
+.get .h2{max-width:22ch}
+.getlist{list-style:none;padding:0;margin:2.5rem 0 0;max-width:40rem;border-top:1px solid rgba(255,255,255,.16)}
+.getlist li a{display:grid;grid-template-columns:44px 1fr auto;gap:1rem;align-items:center;padding:1.05rem 0;border-bottom:1px solid rgba(255,255,255,.16);text-decoration:none}
+.getlist img{width:44px;height:44px;border-radius:10px;background:#fff;padding:5px}
+.getlist img.raw{padding:0;background:transparent}
+.getlist b{display:block;font-weight:600}
+.getlist small{color:rgba(244,241,234,.66)}
+.getlist .go{font-size:.9rem;color:var(--gold)}
+footer{background:#0a1420;color:rgba(244,241,234,.7);font-size:.85rem;padding:2rem 0 3rem}
+footer .wrap{display:grid;gap:1.2rem}
+footer .links{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem}
+footer a{color:rgba(244,241,234,.88);text-decoration:none}
+footer a:hover{color:#fff}
+footer p{max-width:62rem}
+</style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+<a class="skip" href="#main">Skip to content</a>
 
-  <header class="site-header" data-nav>
-    <a class="wordmark" href="#top" aria-label="Crest home">
-      <img class="brand-mark" src="assets/crest-logo.svg" alt="" aria-hidden="true">
-      <span>Crest</span>
-    </a>
-    <nav aria-label="Primary navigation">
-      <a href="#story">Arc parity</a>
-      <a href="#split-view">Split View</a>
-      <a href="#spaces">Spaces</a>
-      <a href="#platforms">Every device</a>
-      <a href="#migration">Move in</a>
-      <a href="#extensions">Extensions</a>
-      <a href="#features">Features</a>
-      <a class="nav-cta" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer">Download for Mac</a>
+<header class="nav" id="nav">
+  <div class="wide">
+    <a class="brand" href="#"><img src="assets/crest-logo.svg" alt="">Crest</a>
+    <nav class="nav-links" aria-label="Site">
+      <a href="#name">The name</a>
+      <a href="#tour">Features</a>
+      <a href="#arc">From Arc</a>
+      <a href="#devices">Devices</a>
+      <span class="sep"></span>
+      <a href="guides/">Help &amp; docs</a>
+      <a href="https://github.com/pauljoda/Crest" target="_blank" rel="noopener noreferrer">Open source</a>
+      <a class="cta" href="#get">Download</a>
     </nav>
-  </header>
+  </div>
+</header>
 
-  <main id="main">
-    <section class="hero" id="top">
-      <div class="hero-grid">
-        <div class="hero-copy reveal">
-          <p class="hero-kicker">Crest</p>
-          <h1>The browser for life after <em>Arc.</em></h1>
-          <p class="hero-lede"><strong>Created by an Arc diehard.</strong> Crest keeps the ideas worth carrying forward&mdash;Spaces, a calm sidebar, Peek, command-first browsing, and real separation between contexts&mdash;and makes them feel at home on Mac, iPad, and iPhone.</p>
-          <div class="hero-actions">
-            <a class="hero-product-button hero-download-button" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer" aria-label="Download the latest Crest release for Mac from GitHub">
-              <img src="assets/crest-logo.svg" alt="" width="32" height="32">
-              <span><small>Apple silicon Mac</small>Download for Mac</span>
-            </a>
-            <a class="hero-product-button hero-app-store-button" href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer" aria-label="Download Crest Browser for iPhone and iPad on the App Store">
-              <img src="assets/app-store-official.png" alt="" width="32" height="32">
-              <span><small>App Store · Mobile release</small>Download for iPhone &amp; iPad</span>
-            </a>
-          </div>
-          <div class="hero-platforms" aria-label="Available platforms">
-            <span>Mac</span><span>iPad</span><span>iPhone</span>
-          </div>
-        </div>
+<main id="main" style="overflow-x:clip">
 
-        <div class="hero-heraldry" aria-label="Four Space banners wearing layered crests">
-          <article class="hero-standard standard-work" style="--standard-height: 78%; --delay: 0ms">
-            <span class="standard-name">Work</span>
-            <img src="assets/space-crest-work.svg" alt="Navy, ocean, and gold Work Space shield">
-            <span class="standard-motto">Focus has a home</span>
-          </article>
-          <article class="hero-standard standard-personal" style="--standard-height: 91%; --delay: 100ms">
-            <span class="standard-name">Personal</span>
-            <img src="assets/space-crest-personal.svg" alt="Green, sand, and red Personal Space compass seal">
-            <span class="standard-motto">A world of your own</span>
-          </article>
-          <article class="hero-standard standard-meadow" style="--standard-height: 72%; --delay: 200ms">
-            <span class="standard-name">Studio</span>
-            <img src="assets/space-crest-meadow.svg" alt="Meadow palette hexagonal crest with tree charge">
-            <span class="standard-motto">Make something lasting</span>
-          </article>
-          <article class="hero-standard standard-storm" style="--standard-height: 86%; --delay: 300ms">
-            <span class="standard-name">Private</span>
-            <img src="assets/space-crest-storm.svg" alt="Storm palette lozenge with star charges">
-            <span class="standard-motto">Leave no trail</span>
-          </article>
-        </div>
+<section class="hero" id="top" data-space="work" style="overflow:visible">
+  <div class="field base"></div>
+  <div class="field alt"></div>
+  <div class="hero-light"></div>
+  <img class="hero-crest work" src="assets/space-crest-work.svg" alt="" aria-hidden="true">
+  <img class="hero-crest personal" src="assets/space-crest-personal.svg" alt="" aria-hidden="true">
+  <div class="field-fade"></div>
+  <div class="wrap">
+    <h1 class="h1">The browser for life after Arc.</h1>
+    <p class="lede">Spaces, a calm sidebar, Peek, and Split View. Native on Mac, iPad, and iPhone. <strong>Made by an Arc diehard.</strong></p>
+    <div class="cta">
+      <a class="btn paper primary for-mac" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer"><img src="assets/crest-logo.svg" alt=""><span><small>Apple silicon Mac</small><b>Download for Mac</b></span></a>
+      <a class="btn paper primary for-ios" href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer"><img src="assets/app-store-official.png" alt=""><span><small>App Store</small><b>Get it for iPhone &amp; iPad</b></span></a>
+      <div class="secondary">
+        <a class="sl alt-ios" href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer"><img src="assets/app-store-official.png" alt="">iPhone &amp; iPad on the App Store</a>
+        <a class="sl alt-mac" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer"><img src="assets/crest-logo.svg" alt="">Download for Mac</a>
+        <a class="sl" href="https://github.com/pauljoda/Crest" target="_blank" rel="noopener noreferrer"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>Open source on GitHub</a>
       </div>
-      <p class="hero-independence">Independent and not affiliated with Arc.</p>
-    </section>
-
-    <div class="running-order" aria-hidden="true">
-      <div>Spaces · Split View · Peek · Quick Window · Air Traffic Control carried forward · Native on Mac, iPad, and iPhone · </div>
     </div>
-
-    <section class="arc-story" id="story" aria-labelledby="story-heading">
-      <div class="arc-story-lead reveal">
-        <p class="eyebrow">The Arc feature map</p>
-        <h2 id="story-heading">The ideas you relied on are <em>still here.</em></h2>
-        <p class="story-declaration">This is the practical overlap, using Arc&rsquo;s names alongside Crest&rsquo;s implementation. The details are native to Crest, but the familiar job of each feature carries forward.</p>
-      </div>
-
-      <div class="parity-matrix reveal" role="table" aria-label="Arc and Crest feature parity">
-        <div class="parity-row parity-heading" role="row">
-          <span role="columnheader">The job</span><span role="columnheader">Arc called it</span><span role="columnheader">Crest carries it forward</span>
-        </div>
-        <div class="parity-row" role="row"><span role="cell">Separate contexts</span><strong role="cell">Spaces + Profiles</strong><span role="cell"><b>Spaces with isolated profiles</b><small>Sessions, history, passwords, extensions, permissions, and site data stay apart.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Browser structure</span><strong role="cell">Sidebar</strong><span role="cell"><b>Adaptive sidebar</b><small>Full on Mac and iPad; a dedicated, touch-native view on iPhone.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Always-close sites</span><strong role="cell">Favorites</strong><span role="cell"><b>Pinned sites</b><small>A fast icon grid scoped deliberately to each Space.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Durable pages</span><strong role="cell">Pinned Tabs</strong><span role="cell"><b>Saved tabs</b><small>Keep a home URL, wander away, then return to the saved location.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Projects and nesting</span><strong role="cell">Folders</strong><span role="cell"><b>Saved folders</b><small>Nest, color, collapse, reorder, and move complete folder trees.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Fast navigation</span><strong role="cell">Command Bar</strong><span role="cell"><b>Command palette</b><small>Search the web, tabs, history, other Spaces, and every Crest command.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Automatic link routing</span><strong role="cell">Air Traffic Control</strong><span role="cell"><b>Link Routing</b><small>Send exact URLs or matching domains to the right Space before the default route.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Multiple pages at once</span><strong role="cell">Split View</strong><span role="cell"><b>Split View</b><small>Two to four live cards, resizable on Mac and iPad and paged on iPhone.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Temporary link preview</span><strong role="cell">Peek</strong><span role="cell"><b>Peek</b><small>Preview above the source page, then close it or promote it into any Space.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">External-link triage</span><strong role="cell">Little Arc</strong><span role="cell"><b>Quick Window</b><small>Open small, choose the right Space, and keep only what matters.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Automatic cleanup</span><strong role="cell">Auto Archive</strong><span role="cell"><b>Space cleanup + Archive</b><small>Choose 12 hours through 30 days, or turn cleanup off; every result stays recoverable.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Recently used switching</span><strong role="cell">Recent Tab Switcher</strong><span role="cell"><b>Most Recent Tab</b><small>Use Control-Tab to move straight back to the tab you just left.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Personal key map</span><strong role="cell">Custom Keyboard Shortcuts</strong><span role="cell"><b>Rebindable Shortcuts</b><small>Search, record, reset, and resolve conflicts for the complete Mac command set.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Developer context</span><strong role="cell">Developer Mode</strong><span role="cell"><b>Localhost mode</b><small>Automatic address, capture, console, network, and Web Inspector controls.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Per-site control</span><strong role="cell">Site Control Center</strong><span role="cell"><b>Site Controls</b><small>Reader, blocking, permissions, extension actions, and page tools in context.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Browser add-ons</span><strong role="cell">Extensions</strong><span role="cell"><b>Per-Space extensions</b><small>Chrome Web Store, Firefox Add-ons, Safari Web Extensions, and unpacked packages on Mac.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Private browsing</span><strong role="cell">Incognito</strong><span role="cell"><b>Private Spaces</b><small>Non-persistent browsing with optional device authentication and foreground relocking.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Appearance</span><strong role="cell">Space Themes</strong><span role="cell"><b>Space Forge + gradients</b><small>Build a full crest or keep the familiar blended-color atmosphere.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Shared organization</span><strong role="cell">Arc Sync</strong><span role="cell"><b>iCloud sync</b><small>Spaces, tabs, folders, split groups, appearance, and durable state across Apple devices.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Browser library</span><strong role="cell">Library</strong><span role="cell"><b>History, Archive + Downloads</b><small>Common lists remain easy to reach while their records stay scoped by Space.</small></span></div>
-        <div class="parity-row" role="row"><span role="cell">Move-in flow</span><strong role="cell">Import from Another Browser</strong><span role="cell"><b>Review-first migration</b><small>Bring over supported data from Arc, Zen, Chrome, Safari, and Firefox on Mac.</small></span></div>
-      </div>
-
-      <p class="parity-note reveal">This matrix covers the Arc features Crest implements today; it is not a claim that the two browsers share code or identical internals. Crest is independent and not affiliated with Arc.</p>
-    </section>
-
-    <section class="platform-story" id="platforms" aria-labelledby="platforms-heading">
-      <div class="section-heading section-heading-light reveal">
-        <p class="eyebrow">Carried forward, then taken further</p>
-        <h2 id="platforms-heading">The full browser model now belongs on every Apple device</h2>
-        <p>Crest retains the complete Space, tab, folder, split, history, archive, settings, and command model. Mac and iPad have room to show it directly; iPhone adapts the same interface into focused views instead of throwing features away.</p>
-      </div>
-
-      <div class="platform-grid">
-        <article class="platform-card platform-mac reveal">
-          <div class="platform-copy">
-            <span class="platform-index">01</span>
-            <p class="eyebrow">Crest for Mac</p>
-            <h3>The complete desktop browser</h3>
-            <p>A generous sidebar, two-to-four-card Split View, native windows and menus, Quick Window, Peek, rebindable shortcuts, extensions, and automatic localhost tools give the Mac room to work.</p>
-            <ul><li>Direct releases and Sparkle updates</li><li>Full sidebar, splits, and native menus</li><li>Developer and extension workflows</li></ul>
-          </div>
-          <figure class="platform-shot platform-shot-mac">
-            <img src="assets/crest-work-mac-2026.png" alt="Crest Work Space on Mac with its sidebar and project dashboard" width="1329" height="768">
-          </figure>
-        </article>
-
-        <article class="platform-card platform-ipad reveal">
-          <div class="platform-copy">
-            <span class="platform-index">02</span>
-            <p class="eyebrow">Crest for iPad</p>
-            <h3>The desktop structure, made for touch</h3>
-            <p>Keep the full sidebar, resizable Split View columns, Space identity, durable organization, and hardware-keyboard commands without pretending your iPad is just a large phone.</p>
-          </div>
-          <figure class="platform-shot">
-            <img src="assets/crest-work-ipad-2026.png" alt="Crest Work Space on iPad" width="2420" height="1668">
-          </figure>
-          <div class="platform-field">
-            <img src="assets/space-crest-work.svg" alt="" aria-hidden="true">
-            <p><span>The whole Space</span><strong>Right at hand.</strong></p>
-          </div>
-        </article>
-
-        <article class="platform-card platform-iphone reveal">
-          <div class="platform-copy">
-            <span class="platform-index">03</span>
-            <p class="eyebrow">Crest for iPhone</p>
-            <h3>The same browser, recomposed</h3>
-            <p>Compact chrome keeps the page primary. The full sidebar becomes a dedicated view, Split View becomes a focused card pager, and every Space remains within thumb&rsquo;s reach.</p>
-          </div>
-          <figure class="platform-shot platform-shot-phone">
-            <img src="assets/crest-work-iphone-2026.png" alt="Crest Work Space on iPhone" width="1206" height="2622">
-          </figure>
-        </article>
-      </div>
-
-      <div class="sidebar-story reveal" id="sidebar-story" aria-labelledby="sidebar-story-heading">
-        <div class="sidebar-story-copy">
-          <p class="eyebrow">How the sidebar adapts</p>
-          <h3 id="sidebar-story-heading">Beside the page on larger screens, ready when you need it on iPhone</h3>
-          <p>Mac and iPad keep the sidebar beside the page, where tabs and Spaces remain in view. On iPhone, the page gets the whole screen and the same sidebar arrives as its own view—then slips away the moment you choose a tab.</p>
-        </div>
-
-        <div class="sidebar-wide-pair" aria-label="Crest sidebars on Mac and iPad">
-          <figure>
-            <img src="assets/crest-work-mac-2026.png" alt="Crest on Mac with the Work Space sidebar beside the page" width="1329" height="768">
-            <figcaption><span>Mac</span>Sidebar and page, together</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/crest-work-ipad-2026.png" alt="Crest on iPad with the Work Space sidebar beside the page" width="2420" height="1668">
-            <figcaption><span>iPad</span>The familiar structure, touch-native</figcaption>
-          </figure>
-        </div>
-
-        <div class="sidebar-mobile-sequence" aria-label="Crest iPhone web view opening into its dedicated sidebar">
-          <figure>
-            <span class="sidebar-mobile-step">01 · Browse</span>
-            <img src="assets/crest-work-iphone-2026.png" alt="Crest on iPhone with the web page filling the screen" width="1206" height="2622">
-          </figure>
-          <div class="sidebar-transition-mark" aria-hidden="true"><span>Open sidebar</span><b>→</b></div>
-          <figure>
-            <span class="sidebar-mobile-step">02 · Choose</span>
-            <img src="assets/crest-work-iphone-sidebar-2026.png" alt="Crest on iPhone showing the dedicated full-screen Work Space sidebar" width="1206" height="2622">
-          </figure>
+    <p class="fine">MPL 2.0 · Not affiliated with Arc.</p>
+  </div>
+  <div class="scrolly tour" id="tour" data-steps="11">
+    <div class="stage">
+      <div class="tour-in">
+        <div class="mac" id="tour-mac" data-mac='{"id":"hero","space":"work","page":"northstar","picker":true}'></div>
+        <div class="tour-cap" id="tour-cap" aria-live="polite"><span class="tc-step"></span><h3></h3><p></p></div>
+        <div class="tour-dots" id="tour-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="segs tour-segs" role="tablist" aria-label="Features">
+          <button role="tab" aria-selected="true" data-go="0">Crest</button>
+          <button role="tab" aria-selected="false" data-go="1">Spaces</button>
+          <button role="tab" aria-selected="false" data-go="3">Sidebar</button>
+          <button role="tab" aria-selected="false" data-go="4">Split View</button>
+          <button role="tab" aria-selected="false" data-go="5">Peek</button>
+          <button role="tab" aria-selected="false" data-go="6">Quick Window</button>
+          <button role="tab" aria-selected="false" data-go="7">Link Routing</button>
+          <button role="tab" aria-selected="false" data-go="8">Command palette</button>
+          <button role="tab" aria-selected="false" data-go="9">Localhost</button>
+          <button role="tab" aria-selected="false" data-go="10">Space Forge</button>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="split-story" id="split-view" aria-labelledby="split-view-heading">
-      <div class="split-story-intro reveal">
-        <div>
-          <p class="eyebrow">Split View</p>
-          <h2 id="split-view-heading">Keep the pages that belong together, together.</h2>
+<section class="section name" id="name">
+  <div class="wrap name-grid">
+    <div class="rv">
+      <p class="eyebrow">Why it's called Crest</p>
+      <h2 class="h2">Every Space flies its own colors.</h2>
+      <p class="lede">A crest is the mark a house puts on its banner, so you know whose hall you are standing in before anyone says a word. Crest borrows the idea. Each Space has a crest and a palette, and the sidebar wears them. One glance tells you this is Work, not Personal, before you read a tab or type a password. Fold that sidebar into a flag and you have the app icon.</p>
+      <div class="chips" role="group" aria-label="Show another Space's colors">
+        <button class="chip" type="button" data-flag="work" aria-pressed="true"><img src="assets/space-crest-work.svg" alt="">Work</button>
+        <button class="chip" type="button" data-flag="personal" aria-pressed="false"><img src="assets/space-crest-personal.svg" alt="">Personal</button>
+        <button class="chip" type="button" data-flag="studio" aria-pressed="false"><img src="assets/space-crest-meadow.svg" alt="">Studio</button>
+        <button class="chip" type="button" data-flag="private" aria-pressed="false"><img src="assets/space-crest-storm.svg" alt="">Private</button>
+      </div>
+    </div>
+    <div class="hall rv" id="hall">
+      <div class="banner-wrap">
+        <div class="rod"></div>
+        <div class="banner" id="banner">
+          <img src="assets/space-crest-work.svg" alt="" data-bcrest>
+          <span class="bn" data-bname>Work</span>
+          <span class="bm" data-bmotto>Focus has a home</span>
         </div>
-        <p>Build a working surface from two to four live tabs. The group becomes one durable row in the sidebar, the address and page controls follow the focused card, and the whole arrangement can synchronize across your devices.</p>
+        <div class="banner-shadow"></div>
       </div>
+    </div>
+  </div>
+</section>
 
-      <figure class="split-product-shot reveal">
-        <img src="assets/crest-split-view-mac-2026.png" alt="Crest Split View on Mac showing a field guide and trail note side by side inside the Personal Space" width="1228" height="650">
-        <figcaption><span>Real Crest capture · Personal Space</span><strong>Two live pages, one saved group.</strong></figcaption>
-      </figure>
+<section class="section dark" id="arc">
+  <div class="wrap">
+    <div class="head rv">
+      <p class="eyebrow">Coming from Arc</p>
+      <h2 class="h2">If you used Arc, you already know how this works.</h2>
+      <p class="lede">The same jobs, mostly the same names. The tour above covers the big ones; this is everything else.</p>
+    </div>
+    <div class="ticker rv" aria-label="Arc features in Crest" id="ticker"></div>
+    <details class="fulllist rv">
+      <summary>The full list: what Arc called it, and what Crest calls it</summary>
+      <table class="parity">
+        <thead><tr><th>The job</th><th>Arc</th><th>Crest</th></tr></thead>
+        <tbody>
+          <tr><td>Separate contexts</td><td>Spaces + Profiles</td><td>Spaces with isolated profiles<small>Sessions, history, passwords, extensions, permissions, and site data stay apart.</small></td></tr>
+          <tr><td>Browser structure</td><td>Sidebar</td><td>Adaptive sidebar<small>Full on Mac and iPad; a dedicated, touch-native view on iPhone.</small></td></tr>
+          <tr><td>Always-close sites</td><td>Favorites</td><td>Pinned sites<small>A fast icon grid scoped deliberately to each Space.</small></td></tr>
+          <tr><td>Durable pages</td><td>Pinned Tabs</td><td>Saved tabs<small>Keep a home URL, wander away, then return to the saved location.</small></td></tr>
+          <tr><td>Projects and nesting</td><td>Folders</td><td>Saved folders<small>Nest, color, collapse, reorder, and move complete folder trees.</small></td></tr>
+          <tr><td>Fast navigation</td><td>Command Bar</td><td>Command palette<small>Search the web, tabs, history, other Spaces, and every Crest command.</small></td></tr>
+          <tr><td>Automatic link routing</td><td>Air Traffic Control</td><td>Link Routing<small>Send exact URLs or matching domains to the right Space before the default route.</small></td></tr>
+          <tr><td>Multiple pages at once</td><td>Split View</td><td>Split View<small>Two to four live cards, resizable on Mac and iPad and paged on iPhone.</small></td></tr>
+          <tr><td>Temporary link preview</td><td>Peek</td><td>Peek<small>Preview above the source page, then close it or promote it into any Space.</small></td></tr>
+          <tr><td>External-link triage</td><td>Little Arc</td><td>Quick Window<small>Open small, choose the right Space, and keep only what matters.</small></td></tr>
+          <tr><td>Automatic cleanup</td><td>Auto Archive</td><td>Space cleanup + Archive<small>Choose 12 hours through 30 days, or turn cleanup off; every result stays recoverable.</small></td></tr>
+          <tr><td>Recently used switching</td><td>Recent Tab Switcher</td><td>Most Recent Tab<small>Use Control-Tab to move straight back to the tab you just left.</small></td></tr>
+          <tr><td>Personal key map</td><td>Custom Keyboard Shortcuts</td><td>Rebindable Shortcuts<small>Search, record, reset, and resolve conflicts for the complete Mac command set.</small></td></tr>
+          <tr><td>Developer context</td><td>Developer Mode</td><td>Localhost mode<small>Automatic address, capture, console, network, and Web Inspector controls.</small></td></tr>
+          <tr><td>Per-site control</td><td>Site Control Center</td><td>Site Controls<small>Reader, blocking, permissions, extension actions, and page tools in context.</small></td></tr>
+          <tr><td>Browser add-ons</td><td>Extensions</td><td>Per-Space extensions<small>Chrome Web Store, Firefox Add-ons, Safari Web Extensions, and unpacked packages on Mac.</small></td></tr>
+          <tr><td>Private browsing</td><td>Incognito</td><td>Private Spaces<small>Non-persistent browsing with optional device authentication and foreground relocking.</small></td></tr>
+          <tr><td>Appearance</td><td>Space Themes</td><td>Space Forge + gradients<small>Build a full crest or keep the familiar blended-color atmosphere.</small></td></tr>
+          <tr><td>Shared organization</td><td>Arc Sync</td><td>iCloud sync<small>Spaces, tabs, folders, split groups, appearance, and durable state across Apple devices.</small></td></tr>
+          <tr><td>Browser library</td><td>Library</td><td>History, Archive + Downloads<small>Common lists remain easy to reach while their records stay scoped by Space.</small></td></tr>
+          <tr><td>Move-in flow</td><td>Import from Another Browser</td><td>Review-first migration<small>Bring over supported data from Arc, Zen, Chrome, Safari, and Firefox on Mac.</small></td></tr>
+        </tbody>
+      </table>
+      <p class="fine" style="margin-top:1rem">This matrix covers the Arc features Crest implements today. It is not a claim that the two browsers share code or identical internals. Crest is independent and not affiliated with Arc.</p>
+    </details>
+  </div>
+</section>
 
-      <div class="split-capabilities reveal">
-        <article><span>01</span><h3>Make a split naturally</h3><p>Drag a sidebar tab onto the page, split the current tab with another tab, or right-click a link and open it directly in Split View.</p></article>
-        <article><span>02</span><h3>Focus stays explicit</h3><p>Click a card or use Control-Command-Left and Right. Address, reload, find, page tools, Peek, and extension popups follow that card.</p></article>
-        <article><span>03</span><h3>Resize and rearrange</h3><p>Drag the dividers, move cards left or right, remove one card, or separate every tab while keeping the pages alive.</p></article>
-        <article><span>04</span><h3>Adapt, do not amputate</h3><p>Mac and iPad use resizable columns. iPhone keeps the same synchronized group and pages between cards from the compact toolbar.</p></article>
+<section class="section" id="devices">
+  <div class="wrap">
+    <div class="head rv" style="text-align:center;margin-left:auto;margin-right:auto">
+      <p class="eyebrow">Mac, iPad, iPhone</p>
+      <h2 class="h2">The full browser model on every Apple device.</h2>
+    </div>
+    <div class="devstack rv" id="devstack" data-dev="mac">
+      <div class="ds-scene">
+        <div class="ds-item ds-mac" data-devitem="mac"><div class="mac" data-mac='{"id":"dev-mac","space":"work","page":"northstar","picker":true}'></div></div>
+        <div class="ds-item ds-ipad" data-devitem="ipad"><div class="bezel ipad-bz"><img src="assets/crest-work-ipad-2026.png" alt="Crest Work Space on iPad with the sidebar beside the page" width="2420" height="1668"></div></div>
+        <div class="ds-item ds-phone" data-devitem="iphone"><div class="bezel phone-bz"><img src="assets/crest-work-iphone-sidebar-2026.png" alt="Crest on iPhone showing the dedicated full-screen Work Space sidebar" width="1206" height="2622"></div></div>
       </div>
-
-      <a class="split-guide-link reveal" href="guides/split-view/">
-        <span><small>Help &amp; shortcuts</small><strong>Learn every way to create, focus, resize, reorder, sync, and separate a Split View.</strong></span>
-        <span>Open the guide</span>
-      </a>
-    </section>
-
-    <section class="space-story" id="spaces" aria-labelledby="spaces-heading" data-space-browser>
-      <div class="space-story-intro reveal">
-        <div>
-          <p class="eyebrow">Spaces, properly separated</p>
-          <h2 id="spaces-heading">Every Space is its own browser.</h2>
-        </div>
-        <p class="space-story-lede">Choose a crest, swipe, or scroll sideways. The entire browser moves with you—sidebar, tabs, signed-in session, history, cookies, passwords, permissions, and WebKit data.</p>
+      <div class="segs light" role="tablist" aria-label="Devices">
+        <button role="tab" aria-selected="true" data-dev="mac">Mac</button>
+        <button role="tab" aria-selected="false" data-dev="ipad">iPad</button>
+        <button role="tab" aria-selected="false" data-dev="iphone">iPhone</button>
       </div>
-
-      <div class="space-browser-showcase reveal">
-        <div class="space-browser-shell" tabindex="0" aria-label="Interactive Work and Personal Space browser showcase">
-          <div class="space-browser-screen">
-            <figure class="space-browser-picture active" data-space-image="work" aria-hidden="false">
-              <img class="space-browser-desktop-shot" src="assets/crest-work-mac-2026.png" alt="Crest on Mac showing the Work Space and its project dashboard" width="1329" height="768">
-              <img class="space-browser-mobile-shot" src="assets/crest-work-iphone-sidebar-2026.png" alt="Crest on iPhone showing the dedicated Work Space sidebar" width="1206" height="2622">
-            </figure>
-            <figure class="space-browser-picture" data-space-image="personal" aria-hidden="true">
-              <img class="space-browser-desktop-shot" src="assets/crest-personal-mac-clean.png" alt="Crest on macOS showing the Personal Space and its weekend dashboard" width="1440" height="900">
-              <img class="space-browser-mobile-shot" src="assets/crest-personal-iphone.png" alt="Crest on iPhone showing the Personal Space tab view" width="1206" height="2622">
-            </figure>
-          </div>
-        </div>
-
-        <div class="space-browser-actions" role="group" aria-label="Choose a Space">
-          <span class="space-browser-actions-label"><strong>Choose a Space</strong><small>or swipe the browser</small></span>
-          <button class="active" type="button" data-space-choice="work" aria-pressed="true">
-            <img class="space-choice-crest" src="assets/space-crest-work.svg" alt="" aria-hidden="true">
-            <span><strong>Work Space</strong><small>Focused and signed in</small></span>
-          </button>
-          <button type="button" data-space-choice="personal" aria-pressed="false">
-            <img class="space-choice-crest" src="assets/space-crest-personal.svg" alt="" aria-hidden="true">
-            <span><strong>Personal Space</strong><small>Familiar and yours</small></span>
-          </button>
-        </div>
-
-        <div class="space-browser-caption" aria-live="polite">
-          <p class="eyebrow" data-space-kicker>Work Space · Focused, signed in, ready</p>
-          <h3 data-space-title>One sidebar for the workday.</h3>
-          <p data-space-detail>Work accounts, Launch Atlas, and Monday's tabs stay together. Personal browsing never appears in the same history or session.</p>
-          <p class="space-browser-meta" data-space-meta>Work accounts · Launch Atlas · Monday overview</p>
-        </div>
+      <div class="captions center" aria-live="polite">
+        <p class="cap on" data-devcap="mac"><b>Mac.</b> A generous sidebar, two-to-four-card Split View, native windows and menus, Quick Window, Peek, rebindable shortcuts, extensions, and automatic localhost tools. Direct releases with Sparkle updates.</p>
+        <p class="cap" data-devcap="ipad"><b>iPad.</b> The full sidebar, resizable Split View columns, Space identity, and hardware-keyboard commands, without pretending your iPad is a large phone.</p>
+        <p class="cap" data-devcap="iphone"><b>iPhone.</b> Compact chrome keeps the page primary. The full sidebar becomes a dedicated view, Split View becomes a focused card pager, and every Space stays within thumb's reach.</p>
       </div>
+    </div>
+    <p class="sync rv" style="margin-left:auto;margin-right:auto;text-align:center">Turn on Sync Crest with iCloud and Spaces, tabs, saved folders, Split View groups, appearance, Archive, and history follow you between devices. Password values never enter CloudKit.</p>
+  </div>
+</section>
 
-      <div class="space-ledger reveal" aria-label="What each Crest Space isolates">
-        <article><span>01</span><h3>Sessions</h3><p>Sign into the same site with a different account in every Space.</p></article>
-        <article><span>02</span><h3>History</h3><p>Search and revisit only the trail that belongs to the current context.</p></article>
-        <article><span>03</span><h3>Passwords</h3><p>Origin-matched Keychain credentials stay attached to the right Space.</p></article>
-        <article><span>04</span><h3>Website data</h3><p>Cookies, caches, local storage, and permissions stay inside the Space that created them.</p></article>
-        <article><span>05</span><h3>Tabs</h3><p>Pinned, saved, current, recent, and archived each have a clear role.</p></article>
-        <article><span>06</span><h3>Identity</h3><p>A crest and palette tell you instantly which boundary you crossed.</p></article>
+<section class="section" id="import">
+  <div class="wrap">
+    <div class="head rv">
+      <p class="eyebrow">Move in without starting over</p>
+      <h2 class="h2">Bring over the browser you already have.</h2>
+      <p class="lede"><strong>Start on Mac.</strong> Crest finds supported browsers and shows you a before and after for every Space. Nothing moves until you say so.</p>
+    </div>
+    <figure class="setup rv"><img src="assets/crest-import-space-review-mac-2026.png" alt="Crest Setup reviewing an Arc Space beside its customized Crest destination before import" width="2350" height="1632"></figure>
+    <div class="imp3 rv">
+      <ol class="steps">
+        <li><span><b>Keep only what matters.</b> Turn individual tabs, favorites, and saved folders on or off.</span></li>
+        <li><span><b>Choose where it lands.</b> A new Crest Space, or one you already use.</span></li>
+        <li><span><b>Make it yours.</b> Rename it and pick its colors and crest before you finish.</span></li>
+      </ol>
+      <div class="srcs">
+        <div><b>Arc</b><span>Spaces, tabs, folders, colors, icons, and passwords</span></div>
+        <div><b>Zen</b><span>Spaces, Essentials, pinned tabs, folders, open tabs, and colors</span></div>
+        <div><b>Chrome</b><span>Profiles, bookmarks, open tabs, and passwords</span></div>
+        <div><b>Safari</b><span>Bookmarks, windows, and open tabs</span></div>
+        <div><b>Firefox</b><span>Windows, open tabs, and pinned tabs</span></div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="identity" id="customization" aria-labelledby="identity-heading">
-      <div class="identity-intro reveal">
-        <div>
-          <p class="eyebrow">Space Forge</p>
-          <h2 id="identity-heading">Make each Space easy to recognize</h2>
-        </div>
-        <div class="identity-copy">
-          <p>Crest uses the same layered heraldic model you see in the app: choose a backplate, divide the field, add an ordinary, finish the trim, then place one or more charges. Pair it with a shipped house palette or make a new one.</p>
-          <p>It is not decoration for decoration&rsquo;s sake. The standard is an immediate signal that your accounts, history, passwords, site data, and tabs have changed with it. Prefer the familiar Arc-style look? Traditional Gradient mode keeps that quieter option close.</p>
-        </div>
-      </div>
+<section class="section" id="more" style="padding-top:0">
+  <div class="wrap">
+    <div class="head rv">
+      <p class="eyebrow">The rest of the browser</p>
+      <h2 class="h2">A complete feature set, without a pile of chrome.</h2>
+      <p class="lede">Controls appear when they are relevant, and Space-scoped features keep the current boundary intact.</p>
+    </div>
+    <div class="rest rv">
+      <div><b>Extensions<span class="tag">Mac</span></b><p>Install from the Chrome Web Store and Firefox Add-ons, or use compatible Safari Web Extensions from signed apps on your Mac. Each Space keeps its own set. Some extensions depend on a particular browser, so compatibility can vary.</p></div>
+      <div><b>Crest Passwords</b><p>Origin- and Space-matched credentials in the Keychain, with device authentication around sensitive access.</p></div>
+      <div><b>Private Spaces</b><p>Non-persistent website storage, no normal history, no sync trail. Require Touch ID, Face ID, or the passcode to open one, and relock it when Crest leaves the foreground.</p></div>
+      <div><b>Content blocking</b><p>A small built-in ad and tracker list per Space, or a compatible blocking extension on Mac.</p></div>
+      <div><b>Site permissions</b><p>Remember or reset decisions for protected capabilities, popups, downloads, and external-app handoff per site and Space.</p></div>
+      <div><b>Reader mode</b><p>Turn supported articles into a calm reading surface without leaving the tab or its Space.</p></div>
+      <div><b>Localhost mode<span class="tag">Mac</span></b><p>Open localhost and a toolbar appears with reload options, responsive capture, console, network, and Web Inspector. Leave, and it leaves with you.</p></div>
+      <div><b>Custom shortcuts<span class="tag">Mac</span></b><p>Rebind the complete command map, search actions, spot conflicts, and return any command to its default.</p></div>
+      <div><b>Space cleanup</b><p>Archive unpinned tabs after 12 hours, 24 hours, 7 days, or 30 days, or never. Cleanup moves tabs to the recoverable Archive; it does not erase them.</p></div>
+      <div><b>Page tools</b><p>Find, zoom, copy a normal or Markdown link, share, print, export PDF, save a web archive, and inspect.</p></div>
+      <div><b>Keep Loaded</b><p>Protect important live pages from ordinary unloading while Crest still responds to real memory pressure.</p></div>
+      <div><b>Native where it matters</b><p>SwiftUI, WebKit, CloudKit, Keychain, native windows, menus, share sheets, and platform authentication.</p></div>
+    </div>
+  </div>
+</section>
 
-      <div class="crest-anatomy reveal">
-        <article><span>Shield</span><img src="assets/space-crest-lion.svg" alt="Quartered shield crest"></article>
-        <article><span>Roundel</span><img src="assets/space-crest-river.svg" alt="Round compass crest"></article>
-        <article><span>Hexagon</span><img src="assets/space-crest-meadow.svg" alt="Hexagonal tree crest"></article>
-        <article><span>Lozenge</span><img src="assets/space-crest-storm.svg" alt="Diamond star crest"></article>
-        <article><span>Seal</span><img src="assets/space-crest-winter.svg" alt="Steel snowflake seal"></article>
-      </div>
+<section class="section dark get" id="get">
+  <div class="band"></div>
+  <div class="wrap">
+    <p class="eyebrow">Get Crest</p>
+    <h2 class="h2" style="margin:.8rem 0 1rem">Direct on Mac. App Store on iPhone and iPad.</h2>
+    <p class="lede">Mac releases are signed, notarized, and distributed directly through GitHub Releases with built-in Sparkle updates. iPhone and iPad are on the App Store, with beta releases in TestFlight.</p>
+    <ul class="getlist">
+      <li><a href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer"><img class="raw" src="assets/crest-logo.svg" alt=""><span><b>Crest for Mac</b><small>Direct · signed · notarized · automatic updates</small></span><span class="go">View releases ↗</span></a></li>
+      <li><a href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer"><img src="assets/app-store-official.png" alt=""><span><b>Crest for iPhone and iPad</b><small>App Store</small></span><span class="go">Open ↗</span></a></li>
+      <li><a href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer"><img src="assets/testflight-official.png" alt=""><span><b>Crest beta for iPhone and iPad</b><small>Beta releases through TestFlight</small></span><span class="go">Join ↗</span></a></li>
+      <li><a href="https://github.com/pauljoda/Crest" target="_blank" rel="noopener noreferrer"><img class="raw" src="assets/crest-logo.svg" alt=""><span><b>Source on GitHub</b><small>Mozilla Public License 2.0 · issues · pull requests</small></span><span class="go">Open ↗</span></a></li>
+      <li><a href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer"><img src="assets/reddit-official.png" alt=""><span><b>r/CrestBrowser</b><small>Feedback · updates · community</small></span><span class="go">Visit ↗</span></a></li>
+    </ul>
+  </div>
+</section>
+</main>
 
-      <div class="forge-grid">
-        <article class="forge-card forge-mac reveal">
-          <div class="forge-copy">
-            <p class="eyebrow">Forge on Mac</p>
-            <h3>Every layer, visible as you build.</h3>
-            <p>Choose Banner or Gradient, tune the field, and watch the whole sidebar respond while the layered crest stays crisp from picker to toolbar.</p>
-          </div>
-          <figure class="forge-shot">
-            <img src="assets/crest-spaces-mac-2026.png" alt="Space Forge on Mac with crest, palette, and Banner controls" width="900" height="660">
-          </figure>
-        </article>
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="#name">The name</a><a href="#tour">Features</a><a href="#arc">From Arc</a><a href="#devices">Devices</a><a href="#import">Move in</a><a href="guides/">Help &amp; docs</a><a href="support/">Support</a><a href="privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest" target="_blank" rel="noopener noreferrer">Source on GitHub</a><a href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Mac releases</a><a href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer">App Store</a><a href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer">iPhone &amp; iPad beta</a><a href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer">Reddit</a><a href="https://ko-fi.com/pauljoda/tiers" target="_blank" rel="noopener noreferrer">Support open source software</a>
+    </div>
+    <p>Crest is an independent browser created by an Arc diehard who wanted its best ideas to have a future on Mac, iPad, and iPhone. Crest is free and open source under the Mozilla Public License 2.0, and is not affiliated with Arc. TestFlight is a trademark of Apple Inc. Reddit and the Reddit logo are trademarks of Reddit, Inc.</p>
+  </div>
+</footer>
 
-        <article class="forge-card forge-everywhere reveal">
-          <div class="forge-copy">
-            <p class="eyebrow">The same standard · across your Apple devices</p>
-            <h3>Your identity travels with the Space.</h3>
-            <p>The palette, crest, and presentation mode remain recognizable across Mac, iPad, and iPhone—even while the browser chrome adapts around them.</p>
-          </div>
-          <div class="forge-devices">
-            <figure><img src="assets/crest-spaces-ipad-2026.png" alt="Space Forge on iPad" width="2420" height="1668"></figure>
-            <figure><img src="assets/crest-spaces-iphone-2026.png" alt="Space Forge on iPhone" width="1206" height="2622"></figure>
-          </div>
-        </article>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search);
+  var shot=q.has('shot');
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(shot||reduce)document.documentElement.classList.add('noanim');
+  var A='assets/';
+  (function(){var hero=document.getElementById('top');function plat(){var ua=navigator.userAgent||'';var ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||innerWidth<760;hero.dataset.plat=ios?'ios':'mac'}plat();addEventListener('resize',plat);if(q.get('plat'))hero.dataset.plat=q.get('plat')})();
 
-        <article class="forge-card forge-traditional reveal">
-          <div class="forge-copy">
-            <p class="eyebrow">Traditional Gradient · the familiar Arc-style option</p>
-            <h3>Not every Space needs a coat of arms.</h3>
-            <p>Choose one to three colors, set the direction and intensity, then add optional texture. Traditional Gradient mode preserves the smooth, atmospheric themes Arc users know while keeping Crest&rsquo;s crest, isolation, and Space identity intact.</p>
-          </div>
-          <figure class="forge-shot">
-            <img src="assets/crest-traditional-gradient-mac-clean.png" alt="Crest Work Space using a traditional gray and gold gradient theme on Mac" width="1440" height="900">
-          </figure>
-        </article>
-      </div>
-    </section>
+  var I={
+    sidebar:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>',
+    back:'<svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>',
+    fwd:'<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
+    reload:'<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>',
+    more:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>',
+    search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    down:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8.5 12.5 12 16l3.5-3.5"/></svg>',
+    archive:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg>',
+    reader:'<svg viewBox="0 0 24 24"><circle cx="7" cy="14" r="3.2"/><circle cx="17" cy="14" r="3.2"/><path d="M10.2 14h3.6"/></svg>',
+    gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
+    link:'<svg viewBox="0 0 24 24"><path d="M10 14 14 10M8 12l-2 2a3 3 0 0 0 4 4l2-2M16 12l2-2a3 3 0 0 0-4-4l-2 2"/></svg>',
+    win:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>',
+    cam:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/></svg>',
+    term:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>',
+    globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+    target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>'
+  };
+  var TOOLICONS=I.link+I.win+I.cam+I.term+I.globe+I.target;
 
-    <section class="migration-story" id="migration" aria-labelledby="migration-heading">
-      <div class="migration-intro reveal">
-        <div>
-          <p class="eyebrow">Move in without starting over</p>
-          <h2 id="migration-heading">Bring over the browser you already have</h2>
-        </div>
-        <div class="migration-lede">
-          <p><strong>Start on Mac.</strong> Crest finds supported browsers and lets you pull in open tabs, bookmarks, saved folders, Spaces or profiles, and supported passwords.</p>
-          <p>Import is a review—not a data dump. You decide what stays, where it lands, and how each Space should look before Crest changes anything.</p>
-        </div>
-      </div>
+  var SIDE={
+    work:{crest:'space-crest-work.svg',name:'Work',url:'data:text/html;cha…E%3C%2Fhtml%3E',tiles:['🧭','📐','📅','✍️'],fold:'Launch Atlas',chev:false,kids:[['🔬','Audience research'],['🚩','Launch plan'],['🎨','Design review']],act:['✨','Monday overview']},
+    personal:{crest:'space-crest-personal.svg',name:'Personal',url:'data:text/html;ch…3C%2Fhtml%3E',tiles:['🏠','🗺️','☕','📚'],fold:'Weekend Plans',chev:true,blue:true,kids:[['🏕️','Cabin ideas'],['🌱','Garden notes'],['📖','Sunday reading']],act:['☀️','A slower Saturday']}
+  };
+  var CREST={work:A+'space-crest-work.svg',personal:A+'space-crest-personal.svg'};
+  function img(src){return '<img src="'+src+'" alt="">'}
 
-      <figure class="migration-source-shot reveal">
-        <img src="assets/crest-import-browser-selection-mac-2026.png" alt="Crest Setup offering imports from Arc, Zen, Chrome, and Safari on Mac" width="2340" height="1622">
-        <figcaption>
-          <span>01</span>
-          <div><strong>Choose what to bring over.</strong><p>Crest discovers the browsers on your Mac and shows exactly which kinds of data each one can provide.</p></div>
-        </figcaption>
-      </figure>
+  function qwHTML(){return '<div class="qw float"><div class="qw-win"><div class="qw-bar"><span class="lights"><i></i><i></i><i></i></span><span class="sp">'+img(CREST.personal)+'Personal</span><span class="qaddr">'+I.search+'<span class="url">localhost:4321<small>/demos/trail/</small></span>'+I.reload+'</span><span class="open">Open in Personal <small>⌄</small></span></div><div class="qw-page"><div class="pbar"><span class="i">i</span><span>http://localhost:4321/demos/trail/</span><span class="ics">'+TOOLICONS+'</span></div><div class="pbody"><div class="kk">Field note · Quick look</div><h4>The trail is clear after noon.</h4><p>A compact answer, held in the Personal Space—its cookies, history, and passwords stay right where they belong.</p></div></div></div></div>'}
+  function descPage(o){
+    var d=o.desc, h='<div class="pg desc '+(o.space==='personal'?'personal':'')+((d.float||d.qw)?' hasfloat':'')+'"><div class="dsc">';
+    h+='<div class="kk">'+d.kk+'</div><h3>'+d.h+'</h3><div class="body">'+d.body.map(function(x){return '<p>'+x+'</p>'}).join('')+'</div>';
+    if(d.list)h+='<div class="list">'+d.list.map(function(x){return '<div><b>'+x[0]+'</b><span>'+x[1]+'</span></div>'}).join('')+'</div>';
+    if(d.routes)h+='<div class="routes"><div><span>URL pattern</span><span>Match</span><span>Space</span></div>'+d.routes.map(function(r){return '<div><code>'+r[0]+'</code><em>'+r[1]+'</em><span>'+img(CREST[r[2]])+(r[2]==='work'?'Work':'Personal')+'</span></div>'}).join('')+'</div>';
+    if(d.arc)h+='<div class="arcname"><span>Arc called it <b>'+d.arc+'</b></span></div>';
+    h+='</div>';
+    if(d.float)h+='<img class="float" src="'+d.float+'" alt="">';
+    if(d.qw)h+=qwHTML();
+    if(d.todo)h+='<div class="todo">'+d.todo+'</div>';
+    return h+'</div>';
+  }
+  var PAL_ROWS=[['🧭','Brief'],['📐','Projects'],['📅','Calendar'],['✍️','Notes'],['🚩','Launch plan']];
+  var PAGES={
+    desc:descPage,
+    localhost:function(){return '<div class="pg fieldnotes"><div class="pbar top"><span class="i">i</span><span>http://localhost:4321/demos/source/</span><span class="ics">'+TOOLICONS+'</span></div><div class="pbody lh"><div class="kk">Weekend plans · Field guide</div><h4>Follow a thought without losing your place.</h4><p>Open the trail note in Peek, decide if it deserves a tab, then return exactly where you were.</p><span class="pill">Peek at the trail note →</span></div></div>'},
+    northstar:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Northstar Studio · Monday overview</div><h3>Make space for the work that matters.</h3><p class="sub">A calm command center for launches, decisions, and the people moving them forward.</p><div class="cards"><div><small>01</small><b>Today</b><span>Three decisions, one clear priority</span></div><div><small>02</small><b>Atlas</b><span>Research is ready for review</span></div><div><small>03</small><b>Launch</b><span>Milestone check-in at 2:30</span></div><div><small>04</small><b>Notes</b><span>Seven ideas worth keeping</span></div></div></div></div>'},
+    fieldnotes:function(){return '<div class="pg fieldnotes"><div class="demo"><div class="kk">Field notes · A slower Saturday</div><h3>A slower Saturday starts here.</h3><p class="sub">Plans for good food, open roads, a little dirt under your nails, and time to read.</p><div class="cards"><div><small>01</small><b>Weekend</b><span>Market, trail, then nowhere to be</span></div><div><small>02</small><b>Trips</b><span>Cabin map and quiet roads</span></div><div><small>03</small><b>Garden</b><span>What to plant before the rain</span></div><div><small>04</small><b>Reading</b><span>Four essays for Sunday morning</span></div></div></div></div>'},
+    split:function(){return '<div class="pg split"><div class="card"><div class="demo"><div class="kk">Weekend plans · Field guide</div><h3>Follow a thought without losing your place.</h3><p>Open the trail note in Peek, decide if it deserves a tab, then return exactly where you were.</p><span class="pill">Peek at the trail note →</span></div></div><div class="card focus"><div class="demo"><div class="kk">Field note · Quick look</div><h3>The trail is clear after noon.</h3><p>A compact answer, held in the Personal Space—its cookies, history, and passwords stay right where they belong.</p><div class="note">Saturday · 64° · Pack lunch and the green thermos.</div></div></div></div>'},
+    peek:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Weekend plans · Field guide</div><h3 style="max-width:9ch">Follow a thought without losing your place.</h3></div><div class="dim"></div><div class="pk-actions"><span>✕ &nbsp;Close</span><span class="pri">'+img(CREST.work)+'Open In… <small>⌄</small></span></div><div class="peek"><div class="pbar"><span class="i">i</span><span>http://localhost:4321/demos/trail/</span><span class="ics">'+TOOLICONS+'</span></div><div class="pbody"><div class="kk">Field note · Quick look</div><h4>The trail is clear after noon.</h4><p>A compact answer, held in the Personal Space—its cookies, history, and passwords stay right where they belong.</p><div class="note">Saturday · 64° · Pack lunch and the green thermos.</div></div></div></div>'},
+    palette:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Northstar Studio · Audience research</div><h3>Make space for the work that matters.</h3><p class="sub">A calm command center for launches, decisions, and the people moving them forward.</p><div class="cards"><div><small>01</small><b>Today</b><span>Three decisions, one clear priority</span></div><div><small>02</small><b>Atlas</b><span>Research is ready for review</span></div><div><small>03</small><b>Launch</b><span>Milestone check-in at 2:30</span></div><div><small>04</small><b>Notes</b><span>Seven ideas worth keeping</span></div></div></div><div class="dim" style="background:rgba(150,146,136,.62)"></div><div class="glass"><div class="g-in">'+I.search+'<span>Search or Enter URL…</span><i class="x">✕</i></div><div class="g-sec">Open Tabs</div>'+PAL_ROWS.map(function(r,i){return '<div class="g-row'+(i===0?' sel':'')+'"><i>'+r[0]+'</i><div><b>'+r[1]+'</b><small>data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Cmet…</small></div><span class="g-act">Switch to Tab <b>→</b></span></div>'}).join('')+'<div class="g-sec">Actions</div><div class="g-row"><i>▢</i><div><b>New Window</b></div><span class="g-act"><kbd>⌘N</kbd> <b>→</b></span></div><span class="g-bar"></span></div></div>'}
+  };
 
-      <div class="migration-source-ledger reveal" aria-label="Supported browser import details">
-        <article><strong>Arc</strong><p>Spaces, tabs, folders, colors, icons, and passwords</p></article>
-        <article><strong>Zen</strong><p>Spaces, Essentials, pinned tabs, folders, open tabs, and colors</p></article>
-        <article><strong>Chrome</strong><p>Profiles, bookmarks, open tabs, and passwords</p></article>
-        <article><strong>Safari</strong><p>Bookmarks, windows, and open tabs</p></article>
-        <article><strong>Firefox</strong><p>Windows, open tabs, and pinned tabs</p></article>
-      </div>
+  function sidebar(space,o){
+    var s=SIDE[space],h='<aside class="sb">';
+    h+='<div class="sb-title"><span class="lights"><i></i><i></i><i></i></span><span class="navc mute">'+I.back+I.fwd+I.reload+'</span></div>';
+    h+='<div class="addr">'+I.search+'<span class="url left mute">'+(o.url||s.url)+'</span></div>';
+    h+='<div class="tiles">'+s.tiles.map(function(t){return '<i class="tile">'+t+'</i>'}).join('')+'</div>';
+    h+='<div class="row space">'+img(A+s.crest)+s.name+'<span class="more">···</span></div>';
+    h+='<div class="row fold">'+(s.chev?'<span class="chev">⌵</span>':'')+'<span class="ic">'+(s.blue?'<svg viewBox="0 0 24 24" style="fill:#2f7bff"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>':'📁')+'</span>'+s.fold+'</div>';
+    h+=s.kids.map(function(k){return '<div class="row child"><span class="ic">'+k[0]+'</span>'+k[1]+'</div>'}).join('');
+    h+='<div class="rule"></div><div class="row new"><span class="ic">+</span>New Tab</div>';
+    if(o.group)h+='<div class="row group"><span class="ic">⧉</span>2</div><div class="row"><span class="ic">☀️</span>Personal Field Guide</div><div class="row act"><span class="ic">📓</span>Saturday Trail Note<span class="x">✕</span></div>';
+    else{var act=o.act||s.act;h+='<div class="row act"><span class="ic">'+act[0]+'</span>'+act[1]+'<span class="x">✕</span></div>';}
+    h+='<div class="grow"></div>';
+    h+='<div class="sb-foot">'+I.sidebar+'<span class="picker" role="group" aria-label="Switch Space">'
+      +'<button type="button" data-pick="work" aria-pressed="'+(space==='work')+'" aria-label="Work Space"'+(o.picker?'':' tabindex="-1" aria-hidden="true"')+'>'+img(CREST.work)+'</button>'
+      +'<button type="button" data-pick="personal" aria-pressed="'+(space==='personal')+'" aria-label="Personal Space"'+(o.picker?'':' tabindex="-1" aria-hidden="true"')+'>'+img(CREST.personal)+'</button>'
+      +'</span>'+I.archive+'</div></aside>';
+    return h;
+  }
+  function renderMac(el){
+    if(!el.dataset.mac)return;
+    var o=JSON.parse(el.dataset.mac||'{}');
+    el.innerHTML='<div class="mac-win" data-space="'+o.space+'">'+sidebar(o.space,o)+PAGES[o.page](o)+'</div>';
+    if(o.page==='peek'){el.classList.add('is-hidden');requestAnimationFrame(function(){requestAnimationFrame(function(){el.classList.remove('is-hidden')})})}
+    if(o.picker)el.querySelectorAll('[data-pick]').forEach(function(b){b.addEventListener('click',function(){switchSpace(el,b.dataset.pick)})});
+  }
+  function switchSpace(el,space){
+    var o=JSON.parse(el.dataset.mac||'{}');
+    if(o.space===space)return;
+    o.space=space;o.page=(space==='work'?'northstar':'fieldnotes');delete o.url;delete o.act;delete o.group;delete o.desc;el.dataset.mac=JSON.stringify(o);
+    renderMac(el);
+    if(o.id==='hero')document.getElementById('top').dataset.space=space;
+  }
+  document.querySelectorAll('.mac').forEach(renderMac);
 
-      <div class="migration-review">
-        <div class="migration-review-copy reveal">
-          <p class="eyebrow">Review before importing</p>
-          <h3>Nothing moves until it looks right.</h3>
-          <p>Crest builds a visual before-and-after for every imported Space. Keep or remove individual tabs, include supported passwords, and route the source into a new or existing Crest Space.</p>
-          <ol class="migration-steps">
-            <li><span>01</span><div><strong>Keep only what matters.</strong><p>Turn individual tabs, favorites, and saved folders on or off.</p></div></li>
-            <li><span>02</span><div><strong>Choose where it lands.</strong><p>Move each source Space into a new Crest Space or combine it with one you already use.</p></div></li>
-            <li><span>03</span><div><strong>Make it unmistakably yours.</strong><p>Open Customize Space during setup to rename it and edit its colors, crest, and presentation.</p></div></li>
-          </ol>
-          <p class="migration-note"><strong>One Mac setup, every Apple device.</strong> Once imported, your Spaces and tabs can follow you to iPad and iPhone with iCloud.</p>
-        </div>
+  /* nav */
+  var nav=document.getElementById('nav');
+  function stick(){nav.classList.toggle('stuck',scrollY>40)}
+  stick();addEventListener('scroll',stick,{passive:true});
 
-        <figure class="migration-review-shot reveal">
-          <img src="assets/crest-import-space-review-mac-2026.png" alt="Crest Setup reviewing an Arc Space beside its customized Crest destination before import" width="2350" height="1632">
-          <figcaption><span>02</span><strong>See how everything will look before you import it</strong></figcaption>
-        </figure>
-      </div>
-    </section>
+  /* reveal */
+  var rv=[].slice.call(document.querySelectorAll('.rv'));
+  if(!shot&&!reduce&&'IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -6% 0px',threshold:.05});
+    rv.forEach(function(e){io.observe(e)});
+  }else rv.forEach(function(e){e.classList.add('in')});
 
-    <section class="extensions-story" id="extensions" aria-labelledby="extensions-heading">
-      <div class="extensions-intro reveal">
-        <div>
-          <p class="eyebrow">Extensions on Mac</p>
-          <h2 id="extensions-heading">Bring the extensions you use into the right Space</h2>
-        </div>
-        <div class="extensions-lede">
-          <p>Crest can install most standards-based extensions from the Chrome Web Store and Firefox Add-ons, and can use compatible Safari Web Extensions from signed apps on your Mac. Some extensions depend on features from a particular browser, so compatibility can vary.</p>
-          <p>Each Space keeps its own extensions, permissions, site access, and settings. You can add a tool to Work without also adding it to Personal.</p>
-          <p class="extension-platform-note">Extensions are currently available in Crest for Mac.</p>
-        </div>
-      </div>
+  /* banner colours */
+  var PAL={
+    work:{c:['#0f1c2c','#37699e','#bd8e27'],fg:'#f4f1ea',crest:'space-crest-work.svg',name:'Work',motto:'Focus has a home'},
+    personal:{c:['#5f7f5e','#b7a582','#c84835'],fg:'#1d2b22',crest:'space-crest-personal.svg',name:'Personal',motto:'A world of your own'},
+    studio:{c:['#152318','#345738','#bca766'],fg:'#f1efe4',crest:'space-crest-meadow.svg',name:'Studio',motto:'Make something lasting'},
+    private:{c:['#151824','#313848','#b08f4a'],fg:'#ecebe6',crest:'space-crest-storm.svg',name:'Private',motto:'Leave no trail'}
+  };
+  var hall=document.getElementById('hall');
+  document.querySelectorAll('[data-flag]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var p=PAL[b.dataset.flag];
+      document.querySelectorAll('[data-flag]').forEach(function(x){x.setAttribute('aria-pressed',String(x===b))});
+      document.querySelectorAll('#name .banner').forEach(function(el){el.style.setProperty('--c1',p.c[0]);el.style.setProperty('--c2',p.c[1]);el.style.setProperty('--c3',p.c[2]);el.style.setProperty('--fg',p.fg)});
+      hall.querySelector('[data-bcrest]').src=A+p.crest;
+      hall.querySelector('[data-bname]').textContent=p.name;
+      hall.querySelector('[data-bmotto]').textContent=p.motto;
+    });
+  });
 
-      <div class="extension-install-paths reveal" aria-label="Using extensions in Crest">
-        <article class="extension-install-path extension-install-store">
-          <span class="extension-path-index">01</span>
-          <p class="eyebrow">Chrome Web Store · Firefox Add-ons</p>
-          <h3>Add extensions from their store pages</h3>
-          <p>Crest shows the requested permissions and website access before anything is added.</p>
-        </article>
-        <article class="extension-install-path">
-          <span class="extension-path-index">02</span>
-          <p class="eyebrow">Safari apps</p>
-          <h3>Use compatible WebExtensions already on your Mac</h3>
-          <p>Crest can find WebExtensions included with signed Safari apps and let you choose which Space should use them.</p>
-        </article>
-        <article class="extension-install-path">
-          <span class="extension-path-index">03</span>
-          <p class="eyebrow">Per-Space controls</p>
-          <h3>Keep extensions where they belong</h3>
-          <p>Manage access, pin useful actions, and set shortcuts separately in every Space.</p>
-        </article>
-      </div>
-      <a class="extension-guides-link reveal" href="guides/">
-        <span><small>Extension guides</small><strong>Compatibility notes, setup help, and troubleshooting</strong></span>
-        <span aria-hidden="true">Read the guides ↗</span>
-      </a>
-    </section>
+  /* feature ticker from the parity table */
+  (function(){
+    var tk=document.getElementById('ticker'); if(!tk)return;
+    var rows=[].slice.call(document.querySelectorAll('.parity tbody tr')).map(function(tr){var td=tr.children;var small=td[2].querySelector('small');return {job:td[0].textContent,arc:td[1].textContent,crest:td[2].firstChild.textContent,detail:small?small.textContent:''}});
+    function card(r){return '<article class="fcard"><span class="fjob">'+r.job+'</span><small>Arc called it <b>'+r.arc+'</b></small><h3>'+r.crest+'</h3><p>'+r.detail+'</p></article>'}
+    function track(rs,hidden){return '<div class="ttrack"'+(hidden?' aria-hidden="true"':'')+'>'+rs.map(card).join('')+'</div>'}
+    var r1=rows.filter(function(_,i){return i%2===0}), r2=rows.filter(function(_,i){return i%2===1});
+    tk.innerHTML='<div class="trow"><div class="tbelt">'+track(r1)+track(r1,true)+'</div></div><div class="trow rev"><div class="tbelt">'+track(r2)+track(r2,true)+'</div></div>';
+  })();
 
-    <section class="feature-field" id="features" aria-labelledby="features-heading">
-      <div class="section-heading reveal">
-        <p class="eyebrow">The rest of the browser</p>
-        <h2 id="features-heading">A complete feature set, without a pile of chrome</h2>
-        <p>Crest keeps everyday browsing, serious organization, privacy, portability, and developer tools close at hand. Controls appear when they are relevant, and Space-scoped features keep the current boundary intact.</p>
-      </div>
+  /* feature tour */
+  var TOUR=[
+    {space:'work',page:'northstar'},
+    {space:'work',page:'desc',url:'crestbrowser.com/features/spaces',act:['◈','Spaces'],desc:{kk:'Spaces',h:'Each Space is a separate browser.',body:['A Space is not only a group of tabs. It is a separate browsing profile with its own organization, runtime, and privacy boundary.','This is Work. Its sessions, cookies, history, passwords, permissions, and extensions belong to Work alone.'],list:[['Sessions and site data','Signed-in sessions, cookies, caches, local storage, and other WebKit website data.'],['Tabs and folders','Current, pinned, saved, grouped, and archived tabs, plus nested folders.'],['History and Archive','History, Archive, download records, and their retention choices.'],['Passwords','Crest Passwords and optional iCloud Keychain participation.']],arc:'Spaces and Profiles'}},
+    {space:'personal',page:'desc',url:'crestbrowser.com/features/spaces',act:['◈','Spaces'],desc:{kk:'Spaces · Personal',h:'Switch, and everything switches.',body:['Pick the other crest and the whole browser context changes: the visible tabs, history search, credentials, permissions, and the website process pool.','The same website can be signed into different accounts in Work and Personal, and those sessions never meet.'],list:[['Pick a Space','Select it in the sidebar or swipe through the picker.'],['Keyboard','Option-Command-Left and Right. Control-1 through Control-9 by position.'],['Move a tab','Send it to another Space. The tab moves; the cookies and session do not.'],['Identity','Name, crest or gradient, and the sidebar colors that come with it.']]}},
+    {space:'work',page:'desc',url:'crestbrowser.com/features/sidebar',act:['▤','Sidebar'],desc:{kk:'Sidebar',h:'Tabs on the side, one Space at a time.',body:['Pinned sites at the top, saved folders beneath, open tabs below the line, and the Space picker at the bottom.','Full on Mac and iPad. On iPhone the same sidebar becomes a dedicated view that slips away when you choose a tab.'],list:[['Pinned sites','Arc called them Favorites. An icon grid scoped to each Space.'],['Saved tabs','Arc called them Pinned Tabs. Keep a home URL, wander, come back.'],['Saved folders','Nest, color, collapse, reorder, and move whole trees.'],['Cleanup','Archive unpinned tabs after 12 hours to 30 days, or never. Nothing is erased.']],arc:'Sidebar, Favorites, Pinned Tabs, Folders'}},
+    {space:'personal',page:'split',url:'crestbrowser.com<small>/demos/trail/</small>',group:true},
+    {space:'work',page:'peek',url:'localhost:4321<small>/demos/source/</small>',act:['✨','Personal Field Guide']},
+    {space:'personal',page:'desc',url:'crestbrowser.com/features/quick-window',act:['▢','Quick Window'],desc:{kk:'Quick Window',h:'A link from another app, without the commitment.',body:['It opens in a small window that uses the chosen Space\'s cookies and passwords, so it never has to become a durable tab.','When the page matters, move it into a normal window and choose the right Space. Option-Command-N opens a blank one.'],arc:'Little Arc',qw:true}},
+    {space:'work',page:'desc',url:'crestbrowser.com/features/link-routing',act:['⇢','Link Routing'],desc:{kk:'Link Routing',h:'Links from other apps land where they belong.',body:['Give a URL pattern, choose Contains or Exact, and pick the Space. Matching links go there before the default destination is considered.','Routes run top to bottom, so put narrow rules first. If nothing matches, Crest uses the default for links from other apps: Quick Window, the most recent Space, or a Space you choose.'],routes:[['github.com','Contains','work'],['docs.northstar.studio/launch','Exact','work'],['allrecipes.com','Contains','personal']],arc:'Air Traffic Control'}},
+    {space:'work',page:'palette',url:'data:text/html;cha…E%3C%2Fhtml%3E',act:['🔬','Audience research']},
+    {space:'work',page:'localhost',url:'localhost:4321<small>/demos/source/</small>',act:['✨','Personal Field Guide']},
+    {space:'work',page:'desc',url:'crestbrowser.com/features/space-forge',act:['◆','Space Forge'],desc:{kk:'Space Forge',h:'Build the crest that flies over each Space.',body:['Choose a shield, a field division, an ordinary, trim, and charges, then pair it with a shipped palette or your own. The result appears in the picker and the browser chrome on Mac, iPad, and iPhone.','Prefer the Arc look? Traditional Gradient blends one to three colors with direction, intensity, and optional texture.'],arc:'Space Themes',float:A+'crest-spaces-mac-2026.png'}}
+  ];
+  var CAP={0:['Crest','A sidebar, Spaces, and the page. This is the Work Space.'],4:['Split View','Two to four live tabs in one saved group. The focused card owns the address field and page commands.'],5:['Peek','A link opens above the page you are on. Close it to return, or promote it into a tab.'],8:['Command palette','Search the web, open a tab in any Space, find history, or run any command from one field.'],9:['Localhost mode','Open localhost and a toolbar appears: reload options, capture, console, network, and Web Inspector.']};
+  var tourEl=document.getElementById('tour'), tourMac=document.getElementById('tour-mac'), tourCap=document.getElementById('tour-cap');
+  function setTour(i){
+    if(tourEl.dataset.cur===String(i))return; tourEl.dataset.cur=i;
+    var t=TOUR[i]; var o=Object.assign({id:'hero',picker:true},t); tourMac.dataset.mac=JSON.stringify(o); renderMac(tourMac);
+    document.getElementById('top').dataset.space=t.space;
+    if(tourCap){var c=CAP[i]||(t.desc?[t.desc.h,t.desc.body[0]]:['','']);tourCap.querySelector('h3').textContent=c[0];tourCap.querySelector('p').textContent=c[1];tourCap.classList.remove('swap');void tourCap.offsetWidth;tourCap.classList.add('swap');}
+    document.querySelectorAll('#tour-dots i').forEach(function(d,k){d.classList.toggle('on',k===i)});
+    var goIdx=[0,1,1,3,4,5,6,7,8,9,10][i];
+    tourEl.querySelectorAll('[data-go]').forEach(function(b){b.setAttribute('aria-selected',String(Number(b.dataset.go)===goIdx))});
+  }
+  (function(){
+    var n=TOUR.length; tourEl.style.setProperty('--n',n); var inner=tourEl.querySelector('.tour-in');
+    function update(){
+      var r=tourEl.getBoundingClientRect(), stage=tourEl.querySelector('.stage'), st=stage.offsetHeight, total=r.height-st;
+      var p=Math.min(.9999,Math.max(0,-r.top/total)); var step=Math.floor(p*n);
+      var grow=Math.min(1,Math.max(0,p*n)); inner.style.setProperty('--grow',grow.toFixed(3));
+      var avail=document.documentElement.clientHeight-64, sv=Math.round(64+Math.max(0,(avail-st)*(innerWidth<760?.42:.5)))+'px'; if(stage.style.getPropertyValue('--stick')!==sv)stage.style.setProperty('--stick',sv);
+      setTour(step);
+    }
+    tourEl.querySelectorAll('[data-go]').forEach(function(b){b.addEventListener('click',function(){
+      var i=Number(b.dataset.go), st=tourEl.querySelector('.stage').offsetHeight, total=tourEl.offsetHeight-st, top=tourEl.getBoundingClientRect().top+scrollY;
+      scrollTo({top:top+(i+.5)*(total/n),behavior:reduce?'auto':'smooth'});
+    })});
+    if(!shot&&!reduce){addEventListener('scroll',update,{passive:true});addEventListener('resize',update);update()}
+    else{inner.style.setProperty('--grow',q.get('step')?1:0);setTour(Number(q.get('step')||0))}
+  })();
 
-      <div class="feature-chapters">
-        <article class="feature-chapter feature-quick reveal">
-          <div class="feature-copy">
-            <span class="feature-index">I</span>
-            <p class="eyebrow">Quick Window · Tiny Arc, carried forward</p>
-            <h3>A lighter place for links from other apps</h3>
-            <p>Like Arc&rsquo;s Tiny Arc, links opened from other apps can arrive in a lightweight browser instead of becoming a durable tab. Quick Window uses the chosen Space&rsquo;s signed-in session; close it when you are done, or keep it by opening it as a full tab.</p>
-          </div>
-          <figure><img src="assets/crest-quick-window-mac-2026.png" alt="Current Crest Quick Window showing a trail note with its automatic localhost toolbar" width="720" height="460"></figure>
-        </article>
+  /* device stack */
+  var ds=document.getElementById('devstack');
+  function setDev(k){
+    ds.dataset.dev=k;
+    ds.querySelectorAll('button[data-dev]').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.dev===k))});
+    ds.querySelectorAll('[data-devcap]').forEach(function(c){c.classList.toggle('on',c.dataset.devcap===k)});
+  }
+  ds.querySelectorAll('button[data-dev]').forEach(function(b){b.addEventListener('click',function(){setDev(b.dataset.dev)})});
+  ds.querySelectorAll('.ds-item').forEach(function(it){it.addEventListener('click',function(){setDev(it.dataset.devitem)})});
+  if(q.get('dev'))setDev(q.get('dev'));
+  if(q.get('open'))document.querySelector('.fulllist').open=true;
 
-        <article class="feature-chapter feature-peek reveal">
-          <div class="feature-copy">
-            <span class="feature-index">II</span>
-            <p class="eyebrow">Peek</p>
-            <h3>Take a quick look without losing your place</h3>
-            <p>Open a link above the page you are reading. Close it to return instantly, or promote it into a full tab when it earns a place.</p>
-          </div>
-          <figure><img src="assets/crest-peek-mac-2026.png" alt="Current Crest Peek displaying a trail note above its dimmed source page" width="1140" height="768"></figure>
-        </article>
-
-        <article class="feature-chapter feature-localhost reveal">
-          <div class="feature-copy">
-            <span class="feature-index">III</span>
-            <p class="eyebrow">Localhost mode</p>
-            <h3>Developer tools that appear when you open localhost</h3>
-            <p>Open localhost and Crest reveals a dedicated toolbar for reload options, responsive capture, console, network, and inspection. Leave localhost and the extra chrome leaves with it.</p>
-          </div>
-          <figure><img src="assets/crest-localhost-mac-2026.png" alt="Crest on Mac showing its automatic localhost developer toolbar" width="1228" height="650"></figure>
-        </article>
-      </div>
-
-      <div class="feature-ledger reveal">
-        <article><span>⌕</span><h3>Command palette</h3><p>Search the web, open or move to tabs in any Space, search history, and run the full command set.</p></article>
-        <article><span>⌨</span><h3>Custom shortcuts</h3><p>Rebind the complete Mac command map, search actions, spot conflicts, and return any command to its default.</p></article>
-        <article><span>◇</span><h3>Crest Passwords</h3><p>Origin- and Space-matched credentials in the Keychain, with device authentication around sensitive access.</p></article>
-        <article><span>¶</span><h3>Reader mode</h3><p>Turn supported articles into a calm reading surface without leaving the tab or its Space.</p></article>
-        <article><span>◒</span><h3>Content blocking</h3><p>Use Crest&rsquo;s small built-in ad and tracker list per Space, or add a compatible blocking extension on Mac.</p></article>
-        <article><span>⚑</span><h3>Site permissions</h3><p>Remember or reset decisions for protected capabilities, popups, downloads, and external-app handoff per site and Space.</p></article>
-        <article><span>↗</span><h3>Page tools</h3><p>Find, zoom, copy a normal or Markdown link, share, print, export PDF, save a web archive, and inspect.</p></article>
-        <article><span>⌛</span><h3>History, archive &amp; downloads</h3><p>Common lists stay easy to reach while records and retention choices remain attached to the Space that made them.</p></article>
-        <article><span>⇄</span><h3>Portable and synced</h3><p>Import with a visual review, export a validated Crest archive, and carry durable state through iCloud.</p></article>
-        <article><span>☾</span><h3>Private Spaces</h3><p>Use non-persistent WebKit storage with no normal history or sync trail, then add device authentication if needed.</p></article>
-        <article><span>⊙</span><h3>Keep Loaded</h3><p>Protect important live pages from ordinary unloading while Crest still responds to genuine system memory pressure.</p></article>
-        <article><span>⌁</span><h3>Native where it matters</h3><p>SwiftUI, WebKit, CloudKit, Keychain, native windows, menus, share sheets, and platform authentication.</p></article>
-      </div>
-    </section>
-
-    <section class="early-access" id="early-access" aria-labelledby="early-access-heading">
-      <div class="early-access-copy reveal">
-        <p class="eyebrow">Choose your platform</p>
-        <h2 id="early-access-heading">Direct on Mac. App Store on iPhone and iPad.</h2>
-        <p>Mac releases are signed, notarized, and distributed directly through GitHub Releases with built-in Sparkle updates. Get Crest for iPhone and iPad on the <a href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer">App Store</a>, or join TestFlight to try beta releases.</p>
-      </div>
-      <div class="community-actions reveal" aria-label="Crest downloads, early access, and community links">
-        <a class="brand-action" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer" aria-label="Download Crest for Mac from GitHub Releases">
-          <img class="brand-action-icon brand-action-crest" src="assets/crest-logo.svg" alt="Crest" width="400" height="400">
-          <span class="brand-action-copy">
-            <strong>Crest for Mac</strong>
-            <small>Direct · signed · notarized · automatic updates</small>
-          </span>
-          <span class="service-button">View releases</span>
-        </a>
-        <a class="brand-action" href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer" aria-label="Join the Crest beta for iPhone and iPad in TestFlight">
-          <img class="brand-action-icon" src="assets/testflight-official.png" alt="TestFlight" width="400" height="400">
-          <span class="brand-action-copy">
-            <strong>Crest beta for iPhone &amp; iPad</strong>
-            <small>Beta releases through TestFlight</small>
-          </span>
-          <span class="service-button">View in TestFlight</span>
-        </a>
-        <a class="brand-action" href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer" aria-label="Visit the CrestBrowser community on Reddit">
-          <img class="brand-action-icon" src="assets/reddit-official.png" alt="Reddit" width="400" height="400">
-          <span class="brand-action-copy">
-            <strong>r/CrestBrowser</strong>
-            <small>Feedback · updates · community</small>
-          </span>
-          <span class="service-button">Visit Reddit</span>
-        </a>
-      </div>
-    </section>
-
-    <section class="final-cta">
-      <div class="final-crest reveal" aria-hidden="true"><img src="assets/space-crest-work.svg" alt=""></div>
-      <div class="final-copy reveal">
-        <p class="eyebrow">Made independently by an Arc diehard</p>
-        <h2>A browser made to be worth keeping</h2>
-        <p>Crest is a personal project shaped by the parts of Arc worth carrying forward, the things that could work differently, and a lot of care for how a browser should feel on Mac, iPad, and iPhone.</p>
-        <div class="hero-actions">
-          <a class="button button-paper" href="https://github.com/pauljoda/Crest/releases/latest" target="_blank" rel="noopener noreferrer">Download for Mac</a>
-          <a class="text-link text-link-light" href="guides/">Open Help &amp; guides <span aria-hidden="true">↗</span></a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <a class="wordmark" href="#top"><img class="brand-mark" src="assets/crest-logo.svg" alt="" aria-hidden="true"><span>Crest</span></a>
-    <p>Crest is an independent browser created by an Arc diehard who wanted its best ideas to have a future on Mac, iPad, and iPhone. Crest is not affiliated with Arc. TestFlight is a trademark of Apple Inc. Reddit and the Reddit logo are trademarks of Reddit, Inc.</p>
-    <div><a href="#story">Arc parity</a><a href="#split-view">Split View</a><a href="#spaces">Spaces</a><a href="#migration">Move in</a><a href="#extensions">Extensions</a><a href="#features">Features</a><a href="guides/">Help &amp; guides</a><a href="docs/">Field guide</a><a href="support/">Support</a><a href="privacy/">Privacy</a><a href="https://github.com/pauljoda/Crest/releases" target="_blank" rel="noopener noreferrer">Mac releases</a><a href="https://apps.apple.com/us/app/crest-browser/id6797335023" target="_blank" rel="noopener noreferrer">iPhone &amp; iPad App Store</a><a href="https://testflight.apple.com/join/vV1CM49Q" target="_blank" rel="noopener noreferrer">iPhone &amp; iPad beta</a><a href="https://www.reddit.com/r/CrestBrowser" target="_blank" rel="noopener noreferrer">Reddit</a><a href="https://ko-fi.com/pauljoda/tiers" target="_blank" rel="noopener noreferrer">Support open source software</a></div>
-  </footer>
+  /* shot hook */
+  if(shot){
+    var y=Number(q.get('y')||0);
+    var go=function(){document.documentElement.style.scrollBehavior='auto';document.body.style.marginTop=(-y)+'px';scrollTo(0,0);document.querySelectorAll('.mac').forEach(function(m){m.classList.remove('is-hidden')})};
+    go();addEventListener('load',go);
+  }
+})();
+</script>
 </body>
 </html>

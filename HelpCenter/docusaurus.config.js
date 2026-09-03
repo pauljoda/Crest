@@ -3,7 +3,7 @@ const {themes: prismThemes} = require('prism-react-renderer');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Crest Help',
-  tagline: 'Guides for browsing under your colors.',
+  tagline: 'Help articles for Crest.',
   favicon: 'img/crest-logo.svg',
   url: 'https://crestbrowser.com',
   baseUrl: '/guides/',
@@ -48,7 +48,7 @@ const config = {
     metadata: [
       {
         name: 'description',
-        content: 'Crest help for Spaces, Split View, shortcuts, gestures, privacy, migration, passwords, extensions, and everyday browsing.',
+        content: 'Help articles for Crest on Mac, iPad, and iPhone.',
       },
     ],
     colorMode: {
@@ -63,7 +63,7 @@ const config = {
         src: 'img/crest-logo.svg',
       },
       items: [
-        {type: 'docSidebar', sidebarId: 'helpSidebar', position: 'left', label: 'Guides'},
+        {type: 'docSidebar', sidebarId: 'helpSidebar', position: 'left', label: 'Articles'},
         {to: '/keyboard-shortcuts/', label: 'Shortcuts', position: 'left'},
         {to: '/extension-api-compatibility/', label: 'Compatibility', position: 'left'},
         {href: 'https://github.com/pauljoda/Crest/releases/latest', label: 'Download for Mac', position: 'right'},
@@ -91,7 +91,7 @@ const config = {
         {
           title: 'Help',
           items: [
-            {label: 'All guides', to: '/'},
+            {label: 'All articles', to: '/'},
             {label: 'Keyboard shortcuts', to: '/keyboard-shortcuts/'},
             {label: 'Split View', to: '/split-view/'},
             {label: 'Extension compatibility', to: '/extension-api-compatibility/'},

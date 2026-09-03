@@ -26,7 +26,7 @@ export default function HelpSearch() {
 
   return (
     <section className="help-search" aria-labelledby="help-search-label">
-      <label id="help-search-label" htmlFor="help-search-input">What can we help with?</label>
+      <label id="help-search-label" htmlFor="help-search-input">Search</label>
       <div className="help-search-field">
         <span aria-hidden="true">⌕</span>
         <input
@@ -34,13 +34,13 @@ export default function HelpSearch() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search Spaces, extensions, passwords…"
+          placeholder="Search articles"
           autoComplete="off"
           aria-describedby="help-search-status"
         />
       </div>
       <p id="help-search-status" className="help-search-status" aria-live="polite">
-        {normalizedQuery ? `${results.length} ${results.length === 1 ? 'guide' : 'guides'} found` : 'Search every Crest guide'}
+        {normalizedQuery ? `${results.length} ${results.length === 1 ? 'article' : 'articles'}` : ''}
       </p>
       {normalizedQuery && (
         <div className="help-search-results" role="list">
@@ -53,7 +53,7 @@ export default function HelpSearch() {
             </div>
           ))}
           {results.length === 0 && (
-            <p className="help-search-empty">No exact match yet. Try “permissions,” “Safari,” or “passwords.”</p>
+            <p className="help-search-empty">No matching articles.</p>
           )}
         </div>
       )}
