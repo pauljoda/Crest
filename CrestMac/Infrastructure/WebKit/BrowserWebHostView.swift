@@ -385,6 +385,7 @@ final class BrowserWebHostView: NSView {
             addInterval
         )
         hostedWebView = webView
+        (webView as? BrowserDesktopWebView)?.linkHover?.attach(to: self)
     }
 
     func updateFocusPresentation(
@@ -414,6 +415,7 @@ final class BrowserWebHostView: NSView {
     func detach() {
         guard let hostedWebView else { return }
         if hostedWebView.superview === self {
+            (hostedWebView as? BrowserDesktopWebView)?.linkHover?.detach(from: self)
             hostedWebView.removeFromSuperview()
         }
         self.hostedWebView = nil

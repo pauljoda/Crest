@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E940C45A4ED60CD033F6B0AA /* BrowserLinkHoverMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30AC58E6D2204B24F9B5956E /* BrowserLinkHoverMessage.swift */; };
+		B3F9230494840BED80A53E69 /* BrowserLinkHoverPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E0466327C857AD8EDA9F6C /* BrowserLinkHoverPreview.swift */; };
+		0FE13E7E2B23D8445DE9E29D /* BrowserLinkHoverController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9714BC8672EA185BFD1E73B1 /* BrowserLinkHoverController.swift */; };
+		683E0AC4A6AD7343CEE28A9F /* BrowserLinkHoverContentBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4CEEA4AC58CEAC9D1F56E6 /* BrowserLinkHoverContentBridge.swift */; };
+		37A09C3B441CE303D578D86E /* BrowserLinkHoverDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F6CCD6E2CFECC8E1058FDA8 /* BrowserLinkHoverDestination.swift */; };
+		14FEA882D17F4CC8E18B2ECC /* BrowserLinkHoverState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5DD4D91D4D64150ED39999 /* BrowserLinkHoverState.swift */; };
+		D227A7E707F8E5B3B86D70C4 /* BrowserLinkHoverStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4487B64407C948A5C0802CF /* BrowserLinkHoverStateTests.swift */; };
 		2D498C7707DDF8B33648A7E5 /* BrowserSpaceAccessActionLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */; };
 		CF203DA5A214D4FC577D8FCA /* BrowserSpaceAccessActionLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */; };
 		65F6389FF492BBB9B2F880FA /* BrowserSoftwareUpdateReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85449328134EADEA2DDFB98F /* BrowserSoftwareUpdateReleaseNotes.swift */; };
@@ -3701,6 +3708,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		30AC58E6D2204B24F9B5956E /* BrowserLinkHoverMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverMessage.swift; path = CrestMac/Infrastructure/WebKit/LinkHover/BrowserLinkHoverMessage.swift; sourceTree = SOURCE_ROOT; };
+		93E0466327C857AD8EDA9F6C /* BrowserLinkHoverPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverPreview.swift; path = CrestMac/Features/Browser/Components/BrowserLinkHoverPreview/BrowserLinkHoverPreview.swift; sourceTree = SOURCE_ROOT; };
+		9714BC8672EA185BFD1E73B1 /* BrowserLinkHoverController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverController.swift; path = CrestMac/Infrastructure/WebKit/LinkHover/BrowserLinkHoverController.swift; sourceTree = SOURCE_ROOT; };
+		9F4CEEA4AC58CEAC9D1F56E6 /* BrowserLinkHoverContentBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverContentBridge.swift; path = CrestMac/Infrastructure/WebKit/LinkHover/BrowserLinkHoverContentBridge.swift; sourceTree = SOURCE_ROOT; };
+		7F6CCD6E2CFECC8E1058FDA8 /* BrowserLinkHoverDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverDestination.swift; path = CrestMac/Infrastructure/WebKit/LinkHover/BrowserLinkHoverDestination.swift; sourceTree = SOURCE_ROOT; };
+		0D5DD4D91D4D64150ED39999 /* BrowserLinkHoverState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverState.swift; path = CrestMac/Infrastructure/WebKit/LinkHover/BrowserLinkHoverState.swift; sourceTree = SOURCE_ROOT; };
+		B4487B64407C948A5C0802CF /* BrowserLinkHoverStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BrowserLinkHoverStateTests.swift; path = CrestTests/BrowserLinkHoverStateTests.swift; sourceTree = SOURCE_ROOT; };
 		A058EA7A8BB5CC5F0AB5336B /* BrowserSpaceAccessActionLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSpaceAccessActionLabel.swift; sourceTree = "<group>"; };
 		2C94202EE12A3695C28EEFCE /* BrowserSoftwareUpdateProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSoftwareUpdateProgress.swift; sourceTree = "<group>"; };
 		36AFAE6B471938E37D045B92 /* BrowserSoftwareUpdateReleaseNoteBlock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSoftwareUpdateReleaseNoteBlock.swift; sourceTree = "<group>"; };
@@ -6154,6 +6168,7 @@
 		01E4CD6EC3375F88226096C3 /* CrestTests */ = {
 			isa = PBXGroup;
 			children = (
+				B4487B64407C948A5C0802CF /* BrowserLinkHoverStateTests.swift */,
 				45B9A7DDA70F71E7F01449CA /* AddressResolverTests.swift */,
 				6CCA743AE6DB5BD26DACBA4E /* BrowserAboutSettingsTests.swift */,
 				AAD0339FDC13015E4F6C38CB /* BrowserAddressPresentationTests.swift */,
@@ -8514,6 +8529,11 @@
 		43EAFDDD900F9803E49EA496 /* WebKit */ = {
 			isa = PBXGroup;
 			children = (
+				30AC58E6D2204B24F9B5956E /* BrowserLinkHoverMessage.swift */,
+				9714BC8672EA185BFD1E73B1 /* BrowserLinkHoverController.swift */,
+				9F4CEEA4AC58CEAC9D1F56E6 /* BrowserLinkHoverContentBridge.swift */,
+				7F6CCD6E2CFECC8E1058FDA8 /* BrowserLinkHoverDestination.swift */,
+				0D5DD4D91D4D64150ED39999 /* BrowserLinkHoverState.swift */,
 				14EB0E33B323F1B6A9A81B7E /* BrowserPlatformPage.swift */,
 				415B29D96A91ED274875743B /* BrowserPlatformTransientPageLease.swift */,
 				9C069049E263B54464DFD389 /* BrowserPlatformUserAgent.swift */,
@@ -13925,6 +13945,7 @@
 		D812AD1834A06486ED7747FC /* BrowserWebPageSurface */ = {
 			isa = PBXGroup;
 			children = (
+				93E0466327C857AD8EDA9F6C /* BrowserLinkHoverPreview.swift */,
 				C9FED9E333A45F04044C7749 /* BrowserWebPageSurface.swift */,
 				F7C26955A1AABA0725919802 /* Components */,
 				4BE3669B3022299EC16AC66C /* Support */,
@@ -17308,6 +17329,7 @@
 				551CC5BFE1B72E42CAF61634 /* BrowserInteractionModelTests.swift in Sources */,
 				450B6DB7D174EACCDD6887BE /* BrowserLaunchEnvironmentTests.swift in Sources */,
 				E2A09088894F57665DE463F3 /* BrowserLinkContextCapturePolicyTests.swift in Sources */,
+				D227A7E707F8E5B3B86D70C4 /* BrowserLinkHoverStateTests.swift in Sources */,
 				00EEF058F6E378BEE9BE724C /* BrowserLinkPreferenceOwnershipTests.swift in Sources */,
 				32C689F43E28BF32DF31C1EE /* BrowserLinkSettingsTests.swift in Sources */,
 				67A7DE00D42F8F7BF6EC3578 /* BrowserMacOnboardingPolicyTests.swift in Sources */,
@@ -17983,6 +18005,12 @@
 				D44A32EE7B5A335769A77580 /* BrowserLaunchIsolationPolicy.swift in Sources */,
 				669A95925222D9D5AE5A07CE /* BrowserLinkClickBehavior.swift in Sources */,
 				C0CC40509F4668EA00F0F206 /* BrowserLinkContextCapturePolicy.swift in Sources */,
+				E940C45A4ED60CD033F6B0AA /* BrowserLinkHoverMessage.swift in Sources */,
+				B3F9230494840BED80A53E69 /* BrowserLinkHoverPreview.swift in Sources */,
+				0FE13E7E2B23D8445DE9E29D /* BrowserLinkHoverController.swift in Sources */,
+				683E0AC4A6AD7343CEE28A9F /* BrowserLinkHoverContentBridge.swift in Sources */,
+				37A09C3B441CE303D578D86E /* BrowserLinkHoverDestination.swift in Sources */,
+				14FEA882D17F4CC8E18B2ECC /* BrowserLinkHoverState.swift in Sources */,
 				18A2FF4545570A676A0C5004 /* BrowserLinkContextContentBridge.swift in Sources */,
 				9ABC22D7952274F6AEFBAAF8 /* BrowserLinkContextScriptMessageProxy.swift in Sources */,
 				7A4EE711274E943F84DC7A14 /* BrowserLinkPreferenceStore+Composition.swift in Sources */,

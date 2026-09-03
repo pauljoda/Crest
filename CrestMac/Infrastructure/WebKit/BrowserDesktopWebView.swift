@@ -7,6 +7,17 @@ final class BrowserDesktopWebView: WKWebView {
     weak var menuHost: (any BrowserDesktopWebViewMenuHost)?
     /// The page-owned record of this view's public AppKit editing responder.
     weak var focusRestoration: BrowserWebFocusRestorationController?
+    weak var linkHover: BrowserLinkHoverController?
+
+    override func viewWillMove(toSuperview newSuperview: NSView?) {
+        if superview !== newSuperview { linkHover?.detach() }
+        super.viewWillMove(toSuperview: newSuperview)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { linkHover?.invalidate() }
+    }
 
     override func becomeFirstResponder() -> Bool {
         guard focusRestoration?.allowsNativeFocusAcquisition != false else {

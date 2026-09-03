@@ -23,6 +23,8 @@ struct BrowserWebPageSurface: View {
 
             BrowserPageLoadingPresentation(page: page)
 
+            BrowserLinkHoverPreview(hover: page.linkHover)
+
             if page.isFindPresented {
                 BrowserFindBar(
                     port: findPort,

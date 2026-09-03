@@ -8,6 +8,7 @@ import os
 
 extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
+        linkHover.beginNavigation()
         focusRestoration.invalidate()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
@@ -31,6 +32,7 @@ extension BrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        linkHover.didCommitNavigation()
         mediaSessionCoordinator?.didCommitNavigation()
         committedNavigationCount += 1
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
@@ -302,6 +304,7 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        linkHover.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
         credentialState.webContentProcessDidTerminate()
@@ -378,6 +381,7 @@ extension BrowserPage: WKNavigationDelegate {
         didFail navigation: WKNavigation?,
         withError error: any Error
     ) {
+        if isCurrentNavigation(navigation) { linkHover.didFailNavigation() }
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
@@ -391,6 +395,7 @@ extension BrowserPage: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation?,
         withError error: any Error
     ) {
+        if isCurrentNavigation(navigation) { linkHover.didFailNavigation() }
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,

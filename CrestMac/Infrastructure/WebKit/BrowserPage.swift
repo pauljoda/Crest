@@ -15,6 +15,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     )
 
     @ObservationIgnored let webView: WKWebView
+    @ObservationIgnored lazy var linkHover = BrowserLinkHoverController(webView: webView)
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
         let controller = BrowserWebFocusRestorationController(webView: webView)
         (webView as? BrowserDesktopWebView)?.focusRestoration = controller
@@ -351,6 +352,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         super.init()
 
         desktopWebView.menuHost = self
+        desktopWebView.linkHover = linkHover
         if !BrowserPageZoomPolicy.levelsMatch(
             normalizedDefaultPageZoom,
             BrowserPageZoomPolicy.defaultLevel
@@ -407,6 +409,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // only gate is the shared-controller one every bridge has: a popup runs
         // its opener's scripts against its opener's handlers.
         if ownsUserContentController {
+            BrowserLinkHoverContentBridge.install(in: webView.configuration.userContentController)
             linkContextMessageProxy = BrowserLinkContextContentBridge.install(
                 in: webView.configuration.userContentController
             ) { [weak self] message in
@@ -710,6 +713,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        linkHover.detach()
+        (webView as? BrowserDesktopWebView)?.linkHover = nil
         focusRestoration.invalidate()
         extensionBackgroundActivityLease?.cancel()
         extensionBackgroundActivityLease = nil
@@ -1492,6 +1497,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        linkHover.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
