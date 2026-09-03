@@ -141,6 +141,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
+    @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored private let activateHostedNotificationSource: (SpaceID, TabID) -> Void
@@ -202,6 +203,7 @@ final class BrowserPagePool:
         backgroundPageDidUpdate: @escaping BackgroundPageUpdateHandler = { _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
+        linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         activateHostedNotificationSource:
             @escaping (SpaceID, TabID) -> Void = { _, _ in },
         residencyDecisionProvider: @escaping ResidencyDecisionProvider = {
@@ -240,6 +242,7 @@ final class BrowserPagePool:
         self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
         self.splitLinkHost = splitLinkHost
+        self.linkDestinationHost = linkDestinationHost
         self.activateHostedNotificationSource = activateHostedNotificationSource
         downloadCenter = BrowserDownloadCenter(
             ledger: downloadLedger,
@@ -1913,6 +1916,7 @@ final class BrowserPagePool:
             },
             openPeek: openPeek,
             splitLinkHost: splitLinkHost,
+            linkDestinationHost: linkDestinationHost,
             extensionWebpageMenuItems: {
                 [extensionWebpageMenuProvider] context in
                 guard let tabID else { return [] }

@@ -69,6 +69,7 @@ final class MobileBrowserWindowSceneModel {
             },
             tabStateArchive: tabStateArchive,
             popupTabHost: browser.popupTabHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
             openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 guard
@@ -96,6 +97,7 @@ final class MobileBrowserWindowSceneModel {
             // The private store answers to the private session, so a popup from a
             // private page can only ever land in a private tab.
             popupTabHost: privateBrowser.popupTabHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess),
             openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 guard

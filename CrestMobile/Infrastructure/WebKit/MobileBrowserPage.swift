@@ -63,6 +63,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let pullToRefreshControl = UIRefreshControl()
+    @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: MobileBrowserPageStore.ModifiedLinkOpener
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
@@ -149,6 +150,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             @escaping BrowserHTTPAuthenticationSession.LoadCredential = { _ in nil },
         saveHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.SaveCredential = { _ in },
+        linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         openNewTab: @escaping (URL) -> Void,
         openModifiedLink: @escaping MobileBrowserPageStore.ModifiedLinkOpener = {
             _, _, _ in nil
@@ -167,6 +169,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.downloadCenter = downloadCenter
         self.permissionCenter = permissionCenter
         self.serverTrustOverrides = serverTrustOverrides
+        self.linkDestinationHost = linkDestinationHost
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek

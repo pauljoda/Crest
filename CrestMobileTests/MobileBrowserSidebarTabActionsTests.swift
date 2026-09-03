@@ -9,6 +9,26 @@ import XCTest
 /// reconcile after a tab-list mutation.
 @MainActor
 final class MobileBrowserSidebarTabActionsTests: XCTestCase {
+    func testLinkMenuOpensInTheRequestedSpaceAndPreservesItsSource() throws {
+        let context = makeContext()
+        let otherSpace = BrowserSession.makeBlankSpace(number: 2)
+        context.browser.session.spaces.append(otherSpace)
+        let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)
+        let source = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id
+        )
+        let url = try XCTUnwrap(URL(string: "https://destination.crest.test"))
+
+        XCTAssertTrue(host.openLink(url, from: source, in: BrowserSpaceRuntimeAssignment(space: otherSpace)))
+
+        XCTAssertEqual(context.browser.selectedSpace?.id, otherSpace.id)
+        XCTAssertEqual(context.browser.selectedSpace?.profile.id, otherSpace.profile.id)
+        XCTAssertEqual(context.browser.selectedTab?.url, url)
+        XCTAssertEqual(context.browser.session.space(id: source.spaceID)?.tabs, context.space.tabs)
+        XCTAssertEqual(context.browser.session.spaces.count, 2)
+        XCTAssertFalse(host.openLink(url, from: source, in: BrowserSpaceRuntimeAssignment(space: otherSpace)))
+    }
+
     func testNewTabCallsTheMobileCommandOncePerRequestWithoutInsertingTabs() {
         let context = makeContext()
         let action = makeActions(context)

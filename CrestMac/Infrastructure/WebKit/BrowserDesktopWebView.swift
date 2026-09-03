@@ -34,7 +34,7 @@ final class BrowserDesktopWebView: WKWebView {
         true
     }
 
-    /// Appends Crest's own items to the menu WebKit just built.
+    /// Adds Crest's Space destinations to the menu WebKit just built.
     ///
     /// AppKit calls this with the finished menu, which is the one moment a
     /// link-aware item can be added: WebKit's items stay exactly as WebKit
@@ -43,7 +43,13 @@ final class BrowserDesktopWebView: WKWebView {
     /// hit test of Crest's own.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
+        if menuHost?.opensLinksInCurrentSpace == true {
+            BrowserDesktopWebViewMenuPolicy.relabelLinkDestination(in: menu)
+        }
         guard let context = menuHost?.takeMenuContext() else { return }
+        if let destinations = context.linkDestinations {
+            addSpaceDestinations(destinations, to: menu)
+        }
         if let imageDownloadURL = context.imageDownloadURL,
             let item = BrowserDesktopWebViewMenuPolicy.downloadImageItem(in: menu)
         {
@@ -83,9 +89,51 @@ final class BrowserDesktopWebView: WKWebView {
         guard let url = sender.representedObject as? URL else { return }
         menuHost?.downloadImage(from: url)
     }
+
+    private func addSpaceDestinations(_ destinations: BrowserDesktopLinkDestinations, to menu: NSMenu) {
+        guard !destinations.spaces.isEmpty, let window else { return }
+        let item = NSMenuItem(
+            title: String(localized: "Open Link in Another Space"), action: nil, keyEquivalent: ""
+        )
+        let submenu = NSMenu()
+        for space in destinations.spaces {
+            let choice = NSMenuItem(title: space.name, action: #selector(openLinkInSpace(_:)), keyEquivalent: "")
+            choice.target = self
+            choice.representedObject = LinkSpaceAction(
+                url: destinations.url, source: destinations.source,
+                destination: BrowserSpaceRuntimeAssignment(space: space),
+                windowNumber: window.windowNumber
+            )
+            submenu.addItem(choice)
+        }
+        item.submenu = submenu
+        let sourceIndex = menu.items.firstIndex { $0.identifier == BrowserDesktopWebViewMenuPolicy.openLinkIdentifier }
+        menu.insertItem(item, at: sourceIndex.map { $0 + 1 } ?? 0)
+    }
+
+    @objc private func openLinkInSpace(_ sender: NSMenuItem) {
+        guard let action = sender.representedObject as? LinkSpaceAction,
+            window?.windowNumber == action.windowNumber
+        else { return }
+        menuHost?.openLink(action.url, from: action.source, in: action.destination)
+    }
+
+    private struct LinkSpaceAction {
+        let url: URL
+        let source: BrowserTabRuntimeAssignment
+        let destination: BrowserSpaceRuntimeAssignment
+        let windowNumber: Int
+    }
 }
 
 enum BrowserDesktopWebViewMenuPolicy {
+    static let openLinkIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierOpenLinkInNewWindow")
+
+    static func relabelLinkDestination(in menu: NSMenu) {
+        menu.items.first { $0.identifier == openLinkIdentifier }?.title =
+            String(localized: "Open Link in This Space")
+    }
+
     static let downloadImageIdentifier = NSUserInterfaceItemIdentifier(
         "WKMenuItemIdentifierDownloadImage"
     )

@@ -8,6 +8,47 @@ import XCTest
 /// `MobileBrowserSidebarTabActionsTests`.
 @MainActor
 final class BrowserSidebarTabActionsTests: XCTestCase {
+    func testLinkDestinationOpensANewTabInTheChosenSpaceWithoutMovingTheSource() throws {
+        let context = makeContext()
+        let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)
+        let source = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id
+        )
+        let destination = BrowserSpaceRuntimeAssignment(space: context.otherSpace)
+        let url = try XCTUnwrap(URL(string: "https://destination.crest.test/article"))
+
+        XCTAssertEqual(host.otherSpaces(from: source).map(\.id), [context.otherSpace.id])
+        XCTAssertTrue(host.openLink(url, from: source, in: destination))
+
+        XCTAssertEqual(context.browser.session.spaces.count, 2)
+        XCTAssertEqual(context.browser.session.space(id: context.space.id)?.tabs, context.space.tabs)
+        let selected = try XCTUnwrap(context.browser.selectedSpace)
+        XCTAssertEqual(selected.id, destination.spaceID)
+        XCTAssertEqual(selected.profile.id, destination.profileID)
+        XCTAssertEqual(context.browser.selectedTab?.url, url)
+        XCTAssertNotEqual(context.browser.selectedTab?.id, context.tab.id)
+    }
+
+    func testLinkDestinationRejectsAStaleSourceAndLockedDestination() throws {
+        let context = makeContext()
+        let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)
+        let source = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id
+        )
+        let destination = BrowserSpaceRuntimeAssignment(space: context.otherSpace)
+        let url = try XCTUnwrap(URL(string: "https://destination.crest.test"))
+        context.browser.selectSpace(context.otherSpace.id)
+        XCTAssertFalse(host.openLink(url, from: source, in: destination))
+        context.browser.selectSpace(context.space.id)
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.otherSpace.id)
+        XCTAssertTrue(host.otherSpaces(from: source).isEmpty)
+        XCTAssertFalse(host.openLink(url, from: source, in: destination))
+        context.browser.updateSpaceAccessPolicy(.open, in: context.otherSpace.id)
+        context.browser.session.spaces[0] = replacingProfile(in: context.space)
+        XCTAssertFalse(host.openLink(url, from: source, in: destination))
+        XCTAssertEqual(context.browser.session.space(id: destination.spaceID)?.tabs.count, 0)
+    }
+
     func testNewTabInvokesTheExistingCommandOnceWithoutEditingTheSession() {
         let context = makeContext()
         let action = makeActions(context, pullFavicon: { _, _ in nil })

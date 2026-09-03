@@ -122,6 +122,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var linkContextCapture = BrowserLinkContextCapturePolicy()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored let splitLinkHost: BrowserSplitLinkHost
+    @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored let extensionWebpageMenuItems: @MainActor (BrowserExtensionWebpageMenuContext) -> [NSMenuItem]
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
@@ -240,6 +241,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
+        linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         extensionWebpageMenuItems:
             @escaping @MainActor (BrowserExtensionWebpageMenuContext)
             -> [NSMenuItem] = { _ in [] },
@@ -301,6 +303,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         self.splitLinkHost = splitLinkHost
+        self.linkDestinationHost = linkDestinationHost
         self.extensionWebpageMenuItems = extensionWebpageMenuItems
         credentialState = BrowserCredentialPageState(spaceID: spaceID)
         httpAuthenticationSession = BrowserHTTPAuthenticationSession(

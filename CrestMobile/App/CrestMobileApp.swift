@@ -93,6 +93,7 @@ struct CrestMobileApp: App {
             },
             tabStateArchive: tabStateArchive,
             popupTabHost: browser.popupTabHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
             openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 guard

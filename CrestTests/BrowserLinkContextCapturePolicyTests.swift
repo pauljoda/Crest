@@ -198,6 +198,27 @@ final class BrowserLinkContextCapturePolicyTests: XCTestCase {
     }
 
     @MainActor
+    func testLinkDestinationTitleKeepsWebKitsActionAndShortcut() {
+        let menu = NSMenu()
+        let action = NSSelectorFromString("nativeOpenLink:")
+        let target = NSObject()
+        let item = NSMenuItem(title: "Localized native title", action: action, keyEquivalent: "t")
+        item.identifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierOpenLinkInNewWindow")
+        item.target = target
+        let download = NSMenuItem(title: "Download Linked File", action: nil, keyEquivalent: "")
+        menu.items = [item, download]
+
+        BrowserDesktopWebViewMenuPolicy.relabelLinkDestination(in: menu)
+
+        XCTAssertEqual(item.title, String(localized: "Open Link in This Space"))
+        XCTAssertEqual(item.action, action)
+        XCTAssertTrue(item.target === target)
+        XCTAssertEqual(item.keyEquivalent, "t")
+        XCTAssertEqual(menu.items.count, 2)
+        XCTAssertEqual(download.title, "Download Linked File")
+    }
+
+    @MainActor
     func testImageDownloadMenuLookupUsesWebKitsIdentifierInsteadOfItsTitle() {
         let menu = NSMenu()
         let unrelated = NSMenuItem(

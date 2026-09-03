@@ -249,6 +249,7 @@ struct CrestApp: App {
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
             splitLinkHost: browser.splitLinkHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
             activateHostedNotificationSource: { spaceID, tabID in
                 browser.selectSpace(spaceID)
                 browser.selectTab(tabID)
@@ -301,7 +302,8 @@ struct CrestApp: App {
                 return privateBrowser.session
             },
             openPeek: { request in privateTransientBrowsing.presentPeek(request) },
-            splitLinkHost: privateBrowser.splitLinkHost
+            splitLinkHost: privateBrowser.splitLinkHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess)
         )
         extensionControllerPool.connect(browser: browser, pageProvider: pages)
         privateExtensionControllerPool.connect(

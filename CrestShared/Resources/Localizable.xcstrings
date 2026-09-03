@@ -9267,12 +9267,32 @@
         }
       }
     },
+    "Open Link in Another Space" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فتح الرابط في مساحة أخرى"
+          }
+        }
+      }
+    },
     "Open Link in Split View" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "فتح الرابط في العرض المنقسم"
+          }
+        }
+      }
+    },
+    "Open Link in This Space" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فتح الرابط في هذه المساحة"
           }
         }
       }

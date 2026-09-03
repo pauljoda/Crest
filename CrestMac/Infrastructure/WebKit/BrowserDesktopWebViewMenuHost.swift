@@ -7,6 +7,8 @@ import Foundation
 /// right-click is still being handled, so every answer here is synchronous.
 @MainActor
 protocol BrowserDesktopWebViewMenuHost: AnyObject {
+    var opensLinksInCurrentSpace: Bool { get }
+
     /// The content the right-click that is opening this menu landed on.
     ///
     /// Consumes the capture: nil means no fresh page report arrived, and
@@ -21,6 +23,12 @@ protocol BrowserDesktopWebViewMenuHost: AnyObject {
     /// Opens `url` as a new card beside the tab this page presents.
     func openLinkInSplitView(_ url: URL)
 
+    func openLink(
+        _ url: URL,
+        from source: BrowserTabRuntimeAssignment,
+        in destination: BrowserSpaceRuntimeAssignment
+    )
+
     /// Starts a person-requested image transfer in this page's WebKit context.
     func downloadImage(from url: URL)
 
@@ -32,4 +40,11 @@ struct BrowserDesktopWebViewMenuContext: Equatable, Sendable {
     let splitViewLinkDestination: URL?
     let imageDownloadURL: URL?
     let extensionContext: BrowserExtensionWebpageMenuContext?
+    var linkDestinations: BrowserDesktopLinkDestinations? = nil
+}
+
+struct BrowserDesktopLinkDestinations: Equatable, Sendable {
+    let url: URL
+    let source: BrowserTabRuntimeAssignment
+    let spaces: [BrowserSpace]
 }

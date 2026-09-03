@@ -5,6 +5,49 @@ import UniformTypeIdentifiers
 import WebKit
 
 extension MobileBrowserPage: WKUIDelegate {
+    func webView(
+        _ webView: WKWebView,
+        contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo,
+        completionHandler: @escaping @MainActor (UIContextMenuConfiguration?) -> Void
+    ) {
+        let source = navigationContext.map {
+            BrowserTabRuntimeAssignment(
+                tabID: $0.tabID, spaceID: $0.spaceID, profileID: $0.assignment.profileID
+            )
+        }
+        let window = webView.window
+        completionHandler(
+            UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self, weak window] suggested in
+                guard let self, let source, let url = elementInfo.linkURL,
+                    BrowserExternalURLPolicy.accepts(url),
+                    linkDestinationHost.canOpenLink(from: source)
+                else { return UIMenu(children: suggested) }
+                let open: (BrowserSpaceRuntimeAssignment) -> Void = { [weak self, weak window] destination in
+                    guard let self, let window, self.webView.window === window,
+                        self.navigationContext?.tabID == source.tabID
+                    else { return }
+                    self.linkDestinationHost.openLink(url, from: source, in: destination)
+                }
+                let current = UIAction(title: String(localized: "Open Link in This Space")) { _ in
+                    open(BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID))
+                }
+                var actions: [UIMenuElement] = [current]
+                let spaces = linkDestinationHost.otherSpaces(from: source)
+                if !spaces.isEmpty {
+                    actions.append(
+                        UIMenu(
+                            title: String(localized: "Open Link in Another Space"),
+                            children: spaces.map { space in
+                                UIAction(title: space.name) { _ in
+                                    open(BrowserSpaceRuntimeAssignment(space: space))
+                                }
+                            }
+                        ))
+                }
+                return UIMenu(children: suggested + [UIMenu(options: .displayInline, children: actions)])
+            })
+    }
+
     /// Returns the popup's web view built from WebKit's own configuration, which
     /// is what keeps `window.open()` non-null, `window.opener` connected, and
     /// `about:blank` popups writable. Crest never loads that web view itself:

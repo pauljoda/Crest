@@ -69,6 +69,7 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private var ephemeralDataStores: [UUID: WKWebsiteDataStore] = [:]
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
     @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
+    @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
@@ -119,6 +120,7 @@ final class MobileBrowserPageStore:
             any BrowserContentRuleListProviding = BrowserContentRuleListProvider.shared,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil,
         popupTabHost: BrowserPopupTabHost = .unavailable,
+        linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
@@ -147,6 +149,7 @@ final class MobileBrowserPageStore:
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         self.websiteDataStoreRemover = websiteDataStoreRemover
         self.contentRuleListProvider = contentRuleListProvider
+        self.linkDestinationHost = linkDestinationHost
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
@@ -820,6 +823,7 @@ final class MobileBrowserPageStore:
             saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
                 try await saveHTTPAuthenticationCredential(request, space.id)
             },
+            linkDestinationHost: linkDestinationHost,
             openNewTab: openNewTab,
             openModifiedLink: openModifiedLink,
             openPeek: openPeek,
@@ -1269,6 +1273,7 @@ final class MobileBrowserPageStore:
             saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
                 try await saveHTTPAuthenticationCredential(request, space.id)
             },
+            linkDestinationHost: linkDestinationHost,
             openNewTab: openNewTab,
             openModifiedLink: openModifiedLink,
             openPeek: openPeek,

@@ -425,6 +425,10 @@
     "2026-09-03-hover-link-destinations": {
       "category": "new",
       "message": "Preview link destinations after hovering for a moment on macOS"
+    },
+    "2026-09-03-clear-link-space-destinations": {
+      "category": "improved",
+      "message": "Open links in the current Space or choose another Space from clearly labeled menu actions"
     }
   }
 }

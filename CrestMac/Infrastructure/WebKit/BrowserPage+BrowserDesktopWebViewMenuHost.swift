@@ -2,6 +2,8 @@ import AppKit
 import Foundation
 
 extension BrowserPage: BrowserDesktopWebViewMenuHost {
+    var opensLinksInCurrentSpace: Bool { navigationContext != nil }
+
     /// Answers the menu WebKit is building right now.
     ///
     /// The capture is taken unconditionally — even when the split refuses the
@@ -20,11 +22,24 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
         } else {
             splitViewDestination = nil
         }
-        return BrowserDesktopWebViewMenuContext(
+        var menuContext = BrowserDesktopWebViewMenuContext(
             splitViewLinkDestination: splitViewDestination,
             imageDownloadURL: captured.imageURL,
             extensionContext: extensionMenuContext(from: captured)
         )
+        if let url = captured.linkURL, let context = navigationContext {
+            let source = BrowserTabRuntimeAssignment(
+                tabID: context.tabID, spaceID: context.spaceID,
+                profileID: context.assignment.profileID
+            )
+            if linkDestinationHost.canOpenLink(from: source) {
+                menuContext.linkDestinations = BrowserDesktopLinkDestinations(
+                    url: url, source: source,
+                    spaces: linkDestinationHost.otherSpaces(from: source)
+                )
+            }
+        }
+        return menuContext
     }
 
     func extensionMenuItems(
@@ -39,6 +54,19 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
             BrowserExternalURLPolicy.accepts(url)
         else { return }
         splitLinkHost.openLink(url, context.tabID, context.assignment)
+    }
+
+    func openLink(
+        _ url: URL,
+        from source: BrowserTabRuntimeAssignment,
+        in destination: BrowserSpaceRuntimeAssignment
+    ) {
+        guard let context = navigationContext,
+            context.tabID == source.tabID,
+            context.spaceID == source.spaceID,
+            context.assignment.profileID == source.profileID
+        else { return }
+        linkDestinationHost.openLink(url, from: source, in: destination)
     }
 
     func downloadImage(from url: URL) {
