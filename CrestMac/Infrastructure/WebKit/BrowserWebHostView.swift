@@ -271,6 +271,33 @@ final class BrowserWebHostView: NSView {
     private var isPageActive = false
     private var focusRestorationAttemptGeneration = 0
 
+    override func keyDown(with event: NSEvent) {
+        guard let hostedWebView,
+            let responder = window?.firstResponder as? NSView,
+            responder === hostedWebView || responder.isDescendant(of: hostedWebView)
+        else {
+            super.keyDown(with: event)
+            return
+        }
+
+        // WebKit has already offered this key to the page and its input
+        // context. Preserve native fallback handlers without interpreting or
+        // dispatching the key to WebKit again. Only the terminal, unhandled
+        // key-down feedback is unnecessary in a browsing view.
+        let fallback = BrowserWebKeyboardFallback()
+        var tail: NSResponder = self
+        while let next = tail.nextResponder {
+            tail = next
+        }
+        tail.nextResponder = fallback
+        defer {
+            if tail.nextResponder === fallback {
+                tail.nextResponder = fallback.nextResponder
+            }
+        }
+        super.keyDown(with: event)
+    }
+
     override func layout() {
         super.layout()
         layoutHostedWebView()
@@ -415,5 +442,13 @@ final class BrowserWebHostView: NSView {
                 gate: self.focusRestorationGate
             )
         }
+    }
+}
+
+@MainActor
+private final class BrowserWebKeyboardFallback: NSResponder {
+    override func noResponder(for eventSelector: Selector) {
+        guard eventSelector != #selector(NSResponder.keyDown(with:)) else { return }
+        super.noResponder(for: eventSelector)
     }
 }

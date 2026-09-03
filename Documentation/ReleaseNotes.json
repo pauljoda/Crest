@@ -413,6 +413,10 @@
     "2026-09-03-command-palette-content-centering": {
       "category": "fixed",
       "message": "Keep the command palette centered over page content as the sidebar and search results change"
+    },
+    "2026-09-03-quiet-webpage-keyboard-controls": {
+      "category": "fixed",
+      "message": "Use webpage keyboard controls without unnecessary alert sounds on macOS"
     }
   }
 }

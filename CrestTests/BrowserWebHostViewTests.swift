@@ -6,6 +6,102 @@ import XCTest
 
 @MainActor
 final class BrowserWebHostViewTests: XCTestCase {
+    func testUnhandledWebKeyDoesNotReachTerminalInvalidInputFeedback() throws {
+        let setup = focusHostSetup()
+        let terminal = BrowserKeyboardTerminalProbe()
+        setup.host.nextResponder = terminal
+        XCTAssertTrue(setup.window.makeFirstResponder(setup.webView))
+        let event = try keyboardFallbackEvent(in: setup.window)
+
+        setup.host.keyDown(with: event)
+
+        XCTAssertTrue(terminal.unhandledSelectors.isEmpty)
+        XCTAssertTrue(setup.host.nextResponder === terminal)
+        XCTAssertNil(terminal.nextResponder)
+        terminal.keyDown(with: event)
+        XCTAssertEqual(terminal.unhandledSelectors, [#selector(NSResponder.keyDown(with:))])
+    }
+
+    func testWebKeyFallbackPreservesAnExistingNativeHandlerAndRepeat() throws {
+        let setup = focusHostSetup()
+        let handler = BrowserKeyboardHandlerProbe()
+        let terminal = BrowserKeyboardTerminalProbe()
+        setup.host.nextResponder = handler
+        handler.nextResponder = terminal
+        XCTAssertTrue(setup.window.makeFirstResponder(setup.webView))
+        let event = try keyboardFallbackEvent(in: setup.window, isRepeat: true)
+
+        setup.host.keyDown(with: event)
+
+        XCTAssertEqual(handler.events.count, 1)
+        XCTAssertTrue(handler.events.first === event)
+        XCTAssertTrue(terminal.unhandledSelectors.isEmpty)
+        XCTAssertTrue(handler.nextResponder === terminal)
+        XCTAssertNil(terminal.nextResponder)
+    }
+
+    func testNativeFieldOutsideTheWebViewKeepsItsNormalFallback() throws {
+        let setup = focusHostSetup()
+        let field = NSTextField(string: "Native field")
+        setup.host.addSubview(field)
+        XCTAssertTrue(setup.window.makeFirstResponder(field))
+        let terminal = BrowserKeyboardTerminalProbe()
+        setup.host.nextResponder = terminal
+
+        setup.host.keyDown(with: try keyboardFallbackEvent(in: setup.window))
+
+        XCTAssertEqual(terminal.unhandledSelectors, [#selector(NSResponder.keyDown(with:))])
+    }
+
+    func testNativeHandlerCanChangeTheResponderChainDuringWebFallback() throws {
+        let setup = focusHostSetup()
+        let handler = BrowserKeyboardHandlerProbe()
+        let terminal = BrowserKeyboardTerminalProbe()
+        let replacement = NSResponder()
+        setup.host.nextResponder = handler
+        handler.nextResponder = terminal
+        handler.onKeyDown = { terminal.nextResponder = replacement }
+        XCTAssertTrue(setup.window.makeFirstResponder(setup.webView))
+
+        setup.host.keyDown(with: try keyboardFallbackEvent(in: setup.window))
+
+        XCTAssertEqual(handler.events.count, 1)
+        XCTAssertTrue(terminal.nextResponder === replacement)
+    }
+
+    func testWebFallbackDoesNotChangeKeyUpRouting() throws {
+        let setup = focusHostSetup()
+        let terminal = BrowserKeyboardTerminalProbe()
+        setup.host.nextResponder = terminal
+        XCTAssertTrue(setup.window.makeFirstResponder(setup.webView))
+
+        setup.host.keyUp(with: try keyboardFallbackEvent(in: setup.window, type: .keyUp))
+
+        XCTAssertEqual(terminal.unhandledSelectors, [#selector(NSResponder.keyUp(with:))])
+        XCTAssertNil(terminal.nextResponder)
+    }
+
+    private func keyboardFallbackEvent(
+        in window: NSWindow,
+        type: NSEvent.EventType = .keyDown,
+        isRepeat: Bool = false
+    ) throws -> NSEvent {
+        try XCTUnwrap(
+            NSEvent.keyEvent(
+                with: type,
+                location: .zero,
+                modifierFlags: [],
+                timestamp: 1,
+                windowNumber: window.windowNumber,
+                context: nil,
+                characters: "z",
+                charactersIgnoringModifiers: "z",
+                isARepeat: isRepeat,
+                keyCode: 6
+            )
+        )
+    }
+
     func testAttachReplacesTheVisibleWebView() {
         let host = BrowserWebHostView()
         let first = WKWebView()
@@ -674,6 +770,26 @@ final class BrowserWebHostViewTests: XCTestCase {
             candidate = current.superview
         }
         return false
+    }
+}
+
+@MainActor
+private final class BrowserKeyboardTerminalProbe: NSResponder {
+    var unhandledSelectors: [Selector] = []
+
+    override func noResponder(for eventSelector: Selector) {
+        unhandledSelectors.append(eventSelector)
+    }
+}
+
+@MainActor
+private final class BrowserKeyboardHandlerProbe: NSResponder {
+    var events: [NSEvent] = []
+    var onKeyDown: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        events.append(event)
+        onKeyDown?()
     }
 }
 
