@@ -7,15 +7,18 @@ import XCTest
 @MainActor
 final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
     private static let claudePatterns = ["https://claude.ai/*", "https://*.claude.ai/*"]
-    /// Stands in for WebKit's web-page runtime: records the call, answers a
-    /// supplied callback the way WebKit does, and returns "reply" otherwise.
+    /// Stands in for WebKit's web-page runtime: records the call and answers
+    /// `{ success: true }`, or `undefined` when the message type is
+    /// "unanswered" — what WebKit hands back for an unknown extension — through
+    /// the callback when one is supplied and a promise otherwise.
     private static let webKitBrowser = """
         ({ runtime: {
             sendMessage: (...args) => {
                 globalThis.__sent = args;
+                const reply = args[1] && args[1].type === "unanswered" ? undefined : { success: true };
                 const callback = args[3];
-                if (typeof callback === "function") { callback({ success: true }); return undefined; }
-                return "reply";
+                if (typeof callback === "function") { callback(reply); return undefined; }
+                return Promise.resolve(reply);
             },
             connect: (...args) => ({ connected: args })
         } })
@@ -85,15 +88,16 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         XCTAssertEqual(
             context.evaluateScript("typeof chrome.runtime.sendMessage")!.toString(), "function"
         )
-        XCTAssertEqual(
-            context.evaluateScript(
-                #"chrome.runtime.sendMessage("fcoeoab", { type: "oauth_redirect" })"#
-            )!.toString(),
-            "reply"
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "oauth_redirect" }).then((r) => { globalThis.__resolved = r; })"#
         )
         XCTAssertEqual(
             context.evaluateScript("JSON.stringify(globalThis.__sent)")!.toString(),
             #"["fcoeoab",{"type":"oauth_redirect"}]"#
+        )
+        XCTAssertTrue(
+            context.evaluateScript("globalThis.__resolved && globalThis.__resolved.success === true")!.toBool(),
+            "The promise form resolves with the extension's reply."
         )
         XCTAssertEqual(
             context.evaluateScript(#"chrome.runtime.connect("fcoeoab", { name: "p" }).connected[1].name"#)!
@@ -156,6 +160,35 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         )
         XCTAssertEqual(context.evaluateScript("typeof globalThis.__reports")!.toString(), "undefined")
         XCTAssertEqual(context.evaluateScript("typeof chrome.runtime.sendMessage")!.toString(), "function")
+    }
+
+    func testAnUnansweredCallSetsLastErrorDuringTheCallbackAndRejectsThePromise() throws {
+        let context = try page(at: "https://claude.ai/oauth/authorize", patterns: Self.claudePatterns)
+        context.evaluateScript(
+            """
+            globalThis.__seen = [];
+            chrome.runtime.sendMessage("dngcpim", { type: "unanswered" }, (reply) => {
+                globalThis.__seen.push(reply === undefined, chrome.runtime.lastError && chrome.runtime.lastError.message);
+            });
+            globalThis.__seen.push(chrome.runtime.lastError === undefined);
+            chrome.runtime.sendMessage("fcoeoab", { type: "ping" }, (reply) => {
+                globalThis.__seen.push(reply.success === true, chrome.runtime.lastError === undefined);
+            });
+            """
+        )
+        XCTAssertEqual(
+            context.evaluateScript("JSON.stringify(globalThis.__seen)")!.toString(),
+            #"[true,"Could not establish connection. Receiving end does not exist.",true,true,true]"#,
+            "lastError is set only while the callback of an unanswered call runs, as in Chrome."
+        )
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("dngcpim", { type: "unanswered" }).then(() => { globalThis.__promise = "resolved"; }, (e) => { globalThis.__promise = e.message; })"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("globalThis.__promise")!.toString(),
+            "Could not establish connection. Receiving end does not exist.",
+            "The promise form rejects, so a page probing several extension ids moves on to the next one."
+        )
     }
 
     func testASubdomainWildcardCoversTheApexAndItsSubdomainsOnly() throws {

@@ -167,6 +167,15 @@ enum BrowserExtensionWebPageRuntimeBridge {
             const s = shape(reply);
             return s.keys ? `keys=[${s.keys.join(",")}]` : s.valueType;
           };
+          // Chrome reports "nobody answered" through `chrome.runtime.lastError`
+          // (set only while the callback runs) or a rejected promise. WebKit
+          // answers an unknown extension, an unmatched page, or a silent
+          // listener with a plain `undefined` reply. Pages rely on the Chrome
+          // signal: claude.ai probes several extension ids in turn and treats
+          // an error-free `undefined` as a completed hand-off, so without it
+          // the sign-in never reaches the installed extension.
+          const receivingEndError = "Could not establish connection. Receiving end does not exist.";
+          let lastError;
           // Chrome resolves `sendMessage(extensionId, message, callback)` by
           // recognizing the function; place it in WebKit's callback slot
           // explicitly rather than relying on positional matching.
@@ -182,17 +191,30 @@ enum BrowserExtensionWebPageRuntimeBridge {
             try {
               if (callback !== undefined) {
                 return runtime.sendMessage(extensionId, message, options, (reply) => {
-                  settle(reply === undefined ? "unanswered" : "replied", describe(reply));
-                  return callback(reply);
+                  const unanswered = reply === undefined;
+                  settle(unanswered ? "unanswered" : "replied", describe(reply));
+                  lastError = unanswered ? { message: receivingEndError } : undefined;
+                  try {
+                    return callback(reply);
+                  } finally {
+                    lastError = undefined;
+                  }
                 });
               }
               const result = options === undefined
                 ? runtime.sendMessage(extensionId, message)
                 : runtime.sendMessage(extensionId, message, options);
               if (result && typeof result.then === "function") {
-                result.then(
-                  (reply) => settle(reply === undefined ? "unanswered" : "replied", describe(reply)),
-                  (error) => settle("rejected", String(error && error.message ? error.message : error)),
+                return result.then(
+                  (reply) => {
+                    settle(reply === undefined ? "unanswered" : "replied", describe(reply));
+                    if (reply === undefined) throw new Error(receivingEndError);
+                    return reply;
+                  },
+                  (error) => {
+                    settle("rejected", String(error && error.message ? error.message : error));
+                    throw error;
+                  },
                 );
               }
               return result;
@@ -201,15 +223,19 @@ enum BrowserExtensionWebPageRuntimeBridge {
               throw error;
             }
           };
-          globalThis.chrome = {
-            runtime: {
-              sendMessage,
-              connect: (extensionId, connectInfo) => {
-                report({ event: "connect", extensionId: String(extensionId) });
-                return runtime.connect(extensionId, connectInfo);
-              },
+          const chromeRuntime = {
+            sendMessage,
+            connect: (extensionId, connectInfo) => {
+              report({ event: "connect", extensionId: String(extensionId) });
+              return runtime.connect(extensionId, connectInfo);
             },
           };
+          Object.defineProperty(chromeRuntime, "lastError", {
+            get: () => lastError,
+            enumerable: true,
+            configurable: true,
+          });
+          globalThis.chrome = { runtime: chromeRuntime };
         })();
         """#
 }

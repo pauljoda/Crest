@@ -368,9 +368,20 @@ That is the exact footprint Chrome exposes there. Rules:
   none of them receive the script.
 - The pattern set is fixed when the page is created. A page that was already
   open when an extension was installed gains the alias on its next load.
-- WebKit's web-page `sendMessage` resolves to `undefined` when no extension
-  accepts the message; Chrome sets `chrome.runtime.lastError` instead. The
-  alias does not invent that error.
+- WebKit's web-page `sendMessage` answers an unknown extension id, an
+  unmatched page, or a listener that never responds with a plain `undefined`.
+  Chrome reports all of those through `chrome.runtime.lastError`, set only
+  while the callback runs, or by rejecting the promise form. The alias
+  reproduces that: an `undefined` reply sets `lastError` to "Could not
+  establish connection. Receiving end does not exist." for the duration of the
+  callback and rejects the promise with the same message. Pages depend on it:
+  claude.ai's authorize screen probes Anthropic's internal extension id before
+  the public one and treats an error-free `undefined` as a completed hand-off,
+  so without the signal the sign-in never reaches the installed extension.
+- Under extension console capture, every web-page call into an extension and
+  its outcome (replied, unanswered, rejected, threw, with elapsed time) is
+  written to the `extension-diagnostics` log as shapes only — a type field and
+  key names, never payload values.
 
 ### Extension-created popup windows
 
