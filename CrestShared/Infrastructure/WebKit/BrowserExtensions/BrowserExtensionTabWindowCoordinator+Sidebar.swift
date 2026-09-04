@@ -97,7 +97,18 @@ extension BrowserExtensionTabWindowCoordinator {
             let liveTabs = Set(state.tabs.map(\.id)).subtracting(
                 (transientTabsBySpace[spaceID] ?? []).map(\.id)
             )
-            let scope = try request.resolveScope(in: state, liveTabs: liveTabs)
+            let scope: BrowserExtensionSidebarScope
+            do {
+                scope = try request.resolveScope(in: state, liveTabs: liveTabs)
+            } catch BrowserExtensionSidebarBrokerError.staleTab {
+                if case .tab(let index, let url) = request.target {
+                    let stateURL = state.tabs.first(where: { $0.index == index })?.url?.absoluteString ?? "<no tab at index>"
+                    browserExtensionSidebarLog.error(
+                        "\(api, privacy: .public) stale tab: index \(index, privacy: .public) requested \(url ?? "<nil>", privacy: .public) state \(stateURL, privacy: .public)"
+                    )
+                }
+                throw BrowserExtensionSidebarBrokerError.staleTab
+            }
             if request.requiresUserGesture, !request.userActivation,
                 !sidebarUserGestures.hasRecentGesture(for: client, now: ProcessInfo.processInfo.systemUptime)
             {

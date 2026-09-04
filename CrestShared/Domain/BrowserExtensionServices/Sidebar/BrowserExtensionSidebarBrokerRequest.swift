@@ -40,14 +40,15 @@ struct BrowserExtensionSidebarBrokerRequest {
         case isOpen = "sidebarAction.isOpen"
     }
 
-    private enum Target {
+    /// The addressed scope, exposed so the broker can describe a stale tab.
+    enum Target {
         case global
         case window
         case tab(index: Int, url: String?)
     }
 
     let operation: Operation
-    private let target: Target
+    let target: Target
     let path: String?
     let enabled: Bool?
     let title: String?

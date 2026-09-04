@@ -465,6 +465,10 @@
     "2026-09-04-extension-broker-tracing-and-isolated-hosts": {
       "category": "internal",
       "message": "Trace extension capability broker calls under console capture, log side-panel broker outcomes, and let isolated launches opt into external native hosts"
+    },
+    "2026-09-04-side-panel-permission-only-registration": {
+      "category": "fixed",
+      "message": "Show side panels for extensions that request the permission without declaring a default page"
     }
   }
 }

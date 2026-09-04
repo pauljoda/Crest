@@ -521,7 +521,7 @@ final class BrowserExtensionRuntimeContextController {
             BrowserExtensionSidebarManifestPolicy.defaults(
                 manifest: webExtension.manifest, referenceEnvironment: referenceEnvironment
             )
-            ?? (authoredRequestedPermissions.contains("sidePanel")
+            ?? (Self.manifestDeclaresSidePanelPermission(webExtension.manifest, authored: authoredRequestedPermissions)
                 ? BrowserExtensionSidebarDefaults(flavor: .sidePanel) : nil)
         if let sidebarDefaults {
             let sidebarClient = BrowserExtensionServiceClientID.scoped(extensionID: extensionID, spaceID: space.id)
@@ -802,6 +802,19 @@ final class BrowserExtensionRuntimeContextController {
                 ?? []
         }
         return []
+    }
+
+
+    /// WebKit only reports the `sidePanel` permission while its own sidebar
+    /// implementation is compiled in, so a package that declares the permission
+    /// without a `side_panel` manifest key (Claude sets its panel path from the
+    /// worker) would never register. The authored manifest is authoritative.
+    private static func manifestDeclaresSidePanelPermission(
+        _ manifest: [String: Any], authored: [String]
+    ) -> Bool {
+        authored.contains("sidePanel")
+            || (manifest["permissions"] as? [String] ?? []).contains("sidePanel")
+            || (manifest["optional_permissions"] as? [String] ?? []).contains("sidePanel")
     }
 
 }
