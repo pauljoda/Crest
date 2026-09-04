@@ -7,6 +7,10 @@ import SwiftUI
 /// their own insets inside a group's container.
 struct BrowserSidebarTabActivationButton: View {
     let tab: BrowserTab
+    /// The Space the row is listed in, which is what an extension side panel is
+    /// bound against — both for the badge on the favicon and for the panel this
+    /// button announces.
+    let spaceID: SpaceID
     let profileID: UUID
     let isSelected: Bool
     let isLoaded: Bool
@@ -18,6 +22,12 @@ struct BrowserSidebarTabActivationButton: View {
     let restoreSavedLocation: (() -> Void)?
     let iconCustomization: BrowserIconCustomizationPresentation
     let select: () -> Void
+
+    /// Read here rather than inside the badge: the row is an accessibility
+    /// container whose one labelled element is this button, so only the value
+    /// written at this level is ever spoken. See
+    /// `BrowserTabSidePanelAccessibility`.
+    @Environment(\.browserTabSidePanel) private var sidePanel
 
     var body: some View {
         Button(action: select) {
@@ -38,31 +48,35 @@ struct BrowserSidebarTabActivationButton: View {
                 .browserIconCustomizationPopover(iconCustomization)
         }
         .accessibilityLabel(tab.displayTitle)
-        .accessibilityValue(
-            BrowserChromeAccessibility.tabValue(isLoaded: isLoaded)
-        )
+        .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier(BrowserTabAccessibilityID.row(tab.id))
     }
 
+    /// What the tab is holding, spoken after what the tab is: whether it is
+    /// resident, and the extension side panel bound to it where there is one.
+    private var accessibilityValue: String {
+        BrowserTabSidePanelAccessibility.value(
+            BrowserChromeAccessibility.tabValue(isLoaded: isLoaded),
+            panelTitle: sidePanel?.sidePanelPresentation(
+                forTab: tab.id,
+                in: spaceID
+            )?.title
+        )
+    }
+
+    /// The residency treatment sits on the two pieces that describe the tab
+    /// rather than on the label as a whole, so the side-panel badge the favicon
+    /// carries stays out of it.
     private var label: some View {
         Label {
             Text(tab.displayTitle)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
+                .browserTabResidency(isLoaded: isLoaded)
         } icon: {
             icon
         }
-        .saturation(
-            BrowserVisualAccessibilityPolicy.tabResidencySaturation(
-                isLoaded: isLoaded
-            )
-        )
-        .opacity(
-            BrowserVisualAccessibilityPolicy.tabResidencyOpacity(
-                isLoaded: isLoaded
-            )
-        )
         .padding(.leading, leadingInset)
         .frame(maxWidth: .infinity, maxHeight: maxHeight, alignment: .leading)
         .contentShape(.rect)
@@ -74,7 +88,9 @@ struct BrowserSidebarTabActivationButton: View {
                 tab: tab,
                 profileID: profileID,
                 metrics: metrics,
-                isProminent: isSelected
+                isProminent: isSelected,
+                isLoaded: isLoaded,
+                sidePanelSpaceID: spaceID
             )
 
             if tab.placement == .saved,
@@ -82,6 +98,7 @@ struct BrowserSidebarTabActivationButton: View {
                 let restoreSavedLocation
             {
                 BrowserTabSavedLocationIndicator(restore: restoreSavedLocation)
+                    .browserTabResidency(isLoaded: isLoaded)
             }
         }
     }

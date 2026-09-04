@@ -9,10 +9,6 @@ struct BrowserSidebarTabRowContent: View {
     var body: some View {
         HStack(spacing: configuration.metrics.contentSpacing) {
             leadingContent
-            BrowserTabSidePanelIndicator(
-                tabID: configuration.tab.id,
-                spaceID: configuration.spaceID
-            )
             BrowserSidebarTabTrailingControl(
                 configuration: configuration,
                 isHovering: interaction.isHovering.wrappedValue
@@ -26,6 +22,7 @@ struct BrowserSidebarTabRowContent: View {
         if interaction.isRenaming {
             BrowserSidebarTabRenameField(
                 tab: configuration.tab,
+                spaceID: configuration.spaceID,
                 profileID: configuration.profileID,
                 metrics: configuration.metrics,
                 leadingInset: configuration.metrics.contentLeadingInset,
@@ -37,6 +34,7 @@ struct BrowserSidebarTabRowContent: View {
         } else {
             BrowserSidebarTabActivationButton(
                 tab: configuration.tab,
+                spaceID: configuration.spaceID,
                 profileID: configuration.profileID,
                 isSelected: configuration.isSelected,
                 isLoaded: configuration.isLoaded,

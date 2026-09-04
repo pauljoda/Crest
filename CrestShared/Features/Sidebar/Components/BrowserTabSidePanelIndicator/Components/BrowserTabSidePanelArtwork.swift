@@ -31,11 +31,11 @@ struct BrowserTabSidePanelArtwork: View {
     HStack(spacing: CrestSpacing.medium) {
         BrowserTabSidePanelArtwork(
             icon: nil,
-            size: BrowserTabSidePanelIndicatorMetrics.rowArtworkSize
+            size: BrowserTabSidePanelIndicatorMetrics.badgeArtworkSize
         )
         BrowserTabSidePanelArtwork(
             icon: Image(systemName: "sparkles"),
-            size: BrowserTabSidePanelIndicatorMetrics.rowArtworkSize
+            size: BrowserTabSidePanelIndicatorMetrics.badgeArtworkSize
         )
     }
     .padding()

@@ -2117,6 +2117,15 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (typeof listener !== "function") return;
                         if (capturesExtensionConsole) {
                             tracedMessageListeners.add(listener);
+                            if (tracesEverySender) {
+                                // Proves the extension registered natively:
+                                // WebKit only dispatches web-page messages to
+                                // processes that told it they listen.
+                                reportRuntimeTrace(`${traceLabel}Listener`, {
+                                    context: executionProcess,
+                                    listeners: tracedMessageListeners.size
+                                });
+                            }
                         }
                         return Reflect.apply(
                             nativeAddListener,

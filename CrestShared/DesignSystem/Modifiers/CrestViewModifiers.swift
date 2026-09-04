@@ -15,6 +15,24 @@ private struct BrowserReadableForegroundModifier: ViewModifier {
     }
 }
 
+private struct BrowserTabResidencyModifier: ViewModifier {
+    let isLoaded: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .saturation(
+                BrowserVisualAccessibilityPolicy.tabResidencySaturation(
+                    isLoaded: isLoaded
+                )
+            )
+            .opacity(
+                BrowserVisualAccessibilityPolicy.tabResidencyOpacity(
+                    isLoaded: isLoaded
+                )
+            )
+    }
+}
+
 private struct CrestOptionalAccessibilityIdentifier: ViewModifier {
     let identifier: String?
 
@@ -44,6 +62,16 @@ private struct CrestOptionalAccessibilityValue: ViewModifier {
 extension View {
     func browserReadableForeground(over background: Color) -> some View {
         modifier(BrowserReadableForegroundModifier(background: background))
+    }
+
+    /// Fades what stands for a tab the shell is no longer holding in memory.
+    ///
+    /// Applied to the pieces that *describe* the tab — its favicon, its title —
+    /// rather than to the row or tile as a whole, so a mark drawn over one of
+    /// them can stay out of the treatment. An unloaded tab still holds its
+    /// extension side panel, and the badge saying so keeps full strength.
+    func browserTabResidency(isLoaded: Bool) -> some View {
+        modifier(BrowserTabResidencyModifier(isLoaded: isLoaded))
     }
 
     /// Applies an identifier only when one is supplied, preserving any identifier

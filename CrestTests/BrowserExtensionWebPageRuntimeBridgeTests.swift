@@ -7,9 +7,16 @@ import XCTest
 @MainActor
 final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
     private static let claudePatterns = ["https://claude.ai/*", "https://*.claude.ai/*"]
+    /// Stands in for WebKit's web-page runtime: records the call, answers a
+    /// supplied callback the way WebKit does, and returns "reply" otherwise.
     private static let webKitBrowser = """
         ({ runtime: {
-            sendMessage: (...args) => { globalThis.__sent = args; return "reply"; },
+            sendMessage: (...args) => {
+                globalThis.__sent = args;
+                const callback = args[3];
+                if (typeof callback === "function") { callback({ success: true }); return undefined; }
+                return "reply";
+            },
             connect: (...args) => ({ connected: args })
         } })
         """
@@ -19,6 +26,7 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         patterns: [String],
         browser: String? = BrowserExtensionWebPageRuntimeBridgeTests.webKitBrowser,
         chrome: String? = nil,
+        reportsDiagnostics: Bool = false,
         file: StaticString = #filePath,
         line: UInt = #line
     ) throws -> JSContext {
@@ -27,18 +35,39 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         context.exceptionHandler = { _, exception in
             thrown = exception?.toString()
         }
-        let encodedURL = String(
-            data: try JSONSerialization.data(withJSONObject: [url]), encoding: .utf8
+        // Bare JavaScriptCore has no `URL`; the page world's `location`
+        // fields are what the script reads, so supply those.
+        let components = try XCTUnwrap(URLComponents(string: url))
+        let location: [String: String] = [
+            "href": url,
+            "protocol": (components.scheme ?? "") + ":",
+            "hostname": components.host ?? "",
+            "pathname": components.path.isEmpty ? "/" : components.path,
+            "search": components.query.map { "?" + $0 } ?? "",
+        ]
+        let encodedLocation = String(
+            data: try JSONSerialization.data(withJSONObject: location), encoding: .utf8
         )!
-        context.evaluateScript("globalThis.location = { href: \(encodedURL)[0] };")
+        context.evaluateScript("globalThis.location = \(encodedLocation);")
         if let browser {
             context.evaluateScript("globalThis.browser = \(browser);")
         }
         if let chrome {
             context.evaluateScript("globalThis.chrome = \(chrome);")
         }
+        if reportsDiagnostics {
+            context.evaluateScript(
+                """
+                globalThis.__reports = [];
+                globalThis.webkit = { messageHandlers: { crestExtensionWebPageRuntime: {
+                    postMessage: (body) => { globalThis.__reports.push(body); } } } };
+                """
+            )
+        }
         context.evaluateScript(
-            BrowserExtensionWebPageRuntimeBridge.source(matchPatterns: patterns)
+            BrowserExtensionWebPageRuntimeBridge.source(
+                matchPatterns: patterns, reportsDiagnostics: reportsDiagnostics
+            )
         )
         XCTAssertNil(thrown, "The alias script must not throw", file: file, line: line)
         return context
@@ -95,9 +124,38 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         XCTAssertEqual(context.evaluateScript("typeof globalThis.__sent[3]")!.toString(), "function")
         context.evaluateScript(#"chrome.runtime.sendMessage("fcoeoab", { type: "ping" })"#)
         XCTAssertEqual(
-            context.evaluateScript("globalThis.__sent.length")!.toInt32(), 3,
-            "Without a callback the promise form reaches WebKit unchanged."
+            context.evaluateScript("globalThis.__sent.length")!.toInt32(), 2,
+            "Without a callback or options the promise form reaches WebKit with just the two arguments."
         )
+    }
+
+    func testDiagnosticsReportShapesAndOutcomesWithoutPayloadValues() throws {
+        let context = try page(
+            at: "https://claude.ai/oauth/authorize", patterns: Self.claudePatterns, reportsDiagnostics: true
+        )
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "oauth_redirect", redirect_uri: "secret" }, () => {})"#
+        )
+        context.evaluateScript(#"chrome.runtime.sendMessage("fcoeoab", { type: "ping" })"#)
+        let reports = context.evaluateScript("JSON.stringify(globalThis.__reports)")!.toString()!
+        XCTAssertTrue(reports.contains(#""event":"sendMessage""#))
+        XCTAssertTrue(reports.contains(#""type":"oauth_redirect""#))
+        XCTAssertTrue(reports.contains(#""form":"callback""#))
+        XCTAssertTrue(reports.contains(#""form":"promise""#))
+        XCTAssertTrue(reports.contains(#""keys":["type","redirect_uri"]"#))
+        XCTAssertFalse(reports.contains("secret"), "Diagnostics carry shapes, never payload values.")
+        // The fake WebKit runtime replies synchronously through the callback.
+        XCTAssertTrue(reports.contains(#""outcome":"replied""#))
+    }
+
+    func testDiagnosticsStayOutOfTheScriptWhenNotRequested() throws {
+        let context = try page(at: "https://claude.ai/", patterns: Self.claudePatterns)
+        XCTAssertFalse(
+            BrowserExtensionWebPageRuntimeBridge.source(matchPatterns: Self.claudePatterns)
+                .contains(BrowserExtensionWebPageRuntimeBridge.diagnosticsPlaceholder)
+        )
+        XCTAssertEqual(context.evaluateScript("typeof globalThis.__reports")!.toString(), "undefined")
+        XCTAssertEqual(context.evaluateScript("typeof chrome.runtime.sendMessage")!.toString(), "function")
     }
 
     func testASubdomainWildcardCoversTheApexAndItsSubdomainsOnly() throws {
@@ -194,5 +252,13 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
             "The authored patterns are embedded as JSON."
         )
         XCTAssertFalse(script.source.contains(BrowserExtensionWebPageRuntimeBridge.patternsPlaceholder))
+        XCTAssertTrue(script.source.contains("const reportsDiagnostics = false;"))
+
+        let reporting = WKUserContentController()
+        let proxy = BrowserExtensionWebPageRuntimeBridge.install(
+            in: reporting, matchPatterns: Self.claudePatterns, reportsDiagnostics: true
+        )
+        XCTAssertNotNil(proxy, "Diagnostics hand back the handler the page must remove on teardown.")
+        XCTAssertTrue(reporting.userScripts[0].source.contains("const reportsDiagnostics = true;"))
     }
 }

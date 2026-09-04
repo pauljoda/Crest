@@ -245,6 +245,7 @@ struct CrestApp: App {
             monitorsMemoryPressure: !usesIsolatedLaunch,
             usesEphemeralWebsiteDataStores: usesEphemeralProfileStorage,
             extensionControllerPool: extensionControllerPool,
+            capturesExtensionConsole: capturesExtensionConsole,
             permissionCenter: permissionCenter,
             hostedNotificationCenter: hostedNotificationCenter,
             mediaSessionStore: mediaSessions,

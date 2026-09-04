@@ -159,6 +159,59 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         return store
     }
 
+    func testClosingThePresentedContextualPanelLeavesOtherTabsBound() throws {
+        let store = makeStore()
+        let otherTab = TabID()
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(otherTab), from: client)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
+        try store.open(for: client, in: window, tab: otherTab)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.open(for: client, in: window, tab: tab)
+        XCTAssertNotNil(store.boundPanel(for: otherTab, in: window, spaceID: space))
+
+        store.closePresentedPanel(in: window, spaceID: space)
+
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab), "The tab that was closed shows nothing.")
+        XCTAssertNil(store.boundPanel(for: tab, in: window, spaceID: space))
+        XCTAssertNotNil(
+            store.boundPanel(for: otherTab, in: window, spaceID: space),
+            "Chrome resets only the active tab's contextual entry; the other tab keeps its panel.")
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: otherTab)?.tabID, otherTab)
+    }
+
+    func testClosingThePresentedGlobalPanelClosesItOnEveryTab() throws {
+        let store = makeStore()
+        let otherTab = TabID()
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.open(for: client, in: window, tab: nil)
+        store.closePresentedPanel(in: window, spaceID: space)
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab))
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
+        XCTAssertNil(
+            store.panel(in: window, spaceID: space, activeTab: otherTab),
+            "A global entry is window state; closing it closes it everywhere, as Chrome does.")
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+    }
+
+    func testToggleWhileShowingClosesLikeThePersonDid() throws {
+        let store = makeStore()
+        let otherTab = TabID()
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(otherTab), from: client)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
+        try store.open(for: client, in: window, tab: otherTab)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.toggle(for: client, in: window, tab: tab)
+        XCTAssertTrue(store.isOpen(for: client, in: window))
+        try store.toggle(for: client, in: window, tab: tab)
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+        XCTAssertNotNil(
+            store.boundPanel(for: otherTab, in: window, spaceID: space),
+            "Toggling the panel away on one tab must not take another tab's panel with it.")
+    }
+
     func testUnchangedSessionRepairDoesNotInvalidateObservers() {
         let store = makeStore()
         let browserSpace = BrowserSpace(

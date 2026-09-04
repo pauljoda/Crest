@@ -1,17 +1,19 @@
 import SwiftUI
 
-/// The mark a pinned tile carries while an extension side panel is bound to its
-/// tab.
+/// The mark a tab carries while an extension side panel is bound to it.
 ///
-/// A pinned tile has no label to set a mark beside, so this rides the favicon's
-/// bottom-trailing corner instead. It is drawn on its own disc, over the
-/// window's ground rather than over the icon: a favicon can be any colour, and
-/// the mark has to stay readable against all of them.
+/// It rides the favicon's bottom-trailing corner, on its own disc drawn over
+/// the window's ground rather than over the icon: a favicon can be any colour,
+/// and the mark has to stay readable against all of them. A sidebar row and a
+/// pinned tile draw exactly this, at exactly this size — the badge belongs to
+/// the tab's icon, not to the shape the shell happens to be listing it in, so
+/// pinning a tab changes nothing about how its panel is marked.
 ///
-/// The badge says nothing to VoiceOver: a tile is one button, and the grid
-/// writes that button's label and value, so anything declared in here would be
-/// merged away. `BrowserTabSidePanelAccessibility` puts the panel into the
-/// tile's value instead.
+/// The badge says nothing to VoiceOver. A tile is one button and a row is a
+/// container with one labelled button in it, and both have their value written
+/// from outside, so anything declared in here would be merged away or read
+/// twice over. `BrowserTabSidePanelAccessibility` composes those values
+/// instead.
 ///
 /// A shell without extensions supplies no resolver and this draws nothing.
 struct BrowserTabSidePanelBadge: View {
@@ -35,8 +37,8 @@ struct BrowserTabSidePanelBadge: View {
                     .strokeBorder(CrestColor.subtleBorder, lineWidth: CrestLayout.hairline)
             }
             .offset(
-                x: BrowserTabSidePanelIndicatorMetrics.badgeOffset,
-                y: BrowserTabSidePanelIndicatorMetrics.badgeOffset
+                x: BrowserTabSidePanelIndicatorMetrics.badgeOverhang,
+                y: BrowserTabSidePanelIndicatorMetrics.badgeOverhang
             )
             .accessibilityHidden(true)
             .help(Text(verbatim: presentation.title))

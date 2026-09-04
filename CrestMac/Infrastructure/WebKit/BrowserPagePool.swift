@@ -110,6 +110,9 @@ final class BrowserPagePool:
     private(set) var contentBlockingErrorDescription: String?
     let downloadCenter: BrowserDownloadCenter
     let extensionControllerPool: BrowserExtensionControllerPool
+    /// Mirrors the runtime's console capture: web pages then report their
+    /// calls into an installed extension to the diagnostics log.
+    let capturesExtensionConsole: Bool
     @ObservationIgnored private let extensionWebpageMenuProvider: BrowserExtensionWebpageMenuProvider
     let permissionCenter: BrowserSitePermissionCenter
     let serverTrustOverrides = BrowserServerTrustOverrideStore()
@@ -183,6 +186,7 @@ final class BrowserPagePool:
             BrowserLaunchIsolationPolicy.usesEphemeralProfileStorage(.current),
         pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         extensionControllerPool: BrowserExtensionControllerPool = BrowserExtensionControllerPool(),
+        capturesExtensionConsole: Bool = false,
         chromeWebStoreProvider: BrowserChromeWebStoreProvider =
             BrowserChromeWebStoreProvider(),
         mozillaAddonsProvider: BrowserMozillaAddonsProvider =
@@ -227,6 +231,7 @@ final class BrowserPagePool:
             ? nil
             : tabStateArchive
         self.extensionControllerPool = extensionControllerPool
+        self.capturesExtensionConsole = capturesExtensionConsole
         extensionWebpageMenuProvider = BrowserExtensionWebpageMenuProvider(
             extensionControllerPool: extensionControllerPool
         )
@@ -1910,6 +1915,7 @@ final class BrowserPagePool:
                 : extensionControllerPool.externallyConnectableMatchPatterns(
                     in: space.id
                 ),
+            capturesExtensionConsole: capturesExtensionConsole,
             ownsUserContentController: adoptedConfiguration == nil
                 && extensionConfiguration == nil,
             allowsCredentialAccess: !browsingMode.isPrivate,

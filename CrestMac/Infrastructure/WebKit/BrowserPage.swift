@@ -136,6 +136,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
     @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
+    @ObservationIgnored private var extensionWebPageRuntimeProxy: BrowserExtensionWebPageRuntimeDiagnosticsProxy?
     @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
     @ObservationIgnored var mediaSessionCoordinator: BrowserMediaSessionPageCoordinator?
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
@@ -214,6 +215,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
         externallyConnectableMatchPatterns: [String] = [],
+        capturesExtensionConsole: Bool = false,
         ownsUserContentController: Bool = true,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
@@ -467,9 +469,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // Extension pages already carry `chrome`; a popup runs its opener's
         // scripts. Only a web page Crest configured itself needs the alias.
         if extensionBaseURL == nil, ownsUserContentController {
-            BrowserExtensionWebPageRuntimeBridge.install(
+            extensionWebPageRuntimeProxy = BrowserExtensionWebPageRuntimeBridge.install(
                 in: webView.configuration.userContentController,
-                matchPatterns: externallyConnectableMatchPatterns
+                matchPatterns: externallyConnectableMatchPatterns,
+                reportsDiagnostics: capturesExtensionConsole
             )
         }
         if let hostedNotificationCenter,
@@ -761,6 +764,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
             blockedPopupMessageProxy = nil
+            extensionWebPageRuntimeProxy = nil
             geolocationCoordinator = nil
             hostedNotificationMessageProxy = nil
             mediaSessionMessageProxy = nil
@@ -818,6 +822,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
         }
         blockedPopupMessageProxy = nil
+        if extensionWebPageRuntimeProxy != nil {
+            webView.configuration.userContentController
+                .removeScriptMessageHandler(
+                    forName: BrowserExtensionWebPageRuntimeBridge.diagnosticsHandlerName,
+                    contentWorld: BrowserExtensionWebPageRuntimeBridge.contentWorld
+                )
+        }
+        extensionWebPageRuntimeProxy = nil
         geolocationCoordinator = nil
         if hostedNotificationMessageProxy != nil {
             webView.configuration.userContentController

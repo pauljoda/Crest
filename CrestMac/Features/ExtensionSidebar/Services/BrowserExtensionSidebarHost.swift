@@ -91,7 +91,7 @@ final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
 
     func close() {
         guard let panel else { return }
-        try? store.close(for: panel.clientID, in: windowID, tab: nil)
+        store.closePresentedPanel(in: windowID, spaceID: panel.spaceID)
         reconcile()
     }
 

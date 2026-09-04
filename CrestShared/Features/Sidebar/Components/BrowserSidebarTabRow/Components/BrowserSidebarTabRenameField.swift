@@ -8,6 +8,10 @@ import SwiftUI
 /// page title.
 struct BrowserSidebarTabRenameField: View {
     let tab: BrowserTab
+    /// The Space the row is listed in. Carried for the same reason the favicon
+    /// is: renaming a tab does not release the side panel bound to it, so the
+    /// icon keeps its badge while the title is being edited.
+    let spaceID: SpaceID
     let profileID: UUID
     let metrics: BrowserSidebarTabRowMetrics
     var leadingInset: CGFloat = 0
@@ -32,7 +36,8 @@ struct BrowserSidebarTabRenameField: View {
             BrowserSidebarTabFavicon(
                 tab: tab,
                 profileID: profileID,
-                metrics: metrics
+                metrics: metrics,
+                sidePanelSpaceID: spaceID
             )
         }
         .padding(.leading, leadingInset)

@@ -15,16 +15,7 @@ struct PinnedTabSelectionButton: View {
         Button(action: select) {
             TabFaviconView(tab: tab, profileID: profileID, size: 19)
                 .font(.system(size: 17, weight: .medium))
-                .saturation(
-                    BrowserVisualAccessibilityPolicy.tabResidencySaturation(
-                        isLoaded: isLoaded
-                    )
-                )
-                .opacity(
-                    BrowserVisualAccessibilityPolicy.tabResidencyOpacity(
-                        isLoaded: isLoaded
-                    )
-                )
+                .browserTabResidency(isLoaded: isLoaded)
                 // Outside the residency treatment above: an unloaded tab still
                 // holds its panel, and the mark saying so should not fade with
                 // the favicon it sits on.

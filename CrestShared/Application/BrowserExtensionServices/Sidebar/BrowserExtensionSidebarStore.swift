@@ -245,9 +245,26 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         refresh(in: window, spaceID: spaceID)
     }
 
+    /// The person's close control, and the action-click toggle while a panel
+    /// shows. Chrome's `SidePanelCoordinator::Close` resets the active entry
+    /// of the window's global registry and of the active tab's contextual
+    /// registry, and nothing else: another tab that opened its own panel keeps
+    /// it and shows it again when selected. Firefox has one sidebar per window,
+    /// so for it this is simply closing that sidebar.
+    func closePresentedPanel(in window: BrowserWindowID, spaceID: SpaceID) {
+        guard let current = visiblePanels[window]?[spaceID] else { return }
+        if let tab = current.tabID ?? visibility[window]?[spaceID]?.tabID {
+            contextualPresentations[window]?[spaceID]?[tab] = nil
+        }
+        presentationsByWindow[window]?[spaceID] = nil
+        closedTabs[window]?[spaceID] = nil
+        refresh(in: window, spaceID: spaceID)
+    }
+
     func toggle(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID, tab: TabID?) throws {
         if isOpen(for: client, in: window) {
-            try close(for: client, in: window, tab: nil)
+            let registration = try registration(for: client)
+            closePresentedPanel(in: window, spaceID: registration.spaceID)
             return
         }
         let registration = try registration(for: client)

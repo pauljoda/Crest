@@ -501,6 +501,18 @@
     "2026-09-04-side-panel-tab-indicators": {
       "category": "new",
       "message": "See which tabs hold an extension side panel from a mark on their sidebar rows and pinned tiles"
+    },
+    "2026-09-04-side-panel-close-per-tab": {
+      "category": "fixed",
+      "message": "Close an extension side panel on one tab without closing the panels other tabs hold, matching Chrome"
+    },
+    "2026-09-04-side-panel-favicon-badge": {
+      "category": "improved",
+      "message": "Show the side panel mark as one small badge on the favicon for both sidebar rows and pinned tiles"
+    },
+    "2026-09-04-web-page-extension-diagnostics": {
+      "category": "internal",
+      "message": "Trace web page calls into installed extensions and their outcomes under extension console capture"
     }
   }
 }
