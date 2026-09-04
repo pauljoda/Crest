@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// What a sidebar tab row draws inside its surface: the tab, and the one
-/// control that puts it away.
+/// What a sidebar tab row draws inside its surface: the tab, whatever the tab
+/// is currently holding open, and the one control that puts it away.
 struct BrowserSidebarTabRowContent: View {
     let configuration: BrowserSidebarTabRowConfiguration
     let interaction: BrowserSidebarTabRowInteractionContext
@@ -9,6 +9,10 @@ struct BrowserSidebarTabRowContent: View {
     var body: some View {
         HStack(spacing: configuration.metrics.contentSpacing) {
             leadingContent
+            BrowserTabSidePanelIndicator(
+                tabID: configuration.tab.id,
+                spaceID: configuration.spaceID
+            )
             BrowserSidebarTabTrailingControl(
                 configuration: configuration,
                 isHovering: interaction.isHovering.wrappedValue

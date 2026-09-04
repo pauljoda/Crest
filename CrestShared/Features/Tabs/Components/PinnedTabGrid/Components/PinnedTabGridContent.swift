@@ -20,6 +20,10 @@ struct PinnedTabGridContent: View {
     var capabilities = BrowserInteractionCapabilities()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Read here rather than inside the tile: a tile is one button, so only the
+    /// value written at this level is ever spoken. See
+    /// `BrowserTabSidePanelAccessibility`.
+    @Environment(\.browserTabSidePanel) private var sidePanel
     @State private var isTrailingDropTargeted = false
     @State private var renamingAssignment: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
@@ -62,6 +66,7 @@ struct PinnedTabGridContent: View {
 
                 PinnedTabSelectionButton(
                     tab: tab,
+                    spaceID: assignment.spaceID,
                     profileID: assignment.profileID,
                     isSelected: tab.id == selectedTabID,
                     isLoaded: loaded,
@@ -89,7 +94,13 @@ struct PinnedTabGridContent: View {
                 )
                 .accessibilityLabel(tab.displayTitle)
                 .accessibilityValue(
-                    BrowserChromeAccessibility.tabValue(isLoaded: loaded)
+                    BrowserTabSidePanelAccessibility.value(
+                        BrowserChromeAccessibility.tabValue(isLoaded: loaded),
+                        panelTitle: sidePanel?.sidePanelPresentation(
+                            forTab: tab.id,
+                            in: assignment.spaceID
+                        )?.title
+                    )
                 )
                 .accessibilityAddTraits(tab.id == selectedTabID ? .isSelected : [])
                 .help(tab.displayTitle)

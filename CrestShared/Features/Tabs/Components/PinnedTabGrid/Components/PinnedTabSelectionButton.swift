@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PinnedTabSelectionButton: View {
     let tab: BrowserTab
+    let spaceID: SpaceID
     let profileID: UUID
     let isSelected: Bool
     let isLoaded: Bool
@@ -24,6 +25,12 @@ struct PinnedTabSelectionButton: View {
                         isLoaded: isLoaded
                     )
                 )
+                // Outside the residency treatment above: an unloaded tab still
+                // holds its panel, and the mark saying so should not fade with
+                // the favicon it sits on.
+                .overlay(alignment: .bottomTrailing) {
+                    BrowserTabSidePanelBadge(tabID: tab.id, spaceID: spaceID)
+                }
                 .frame(maxWidth: .infinity)
                 .frame(height: 47)
                 .contentShape(.rect)

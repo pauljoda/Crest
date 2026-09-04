@@ -497,6 +497,10 @@
     "2026-09-04-external-message-replies": {
       "category": "fixed",
       "message": "Deliver replies to websites that message an installed extension, including callbacks passed the Chrome way"
+    },
+    "2026-09-04-side-panel-tab-indicators": {
+      "category": "new",
+      "message": "See which tabs hold an extension side panel from a mark on their sidebar rows and pinned tiles"
     }
   }
 }

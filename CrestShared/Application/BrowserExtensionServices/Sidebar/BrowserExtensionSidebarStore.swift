@@ -92,7 +92,9 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
             try open(for: client, in: window, tab: visible.tabID)
             pendingInstallOpens[client] = nil
             completion()
-        } catch { /* A disabled first-install panel waits for applicable options. */  }
+        } catch {
+            // A disabled first-install panel waits for applicable options.
+        }
     }
 
     func setOptions(
@@ -270,6 +272,30 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         return makePanel(
             client: intent.clientID, activeTab: activeTab,
             isAvailable: visibility[window]?[spaceID]?.isAvailable ?? true)
+    }
+
+    /// The panel bound to one tab: the contextual presentation an extension
+    /// opened for it, which selecting that tab would put back on screen.
+    ///
+    /// Only one panel presents at a time, so this deliberately answers for
+    /// tabs that are not the active one — that is the whole point of a per-row
+    /// mark. It is O(1) per tab, because the sidebar asks once per row.
+    ///
+    /// Window-level presentations are excluded on purpose. A global panel
+    /// applies to every tab in the Space, so binding it to rows would mark the
+    /// whole list while the card on screen already says the same thing. To
+    /// change that rule, fall back to `presentationsByWindow[window]?[spaceID]`
+    /// when there is no contextual entry.
+    func boundPanel(for tab: TabID, in window: BrowserWindowID, spaceID: SpaceID)
+        -> BrowserExtensionSidebarPanel?
+    {
+        _ = optionsRevision
+        guard closedTabs[window]?[spaceID]?.contains(tab) != true,
+            let intent = contextualPresentations[window]?[spaceID]?[tab],
+            let panel = makePanel(client: intent.clientID, activeTab: tab, isAvailable: true),
+            panel.documentURL != nil
+        else { return nil }
+        return panel
     }
 
     func availablePanels(in window: BrowserWindowID, spaceID: SpaceID, activeTab: TabID?)

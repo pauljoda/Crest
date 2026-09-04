@@ -121,6 +121,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 BrowserPageZoomFeedbackView(label: label)
             }
         }
+        // One per-window host answers for every row and tile in this shell,
+        // so the sidebar reads it from here rather than being handed a value
+        // per tab through the tree between them.
+        .environment(\.browserTabSidePanel, model.extensionSidebar)
         .environment(
             \.browserWebFocusRestorationGate,
             BrowserWebFocusRestorationGate(

@@ -101,6 +101,54 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.documentURL?.query, "query=1")
     }
 
+    func testBoundPanelAnswersForTheTabItWasOpenedForAndForNoOtherPlace() throws {
+        let store = makeStore()
+        let otherTab = TabID()
+        // The bound tab is not the selected one: a row's mark has to promise
+        // what returning to that tab would show.
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.open(for: client, in: window, tab: tab)
+        let bound = store.boundPanel(for: tab, in: window, spaceID: space)
+        XCTAssertEqual(bound?.clientID, client)
+        XCTAssertEqual(bound?.path, "tab.html")
+        XCTAssertEqual(bound?.tabID, tab)
+        XCTAssertNil(store.boundPanel(for: otherTab, in: window, spaceID: space))
+        XCTAssertNil(store.boundPanel(for: tab, in: BrowserWindowID(), spaceID: space))
+        XCTAssertNil(store.boundPanel(for: tab, in: window, spaceID: SpaceID()))
+    }
+
+    func testGlobalPanelBindsNoTabEvenWhileItIsOnScreen() throws {
+        let store = makeStore()
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.open(for: client, in: window, tab: nil)
+        XCTAssertTrue(store.isOpen(for: client, in: window))
+        XCTAssertNil(store.boundPanel(for: tab, in: window, spaceID: space))
+    }
+
+    func testClosingATabsPanelClearsItsBindingAndDisablingItHidesTheMark() throws {
+        let store = makeStore()
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.open(for: client, in: window, tab: tab)
+        XCTAssertNotNil(store.boundPanel(for: tab, in: window, spaceID: space))
+        try store.setOptions(.init(isEnabled: false), scope: .tab(tab), from: client)
+        XCTAssertNil(store.boundPanel(for: tab, in: window, spaceID: space))
+        try store.setOptions(.init(isEnabled: true), scope: .tab(tab), from: client)
+        XCTAssertNotNil(store.boundPanel(for: tab, in: window, spaceID: space))
+        try store.closeChromePanel(for: client, in: window, tab: tab)
+        XCTAssertNil(store.boundPanel(for: tab, in: window, spaceID: space))
+    }
+
+    func testUnregisteringAnExtensionDropsEveryTabItHadBound() throws {
+        let store = makeStore()
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.open(for: client, in: window, tab: tab)
+        store.unregister(client: client)
+        XCTAssertNil(store.boundPanel(for: tab, in: window, spaceID: space))
+    }
+
     private func makeStore(
         persistence: InMemoryBrowserExtensionSidebarBehaviorStore = .init()
     ) -> BrowserExtensionSidebarStore {
