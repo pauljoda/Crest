@@ -139,6 +139,21 @@ struct CrestApp: App {
             }
         )
         extensionControllerPool.setCookieAccessService(extensionCookieAccess)
+        // `chrome.identity.launchWebAuthFlow` runs in a Crest-owned web view
+        // on the Space's own data store, so a provider the person is already
+        // signed in to answers a `prompt=none` re-authorization silently and
+        // an extension that keeps its tokens in `chrome.storage.session`
+        // survives a relaunch without asking for a password.
+        extensionControllerPool.setWebAuthFlowHost(
+            BrowserExtensionWebAuthFlowHost(
+                websiteDataStore: { [weak extensionControllerPool] spaceID in
+                    extensionControllerPool?.extensionWebsiteDataStore(in: spaceID)
+                },
+                profile: { [weak browser] spaceID in
+                    browser?.session.space(id: spaceID)?.profile
+                }
+            )
+        )
         // WebKit drops the `debugger` permission, so Crest owns the decision,
         // the prompt, and the live withdrawal behind it.
         let extensionDebugger = BrowserExtensionDebuggerInstallation.install(

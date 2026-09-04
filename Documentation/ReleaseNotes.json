@@ -537,6 +537,10 @@
     "2026-09-04-extension-frame-content-security-policy": {
       "category": "fixed",
       "message": "Let websites an extension embeds in its side panel run under their own security policy instead of the extension’s"
+    },
+    "2026-09-04-extension-identity-web-auth-flow": {
+      "category": "new",
+      "message": "Let extensions sign you in silently through their web authentication flow, so Claude stays signed in across launches"
     }
   }
 }

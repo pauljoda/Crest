@@ -694,14 +694,129 @@ rest of the process.
 notification the person dismissed from Notification Center disappears from
 `getAll`.
 
+## Identity — `chrome.identity`
+
+The namespace has two halves that fail in opposite directions, and the split
+is the whole design.
+
+**The portable half — implemented.** `getRedirectURL` and `launchWebAuthFlow`
+run an authorization flow against any provider. Chrome does not own
+`chromiumapp.org` either: it watches its own web view for the first navigation
+to `https://<extension id>.chromiumapp.org` and cancels it, so the redirect
+never reaches the network and the code never leaves the browser. Crest does the
+same thing in `BrowserExtensionWebAuthFlowHost`.
+
+**The Google-account half — answered, not faked.** `getAuthToken`,
+`getAccounts`, `getProfileUserInfo`, `removeCachedAuthToken`, and
+`clearAllCachedAuthTokens` are bound to Chrome's own Google sign-in state,
+which a Crest profile has none of. They answer the way a Chrome profile with no
+Google account answers: an empty account list, an empty `ProfileUserInfo`, a
+token cache that really is empty so removing from it really does succeed, and —
+for the one call that would have to mint a credential — Chrome's own refusal
+text, `OAuth2 not granted or revoked.` when the manifest has an `oauth2`
+section and `Invalid manifest: 'oauth2' section is missing.` when it does not.
+`onSignInChanged` keeps a real listener registry and never fires.
+
+### Envelopes
+
+One request, one response. `launchWebAuthFlow` is the only member that reaches
+the broker at all; everything else is answered inside the compatibility
+runtime.
+
+| Direction | Shape |
+| --- | --- |
+| Request | `{api: "identity.launchWebAuthFlow", url, interactive, abortOnLoadForNonInteractive, timeoutMs}` |
+| Response | `{url: "<the redirect URL>"}` |
+| Failure | Chrome's own text: `Authorization page could not be loaded.`, `The user did not approve access.`, `User interaction required.` |
+
+The request names no redirect. `BrowserExtensionTabWindowCoordinator+Identity`
+derives the origin it watches for from the loaded context's own base URL — the
+same string WebKit serves the package's pages from — so an extension cannot ask
+Crest to hand it a URL, and the authorization code in it, from an origin it
+does not own. `timeoutMs` is clamped to Chrome's 60-second ceiling in
+`BrowserExtensionIdentityBrokerRequest` rather than trusted.
+
+### Redirect origin
+
+`getRedirectURL(path)` resolves `path` against
+`https://<runtime id>.chromiumapp.org/`, reading `runtime.id` live. A verified
+Chrome Web Store package runs at its real store origin, so this is the
+`[a-p]{32}` host the provider already has on file and a `prompt=none`
+authorization is accepted. Every other package keeps Crest's per-Space host,
+which is not a Chrome-shaped id: the round trip still completes, and a provider
+that validates the redirect host will refuse the flow, exactly as it refuses an
+unpacked extension in Chrome.
+
+Matching is origin equality, not a prefix test. Chrome matches
+`https://<id>.chromiumapp.org/*`, so any path, query, or fragment completes the
+flow while `…chromiumapp.org.example.com` does not.
+
+### Host behavior
+
+`BrowserExtensionWebAuthFlowHosting` is the port; the macOS implementation
+builds a `WKWebView` on **the Space's own `WKWebsiteDataStore`** — the store
+the person's tabs and that Space's extension pages already share. That is the
+point: a provider the person is signed in to answers a silent re-authorization
+without a password Crest has no business seeing.
+
+- The redirect is detected in `decidePolicyFor navigationAction` and
+  `decidePolicyFor navigationResponse`, plus
+  `didReceiveServerRedirectForProvisionalNavigation` as a backstop. The
+  navigation is **cancelled**, the URL is resolved to the extension, and the
+  web view is torn down. WebKit reports Crest's own cancellation through
+  `didFail`, so a cancelled navigation is never mistaken for a load failure.
+- **Non-interactive** never shows a window. A page that finishes loading
+  without redirecting fails with `User interaction required.` when
+  `abortOnLoadForNonInteractive` is true (the default); when it is false only
+  the deadline ends the flow, with the same text. The web view is still hosted
+  by an unshown `NSWindow` and configured with
+  `inactiveSchedulingPolicy = .none`, because Crest's pages suspend when
+  detached from a visible window and the providers this exists for redirect
+  from JavaScript.
+- **Interactive** presents a 520×720 window titled with the extension's display
+  name, centered on the front Crest window, when the first page load completes
+  — Chrome's rule, so a flow that redirects straight through never flashes a
+  window. Closing it fails with `The user did not approve access.`
+- A navigation failure fails with `Authorization page could not be loaded.`,
+  which is also what a missing host, data store, or profile reports.
+- **One flow per extension.** Chrome queues a second call; Crest refuses it
+  with the load-failure text instead. A queued invisible web view is a resource
+  an extension can grow without bound, and the packages Crest has seen retry
+  rather than wait.
+
+### Security notes
+
+The authorize URL carries the PKCE challenge and the account hint; the redirect
+URL carries the authorization code. Neither is ever logged.
+
+- The compatibility runtime's capability trace, which records every broker call
+  when console capture is on, treats `identity.launchWebAuthFlow` as sensitive:
+  `requestCapability` rewrites any `url` in the traced request or response to
+  its origin and path, dropping the query and fragment.
+- The Swift side logs nothing about the flow at all. The URL is read once, to
+  match the redirect origin, and handed straight back to the calling extension.
+- Chrome's failure texts are reproduced exactly and none of them interpolate
+  the URL, because an error message is a place a package logs.
+
+**Why not `ASWebAuthenticationSession`.** Its callback is declared up front and
+comes in two shapes. `.customScheme(_:)` matches a custom URL scheme, which
+Chrome extensions do not use here. `.https(host:path:)` matches a real web URL,
+but only for a host the app is *associated* with — a
+`com.apple.developer.associated-domains` entitlement naming
+`webcredentials:<host>` **and** an `apple-app-site-association` file served by
+that host listing Crest's bundle identifier. Crest controls neither
+`chromiumapp.org` nor the association file Google would have to publish for it,
+so the system would refuse to start the session. Watching Crest's own web view
+is the only shape that reproduces Chrome's contract, and it is also the shape
+that lets the flow run in the Space's cookie jar.
+
 ## Design notes for services not yet built
 
 Nothing below this heading exists in the tree. `chrome.history`,
-`chrome.topSites`, `identity.launchWebAuthFlow`, and `chrome.omnibox` are all
-routed **Unavailable** by `BrowserExtensionAPICompatibilityMatrix`, and no
-port, service, adapter, or double for them is present. The notes are kept
-because the constraints they work through — Crest's per-Space history shape,
-`ASWebAuthenticationSession`'s callback rules, and the command palette's
+`chrome.topSites`, and `chrome.omnibox` are all routed **Unavailable** by
+`BrowserExtensionAPICompatibilityMatrix`, and no port, service, adapter, or
+double for them is present. The notes are kept because the constraints they
+work through — Crest's per-Space history shape and the command palette's
 synchronous result pipeline — are the real reasons those services are hard, and
 rediscovering them later would be waste.
 
@@ -750,49 +865,6 @@ event per URL.
 visit count alone would pin a site somebody used heavily last spring above one
 they use daily now, so counts are weighted by recency — the frecency shape
 Firefox popularized.
-
-### Web auth — `identity.launchWebAuthFlow`
-
-This is the service with a hard platform constraint, and it is worth stating
-plainly.
-
-Chrome extensions almost always pass a redirect URL of the form
-`https://<extension-id>.chromiumapp.org/*`. Chrome does not own that domain
-either — it watches its own web view and intercepts the first navigation whose
-URL starts with the expected prefix.
-
-`ASWebAuthenticationSession` cannot reproduce that. Its callback is declared up
-front and comes in two shapes:
-
-- `.customScheme(_:)` matches a custom URL scheme. It needs no configuration,
-  and Crest uses it whenever an extension supplies one.
-- `.https(host:path:)` (macOS 14.4+) matches a real web URL, but only for a host
-  the app is *associated* with. That requires a
-  `com.apple.developer.associated-domains` entitlement naming
-  `webcredentials:<host>` **and** an `apple-app-site-association` file served by
-  that host listing Crest's bundle identifier. The system refuses to start a
-  session whose callback fails that check.
-
-Crest controls neither `chromiumapp.org` nor the association file Google would
-have to publish for it. An `https` redirect on an unassociated host is therefore
-rejected up front with `.unsupportedCallback` rather than started and left to
-hang forever. `BrowserExtensionWebAuthenticationService` is constructed with the
-set of hosts Crest genuinely is associated with, so legitimate first-party
-`https` callbacks keep working.
-
-**Supporting `chromiumapp.org` flows properly needs a Crest-owned
-authentication window** that watches navigation the way Chrome does. That is
-deliberately not attempted here.
-
-Two checks bracket the session. A callback the system cannot service is refused
-before any window appears, and a redirect the system does return is re-checked
-against the prefix the extension actually asked for — which keeps a provider
-that redirects somewhere unexpected from handing an extension a URL, and any
-token in its fragment, that it never requested.
-
-The presentation anchor follows the house pattern: `NSApp.keyWindow ??
-NSApp.mainWindow`, resolved before the session starts, held weakly, and a
-missing window fails with `.presentationFailure` instead of trapping.
 
 ### Omnibox — `chrome.omnibox`
 

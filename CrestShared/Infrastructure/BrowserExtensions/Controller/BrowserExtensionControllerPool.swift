@@ -220,6 +220,15 @@ final class BrowserExtensionControllerPool {
         tabWindowCoordinator.debuggerConsent = consent
     }
 
+    /// Installs the web view that runs `identity.launchWebAuthFlow`.
+    ///
+    /// Supplied by the platform shell, because the flow needs a window and a
+    /// Space-scoped data store. Without it every flow is refused with Chrome's
+    /// load-failure text rather than hanging.
+    func setWebAuthFlowHost(_ host: (any BrowserExtensionWebAuthFlowHosting)?) {
+        tabWindowCoordinator.webAuthFlowHost = host
+    }
+
     func setUpdateModel(_ model: BrowserExtensionUpdateModel?) {
         updateModel?.cancelScheduledUpdates()
         updateModel = model

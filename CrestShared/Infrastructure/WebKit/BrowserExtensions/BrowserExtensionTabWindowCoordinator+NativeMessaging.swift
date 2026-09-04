@@ -50,6 +50,9 @@ extension BrowserExtensionTabWindowCoordinator {
             cookieAccessService?.unregister(client: client)
         }
         unregisterDebuggerClient(for: context)
+        // A context that unloaded mid-flow will never be asked again under
+        // this identity; leaving its key behind would only accumulate.
+        webAuthFlowsInFlight.remove(key)
         let resolvedSpaceID: SpaceID?
         if let owningSpaceID {
             resolvedSpaceID = owningSpaceID
@@ -117,6 +120,15 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
         if handleCapabilityBrokerDebugger(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerIdentity(
             message,
             applicationIdentifier: applicationIdentifier,
             controller: controller,

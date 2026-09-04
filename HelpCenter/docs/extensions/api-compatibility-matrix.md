@@ -95,7 +95,7 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `extension` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
 | `history` | Native | Native | Unavailable | Unavailable | BG, EP | `history` | `history` | — |
 | `i18n` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
-| `identity` | Native | Partial | Unavailable | Unavailable | BG, EP | `identity`, `identity.email` | `identity`, `identity.email` | — |
+| `identity` | Native | Partial | Unavailable | Emulated | BG, EP | `identity`, `identity.email` | `identity`, `identity.email` | `identity` |
 | `idle` | Native | Native | Unavailable | Emulated | BG, EP | `idle` | `idle` | `idle` |
 | `management` | Native | Native | Unavailable | Emulated | BG, EP | `management` | `management` | — |
 | `notifications` | Native | Native | Partial | Emulated | BG, EP | `notifications` | `notifications` | `notifications` |
@@ -189,6 +189,15 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `extension.getBackgroundPage` | Native | Native + patch | BG, EP | — |
 | `extension.getViews` | Native | Native + patch | BG, EP | — |
 | `i18n.getMessage` | Native | Native + patch | BG, EP, CS | — |
+| `identity.AccountStatus` | Unavailable | Emulated | BG, EP | — |
+| `identity.clearAllCachedAuthTokens` | Unavailable | Emulated | BG, EP | — |
+| `identity.getAccounts` | Unavailable | Emulated | BG, EP | — |
+| `identity.getAuthToken` | Unavailable | Emulated | BG, EP | — |
+| `identity.getProfileUserInfo` | Unavailable | Emulated | BG, EP | — |
+| `identity.getRedirectURL` | Unavailable | Emulated | BG, EP | — |
+| `identity.launchWebAuthFlow` | Unavailable | Emulated | BG, EP | — |
+| `identity.onSignInChanged` | Unavailable | Emulated | BG, EP | — |
+| `identity.removeCachedAuthToken` | Unavailable | Emulated | BG, EP | — |
 | `idle.getAutoLockDelay` | Unavailable | Presence only | BG, EP | — |
 | `idle.onStateChanged` | Unavailable | Emulated | BG, EP | — |
 | `idle.queryState` | Unavailable | Emulated | BG, EP | — |
@@ -311,13 +320,13 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 - **Offscreen documents.** Crest hosts the hidden document itself, using the page the extension bundles, so Chrome extensions that depend on an offscreen worker keep working.
 - **Side panels.** On macOS, Chrome <code>sidePanel</code> and Firefox <code>sidebarAction</code> open an extension-owned card beside your tabs. You can resize or close it, and choose another available extension from its title. Closing unloads the panel; restarting Crest leaves it closed. Firefox path icons work, but image-data icons are not supported.
 - **Request blocking.** WebKit reports requests but does not consume blocking <code>webRequest</code> responses, so cancellation, redirection, header mutation, and authentication parity are unavailable. Declarative rules are translated by WebKit, and that translation is not lossless.
-- **Sign-in redirects.** <code>identity.launchWebAuthFlow</code> needs a browser-owned authentication window Crest does not have yet.
+- **Sign-in redirects.** <code>identity.launchWebAuthFlow</code> opens a Crest authentication window that shares the Space's cookies, so an extension you are already signed in to on the web can renew its session without asking you again — and only shows you a window when the provider actually needs you. The Google-account part of <code>identity</code> is different: Crest has no Google profile, so <code>getAuthToken</code> refuses and the account queries answer as a signed-out browser does.
 - **Extension management.** An extension can read its own record. Listing, enabling, or removing other extensions is refused.
 - **Keyword search.** There is no extension omnibox keyword surface.
 
 ## What this coverage means
 
-Crest currently routes **37 namespace contracts** and 134 individual members through one executable matrix. Twenty-nine namespaces are available in some form and eight are intentionally unavailable. Coverage includes runtime messaging, storage, tabs, tab groups, injection, actions, auxiliary windows, side panels, permissions, notifications, menus, and lifecycle. API coverage alone does not certify every extension's account or native-companion workflow.
+Crest currently routes **38 namespace contracts** and 186 individual members through one executable matrix. Thirty-one namespaces are available in some form and seven are intentionally unavailable. Coverage includes runtime messaging, storage, tabs, tab groups, injection, actions, auxiliary windows, side panels, permissions, notifications, menus, sign-in redirects, and lifecycle. API coverage alone does not certify every extension's account or native-companion workflow.
 
 The remaining gaps cluster around browser-owned data stores such as bookmarks, history, and sessions; the extension omnibox; and request interception semantics WebKit does not expose. Those gaps are documented instead of being replaced with extension-specific shims or successful no-ops.
 

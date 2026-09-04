@@ -206,12 +206,23 @@ enum BrowserExtensionAPICompatibilityMatrix {
             processes: [.background, .extensionPage, .contentScript],
             runtime: true
         ),
+        // Two halves that fail in opposite directions. `launchWebAuthFlow` and
+        // `getRedirectURL` are the portable half — an authorization flow
+        // against any provider — and Crest owns them: a Crest web view on the
+        // Space's own data store, watching for the redirect the way Chrome
+        // watches for it. The `getAuthToken` family is Google-account plumbing
+        // bound to Chrome's own sign-in state, which Crest has none of, so
+        // those members answer the way a Chrome profile with no Google account
+        // answers. Firefox implements only the portable half, which is why its
+        // column is `partial` and not `native`.
         contract(
             "identity",
             permissions: ["identity", "identity.email"],
             firefox: .partial,
             webKit: .unavailable,
-            crest: .unavailable
+            crest: .emulated,
+            runtime: true,
+            broker: ["identity"]
         ),
         contract(
             "idle",
@@ -410,6 +421,24 @@ enum BrowserExtensionAPICompatibilityMatrix {
             "onErased",
             "onChanged",
             "onDeterminingFilename",
+        ],
+        // `AccountStatus` is published because Chrome publishes it: the
+        // schema's enums become objects on the namespace. Its dictionaries —
+        // `AccountInfo`, `ProfileDetails`, `ProfileUserInfo`, `TokenDetails`,
+        // `InvalidTokenDetails`, `WebAuthFlowDetails`, `GetAuthTokenResult` —
+        // are deliberately absent for the same reason `tabGroups.TabGroup` is:
+        // Chrome publishes no property for a dictionary type, so adding one
+        // would invent surface rather than complete it.
+        "identity": [
+            "getAccounts",
+            "getAuthToken",
+            "getProfileUserInfo",
+            "removeCachedAuthToken",
+            "clearAllCachedAuthTokens",
+            "launchWebAuthFlow",
+            "getRedirectURL",
+            "onSignInChanged",
+            "AccountStatus",
         ],
         "idle": [
             "queryState",
@@ -678,6 +707,28 @@ enum BrowserExtensionAPICompatibilityMatrix {
             crest: .nativePatched,
             processes: [.background, .extensionPage, .contentScript]
         ),
+        // Crest runs the flow, so these are `emulated` rather than
+        // `presenceOnly`: a web view on the Space's data store, the redirect
+        // origin derived from the loaded context, and the URL handed back
+        // whole.
+        member("identity.getRedirectURL", webKit: .unavailable, crest: .emulated),
+        member("identity.launchWebAuthFlow", webKit: .unavailable, crest: .emulated),
+        // A real listener registry with nothing to deliver through it. It is
+        // `emulated` and not `presenceOnly` because Crest is not waiting for a
+        // WebKit implementation to displace it: there is no Google sign-in
+        // state in a Crest profile for any implementation to observe.
+        member("identity.onSignInChanged", webKit: .unavailable, crest: .emulated),
+        member("identity.AccountStatus", webKit: .unavailable, crest: .emulated),
+        // The Google-account half. Each of these is implemented — it answers
+        // the way a Chrome profile with no Google account answers — rather
+        // than filled in: an empty account list, an empty profile, a token
+        // cache that really is empty, and Chrome's own refusal for the one
+        // call that would have to mint a credential Crest cannot mint.
+        member("identity.getAccounts", webKit: .unavailable, crest: .emulated),
+        member("identity.getAuthToken", webKit: .unavailable, crest: .emulated),
+        member("identity.getProfileUserInfo", webKit: .unavailable, crest: .emulated),
+        member("identity.removeCachedAuthToken", webKit: .unavailable, crest: .emulated),
+        member("identity.clearAllCachedAuthTokens", webKit: .unavailable, crest: .emulated),
         member("idle.onStateChanged", webKit: .unavailable, crest: .emulated),
         member("idle.queryState", webKit: .unavailable, crest: .emulated),
         member(

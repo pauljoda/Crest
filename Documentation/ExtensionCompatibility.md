@@ -532,6 +532,32 @@ popup is still subject to WebCore's decision.
 bookkeeping, the live `WKHTTPCookieStore` behavior including the observer, and
 the permission gate.
 
+### Silent sign-in — `chrome.identity`
+
+`identity` is **emulated**, not unavailable. `getRedirectURL` and
+`launchWebAuthFlow` are implemented against a Crest-owned authentication web
+view on the Space's own `WKWebsiteDataStore`, so the flow sees exactly the
+cookies the person's tabs see. The schema is at `identity.webidl` in the pinned
+Chromium revision.
+
+The concrete beneficiary is the unchanged Claude Chrome extension. It keeps its
+OAuth tokens only in `chrome.storage.session`, which every browser clears on
+restart, and re-authenticates at startup by calling `launchWebAuthFlow` with
+`interactive: false` and `prompt=none` against
+`https://<store id>.chromiumapp.org/`. Because Crest runs verified store
+packages at their real Chrome origin and shares the Space's cookie jar,
+claude.ai answers that authorization the way it answers it in Chrome and the
+person is not asked to sign in on every launch. Before this, `identity` routed
+`.unavailable`, `getRedirectURL` threw, and the sign-in was manual every time.
+
+The `getAuthToken` family is a different thing and is not implemented: those
+members are Google-account plumbing tied to Chrome's own sign-in state, which a
+Crest profile has none of. They answer the way a Chrome profile with no Google
+account answers — an empty account list, an empty profile, a token cache that
+really is empty — and `getAuthToken` refuses in Chrome's own words. See
+[`ExtensionEmulationServices.md`](ExtensionEmulationServices.md) for the
+envelopes, the redirect-origin rule, and why the URL never reaches a log.
+
 ## Native companion distribution boundary
 
 - Ordinary WebExtensions can use APIs implemented by WebKit.

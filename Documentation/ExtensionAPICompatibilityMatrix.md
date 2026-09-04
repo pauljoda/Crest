@@ -72,7 +72,7 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `extension` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
 | `history` | Native | Native | Unavailable | Unavailable | BG, EP | `history` | `history` | — |
 | `i18n` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
-| `identity` | Native | Partial | Unavailable | Unavailable | BG, EP | `identity`, `identity.email` | `identity`, `identity.email` | — |
+| `identity` | Native | Partial | Unavailable | Emulated | BG, EP | `identity`, `identity.email` | `identity`, `identity.email` | `identity` |
 | `idle` | Native | Native | Unavailable | Emulated | BG, EP | `idle` | `idle` | `idle` |
 | `management` | Native | Native | Unavailable | Emulated | BG, EP | `management` | `management` | — |
 | `notifications` | Native | Native | Partial | Emulated | BG, EP | `notifications` | `notifications` | `notifications` |
@@ -166,6 +166,15 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `extension.getBackgroundPage` | Native | Native + patch | BG, EP | — |
 | `extension.getViews` | Native | Native + patch | BG, EP | — |
 | `i18n.getMessage` | Native | Native + patch | BG, EP, CS | — |
+| `identity.AccountStatus` | Unavailable | Emulated | BG, EP | — |
+| `identity.clearAllCachedAuthTokens` | Unavailable | Emulated | BG, EP | — |
+| `identity.getAccounts` | Unavailable | Emulated | BG, EP | — |
+| `identity.getAuthToken` | Unavailable | Emulated | BG, EP | — |
+| `identity.getProfileUserInfo` | Unavailable | Emulated | BG, EP | — |
+| `identity.getRedirectURL` | Unavailable | Emulated | BG, EP | — |
+| `identity.launchWebAuthFlow` | Unavailable | Emulated | BG, EP | — |
+| `identity.onSignInChanged` | Unavailable | Emulated | BG, EP | — |
+| `identity.removeCachedAuthToken` | Unavailable | Emulated | BG, EP | — |
 | `idle.getAutoLockDelay` | Unavailable | Presence only | BG, EP | — |
 | `idle.onStateChanged` | Unavailable | Emulated | BG, EP | — |
 | `idle.queryState` | Unavailable | Emulated | BG, EP | — |
@@ -344,9 +353,15 @@ that reason.
   processes where the reference browsers expose those members.
 - `i18n`: message lookup and empty-token normalization, even when the native
   namespace cannot be augmented in place.
-- `identity`: Chromium's redirect contract is not implemented. A
-  `chromiumapp.org` flow needs a Crest-owned authentication window, which does
-  not exist.
+- `identity`: `getRedirectURL` and `launchWebAuthFlow` are implemented against
+  a Crest-owned authentication window on the Space's own website data store,
+  so a `chromiumapp.org` flow completes the way it does in Chrome — including
+  the silent `prompt=none` refresh an extension runs at startup. The
+  Google-account members are not, because a Crest profile has no Google
+  account: `getAccounts` answers with an empty list, `getProfileUserInfo` with
+  an empty profile, `removeCachedAuthToken` and `clearAllCachedAuthTokens`
+  succeed against an empty cache, and `getAuthToken` refuses in Chrome's own
+  words. `onSignInChanged` keeps a real registry and never fires.
 - `idle`: broker-backed macOS session and input state with query, detection
   interval, and transition events. Firefox's `getAutoLockDelay` is **Presence
   only**.

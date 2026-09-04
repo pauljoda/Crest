@@ -3963,6 +3963,39 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     normalizedPermissionNamespaces.set(normalized, normalized);
                     return normalized;
                 };
+                // Capability calls whose request or response carries a
+                // credential. The trace still records that the call happened
+                // and how it settled; what it never records is the URL, whose
+                // query carries the PKCE challenge and the account hint on the
+                // way out and the authorization code on the way back.
+                const sensitiveCapabilityAPIs = new Set([
+                    "identity.launchWebAuthFlow"
+                ]);
+                const redactedTraceURL = (value) => {
+                    if (typeof value !== "string") return value;
+                    try {
+                        const parsed = new URL(value);
+                        return `${parsed.origin}${parsed.pathname}`;
+                    } catch { return "<redacted>"; }
+                };
+                const redactCapabilityTrace = (detail) =>
+                    Object.fromEntries(
+                        Object.entries(detail ?? {}).map(([key, value]) => [
+                            key,
+                            value && typeof value === "object"
+                                ? Object.fromEntries(
+                                    Object.entries(value).map(
+                                        ([name, entry]) => [
+                                            name,
+                                            name === "url"
+                                                ? redactedTraceURL(entry)
+                                                : entry
+                                        ]
+                                    )
+                                )
+                                : value
+                        ])
+                    );
                 const requestCapability = (
                     api,
                     payload,
@@ -4001,7 +4034,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         try {
                             reportRuntimeTrace(`capability.${api}${suffix}`, {
                                 context: executionProcess,
-                                ...detail
+                                ...(sensitiveCapabilityAPIs.has(api)
+                                    ? redactCapabilityTrace(detail)
+                                    : detail)
                             });
                         } catch {}
                     };
@@ -4696,6 +4731,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 \(BrowserExtensionSidebarCompatibilityScript.source)
                 \(BrowserExtensionTabGroupsCompatibilityScript.source)
                 \(BrowserExtensionDebuggerCompatibilityScript.source)
+                \(BrowserExtensionIdentityCompatibilityScript.source)
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 const isIdleState = (state) =>
@@ -4851,6 +4887,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         // is bound to a legal identifier and published here
                         // under its schema name.
                         debugger: debuggerNamespace,
+                        identity,
                         idle,
                         webNavigation,
                         webRequest,

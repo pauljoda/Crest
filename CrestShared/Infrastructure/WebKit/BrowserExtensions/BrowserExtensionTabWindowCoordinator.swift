@@ -45,6 +45,13 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     /// Live `session token -> bound tab` records. See
     /// `BrowserExtensionDebuggerBrokerRequest` for why the binding is made once.
     var debuggerBindings: [String: BrowserExtensionDebuggerBinding] = [:]
+    /// Runs `identity.launchWebAuthFlow` in a Crest-owned web view. Supplied
+    /// by the platform shell; absent means every flow is refused, because a
+    /// pool assembled for a test or a preview has no window to present one in.
+    var webAuthFlowHost: (any BrowserExtensionWebAuthFlowHosting)?
+    /// The extension contexts currently running an authorization flow. One at
+    /// a time per extension: see `handleCapabilityBrokerIdentity`.
+    var webAuthFlowsInFlight: Set<ObjectIdentifier> = []
     var verifiedNativeMessagingIdentities: [ObjectIdentifier: BrowserExtensionNativeMessagingIdentity] = [:]
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
