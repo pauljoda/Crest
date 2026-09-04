@@ -85,11 +85,17 @@ enum BrowserExtensionSidebarCompatibilityScript {
         const sidebarListeners = {opened: new Set(), closed: new Set()};
         const sidebarListenerCount = () => sidebarListeners.opened.size + sidebarListeners.closed.size;
         let sidebarEventQueue = Promise.resolve();
+        // Diagnostics only. The fragment also runs in harnesses without the
+        // runtime's tracing globals, so every reference stays inside the try.
+        const sidebarTrace = (op, detail) => {
+            try { if (capturesExtensionConsole) reportRuntimeTrace(op, {context: executionProcess, ...detail}); } catch {}
+        };
         const sidebarWatch = capabilityWatch({
             api: "sidebar",
             hasListeners: () => sidebarListenerCount() > 0,
             subscription: () => ({api: "sidebar.watch"}),
             onMessage: message => {
+                sidebarTrace("sidePanel.event", {kind: message?.kind, tabIndex: message?.tabIndex, listeners: sidebarListenerCount()});
                 sidebarEventQueue = sidebarEventQueue.then(async () => {
                     if (message?.api !== "sidebar.event" || message.windowKind !== "primary" || typeof message.path !== "string" || !sidebarListeners[message.kind]) return;
                     const windowId = await sidebarPrimaryWindowId();
@@ -104,6 +110,7 @@ enum BrowserExtensionSidebarCompatibilityScript {
             addListener(listener) {
                 if (typeof listener !== "function") return;
                 sidebarListeners[kind].add(listener);
+                sidebarTrace("sidePanel.listener", {kind, listeners: sidebarListenerCount()});
                 sidebarWatch.connect();
             },
             removeListener(listener) {

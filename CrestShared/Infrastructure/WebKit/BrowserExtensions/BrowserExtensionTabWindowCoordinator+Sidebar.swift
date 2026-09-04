@@ -65,10 +65,17 @@ extension BrowserExtensionTabWindowCoordinator {
             "windowKind": "primary", "path": event.path,
         ]
         if let tabID = event.tabID {
-            guard let tab = currentState?.space(event.spaceID)?.tab(tabID) else { return nil }
+            guard let tab = currentState?.space(event.spaceID)?.tab(tabID) else {
+                browserExtensionSidebarLog.info(
+                    "sidebar.event \(event.kind.rawValue, privacy: .public) dropped: tab no longer in Space")
+                return nil
+            }
             message["tabIndex"] = tab.index
             message["url"] = tab.url?.absoluteString
         }
+        browserExtensionSidebarLog.info(
+            "sidebar.event \(event.kind.rawValue, privacy: .public) path=\(event.path, privacy: .public) tabIndex=\((message["tabIndex"] as? Int).map(String.init) ?? "-", privacy: .public)"
+        )
         return message
     }
 
@@ -102,9 +109,11 @@ extension BrowserExtensionTabWindowCoordinator {
                 scope = try request.resolveScope(in: state, liveTabs: liveTabs)
             } catch BrowserExtensionSidebarBrokerError.staleTab {
                 if case .tab(let index, let url) = request.target {
-                    let stateURL = state.tabs.first(where: { $0.index == index })?.url?.absoluteString ?? "<no tab at index>"
+                    let stateURL =
+                        state.tabs.first(where: { $0.index == index })?.url?.absoluteString ?? "<no tab at index>"
+                    let requested = url ?? "<nil>"
                     browserExtensionSidebarLog.error(
-                        "\(api, privacy: .public) stale tab: index \(index, privacy: .public) requested \(url ?? "<nil>", privacy: .public) state \(stateURL, privacy: .public)"
+                        "\(api, privacy: .public) stale tab: index \(index, privacy: .public) requested \(requested, privacy: .public) state \(stateURL, privacy: .public)"
                     )
                 }
                 throw BrowserExtensionSidebarBrokerError.staleTab

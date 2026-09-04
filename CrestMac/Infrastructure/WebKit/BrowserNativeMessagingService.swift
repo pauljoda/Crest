@@ -329,6 +329,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case nil: break
         }
         let events = sidebarService.events(for: client)
+        Logger(subsystem: ProductIdentity.serviceNamespace, category: "extension-sidebar").info(
+            "\(client.rawValue, privacy: .public) sidebar.watch connected")
         watch = .sidebar(
             Task { @MainActor [weak self] in
                 for await event in events {

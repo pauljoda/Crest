@@ -78,6 +78,11 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
             url: url, extensionBaseURL: extensionBaseURL, isMainFrame: action.targetFrame?.isMainFrame ?? true,
             opensNewWindow: action.targetFrame == nil
         )
+        if action.targetFrame?.isMainFrame == false {
+            browserExtensionSidebarDocumentLog.info(
+                "panel frame navigation \(url.host() ?? "-", privacy: .public)\(url.path(), privacy: .public) decision=\(String(describing: decision), privacy: .public)"
+            )
+        }
         switch decision {
         case .allow:
             // A framed site's cookies have to be usable before the frame's own
@@ -116,6 +121,21 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
         browserExtensionSidebarDocumentLog.info(
             "panel document finished \(webView.url?.absoluteString ?? "<nil>", privacy: .public)")
         errorDescription = nil
+    }
+
+    /// Subframe loads never reach the main-frame delegate callbacks, so their
+    /// responses are the only signal of what a framed site answered.
+    func webView(
+        _ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
+    ) {
+        if !navigationResponse.isForMainFrame, let http = navigationResponse.response as? HTTPURLResponse {
+            let url = http.url
+            browserExtensionSidebarDocumentLog.info(
+                "panel frame response \(http.statusCode, privacy: .public) \(url?.host() ?? "-", privacy: .public)\(url?.path() ?? "", privacy: .public) \(http.mimeType ?? "-", privacy: .public) location=\(http.value(forHTTPHeaderField: "Location") ?? "-", privacy: .public)"
+            )
+        }
+        decisionHandler(.allow)
     }
 
     func webView(
