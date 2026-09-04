@@ -127,10 +127,14 @@ struct CrestApp: App {
                     capability:
                         BrowserPlatformExtensionNativeMessagingCapability
                         .currentBuild,
-                    resolver: BrowserNativeMessagingHostManifestResolver(
-                        searchDirectories: []
-                    ),
-                    // An isolated launch refuses external native hosts, but
+                    // An isolated launch refuses external native hosts unless
+                    // the run opted in, so a companion process only ever runs
+                    // when a validation asked for it.
+                    resolver: launchEnvironment.allowsExternalNativeHostsInIsolation
+                        ? .production()
+                        : BrowserNativeMessagingHostManifestResolver(
+                            searchDirectories: []
+                        ),
                     // Crest's own capability broker must match production:
                     // without a notification center every `notifications`
                     // call is refused and validation runs diverge from the

@@ -461,6 +461,10 @@
     "2026-09-03-extension-debugger-reconnect": {
       "category": "fixed",
       "message": "Keep extension debugging sessions stable when an extension reattaches to a page quickly"
+    },
+    "2026-09-04-extension-broker-tracing-and-isolated-hosts": {
+      "category": "internal",
+      "message": "Trace extension capability broker calls under console capture, log side-panel broker outcomes, and let isolated launches opt into external native hosts"
     }
   }
 }

@@ -3964,11 +3964,32 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
 
                     const request = { api, ...payload };
+                    // Broker traffic is invisible to the page's own console, so
+                    // console capture also records each capability call and
+                    // how it settled. This is what shows whether an extension
+                    // asked Crest for something and what Crest answered.
+                    const traceCapability = (suffix, detail) => {
+                        if (!capturesExtensionConsole) return;
+                        try {
+                            reportRuntimeTrace(`capability.${api}${suffix}`, {
+                                context: executionProcess,
+                                ...detail
+                            });
+                        } catch {}
+                    };
+                    traceCapability("", { request: payload });
                     const response = new Promise((resolve, reject) => {
                         let settled = false;
                         const settle = (operation, value) => {
                             if (settled) return;
                             settled = true;
+                            if (operation === reject) {
+                                traceCapability(".rejected", {
+                                    message: String(value?.message ?? value)
+                                });
+                            } else {
+                                traceCapability(".resolved", { response: value });
+                            }
                             operation(value);
                         };
                         let returned;

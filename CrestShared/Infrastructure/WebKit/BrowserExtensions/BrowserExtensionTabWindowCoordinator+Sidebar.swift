@@ -1,5 +1,11 @@
 import Foundation
 import WebKit
+import os
+
+private let browserExtensionSidebarLog = Logger(
+    subsystem: ProductIdentity.serviceNamespace,
+    category: "extension-sidebar"
+)
 
 extension BrowserExtensionTabWindowCoordinator {
     func sidebarIsAvailable(for context: WKWebExtensionContext) -> Bool {
@@ -100,8 +106,14 @@ extension BrowserExtensionTabWindowCoordinator {
             let response = try sidebarResponse(
                 request, scope: scope, service: service, client: client, space: state, baseURL: extensionContext.baseURL
             )
+            browserExtensionSidebarLog.info(
+                "\(extensionContext.webExtension.displayName ?? "extension", privacy: .public) \(api, privacy: .public) ok"
+            )
             replyHandler(response, nil)
         } catch {
+            browserExtensionSidebarLog.error(
+                "\(extensionContext.webExtension.displayName ?? "extension", privacy: .public) \(api, privacy: .public) failed: \(String(describing: error), privacy: .public)"
+            )
             replyHandler(nil, error)
         }
         return true
