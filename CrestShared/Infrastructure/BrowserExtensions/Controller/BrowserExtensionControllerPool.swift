@@ -187,6 +187,26 @@ final class BrowserExtensionControllerPool {
         tabWindowCoordinator.declarativeNetRequestService = service
     }
 
+    /// Installs the seam that keeps a site's cookies usable inside an
+    /// extension page that frames it.
+    ///
+    /// Absent by default: without a platform cookie jar behind it, a pool
+    /// assembled for a test or a preview rewrites nothing.
+    func setCookieAccessService(
+        _ service: (any BrowserExtensionCookieAccessHandling)?
+    ) {
+        tabWindowCoordinator.cookieAccessService = service
+    }
+
+    var cookieAccessService: (any BrowserExtensionCookieAccessHandling)? {
+        tabWindowCoordinator.cookieAccessService
+    }
+
+    /// The website data store `spaceID`'s extension web views use.
+    func extensionWebsiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
+        runtimeContextController.websiteDataStore(in: spaceID)
+    }
+
     /// Installs the debugger session store and the consent gate in front of it.
     ///
     /// Both are supplied by the platform shell. Without a consent resolver no

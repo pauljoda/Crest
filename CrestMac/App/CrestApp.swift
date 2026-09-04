@@ -127,6 +127,18 @@ struct CrestApp: App {
             persistence: declarativeNetRequestPersistence
         )
         extensionControllerPool.setDeclarativeNetRequestService(extensionDeclarativeNetRequest)
+        // WebKit decides `SameSite` from the top document, so a site framed by
+        // an extension page is cross-site to it and its session cookies are
+        // withheld. Crest drops the attribute for hosts the extension has
+        // permission for, in that Space's jar only. Nothing is persisted: a
+        // launch that never opens the page again rewrites nothing.
+        let extensionCookieAccess = BrowserExtensionCookieAccessStore(
+            cookieJar: BrowserExtensionCookieJarCoordinator {
+                [weak extensionControllerPool] spaceID in
+                extensionControllerPool?.extensionWebsiteDataStore(in: spaceID)
+            }
+        )
+        extensionControllerPool.setCookieAccessService(extensionCookieAccess)
         // WebKit drops the `debugger` permission, so Crest owns the decision,
         // the prompt, and the live withdrawal behind it.
         let extensionDebugger = BrowserExtensionDebuggerInstallation.install(

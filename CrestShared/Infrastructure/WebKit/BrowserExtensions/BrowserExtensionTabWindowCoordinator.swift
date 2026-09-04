@@ -29,6 +29,9 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     /// Holds the `modifyHeaders` request-header operations WebKit refuses, so
     /// every context of one extension applies the same table.
     var declarativeNetRequestService: (any BrowserExtensionDeclarativeNetRequestHandling)?
+    /// Drops `SameSite` from the cookies of sites this extension's own pages
+    /// frame, within the framing Space only.
+    var cookieAccessService: (any BrowserExtensionCookieAccessHandling)?
     var sidebarLayoutSide: () -> String = { "right" }
     var sidebarUserGestures = BrowserExtensionUserGestureLedger()
     var sidebarClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]

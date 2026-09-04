@@ -40,8 +40,12 @@ extension BrowserPagePool {
             return existing
         }
         closeExtensionSidebars(inWindow: window)
-        let document = BrowserExtensionSidebarDocument(url: url, tabID: panel.tabID, configuration: configuration) {
-            [weak self] url in
+        let document = BrowserExtensionSidebarDocument(
+            url: url, tabID: panel.tabID, configuration: configuration,
+            cookieAccess: BrowserExtensionFramedSiteCookieAccess(
+                configuration: configuration, spaceID: panel.spaceID,
+                service: extensionControllerPool.cookieAccessService)
+        ) { [weak self] url in
             self?.openExtensionSidebarLink(url)
         }
         extensionSidebarDocuments[key] = document

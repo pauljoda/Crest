@@ -117,6 +117,10 @@ struct BrowserExtensionPageConfiguration {
     let baseURL: URL
     let context: WKWebExtensionContext
     let webViewConfiguration: WKWebViewConfiguration
+    /// This page's identity to the emulated services, so a Crest-owned
+    /// document can reach one without re-deriving the extension identifier
+    /// WebKit no longer carries on the context.
+    let clientID: BrowserExtensionServiceClientID
 }
 
 @MainActor
@@ -276,22 +280,34 @@ final class BrowserExtensionRuntimeContextController {
         for extensionURL: URL,
         in spaceID: SpaceID
     ) -> BrowserExtensionPageConfiguration? {
-        contextsBySpace[spaceID]?.values.first(where: { context in
+        contextsBySpace[spaceID]?.first(where: { _, context in
             extensionURL.scheme?.caseInsensitiveCompare(
                 context.baseURL.scheme ?? ""
             ) == .orderedSame
                 && extensionURL.host?.caseInsensitiveCompare(
                     context.baseURL.host ?? ""
                 ) == .orderedSame
-        }).flatMap { context in
+        }).flatMap { extensionID, context in
             context.webViewConfiguration.map {
                 BrowserExtensionPageConfiguration(
                     baseURL: context.baseURL,
                     context: context,
-                    webViewConfiguration: $0
+                    webViewConfiguration: $0,
+                    clientID: .scoped(extensionID: extensionID, spaceID: spaceID)
                 )
             }
         }
+    }
+
+    /// The website data store a Space's extension web views were configured
+    /// with, or `nil` before that Space has an extension controller.
+    ///
+    /// This is the store itself rather than a fresh
+    /// `BrowserWebsiteDataStore.persistent(for:)` for the profile, so a caller
+    /// that rewrites cookies cannot land them in a jar the extension's own
+    /// frames never read.
+    func websiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
+        controllerEntries[spaceID]?.controller.configuration.defaultWebsiteDataStore
     }
 
     func loadExtension(

@@ -394,7 +394,12 @@ final class BrowserPagePool:
             throw BrowserExtensionOffscreenDocumentError.unavailable
         }
         let document = BrowserExtensionOffscreenDocument(
-            configuration: configuration.webViewConfiguration
+            configuration: configuration.webViewConfiguration,
+            cookieAccess: BrowserExtensionFramedSiteCookieAccess(
+                configuration: configuration,
+                spaceID: spaceID,
+                service: extensionControllerPool.cookieAccessService
+            )
         )
         extensionOffscreenDocuments[key] = document
         do {
@@ -2367,13 +2372,39 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
     let contextID = UUID().uuidString
     private(set) var url: URL?
     private let webView: WKWebView
+    private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     private var loadContinuation: CheckedContinuation<Void, any Error>?
 
-    init(configuration: WKWebViewConfiguration) {
+    init(
+        configuration: WKWebViewConfiguration,
+        cookieAccess: BrowserExtensionFramedSiteCookieAccess?
+    ) {
         webView = WKWebView(frame: .zero, configuration: configuration)
+        self.cookieAccess = cookieAccess
         super.init()
         webView.navigationDelegate = self
         webView.isInspectable = true
+    }
+
+    /// The same first-party-for-cookies rule the side panel applies. An
+    /// offscreen document frames sites too, and WebCore treats its
+    /// `chrome-extension://` top document as cross-site in exactly the same
+    /// way.
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+    ) {
+        guard let cookieAccess,
+            let host = cookieAccess.hostRequiringRewrite(for: navigationAction)
+        else {
+            decisionHandler(.allow)
+            return
+        }
+        Task { @MainActor in
+            await cookieAccess.relaxCookies(for: host)
+            decisionHandler(.allow)
+        }
     }
 
     func load(_ url: URL) async throws {

@@ -525,6 +525,10 @@
     "2026-09-04-chrome-extension-store-origin": {
       "category": "fixed",
       "message": "Run Chrome Web Store extensions under their real chrome-extension origin so sites and services that check the extension identity accept them"
+    },
+    "2026-09-04-extension-frame-cookie-access": {
+      "category": "fixed",
+      "message": "Let sites an extension embeds in its own pages see their session within that Space, as they do in Chrome"
     }
   }
 }

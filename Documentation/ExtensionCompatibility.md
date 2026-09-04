@@ -447,6 +447,72 @@ pins the page contract, and
 `BrowserExtensionControllerPoolTests.testCapabilityBrokerPresentsARejectedPopupAsANativeExtensionWindow`
 pins native presentation and controller ownership.
 
+### Cookies for sites an extension frames
+
+Claude's side panel offers a "Cowork" mode that frames
+`https://claude.ai/cic/new?surface=cic_sidepanel` inside the extension page.
+The frame loads, and claude.ai inside it reports that nobody is signed in.
+
+The cause is engine-side. WebKit already relaxes third-party cookie *blocking*
+for extension web views, but `SameSite` is a separate decision made in WebCore
+from the registrable domain of the **top** document, and it has no extension
+exemption. Under a `chrome-extension://` top document a `claude.ai` frame is
+cross-site, so every cookie the site marked `SameSite=Lax` or `Strict` is
+withheld — not only from the frame's own navigation but from every request that
+frame's document makes afterwards, because its site-for-cookies stays the top
+document. Chrome does not have this problem: an extension page holding host
+permission for a site is treated as first-party for that site's cookies.
+
+Crest adopts the same rule, and pays for it in the one currency it owns. When
+one of an extension's own pages frames a site the extension has host permission
+for, Crest rewrites that site's cookies **in that Space's website data store**
+to drop the `SameSite` attribute. Name, value, domain, path, expiry, `Secure`,
+`HttpOnly`, and port are all preserved; only `SameSite` is removed. WebKit does
+not apply Chromium's Lax-by-default, so a cookie carrying no `SameSite`
+attribute is simply sent, which is why removing the attribute is enough and
+nothing has to claim `SameSite=None`.
+
+The scope is deliberately narrow:
+
+- **That Space only.** The jar is resolved from the Space's own extension
+  controller — the same `WKWebsiteDataStore` its extension web views were
+  configured with — never rebuilt from the profile. Other Spaces are untouched.
+- **Only hosts the extension has permission for.** The check is
+  `WKWebExtensionContext.hasAccessToURL:` against the granted match patterns,
+  which is the grant the user made at install.
+- **Only after one of its pages frames the site.** The trigger is a subframe
+  navigation to an `http(s)` URL from a Crest-owned extension document. A
+  main-frame load of the extension page itself, a non-web frame, and a host
+  with no permission all rewrite nothing.
+- **Enforcement lasts as long as the extension is loaded in that Space.** A
+  login response re-sets the same cookies as `Lax`, so a cookie-store observer
+  re-applies the rewrite. It is removed once no client in the Space still lists
+  the host.
+- **Nothing is persisted.** A fresh launch relaxes nothing until a frame loads
+  again. Cookies already rewritten stay rewritten — Crest does not invent a
+  `SameSite` value the site never sent — but the re-application stops.
+
+The trade-off is real and the user accepts it at install: within that Space,
+those cookies no longer carry the cross-site request protection `SameSite` gave
+them, so any cross-site request in that Space that reaches the host will send
+them. It is bounded by the Space, by the host permission the user granted, and
+by the extension staying loaded, but it is not free. Extensions already have
+full access within their Space, which is what makes the bound the meaningful
+one.
+
+Crest owns the navigation delegate for the side panel document and the
+offscreen document, and both apply the rule. It does **not** own the action
+popup's web view: WebKit creates `WKWebExtensionAction.popupWebView` and is its
+own navigation delegate, so there is no Crest seam there and a site framed by a
+popup is still subject to WebCore's decision.
+
+`BrowserExtensionCookieAccessPolicyTests`,
+`BrowserExtensionCookieAccessStoreTests`,
+`BrowserExtensionCookieJarCoordinatorTests`, and
+`BrowserExtensionFramedSiteCookieAccessTests` pin the rewrite, the per-Space
+bookkeeping, the live `WKHTTPCookieStore` behavior including the observer, and
+the permission gate.
+
 ## Native companion distribution boundary
 
 - Ordinary WebExtensions can use APIs implemented by WebKit.

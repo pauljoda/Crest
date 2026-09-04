@@ -45,6 +45,9 @@ extension BrowserExtensionTabWindowCoordinator {
             // Chrome drops session rules when an extension's context unloads
             // or reloads and keeps dynamic ones.
             declarativeNetRequestService?.unregister(client: client)
+            // Relaxed cookies stay relaxed; what stops is re-applying the
+            // rewrite once the extension no longer frames the site.
+            cookieAccessService?.unregister(client: client)
         }
         unregisterDebuggerClient(for: context)
         let resolvedSpaceID: SpaceID?

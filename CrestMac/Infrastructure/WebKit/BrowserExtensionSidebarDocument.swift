@@ -28,12 +28,21 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     private(set) var webView: WKWebView?
     private(set) var errorDescription: String?
     @ObservationIgnored private let openTab: (URL) -> Void
+    /// Absent when the pool has no cookie-access service behind it.
+    @ObservationIgnored private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     @ObservationIgnored private var hasRecoveredProcess = false
 
-    init(url: URL, tabID: TabID?, configuration: BrowserExtensionPageConfiguration, openTab: @escaping (URL) -> Void) {
+    init(
+        url: URL,
+        tabID: TabID?,
+        configuration: BrowserExtensionPageConfiguration,
+        cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
+        openTab: @escaping (URL) -> Void
+    ) {
         self.url = url
         self.tabID = tabID
         extensionBaseURL = configuration.baseURL
+        self.cookieAccess = cookieAccess
         self.openTab = openTab
         let webView = WKWebView(frame: .zero, configuration: configuration.webViewConfiguration)
         self.webView = webView
@@ -59,7 +68,7 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
 
     func webView(
         _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
-        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
         guard let url = action.request.url else {
             decisionHandler(.cancel)
@@ -70,7 +79,18 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
             opensNewWindow: action.targetFrame == nil
         )
         switch decision {
-        case .allow: decisionHandler(.allow)
+        case .allow:
+            // A framed site's cookies have to be usable before the frame's own
+            // request goes out, so the decision waits on the rewrite. Every
+            // other navigation is answered without a hop.
+            guard let cookieAccess, let host = cookieAccess.hostRequiringRewrite(for: action) else {
+                decisionHandler(.allow)
+                return
+            }
+            Task { @MainActor in
+                await cookieAccess.relaxCookies(for: host)
+                decisionHandler(.allow)
+            }
         case .openTab:
             decisionHandler(.cancel)
             openTab(url)

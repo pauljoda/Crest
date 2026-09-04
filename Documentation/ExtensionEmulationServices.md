@@ -317,8 +317,9 @@ still needs an enforceable request hook.
 
 ## App-side service layout
 
-Notifications, side panels, and tab groups have Application-layer service
-ports. Other broker capabilities are implemented where their state lives.
+Notifications, side panels, tab groups, and framed-site cookies have
+Application-layer service ports. Other broker capabilities are implemented
+where their state lives.
 
 | Concern | Where it lives | Shape |
 | --- | --- | --- |
@@ -326,6 +327,7 @@ ports. Other broker capabilities are implemented where their state lives.
 | Side panels | `CrestShared/Domain/BrowserExtensionServices/Sidebar/`, `CrestShared/Application/BrowserExtensionServices/Sidebar/`, `CrestShared/Infrastructure/BrowserExtensionServices/Sidebar/`, `CrestMac/Features/ExtensionSidebar/` | `BrowserExtensionSidebarHandling`, observable store, behavior persistence adapters, per-window host and native document |
 | Tab groups | `CrestShared/Domain/BrowserExtensionServices/TabGroups/`, `CrestShared/Application/BrowserExtensionServices/TabGroups/`, `CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionTabWindowCoordinator+TabGroups.swift` | `BrowserExtensionTabGroupHandling` port, observable store over a Space-scoped registry, and an async event hub that fans one change out to every extension in the Space. No persistence adapter: Chrome's group ids are session-local too |
 | Declarative header rules | `CrestShared/Domain/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Application/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Infrastructure/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionTabWindowCoordinator+DeclarativeNetRequest.swift` | `BrowserExtensionDeclarativeNetRequestHandling` port, observable store keyed by extension and Space, an event hub per client, and `UserDefaults`/in-memory persistence adapters for the dynamic ruleset |
+| Framed-site cookies | `CrestShared/Domain/BrowserExtensionServices/CookieAccess/`, `CrestShared/Application/BrowserExtensionServices/CookieAccess/`, `CrestShared/Infrastructure/BrowserExtensionServices/CookieAccess/`, `CrestMac/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionCookieJarCoordinator.swift` | `BrowserExtensionCookieAccessHandling` and `BrowserExtensionCookieJarRelaxing` ports, an observable store keyed by client and Space, the `BrowserExtensionCookieJarCoordinator` WebKit adapter, and the `InMemoryBrowserExtensionCookieJar` double. No persistence adapter: the relaxation follows a live page, so a launch that never frames the site again relaxes nothing |
 | Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
 | Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
@@ -564,6 +566,41 @@ over a header the caller already sent, and any `remove`, are skipped there too.
 Under console capture each skip is reported once per header name as
 `dnr.emulatedHeaders.skipped`, and each application once per host and header
 set as `dnr.emulatedHeaders.applied` — header **names** only, never values.
+
+## Framed-site cookies — no namespace
+
+The only service with no JavaScript surface and no broker envelope. It is not
+an API an extension calls; it is a rule Crest applies on the extension's behalf
+when one of its own pages frames a site, because WebCore decides `SameSite`
+from the top document and leaves no embedder seam. What the rule is, what it
+costs, and why it is bounded to the Space are in *Cookies for sites an
+extension frames* in `Documentation/ExtensionCompatibility.md`.
+
+The shape follows the other services, with the port split in two so no
+Foundation-only layer has to name WebKit:
+
+| Piece | Type | Responsibility |
+| --- | --- | --- |
+| Domain | `BrowserExtensionCookieAccessPolicy` | Pure functions over `HTTPCookie`: `host(for:)` accepts only `http`/`https`; `appliesTo(cookie:host:)` is RFC 6265 domain matching with the leading dot stripped; `restrictsCrossSiteUse(_:)` recognizes only `Lax` and `Strict`; `relaxed(_:)` returns a copy without `SameSite`, or `nil` when there is nothing to write |
+| Application port | `BrowserExtensionCookieAccessHandling` | `relaxCookies(for:client:in:)` and `unregister(client:)`. There is no `register`: a client appears the first time it frames a permitted site |
+| Application port | `BrowserExtensionCookieJarRelaxing` | `relax(host:in:)` and `observe(spaceID:onChange:)`, the jar expressed without WebKit. A `nil` handler removes the observation |
+| Application store | `BrowserExtensionCookieAccessStore` | Relaxed hosts per client per Space, and the only thing that knows a Space's full host set — so it, not the jar, decides what a change notification re-applies |
+| Infrastructure double | `InMemoryBrowserExtensionCookieJar` | Records `relax` calls and can stand in for a third-party write with `simulateCookieChange(in:)` |
+| Infrastructure adapter | `BrowserExtensionCookieJarCoordinator` (CrestMac) | Resolves the Space's `WKWebsiteDataStore` from its extension controller, rewrites through `WKHTTPCookieStore`, and owns the `WKHTTPCookieStoreObserver` |
+| Trigger | `BrowserExtensionFramedSiteCookieAccess` (CrestMac) | Held by the side panel and offscreen documents; in `decidePolicyFor` it checks subframe, scheme, and `hasAccessToURL:`, then awaits the rewrite before allowing the navigation |
+
+Two details keep the observer from chasing its own writes. `relaxed(_:)`
+answers `nil` for a cookie that already places no cross-site restriction, so a
+second pass writes nothing at all — and WebKit reports an unspecified
+`SameSite` as `none` rather than as no value, which is why the check is a
+policy question rather than a nil test. On top of that, the coordinator
+suppresses notifications raised during its own pass and re-reads once
+afterwards if any arrived, so the login response that establishes a session is
+never the one that gets dropped.
+
+`unregister` runs from `unregisterNativeMessagingIdentity`, beside the sidebar,
+tab-group, declarative-rule, and debugger unregisters, and stops enforcing a
+host only once no client in that Space still lists it.
 
 ## Debugger — `chrome.debugger`
 
