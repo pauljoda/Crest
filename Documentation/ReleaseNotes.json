@@ -477,6 +477,10 @@
     "2026-09-04-extension-side-panel-switching": {
       "category": "improved",
       "message": "Show each extension's icon in the side panel switcher, and let the panel you open last take over the card"
+    },
+    "2026-09-04-extension-toolbar-alignment-and-badges": {
+      "category": "fixed",
+      "message": "Keep pinned extension icons centered and badge text on one line"
     }
   }
 }

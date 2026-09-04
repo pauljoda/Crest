@@ -11,7 +11,7 @@ struct BrowserPinnedExtensionActionList: View {
     var body: some View {
         GeometryReader { proxy in
             ScrollView(.horizontal) {
-                LazyHStack(
+                HStack(
                     spacing: BrowserPinnedExtensionStripLayoutPolicy.spacing
                 ) {
                     ForEach(actions) { action in
@@ -23,7 +23,12 @@ struct BrowserPinnedExtensionActionList: View {
                         )
                     }
                 }
-                .frame(minWidth: proxy.size.width)
+                // Size the scroll content in both axes so the buttons stay
+                // centered when the viewport is laid out again.
+                .frame(
+                    minWidth: proxy.size.width,
+                    minHeight: proxy.size.height
+                )
             }
             .scrollIndicators(.hidden)
         }

@@ -33,9 +33,9 @@ final class BrowserChromeLayoutTests: XCTestCase {
                 .environment(\.displayScale, scale)
             window.setContentSize(CGSize(width: width, height: height))
             host.layoutSubtreeIfNeeded()
-            guard height == 32 else { continue }
             RunLoop.main.run(until: Date().addingTimeInterval(0.05))
             host.layoutSubtreeIfNeeded()
+            guard height == 32 else { continue }
             let buttons = extensionButtonViews(in: host)
             XCTAssertEqual(buttons.count, 3)
             for button in buttons {
@@ -47,6 +47,72 @@ final class BrowserChromeLayoutTests: XCTestCase {
             let first = try XCTUnwrap(frames.map(\.minX).min())
             let last = try XCTUnwrap(frames.map(\.maxX).max())
             XCTAssertEqual((first + last) / 2, host.bounds.midX, accuracy: 0.5)
+        }
+    }
+
+    @MainActor
+    func testPinnedExtensionOverflowCanScrollToTheLastButton() throws {
+        let actions = (0..<12).map {
+            BrowserExtensionActionPresentation(
+                id: "overflow-\($0)", displayName: "Extension \($0)", isPinned: true
+            )
+        }
+        let host = NSHostingView(
+            rootView: BrowserPinnedExtensionActionList(actions: actions, perform: { _, _ in })
+        )
+        let window = NSWindow(
+            contentRect: CGRect(x: 100, y: 100, width: 180, height: 32),
+            styleMask: [.borderless], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        window.orderFront(nil)
+        defer { window.close() }
+        host.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+        var ancestor: NSView? = extensionButtonViews(in: host).first
+        while let view = ancestor, !(view is NSScrollView) { ancestor = view.superview }
+        let scroll = try XCTUnwrap(ancestor as? NSScrollView)
+        let document = try XCTUnwrap(scroll.documentView)
+        XCTAssertGreaterThan(document.bounds.width, scroll.contentSize.width)
+        scroll.contentView.scroll(
+            to: CGPoint(x: document.bounds.maxX - scroll.contentSize.width, y: 0)
+        )
+        scroll.reflectScrolledClipView(scroll.contentView)
+        host.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+        let last = try XCTUnwrap(extensionButtonViews(in: host).last)
+        let frame = last.convert(last.bounds, to: host)
+        XCTAssertGreaterThanOrEqual(frame.minX, host.bounds.minX)
+        XCTAssertLessThanOrEqual(frame.maxX, host.bounds.maxX + 0.5)
+        XCTAssertEqual(frame.midY, host.bounds.midY, accuracy: 0.5)
+    }
+
+    @MainActor
+    func testExtensionNewBadgeStaysOnOneLineAtToolbarSize() throws {
+        let renderer = ImageRenderer(content: BrowserExtensionBadge(text: "NEW"))
+        renderer.proposedSize = ProposedViewSize(width: 16, height: 24)
+        let image = try XCTUnwrap(renderer.nsImage)
+        XCTAssertEqual(image.size.height, 12, accuracy: 0.5)
+        XCTAssertGreaterThan(image.size.width, 16)
+    }
+
+    @MainActor
+    func testExtensionBadgesDoNotChangeArtworkLayoutSize() throws {
+        for badgeText in ["", "NEW", "1234", "999+"] {
+            let renderer = ImageRenderer(
+                content: BrowserExtensionActionArtwork(
+                    action: BrowserExtensionActionPresentation(
+                        id: "badge", displayName: "Badge", badgeText: badgeText
+                    ),
+                    glyphSize: 16
+                )
+            )
+            let image = try XCTUnwrap(renderer.nsImage)
+            XCTAssertEqual(image.size.width, 16, accuracy: 0.5, badgeText)
+            XCTAssertEqual(image.size.height, 16, accuracy: 0.5, badgeText)
         }
     }
 

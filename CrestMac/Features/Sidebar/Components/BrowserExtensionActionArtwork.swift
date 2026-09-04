@@ -5,13 +5,13 @@ struct BrowserExtensionActionArtwork: View {
     let glyphSize: CGFloat
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            artwork
-                .frame(width: glyphSize, height: glyphSize)
-            if !action.badgeText.isEmpty {
-                BrowserExtensionBadge(text: action.badgeText)
+        artwork
+            .frame(width: glyphSize, height: glyphSize)
+            .overlay(alignment: .topTrailing) {
+                if !action.badgeText.isEmpty {
+                    BrowserExtensionBadge(text: action.badgeText)
+                }
             }
-        }
     }
 
     @ViewBuilder
