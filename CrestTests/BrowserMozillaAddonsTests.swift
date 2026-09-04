@@ -684,6 +684,35 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
     }
 
+    /// Only a verified Chrome Web Store package runs on a public
+    /// `chrome-extension://<store id>` origin. A Firefox add-on has no such
+    /// origin to preserve, so it keeps the hashed per-Space host.
+    func testRuntimeBaseURLNamespacesEveryFirefoxAddonPerSpace() throws {
+        let source = try mozillaSource()
+        let work = SpaceID()
+        let personal = SpaceID()
+
+        func baseURL(in spaceID: SpaceID) -> URL {
+            BrowserExtensionRuntimeIdentifierPolicy.identity(
+                extensionID: darkReaderGUID,
+                source: .mozillaAddons(source),
+                spaceID: spaceID
+            ).baseURL
+        }
+
+        let originIdentifier =
+            "\(darkReaderGUID).space.\(work.rawValue.uuidString.lowercased())"
+        let digest = SHA256.hash(data: Data(originIdentifier.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+
+        XCTAssertEqual(
+            baseURL(in: work).absoluteString,
+            "chrome-extension://extension-\(digest)/"
+        )
+        XCTAssertNotEqual(baseURL(in: work), baseURL(in: personal))
+    }
+
     func testVerifiedFirefoxNativeMessagingCanUseThePlatformCompanionBridge() {
         let assessment = BrowserExtensionCompatibilityPolicy.assess(
             requestedPermissions: ["nativeMessaging", "storage"],

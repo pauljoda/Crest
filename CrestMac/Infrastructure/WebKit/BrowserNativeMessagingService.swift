@@ -469,11 +469,13 @@ final class BrowserExtensionCapabilityBrokerConnection {
 
     /// The origin a Chrome extension would present to a server.
     ///
-    /// Crest gives every Space its own WebKit extension origin so one Space's
-    /// service-worker registration cannot be reused by another, which makes
-    /// the runtime base URL useless as an identity to a local app server that
-    /// allow-lists its companion extension. The public store ID is what such a
-    /// server knows, and it is the prefix of the per-Space client identity.
+    /// A verified store package runs on `chrome-extension://<store id>` in
+    /// every Space, and that is exactly what a local app server allow-lists.
+    /// This is still derived from the per-Space client identity rather than
+    /// read off the context's base URL: the client ID is what the broker
+    /// authorizes a request against, its prefix is the store ID, and the
+    /// derivation stays correct for the fallback identity a Space would take
+    /// if it ever had to share a data store with another Space.
     private static func chromeStyleOrigin(
         for clientID: BrowserExtensionServiceClientID?
     ) -> String? {

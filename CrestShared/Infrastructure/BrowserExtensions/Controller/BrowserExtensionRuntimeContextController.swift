@@ -1,5 +1,6 @@
 import Foundation
 import WebKit
+import os
 
 /// Makes an extension background ready before another extension context sends
 /// its first runtime message or opens its first Port.
@@ -126,6 +127,11 @@ final class BrowserExtensionRuntimeContextController {
         )
     }()
 
+    private static let identityLog = Logger(
+        subsystem: ProductIdentity.serviceNamespace,
+        category: "extension-diagnostics"
+    )
+
     private struct ControllerEntry {
         let profileID: UUID
         let controller: WKWebExtensionController
@@ -222,6 +228,31 @@ final class BrowserExtensionRuntimeContextController {
         in spaceID: SpaceID
     ) -> WKWebExtensionContext? {
         contextsBySpace[spaceID]?[extensionID]
+    }
+
+    /// Whether another Space already runs `extensionID` on the same
+    /// `WKWebsiteDataStore` this Space's controller will use.
+    ///
+    /// `BrowserExtensionRuntimeIdentifierPolicy` hands a verified Chrome Web
+    /// Store package its real `chrome-extension://<store id>/` origin, which
+    /// is the same string in every Space. That is safe only while Spaces do
+    /// not share WebKit storage, because a service-worker registration is
+    /// keyed by origin *within* a data store and WebKit reuses a dormant
+    /// registration instead of re-evaluating the worker. A Space's data store
+    /// is `WKWebsiteDataStore(forIdentifier: profile.id)`, so two Spaces would
+    /// have to hold the same `profile.id` — which `makeBlankSpace` never
+    /// produces and `BrowserSession.repairRuntimeIntegrity` actively repairs.
+    /// This answers the question from live state anyway rather than trusting
+    /// that invariant.
+    func sharesDataStoreWithAnotherLoadedContext(
+        extensionID: String,
+        in space: BrowserSpace
+    ) -> Bool {
+        controllerEntries.contains { spaceID, entry in
+            spaceID != space.id
+                && entry.profileID == space.profile.id
+                && contextsBySpace[spaceID]?[extensionID] != nil
+        }
     }
 
     func contexts(in spaceID: SpaceID) -> [String: WKWebExtensionContext] {
@@ -399,10 +430,27 @@ final class BrowserExtensionRuntimeContextController {
         // parts a developer most needs Web Inspector for.
         context.isInspectable = true
         context.inspectionName = webExtension.displayName ?? extensionID
+        let sharesDataStore = sharesDataStoreWithAnotherLoadedContext(
+            extensionID: extensionID,
+            in: space
+        )
+        if sharesDataStore {
+            Self.identityLog.error(
+                """
+                Extension identity fell back to a per-Space origin: \
+                \(extensionID, privacy: .public) already runs in another \
+                Space on browsing profile \
+                \(space.profile.id.uuidString, privacy: .public). \
+                Chrome-origin behaviour that string-matches \
+                chrome-extension://<store id> will not apply in this Space.
+                """
+            )
+        }
         let runtimeIdentity = BrowserExtensionRuntimeIdentifierPolicy.identity(
             extensionID: extensionID,
             source: source,
-            spaceID: space.id
+            spaceID: space.id,
+            sharesDataStoreWithAnotherContext: sharesDataStore
         )
         context.uniqueIdentifier = runtimeIdentity.uniqueIdentifier
         context.baseURL = runtimeIdentity.baseURL
@@ -720,7 +768,12 @@ final class BrowserExtensionRuntimeContextController {
                 extensionID: installation.id,
                 source: installation.source,
                 spaceID: installation.spaceID,
-                requestedPermissions: installation.requestedPermissions
+                requestedPermissions: installation.requestedPermissions,
+                sharesDataStoreWithAnotherContext:
+                    sharesDataStoreWithAnotherLoadedContext(
+                        extensionID: installation.id,
+                        in: space
+                    )
             )
         )
         let context = try await loadExtension(
@@ -803,7 +856,6 @@ final class BrowserExtensionRuntimeContextController {
         }
         return []
     }
-
 
     /// WebKit only reports the `sidePanel` permission while its own sidebar
     /// implementation is compiled in, so a package that declares the permission

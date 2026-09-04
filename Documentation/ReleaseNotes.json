@@ -521,6 +521,10 @@
     "2026-09-04-extension-header-rule-emulation": {
       "category": "fixed",
       "message": "Apply the request header rules extensions declare even when WebKit refuses the header names, so Claude can reach its API from the side panel"
+    },
+    "2026-09-04-chrome-extension-store-origin": {
+      "category": "fixed",
+      "message": "Run Chrome Web Store extensions under their real chrome-extension origin so sites and services that check the extension identity accept them"
     }
   }
 }

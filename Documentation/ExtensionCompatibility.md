@@ -322,10 +322,34 @@ signature window suppresses duplicates when WebKit also reports a mutation.
 Runtime messaging stays entirely on WebKit's native path. The compatibility
 facade may expose that native runtime through the `browser` spelling, but it
 does not replace Chrome's root, runtime object, event objects, Ports, or sender
-metadata. Each Space also receives a stable, distinct worker origin while the
-extension-visible ID remains the verified store ID. This prevents one Space's
-service-worker registration from being reused for another Space and lets
-WebKit retain ownership of popup, background, and content-script routing.
+metadata. WebKit retains ownership of popup, background, and content-script
+routing.
+
+A verified Chrome Web Store package runs on the origin Chrome gives it:
+`chrome-extension://<store id>/`, the same string in every Space, with the
+extension-visible ID likewise the verified store ID. The origin is load-bearing
+for anything that identifies an extension by string comparison rather than by
+permission: an embedder's `frame-ancestors` list and the `ancestorOrigins`
+check an embedded surface runs in JavaScript, a service's CORS exemption for
+its own extension, a web-accessible-resource probe, and a redirect back to
+`chrome-extension://<id>/…`. A synthetic host fails all of them silently and no
+manifest or permission edit compensates. Every other source — Firefox add-ons,
+local and unpacked packages, Safari web extensions — has no public origin to
+preserve and keeps a per-Space host derived from
+`sha256(<id>.space.<space uuid>)`.
+
+Sharing one origin across Spaces is safe because Spaces do not share WebKit
+storage. Every Space owns a `BrowsingProfile` — `BrowserSession.makeBlankSpace`
+mints a fresh one and `repairRuntimeIntegrity` reidentifies any duplicate — and
+each Space's extension controller is built on
+`WKWebsiteDataStore(forIdentifier: profile.id)`. Service-worker registrations,
+the reason this host was ever hashed, live inside that per-Space store, so one
+Space cannot reuse another Space's dormant registration and lose its runtime
+listeners. `BrowserExtensionRuntimeContextController` still checks that
+invariant against live state on every load rather than trusting it: if a
+different Space with the same `profile.id` already runs the package, the second
+Space falls back to the hashed per-Space host and the fallback is written to
+the `extension-diagnostics` log.
 
 `BrowserExtensionControllerPoolTests.testModuleWorkerUsesWebKitsContentTabIdentity`
 and `testClassicWebSocketWorkerUsesWebKitsContentTabIdentity` pin one-shot and

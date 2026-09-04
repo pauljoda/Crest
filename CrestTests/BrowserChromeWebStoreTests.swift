@@ -3769,6 +3769,119 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    /// A verified store package has to run on the origin the rest of the web
+    /// already knows it by: embedding checks, CORS exemptions, and
+    /// web-accessible-resource probes all string-match
+    /// `chrome-extension://<store id>`.
+    func testRuntimeBaseURLIsTheVerifiedChromeStoreOrigin() throws {
+        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
+        let source = BrowserChromeWebStoreSource(
+            extensionID: id,
+            storeURL: URL(
+                string: "https://chromewebstore.google.com/detail/dark-reader/\(darkReaderID)"
+            )!,
+            crxSHA256Hex: String(repeating: "a", count: 64),
+            publisherKeyHashHex: BrowserCRX3Verifier.chromeWebStorePublisherKeyHash.hexString
+        )
+        let work = SpaceID()
+        let personal = SpaceID()
+
+        for spaceID in [work, personal] {
+            XCTAssertEqual(
+                BrowserExtensionRuntimeIdentifierPolicy.identity(
+                    extensionID: darkReaderID,
+                    source: .chromeWebStore(source),
+                    spaceID: spaceID
+                ).baseURL.absoluteString,
+                "chrome-extension://\(darkReaderID)/"
+            )
+        }
+    }
+
+    /// Nothing but a verified store package earns the store origin. An
+    /// unpacked or locally installed package — and a store record whose ID
+    /// does not match the package being loaded — keeps the hashed per-Space
+    /// host.
+    func testRuntimeBaseURLStaysPerSpaceForUnverifiedSources() throws {
+        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
+        let source = BrowserChromeWebStoreSource(
+            extensionID: id,
+            storeURL: URL(
+                string: "https://chromewebstore.google.com/detail/dark-reader/\(darkReaderID)"
+            )!,
+            crxSHA256Hex: String(repeating: "a", count: 64),
+            publisherKeyHashHex: BrowserCRX3Verifier.chromeWebStorePublisherKeyHash.hexString
+        )
+        let work = SpaceID()
+        let personal = SpaceID()
+
+        let unpacked = BrowserExtensionRuntimeIdentifierPolicy.identity(
+            extensionID: darkReaderID,
+            source: .unpackedPackage,
+            spaceID: work
+        ).baseURL
+        XCTAssertEqual(unpacked.absoluteString, hashedBaseURL(darkReaderID, work))
+        XCTAssertNotEqual(
+            unpacked,
+            BrowserExtensionRuntimeIdentifierPolicy.identity(
+                extensionID: darkReaderID,
+                source: .unpackedPackage,
+                spaceID: personal
+            ).baseURL
+        )
+        // The record is verified, but it does not name this package.
+        XCTAssertEqual(
+            BrowserExtensionRuntimeIdentifierPolicy.identity(
+                extensionID: "local.probe",
+                source: .chromeWebStore(source),
+                spaceID: work
+            ).baseURL.absoluteString,
+            hashedBaseURL("local.probe", work)
+        )
+    }
+
+    /// The escape hatch for a Space that would share a `WKWebsiteDataStore`
+    /// with another Space running the same package: WebKit keys service-worker
+    /// registrations by origin inside a data store, so the second Space takes
+    /// the hashed host back rather than colliding on a dormant registration.
+    func testRuntimeBaseURLFallsBackWhenASpaceSharesADataStore() throws {
+        let id = try XCTUnwrap(BrowserChromeExtensionID(darkReaderID))
+        let source = BrowserChromeWebStoreSource(
+            extensionID: id,
+            storeURL: URL(
+                string: "https://chromewebstore.google.com/detail/dark-reader/\(darkReaderID)"
+            )!,
+            crxSHA256Hex: String(repeating: "a", count: 64),
+            publisherKeyHashHex: BrowserCRX3Verifier.chromeWebStorePublisherKeyHash.hexString
+        )
+        let spaceID = SpaceID()
+
+        let identity = BrowserExtensionRuntimeIdentifierPolicy.identity(
+            extensionID: darkReaderID,
+            source: .chromeWebStore(source),
+            spaceID: spaceID,
+            sharesDataStoreWithAnotherContext: true
+        )
+
+        XCTAssertEqual(
+            identity.baseURL.absoluteString,
+            hashedBaseURL(darkReaderID, spaceID)
+        )
+        // Only the origin moves. The extension-visible identity, and the data
+        // record it is stored under, stay the verified store ID.
+        XCTAssertEqual(identity.uniqueIdentifier, darkReaderID)
+        XCTAssertEqual(identity.referenceEnvironment, .chromium)
+    }
+
+    private func hashedBaseURL(_ extensionID: String, _ spaceID: SpaceID) -> String {
+        let originIdentifier =
+            "\(extensionID).space.\(spaceID.rawValue.uuidString.lowercased())"
+        let digest = SHA256.hash(data: Data(originIdentifier.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return "chrome-extension://extension-\(digest)/"
+    }
+
     func testServiceClientIdentityScopesVerifiedStoreRuntimeBySpace()
         throws
     {

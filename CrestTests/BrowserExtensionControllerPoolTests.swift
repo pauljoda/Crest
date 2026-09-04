@@ -2217,6 +2217,63 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertTrue(first === repeatedFirst)
     }
 
+    /// Every Space owns a `BrowsingProfile`, and a Space's extension
+    /// controller is built on `WKWebsiteDataStore(forIdentifier: profile.id)`,
+    /// so the service-worker registration a hashed host used to protect is
+    /// already partitioned per Space. A verified store package therefore keeps
+    /// its real Chrome origin everywhere, which is what an embedded surface's
+    /// `frame-ancestors` list and `ancestorOrigins` check compare against.
+    func testVerifiedStorePackageKeepsItsStoreOriginInEverySpace() async throws {
+        let browser = BrowserStore.preview()
+        let pool = BrowserExtensionControllerPool()
+        pool.connect(browser: browser, pageProvider: PageProviderSpy())
+        let work = browser.session.spaces[0]
+        let personal = browser.session.spaces[1]
+        XCTAssertNotEqual(work.profile.id, personal.profile.id)
+        let storeID = try XCTUnwrap(
+            BrowserChromeExtensionID("abcdefghijklmnopabcdefghijklmnop")
+        )
+        let source = BrowserExtensionInstallationSource.chromeWebStore(
+            BrowserChromeWebStoreSource(
+                extensionID: storeID,
+                storeURL: URL(
+                    string:
+                        "https://chromewebstore.google.com/detail/probe/\(storeID.rawValue)"
+                )!,
+                crxSHA256Hex: String(repeating: "a", count: 64),
+                publisherKeyHashHex: String(repeating: "b", count: 64)
+            )
+        )
+
+        let workContext = try await pool.loadExtension(
+            at: fixtureURL,
+            extensionID: storeID.rawValue,
+            in: work,
+            source: source
+        )
+        let personalContext = try await pool.loadExtension(
+            at: fixtureURL,
+            extensionID: storeID.rawValue,
+            in: personal,
+            source: source
+        )
+
+        XCTAssertEqual(
+            workContext.baseURL.absoluteString,
+            "chrome-extension://\(storeID.rawValue)/"
+        )
+        XCTAssertEqual(personalContext.baseURL, workContext.baseURL)
+        XCTAssertEqual(workContext.uniqueIdentifier, storeID.rawValue)
+        XCTAssertEqual(personalContext.uniqueIdentifier, storeID.rawValue)
+        XCTAssertFalse(
+            pool.runtimeContextController
+                .sharesDataStoreWithAnotherLoadedContext(
+                    extensionID: storeID.rawValue,
+                    in: personal
+                )
+        )
+    }
+
     func testTabAdapterRejectsAContextOwnedByAnotherSpace() async throws {
         let browser = BrowserStore.preview()
         let pool = BrowserExtensionControllerPool()

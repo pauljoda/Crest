@@ -5,6 +5,12 @@ struct BrowserExtensionStoredResourcePreparationRequest {
     let source: BrowserExtensionInstallationSource?
     let spaceID: SpaceID
     let requestedPermissions: [String]
+    /// Mirrors the flag `BrowserExtensionRuntimeContextController` will hand
+    /// `BrowserExtensionRuntimeIdentifierPolicy` when it loads this package.
+    /// The generated compatibility runtime bakes the base URL in as a literal
+    /// and compares `location.href` against it, so the preparer has to reach
+    /// the same identity the context will run under.
+    var sharesDataStoreWithAnotherContext = false
 }
 
 @MainActor

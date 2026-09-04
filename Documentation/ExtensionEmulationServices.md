@@ -259,8 +259,10 @@ Limits worth knowing:
   `URLSession` with the cookie jar, credential store, and URL cache removed. An
   extension socket carries the extension's own credentials in its payload.
 - **The `Origin` header is the extension's Chrome-style origin**
-  (`chrome-extension://<store id>`), not Crest's per-Space runtime origin, which
-  no local app server would recognize.
+  (`chrome-extension://<store id>`), which is what a local app server
+  allow-lists. It is derived from the per-Space client identity rather than
+  read off the context's base URL, so it stays correct for a Space that ever
+  has to fall back to a hashed per-Space host.
 - **Binary is base64.** Native-messaging payloads are JSON, so every binary
   frame is encoded in both directions. A `Blob` sent from the worker is read
   first and queued so it cannot be overtaken by a later `send`.

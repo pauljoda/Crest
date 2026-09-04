@@ -123,7 +123,7 @@ extension BrowserExtensionInstallationController {
                 package,
                 extensionID: extensionID,
                 source: source,
-                spaceID: space.id,
+                space: space,
                 requestedPermissions: candidate.requestedPermissions
             )
             pendingLifecycle = prepareContextMenuInstallLifecycle(
@@ -276,7 +276,7 @@ extension BrowserExtensionInstallationController {
                 package,
                 extensionID: extensionID,
                 source: source,
-                spaceID: space.id,
+                space: space,
                 requestedPermissions: candidate.requestedPermissions
             )
             pendingLifecycle = prepareContextMenuInstallLifecycle(
@@ -428,7 +428,7 @@ extension BrowserExtensionInstallationController {
                 package,
                 extensionID: extensionID,
                 source: source,
-                spaceID: space.id,
+                space: space,
                 requestedPermissions: candidate.requestedPermissions
             )
             pendingLifecycle = prepareContextMenuInstallLifecycle(
@@ -557,7 +557,7 @@ extension BrowserExtensionInstallationController {
         _ package: BrowserExtensionPackage,
         extensionID: String,
         source: BrowserExtensionInstallationSource,
-        spaceID: SpaceID,
+        space: BrowserSpace,
         requestedPermissions: [String]
     ) throws -> BrowserExtensionStoredResource? {
         try storedResourcePreparer.prepare(
@@ -565,8 +565,13 @@ extension BrowserExtensionInstallationController {
             request: BrowserExtensionStoredResourcePreparationRequest(
                 extensionID: extensionID,
                 source: source,
-                spaceID: spaceID,
-                requestedPermissions: requestedPermissions
+                spaceID: space.id,
+                requestedPermissions: requestedPermissions,
+                sharesDataStoreWithAnotherContext:
+                    runtime.sharesDataStoreWithAnotherLoadedContext(
+                        extensionID: extensionID,
+                        in: space
+                    )
             )
         )
     }

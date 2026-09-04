@@ -57,7 +57,9 @@ struct BrowserStoreWebExtensionStoredResourcePreparer:
                         .identity(
                             extensionID: request.extensionID,
                             source: request.source,
-                            spaceID: request.spaceID
+                            spaceID: request.spaceID,
+                            sharesDataStoreWithAnotherContext:
+                                request.sharesDataStoreWithAnotherContext
                         )
                 )
         else {

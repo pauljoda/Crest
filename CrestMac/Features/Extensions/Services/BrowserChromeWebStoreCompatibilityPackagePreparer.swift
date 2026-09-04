@@ -511,9 +511,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             // Keep WebKit's native worker boundary for both worker types.
             // Hosting a module worker in a generated background document
             // makes that document visible to same-origin channels, but WebKit
-            // does not route native runtime Ports or messages into it. Stable
-            // per-Space origins already prevent one context from reusing
-            // another context's service-worker registration.
+            // does not route native runtime Ports or messages into it. A
+            // verified store package now shares one origin across Spaces; what
+            // keeps one context from reusing another's service-worker
+            // registration is the per-Space `WKWebsiteDataStore` each Space's
+            // extension controller is built on.
             let backgroundBootstrapName = try installServiceWorkerBootstrap(
                 in: resourceURL,
                 serviceWorker: serviceWorker,

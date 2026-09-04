@@ -80,7 +80,12 @@ final class BrowserExtensionInstallationController {
                     extensionID: package.extensionID,
                     source: source,
                     spaceID: space.id,
-                    requestedPermissions: requestedPermissions
+                    requestedPermissions: requestedPermissions,
+                    sharesDataStoreWithAnotherContext:
+                        runtime.sharesDataStoreWithAnotherLoadedContext(
+                            extensionID: package.extensionID,
+                            in: space
+                        )
                 )
             )
             pendingLifecycle = prepareContextMenuInstallLifecycle(
