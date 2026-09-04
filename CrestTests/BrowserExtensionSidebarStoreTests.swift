@@ -123,6 +123,25 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertEqual(store.optionsRevision, revision)
     }
 
+    func testRepairDropsAContextualPanelWhoseTabClosedWithoutOverlappingAccess() throws {
+        // Claude's login opened a tab, the coordinator reconciled the session,
+        // and repair trapped on overlapping access to `contextualPresentations`
+        // while a tab-specific panel was showing. Debug builds abort on that.
+        let store = makeStore()
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.open(for: client, in: window, tab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.tabID, tab)
+        let survivor = BrowserTab(title: "Example", url: URL(string: "https://example.com/")!, placement: .current)
+        let browserSpace = BrowserSpace(
+            id: space, profile: BrowsingProfile(), name: "Work", symbol: "briefcase",
+            accent: .indigo, folders: [], tabs: [survivor], selectedTabID: survivor.id
+        )
+        store.repair(using: BrowserSession(spaces: [browserSpace], selectedSpaceID: space))
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab))
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+    }
+
     func testOpeningInactiveTabPanelDoesNotReplaceVisibleGlobalPanel() throws {
         let store = makeStore()
         let inactiveTab = TabID()

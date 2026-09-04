@@ -329,11 +329,14 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
                 continue
             }
             registrations[client]?.registry.repair(liveTabs: Set(space.tabs.map(\.id)))
-            for window in contextualPresentations.keys {
-                contextualPresentations[window]?[space.id] = contextualPresentations[window]?[space.id]?.filter {
-                    space.contains($0.key)
-                }
-                closedTabs[window]?[space.id] = closedTabs[window]?[space.id]?.filter { space.contains($0) }
+            // `a?[k] = rhs` opens the write to `a` before evaluating `rhs`, so
+            // reading the same dictionary on the right side is an exclusivity
+            // violation. Compute the survivors first, then store them.
+            for window in Array(contextualPresentations.keys) {
+                let liveContextual = contextualPresentations[window]?[space.id]?.filter { space.contains($0.key) }
+                contextualPresentations[window]?[space.id] = liveContextual
+                let liveClosed = closedTabs[window]?[space.id]?.filter { space.contains($0) }
+                closedTabs[window]?[space.id] = liveClosed
             }
             for (window, spaces) in visibility {
                 guard let current = spaces[space.id], let tab = current.tabID, !space.contains(tab) else { continue }

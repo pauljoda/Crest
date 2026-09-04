@@ -481,6 +481,10 @@
     "2026-09-04-extension-toolbar-alignment-and-badges": {
       "category": "fixed",
       "message": "Keep pinned extension icons centered and badge text on one line"
+    },
+    "2026-09-04-extension-side-panel-tab-close-crash": {
+      "category": "fixed",
+      "message": "Stop a crash when an extension opens a new tab while its tab-specific side panel is showing"
     }
   }
 }
