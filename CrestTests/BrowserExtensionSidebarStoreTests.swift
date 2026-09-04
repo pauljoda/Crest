@@ -138,6 +138,23 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertTrue(store.isOpen(for: client, in: window))
     }
 
+    func testOpeningAGlobalPanelReplacesTheActiveTabsContextualPanel() throws {
+        let store = makeStore()
+        store.register(
+            client: other, spaceID: space, defaults: .init(flavor: .sidePanel),
+            displayName: "Other", baseURL: URL(string: "webkit-extension://other/")!)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: other)
+        try store.open(for: other, in: window, tab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.clientID, other)
+        // Chrome shows the panel opened last: another extension's global panel
+        // takes over the tab that was showing a tab-specific one.
+        try store.open(for: client, in: window, tab: nil)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.clientID, client)
+        XCTAssertTrue(store.isOpen(for: client, in: window))
+        XCTAssertFalse(store.isOpen(for: other, in: window))
+    }
+
     func testClosingInactiveTabPanelDoesNotCloseVisiblePanel() throws {
         let store = makeStore()
         let inactiveTab = TabID()

@@ -79,6 +79,12 @@ final class BrowserExtensionSidebarHost {
 
     var canToggle: Bool { panel != nil || preferredPanel != nil }
 
+    /// The icon a switcher row shows for `candidate`; the presented panel's
+    /// icon is cached on `icon`, the others are read on demand.
+    func icon(for candidate: BrowserExtensionSidebarPanel) -> NSImage? {
+        candidate.clientID == panel?.clientID ? icon : pages.extensionSidebarIcon(for: candidate)
+    }
+
     var availablePanels: [BrowserExtensionSidebarPanel] {
         guard let space = browser.selectedSpace, !spaceAccess.isLocked(space), browser.selectedTab != nil else {
             return []

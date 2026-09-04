@@ -6,6 +6,57 @@ import XCTest
 
 final class BrowserChromeLayoutTests: XCTestCase {
     @MainActor
+    func testPinnedExtensionButtonsStayCenteredDuringLayoutChanges() throws {
+        let actions = (0..<3).map {
+            BrowserExtensionActionPresentation(
+                id: "layout-\($0)", displayName: "Extension \($0)", isPinned: true
+            )
+        }
+        let host = NSHostingView(
+            rootView: BrowserPinnedExtensionActionList(actions: actions, perform: { _, _ in })
+                .environment(\.displayScale, 2)
+        )
+        let window = NSWindow(
+            contentRect: CGRect(x: 100, y: 100, width: 262, height: 32),
+            styleMask: [.borderless], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        window.orderFront(nil)
+        defer { window.close() }
+
+        for (width, height, scale) in [
+            (262.0, 32.0, 2.0), (180.0, 32.0, 1.0), (340.0, 16.0, 2.0),
+            (262.0, 32.0, 1.0), (262.0, 1.0, 2.0), (262.0, 32.0, 1.0),
+        ] {
+            host.rootView = BrowserPinnedExtensionActionList(actions: actions, perform: { _, _ in })
+                .environment(\.displayScale, scale)
+            window.setContentSize(CGSize(width: width, height: height))
+            host.layoutSubtreeIfNeeded()
+            guard height == 32 else { continue }
+            RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+            host.layoutSubtreeIfNeeded()
+            let buttons = extensionButtonViews(in: host)
+            XCTAssertEqual(buttons.count, 3)
+            for button in buttons {
+                let frame = button.convert(button.bounds, to: host)
+                XCTAssertEqual(frame.height, 24, accuracy: 0.5)
+                XCTAssertEqual(frame.midY, host.bounds.midY, accuracy: 0.5)
+            }
+            let frames = buttons.map { $0.convert($0.bounds, to: host) }
+            let first = try XCTUnwrap(frames.map(\.minX).min())
+            let last = try XCTUnwrap(frames.map(\.maxX).max())
+            XCTAssertEqual((first + last) / 2, host.bounds.midX, accuracy: 0.5)
+        }
+    }
+
+    @MainActor
+    private func extensionButtonViews(in view: NSView) -> [BrowserExtensionContextMenuTriggerView] {
+        if let button = view as? BrowserExtensionContextMenuTriggerView { return [button] }
+        return view.subviews.flatMap { extensionButtonViews(in: $0) }
+    }
+
+    @MainActor
     func testSetupActivationRejectsBrowserWithSetupPageTitle() {
         let browser = NSWindow()
         browser.identifier = NSUserInterfaceItemIdentifier(BrowserSceneID.browser.rawValue)

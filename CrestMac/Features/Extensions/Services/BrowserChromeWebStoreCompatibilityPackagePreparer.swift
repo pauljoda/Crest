@@ -1629,6 +1629,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             const source = diagnosticsSource();
                             if (
                                 traceReportCount >= diagnosticsTraceReportLimit
+                                && !String(op).startsWith("capability.")
                             ) {
                                 if (reportedTraceSuppression) return;
                                 reportedTraceSuppression = true;

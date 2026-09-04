@@ -181,9 +181,10 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
             contextualPresentations[window, default: [:]][registration.spaceID, default: [:]][tabID] = presentation
         } else {
             if let tab { contextualPresentations[window]?[registration.spaceID]?[tab] = nil }
-            if registration.registry.defaults.flavor == .sidebarAction,
-                let active = visibility[window]?[registration.spaceID]?.tabID
-            {
+            // Chrome shows whichever panel was opened last: a global panel
+            // opened while another extension's tab-specific panel is showing
+            // takes over that tab. Firefox has one sidebar per window anyway.
+            if let active = visibility[window]?[registration.spaceID]?.tabID {
                 contextualPresentations[window]?[registration.spaceID]?[active] = nil
             }
             presentationsByWindow[window, default: [:]][registration.spaceID] = presentation

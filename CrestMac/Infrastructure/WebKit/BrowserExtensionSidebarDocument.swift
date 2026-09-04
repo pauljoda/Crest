@@ -1,6 +1,12 @@
 import AppKit
 import Observation
 import WebKit
+import os
+
+private let browserExtensionSidebarDocumentLog = Logger(
+    subsystem: ProductIdentity.serviceNamespace,
+    category: "extension-sidebar"
+)
 
 struct BrowserExtensionSidebarKey: Hashable {
     let windowID: BrowserWindowID
@@ -37,6 +43,7 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
         webView.isInspectable = true
         webView.underPageBackgroundColor = .clear
         webView.appearance = NSApp.effectiveAppearance
+        browserExtensionSidebarDocumentLog.info("panel document load \(url.absoluteString, privacy: .public)")
         webView.load(URLRequest(url: url))
     }
 
@@ -85,15 +92,23 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
         return nil
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) { errorDescription = nil }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
+        browserExtensionSidebarDocumentLog.info(
+            "panel document finished \(webView.url?.absoluteString ?? "<nil>", privacy: .public)")
+        errorDescription = nil
+    }
 
     func webView(
         _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation?, withError error: any Error
     ) {
+        browserExtensionSidebarDocumentLog.error(
+            "panel document provisional failure \(String(describing: error), privacy: .public)")
         if (error as NSError).code != NSURLErrorCancelled { errorDescription = error.localizedDescription }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation?, withError error: any Error) {
+        browserExtensionSidebarDocumentLog.error(
+            "panel document failure \(String(describing: error), privacy: .public)")
         if (error as NSError).code != NSURLErrorCancelled { errorDescription = error.localizedDescription }
     }
 

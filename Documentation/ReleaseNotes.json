@@ -473,6 +473,10 @@
     "2026-09-04-extension-tab-identity-root-urls": {
       "category": "fixed",
       "message": "Keep extension side panels, tab groups and debugging working on tabs at a site's root address"
+    },
+    "2026-09-04-extension-side-panel-switching": {
+      "category": "improved",
+      "message": "Show each extension's icon in the side panel switcher, and let the panel you open last take over the card"
     }
   }
 }
