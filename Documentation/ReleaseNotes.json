@@ -437,6 +437,10 @@
     "2026-09-03-extension-tab-groups": {
       "category": "new",
       "message": "Support extensions that organize tabs into groups"
+    },
+    "2026-09-03-extension-runtime-contexts": {
+      "category": "improved",
+      "message": "Improve compatibility with extensions that use Chrome's runtime, badge and network-rule constants"
     }
   }
 }

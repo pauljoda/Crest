@@ -143,6 +143,10 @@ enum BrowserExtensionAPICompatibilityMatrix {
             broker: ["contextMenus", "menus"]
         ),
         contract("cookies", permissions: ["cookies"]),
+        // WebKit implements the methods and publishes none of the schema's
+        // enums or limits. The namespace is WebKit's, member for member; the
+        // constants below are added to it in place, and only when WebKit
+        // published the namespace at all.
         contract(
             "declarativeNetRequest",
             permissions: [
@@ -151,7 +155,7 @@ enum BrowserExtensionAPICompatibilityMatrix {
                 "declarativeNetRequestWithHostAccess",
             ],
             webKit: .partial,
-            crest: .native
+            crest: .nativePatched
         ),
         contract(
             "devtools",
@@ -461,6 +465,21 @@ enum BrowserExtensionAPICompatibilityMatrix {
     /// the `presenceOnly` fillers `emulatedSurface` implies.
     private static let routedMembers: [BrowserExtensionAPIMemberContract] = [
         member("action.getUserSettings", crest: .nativePatched),
+        // Crest draws its own toolbar badge, so there is no WebKit text color
+        // for a later OS release to take back: `emulated`. The call is
+        // validated the way Chrome validates it and then accepted without
+        // changing anything the user can see — packages call it inside a
+        // `try` that reads a throw as "badges are broken".
+        member("action.setBadgeTextColor", webKit: .unavailable, crest: .emulated),
+        // `presenceOnly`, not `emulated`: the object is a real listener
+        // registry, and Crest has no toolbar-pinning change to deliver
+        // through it. A future WebKit implementation must win rather than be
+        // displaced by a permanently silent placeholder.
+        member(
+            "action.onUserSettingsChanged",
+            webKit: .unavailable,
+            crest: .presenceOnly
+        ),
         member("alarms.onAlarm", crest: .nativePatched),
         member("contextMenus.create", crest: .nativePatched),
         member("contextMenus.onClicked", crest: .nativePatched),
@@ -468,6 +487,119 @@ enum BrowserExtensionAPICompatibilityMatrix {
         member("contextMenus.removeAll", crest: .nativePatched),
         member("contextMenus.update", crest: .nativePatched),
         member("browserAction.getUserSettings", crest: .nativePatched),
+        // Crest aliases `action` onto `browserAction`, one shared object, so
+        // every member added to one needs a row for both or the routing
+        // filter drops it from the alias.
+        member(
+            "browserAction.setBadgeTextColor",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "browserAction.onUserSettingsChanged",
+            webKit: .unavailable,
+            crest: .presenceOnly
+        ),
+        // WebKit implements this namespace's methods and publishes none of
+        // the schema's enums or limits, so a rule builder that reads
+        // `RuleActionType.MODIFY_HEADERS` while composing a rule throws.
+        // These are spec constants, identical in every browser that has them,
+        // so Crest owns them outright.
+        member(
+            "declarativeNetRequest.DomainType",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.HeaderOperation",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.RequestMethod",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.ResourceType",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.RuleActionType",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.UnsupportedRegexReason",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.DYNAMIC_RULESET_ID",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.SESSION_RULESET_ID",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.GUARANTEED_MINIMUM_STATIC_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.GETMATCHEDRULES_QUOTA_INTERVAL",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_GETMATCHEDRULES_CALLS_PER_INTERVAL",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_AND_SESSION_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_ENABLED_STATIC_RULESETS",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_REGEX_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_SESSION_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_STATIC_RULESETS",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_UNSAFE_DYNAMIC_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "declarativeNetRequest.MAX_NUMBER_OF_UNSAFE_SESSION_RULES",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
         member(
             "downloads.download",
             webKit: .unavailable,
@@ -626,6 +758,41 @@ enum BrowserExtensionAPICompatibilityMatrix {
         ),
         member("runtime.onUpdateAvailable", crest: .nativePatched),
         member("runtime.requestUpdateCheck", crest: .nativePatched),
+        // WebKit's runtime IDL publishes no `getContexts` and none of the
+        // schema's enums. Packages read both unguarded — a side-panel toggle
+        // asks `getContexts` which of its documents are already open, and an
+        // install handler compares against `OnInstalledReason.INSTALL` — so an
+        // absent enum throws inside whatever awaited it. Crest answers
+        // `getContexts` from the registries it actually owns, and the enums
+        // are schema constants it owns outright.
+        member(
+            "runtime.getContexts",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member("runtime.ContextType", webKit: .unavailable, crest: .emulated),
+        member(
+            "runtime.OnInstalledReason",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member(
+            "runtime.OnRestartRequiredReason",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member("runtime.PlatformArch", webKit: .unavailable, crest: .emulated),
+        member(
+            "runtime.PlatformNaclArch",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
+        member("runtime.PlatformOs", webKit: .unavailable, crest: .emulated),
+        member(
+            "runtime.RequestUpdateCheckStatus",
+            webKit: .unavailable,
+            crest: .emulated
+        ),
         member("scripting.ExecutionWorld", crest: .nativePatched),
         member(
             "storage.local",

@@ -4891,6 +4891,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         return Promise.resolve({ status: "no_update" });
                     }
                 };
+                \(BrowserExtensionRuntimeContextsCompatibilityScript.source)
+                \(BrowserExtensionDeclarativeNetRequestCompatibilityScript.source)
                 // The routed fallback set does not depend on which root asks
                 // for it — routes, processes, and declared permissions are
                 // fixed for the life of this context. Computing it once means
@@ -4906,6 +4908,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     const fallbacks = {
                         action,
                         browserAction: action,
+                        declarativeNetRequest,
                         scripting,
                         permissions,
                         privacy: {

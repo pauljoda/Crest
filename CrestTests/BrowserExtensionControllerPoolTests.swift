@@ -60,6 +60,89 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertThrowsError(try send(["api": "sidebarAction.getTitle", "scope": ["kind": "default"]]))
     }
 
+    /// `runtime` gates on no permission, so the broker asks only that the
+    /// context may use the internal broker at all, and answers from the
+    /// document registries Crest owns.
+    func testRuntimeGetContextsReportsHostedDocumentsWithTheirTabScope() async throws {
+        let pool = BrowserExtensionControllerPool()
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let tab = try XCTUnwrap(space.tabs.first)
+        let pages = PageProviderSpy()
+        pool.connect(browser: browser, pageProvider: pages)
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "Fixtures/SidePanelProbeExtension", directoryHint: .isDirectory)
+        let context = try await pool.loadExtension(at: fixture, extensionID: "contexts-probe", in: space)
+        let panelURL = context.baseURL.appending(path: "panel.html").appending(
+            queryItems: [URLQueryItem(name: "tabId", value: "42")])
+        pages.sidebarDocuments = [
+            .init(contextID: "panel-context", url: panelURL, tabID: tab.id)
+        ]
+        pages.offscreenDocument = .init(
+            contextID: "offscreen-context", url: context.baseURL.appending(path: "offscreen.html"), tabID: nil)
+        func send(_ payload: [String: Any]) throws -> [String: Any] {
+            var value: Any?
+            var failure: Error?
+            pool.tabWindowCoordinator.webExtensionController(
+                pool.controller(for: space), sendMessage: payload,
+                toApplicationWithIdentifier: BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier,
+                for: context
+            ) {
+                value = $0
+                failure = $1
+            }
+            if let failure { throw failure }
+            return try XCTUnwrap(value as? [String: Any])
+        }
+
+        // An unverified context cannot enumerate another extension's documents.
+        XCTAssertThrowsError(try send(["api": "runtime.getContexts", "filter": [String: Any]()]))
+
+        pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+            .init(
+                grantedPermissions: [],
+                clientID: .scoped(extensionID: "contexts-probe", spaceID: space.id),
+                allowsInternalCapabilityBroker: true
+            ),
+            for: context
+        )
+        let all = try XCTUnwrap(
+            try send(["api": "runtime.getContexts", "filter": [String: Any]()])["contexts"]
+                as? [[String: Any]])
+        XCTAssertEqual(
+            all.map { $0["contextType"] as? String },
+            ["BACKGROUND", "OFFSCREEN_DOCUMENT", "SIDE_PANEL"])
+        let origin = "\(context.baseURL.scheme ?? "")://\(context.baseURL.host() ?? "")"
+        XCTAssertEqual(all[0]["contextId"] as? String, context.uniqueIdentifier)
+        XCTAssertNil(all[0]["documentUrl"])
+        XCTAssertEqual(all[0]["documentOrigin"] as? String, origin)
+        XCTAssertEqual(all[1]["contextId"] as? String, "offscreen-context")
+        XCTAssertEqual(
+            all[1]["documentUrl"] as? String,
+            context.baseURL.appending(path: "offscreen.html").absoluteString)
+        let panel = all[2]
+        XCTAssertEqual(panel["contextId"] as? String, "panel-context")
+        XCTAssertEqual(panel["documentUrl"] as? String, panelURL.absoluteString)
+        XCTAssertEqual(panel["windowKind"] as? String, "primary")
+        XCTAssertEqual(panel["tabIndex"] as? Int, 0)
+        XCTAssertEqual(panel["tabURL"] as? String, tab.url?.absoluteString)
+        XCTAssertEqual(panel["frameId"] as? Int, 0)
+        XCTAssertEqual(panel["incognito"] as? Bool, false)
+
+        let panelsOnly = try XCTUnwrap(
+            try send(["api": "runtime.getContexts", "filter": ["contextTypes": ["SIDE_PANEL"]]])["contexts"]
+                as? [[String: Any]])
+        XCTAssertEqual(panelsOnly.count, 1)
+        XCTAssertEqual(panelsOnly[0]["contextId"] as? String, "panel-context")
+
+        pages.sidebarDocuments = []
+        pages.offscreenDocument = nil
+        let backgroundOnly = try XCTUnwrap(
+            try send(["api": "runtime.getContexts", "filter": [String: Any]()])["contexts"]
+                as? [[String: Any]])
+        XCTAssertEqual(backgroundOnly.map { $0["contextType"] as? String }, ["BACKGROUND"])
+    }
+
     func testSidebarRegistersWithItsSpaceAndUnregistersOnRemoval() async throws {
         let pool = BrowserExtensionControllerPool()
         let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
@@ -107,6 +190,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         var webViews: [TabID: WKWebView] = [:]
         var readerModeStates: [TabID: BrowserReaderModeState] = [:]
         var windowGeometry = BrowserExtensionWindowGeometry.unavailable
+        var sidebarDocuments: [BrowserExtensionHostedDocument] = []
+        var offscreenDocument: BrowserExtensionHostedDocument?
 
         func extensionWebView(
             for tabID: TabID,
@@ -196,6 +281,20 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 extensionBaseURL,
                 spaceID
             ) ?? hasOffscreenDocument
+        }
+
+        func extensionOffscreenDocument(
+            extensionBaseURL: URL,
+            in spaceID: SpaceID
+        ) -> BrowserExtensionHostedDocument? {
+            offscreenDocument
+        }
+
+        func extensionSidebarDocuments(
+            extensionBaseURL: URL,
+            in spaceID: SpaceID
+        ) -> [BrowserExtensionHostedDocument] {
+            sidebarDocuments
         }
 
         func extensionWindowGeometry(

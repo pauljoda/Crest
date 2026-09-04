@@ -61,4 +61,20 @@ extension BrowserPagePool {
     func closeExtensionSidebars(extensionBaseURL: URL, in spaceID: SpaceID) {
         closeExtensionSidebars(inSpace: spaceID, baseURL: extensionBaseURL)
     }
+
+    /// The side-panel documents this extension has loaded in the Space.
+    ///
+    /// The registry, not the sidebar store, is the authority here: the store
+    /// records what an extension asked to present, and `runtime.getContexts`
+    /// answers for documents that exist. A document whose web view is gone is
+    /// no longer a context.
+    func extensionSidebarDocuments(extensionBaseURL: URL, in spaceID: SpaceID)
+        -> [BrowserExtensionHostedDocument]
+    {
+        extensionSidebarDocuments.filter {
+            $0.key.spaceID == spaceID && $0.key.extensionBaseURL == extensionBaseURL && $0.value.webView != nil
+        }.values.map {
+            BrowserExtensionHostedDocument(contextID: $0.contextID, url: $0.url, tabID: $0.tabID)
+        }.sorted { $0.contextID < $1.contextID }
+    }
 }

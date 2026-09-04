@@ -426,6 +426,28 @@ final class BrowserPagePool:
         ] != nil
     }
 
+    func extensionOffscreenDocument(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) -> BrowserExtensionHostedDocument? {
+        guard
+            let document = extensionOffscreenDocuments[
+                ExtensionOffscreenDocumentKey(
+                    spaceID: spaceID,
+                    extensionBaseURL: extensionBaseURL
+                )
+            ],
+            let url = document.url
+        else {
+            return nil
+        }
+        return BrowserExtensionHostedDocument(
+            contextID: document.contextID,
+            url: url,
+            tabID: nil
+        )
+    }
+
     func loadExtensionURL(
         _ url: URL,
         for tabID: TabID,
@@ -2329,6 +2351,10 @@ final class BrowserPagePool:
 private final class BrowserExtensionOffscreenDocument: NSObject,
     WKNavigationDelegate
 {
+    /// This document's `runtime.getContexts` identity, and the URL it holds.
+    /// Both live and die with the document, as a Chrome context ID does.
+    let contextID = UUID().uuidString
+    private(set) var url: URL?
     private let webView: WKWebView
     private var loadContinuation: CheckedContinuation<Void, any Error>?
 
@@ -2343,6 +2369,7 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
         guard loadContinuation == nil else {
             throw BrowserExtensionOffscreenDocumentError.alreadyExists
         }
+        self.url = url
         try await withCheckedThrowingContinuation { continuation in
             loadContinuation = continuation
             guard webView.load(URLRequest(url: url)) != nil else {

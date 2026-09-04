@@ -78,6 +78,20 @@ struct BrowserExtensionOffscreenDocumentRequest: Equatable, Sendable {
     }
 }
 
+/// One extension document Crest hosts outside the tab strip.
+///
+/// `runtime.getContexts` reports the document that is actually loaded, not the
+/// intent that asked for it: an extension reads the query string back off
+/// `documentUrl` to recognize its own panel, so a stored path would answer for
+/// a document that never opened. `contextID` is minted with the document and
+/// dies with it, which is the lifetime Chrome gives a context ID.
+struct BrowserExtensionHostedDocument: Equatable, Sendable {
+    let contextID: String
+    let url: URL
+    /// The tab the document is scoped to, or nil for a Space-wide document.
+    let tabID: TabID?
+}
+
 struct BrowserExtensionDownloadRequest: Equatable, Sendable {
     let url: URL
     let filename: String?
@@ -196,6 +210,19 @@ protocol BrowserExtensionPageProviding:
         in spaceID: SpaceID
     ) -> Bool
 
+    /// The extension's loaded offscreen document, if it has one here.
+    func extensionOffscreenDocument(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) -> BrowserExtensionHostedDocument?
+
+    /// Every side-panel document this extension currently has loaded in the
+    /// Space, across the Space's windows.
+    func extensionSidebarDocuments(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) -> [BrowserExtensionHostedDocument]
+
     func closeExtensionSidebars(extensionBaseURL: URL, in spaceID: SpaceID)
 
     /// The placement of the real window presenting the Space, or
@@ -236,6 +263,20 @@ extension BrowserExtensionPageProviding {
         in spaceID: SpaceID
     ) -> Bool {
         false
+    }
+
+    func extensionOffscreenDocument(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) -> BrowserExtensionHostedDocument? {
+        nil
+    }
+
+    func extensionSidebarDocuments(
+        extensionBaseURL: URL,
+        in spaceID: SpaceID
+    ) -> [BrowserExtensionHostedDocument] {
+        []
     }
 
     func startExtensionDownload(

@@ -109,6 +109,15 @@ extension BrowserExtensionTabWindowCoordinator {
         ) {
             return
         }
+        if handleCapabilityBrokerRuntimeContexts(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
         if handleCapabilityBrokerDownload(
             message,
             applicationIdentifier: applicationIdentifier,

@@ -337,6 +337,63 @@ pretending otherwise:
 - `TabGroup.shared` is always `false`. Chrome's shared and saved groups are a
   sync feature Crest has no equivalent for, and reporting `false` is the truth
   rather than a stub.
+## Context enumeration — `chrome.runtime.getContexts`
+
+WebKit's runtime IDL publishes no `getContexts` and none of Chrome's `runtime`
+enums, so a package that reads `runtime.ContextType.SIDE_PANEL` or compares an
+install reason against `runtime.OnInstalledReason.INSTALL` throws where it
+expected a string. Crest publishes every enum the pinned Chromium
+`runtime.json` declares, frozen and member for member, and answers
+`getContexts` through the capability broker from the document registries it
+actually owns.
+
+`runtime` gates on no permission in Chrome and asks for none here: the handler
+requires only that the calling context is authorized to use the internal
+broker, the same reasoning that lets `diagnostics.report` past the grant table.
+
+Three context types are covered:
+
+- `SIDE_PANEL` — every side-panel document Crest currently has loaded for the
+  extension in the Space, reported with the document's live URL. Extensions
+  read their own query string back off `documentUrl` to recognize a panel, so
+  the document registry answers here, not the stored options. A tab-scoped
+  panel names its tab; a Space-wide panel reports `tabId: -1`.
+- `OFFSCREEN_DOCUMENT` — the Crest-hosted offscreen document, if the extension
+  has one in the Space.
+- `BACKGROUND` — one entry when the package has background content.
+  `documentUrl` follows the package's own declared manifest, so an MV3 worker
+  reports none and a background page or MV2 `scripts` background reports the
+  page URL. Crest's hosting choice does not leak through it.
+
+`POPUP`, `TAB`, and `DEVELOPER_TOOLS` are absent rather than guessed at:
+those documents live inside WebKit's page lifecycle, which publishes no
+enumeration Crest can read. `documentId` is likewise never reported, so a
+filter on `documentIds` matches nothing. `incognito` is always false — a
+private Space loads no extension controller. Tabs and windows cross the broker
+as a Space-relative tab index plus that tab's URL, exactly as the sidebar event
+channel reports them, and the page-side wrapper resolves them back to WebKit's
+numeric IDs through `tabs.query` before applying the complete `ContextFilter`.
+
+## Badge color and toolbar settings — `chrome.action`
+
+`action.setBadgeTextColor` is validated the way Chrome validates it — a CSS
+color string or four integers in 0…255, with an optional `tabId` — and then
+accepted without changing anything the user sees. Crest draws its own toolbar
+badge, and packages call this inside a `try` that reads a throw as "badges are
+broken". `action.onUserSettingsChanged` is a real listener registry that never
+fires: Crest has no toolbar-pinning change wired to extensions, so the matrix
+routes it `presenceOnly` and a future WebKit implementation displaces it rather
+than the other way round. Both are aliased onto `browserAction`.
+
+## Declarative rules — `chrome.declarativeNetRequest`
+
+WebKit implements this namespace's methods and publishes none of the schema's
+enums or numeric limits, so a rule builder that reads
+`RuleActionType.MODIFY_HEADERS` or `HeaderOperation.SET` while composing a rule
+throws. Crest adds every enum and constant the pinned Chromium
+`declarative_net_request.webidl` declares, in place on WebKit's own namespace
+object, and only when WebKit published that namespace at all: a namespace
+carrying constants and no `updateDynamicRules` is worse than an absent one.
 
 ## Notifications — `chrome.notifications`
 

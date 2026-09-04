@@ -15,6 +15,10 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     let url: URL
     let tabID: TabID?
     let extensionBaseURL: URL
+    /// This document's `runtime.getContexts` identity. Minted with the
+    /// document and gone when it closes, which is the lifetime Chrome gives a
+    /// context ID: a reopened panel is a new context, not the old one.
+    let contextID = UUID().uuidString
     private(set) var webView: WKWebView?
     private(set) var errorDescription: String?
     @ObservationIgnored private let openTab: (URL) -> Void
