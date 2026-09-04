@@ -420,6 +420,25 @@ That is the exact footprint Chrome exposes there. Rules:
   written to the `extension-diagnostics` log as shapes only — a type field and
   key names, never payload values.
 
+### Framed websites keep their own content security policy
+
+WebKit stamps an extension's manifest CSP mode on the whole web view: WebCore
+copies `page->contentSecurityPolicyModeForExtension()` into every document's
+policy in that view, cross-origin frames included, and Manifest V3 mode then
+limits `script-src` to `'self'`, refusing the framed site's nonces, hashes and
+asset hosts. Chrome applies that policy to extension-origin documents only.
+Claude's Cowork surface, an iframe of `https://claude.ai/cic/new` inside the
+side panel, rendered blank in Crest for exactly this reason: every one of
+claude.ai's scripts was refused under the extension's policy.
+
+`BrowserExtensionHostedPageConfigurationPolicy` clears the mode on the
+configuration copy Crest receives for the extension documents it hosts — the
+side panel, offscreen documents, and extension pages opened as tabs — so each
+document in those views is governed by its own policy, as on a web page. The
+trade-off, accepted for extensions within their Space, is that WebKit no longer
+enforces the manifest's Manifest V3 script restrictions on the extension's own
+page inside those views. WebKit-owned action popups are unaffected.
+
 ### Extension-created popup windows
 
 WebKit's `windows.create({ type: "popup" })` result is context-dependent. An

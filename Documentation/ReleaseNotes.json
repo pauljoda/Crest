@@ -533,6 +533,10 @@
     "2026-09-04-side-panel-frame-and-event-diagnostics": {
       "category": "internal",
       "message": "Log side panel subframe responses, sidebar watch subscriptions and published events, and trace side panel event delivery in the extension runtime"
+    },
+    "2026-09-04-extension-frame-content-security-policy": {
+      "category": "fixed",
+      "message": "Let websites an extension embeds in its side panel run under their own security policy instead of the extension’s"
     }
   }
 }

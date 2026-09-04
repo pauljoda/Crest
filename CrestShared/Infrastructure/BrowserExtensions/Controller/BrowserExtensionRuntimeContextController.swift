@@ -288,11 +288,15 @@ final class BrowserExtensionRuntimeContextController {
                     context.baseURL.host ?? ""
                 ) == .orderedSame
         }).flatMap { extensionID, context in
-            context.webViewConfiguration.map {
-                BrowserExtensionPageConfiguration(
+            context.webViewConfiguration.map { configuration in
+                // WebKit hands back a fresh copy, so clearing the mode here
+                // never reaches the popups WebKit builds for itself.
+                BrowserExtensionHostedPageConfigurationPolicy.clearExtensionContentSecurityPolicyMode(
+                    on: configuration)
+                return BrowserExtensionPageConfiguration(
                     baseURL: context.baseURL,
                     context: context,
-                    webViewConfiguration: $0,
+                    webViewConfiguration: configuration,
                     clientID: .scoped(extensionID: extensionID, spaceID: spaceID)
                 )
             }
