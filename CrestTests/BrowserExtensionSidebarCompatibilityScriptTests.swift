@@ -75,6 +75,22 @@ final class BrowserExtensionSidebarCompatibilityScriptTests: XCTestCase {
         XCTAssertEqual((result["subscription"] as? [String: String])?["api"], "sidebar.watch")
     }
 
+    func testThePrimaryWindowIsTheSpacesNormalWindowEvenWhenAPopupHasFocus() async throws {
+        let result = try await evaluate(
+            """
+            primaryRoot.windows = {
+                async getAll() { return [{id: 30, type: 'popup'}, {id: 12, type: 'normal'}]; },
+                async getCurrent() { return {id: 30, type: 'popup'}; }
+            };
+            activation = true;
+            await sidePanel.open({windowId: 12});
+            return {requests};
+            """)
+        let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
+        XCTAssertEqual(requests.map { $0["api"] as? String }, ["sidePanel.open"])
+        XCTAssertEqual(requests[0]["windowKind"] as? String, "primary")
+    }
+
     private func evaluate(_ body: String) async throws -> [String: Any] {
         let script = """
             let activation = false;

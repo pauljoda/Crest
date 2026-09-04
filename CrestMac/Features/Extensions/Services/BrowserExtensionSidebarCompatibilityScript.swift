@@ -16,7 +16,17 @@ enum BrowserExtensionSidebarCompatibilityScript {
         };
         const sidebarCall = (api, args, payload, transform = value => value, errorTransform = error => error) => {
             const response = Promise.resolve().then(payload).then(value => requestCapability(api, value, [], transform))
-                .catch(error => { throw errorTransform(error); });
+                .catch(error => {
+                    // A rejection raised before the broker is otherwise invisible
+                    // to diagnostics; name it so a failing extension call can be
+                    // read off the capture.
+                    try {
+                        if (capturesExtensionConsole) {
+                            reportRuntimeTrace(`${api}.failed`, {context: executionProcess, message: String(error?.message ?? error)});
+                        }
+                    } catch {}
+                    throw errorTransform(error);
+                });
             const callback = args.at(-1);
             if (typeof callback !== "function") return response;
             response.then(value => callback(value), error => invokeCallbackWithLastError(callback, error?.message ?? `${api} failed.`));
@@ -30,7 +40,18 @@ enum BrowserExtensionSidebarCompatibilityScript {
             }
             throw new Error(`Crest cannot resolve the sidebar's ${namespace} target.`);
         };
+        // Crest presents exactly one normal window per Space, so that window is
+        // the primary one whatever currently has focus. `windows.getCurrent`
+        // answers a background context with the focused window, which can be
+        // an extension-created popup (Claude's sign-in window, for one); an
+        // extension grouping tabs "in their own window" must not fail because
+        // of that, so the normal window is found directly first.
         const sidebarPrimaryWindowId = async () => {
+            let windows;
+            try { windows = await sidebarNative("windows", "getAll"); } catch {}
+            const normal = (Array.isArray(windows) ? windows : [])
+                .filter(window => Number.isInteger(window?.id) && (!window.type || window.type === "normal"));
+            if (normal.length === 1) return normal[0].id;
             const window = await sidebarNative("windows", "getCurrent");
             if (!Number.isInteger(window?.id) || (window.type && window.type !== "normal")) throw new Error("The extension side panel requires a regular browser window.");
             return window.id;

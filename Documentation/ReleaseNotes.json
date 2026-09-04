@@ -545,6 +545,10 @@
     "2026-09-04-extension-frame-message-relay": {
       "category": "fixed",
       "message": "Deliver messages from websites embedded in an extension’s side panel back to that extension, as Chrome does"
+    },
+    "2026-09-04-extension-window-resolution": {
+      "category": "fixed",
+      "message": "Let extensions group tabs and open side panels in your window even while one of their popup windows has focus"
     }
   }
 }
