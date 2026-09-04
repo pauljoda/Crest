@@ -181,6 +181,19 @@ final class BrowserExtensionControllerPool {
         tabWindowCoordinator.tabGroupService = service
     }
 
+    /// Installs the debugger session store and the consent gate in front of it.
+    ///
+    /// Both are supplied by the platform shell. Without a consent resolver no
+    /// attachment is ever authorized, so a pool assembled for a test or a
+    /// preview cannot silently grant page control.
+    func setDebuggerService(
+        _ service: (any BrowserExtensionDebuggerHandling)?,
+        consent: (@MainActor (BrowserExtensionDebuggerIdentity) async -> Bool)? = nil
+    ) {
+        tabWindowCoordinator.debuggerService = service
+        tabWindowCoordinator.debuggerConsent = consent
+    }
+
     func setUpdateModel(_ model: BrowserExtensionUpdateModel?) {
         updateModel?.cancelScheduledUpdates()
         updateModel = model

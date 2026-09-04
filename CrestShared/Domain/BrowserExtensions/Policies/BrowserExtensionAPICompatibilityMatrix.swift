@@ -148,6 +148,14 @@ enum BrowserExtensionAPICompatibilityMatrix {
         // constants below are added to it in place, and only when WebKit
         // published the namespace at all.
         contract(
+            "debugger",
+            permissions: ["debugger"],
+            webKit: .unavailable,
+            crest: .emulated,
+            runtime: true,
+            broker: ["debugger"]
+        ),
+        contract(
             "declarativeNetRequest",
             permissions: [
                 "declarativeNetRequest",
@@ -369,6 +377,16 @@ enum BrowserExtensionAPICompatibilityMatrix {
     /// `runtime.lastError` for the callback form — so this list is the single
     /// place a schema member is added to an emulated namespace.
     static let emulatedSurface: [String: [String]] = [
+        "debugger": [
+            "attach",
+            "detach",
+            "sendCommand",
+            "getTargets",
+            "onEvent",
+            "onDetach",
+            "DetachReason",
+            "TargetInfoType",
+        ],
         "downloads": [
             "download",
             "search",
@@ -600,6 +618,14 @@ enum BrowserExtensionAPICompatibilityMatrix {
             webKit: .unavailable,
             crest: .emulated
         ),
+        member("debugger.attach", webKit: .unavailable, crest: .emulated),
+        member("debugger.detach", webKit: .unavailable, crest: .emulated),
+        member("debugger.sendCommand", webKit: .unavailable, crest: .emulated),
+        member("debugger.getTargets", webKit: .unavailable, crest: .emulated),
+        member("debugger.onEvent", webKit: .unavailable, crest: .emulated),
+        member("debugger.onDetach", webKit: .unavailable, crest: .emulated),
+        member("debugger.DetachReason", webKit: .unavailable, crest: .emulated),
+        member("debugger.TargetInfoType", webKit: .unavailable, crest: .emulated),
         member(
             "downloads.download",
             webKit: .unavailable,

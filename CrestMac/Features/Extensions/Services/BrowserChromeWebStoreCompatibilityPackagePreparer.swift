@@ -4773,6 +4773,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 \(BrowserExtensionSidebarCompatibilityScript.source)
                 \(BrowserExtensionTabGroupsCompatibilityScript.source)
+                \(BrowserExtensionDebuggerCompatibilityScript.source)
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 const isIdleState = (state) =>
@@ -4924,6 +4925,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         sidePanel,
                         sidebarAction,
                         tabGroups,
+                        // `debugger` is a reserved word; the namespace object
+                        // is bound to a legal identifier and published here
+                        // under its schema name.
+                        debugger: debuggerNamespace,
                         idle,
                         webNavigation,
                         webRequest,

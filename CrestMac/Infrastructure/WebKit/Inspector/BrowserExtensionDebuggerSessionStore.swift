@@ -85,7 +85,7 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
     ) async throws {
         try Task.checkCancellation()
         try authorize(client, target: target)
-        guard ["1.0", "1.1", "1.2", "1.3"].contains(requiredVersion) else {
+        guard BrowserExtensionDebuggerTargetPolicy.supportedProtocolVersions.contains(requiredVersion) else {
             throw BrowserExtensionDebuggerError.unsupportedVersion(requiredVersion)
         }
         guard entries[target] == nil else { throw BrowserExtensionDebuggerError.alreadyAttached }
@@ -167,6 +167,15 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
         }
     }
 
+    func getTargets(
+        in spaceID: SpaceID, for client: BrowserExtensionServiceClientID
+    ) throws -> Set<BrowserExtensionDebuggerTarget> {
+        guard registrations[client]?.spaceID == spaceID, authorizeClient(client) else {
+            throw BrowserExtensionDebuggerError.accessDenied
+        }
+        return Set(entries.values.map(\.target).filter { $0.spaceID == spaceID })
+    }
+
     func events(for client: BrowserExtensionServiceClientID) -> AsyncStream<BrowserExtensionDebuggerEvent> {
         guard registrations[client] != nil else { return AsyncStream { $0.finish() } }
         return eventHub.events(for: client)
@@ -217,12 +226,18 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             throw BrowserExtensionDebuggerError.invalidRequest
         }
         let response: [String: Any]
-        if command.method.hasPrefix("Runtime.") {
-            response = try await entry.runtime.execute(command.method, parameters: parameters)
-        } else if command.method == "Page.captureScreenshot" {
-            response = try await entry.screenshot.capture(parameters: parameters)
-        } else {
-            throw BrowserChromeDebuggerProtocolError.unsupportedCommand(command.method)
+        // An unimplemented method leaves as a Domain value so callers above the
+        // platform layer can restate it in the protocol's own words.
+        do {
+            if command.method.hasPrefix("Runtime.") {
+                response = try await entry.runtime.execute(command.method, parameters: parameters)
+            } else if command.method == "Page.captureScreenshot" {
+                response = try await entry.screenshot.capture(parameters: parameters)
+            } else {
+                throw BrowserChromeDebuggerProtocolError.unsupportedCommand(command.method)
+            }
+        } catch BrowserChromeDebuggerProtocolError.unsupportedCommand(let method) {
+            throw BrowserExtensionDebuggerError.unsupportedCommand(method)
         }
         return try JSONSerialization.data(withJSONObject: response)
     }

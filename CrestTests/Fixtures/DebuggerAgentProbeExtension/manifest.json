@@ -1,0 +1,7 @@
+{
+  "manifest_version": 3,
+  "name": "Crest Debugger Agent Probe",
+  "version": "1.0",
+  "permissions": ["debugger", "tabs"],
+  "host_permissions": ["<all_urls>"]
+}

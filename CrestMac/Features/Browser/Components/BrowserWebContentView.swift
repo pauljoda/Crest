@@ -19,6 +19,8 @@ struct BrowserWebContentView: View {
                 )
             }
 
+            BrowserWebPageDebuggerBanner(page: page, pages: pages)
+
             BrowserWebPageSurface(
                 page: page,
                 browser: browser,

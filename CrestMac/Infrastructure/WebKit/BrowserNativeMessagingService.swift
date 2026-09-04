@@ -74,6 +74,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case notifications(Task<Void, Never>)
         case sidebar(Task<Void, Never>)
         case tabGroups(Task<Void, Never>)
+        case debugger(Task<Void, Never>)
     }
 
     private let authorization: BrowserExtensionNativeMessagingAuthorization
@@ -85,6 +86,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
     private let tabGroupService: (any BrowserExtensionTabGroupHandling)?
     private let tabGroupEventMessage: (BrowserExtensionTabGroupEvent) -> [String: Any]
+    private let debuggerService: (any BrowserExtensionDebuggerHandling)?
+    private let debuggerEventMessage: (BrowserExtensionDebuggerEvent) -> [String: Any]?
     private var watch: Watch?
     private var webpageMenuClickObserver: UUID?
 
@@ -99,6 +102,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
         tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
+        debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
+        debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
         publish: @escaping ([String: Any]) -> Void
     ) {
         self.authorization = authorization
@@ -109,6 +114,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         self.sidebarEventMessage = sidebarEventMessage
         self.tabGroupService = tabGroupService
         self.tabGroupEventMessage = tabGroupEventMessage
+        self.debuggerService = debuggerService
+        self.debuggerEventMessage = debuggerEventMessage
         self.publish = publish
     }
 
@@ -134,6 +141,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureSidebarWatch()
         case "tabGroups.watch":
             try configureTabGroupsWatch()
+        case "debugger.watch":
+            try configureDebuggerWatch()
         default:
             throw BrowserExtensionCapabilityBrokerError.unsupportedAPI(api)
         }
@@ -152,7 +161,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let watch):
             watch.stop()
-        case .notifications(let task), .sidebar(let task), .tabGroups(let task):
+        case .notifications(let task), .sidebar(let task), .tabGroups(let task),
+            .debugger(let task):
             task.cancel()
         case nil:
             break
@@ -239,7 +249,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let existing):
             idleWatch = existing
-        case .notifications, .sidebar, .tabGroups:
+        case .notifications, .sidebar, .tabGroups, .debugger:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             idleWatch = BrowserExtensionIdleWatch(
@@ -268,7 +278,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .notifications:
             return
-        case .idle, .sidebar, .tabGroups:
+        case .idle, .sidebar, .tabGroups, .debugger:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             break
@@ -292,7 +302,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         }
         switch watch {
         case .sidebar: return
-        case .idle, .notifications, .tabGroups:
+        case .idle, .notifications, .tabGroups, .debugger:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil: break
         }
@@ -320,7 +330,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         }
         switch watch {
         case .tabGroups: return
-        case .idle, .notifications, .sidebar:
+        case .idle, .notifications, .sidebar, .debugger:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil: break
         }
@@ -331,6 +341,30 @@ final class BrowserExtensionCapabilityBrokerConnection {
                     guard !Task.isCancelled else { return }
                     guard let self else { continue }
                     self.publish(self.tabGroupEventMessage(event))
+                }
+            })
+    }
+
+    private func configureDebuggerWatch() throws {
+        guard authorization.grants("debugger") else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied("debugger")
+        }
+        guard let client = authorization.clientID, let debuggerService else {
+            throw BrowserExtensionCapabilityBrokerError.unsupportedAPI("debugger")
+        }
+        switch watch {
+        case .debugger: return
+        case .idle, .notifications, .sidebar, .tabGroups:
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case nil: break
+        }
+        let events = debuggerService.events(for: client)
+        watch = .debugger(
+            Task { @MainActor [weak self] in
+                for await event in events {
+                    guard !Task.isCancelled else { return }
+                    guard let self, let message = self.debuggerEventMessage(event) else { continue }
+                    self.publish(message)
                 }
             })
     }
@@ -437,6 +471,8 @@ final class BrowserNativeMessagingService:
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
     private let tabGroupService: (any BrowserExtensionTabGroupHandling)?
     private let tabGroupEventMessage: (BrowserExtensionTabGroupEvent) -> [String: Any]
+    private let debuggerService: (any BrowserExtensionDebuggerHandling)?
+    private let debuggerEventMessage: (BrowserExtensionDebuggerEvent) -> [String: Any]?
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private var connections: [ObjectIdentifier: BrowserNativeMessagingPersistentConnection] = [:]
     private var capabilityConnections: [ObjectIdentifier: BrowserExtensionCapabilityBrokerConnection] = [:]
@@ -451,6 +487,8 @@ final class BrowserNativeMessagingService:
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
         tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
+        debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
+        debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry(),
         idleStateProvider:
@@ -464,6 +502,8 @@ final class BrowserNativeMessagingService:
         self.sidebarEventMessage = sidebarEventMessage
         self.tabGroupService = tabGroupService
         self.tabGroupEventMessage = tabGroupEventMessage
+        self.debuggerService = debuggerService
+        self.debuggerEventMessage = debuggerEventMessage
         self.webpageMenuRegistry = webpageMenuRegistry
         if let idleStateProvider {
             self.idleStateProvider = idleStateProvider
@@ -480,6 +520,8 @@ final class BrowserNativeMessagingService:
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
         tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
+        debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
+        debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry()
     ) -> BrowserNativeMessagingService {
@@ -497,6 +539,8 @@ final class BrowserNativeMessagingService:
             sidebarEventMessage: sidebarEventMessage,
             tabGroupService: tabGroupService,
             tabGroupEventMessage: tabGroupEventMessage,
+            debuggerService: debuggerService,
+            debuggerEventMessage: debuggerEventMessage,
             webpageMenuRegistry: webpageMenuRegistry
         )
     }
@@ -619,6 +663,8 @@ final class BrowserNativeMessagingService:
                 sidebarEventMessage: sidebarEventMessage,
                 tabGroupService: tabGroupService,
                 tabGroupEventMessage: tabGroupEventMessage,
+                debuggerService: debuggerService,
+                debuggerEventMessage: debuggerEventMessage,
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }

@@ -41,6 +41,10 @@ enum BrowserExtensionDebuggerError: Error, Equatable, LocalizedError {
     case detachedWhileHandling
     case unsupportedVersion(String)
     case invalidRequest
+    /// A Chrome DevTools Protocol method Crest does not implement. Carried as
+    /// a Domain value so the broker can restate it as the protocol's own
+    /// `-32601` text without reaching into a platform type.
+    case unsupportedCommand(String)
 
     var errorDescription: String? {
         switch self {
@@ -50,6 +54,7 @@ enum BrowserExtensionDebuggerError: Error, Equatable, LocalizedError {
         case .detachedWhileHandling: "Detached while handling command."
         case .unsupportedVersion(let version): "Requested protocol version is not supported: \(version)."
         case .invalidRequest: "Invalid debugger request."
+        case .unsupportedCommand(let method): "'\(method)' wasn't found"
         }
     }
 }

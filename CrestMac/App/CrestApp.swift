@@ -23,6 +23,7 @@ struct CrestApp: App {
     @State private var softwareUpdates: BrowserSoftwareUpdateService
     @State private var sidebarWidgets: BrowserSidebarWidgetRuntime
     @State private var extensionSidebar: BrowserExtensionSidebarStore
+    @State private var extensionDebugger: BrowserExtensionDebuggerSessionStore
     private let extensionControllerPool: BrowserExtensionControllerPool
     private let extensionCommandMonitor: BrowserExtensionCommandMonitor
     private let pagePoolRegistry: BrowserPagePoolRegistry
@@ -113,6 +114,13 @@ struct CrestApp: App {
         // Groups are session-local in Chrome too — nothing here is persisted.
         let extensionTabGroups = BrowserExtensionTabGroupStore()
         extensionControllerPool.setTabGroupService(extensionTabGroups)
+        // WebKit drops the `debugger` permission, so Crest owns the decision,
+        // the prompt, and the live withdrawal behind it.
+        let extensionDebugger = BrowserExtensionDebuggerInstallation.install(
+            pool: extensionControllerPool,
+            browser: browser,
+            spaceAccess: spaceAccess
+        )
         extensionControllerPool.setNativeMessagingHandler(
             usesIsolatedLaunch
                 ? BrowserNativeMessagingService(
@@ -140,6 +148,10 @@ struct CrestApp: App {
                     tabGroupEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
                     },
+                    debuggerService: extensionDebugger,
+                    debuggerEventMessage: { [weak extensionControllerPool] event in
+                        extensionControllerPool?.debuggerEventMessage(event)
+                    },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
                 )
@@ -151,6 +163,10 @@ struct CrestApp: App {
                     tabGroupService: extensionTabGroups,
                     tabGroupEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
+                    },
+                    debuggerService: extensionDebugger,
+                    debuggerEventMessage: { [weak extensionControllerPool] event in
+                        extensionControllerPool?.debuggerEventMessage(event)
                     },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
@@ -416,6 +432,7 @@ struct CrestApp: App {
         _softwareUpdates = State(initialValue: softwareUpdates)
         _sidebarWidgets = State(initialValue: sidebarWidgets)
         _extensionSidebar = State(initialValue: extensionSidebar)
+        _extensionDebugger = State(initialValue: extensionDebugger)
         _pages = State(initialValue: pages)
         _privatePages = State(initialValue: privatePages)
         self.extensionControllerPool = extensionControllerPool
@@ -512,6 +529,7 @@ struct CrestApp: App {
                         .environment(windowTransparency)
                         .environment(splitFocus)
                         .environment(extensionSidebar)
+                        .environment(extensionDebugger)
                         .environment(
                             \.browserSidebarWidgetRuntime,
                             sidebarWidgets

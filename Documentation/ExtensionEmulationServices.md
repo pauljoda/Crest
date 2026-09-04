@@ -244,6 +244,7 @@ ports. Other broker capabilities are implemented where their state lives.
 | Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
 | Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
+| Debugger | `CrestShared/Domain/BrowserExtensionServices/Debugger/`, `CrestShared/Application/BrowserExtensionServices/Debugger/`, `CrestMac/Infrastructure/WebKit/Inspector/` | `BrowserExtensionDebuggerHandling` port over a WebKit-Inspector-backed session store; the shell supplies the consent gate and target resolver in `BrowserExtensionDebuggerInstallation` |
 
 There is no history, top-sites, web-authentication, or omnibox service in the
 tree. The design notes for those are kept at the end of this document, marked
@@ -394,6 +395,59 @@ throws. Crest adds every enum and constant the pinned Chromium
 `declarative_net_request.webidl` declares, in place on WebKit's own namespace
 object, and only when WebKit published that namespace at all: a namespace
 carrying constants and no `updateDynamicRules` is worse than an absent one.
+## Debugger — `chrome.debugger`
+
+WebKit publishes no debugger namespace and drops the `debugger` permission, so
+Crest owns the whole surface: the namespace, the decision, the prompt, and the
+transport. The namespace is published complete — `attach`, `detach`,
+`sendCommand`, `getTargets`, `onEvent`, `onDetach`, and the frozen
+`DetachReason` and `TargetInfoType` enums — because the ChatGPT and Claude
+packages both read `chrome.debugger.onDetach` at worker startup and lose the
+rest of their bootstrap when it is missing.
+
+Only `{tabId}` debuggees are supported. `extensionId` and `targetId` targets
+report `Cannot attach to this target.`, and every validation message is
+Chrome's own text, including the interpolated tab id, because packages branch
+on those strings.
+
+### What the protocol answers today
+
+| Domain | Implemented |
+| --- | --- |
+| `Runtime` | `enable`, `disable`, `evaluate`, `callFunctionOn`, `awaitPromise`, `getProperties`, `releaseObject`, `releaseObjectGroup`, plus `executionContextCreated`/`executionContextDestroyed`/`executionContextsCleared` events |
+| `Page` | `captureScreenshot` |
+
+Every other method rejects with the protocol's own `'<Domain.method>' wasn't
+found`, and each refusal is logged to the `extension-diagnostics` os_log
+category so real demand for `Input`, `Network`, `Emulation`, and `Target` is
+measured rather than guessed. Nothing is stubbed to look successful.
+
+### Binding, consent, and the Stop control
+
+A tab is named once, at attach, by the primary session index and URL the
+caller's JavaScript resolved from a native `tabs.get`. Crest re-checks that
+pair against live session state, binds the resulting tab to a minted session
+token, and every later command addresses the token. Reordering, replacing, or
+navigating tabs cannot redirect a live session, and the tab id the caller sends
+is used only to reproduce Chrome's error text.
+
+The `debugger` grant is Ask, Allow, or Block per Space. The first attach under
+Ask presents a prompt naming the extension and what an attachment means; Allow
+persists for that Space and Block refuses without re-prompting. `getTargets`
+never prompts — it lists the Space's live tabs and reports `attached: false`
+for every one while the grant is missing.
+
+While a session is attached, the page carries a banner above it naming the
+extension with a **Stop** control that cancels the session and delivers
+`onDetach` with `canceled_by_user`. Revoking the grant, locking the Space,
+closing the tab, or navigating to a page the extension has no host access to
+withdraws the session immediately rather than at its next command. An explicit
+`detach()` emits no event, matching Chrome.
+
+Restricted targets are refused whatever the manifest asks for: Crest's Start
+Page (no document), `about:` and `file:` URLs, the extension-install handoff
+scheme, another package's extension documents, and the extension storefronts.
+Private browsing has no debugger at all.
 
 ## Notifications — `chrome.notifications`
 

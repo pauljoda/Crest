@@ -50,6 +50,22 @@ extension BrowserExtensionControllerPool {
         tabWindowCoordinator.tabGroupEventMessage(event)
     }
 
+    func debuggerEventMessage(_ event: BrowserExtensionDebuggerEvent) -> [String: Any]? {
+        tabWindowCoordinator.debuggerEventMessage(event)
+    }
+
+    func debuggerIdentity(
+        forTarget target: BrowserExtensionDebuggerTarget
+    ) -> BrowserExtensionDebuggerIdentity? {
+        tabWindowCoordinator.debuggerIdentity(forTarget: target)
+    }
+
+    func debuggerIdentity(
+        for client: BrowserExtensionServiceClientID
+    ) -> BrowserExtensionDebuggerIdentity? {
+        tabWindowCoordinator.debuggerIdentity(for: client)
+    }
+
     func extensionTab(
         _ tabID: TabID,
         in spaceID: SpaceID

@@ -523,6 +523,14 @@ final class BrowserExtensionRuntimeContextController {
             )
             tabWindowCoordinator.sidebarClientsByContext[ObjectIdentifier(context)] = sidebarClient
         }
+        if authoredRequestedPermissions.contains("debugger") {
+            tabWindowCoordinator.registerDebuggerClient(
+                .init(
+                    extensionID: extensionID, spaceID: space.id,
+                    displayName: webExtension.displayName ?? extensionID, baseURL: context.baseURL),
+                for: context
+            )
+        }
         internalGrantedPermissionsBySpace[space.id, default: [:]][extensionID] =
             internalGrantedPermissions
         commandController.captureDefaults(

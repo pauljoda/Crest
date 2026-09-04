@@ -43,6 +43,7 @@ extension BrowserExtensionTabWindowCoordinator {
         if let client = verifiedNativeMessagingAuthorizations[key]?.clientID {
             tabGroupService?.unregister(client: client)
         }
+        unregisterDebuggerClient(for: context)
         let resolvedSpaceID: SpaceID?
         if let owningSpaceID {
             resolvedSpaceID = owningSpaceID
@@ -92,6 +93,15 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
         if handleCapabilityBrokerTabGroups(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerDebugger(
             message,
             applicationIdentifier: applicationIdentifier,
             controller: controller,

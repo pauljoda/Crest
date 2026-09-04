@@ -9,6 +9,10 @@ final class BrowserSpaceAccessController {
 
     @ObservationIgnored private let authenticator: any BrowserDeviceAuthenticating
     @ObservationIgnored private var lockGeneration: UInt = 0
+    /// Invoked after the unlocked set changes so a service holding live access
+    /// to a Space's pages — the extension debugger — can withdraw at once
+    /// instead of at its next request.
+    @ObservationIgnored var accessDidChange: (() -> Void)?
     private var unlockedAssignments: Set<BrowserSpaceRuntimeAssignment> = []
 
     init(
@@ -54,6 +58,7 @@ final class BrowserSpaceAccessController {
                 return false
             }
             unlockedAssignments.insert(assignment)
+            accessDidChange?()
             return true
         } catch {
             guard generation == lockGeneration else { return false }
@@ -70,6 +75,7 @@ final class BrowserSpaceAccessController {
             lockGeneration &+= 1
             authenticatingAssignment = nil
         }
+        accessDidChange?()
     }
 
     func lockAllForInactiveScene() {
@@ -81,5 +87,6 @@ final class BrowserSpaceAccessController {
         lockGeneration &+= 1
         unlockedAssignments.removeAll()
         authenticatingAssignment = nil
+        accessDidChange?()
     }
 }

@@ -87,6 +87,7 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `commands` | Native | Native | Native | Native + patch | BG, EP | — | Always | — |
 | `contextMenus` | Native | Native | Native | Native + patch | BG, EP | `contextMenus`, `menus` | `contextMenus`, `menus` | `contextMenus`, `menus` |
 | `cookies` | Native | Native | Native | Native | BG, EP | `cookies` | `cookies` | — |
+| `debugger` | Native | Native | Unavailable | Emulated | BG, EP | `debugger` | `debugger` | `debugger` |
 | `declarativeNetRequest` | Native | Native | Partial | Native + patch | BG, EP | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | — |
 | `devtools` | Native | Native | Partial | Native | DT | — | Always | — |
 | `dom` | Native | Unavailable | Native | Native | EP, CS | — | Always | — |
@@ -136,6 +137,14 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `contextMenus.remove` | Native | Native + patch | BG, EP | — |
 | `contextMenus.removeAll` | Native | Native + patch | BG, EP | — |
 | `contextMenus.update` | Native | Native + patch | BG, EP | — |
+| `debugger.DetachReason` | Unavailable | Emulated | BG, EP | — |
+| `debugger.TargetInfoType` | Unavailable | Emulated | BG, EP | — |
+| `debugger.attach` | Unavailable | Emulated | BG, EP | — |
+| `debugger.detach` | Unavailable | Emulated | BG, EP | — |
+| `debugger.getTargets` | Unavailable | Emulated | BG, EP | — |
+| `debugger.onDetach` | Unavailable | Emulated | BG, EP | — |
+| `debugger.onEvent` | Unavailable | Emulated | BG, EP | — |
+| `debugger.sendCommand` | Unavailable | Emulated | BG, EP | — |
 | `declarativeNetRequest.DYNAMIC_RULESET_ID` | Unavailable | Emulated | BG, EP | — |
 | `declarativeNetRequest.DomainType` | Unavailable | Emulated | BG, EP | — |
 | `declarativeNetRequest.GETMATCHEDRULES_QUOTA_INTERVAL` | Unavailable | Emulated | BG, EP | — |

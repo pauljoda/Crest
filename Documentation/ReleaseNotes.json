@@ -445,6 +445,10 @@
     "2026-09-03-private-page-bridge-test-repair": {
       "category": "internal",
       "message": "Repair the private page bridge expectation test after the link hover and blocked popup bridges"
+    },
+    "2026-09-03-extension-debugger-api": {
+      "category": "new",
+      "message": "Let extensions you approve inspect and control pages in a Space, with a visible Stop control"
     }
   }
 }

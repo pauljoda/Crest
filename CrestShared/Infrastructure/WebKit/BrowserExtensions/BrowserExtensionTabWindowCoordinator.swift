@@ -29,6 +29,16 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var sidebarLayoutSide: () -> String = { "right" }
     var sidebarUserGestures = BrowserExtensionUserGestureLedger()
     var sidebarClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]
+    var debuggerService: (any BrowserExtensionDebuggerHandling)?
+    /// Resolves the user's `debugger` decision for one extension, asking when
+    /// the decision is still `.ask`. Supplied by the platform shell that owns
+    /// the prompt; absent means no attachment is ever authorized.
+    var debuggerConsent: (@MainActor (BrowserExtensionDebuggerIdentity) async -> Bool)?
+    var debuggerClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]
+    var debuggerIdentitiesByClient: [BrowserExtensionServiceClientID: BrowserExtensionDebuggerIdentity] = [:]
+    /// Live `session token -> bound tab` records. See
+    /// `BrowserExtensionDebuggerBrokerRequest` for why the binding is made once.
+    var debuggerBindings: [String: BrowserExtensionDebuggerBinding] = [:]
     var verifiedNativeMessagingIdentities: [ObjectIdentifier: BrowserExtensionNativeMessagingIdentity] = [:]
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
@@ -156,6 +166,9 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     func reconcile(session: BrowserSession) {
         sidebarService?.repair(using: session)
         tabGroupService?.repair(using: session)
+        // A closed tab must end its debugger session now, not at the next
+        // command: the session holds a live Inspector connection to the page.
+        debuggerService?.reconcileTargets()
         let newState = projectedState(for: session)
         let oldState = lastState
 
