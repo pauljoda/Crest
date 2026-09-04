@@ -7045,6 +7045,34 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 }
                             }
                         }
+                        // A classic worker's bootstrap shadows `chrome` with
+                        // the scoped facade, so it sees `tabs.group`,
+                        // `tabs.ungroup`, and the `groupId` mirror. A module
+                        // worker has no lexical binding to shadow and reads
+                        // this live root — as every extension page does — so
+                        // the same facade is installed in place here, like
+                        // `alarms` above. Only the roots must stay WebKit's:
+                        // `enumerateFramesAndNamespaceObjects` unwraps the
+                        // global `browser`/`chrome` object and then reaches
+                        // `tabs()` and its events through WebKit's own object
+                        // graph, never through this JavaScript property. The
+                        // facade hands back WebKit's event objects untouched.
+                        if (property === "tabs") {
+                            const originalTabs = nativeValue;
+                            nativeValue = normalizeTabsNamespace(nativeValue);
+                            if (nativeValue !== originalTabs) {
+                                try {
+                                    Object.defineProperty(root, property, {
+                                        value: nativeValue,
+                                        writable: true,
+                                        configurable: true,
+                                        enumerable: true
+                                    });
+                                } catch {
+                                    try { root[property] = nativeValue; } catch {}
+                                }
+                            }
+                        }
                         const fallback = fallbacks[property];
                         if (fallback === undefined) continue;
                         // `native` and `nativePatched`: WebKit's object

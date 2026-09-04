@@ -335,6 +335,173 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
+    /// The official Claude extension is a module worker. Its bootstrap can
+    /// only `import` the compatibility layer — an ES module has no scope a
+    /// `const { chrome } = …` binding could shadow — so its code reads the
+    /// live `globalThis.chrome`, exactly as every extension page does. The
+    /// tabs facade, which carries `tabs.group`, `tabs.ungroup`, and the
+    /// `Tab.groupId` mirror, used to exist only on the scoped root a classic
+    /// worker's bootstrap binds; Claude's `chrome.tabs.group` was `undefined`,
+    /// its own try/catch swallowed the TypeError, and every browser tool
+    /// failed with "anchor tab group not established". A dedicated Worker
+    /// with no lexical binding is the same view a module worker has.
+    func testAModuleWorkerReadsTheTabsFacadeFromTheLiveRoot() async throws {
+        let fileManager = FileManager.default
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-webextension-module-worker-tabs-test",
+            permissions: ["tabs", "tabGroups"]
+        )
+        defer { try? fileManager.removeItem(at: fixture.root) }
+
+        // Held for the whole probe: a temporary web view is deallocated while
+        // the Worker's reply is still pending. The runtime travels as a string
+        // literal inside the function body, like every sibling test, rather
+        // than through `arguments`.
+        let webView = WKWebView()
+        let evaluated = try await webView.callAsyncJavaScript(
+            """
+            const script = [
+                \(Self.javaScriptLiteral(Self.moduleWorkerFixtureNativeRoot)),
+                \(Self.javaScriptLiteral(fixture.source)),
+                \(Self.javaScriptLiteral(Self.moduleWorkerFixtureProbe))
+            ].join("\\n");
+            const url = URL.createObjectURL(
+                new Blob([script], { type: "text/javascript" })
+            );
+            return await new Promise((resolve) => {
+                let worker;
+                try {
+                    worker = new Worker(url);
+                } catch (error) {
+                    resolve(JSON.stringify({ error: String(error) }));
+                    return;
+                }
+                const timeout = setTimeout(
+                    () => resolve(JSON.stringify({ error: "worker timed out" })),
+                    4000
+                );
+                worker.onmessage = (event) => {
+                    clearTimeout(timeout);
+                    resolve(event.data);
+                };
+                worker.onerror = (event) => {
+                    clearTimeout(timeout);
+                    resolve(JSON.stringify({ error: String(event.message) }));
+                };
+            });
+            """,
+            arguments: [:],
+            contentWorld: .page
+        )
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(evaluated as? String).utf8)
+            ) as? [String: Any]
+        )
+        XCTAssertNil(result["error"], String(describing: result["error"]))
+        XCTAssertEqual(result["isWorker"] as? Bool, true)
+        XCTAssertEqual(
+            result["group"] as? String, "function",
+            "`tabs.group` must exist on the live root a module worker reads."
+        )
+        XCTAssertEqual(result["ungroup"] as? String, "function")
+        XCTAssertEqual(
+            result["scopedGroup"] as? String, "function",
+            "The classic-worker scoped root keeps the same facade."
+        )
+        XCTAssertEqual(
+            result["sameFacade"] as? Bool, true,
+            "Both roots must hand out one tabs facade, not two."
+        )
+        XCTAssertEqual(result["getStillWorks"] as? Bool, true)
+        XCTAssertEqual(
+            result["eventIdentity"] as? Bool, true,
+            """
+            The facade must hand back WebKit's own event object: WebKit \
+            dispatches through its native graph, so a listener registered \
+            via the facade has to land on the native event.
+            """
+        )
+        withExtendedLifetime(webView) {}
+    }
+
+    private static func javaScriptLiteral(_ value: String) -> String {
+        let data = try? JSONSerialization.data(
+            withJSONObject: [value]
+        )
+        let array = String(decoding: data ?? Data(), as: UTF8.self)
+        return String(array.dropFirst().dropLast())
+    }
+
+    /// A worker-shaped WebKit root: no `document`, native `runtime` and
+    /// `tabs` objects, and — deliberately — no `const { chrome } =` binding
+    /// in front of the extension code.
+    private static let moduleWorkerFixtureNativeRoot = """
+        const noop = () => {};
+        const event = () => ({
+            addListener: noop, removeListener: noop, hasListener: () => false
+        });
+        const nativeTabs = {
+            get: (id) => Promise.resolve({
+                id, index: 0, windowId: 7, url: "https://example.com/"
+            }),
+            query: () => Promise.resolve([]),
+            sendMessage: () => Promise.resolve(undefined),
+            onUpdated: event(), onRemoved: event(), onActivated: event()
+        };
+        globalThis.nativeTabs = nativeTabs;
+        globalThis.chrome = {
+            runtime: {
+                id: "fixture",
+                getURL: (path) => "chrome-extension://fixture/" + path,
+                getManifest: () => ({ manifest_version: 3 }),
+                sendMessage: () => Promise.resolve(undefined),
+                connect: () => ({
+                    name: "", postMessage: noop, disconnect: noop,
+                    onMessage: event(), onDisconnect: event()
+                }),
+                connectNative: () => ({
+                    name: "", postMessage: noop, disconnect: noop,
+                    onMessage: event(), onDisconnect: event()
+                }),
+                onMessage: event(), onConnect: event(),
+                onInstalled: event(), onStartup: event()
+            },
+            tabs: nativeTabs,
+            windows: {
+                getCurrent: () => Promise.resolve({ id: 7, type: "normal" }),
+                getAll: () => Promise.resolve([{ id: 7, type: "normal" }])
+            },
+            storage: {
+                local: { get: () => Promise.resolve({}), set: () => Promise.resolve() },
+                session: { get: () => Promise.resolve({}), set: () => Promise.resolve() },
+                onChanged: event()
+            }
+        };
+        globalThis.browser = globalThis.chrome;
+        """
+
+    private static let moduleWorkerFixtureProbe = """
+        (async () => {
+            let getStillWorks = false;
+            try {
+                const tab = await chrome.tabs.get(3);
+                getStillWorks = tab?.id === 3 && tab.groupId === -1;
+            } catch {}
+            const scoped = globalThis.__crestWebExtensionScopedAPI?.chrome;
+            postMessage(JSON.stringify({
+                isWorker: typeof globalThis.document === "undefined",
+                group: typeof chrome.tabs.group,
+                ungroup: typeof chrome.tabs.ungroup,
+                scopedGroup: typeof scoped?.tabs?.group,
+                sameFacade: scoped?.tabs === chrome.tabs,
+                eventIdentity:
+                    chrome.tabs.onUpdated === globalThis.nativeTabs.onUpdated,
+                getStillWorks
+            }));
+        })();
+        """
+
     /// A module worker stays a worker.
     ///
     /// Preparation used to host it in a generated background document; it now
@@ -5912,9 +6079,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
 
     /// WebKit resolves an extension event target by reading the frame's live
     /// `chrome` / `browser` global and unwrapping the native object behind the
-    /// namespace. A Proxy has no native wrapper, so wrapping a live namespace
-    /// strands every listener registered through it — which is how a root
-    /// Proxy broke message routing outright on 2026-08-29.
+    /// root (`WebExtensionContextProxy::enumerateFramesAndNamespaceObjects`);
+    /// namespaces and their events are then reached through WebKit's own
+    /// object graph. A Proxy has no native wrapper, so a Proxy root strands
+    /// every listener — which is how a root Proxy broke message routing
+    /// outright on 2026-08-29. The roots therefore stay WebKit's, and a
+    /// namespace is replaced in place only where Crest has a facade that hands
+    /// back WebKit's event objects untouched (`alarms`, `extension`, `tabs`;
+    /// see `testAModuleWorkerReadsTheTabsFacadeFromTheLiveRoot`). These
+    /// namespaces have no such facade and must remain WebKit's own objects.
     ///
     /// `installFallbacks` used to pin each namespace it touched
     /// non-configurable, which made `installNamespaceFacades` fail silently

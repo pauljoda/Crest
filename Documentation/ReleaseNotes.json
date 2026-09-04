@@ -549,6 +549,10 @@
     "2026-09-04-extension-window-resolution": {
       "category": "fixed",
       "message": "Let extensions group tabs and open side panels in your window even while one of their popup windows has focus"
+    },
+    "2026-09-04-module-worker-tabs-facade": {
+      "category": "fixed",
+      "message": "Give extensions with a module background worker the same tab grouping surface as classic workers, so Claude's browser tools can anchor to a tab group"
     }
   }
 }
