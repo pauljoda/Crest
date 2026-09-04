@@ -453,6 +453,10 @@
     "2026-09-03-extension-debugger-domains": {
       "category": "improved",
       "message": "Let approved extensions read console output, network activity, page navigation and dialogs, and drive pages with synthesized input"
+    },
+    "2026-09-03-extension-worker-websockets": {
+      "category": "fixed",
+      "message": "Let extension background workers open WebSocket connections"
     }
   }
 }

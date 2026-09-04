@@ -457,6 +457,13 @@ final class BrowserExtensionRuntimeContextController {
         authorizedPermissions.formUnion(
             capabilityBrokerGrantedPermissions
         )
+        // Read from the loaded package, so a capability the broker runs
+        // outside WebKit — today only a background worker's WebSocket — is
+        // held to the same `connect-src` the extension's own pages are.
+        let contentSecurityPolicy =
+            BrowserExtensionWebSocketPolicy.extensionPagesPolicy(
+                in: webExtension.manifest
+            )
         let nativeMessagingAuthorization =
             BrowserExtensionNativeMessagingAuthorization(
                 grantedPermissions: authorizedPermissions,
@@ -465,7 +472,8 @@ final class BrowserExtensionRuntimeContextController {
                     spaceID: space.id
                 ),
                 allowsInternalCapabilityBroker:
-                    allowsInternalCapabilityBroker
+                    allowsInternalCapabilityBroker,
+                contentSecurityPolicy: contentSecurityPolicy
             )
         if let nativeMessagingIdentity {
             tabWindowCoordinator.registerVerifiedNativeMessagingIdentity(
@@ -478,7 +486,8 @@ final class BrowserExtensionRuntimeContextController {
                 BrowserExtensionNativeMessagingAuthorization(
                     grantedPermissions: authorizedPermissions,
                     clientID: nativeMessagingAuthorization.clientID,
-                    allowsInternalCapabilityBroker: true
+                    allowsInternalCapabilityBroker: true,
+                    contentSecurityPolicy: contentSecurityPolicy
                 ),
                 for: context
             )

@@ -1,3 +1,4 @@
+import Network
 import XCTest
 
 @testable import Crest
@@ -1931,6 +1932,222 @@ final class BrowserNativeMessagingTests: XCTestCase {
         time.sleep(0.4)
         """
 
+    // MARK: - Brokered worker WebSocket
+
+    /// Drives the broker's half of the transport against a real WebSocket
+    /// server.
+    ///
+    /// The worker-side facade is only half of this capability, and a stub on
+    /// this side would pin nothing that matters: what has to hold is that the
+    /// envelope reaches a socket that really speaks the protocol, that binary
+    /// survives the base64 round trip JSON forces on it, and that a peer's
+    /// close code arrives intact.
+    @MainActor
+    func testBrokeredWebSocketCarriesTextBinaryAndAPeerCloseCode()
+        async throws
+    {
+        let server = BrokeredWebSocketEchoServer(subprotocol: "codex")
+        let port = try server.start()
+        defer { server.stop() }
+        let log = BrokeredWebSocketEventLog()
+        let connection = try brokerConnection(
+            contentSecurityPolicy: "connect-src ws://127.0.0.1:\(port)",
+            log: log
+        )
+        defer { connection.stop() }
+
+        try connection.receive([
+            "api": "websocket.open",
+            "url": "ws://127.0.0.1:\(port)/console",
+            "protocols": ["codex"],
+        ])
+
+        let opened = try await nextEvent("open", from: log)
+        XCTAssertEqual(opened["api"] as? String, "websocket.event")
+        XCTAssertEqual(opened["protocol"] as? String, "codex")
+        XCTAssertEqual(server.requestedSubprotocols, ["codex"])
+        XCTAssertEqual(
+            server.requestedOrigin,
+            "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+        )
+
+        try connection.receive(["api": "websocket.send", "text": "hello"])
+        let echoedText = try await nextEvent("message", from: log)
+        XCTAssertEqual(echoedText["text"] as? String, "hello")
+        let textAcknowledgement = try await nextEvent("sent", from: log)
+        XCTAssertEqual(textAcknowledgement["bytes"] as? Int, 5)
+
+        let payload = Data([0x00, 0x01, 0xfe, 0xff])
+        try connection.receive([
+            "api": "websocket.send",
+            "binaryBase64": payload.base64EncodedString(),
+        ])
+        let echoedBinary = try await nextEvent("message", from: log)
+        XCTAssertNil(echoedBinary["text"])
+        XCTAssertEqual(
+            Data(
+                base64Encoded: (echoedBinary["binaryBase64"] as? String) ?? ""
+            ),
+            payload
+        )
+        let binaryAcknowledgement = try await nextEvent("sent", from: log)
+        XCTAssertEqual(binaryAcknowledgement["bytes"] as? Int, 4)
+
+        server.closeConnections(code: 4001)
+
+        let closed = try await nextEvent("close", from: log)
+        XCTAssertEqual(closed["code"] as? Int, 4001)
+        XCTAssertEqual(closed["wasClean"] as? Bool, true)
+        XCTAssertNil(log.messages.first { $0["kind"] as? String == "error" })
+    }
+
+    /// A socket the worker closes itself reports the code it asked for, and
+    /// the peer sees the connection go away.
+    @MainActor
+    func testBrokeredWebSocketReportsAWorkerInitiatedClose() async throws {
+        let server = BrokeredWebSocketEchoServer(subprotocol: nil)
+        let port = try server.start()
+        defer { server.stop() }
+        let log = BrokeredWebSocketEventLog()
+        let connection = try brokerConnection(
+            contentSecurityPolicy: nil,
+            log: log
+        )
+        defer { connection.stop() }
+
+        try connection.receive([
+            "api": "websocket.open",
+            "url": "ws://127.0.0.1:\(port)/console",
+        ])
+        let opened = try await nextEvent("open", from: log)
+        XCTAssertEqual(opened["protocol"] as? String, "")
+
+        try connection.receive([
+            "api": "websocket.close",
+            "code": 4002,
+            "reason": "done",
+        ])
+
+        let closed = try await nextEvent("close", from: log)
+        XCTAssertEqual(closed["code"] as? Int, 4002)
+        XCTAssertEqual(closed["reason"] as? String, "done")
+        XCTAssertEqual(closed["wasClean"] as? Bool, true)
+    }
+
+    /// WebKit cannot apply the extension's own `connect-src` to a socket
+    /// opened outside its process, so the broker does it — and a refusal drops
+    /// the port, which the worker-side facade reports as a failed handshake.
+    @MainActor
+    func testBrokeredWebSocketRefusesADestinationTheManifestDenies() throws {
+        let log = BrokeredWebSocketEventLog()
+        let connection = try brokerConnection(
+            contentSecurityPolicy:
+                "script-src 'self'; connect-src wss://api.example.com",
+            log: log
+        )
+        defer { connection.stop() }
+
+        XCTAssertThrowsError(
+            try connection.receive([
+                "api": "websocket.open",
+                "url": "ws://127.0.0.1:1455/console",
+            ])
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserExtensionCapabilityBrokerError,
+                .permissionDenied("connect-src")
+            )
+        }
+        XCTAssertTrue(log.messages.isEmpty)
+
+        XCTAssertThrowsError(
+            try connection.receive([
+                "api": "websocket.open",
+                "url": "https://api.example.com/",
+            ])
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserExtensionCapabilityBrokerError,
+                .invalidRequest
+            )
+        }
+    }
+
+    /// A WebSocket asks for no extension permission — Chrome requires none —
+    /// but it still requires the broker grant every capability port has.
+    @MainActor
+    func testBrokeredWebSocketRequiresTheInternalBrokerGrant() throws {
+        var published: [[String: Any]] = []
+        let connection = BrowserExtensionCapabilityBrokerConnection(
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: ["idle", "notifications"],
+                clientID: BrowserExtensionServiceClientID("extension.space"),
+                allowsInternalCapabilityBroker: false
+            ),
+            notificationService: nil,
+            idleStateProvider: { _ in .active },
+            webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry(),
+            publish: { published.append($0) }
+        )
+        defer { connection.stop() }
+
+        XCTAssertThrowsError(
+            try connection.receive([
+                "api": "websocket.open",
+                "url": "wss://api.example.com/",
+            ])
+        ) { error in
+            XCTAssertEqual(
+                error as? BrowserExtensionCapabilityBrokerError,
+                .permissionDenied("internalCapabilityBroker")
+            )
+        }
+        XCTAssertTrue(published.isEmpty)
+    }
+
+    /// Waits for one published socket event, failing the test if it never
+    /// arrives rather than hanging until the suite's own timeout.
+    @MainActor
+    private func nextEvent(
+        _ kind: String,
+        from log: BrokeredWebSocketEventLog,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async throws -> [String: Any] {
+        let event = await log.consume(kind: kind)
+        return try XCTUnwrap(
+            event,
+            "No \(kind) event arrived.",
+            file: file,
+            line: line
+        )
+    }
+
+    @MainActor
+    private func brokerConnection(
+        contentSecurityPolicy: String?,
+        log: BrokeredWebSocketEventLog
+    ) throws -> BrowserExtensionCapabilityBrokerConnection {
+        let clientID = try XCTUnwrap(
+            BrowserExtensionServiceClientID(
+                "abcdefghijklmnopabcdefghijklmnop.space."
+                    + UUID().uuidString.lowercased()
+            )
+        )
+        return BrowserExtensionCapabilityBrokerConnection(
+            authorization: BrowserExtensionNativeMessagingAuthorization(
+                grantedPermissions: [],
+                clientID: clientID,
+                allowsInternalCapabilityBroker: true,
+                contentSecurityPolicy: contentSecurityPolicy
+            ),
+            notificationService: nil,
+            idleStateProvider: { _ in .active },
+            webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry(),
+            publish: { log.record($0) }
+        )
+    }
+
     private static let slowReaderHostScript = """
         #!/usr/bin/python3
         import json, struct, sys, time
@@ -1942,4 +2159,166 @@ final class BrowserNativeMessagingTests: XCTestCase {
         sys.stdout.buffer.write(struct.pack('<I', len(reply)) + reply)
         sys.stdout.buffer.flush()
         """
+}
+
+/// Collects what the broker publishes back to a capability port.
+@MainActor
+private final class BrokeredWebSocketEventLog {
+    private(set) var messages: [[String: Any]] = []
+    private var consumed: Set<Int> = []
+
+    func record(_ message: [String: Any]) {
+        messages.append(message)
+    }
+
+    /// Waits for the next event of `kind` that no earlier call has taken.
+    ///
+    /// Events arrive from a live socket, so a message echo and its `sent`
+    /// acknowledgement can land in either order: a single cursor would make
+    /// the test depend on which won.
+    func consume(kind: String) async -> [String: Any]? {
+        for _ in 0..<1000 {
+            if let index = messages.indices.first(
+                where: {
+                    !consumed.contains($0)
+                        && messages[$0]["kind"] as? String == kind
+                }
+            ) {
+                consumed.insert(index)
+                return messages[index]
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return nil
+    }
+}
+
+/// A WebSocket server the brokered-socket tests connect to.
+///
+/// Network.framework rather than a stub: what these tests exist to prove is
+/// that `URLSessionWebSocketTask` really carries the extension's frames, and a
+/// fake transport would prove nothing about that.
+private final class BrokeredWebSocketEchoServer: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "crest.tests.websocket-echo")
+    private let lock = NSLock()
+    private let negotiatedSubprotocol: String?
+    private var listener: NWListener?
+    private var connections: [NWConnection] = []
+    private var observedSubprotocols: [String] = []
+    private var observedOrigin: String?
+
+    init(subprotocol: String?) {
+        negotiatedSubprotocol = subprotocol
+    }
+
+    var requestedSubprotocols: [String] {
+        lock.withLock { observedSubprotocols }
+    }
+
+    var requestedOrigin: String? {
+        lock.withLock { observedOrigin }
+    }
+
+    func start() throws -> UInt16 {
+        let parameters = NWParameters.tcp
+        let options = NWProtocolWebSocket.Options()
+        options.autoReplyPing = true
+        options.setClientRequestHandler(queue) {
+            [weak self] subprotocols, headers in
+            let origin = headers.first { $0.name.lowercased() == "origin" }
+            self?.lock.withLock {
+                self?.observedSubprotocols = subprotocols
+                self?.observedOrigin = origin?.value
+            }
+            return NWProtocolWebSocket.Response(
+                status: .accept,
+                subprotocol: self?.negotiatedSubprotocol
+            )
+        }
+        parameters.defaultProtocolStack.applicationProtocols.insert(
+            options,
+            at: 0
+        )
+        let listener = try NWListener(using: parameters, on: .any)
+        self.listener = listener
+        listener.newConnectionHandler = { [weak self] connection in
+            guard let self else { return }
+            lock.withLock { connections.append(connection) }
+            connection.start(queue: queue)
+            echo(on: connection)
+        }
+        let ready = DispatchSemaphore(value: 0)
+        listener.stateUpdateHandler = { state in
+            if case .ready = state { ready.signal() }
+        }
+        listener.start(queue: queue)
+        guard ready.wait(timeout: .now() + 10) == .success,
+            let port = listener.port?.rawValue
+        else {
+            throw BrokeredWebSocketEchoServerError.unavailable
+        }
+        return port
+    }
+
+    func closeConnections(code: UInt16) {
+        let open = lock.withLock { connections }
+        for connection in open {
+            let metadata = NWProtocolWebSocket.Metadata(opcode: .close)
+            metadata.closeCode = .applicationCode(code)
+            connection.send(
+                content: nil,
+                contentContext: NWConnection.ContentContext(
+                    identifier: "close",
+                    metadata: [metadata]
+                ),
+                isComplete: true,
+                completion: .contentProcessed { _ in }
+            )
+        }
+    }
+
+    func stop() {
+        listener?.cancel()
+        listener = nil
+        let open = lock.withLock {
+            let current = connections
+            connections = []
+            return current
+        }
+        for connection in open { connection.cancel() }
+    }
+
+    private func echo(on connection: NWConnection) {
+        connection.receiveMessage { [weak self] content, context, _, error in
+            guard let self, error == nil else { return }
+            guard
+                let metadata = context?.protocolMetadata(
+                    definition: NWProtocolWebSocket.definition
+                ) as? NWProtocolWebSocket.Metadata
+            else {
+                return
+            }
+            if metadata.opcode == .text || metadata.opcode == .binary {
+                connection.send(
+                    content: content,
+                    contentContext: NWConnection.ContentContext(
+                        identifier: "echo",
+                        metadata: [
+                            NWProtocolWebSocket.Metadata(
+                                opcode: metadata.opcode
+                            )
+                        ]
+                    ),
+                    isComplete: true,
+                    completion: .contentProcessed { _ in }
+                )
+            }
+            guard metadata.opcode != .close else { return }
+            echo(on: connection)
+        }
+    }
+}
+
+private enum BrokeredWebSocketEchoServerError: Error {
+    case unavailable
 }

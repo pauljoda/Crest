@@ -198,6 +198,88 @@ never reports its own failures, identical reports within a second are
 collapsed, and it stops after 20 reports (200 console lines) per context with a
 single notice that the rest were dropped.
 
+## Worker WebSocket transport
+
+A Manifest V3 background worker cannot open a WebSocket on WebKit 27. The
+engine's worker-side WebSocket channel synchronously posts bridge setup to the
+WebContent main thread and then waits on it, and because that thread is also
+where extension worker callbacks run, constructing the socket stops the whole
+process — every popup and extension page sharing it included. The native
+constructor is therefore never reached from a worker; the socket is opened in
+the browser process instead and driven from the worker over the capability
+broker. Page contexts keep WebKit's own implementation, and so does a worker on
+a build where the engine defect is absent.
+
+The worker half is a `WebSocket`-shaped class installed over the global before
+the authored worker loads (`BrowserExtensionWorkerWebSocketCompatibilityScript`,
+spliced into the generated runtime). Each socket opens one
+`runtime.connectNative()` port to the broker and owns it: the port's lifetime is
+the connection's, and losing the port is how the socket learns it died.
+
+The envelope, worker to broker:
+
+| Message | Meaning |
+| --- | --- |
+| `{api: "websocket.open", url, protocols}` | Open the connection |
+| `{api: "websocket.send", text}` | Send a text frame |
+| `{api: "websocket.send", binaryBase64}` | Send a binary frame |
+| `{api: "websocket.close", code?, reason?}` | Start the closing handshake |
+
+And broker to worker, every message an `{api: "websocket.event", kind: …}`:
+
+| `kind` | Payload |
+| --- | --- |
+| `open` | `protocol`, `extensions` |
+| `message` | `text` or `binaryBase64` |
+| `sent` | `bytes` — one send left this side |
+| `error` | none; the connection is failing |
+| `close` | `code`, `reason`, `wasClean` |
+
+The broker refuses a request by throwing, which drops the port, and the worker
+half turns that disconnect into the `error` and `close` (1006) pair a failed
+handshake produces in any browser. That is also what a worker sees when
+`connectNative` is unavailable, which is the whole of the fallback: there is no
+second implementation to fall back to.
+
+WebKit never sees this connection, so it cannot apply the extension's content
+security policy to it. The broker evaluates `connect-src` — falling back to
+`default-src`, and allowing everything when the manifest declares neither, as
+Chrome's default `extension_pages` policy does — before opening the socket
+(`BrowserExtensionWebSocketPolicy`, Foundation-only and unit-tested). Scheme
+matching follows Chromium: `ws:` covers a secure socket, `wss:` never covers an
+insecure one, and `https:` covers no socket at all. A source that names no
+scheme is the one deliberate divergence: Chromium compares it against the
+page's own scheme, which for an extension is `chrome-extension:` and so matches
+no socket, and reproducing that would break packages whose author plainly meant
+the socket. A non-`ws(s)` URL is refused before the policy is consulted.
+
+Limits worth knowing:
+
+- **No cookies, no credentials, no cache.** Each socket gets its own ephemeral
+  `URLSession` with the cookie jar, credential store, and URL cache removed. An
+  extension socket carries the extension's own credentials in its payload.
+- **The `Origin` header is the extension's Chrome-style origin**
+  (`chrome-extension://<store id>`), not Crest's per-Space runtime origin, which
+  no local app server would recognize.
+- **Binary is base64.** Native-messaging payloads are JSON, so every binary
+  frame is encoded in both directions. A `Blob` sent from the worker is read
+  first and queued so it cannot be overtaken by a later `send`.
+- **`bufferedAmount` is approximate.** The worker adds a frame's byte length on
+  `send` and subtracts it again on the broker's `sent` acknowledgement, so it
+  reports bytes handed over and not yet confirmed. It cannot see the socket's
+  own kernel buffer — neither can the real property — and a close resets it.
+- **`extensions` is whatever the handshake response carried.**
+  `URLSessionWebSocketTask` does not report negotiated extensions, so the value
+  is read from `Sec-WebSocket-Extensions` and is otherwise empty.
+- **A close the worker starts is reported clean.** `URLSession` does not
+  distinguish a peer that echoed the closing frame from one that dropped the
+  socket after it. A close the *peer* starts carries its own code and reason.
+
+`BrowserNativeMessagingTests` drives `websocket.open/send/close` through a
+capability-broker connection against a Network.framework echo server, and
+`BrowserExtensionWorkerWebSocketCompatibilityScriptTests` runs the worker half
+in WebKit against a fake port.
+
 ## Request interception broker — required, not implemented
 
 A JavaScript overlay cannot honestly implement blocking `webRequest`. The

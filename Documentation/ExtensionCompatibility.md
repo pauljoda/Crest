@@ -251,20 +251,30 @@ unresponsive, and a process sample showed the worker-side WebSocket channel
 synchronously waiting for work on that same process's main thread. Any popup
 sharing the process could then show only its empty AppKit shell.
 
-Crest handles the capability, not a package identity: if a classic worker
-references the `WebSocket` global, the temporary compatibility copy installs a
-WebSocket-compatible deferred constructor before the authored worker loads. It
-registers the worker's listeners first and constructs the native socket on the
-next task, avoiding the measured synchronous WebKit wait without changing the
-service-worker environment. The verified archive and installed bytes remain
-unchanged. Workers without that capability receive the native constructor
-directly.
+Deferring the construction was tried first and is not enough: the wait is on the
+constructor itself, so a worker that reached it at any point still stopped the
+process. A later build made every worker connection fail asynchronously, which
+kept the browser alive at the cost of every extension whose background work is a
+socket — a local app-server companion has nothing to fall back to.
 
-`BrowserChromeWebStoreTests.testCompatibilityLayerDefersClassicWorkerWebSocketsWithoutLeavingWorker`
-pins that manifest and script contract. Live validation with the current signed
-LastPass 4.155.1 package rendered its real login popup, accepted and submitted
-account credentials, reached the service's trusted-device email challenge,
-retained that state after dismiss/reopen, and produced no WebKit
+Crest now moves the socket out of the WebContent process entirely, and handles
+the capability rather than a package identity: a worker that needs a WebSocket
+gets a `WebSocket`-shaped class installed over the global before the authored
+worker loads, and that class carries every frame over the capability broker to a
+real socket in the browser process. The native constructor is never reached from
+a worker. Page contexts, and workers on a build without the defect, keep
+WebKit's own implementation. The verified archive and installed bytes remain
+unchanged.
+
+The transport, its envelope, the `connect-src` enforcement that stands in for
+the CSP WebKit can no longer apply, and its limits are described under *Worker
+WebSocket transport* in `Documentation/ExtensionEmulationServices.md`.
+`BrowserNativeMessagingTests` pins the broker half against a real WebSocket
+server and `BrowserExtensionWorkerWebSocketCompatibilityScriptTests` pins the
+worker half in WebKit. Live validation of the deferred-constructor build with
+the signed LastPass 4.155.1 package rendered its real login popup, accepted and
+submitted account credentials, reached the service's trusted-device email
+challenge, retained that state after dismiss/reopen, and produced no WebKit
 unresponsive-process event. The implementation contains no LastPass identifier,
 name, URL, or source patch.
 

@@ -852,6 +852,21 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             .allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
     }
 
+    /// Re-indents a spliced script fragment so the generated runtime stays
+    /// readable in Web Inspector, where an extension developer reads it.
+    private static func indentedJavaScript(
+        _ source: String,
+        by spaces: Int
+    ) -> String {
+        let padding = String(repeating: " ", count: spaces)
+        let lines = source.split(
+            separator: "\n",
+            omittingEmptySubsequences: false
+        )
+        let indented = lines.map { $0.isEmpty ? "" : padding + $0 }
+        return indented.joined(separator: "\n")
+    }
+
     private static func javascriptStringLiteral(_ value: String) -> String {
         guard
             let data = try? JSONSerialization.data(
@@ -1053,6 +1068,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         }
         let appendsChromiumNavigatorFamilyMarker =
             runtimeIdentity.referenceEnvironment == .chromium
+        let workerWebSocketScript = Self.indentedJavaScript(
+            BrowserExtensionWorkerWebSocketCompatibilityScript.source,
+            by: 4
+        )
         return """
             // Crest fills browser-neutral WebExtension surface gaps only when
             // WebKit does not expose a native implementation. Keep this runtime
@@ -1773,153 +1792,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 };
                 installIdleCallbackFallbacks();
 
-                const installFailingWorkerWebSocket = () => {
-                    if (!failsWorkerWebSockets || !isBackgroundWorker) {
-                        return;
-                    }
-                    const NativeWebSocket = globalThis.WebSocket;
-                    if (typeof NativeWebSocket !== "function") return;
-
-                    // WebKit 27 hosts extension worker callbacks on the
-                    // WebContent main thread, but its worker WebSocket channel
-                    // synchronously posts bridge setup back to that same thread
-                    // and waits on a semaphore. Constructing the native socket
-                    // therefore deadlocks the entire process, including popup
-                    // and extension-page loads. Report the connection as a
-                    // standards-shaped asynchronous network failure instead:
-                    // clients retain their normal retry/fallback behavior, and
-                    // the worker remains able to service runtime messages.
-                    const CONNECTING = NativeWebSocket.CONNECTING ?? 0;
-                    const OPEN = NativeWebSocket.OPEN ?? 1;
-                    const CLOSING = NativeWebSocket.CLOSING ?? 2;
-                    const CLOSED = NativeWebSocket.CLOSED ?? 3;
-                    class FailingWebSocket extends EventTarget {
-                        static CONNECTING = CONNECTING;
-                        static OPEN = OPEN;
-                        static CLOSING = CLOSING;
-                        static CLOSED = CLOSED;
-
-                        constructor(url, protocols) {
-                            super();
-                            const resolvedURL = new URL(
-                                String(url),
-                                globalThis.location?.href
-                            );
-                            if (
-                                resolvedURL.protocol !== "ws:"
-                                && resolvedURL.protocol !== "wss:"
-                            ) {
-                                throw new DOMException(
-                                    "WebSocket URL must use ws or wss.",
-                                    "SyntaxError"
-                                );
-                            }
-                            this._url = resolvedURL.href;
-                            this._protocols = protocols;
-                            this._binaryType = "blob";
-                            this._readyState = CONNECTING;
-                            this.onopen = null;
-                            this.onmessage = null;
-                            this.onerror = null;
-                            this.onclose = null;
-                            globalThis.setTimeout(() => this._fail(), 0);
-                        }
-
-                        get url() { return this._url; }
-                        get readyState() { return this._readyState; }
-                        get bufferedAmount() { return 0; }
-                        get extensions() { return ""; }
-                        get protocol() { return ""; }
-                        get binaryType() { return this._binaryType; }
-                        set binaryType(value) {
-                            if (value !== "blob" && value !== "arraybuffer") {
-                                return;
-                            }
-                            this._binaryType = value;
-                        }
-
-                        _dispatch(event) {
-                            super.dispatchEvent(event);
-                            const handler = this[`on${event.type}`];
-                            if (typeof handler === "function") {
-                                try { handler.call(this, event); } catch {}
-                            }
-                        }
-
-                        _fail() {
-                            if (this._readyState !== CONNECTING) {
-                                if (this._readyState === CLOSING) {
-                                    this._readyState = CLOSED;
-                                    this._dispatch(new CloseEvent("close", {
-                                        code: 1006,
-                                        wasClean: false
-                                    }));
-                                }
-                                return;
-                            }
-                            this._readyState = CLOSED;
-                            this._dispatch(new Event("error"));
-                            this._dispatch(new CloseEvent("close", {
-                                code: 1006,
-                                wasClean: false
-                            }));
-                        }
-
-                        send(data) {
-                            if (this._readyState === CONNECTING) {
-                                throw new DOMException(
-                                    "WebSocket is still connecting.",
-                                    "InvalidStateError"
-                                );
-                            }
-                            if (this._readyState !== OPEN) return;
-                            void data;
-                        }
-
-                        close(code, reason) {
-                            if (
-                                this._readyState === CLOSING
-                                || this._readyState === CLOSED
-                            ) {
-                                return;
-                            }
-                            this._readyState = CLOSING;
-                            void code;
-                            void reason;
-                        }
-                    }
-                    for (const [name, value] of Object.entries({
-                        CONNECTING,
-                        OPEN,
-                        CLOSING,
-                        CLOSED
-                    })) {
-                        Object.defineProperty(
-                            FailingWebSocket.prototype,
-                            name,
-                            { value, enumerable: true }
-                        );
-                    }
-                    Object.defineProperty(
-                        FailingWebSocket.prototype,
-                        Symbol.toStringTag,
-                        { value: "WebSocket" }
-                    );
-                    try {
-                        Object.defineProperty(globalThis, "WebSocket", {
-                            value: FailingWebSocket,
-                            configurable: true,
-                            writable: true
-                        });
-                    } catch {}
-                    try {
-                        console.warn(
-                            "WebSocket is unavailable in background workers "
-                                + "in this browser; connection failed."
-                        );
-                    } catch {}
-                };
-                installFailingWorkerWebSocket();
+            \(workerWebSocketScript)
 
                 const topFrameMessageTransportKey =
                     "__crestWebExtensionTopFrameMessage";

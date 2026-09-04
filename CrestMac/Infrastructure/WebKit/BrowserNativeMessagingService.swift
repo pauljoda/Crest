@@ -75,6 +75,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case sidebar(Task<Void, Never>)
         case tabGroups(Task<Void, Never>)
         case debugger(Task<Void, Never>)
+        case webSocket(BrowserExtensionBrokeredWebSocket)
     }
 
     private let authorization: BrowserExtensionNativeMessagingAuthorization
@@ -143,6 +144,12 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureTabGroupsWatch()
         case "debugger.watch":
             try configureDebuggerWatch()
+        case "websocket.open":
+            try openWebSocket(request)
+        case "websocket.send":
+            try webSocket().send(request)
+        case "websocket.close":
+            try webSocket().close(request)
         default:
             throw BrowserExtensionCapabilityBrokerError.unsupportedAPI(api)
         }
@@ -164,6 +171,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case .notifications(let task), .sidebar(let task), .tabGroups(let task),
             .debugger(let task):
             task.cancel()
+        case .webSocket(let socket):
+            socket.stop()
         case nil:
             break
         }
@@ -246,10 +255,12 @@ final class BrowserExtensionCapabilityBrokerConnection {
             )
         }
         let idleWatch: BrowserExtensionIdleWatch
+        // One port carries one watch. A port that already owns a different
+        // one is a client bug, not a second subscription.
         switch watch {
         case .idle(let existing):
             idleWatch = existing
-        case .notifications, .sidebar, .tabGroups, .debugger:
+        case .some:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             idleWatch = BrowserExtensionIdleWatch(
@@ -278,7 +289,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .notifications:
             return
-        case .idle, .sidebar, .tabGroups, .debugger:
+        case .some:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             break
@@ -302,7 +313,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         }
         switch watch {
         case .sidebar: return
-        case .idle, .notifications, .tabGroups, .debugger:
+        case .some:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil: break
         }
@@ -330,7 +341,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         }
         switch watch {
         case .tabGroups: return
-        case .idle, .notifications, .sidebar, .debugger:
+        case .some:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil: break
         }
@@ -354,7 +365,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         }
         switch watch {
         case .debugger: return
-        case .idle, .notifications, .sidebar, .tabGroups:
+        case .some:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil: break
         }
@@ -367,6 +378,72 @@ final class BrowserExtensionCapabilityBrokerConnection {
                     self.publish(message)
                 }
             })
+    }
+
+    /// Opens the socket this port exists to carry.
+    ///
+    /// A WebSocket is not a `chrome.*` capability and Chrome asks for no
+    /// permission before one is opened, so neither does Crest: the broker
+    /// grant this port already holds is the whole gate, exactly as it is for
+    /// `diagnostics.report`. What the destination is allowed to be is decided
+    /// by the extension's own `connect-src`, which WebKit cannot apply to a
+    /// connection made outside its process.
+    private func openWebSocket(_ request: [String: Any]) throws {
+        guard authorization.allowsInternalCapabilityBroker else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied(
+                "internalCapabilityBroker"
+            )
+        }
+        guard watch == nil else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+        let socket = BrowserExtensionBrokeredWebSocket(
+            policy: BrowserExtensionWebSocketPolicy(
+                policy: authorization.contentSecurityPolicy
+            ),
+            origin: Self.chromeStyleOrigin(for: authorization.clientID),
+            publish: publish
+        )
+        do {
+            try socket.open(request)
+        } catch {
+            socket.stop()
+            throw error
+        }
+        watch = .webSocket(socket)
+    }
+
+    private func webSocket() throws -> BrowserExtensionBrokeredWebSocket {
+        guard
+            authorization.allowsInternalCapabilityBroker,
+            case .webSocket(let socket) = watch
+        else {
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        }
+        return socket
+    }
+
+    /// The origin a Chrome extension would present to a server.
+    ///
+    /// Crest gives every Space its own WebKit extension origin so one Space's
+    /// service-worker registration cannot be reused by another, which makes
+    /// the runtime base URL useless as an identity to a local app server that
+    /// allow-lists its companion extension. The public store ID is what such a
+    /// server knows, and it is the prefix of the per-Space client identity.
+    private static func chromeStyleOrigin(
+        for clientID: BrowserExtensionServiceClientID?
+    ) -> String? {
+        guard let rawValue = clientID?.rawValue else { return nil }
+        let scopeMarker = ".space."
+        let extensionID: String
+        if let marker = rawValue.range(of: scopeMarker, options: .backwards) {
+            extensionID = String(rawValue[rawValue.startIndex..<marker.lowerBound])
+        } else {
+            extensionID = rawValue
+        }
+        guard !extensionID.isEmpty else { return nil }
+        return
+            "\(BrowserExtensionRuntimeIdentifierPolicy.urlScheme)://\(extensionID)"
     }
 
     private static func message(

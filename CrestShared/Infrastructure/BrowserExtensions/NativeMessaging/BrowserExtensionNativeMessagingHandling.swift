@@ -14,15 +14,25 @@ struct BrowserExtensionNativeMessagingAuthorization: Equatable, Sendable {
     let grantedPermissions: Set<String>
     let clientID: BrowserExtensionServiceClientID?
     let allowsInternalCapabilityBroker: Bool
+    /// The `content_security_policy` value the package's manifest declared.
+    ///
+    /// A capability the broker runs outside the WebContent process — a
+    /// brokered worker WebSocket is the only one today — is invisible to
+    /// WebKit's CSP enforcement, so the broker applies the extension's own
+    /// `connect-src` itself. Carrying the raw manifest value keeps the parsing
+    /// with the capability that needs it.
+    let contentSecurityPolicy: String?
 
     init(
         grantedPermissions: Set<String> = [],
         clientID: BrowserExtensionServiceClientID? = nil,
-        allowsInternalCapabilityBroker: Bool = false
+        allowsInternalCapabilityBroker: Bool = false,
+        contentSecurityPolicy: String? = nil
     ) {
         self.grantedPermissions = grantedPermissions
         self.clientID = clientID
         self.allowsInternalCapabilityBroker = allowsInternalCapabilityBroker
+        self.contentSecurityPolicy = contentSecurityPolicy
     }
 
     func grants(_ permission: String) -> Bool {
