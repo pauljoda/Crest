@@ -441,6 +441,10 @@
     "2026-09-03-extension-runtime-contexts": {
       "category": "improved",
       "message": "Improve compatibility with extensions that use Chrome's runtime, badge and network-rule constants"
+    },
+    "2026-09-03-private-page-bridge-test-repair": {
+      "category": "internal",
+      "message": "Repair the private page bridge expectation test after the link hover and blocked popup bridges"
     }
   }
 }
