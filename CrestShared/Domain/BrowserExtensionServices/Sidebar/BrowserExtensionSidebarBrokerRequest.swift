@@ -118,7 +118,7 @@ struct BrowserExtensionSidebarBrokerRequest {
         case .window: return .window
         case .tab(let index, let url):
             guard let tab = space.tabs.first(where: { $0.index == index }), liveTabs.contains(tab.id),
-                url == nil || tab.url?.absoluteString == url
+                BrowserExtensionTabIdentity.urlMatches(reported: url, state: tab.url)
             else { throw BrowserExtensionSidebarBrokerError.staleTab }
             return .tab(tab.id)
         }

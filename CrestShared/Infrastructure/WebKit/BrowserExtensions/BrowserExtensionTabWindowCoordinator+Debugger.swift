@@ -233,7 +233,7 @@ extension BrowserExtensionTabWindowCoordinator {
         else {
             throw BrowserExtensionDebuggerBrokerError.noTarget(request.tabID)
         }
-        guard request.url == nil || request.url == tab.url?.absoluteString else {
+        guard BrowserExtensionTabIdentity.urlMatches(reported: request.url, state: tab.url) else {
             throw BrowserExtensionDebuggerBrokerError.noTarget(request.tabID)
         }
         return .init(spaceID: spaceID, tabID: tab.id)

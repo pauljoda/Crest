@@ -469,6 +469,10 @@
     "2026-09-04-side-panel-permission-only-registration": {
       "category": "fixed",
       "message": "Show side panels for extensions that request the permission without declaring a default page"
+    },
+    "2026-09-04-extension-tab-identity-root-urls": {
+      "category": "fixed",
+      "message": "Keep extension side panels, tab groups and debugging working on tabs at a site's root address"
     }
   }
 }

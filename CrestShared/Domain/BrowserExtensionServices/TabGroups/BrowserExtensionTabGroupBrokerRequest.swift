@@ -192,7 +192,7 @@ struct BrowserExtensionTabGroupBrokerRequest {
         try targets.map { target in
             guard let tab = space.tabs.first(where: { $0.index == target.index }),
                 liveTabs.contains(tab.id),
-                target.url == nil || tab.url?.absoluteString == target.url
+                BrowserExtensionTabIdentity.urlMatches(reported: target.url, state: tab.url)
             else { throw BrowserExtensionTabGroupBrokerError.staleTab }
             return tab.id
         }
