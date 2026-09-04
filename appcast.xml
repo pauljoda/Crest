@@ -6,35 +6,44 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.24</title>
-            <pubDate>Thu, 03 Sep 2026 12:55:58 +0000</pubDate>
+            <title>0.5.32</title>
+            <pubDate>Fri, 04 Sep 2026 12:49:45 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1067</sparkle:version>
-            <sparkle:shortVersionString>0.5.24</sparkle:shortVersionString>
+            <sparkle:version>1069</sparkle:version>
+            <sparkle:shortVersionString>0.5.32</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Double-click or double-tap empty sidebar space to open a new tab
+- Preview link destinations after hovering for a moment on macOS
+
 ### Improved
 
-- Show webpages as soon as they begin loading, with clear progress while content arrives
-- Improve extension compatibility across background messaging, notifications, page menus, and installation
+- Show the focused tab title in macOS window lists while keeping locked Spaces private
+- Find builds by release channel with clear publication dates and a separate download for every build
+- Keep sidebar update buttons compact and readable with shorter labels, icons, and more breathing room
 
 ### Fixed
 
-- Launch reliably and keep Start Page searches and newly opened tabs responsive on iPhone and iPad
-- Keep high-resolution canvas-based editors sharp on Retina displays
-- Prevent the page loading bar from staying visible after in-page navigation
-- Switch Spaces without flashing blank pages on macOS
+- Unlock private Spaces comfortably at larger text sizes and keep loaded tabs in place when locking
+- Check for the newest build in your channel before downloading an update
+- Keep the command palette centered over page content as the sidebar and search results change
+- Use webpage keyboard controls without unnecessary alert sounds on macOS
+- Continue typing where you left off in webpage editors after switching Spaces on macOS
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/804e0d81d7f2436f7c3609424a97b48b5acb32b7...176cf568bf586b5a2a8ed24afe330cfa9cb94f3c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.24-nightly-2026-09-03-176cf56-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/176cf568bf586b5a2a8ed24afe330cfa9cb94f3c...db22c259fd7b810bad0162975ffb2f1e7fbe9f63) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.32-2026-09-04-1069-r69.1/Installer-Crest-0.5.32-nightly-2026-09-04-db22c25-arm64.dmg)
+
+[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly/Installer-Crest-0.5.24-nightly-2026-09-03-176cf56-arm64.dmg" length="9001238" type="application/octet-stream" sparkle:edSignature="iAdkSo8rCl0wEj4XOA/aOkCAD2u8hSRVmFE0uxXKqHtQunN0X1esFH6lSh09RwvTNovUKAg8fB/AYFkd+OCXDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.32-2026-09-04-1069-r69.1/Installer-Crest-0.5.32-nightly-2026-09-04-db22c25-arm64.dmg" length="9037079" type="application/octet-stream" sparkle:edSignature="o+7vxHyaKImacDU9xj4Ee6WJi4wofjbk2vsCewCtdgbwVzoS/P6ysU8TMsuhqv0ME585ohfxwtv4XVmfPHfxCA=="/>
         </item>
         <item>
             <title>0.5.7</title>
@@ -80,6 +89,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 8EiOAk+rQ4Tqd50tzZLZTJxljSqi/sQF+qzWjRZOdY+pIpu8JFOCHFMr9o/sj1/Ta4pkm2xmtSz56+Y7/fkNDQ==
-length: 4578
+edSignature: eM0AjYT+vW274BgcbjVw8801f8Ro3UaEVxgNyAfnZQnoRTTDLCtIxxpWzTeV36d4gekjVTYkOWI/QAgDZ6zcAw==
+length: 5118
 -->
