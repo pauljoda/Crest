@@ -457,6 +457,10 @@
     "2026-09-03-extension-worker-websockets": {
       "category": "fixed",
       "message": "Let extension background workers open WebSocket connections"
+    },
+    "2026-09-03-extension-debugger-reconnect": {
+      "category": "fixed",
+      "message": "Keep extension debugging sessions stable when an extension reattaches to a page quickly"
     }
   }
 }

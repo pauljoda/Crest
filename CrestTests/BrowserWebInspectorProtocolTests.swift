@@ -100,6 +100,31 @@ final class BrowserWebInspectorProtocolTests: XCTestCase {
         XCTAssertEqual((response["result"] as? [String: Any])?["value"] as? Int, 42)
     }
 
+    func testRapidReconnectionBindsToAFrontendThatCanStillRunCommands() async throws {
+        let page = try await disposablePage()
+        let connection = BrowserWebInspectorProtocolConnection(webView: page)
+        try await connection.connect()
+        defer { connection.disconnect() }
+        for attempt in 1...3 {
+            connection.disconnect()
+            try await connection.connect()
+            let response = try await connection.sendCommand(
+                "Runtime.evaluate", parameters: ["expression": "6 * 7", "returnByValue": true])
+            XCTAssertEqual(
+                (response["result"] as? [String: Any])?["value"] as? Int, 42,
+                "Reattaching immediately must reach a frontend that still runs commands: attempt \(attempt).")
+        }
+        connection.disconnect()
+        // The extension debugger builds a connection per attach, so a
+        // replacement object meets the same half-closed frontend.
+        let replacement = BrowserWebInspectorProtocolConnection(webView: page)
+        try await replacement.connect()
+        defer { replacement.disconnect() }
+        let response = try await replacement.sendCommand(
+            "Runtime.evaluate", parameters: ["expression": "document.title", "returnByValue": true])
+        XCTAssertEqual((response["result"] as? [String: Any])?["value"] as? String, "Crest inspector probe")
+    }
+
     func testUnsupportedEngineParametersRejectBeforeCommandExecution() async throws {
         let page = try await disposablePage()
         let connection = BrowserWebInspectorProtocolConnection(webView: page)

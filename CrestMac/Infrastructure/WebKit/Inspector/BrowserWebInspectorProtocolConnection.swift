@@ -1,12 +1,27 @@
 import Foundation
 import WebKit
 
-enum BrowserWebInspectorProtocolError: Error, Equatable {
+enum BrowserWebInspectorProtocolError: Error, Equatable, LocalizedError {
     case unavailable
     case alreadyConnected
     case notConnected
     case timedOut
     case invalidResponse
+    /// The frontend a previous attachment asked this inspector to close is still
+    /// the one WebKit reports, so attaching now would bind to a page that is
+    /// about to be destroyed.
+    case closingInProgress
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable: "This page does not expose an inspectable engine connection."
+        case .alreadyConnected: "Another client is already connected to this page's Inspector."
+        case .notConnected: "This Inspector connection is not attached to a page."
+        case .timedOut: "The Inspector frontend did not become ready in time."
+        case .invalidResponse: "The Inspector returned a response Crest could not read."
+        case .closingInProgress: "The Inspector frontend of the previous attachment is still closing."
+        }
+    }
 }
 
 /// A connection to WebKit's own protocol, not Chrome DevTools Protocol.
@@ -31,7 +46,32 @@ final class BrowserWebInspectorProtocolConnection {
     private var inspector: NSObject?
     private var frontend: WKWebView?
     private var attachmentID: UUID?
+    private var claimedAttachment: UUID?
     private let messageName = "crestInspectorProtocol_" + UUID().uuidString
+
+    /// The `_WKInspector` belongs to the inspected web view rather than to a
+    /// connection, and its `close` only starts the teardown: the frontend page
+    /// stays loaded and keeps answering script evaluation until a later
+    /// `connect` replaces it. A new attachment must not bind to that outgoing
+    /// page, whose teardown fails whatever script call is already in flight.
+    /// The record is shared because the attachment that reconnects is often a
+    /// different connection object: the extension session store builds one for
+    /// every `chrome.debugger` attach.
+    private static var pendingCloses: [ObjectIdentifier: PendingClose] = [:]
+
+    private struct PendingClose {
+        weak var inspector: NSObject?
+        weak var frontend: WKWebView?
+        /// Identifies the mark the closed attachment left on its frontend page,
+        /// so a later attachment can tell that page apart from its replacement.
+        let attachment: UUID?
+    }
+
+    private enum FrontendClaim {
+        case notReady
+        case retired
+        case claimed
+    }
 
     init(webView: WKWebView) {
         self.webView = webView
@@ -49,6 +89,8 @@ final class BrowserWebInspectorProtocolConnection {
             candidate.responds(to: NSSelectorFromString("close")),
             candidate.responds(to: NSSelectorFromString("inspectorWebView"))
         else { throw BrowserWebInspectorProtocolError.unavailable }
+        let pending = Self.pendingClose(for: candidate)
+        if let pending { try await Self.waitForClose(pending, in: candidate) }
         guard !Self.boolean("isConnected", from: candidate) else {
             throw BrowserWebInspectorProtocolError.alreadyConnected
         }
@@ -57,9 +99,11 @@ final class BrowserWebInspectorProtocolConnection {
         inspector = candidate
         candidate.perform(NSSelectorFromString("connect"))
         do {
-            let readyFrontend = try await waitForFrontend(in: candidate, attachmentID: attachmentID)
+            let readyFrontend = try await waitForFrontend(
+                in: candidate, attachmentID: attachmentID, replacing: pending?.attachment)
             try Task.checkCancellation()
             guard self.attachmentID == attachmentID else { throw BrowserWebInspectorProtocolError.notConnected }
+            Self.pendingCloses[ObjectIdentifier(candidate)] = nil
             frontend = readyFrontend
             readyFrontend.configuration.userContentController.add(
                 BrowserWebInspectorProtocolMessageHandler(connection: self), name: messageName)
@@ -124,9 +168,11 @@ final class BrowserWebInspectorProtocolConnection {
     func disconnect() {
         let ownedInspector = inspector
         let ownedFrontend = frontend
+        let ownedClaim = claimedAttachment
         inspector = nil
         frontend = nil
         attachmentID = nil
+        claimedAttachment = nil
         ownedFrontend?.configuration.userContentController.removeScriptMessageHandler(forName: messageName)
         guard let ownedInspector else { return }
         if let ownedFrontend,
@@ -135,6 +181,16 @@ final class BrowserWebInspectorProtocolConnection {
             // The user closed our session and opened a different Inspector.
             return
         }
+        // Record what this close leaves behind before asking for it, because the
+        // next attachment has to outlast the teardown rather than race it. An
+        // attachment that never claimed a page keeps the mark of the one that
+        // did, so a stalled teardown stays recognizable across retries.
+        let close = PendingClose(
+            inspector: ownedInspector,
+            frontend: Self.object("inspectorWebView", from: ownedInspector) as? WKWebView,
+            attachment: ownedClaim ?? Self.pendingClose(for: ownedInspector)?.attachment)
+        Self.pendingCloses = Self.pendingCloses.filter { $0.value.inspector != nil }
+        Self.pendingCloses[ObjectIdentifier(ownedInspector)] = close
         ownedInspector.perform(NSSelectorFromString("close"))
     }
 
@@ -147,21 +203,94 @@ final class BrowserWebInspectorProtocolConnection {
         onEvent?(method, parameters)
     }
 
-    private func waitForFrontend(in candidate: NSObject, attachmentID: UUID) async throws -> WKWebView {
+    private func waitForFrontend(
+        in candidate: NSObject, attachmentID: UUID, replacing retiredAttachment: UUID?
+    ) async throws -> WKWebView {
         let deadline = ContinuousClock.now.advanced(by: .seconds(8))
+        var sawRetiredFrontend = false
         while ContinuousClock.now < deadline {
             try Task.checkCancellation()
             guard self.attachmentID == attachmentID else { throw BrowserWebInspectorProtocolError.notConnected }
-            if let view = Self.object("inspectorWebView", from: candidate) as? WKWebView,
-                (try? await view.evaluateJavaScript(
-                    "typeof InspectorBackend !== 'undefined' && !!globalThis.WI?.pageTarget?.RuntimeAgent"
-                )) as? Bool == true
-            {
-                return view
+            if let view = Self.object("inspectorWebView", from: candidate) as? WKWebView {
+                switch await Self.claim(view, for: attachmentID, replacing: retiredAttachment) {
+                case .claimed:
+                    guard self.attachmentID == attachmentID else {
+                        throw BrowserWebInspectorProtocolError.notConnected
+                    }
+                    claimedAttachment = attachmentID
+                    return view
+                case .retired: sawRetiredFrontend = true
+                case .notReady: break
+                }
             }
             try await Task.sleep(for: .milliseconds(50))
         }
-        throw BrowserWebInspectorProtocolError.timedOut
+        throw sawRetiredFrontend
+            ? BrowserWebInspectorProtocolError.closingInProgress
+            : BrowserWebInspectorProtocolError.timedOut
+    }
+
+    /// Marks the frontend page as this attachment's before any command runs.
+    /// The mark lives on the page's own global object, so the page WebKit is
+    /// still retiring keeps the previous attachment's mark and is skipped,
+    /// while its replacement starts unmarked. Claiming through
+    /// `callAsyncJavaScript` also proves the page can still service the call
+    /// the bootstrap is about to make: a page mid-teardown throws instead,
+    /// which reads as "not ready yet" and is retried.
+    private static func claim(
+        _ frontend: WKWebView, for attachmentID: UUID, replacing retiredAttachment: UUID?
+    ) async -> FrontendClaim {
+        let outcome = try? await frontend.callAsyncJavaScript(
+            """
+            if (typeof InspectorBackend === 'undefined' || !globalThis.WI?.pageTarget?.RuntimeAgent) {
+                return 'notReady';
+            }
+            if (retired !== null && globalThis.crestInspectorAttachment === retired) { return 'retired'; }
+            globalThis.crestInspectorAttachment = attachment;
+            return 'claimed';
+            """,
+            arguments: [
+                "attachment": attachmentID.uuidString,
+                "retired": retiredAttachment?.uuidString as Any? ?? NSNull(),
+            ], contentWorld: .page)
+        switch outcome as? String {
+        case "claimed": return .claimed
+        case "retired": return .retired
+        default: return .notReady
+        }
+    }
+
+    private static func pendingClose(for inspector: NSObject) -> PendingClose? {
+        guard let pending = pendingCloses[ObjectIdentifier(inspector)] else { return nil }
+        // A released inspector can leave its address to a new one.
+        guard pending.inspector === inspector else {
+            pendingCloses[ObjectIdentifier(inspector)] = nil
+            return nil
+        }
+        return pending
+    }
+
+    /// Holds a new attachment back until the inspector itself has let go of the
+    /// frontend a previous `close` retired. The inspector clears its own state
+    /// well before WebKit finishes with that page, so this only closes the
+    /// narrow window before the request is applied; `waitForFrontend` covers
+    /// the page that outlives it.
+    private static func waitForClose(_ pending: PendingClose, in inspector: NSObject) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while true {
+            try Task.checkCancellation()
+            let current = object("inspectorWebView", from: inspector) as? WKWebView
+            let retired = pending.frontend == nil || current !== pending.frontend
+            // A session reported while some other frontend is attached belongs
+            // to the user's own Inspector, which `connect` rejects as
+            // `alreadyConnected` rather than waiting out.
+            if retired, !boolean("isConnected", from: inspector) || current != nil { return }
+            guard ContinuousClock.now < deadline else {
+                throw BrowserWebInspectorProtocolError.closingInProgress
+            }
+            await Task.yield()
+            try await Task.sleep(for: .milliseconds(10))
+        }
     }
 
     private static func object(_ name: String, from owner: NSObject) -> NSObject? {
