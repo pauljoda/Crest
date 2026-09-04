@@ -1993,7 +1993,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 };
                 const normalizedRuntimeMessageEvents = new WeakSet();
-                const normalizeRuntimeMessageEvent = (nativeEvent) => {
+                const normalizeRuntimeMessageEvent = (nativeEvent, traceOptions = {}) => {
+                    // `onMessageExternal` deliveries come from web pages, so
+                    // the extension-origin filter that keeps `onMessage`
+                    // traces readable would hide every one of them.
+                    const traceLabel = traceOptions.label ?? "onMessage";
+                    const tracesEverySender = traceOptions.tracesEverySender === true;
                     if (
                         !nativeEvent
                         || normalizedRuntimeMessageEvents.has(nativeEvent)
@@ -2036,9 +2041,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             }
                             const isTracedDelivery =
                                 capturesExtensionConsole
-                                && traceIsExtensionOriginSender(sender);
+                                && (tracesEverySender
+                                    || traceIsExtensionOriginSender(sender));
                             if (isTracedDelivery) {
-                                reportRuntimeTrace("onMessage", {
+                                reportRuntimeTrace(traceLabel, {
                                     context: executionProcess,
                                     summary: traceMessageSummary(
                                         deliveredMessage
@@ -2074,12 +2080,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                         : result === true || didRespond
                                             ? response
                                             : undefined;
-                                reportRuntimeTrace("onMessageResult", {
+                                reportRuntimeTrace(`${traceLabel}Result`, {
                                     context: executionProcess,
                                     kept: settled !== undefined
                                 });
                                 const responded = () => reportRuntimeTrace(
-                                    "onMessageResponded",
+                                    `${traceLabel}Responded`,
                                     { context: executionProcess }
                                 );
                                 try {
@@ -2312,6 +2318,16 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     try {
                         normalizeRuntimeMessageEvent(nativeRuntime.onMessage);
+                    } catch {}
+                    // Web pages named in `externally_connectable` reach
+                    // `onMessageExternal` (claude.ai hands its OAuth code back
+                    // this way). The listener answers asynchronously after
+                    // returning true, which needs the same Promise lifetime.
+                    try {
+                        normalizeRuntimeMessageEvent(nativeRuntime.onMessageExternal, {
+                            label: "onMessageExternal",
+                            tracesEverySender: true
+                        });
                     } catch {}
                     try {
                         normalizeRuntimeConnectEvent(nativeRuntime.onConnect);

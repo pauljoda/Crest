@@ -79,10 +79,21 @@ enum BrowserExtensionWebPageRuntimeBridge {
             return globToRegExp(path).test(url.pathname + url.search);
           };
           if (!patterns.some(matches)) return;
+          // Chrome resolves `sendMessage(extensionId, message, callback)` by
+          // recognizing the function; WebKit's binding fills parameters in
+          // order, so a callback in the options slot would be treated as
+          // options and never called. Place it explicitly.
+          const sendMessage = (extensionId, message, ...rest) => {
+            const callback = typeof rest[rest.length - 1] === "function" ? rest.pop() : undefined;
+            const options = rest.length > 0 && rest[0] !== null && typeof rest[0] === "object" ? rest[0] : undefined;
+            return callback === undefined
+              ? runtime.sendMessage(extensionId, message, options)
+              : runtime.sendMessage(extensionId, message, options, callback);
+          };
           globalThis.chrome = {
             runtime: {
-              sendMessage: (...args) => runtime.sendMessage(...args),
-              connect: (...args) => runtime.connect(...args),
+              sendMessage,
+              connect: (extensionId, connectInfo) => runtime.connect(extensionId, connectInfo),
             },
           };
         })();

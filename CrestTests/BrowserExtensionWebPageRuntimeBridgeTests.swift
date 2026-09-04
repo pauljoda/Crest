@@ -77,6 +77,29 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         )
     }
 
+    func testACallbackInTheOptionsSlotIsForwardedAsTheCallback() throws {
+        let context = try page(at: "https://claude.ai/oauth/authorize", patterns: Self.claudePatterns)
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "ping" }, (reply) => { globalThis.__reply = reply; })"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("globalThis.__sent.length")!.toInt32(), 4,
+            "The callback travels in WebKit's fourth position with options left undefined."
+        )
+        XCTAssertTrue(context.evaluateScript("globalThis.__sent[2] === undefined")!.toBool())
+        XCTAssertEqual(context.evaluateScript("typeof globalThis.__sent[3]")!.toString(), "function")
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "ping" }, { includeTlsChannelId: true }, () => {})"#
+        )
+        XCTAssertTrue(context.evaluateScript("globalThis.__sent[2].includeTlsChannelId === true")!.toBool())
+        XCTAssertEqual(context.evaluateScript("typeof globalThis.__sent[3]")!.toString(), "function")
+        context.evaluateScript(#"chrome.runtime.sendMessage("fcoeoab", { type: "ping" })"#)
+        XCTAssertEqual(
+            context.evaluateScript("globalThis.__sent.length")!.toInt32(), 3,
+            "Without a callback the promise form reaches WebKit unchanged."
+        )
+    }
+
     func testASubdomainWildcardCoversTheApexAndItsSubdomainsOnly() throws {
         XCTAssertEqual(
             chromeType(in: try page(at: "https://www.claude.ai/chrome/installed", patterns: Self.claudePatterns)),
