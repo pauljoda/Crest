@@ -54,6 +54,12 @@ extension BrowserExtensionControllerPool {
         tabWindowCoordinator.debuggerEventMessage(event)
     }
 
+    func externalMessageEventMessage(
+        _ delivery: BrowserExtensionExternalMessageDelivery
+    ) -> [String: Any]? {
+        tabWindowCoordinator.externalMessageEventMessage(delivery)
+    }
+
     func declarativeNetRequestEventMessage(
         _ rulesets: BrowserExtensionEmulatedHeaderRulesets
     ) -> [String: Any] {

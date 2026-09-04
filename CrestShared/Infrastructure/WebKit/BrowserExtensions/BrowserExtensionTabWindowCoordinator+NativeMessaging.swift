@@ -48,6 +48,11 @@ extension BrowserExtensionTabWindowCoordinator {
             // Relaxed cookies stay relaxed; what stops is re-applying the
             // rewrite once the extension no longer frames the site.
             cookieAccessService?.unregister(client: client)
+            // A context that unloads takes its `onMessageExternal` listeners
+            // with it. Finishing the watch streams here ends any delivery
+            // still waiting on them instead of holding the page's promise for
+            // the full timeout.
+            externalMessageRegistry.unregister(client: client)
         }
         unregisterDebuggerClient(for: context)
         // A context that unloaded mid-flow will never be asked again under
@@ -150,6 +155,14 @@ extension BrowserExtensionTabWindowCoordinator {
             message,
             applicationIdentifier: applicationIdentifier,
             controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerExternalMessageReply(
+            message,
+            applicationIdentifier: applicationIdentifier,
             extensionContext: extensionContext,
             replyHandler: replyHandler
         ) {

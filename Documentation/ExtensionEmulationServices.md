@@ -332,6 +332,7 @@ where their state lives.
 | Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
 | Debugger | `CrestShared/Domain/BrowserExtensionServices/Debugger/`, `CrestShared/Application/BrowserExtensionServices/Debugger/`, `CrestMac/Infrastructure/WebKit/Inspector/` | `BrowserExtensionDebuggerHandling` port over a WebKit-Inspector-backed session store; the shell supplies the consent gate and target resolver in `BrowserExtensionDebuggerInstallation` |
+| External web-page messages | `CrestShared/Domain/BrowserExtensionServices/ExternalMessaging/`, `CrestShared/Application/BrowserExtensionServices/ExternalMessaging/`, `CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionTabWindowCoordinator+ExternalMessaging.swift`, `CrestMac/Infrastructure/WebKit/BrowserExtensions/` | `BrowserExtensionExternalMessageHandling` port over a registry of watch ports and pending one-shot replies, owned by the tab/window coordinator; `BrowserExtensionWebPageRuntimeRelay` is the page-facing half. No persistence adapter: a delivery outlives nothing |
 
 There is no history, top-sites, web-authentication, or omnibox service in the
 tree. The design notes for those are kept at the end of this document, marked
@@ -601,6 +602,53 @@ never the one that gets dropped.
 `unregister` runs from `unregisterNativeMessagingIdentity`, beside the sidebar,
 tab-group, declarative-rule, and debugger unregisters, and stops enforcing a
 host only once no client in that Space still lists it.
+
+## External web-page messages — `runtime.onMessageExternal`
+
+WebKit already routes a website's `runtime.sendMessage(extensionID, …)` into an
+extension, and Crest adds nothing when it does. It stops routing in one place:
+`WebExtensionContext::runtimeWebPageSendMessage` resolves the sending page
+through `getTab(senderPageProxyIdentifier)` and drops the message when that
+lookup fails. A frame inside a Crest-hosted extension document — the vendor web
+app a side panel frames, or a site inside an offscreen document — never
+resolves to a tab, and Chrome's side panel is not a tab either, which is why
+`sender.tab` is undefined for these deliveries there. The page's promise
+settles as a bare `undefined` after a delay. Claude's Cowork panel is the
+concrete case: the framed app asks the worker for `get_sidepanel_host_info`
+over `externally_connectable`, hears nothing, and reports that it cannot reach
+the extension.
+
+Crest carries those deliveries itself over the same in-process broker. Three
+envelopes:
+
+| Envelope | Direction | Payload |
+| --- | --- | --- |
+| `runtime.watch` | context → broker, on the watch port | none. Connected when the first `onMessageExternal` listener is added and disconnected when the last one goes |
+| `runtime.externalMessage` | broker → context | `requestId`, `message`, and `sender` as `{url, origin, frameId}` — Chrome's sender for a page that is not a tab: no `tab`, and no `id`, because the sender is a website |
+| `runtime.externalMessageReply` | context → broker, one-shot | `requestId`, and `response` when a listener answered. An omitted `response` is Chrome's "the receiving end does not exist" |
+
+The watch asks for no permission grant, only the broker authorization the port
+already holds, for the same reason `runtime.getContexts` and
+`diagnostics.report` do: no `chrome.*` permission stands in front of
+`onMessageExternal` in Chrome either. Every context of the extension opens its
+own port and hears every delivery, as it would natively; the first listener to
+claim a message owns the answer and a later one is dropped, exactly as Chrome
+drops a late `sendResponse`. A delivery a listener claims but never answers,
+and one that reaches an extension whose worker was evicted mid-dispatch, ends
+at 30 seconds with the same "receiving end does not exist" rather than holding
+the page's promise for the life of the panel.
+
+Whether the page was allowed to send is decided on the Swift side, before any
+of this: see *Externally connectable web pages* in
+[`ExtensionCompatibility.md`](ExtensionCompatibility.md). Payloads are never
+logged — an OAuth hand-back carries an authorization code — only outcomes and
+byte counts.
+
+`BrowserExtensionExternalMessagingCompatibilityScript` is the extension half,
+spliced into the generated runtime beside the identity fragment; it dispatches
+through the same listener wrappers a native delivery runs through, so
+`return true` plus `sendResponse`, a returned Promise, and a synchronous answer
+all behave as they do natively.
 
 ## Debugger — `chrome.debugger`
 

@@ -44,7 +44,12 @@ extension BrowserPagePool {
             url: url, tabID: panel.tabID, configuration: configuration,
             cookieAccess: BrowserExtensionFramedSiteCookieAccess(
                 configuration: configuration, spaceID: panel.spaceID,
-                service: extensionControllerPool.cookieAccessService)
+                service: extensionControllerPool.cookieAccessService),
+            // A panel frames websites, and a website named in an extension's
+            // `externally_connectable` expects `chrome.runtime` there exactly
+            // as it would in a tab.
+            runtimeBridge: hostedDocumentRuntimeBridge(
+                for: configuration, in: panel.spaceID)
         ) { [weak self] url in
             self?.openExtensionSidebarLink(url)
         }

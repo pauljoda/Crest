@@ -32,6 +32,11 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     /// Drops `SameSite` from the cookies of sites this extension's own pages
     /// frame, within the framing Space only.
     var cookieAccessService: (any BrowserExtensionCookieAccessHandling)?
+    /// Carries `runtime.onMessageExternal` deliveries WebKit cannot route,
+    /// which is every one sent from a frame inside a Crest-hosted extension
+    /// document. Owned here rather than injected: it is pure routing state
+    /// with no platform behind it, and the coordinator is the only writer.
+    let externalMessageRegistry = BrowserExtensionExternalMessageRegistry()
     var sidebarLayoutSide: () -> String = { "right" }
     var sidebarUserGestures = BrowserExtensionUserGestureLedger()
     var sidebarClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]

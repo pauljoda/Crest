@@ -1994,6 +1994,26 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         } catch {}
                     }
                 };
+                // Every registered `runtime.onMessageExternal` listener and the
+                // wrapper it runs behind, read by the external-messaging
+                // fragment below. WebKit dispatches a web page's message
+                // itself whenever the sending page resolves to a browser tab;
+                // a frame inside a Crest-hosted extension document never does,
+                // and Crest relays those deliveries through the broker
+                // instead. Dispatching them through the same wrappers is what
+                // makes the two paths indistinguishable to an extension.
+                const externalMessageListeners = new Map();
+                // Assigned by that fragment, once `capabilityWatch` exists.
+                let externalMessageWatch;
+                const registerExternalMessageListener = (listener, wrapper) => {
+                    externalMessageListeners.set(listener, wrapper);
+                    externalMessageWatch?.connect();
+                };
+                const unregisterExternalMessageListener = (listener) => {
+                    if (!externalMessageListeners.delete(listener)) return;
+                    if (externalMessageListeners.size > 0) return;
+                    externalMessageWatch?.disconnect();
+                };
                 const normalizedRuntimeMessageEvents = new WeakSet();
                 const normalizeRuntimeMessageEvent = (nativeEvent, traceOptions = {}) => {
                     // `onMessageExternal` deliveries come from web pages, so
@@ -2001,6 +2021,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // traces readable would hide every one of them.
                     const traceLabel = traceOptions.label ?? "onMessage";
                     const tracesEverySender = traceOptions.tracesEverySender === true;
+                    const relaysExternalMessages =
+                        traceOptions.relaysExternalMessages === true;
                     if (
                         !nativeEvent
                         || normalizedRuntimeMessageEvents.has(nativeEvent)
@@ -2117,6 +2139,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     };
                     const addListener = (listener) => {
                         if (typeof listener !== "function") return;
+                        if (relaysExternalMessages) {
+                            registerExternalMessageListener(
+                                listener,
+                                wrapperFor(listener)
+                            );
+                        }
                         if (capturesExtensionConsole) {
                             tracedMessageListeners.add(listener);
                             if (tracesEverySender) {
@@ -2136,6 +2164,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                     };
                     const removeListener = (listener) => {
+                        if (relaysExternalMessages) {
+                            unregisterExternalMessageListener(listener);
+                        }
                         if (capturesExtensionConsole) {
                             tracedMessageListeners.delete(listener);
                         }
@@ -2337,7 +2368,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     try {
                         normalizeRuntimeMessageEvent(nativeRuntime.onMessageExternal, {
                             label: "onMessageExternal",
-                            tracesEverySender: true
+                            tracesEverySender: true,
+                            relaysExternalMessages: true
                         });
                     } catch {}
                     try {
@@ -4732,6 +4764,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 \(BrowserExtensionTabGroupsCompatibilityScript.source)
                 \(BrowserExtensionDebuggerCompatibilityScript.source)
                 \(BrowserExtensionIdentityCompatibilityScript.source)
+                \(BrowserExtensionExternalMessagingCompatibilityScript.source)
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 const isIdleState = (state) =>

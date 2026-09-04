@@ -31,18 +31,23 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     /// Absent when the pool has no cookie-access service behind it.
     @ObservationIgnored private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     @ObservationIgnored private var hasRecoveredProcess = false
+    /// The page-world `chrome.runtime` alias and its relay, shared with every
+    /// other Crest-hosted document on this extension's content controller.
+    @ObservationIgnored private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
 
     init(
         url: URL,
         tabID: TabID?,
         configuration: BrowserExtensionPageConfiguration,
         cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
+        runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle? = nil,
         openTab: @escaping (URL) -> Void
     ) {
         self.url = url
         self.tabID = tabID
         extensionBaseURL = configuration.baseURL
         self.cookieAccess = cookieAccess
+        self.runtimeBridge = runtimeBridge
         self.openTab = openTab
         let webView = WKWebView(frame: .zero, configuration: configuration.webViewConfiguration)
         self.webView = webView
@@ -57,6 +62,8 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     }
 
     func close() {
+        runtimeBridge?.release()
+        runtimeBridge = nil
         guard let webView else { return }
         webView.stopLoading()
         webView.navigationDelegate = nil

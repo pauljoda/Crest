@@ -420,6 +420,59 @@ That is the exact footprint Chrome exposes there. Rules:
   written to the `extension-diagnostics` log as shapes only — a type field and
   key names, never payload values.
 
+#### Frames inside a Crest-hosted extension document
+
+The alias alone is not enough where the sending frame is not in a browser tab.
+WebKit's `WebExtensionContext::runtimeWebPageSendMessage` resolves the sender
+through `getTab(senderPageProxyIdentifier)` and drops the message when that
+lookup fails. Crest's side panel and offscreen documents are web views Crest
+builds itself and deliberately never registers as tabs — Chrome's side panel is
+not a tab either, which is exactly why `sender.tab` is undefined for these
+deliveries — so a website framed by one gets a bare `undefined` back. Claude's
+Cowork panel frames `https://claude.ai/cic/new` and asks its worker for
+`get_sidepanel_host_info` this way; without an answer the panel reports that it
+cannot reach the extension.
+
+Crest supplies the missing route. Those documents install the alias script in
+every frame together with a promise-returning reply handler,
+`crestExtensionWebPageRuntimeRelay`
+(`BrowserExtensionWebPageRuntimeRelay`, added by
+`BrowserExtensionHostedDocumentRuntimeBridge` and removed when the last hosted
+document on that content controller closes). The alias decides per frame:
+
+- A frame whose ancestors include a `chrome-extension://` document sends
+  through the relay first and does not ask WebKit at all, because WebKit cannot
+  answer it.
+- Every other frame keeps WebKit first, unchanged. If WebKit answers
+  `undefined` and a relay handler exists, the alias tries the relay before
+  reporting "Could not establish connection"; a browser tab installs no handler,
+  so nothing about a tab's round trip changes.
+- A relayed `null` — the relay's refusal and its "nobody answered" alike — maps
+  to the same `lastError` and promise rejection an `undefined` from WebKit does.
+- Only one-shot messages are relayed. `runtime.connect` stays WebKit's.
+
+Every relayed message is validated in Swift, because a frame can reach the
+message handler without running the alias and its own claim is not evidence:
+
+1. The frame's URL, read from `WKScriptMessage.frameInfo` (its request URL, or
+   its security origin when WebKit left the request empty), must match the
+   **named** extension's own `externally_connectable.matches`, evaluated by
+   `BrowserExtensionMatchPatternPolicy` — the Swift twin of the grammar the
+   alias applies in JavaScript.
+2. That extension, resolved in the hosting document's Space, must hold host
+   access for the URL (`WKWebExtensionContext.hasAccess(to:)`), which is the
+   second half of WebKit's own web-page check.
+
+Anything else answers `nil`. A refusal is indistinguishable from an unanswered
+message, so a page cannot use this channel to discover which extensions are
+installed, and payloads never reach a log — an OAuth hand-back would carry the
+authorization code. `sender` is Chrome's shape for a page that is not a tab:
+`url`, `origin`, and a Crest-minted `frameId` (the document itself is 0, each
+framed URL takes the next number), with no `tab` and no `id`. The extension
+half — the watch, the delivery, and the one-shot reply — is documented under
+*External web-page messages* in
+[`ExtensionEmulationServices.md`](ExtensionEmulationServices.md).
+
 ### Framed websites keep their own content security policy
 
 WebKit stamps an extension's manifest CSP mode on the whole web view: WebCore

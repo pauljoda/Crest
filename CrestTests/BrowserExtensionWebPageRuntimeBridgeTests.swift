@@ -24,12 +24,31 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         } })
         """
 
+    /// Stands in for Crest's relay reply handler, which
+    /// `WKScriptMessageHandlerWithReply` exposes to the page as a
+    /// promise-returning `postMessage`. It records every call and answers with
+    /// whatever `__relayReply` holds.
+    private static let relayHandler = """
+        globalThis.__relayed = [];
+        globalThis.__relayReply = { relayed: true };
+        globalThis.webkit = globalThis.webkit || { messageHandlers: {} };
+        globalThis.webkit.messageHandlers = globalThis.webkit.messageHandlers || {};
+        globalThis.webkit.messageHandlers.crestExtensionWebPageRuntimeRelay = {
+            postMessage: (body) => {
+                globalThis.__relayed.push(body);
+                return Promise.resolve(globalThis.__relayReply);
+            }
+        };
+        """
+
     private func page(
         at url: String,
         patterns: [String],
         browser: String? = BrowserExtensionWebPageRuntimeBridgeTests.webKitBrowser,
         chrome: String? = nil,
         reportsDiagnostics: Bool = false,
+        relay: Bool = false,
+        ancestorOrigins: [String]? = nil,
         file: StaticString = #filePath,
         line: UInt = #line
     ) throws -> JSContext {
@@ -52,6 +71,16 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
             data: try JSONSerialization.data(withJSONObject: location), encoding: .utf8
         )!
         context.evaluateScript("globalThis.location = \(encodedLocation);")
+        // A frame inside a Crest-hosted extension document reports the panel's
+        // own `chrome-extension://` origin here; the page world always has the
+        // list, and this stub is the only place a bare JavaScriptCore context
+        // can get one.
+        if let ancestorOrigins {
+            let encodedAncestors = String(
+                data: try JSONSerialization.data(withJSONObject: ancestorOrigins), encoding: .utf8
+            )!
+            context.evaluateScript("globalThis.location.ancestorOrigins = \(encodedAncestors);")
+        }
         if let browser {
             context.evaluateScript("globalThis.browser = \(browser);")
         }
@@ -66,6 +95,9 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
                     postMessage: (body) => { globalThis.__reports.push(body); } } } };
                 """
             )
+        }
+        if relay {
+            context.evaluateScript(Self.relayHandler)
         }
         context.evaluateScript(
             BrowserExtensionWebPageRuntimeBridge.source(
@@ -262,6 +294,151 @@ final class BrowserExtensionWebPageRuntimeBridgeTests: XCTestCase {
         )
         XCTAssertEqual(
             chromeType(in: try page(at: "https://claude.ai/", patterns: Self.claudePatterns, browser: "({})")),
+            "undefined"
+        )
+    }
+
+    /// Inside a Crest-hosted extension document WebKit cannot route the
+    /// message at all — its web-page `sendMessage` resolves the sender to a
+    /// browser tab and a side panel is deliberately never one — so the alias
+    /// sends through Crest's relay first and never touches WebKit.
+    func testAFrameInsideAnExtensionDocumentSendsThroughTheRelayFirst() throws {
+        let context = try page(
+            at: "https://claude.ai/cic/new?surface=cic_sidepanel",
+            patterns: Self.claudePatterns,
+            relay: true,
+            ancestorOrigins: ["chrome-extension://fcoeoabgfenejglbffodgkkbkcdhcgfn"]
+        )
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "ping" }).then((r) => { globalThis.__resolved = r; })"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("JSON.stringify(globalThis.__relayed)")!.toString(),
+            #"[{"extensionId":"fcoeoab","message":{"type":"ping"}}]"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("typeof globalThis.__sent")!.toString(), "undefined",
+            "WebKit is not asked at all: it would answer undefined after a delay."
+        )
+        XCTAssertTrue(
+            context.evaluateScript("globalThis.__resolved && globalThis.__resolved.relayed === true")!
+                .toBool()
+        )
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "ping" }, (reply) => { globalThis.__reply = reply; })"#
+        )
+        XCTAssertTrue(
+            context.evaluateScript("globalThis.__reply && globalThis.__reply.relayed === true")!.toBool(),
+            "The callback form is answered from the relay too."
+        )
+    }
+
+    /// The relay's `null` is both its refusal and its "nobody answered", and
+    /// the page must see Chrome's signal for that rather than a silent
+    /// `undefined`.
+    func testANullRelayAnswerBecomesLastErrorAndARejectedPromise() throws {
+        let context = try page(
+            at: "https://claude.ai/cic/new",
+            patterns: Self.claudePatterns,
+            relay: true,
+            ancestorOrigins: ["chrome-extension://fcoeoabgfenejglbffodgkkbkcdhcgfn"]
+        )
+        context.evaluateScript(
+            """
+            globalThis.__relayReply = null;
+            globalThis.__seen = [];
+            chrome.runtime.sendMessage("fcoeoab", { type: "ping" }, (reply) => {
+                globalThis.__seen.push(reply === undefined, chrome.runtime.lastError && chrome.runtime.lastError.message);
+            });
+            """
+        )
+        XCTAssertEqual(
+            context.evaluateScript("JSON.stringify(globalThis.__seen)")!.toString(),
+            #"[true,"Could not establish connection. Receiving end does not exist."]"#
+        )
+        XCTAssertTrue(
+            context.evaluateScript("chrome.runtime.lastError === undefined")!.toBool(),
+            "lastError is set only while the callback runs, as in Chrome."
+        )
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "ping" }).then(() => { globalThis.__promise = "resolved"; }, (e) => { globalThis.__promise = e.message; })"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("globalThis.__promise")!.toString(),
+            "Could not establish connection. Receiving end does not exist."
+        )
+    }
+
+    /// An ordinary browser tab installs no relay handler, so nothing about its
+    /// round trip changes. A tab that somehow had one would still ask WebKit
+    /// first, because WebKit owns the tab's sender identity.
+    func testATabKeepsWebKitFirstAndFallsBackToTheRelayOnlyWhenWebKitAnswersNothing() throws {
+        let context = try page(
+            at: "https://claude.ai/oauth/authorize", patterns: Self.claudePatterns, relay: true
+        )
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "oauth_redirect" }).then((r) => { globalThis.__resolved = r; })"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("JSON.stringify(globalThis.__sent)")!.toString(),
+            #"["fcoeoab",{"type":"oauth_redirect"}]"#,
+            "WebKit is asked first outside an extension document."
+        )
+        XCTAssertEqual(context.evaluateScript("globalThis.__relayed.length")!.toInt32(), 0)
+        XCTAssertTrue(
+            context.evaluateScript("globalThis.__resolved && globalThis.__resolved.success === true")!
+                .toBool()
+        )
+
+        // WebKit answers `undefined` for a message it could not route. With a
+        // relay present that is a reason to try Crest, not to give up.
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("dngcpim", { type: "unanswered" }, (reply) => { globalThis.__reply = reply; })"#
+        )
+        XCTAssertEqual(
+            context.evaluateScript("JSON.stringify(globalThis.__relayed)")!.toString(),
+            #"[{"extensionId":"dngcpim","message":{"type":"unanswered"}}]"#
+        )
+        XCTAssertTrue(
+            context.evaluateScript("globalThis.__reply && globalThis.__reply.relayed === true")!.toBool()
+        )
+    }
+
+    /// A hosted document can frame a site while WebKit installs no web-page
+    /// namespace there at all. The relay is then the only route, and the alias
+    /// still has to appear.
+    func testTheAliasIsInstalledOnTheRelayAloneWhenWebKitHasNoWebPageRuntime() throws {
+        let context = try page(
+            at: "https://claude.ai/cic/new",
+            patterns: Self.claudePatterns,
+            browser: nil,
+            relay: true,
+            ancestorOrigins: ["chrome-extension://fcoeoabgfenejglbffodgkkbkcdhcgfn"]
+        )
+        XCTAssertEqual(chromeType(in: context), "object")
+        context.evaluateScript(
+            #"chrome.runtime.sendMessage("fcoeoab", { type: "ping" }, (reply) => { globalThis.__reply = reply; })"#
+        )
+        XCTAssertTrue(
+            context.evaluateScript("globalThis.__reply && globalThis.__reply.relayed === true")!.toBool()
+        )
+        XCTAssertTrue(
+            context.evaluateScript(
+                #"(() => { try { chrome.runtime.connect("fcoeoab"); return false; } catch (e) { return e.message.startsWith("Could not establish connection"); } })()"#
+            )!.toBool(),
+            "Crest relays one-shot messages only; a port has no route here."
+        )
+    }
+
+    /// The relay does not widen the alias. A frame outside every pattern still
+    /// sees no `chrome`, even inside a panel that installed the handler.
+    func testTheRelayDoesNotInstallTheAliasOnAnUnmatchedFrame() throws {
+        XCTAssertEqual(
+            chromeType(
+                in: try page(
+                    at: "https://example.com/", patterns: Self.claudePatterns, relay: true,
+                    ancestorOrigins: ["chrome-extension://fcoeoabgfenejglbffodgkkbkcdhcgfn"])
+            ),
             "undefined"
         )
     }

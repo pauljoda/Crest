@@ -201,6 +201,15 @@ struct CrestApp: App {
                     debuggerEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.debuggerEventMessage(event)
                     },
+                    // Every extension may hear from a website it named in its
+                    // own `externally_connectable`, so this watch is offered
+                    // to all of them rather than to a permitted few.
+                    externalMessageService:
+                        extensionControllerPool.externalMessageService,
+                    externalMessageEventMessage: {
+                        [weak extensionControllerPool] delivery in
+                        extensionControllerPool?.externalMessageEventMessage(delivery)
+                    },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
                 )
@@ -221,6 +230,15 @@ struct CrestApp: App {
                     debuggerService: extensionDebugger,
                     debuggerEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.debuggerEventMessage(event)
+                    },
+                    // Every extension may hear from a website it named in its
+                    // own `externally_connectable`, so this watch is offered
+                    // to all of them rather than to a permitted few.
+                    externalMessageService:
+                        extensionControllerPool.externalMessageService,
+                    externalMessageEventMessage: {
+                        [weak extensionControllerPool] delivery in
+                        extensionControllerPool?.externalMessageEventMessage(delivery)
                     },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry

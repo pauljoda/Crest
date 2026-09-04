@@ -76,6 +76,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case tabGroups(Task<Void, Never>)
         case declarativeNetRequest(Task<Void, Never>)
         case debugger(Task<Void, Never>)
+        case runtime(Task<Void, Never>)
         case webSocket(BrowserExtensionBrokeredWebSocket)
     }
 
@@ -92,6 +93,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let declarativeNetRequestEventMessage: (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any]
     private let debuggerService: (any BrowserExtensionDebuggerHandling)?
     private let debuggerEventMessage: (BrowserExtensionDebuggerEvent) -> [String: Any]?
+    private let externalMessageService: (any BrowserExtensionExternalMessageHandling)?
+    private let externalMessageEventMessage: (BrowserExtensionExternalMessageDelivery) -> [String: Any]?
     private var watch: Watch?
     private var webpageMenuClickObserver: UUID?
 
@@ -112,6 +115,9 @@ final class BrowserExtensionCapabilityBrokerConnection {
             @escaping (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any] = { _ in [:] },
         debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
         debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
+        externalMessageService: (any BrowserExtensionExternalMessageHandling)? = nil,
+        externalMessageEventMessage:
+            @escaping (BrowserExtensionExternalMessageDelivery) -> [String: Any]? = { _ in nil },
         publish: @escaping ([String: Any]) -> Void
     ) {
         self.authorization = authorization
@@ -126,6 +132,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         self.declarativeNetRequestEventMessage = declarativeNetRequestEventMessage
         self.debuggerService = debuggerService
         self.debuggerEventMessage = debuggerEventMessage
+        self.externalMessageService = externalMessageService
+        self.externalMessageEventMessage = externalMessageEventMessage
         self.publish = publish
     }
 
@@ -155,6 +163,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureDeclarativeNetRequestWatch()
         case "debugger.watch":
             try configureDebuggerWatch()
+        case "runtime.watch":
+            try configureRuntimeWatch()
         case "websocket.open":
             try openWebSocket(request)
         case "websocket.send":
@@ -180,7 +190,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case .idle(let watch):
             watch.stop()
         case .notifications(let task), .sidebar(let task), .tabGroups(let task),
-            .declarativeNetRequest(let task), .debugger(let task):
+            .declarativeNetRequest(let task), .debugger(let task),
+            .runtime(let task):
             task.cancel()
         case .webSocket(let socket):
             socket.stop()
@@ -426,6 +437,48 @@ final class BrowserExtensionCapabilityBrokerConnection {
             })
     }
 
+    /// Carries `runtime.onMessageExternal` deliveries WebKit cannot route.
+    ///
+    /// No `chrome.*` permission stands in front of `onMessageExternal` — every
+    /// extension may receive a message from a website it named in its own
+    /// `externally_connectable` — so this watch asks for none either, exactly
+    /// as `runtime.getContexts` and `diagnostics.report` do not. The broker
+    /// grant this port already holds is the whole gate. Whether the *page* was
+    /// allowed to send is decided elsewhere, by the relay that owns the
+    /// sending frame's URL.
+    private func configureRuntimeWatch() throws {
+        guard authorization.allowsInternalCapabilityBroker else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied(
+                "internalCapabilityBroker"
+            )
+        }
+        guard let client = authorization.clientID, let externalMessageService
+        else {
+            throw BrowserExtensionCapabilityBrokerError.unsupportedAPI(
+                "runtime"
+            )
+        }
+        switch watch {
+        case .runtime: return
+        case .some:
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case nil: break
+        }
+        let events = externalMessageService.events(for: client)
+        watch = .runtime(
+            Task { @MainActor [weak self] in
+                for await delivery in events {
+                    guard !Task.isCancelled else { return }
+                    guard let self,
+                        let message = self.externalMessageEventMessage(
+                            delivery
+                        )
+                    else { continue }
+                    self.publish(message)
+                }
+            })
+    }
+
     /// Opens the socket this port exists to carry.
     ///
     /// A WebSocket is not a `chrome.*` capability and Chrome asks for no
@@ -600,6 +653,8 @@ final class BrowserNativeMessagingService:
     private let declarativeNetRequestEventMessage: (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any]
     private let debuggerService: (any BrowserExtensionDebuggerHandling)?
     private let debuggerEventMessage: (BrowserExtensionDebuggerEvent) -> [String: Any]?
+    private let externalMessageService: (any BrowserExtensionExternalMessageHandling)?
+    private let externalMessageEventMessage: (BrowserExtensionExternalMessageDelivery) -> [String: Any]?
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private var connections: [ObjectIdentifier: BrowserNativeMessagingPersistentConnection] = [:]
     private var capabilityConnections: [ObjectIdentifier: BrowserExtensionCapabilityBrokerConnection] = [:]
@@ -620,6 +675,9 @@ final class BrowserNativeMessagingService:
             @escaping (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any] = { _ in [:] },
         debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
         debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
+        externalMessageService: (any BrowserExtensionExternalMessageHandling)? = nil,
+        externalMessageEventMessage:
+            @escaping (BrowserExtensionExternalMessageDelivery) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry(),
         idleStateProvider:
@@ -637,6 +695,8 @@ final class BrowserNativeMessagingService:
         self.declarativeNetRequestEventMessage = declarativeNetRequestEventMessage
         self.debuggerService = debuggerService
         self.debuggerEventMessage = debuggerEventMessage
+        self.externalMessageService = externalMessageService
+        self.externalMessageEventMessage = externalMessageEventMessage
         self.webpageMenuRegistry = webpageMenuRegistry
         if let idleStateProvider {
             self.idleStateProvider = idleStateProvider
@@ -659,6 +719,9 @@ final class BrowserNativeMessagingService:
             @escaping (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any] = { _ in [:] },
         debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
         debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
+        externalMessageService: (any BrowserExtensionExternalMessageHandling)? = nil,
+        externalMessageEventMessage:
+            @escaping (BrowserExtensionExternalMessageDelivery) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry()
     ) -> BrowserNativeMessagingService {
@@ -680,6 +743,8 @@ final class BrowserNativeMessagingService:
             declarativeNetRequestEventMessage: declarativeNetRequestEventMessage,
             debuggerService: debuggerService,
             debuggerEventMessage: debuggerEventMessage,
+            externalMessageService: externalMessageService,
+            externalMessageEventMessage: externalMessageEventMessage,
             webpageMenuRegistry: webpageMenuRegistry
         )
     }
@@ -806,6 +871,8 @@ final class BrowserNativeMessagingService:
                 declarativeNetRequestEventMessage: declarativeNetRequestEventMessage,
                 debuggerService: debuggerService,
                 debuggerEventMessage: debuggerEventMessage,
+                externalMessageService: externalMessageService,
+                externalMessageEventMessage: externalMessageEventMessage,
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }

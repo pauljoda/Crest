@@ -121,6 +121,26 @@ struct BrowserExtensionPageConfiguration {
     /// document can reach one without re-deriving the extension identifier
     /// WebKit no longer carries on the context.
     let clientID: BrowserExtensionServiceClientID
+    /// The Space's union of authored `externally_connectable.matches`
+    /// patterns, so a Crest-hosted extension document installs the same
+    /// page-world `chrome.runtime` alias a browser tab gets. A site framed by
+    /// a side panel is on the web, and Chrome exposes the namespace there.
+    let externallyConnectableMatchPatterns: [String]
+
+    init(
+        baseURL: URL,
+        context: WKWebExtensionContext,
+        webViewConfiguration: WKWebViewConfiguration,
+        clientID: BrowserExtensionServiceClientID,
+        externallyConnectableMatchPatterns: [String] = []
+    ) {
+        self.baseURL = baseURL
+        self.context = context
+        self.webViewConfiguration = webViewConfiguration
+        self.clientID = clientID
+        self.externallyConnectableMatchPatterns =
+            externallyConnectableMatchPatterns
+    }
 }
 
 @MainActor
@@ -263,6 +283,19 @@ final class BrowserExtensionRuntimeContextController {
         contextsBySpace[spaceID] ?? [:]
     }
 
+    /// Every `externally_connectable.matches` pattern authored by an extension
+    /// loaded in `spaceID`, sorted so a page's script is stable across
+    /// launches.
+    func externallyConnectableMatchPatterns(in spaceID: SpaceID) -> [String] {
+        Set(
+            contexts(in: spaceID).values.flatMap {
+                BrowserExtensionExternallyConnectablePolicy.matchPatterns(
+                    in: $0.webExtension.manifest
+                )
+            }
+        ).sorted()
+    }
+
     func internallyGrantedPermissions(
         extensionID: String,
         in spaceID: SpaceID
@@ -297,7 +330,9 @@ final class BrowserExtensionRuntimeContextController {
                     baseURL: context.baseURL,
                     context: context,
                     webViewConfiguration: configuration,
-                    clientID: .scoped(extensionID: extensionID, spaceID: spaceID)
+                    clientID: .scoped(extensionID: extensionID, spaceID: spaceID),
+                    externallyConnectableMatchPatterns:
+                        externallyConnectableMatchPatterns(in: spaceID)
                 )
             }
         }

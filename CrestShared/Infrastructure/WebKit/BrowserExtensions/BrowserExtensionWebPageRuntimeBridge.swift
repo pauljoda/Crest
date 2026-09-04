@@ -17,6 +17,16 @@ import os
 /// Chrome. The pattern set is fixed when the page is created; a page that was
 /// already open when an extension was installed gains the alias on its next
 /// load.
+///
+/// Where the alias sends is decided per frame. In a browser tab it forwards to
+/// WebKit, which owns the round trip. In a frame inside a Crest-hosted
+/// extension document — a side panel framing its vendor's web app, say —
+/// WebKit's `runtimeWebPageSendMessage` resolves the sending page to a browser
+/// tab, fails, and answers `undefined`, so the alias sends through Crest's own
+/// relay instead (`BrowserExtensionWebPageRuntimeRelay`). The script decides by
+/// feature detection: the relay's reply handler exists only in the web views
+/// Crest builds for those documents, never in a tab.
+
 /// Receives the page-world alias's diagnostics while extension console
 /// capture is on, and writes them to the `extension-diagnostics` log beside
 /// the runtime's own traces. Only message shapes travel here — a type field
@@ -86,6 +96,24 @@ enum BrowserExtensionWebPageRuntimeBridge {
             )
             proxy = diagnostics
         }
+        installScript(
+            in: userContentController,
+            matchPatterns: matchPatterns,
+            reportsDiagnostics: reportsDiagnostics
+        )
+        return proxy
+    }
+
+    /// Adds the document-start script alone, for a caller that owns the
+    /// diagnostics handler's lifetime itself. A user script can never be
+    /// removed from a `WKUserContentController`, so a controller shared by
+    /// several documents must add this exactly once.
+    static func installScript(
+        in userContentController: WKUserContentController,
+        matchPatterns: [String],
+        reportsDiagnostics: Bool = false
+    ) {
+        guard !matchPatterns.isEmpty else { return }
         userContentController.addUserScript(
             WKUserScript(
                 source: source(matchPatterns: matchPatterns, reportsDiagnostics: reportsDiagnostics),
@@ -94,7 +122,6 @@ enum BrowserExtensionWebPageRuntimeBridge {
                 in: contentWorld
             )
         )
-        return proxy
     }
 
     static func source(matchPatterns: [String], reportsDiagnostics: Bool = false) -> String {
@@ -119,7 +146,20 @@ enum BrowserExtensionWebPageRuntimeBridge {
           if (typeof globalThis.chrome !== "undefined") return;
           const browser = globalThis.browser;
           const runtime = browser !== null && typeof browser === "object" ? browser.runtime : undefined;
-          if (!runtime || typeof runtime.sendMessage !== "function" || typeof runtime.connect !== "function") return;
+          const hasNativeRuntime = !!runtime
+            && typeof runtime.sendMessage === "function"
+            && typeof runtime.connect === "function";
+          // Crest's own route into an extension, present only in the web views
+          // Crest builds for a hosted extension document (a side panel or an
+          // offscreen document). A browser tab never installs it, so a tab's
+          // alias behaves exactly as it did before.
+          const relay = (() => {
+            try {
+              const handler = globalThis.webkit?.messageHandlers?.crestExtensionWebPageRuntimeRelay;
+              return typeof handler?.postMessage === "function" ? handler : undefined;
+            } catch (_) { return undefined; }
+          })();
+          if (!hasNativeRuntime && relay === undefined) return;
           // Read the frame's own location parts rather than parsing `href`
           // through `URL`: the page world always has both, and a bare
           // JavaScriptCore context (the unit tests) has only `location`.
@@ -176,6 +216,37 @@ enum BrowserExtensionWebPageRuntimeBridge {
           // the sign-in never reaches the installed extension.
           const receivingEndError = "Could not establish connection. Receiving end does not exist.";
           let lastError;
+          // WebKit's own web-page `sendMessage` resolves the sending page to a
+          // browser tab and drops the message when it cannot. A frame inside a
+          // Crest-hosted extension document never resolves to one — Chrome's
+          // side panel is not a tab either, which is why `sender.tab` is
+          // undefined there — so WebKit answers `undefined` after a delay.
+          // Prefer Crest's relay in exactly that situation, and keep WebKit
+          // first everywhere else so an ordinary tab's round trip stays inside
+          // the engine that owns it.
+          const framedByExtensionDocument = (() => {
+            try {
+              const ancestors = globalThis.location?.ancestorOrigins;
+              if (!ancestors || ancestors.length === 0) return false;
+              for (let index = 0; index < ancestors.length; index += 1) {
+                if (String(ancestors[index] ?? "").startsWith("chrome-extension://")) return true;
+              }
+              return false;
+            } catch (_) { return false; }
+          })();
+          const prefersRelay = relay !== undefined && (framedByExtensionDocument || !hasNativeRuntime);
+          // The relay's reply handler answers with a Promise. `null` is its
+          // refusal and its "nobody answered", which is the same thing to the
+          // page: Crest never tells a website which extensions exist.
+          const relayReply = (extensionId, message) => {
+            let returned;
+            try {
+              returned = relay.postMessage({ extensionId: String(extensionId), message });
+            } catch (error) {
+              return Promise.reject(error);
+            }
+            return Promise.resolve(returned).then((reply) => (reply === null ? undefined : reply));
+          };
           // Chrome resolves `sendMessage(extensionId, message, callback)` by
           // recognizing the function; place it in WebKit's callback slot
           // explicitly rather than relying on positional matching.
@@ -188,9 +259,50 @@ enum BrowserExtensionWebPageRuntimeBridge {
             const settle = (outcome, detail) => report({
               event: "sendMessageSettled", extensionId: String(extensionId), type: summary.type, outcome, detail, elapsedMs: Date.now() - started,
             });
+            // A relayed answer always arrives as a Promise. Deliver it in
+            // whichever form the page asked for, with the same `lastError`
+            // and rejection semantics WebKit's answer gets.
+            const deliverRelayed = (answer) => {
+              if (callback !== undefined) {
+                answer.then(
+                  (reply) => {
+                    const unanswered = reply === undefined;
+                    settle(unanswered ? "unanswered" : "replied", describe(reply));
+                    lastError = unanswered ? { message: receivingEndError } : undefined;
+                    try { callback(reply); } finally { lastError = undefined; }
+                  },
+                  (error) => {
+                    settle("rejected", String(error && error.message ? error.message : error));
+                    lastError = { message: receivingEndError };
+                    try { callback(undefined); } finally { lastError = undefined; }
+                  },
+                );
+                return undefined;
+              }
+              return answer.then(
+                (reply) => {
+                  settle(reply === undefined ? "unanswered" : "replied", describe(reply));
+                  if (reply === undefined) throw new Error(receivingEndError);
+                  return reply;
+                },
+                (error) => {
+                  settle("rejected", String(error && error.message ? error.message : error));
+                  throw error;
+                },
+              );
+            };
+            if (prefersRelay) {
+              return deliverRelayed(relayReply(extensionId, message));
+            }
             try {
               if (callback !== undefined) {
                 return runtime.sendMessage(extensionId, message, options, (reply) => {
+                  // WebKit could not route it. If Crest can, ask Crest before
+                  // telling the page nobody answered.
+                  if (reply === undefined && relay !== undefined) {
+                    deliverRelayed(relayReply(extensionId, message));
+                    return undefined;
+                  }
                   const unanswered = reply === undefined;
                   settle(unanswered ? "unanswered" : "replied", describe(reply));
                   lastError = unanswered ? { message: receivingEndError } : undefined;
@@ -207,6 +319,9 @@ enum BrowserExtensionWebPageRuntimeBridge {
               if (result && typeof result.then === "function") {
                 return result.then(
                   (reply) => {
+                    if (reply === undefined && relay !== undefined) {
+                      return deliverRelayed(relayReply(extensionId, message));
+                    }
                     settle(reply === undefined ? "unanswered" : "replied", describe(reply));
                     if (reply === undefined) throw new Error(receivingEndError);
                     return reply;
@@ -225,8 +340,12 @@ enum BrowserExtensionWebPageRuntimeBridge {
           };
           const chromeRuntime = {
             sendMessage,
+            // Crest relays one-shot messages only. A long-lived port stays
+            // WebKit's, and a document with no web-page namespace at all
+            // reports the connection failure Chrome reports.
             connect: (extensionId, connectInfo) => {
               report({ event: "connect", extensionId: String(extensionId) });
+              if (!hasNativeRuntime) throw new Error(receivingEndError);
               return runtime.connect(extensionId, connectInfo);
             },
           };

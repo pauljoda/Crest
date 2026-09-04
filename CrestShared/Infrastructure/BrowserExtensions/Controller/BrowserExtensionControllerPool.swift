@@ -499,13 +499,45 @@ extension BrowserExtensionControllerPool {
     /// Web pages matching one of them receive the page-world `chrome.runtime`
     /// alias over WebKit's `browser.runtime`.
     func externallyConnectableMatchPatterns(in spaceID: SpaceID) -> [String] {
-        Set(
-            runtimeContextController.contexts(in: spaceID).values.flatMap {
-                BrowserExtensionExternallyConnectablePolicy.matchPatterns(
-                    in: $0.webExtension.manifest
-                )
-            }
-        ).sorted()
+        runtimeContextController.externallyConnectableMatchPatterns(
+            in: spaceID
+        )
+    }
+
+    /// The `externally_connectable.matches` patterns of one loaded extension,
+    /// which is the set the relay checks a sending frame against.
+    func externallyConnectableMatchPatterns(
+        extensionID: String,
+        in spaceID: SpaceID
+    ) -> [String] {
+        guard
+            let context = loadedContext(extensionID: extensionID, in: spaceID)
+        else { return [] }
+        return BrowserExtensionExternallyConnectablePolicy.matchPatterns(
+            in: context.webExtension.manifest
+        )
+    }
+
+    /// Routes a web page's `runtime.sendMessage` into an extension's
+    /// `onMessageExternal`. See
+    /// `BrowserExtensionTabWindowCoordinator.deliverExternalWebPageMessage`.
+    func deliverExternalWebPageMessage(
+        messageJSON: Data,
+        sender: BrowserExtensionExternalMessageDelivery.Sender,
+        to extensionID: String,
+        in spaceID: SpaceID
+    ) async -> Data? {
+        await tabWindowCoordinator.deliverExternalWebPageMessage(
+            messageJSON: messageJSON,
+            sender: sender,
+            to: extensionID,
+            in: spaceID
+        )
+    }
+
+    /// The watch stream the capability broker subscribes `runtime.watch` to.
+    var externalMessageService: any BrowserExtensionExternalMessageHandling {
+        tabWindowCoordinator.externalMessageRegistry
     }
 }
 

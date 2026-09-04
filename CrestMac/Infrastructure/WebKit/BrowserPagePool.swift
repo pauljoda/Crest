@@ -373,6 +373,32 @@ final class BrowserPagePool:
         )
     }
 
+    /// The page-world `chrome.runtime` alias and its relay for one
+    /// Crest-hosted extension document.
+    ///
+    /// A browser tab gets the alias from `BrowserPage`. A side panel or
+    /// offscreen document is a web view Crest builds from WebKit's extension
+    /// configuration, so it installs its own — and, because those views share
+    /// one user content controller, shares the installation with every other
+    /// hosted document of the extension.
+    func hostedDocumentRuntimeBridge(
+        for configuration: BrowserExtensionPageConfiguration,
+        in spaceID: SpaceID
+    ) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? {
+        guard !browsingMode.isPrivate else { return nil }
+        return BrowserExtensionHostedDocumentRuntimeBridge.install(
+            for: configuration,
+            reportsDiagnostics: capturesExtensionConsole
+        ) { [weak self] extensionID in
+            guard let pool = self?.extensionControllerPool else { return nil }
+            return BrowserExtensionHostedDocumentRuntimeBridge.target(
+                extensionID: extensionID,
+                in: spaceID,
+                pool: pool
+            )
+        }
+    }
+
     func createExtensionOffscreenDocument(
         at url: URL,
         extensionBaseURL: URL,
@@ -399,6 +425,13 @@ final class BrowserPagePool:
                 configuration: configuration,
                 spaceID: spaceID,
                 service: extensionControllerPool.cookieAccessService
+            ),
+            // An offscreen document frames websites too, and an externally
+            // connectable site expects `chrome.runtime` in every frame Chrome
+            // would give it one.
+            runtimeBridge: hostedDocumentRuntimeBridge(
+                for: configuration,
+                in: spaceID
             )
         )
         extensionOffscreenDocuments[key] = document
@@ -2373,14 +2406,17 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
     private(set) var url: URL?
     private let webView: WKWebView
     private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
+    private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
     private var loadContinuation: CheckedContinuation<Void, any Error>?
 
     init(
         configuration: WKWebViewConfiguration,
-        cookieAccess: BrowserExtensionFramedSiteCookieAccess?
+        cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
+        runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle? = nil
     ) {
         webView = WKWebView(frame: .zero, configuration: configuration)
         self.cookieAccess = cookieAccess
+        self.runtimeBridge = runtimeBridge
         super.init()
         webView.navigationDelegate = self
         webView.isInspectable = true
@@ -2424,6 +2460,8 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
     }
 
     func close() {
+        runtimeBridge?.release()
+        runtimeBridge = nil
         webView.stopLoading()
         finishLoading(
             .failure(BrowserExtensionOffscreenDocumentError.unavailable)
