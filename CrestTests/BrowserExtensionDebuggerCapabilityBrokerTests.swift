@@ -76,8 +76,8 @@ final class BrowserExtensionDebuggerCapabilityBrokerTests: XCTestCase {
                 "Debugger target")
 
             await self.assertFails(
-                try await harness.sendCommand(token: token, method: "Input.dispatchKeyEvent"),
-                "'Input.dispatchKeyEvent' wasn't found")
+                try await harness.sendCommand(token: token, method: "DOM.getDocument"),
+                "'DOM.getDocument' wasn't found")
             await self.assertFails(
                 try await harness.sendCommand(token: "not-a-token", method: "Runtime.evaluate"),
                 "Debugger is not attached to the tab with id: 7.")

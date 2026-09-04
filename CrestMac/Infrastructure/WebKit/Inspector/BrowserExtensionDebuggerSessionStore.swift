@@ -28,16 +28,58 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
         let connection: BrowserWebInspectorProtocolConnection
         let runtime: BrowserChromeDebuggerRuntime
         let screenshot: BrowserChromeDebuggerScreenshot
+        let console: BrowserChromeDebuggerConsole
+        let pageDomain: BrowserChromeDebuggerPage
+        let network: BrowserChromeDebuggerNetwork
+        let input: BrowserChromeDebuggerInput
+        let targetDomain: BrowserChromeDebuggerTarget
+        let unsupported = BrowserChromeDebuggerUnsupportedLog()
         var phase = BrowserExtensionDebuggerSession.Phase.attaching
         var pending: [UUID: PendingCommand] = [:]
 
-        init(target: BrowserExtensionDebuggerTarget, client: BrowserExtensionServiceClientID, page: WKWebView) {
+        init(
+            target: BrowserExtensionDebuggerTarget, client: BrowserExtensionServiceClientID, page: WKWebView,
+            tabHost: (any BrowserExtensionDebuggerTabHosting)?
+        ) {
             self.target = target
             self.client = client
             self.page = page
             connection = BrowserWebInspectorProtocolConnection(webView: page)
             runtime = BrowserChromeDebuggerRuntime(connection: connection)
             screenshot = BrowserChromeDebuggerScreenshot(connection: connection)
+            console = BrowserChromeDebuggerConsole(connection: connection)
+            pageDomain = BrowserChromeDebuggerPage(
+                connection: connection, target: target, webView: page, tabHost: tabHost)
+            network = BrowserChromeDebuggerNetwork(connection: connection)
+            input = BrowserChromeDebuggerInput(webView: page)
+            targetDomain = BrowserChromeDebuggerTarget(target: target, webView: page, tabHost: tabHost)
+        }
+
+        /// Every engine event reaches every translator that wants one. A single
+        /// forwarding hop would silently drop a domain the moment a second one
+        /// exists, which is exactly the failure a client cannot diagnose.
+        func receive(_ method: String, parameters: [String: Any]) {
+            runtime.receive(method, parameters: parameters)
+            console.receive(method, parameters: parameters)
+            pageDomain.receive(method, parameters: parameters)
+            network.receive(method, parameters: parameters)
+        }
+
+        func publishEvents(_ publish: @escaping (String, [String: Any]) -> Void) {
+            runtime.onEvent = publish
+            console.onEvent = publish
+            pageDomain.onEvent = publish
+            network.onEvent = publish
+        }
+
+        func stopPublishing() {
+            runtime.onEvent = nil
+            console.onEvent = nil
+            pageDomain.onEvent = nil
+            network.onEvent = nil
+            console.disable()
+            network.disable()
+            pageDomain.detach()
         }
     }
 
@@ -53,6 +95,12 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
     @ObservationIgnored private let resolveTarget:
         (BrowserExtensionDebuggerTarget) -> BrowserExtensionDebuggerTargetAccess
     @ObservationIgnored private let eventHub = BrowserExtensionDebuggerEventHub()
+    /// Supplies the tab operations `Page.close`, `Page.bringToFront`, and
+    /// `Target.closeTarget` need. Absent, those commands report unsupported
+    /// rather than reaching for a tab through some other path.
+    /// Tab-level operations (activate, close) the engine protocol cannot perform.
+    /// Held strongly: the coordinator adapter only references the coordinator weakly.
+    @ObservationIgnored var tabHost: (any BrowserExtensionDebuggerTabHosting)?
 
     init(
         authorizeClient: @escaping (BrowserExtensionServiceClientID) -> Bool,
@@ -92,7 +140,7 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
         guard case .available(let page) = resolveTarget(target) else {
             throw BrowserExtensionDebuggerError.accessDenied
         }
-        let entry = Entry(target: target, client: client, page: page)
+        let entry = Entry(target: target, client: client, page: page, tabHost: tabHost)
         entries[target] = entry
         refreshSessions()
         entry.connection.authorizeCommand = { [weak self, weak entry] in
@@ -101,9 +149,9 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
         }
         entry.connection.onEvent = { [weak self, weak entry] method, parameters in
             guard let self, let entry, (try? self.validate(entry)) != nil else { return }
-            entry.runtime.receive(method, parameters: parameters)
+            entry.receive(method, parameters: parameters)
         }
-        entry.runtime.onEvent = { [weak self, weak entry] method, parameters in
+        entry.publishEvents { [weak self, weak entry] method, parameters in
             guard let self, let entry, (try? self.validate(entry)) != nil,
                 let data = try? JSONSerialization.data(withJSONObject: parameters)
             else { return }
@@ -226,18 +274,35 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             throw BrowserExtensionDebuggerError.invalidRequest
         }
         let response: [String: Any]
-        // An unimplemented method leaves as a Domain value so callers above the
-        // platform layer can restate it in the protocol's own words.
         do {
             if command.method.hasPrefix("Runtime.") {
                 response = try await entry.runtime.execute(command.method, parameters: parameters)
+                // Chrome publishes console output and uncaught exceptions on the
+                // Runtime domain, so a client that only enables Runtime still
+                // expects them.
+                if command.method == "Runtime.enable" { try await entry.console.enable() }
+                if command.method == "Runtime.disable" { entry.console.disable() }
             } else if command.method == "Page.captureScreenshot" {
                 response = try await entry.screenshot.capture(parameters: parameters)
+            } else if command.method.hasPrefix("Page.") {
+                response = try await entry.pageDomain.execute(command.method, parameters: parameters)
+            } else if command.method.hasPrefix("Network.") {
+                response = try await entry.network.execute(command.method, parameters: parameters)
+            } else if command.method.hasPrefix("Input.") {
+                response = try await entry.input.execute(command.method, parameters: parameters)
+            } else if command.method.hasPrefix("Target.") || command.method.hasPrefix("Emulation.") {
+                response = try await entry.targetDomain.execute(command.method, parameters: parameters)
             } else {
                 throw BrowserChromeDebuggerProtocolError.unsupportedCommand(command.method)
             }
-        } catch BrowserChromeDebuggerProtocolError.unsupportedCommand(let method) {
-            throw BrowserExtensionDebuggerError.unsupportedCommand(method)
+        } catch let error as BrowserChromeDebuggerProtocolError {
+            // An unimplemented method leaves as a Domain value so callers above
+            // the platform layer can restate it in the protocol's own words.
+            if case .unsupportedCommand(let method) = error {
+                entry.unsupported.record(method, client: entry.client)
+                throw BrowserExtensionDebuggerError.unsupportedCommand(method)
+            }
+            throw error
         }
         return try JSONSerialization.data(withJSONObject: response)
     }
@@ -271,7 +336,7 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             request.continuation.resume(throwing: BrowserExtensionDebuggerError.detachedWhileHandling)
         }
         entry.connection.onEvent = nil
-        entry.runtime.onEvent = nil
+        entry.stopPublishing()
         entry.connection.disconnect()
         refreshSessions()
         if let reason {

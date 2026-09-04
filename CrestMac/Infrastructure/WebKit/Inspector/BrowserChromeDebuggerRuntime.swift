@@ -263,17 +263,7 @@ final class BrowserChromeDebuggerRuntime {
     }
 
     private func remoteObject(_ value: [String: Any]) -> [String: Any] {
-        var remote = value
-        guard let description = value["description"] as? String else { return remote }
-        if value["type"] as? String == "number", ["NaN", "Infinity", "-Infinity", "-0"].contains(description) {
-            remote["value"] = nil
-            remote["unserializableValue"] = description
-        }
-        if value["type"] as? String == "bigint" {
-            remote["value"] = nil
-            remote["unserializableValue"] = description.hasSuffix("n") ? description : description + "n"
-        }
-        return remote
+        BrowserChromeDebuggerValues.remoteObject(value)
     }
 
     private func validateCallArguments(_ parameters: [String: Any]) throws {
@@ -292,14 +282,10 @@ final class BrowserChromeDebuggerRuntime {
     }
 
     private func pick(_ source: [String: Any], _ names: [String]) -> [String: Any] {
-        source.filter { names.contains($0.key) }
+        BrowserChromeDebuggerValues.pick(source, names)
     }
 
     private func boolean(_ name: String, in parameters: [String: Any]) throws -> Bool {
-        guard let value = parameters[name] else { return false }
-        guard let number = value as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() else {
-            throw BrowserChromeDebuggerProtocolError.invalidParameter(name)
-        }
-        return number.boolValue
+        try BrowserChromeDebuggerValues.boolean(name, in: parameters)
     }
 }

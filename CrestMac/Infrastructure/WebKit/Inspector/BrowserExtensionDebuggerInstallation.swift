@@ -32,6 +32,9 @@ enum BrowserExtensionDebuggerInstallation {
                 targetAccess(target, pool: pool, browser: browser, spaceAccess: spaceAccess)
             }
         )
+        // Page.close, Page.bringToFront and Target.closeTarget go through the
+        // same tab paths the `tabs` API uses, never through the engine protocol.
+        store.tabHost = BrowserExtensionDebuggerTabCoordinatorHost(coordinator: pool.tabWindowCoordinator)
         pool.setDebuggerService(store) { [weak pool] identity in
             await consent(pool: pool, identity: identity, prompt: prompt)
         }

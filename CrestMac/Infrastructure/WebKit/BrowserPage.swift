@@ -67,6 +67,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The pool that owns this page. Weak because the pool owns the page.
     @ObservationIgnored weak var host: (any BrowserPageHosting)?
 
+    /// Set while a debugger session is attached to this page and has enabled
+    /// the protocol's Page domain. It answers the page's JavaScript dialogs in
+    /// place of the user, so it is installed by that session alone and cleared
+    /// the moment the session ends.
+    @ObservationIgnored var debuggerDialogInterceptor: BrowserExtensionDebuggerDialogInterceptor?
+
     /// True when web content opened this page through `window.open()`. It gates
     /// `window.close()`, which may only close what script itself opened.
     @ObservationIgnored private(set) var wasOpenedAsPopup = false
