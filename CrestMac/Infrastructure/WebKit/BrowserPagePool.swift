@@ -137,6 +137,10 @@ final class BrowserPagePool:
     @ObservationIgnored private let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored private let popupTabHost: BrowserPopupTabHost
     @ObservationIgnored private let openNewTab: (URL) -> Void
+    @ObservationIgnored var extensionSidebarDocuments: [BrowserExtensionSidebarKey: BrowserExtensionSidebarDocument] =
+        [:]
+
+    func openExtensionSidebarLink(_ url: URL) { openNewTab(url) }
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
@@ -1577,6 +1581,7 @@ final class BrowserPagePool:
     /// gate ordinary and transient content until authentication succeeds.
     func relockProtectedSpace(_ space: BrowserSpace) {
         guard space.accessPolicy.requiresAuthentication else { return }
+        closeExtensionSidebars(inSpace: space.id)
         // A background Space can still remember its editor after departure.
         // Locking ends that focus session even though its pages stay resident.
         let retainedPages =
@@ -2279,6 +2284,7 @@ final class BrowserPagePool:
     }
 
     private func releaseExtensionOffscreenDocuments(in spaceID: SpaceID) {
+        closeExtensionSidebars(inSpace: spaceID)
         let matchingKeys = extensionOffscreenDocuments.keys.filter {
             $0.spaceID == spaceID
         }
@@ -2288,6 +2294,7 @@ final class BrowserPagePool:
     }
 
     private func releaseAllExtensionOffscreenDocuments() {
+        closeExtensionSidebars()
         for document in extensionOffscreenDocuments.values {
             document.close()
         }

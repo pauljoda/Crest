@@ -72,7 +72,7 @@ The two tables below are generated directly from Crest's executable routing matr
 | Chromium schemas | `209681af9aaea48aa172a1a9eb1eb2cdc63c1e67` |
 | Firefox schemas | `5836a062726f715fda621338a17b51aff30d0a8c` |
 | WebKit extension IDL | `e4856c6696f58bae6f5cf1e864d0550f9eff09f8` |
-| Apple SDK | Xcode 27.0 (27A5237l), macOS 27.0 SDK |
+| Apple SDK | Xcode 27.0 (27A5252f), macOS 27.0 SDK |
 
 ### Namespace routes
 
@@ -106,8 +106,8 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `runtime` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
 | `scripting` | Native | Native | Native | Native + patch | BG, EP | `scripting` | `scripting` | — |
 | `sessions` | Native | Native | Unavailable | Unavailable | BG, EP | `sessions` | `sessions` | — |
-| `sidePanel` | Native | Unavailable | Partial | Unavailable | BG, EP | `sidePanel` | `sidePanel` | — |
-| `sidebarAction` | Unavailable | Native | Partial | Unavailable | BG, EP | — | Always | — |
+| `sidePanel` | Native | Unavailable | Partial | Emulated | BG, EP | `sidePanel` | `sidePanel` | `sidePanel` |
+| `sidebarAction` | Unavailable | Native | Partial | Emulated | BG, EP | — | Manifest `sidebar_action` | — |
 | `storage` | Native | Native | Native | Native + patch | BG, EP, CS | `storage`, `unlimitedStorage` | `storage`, `unlimitedStorage` | — |
 | `tabs` | Native | Native | Native | Native + patch | BG, EP | `tabs` | Always | — |
 | `test` | Unavailable | Unavailable | Native | Unavailable | BG, EP, CS | — | Always | — |
@@ -201,6 +201,25 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `runtime.onUpdateAvailable` | Native | Native + patch | BG, EP | — |
 | `runtime.requestUpdateCheck` | Native | Native + patch | BG, EP | — |
 | `scripting.ExecutionWorld` | Native | Native + patch | BG, EP | — |
+| `sidePanel.Side` | Partial | Emulated | BG, EP | — |
+| `sidePanel.close` | Partial | Emulated | BG, EP | — |
+| `sidePanel.getLayout` | Partial | Emulated | BG, EP | — |
+| `sidePanel.getOptions` | Partial | Emulated | BG, EP | — |
+| `sidePanel.getPanelBehavior` | Partial | Emulated | BG, EP | — |
+| `sidePanel.onClosed` | Partial | Emulated | BG, EP | — |
+| `sidePanel.onOpened` | Partial | Emulated | BG, EP | — |
+| `sidePanel.open` | Partial | Emulated | BG, EP | — |
+| `sidePanel.setOptions` | Partial | Emulated | BG, EP | — |
+| `sidePanel.setPanelBehavior` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.close` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.getPanel` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.getTitle` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.isOpen` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.open` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.setIcon` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.setPanel` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.setTitle` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.toggle` | Partial | Emulated | BG, EP | — |
 | `storage.local` | Native | Native + patch | BG, EP, CS | — |
 | `storage.managed` | Native | Native + patch | BG, EP, CS | — |
 | `storage.session` | Native | Native + patch | BG, EP, CS | — |
@@ -233,7 +252,7 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 - **Browser data stores.** Bookmarks, history, top sites, and sessions are not exposed to extensions at all.
 - **Downloads.** An extension can start a download through <code>downloads.download</code>; Crest applies its own destination and safety policy. The rest of the namespace, including search and download history, is present but reports that Crest cannot do it, so an extension gets an error rather than a broken page.
 - **Offscreen documents.** Crest hosts the hidden document itself, using the page the extension bundles, so Chrome extensions that depend on an offscreen worker keep working.
-- **Side panels.** Crest has no extension-owned panel surface, so the <code>sidePanel</code> API is absent rather than stubbed — the same as Firefox, which extensions already handle. Firefox's <code>sidebarAction</code> is unavailable too.
+- **Side panels.** On macOS, Chrome <code>sidePanel</code> and Firefox <code>sidebarAction</code> open an extension-owned card beside your tabs. You can resize or close it, and choose another available extension from its title. Closing unloads the panel; restarting Crest leaves it closed. Firefox path icons work, but image-data icons are not supported.
 - **Request blocking.** WebKit reports requests but does not consume blocking <code>webRequest</code> responses, so cancellation, redirection, header mutation, and authentication parity are unavailable. Declarative rules are translated by WebKit, and that translation is not lossless.
 - **Sign-in redirects.** <code>identity.launchWebAuthFlow</code> needs a browser-owned authentication window Crest does not have yet.
 - **Extension management.** An extension can read its own record. Listing, enabling, or removing other extensions is refused.
@@ -241,8 +260,8 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 
 ## What this coverage means
 
-Crest currently routes **36 namespace contracts** and 103 individual members through one executable matrix. Twenty-six namespaces are available in some form and ten are intentionally unavailable. The strongest coverage is around the flows used by password managers, page modifiers, and extension popups: runtime messaging, storage, tabs, injection, actions, auxiliary windows, permissions, notifications, menus, and lifecycle.
+Crest currently routes **36 namespace contracts** and 122 individual members through one executable matrix. Twenty-eight namespaces are available in some form and eight are intentionally unavailable. Coverage includes runtime messaging, storage, tabs, injection, actions, auxiliary windows, side panels, permissions, notifications, menus, and lifecycle. API coverage alone does not certify every extension's account or native-companion workflow.
 
-The remaining gaps cluster around three areas: browser-owned data stores such as bookmarks, history, and sessions; browser-chrome surfaces such as side panels and the omnibox; and request interception semantics WebKit does not expose. Those gaps are documented instead of being replaced with extension-specific shims or successful no-ops.
+The remaining gaps cluster around browser-owned data stores such as bookmarks, history, and sessions; the extension omnibox; and request interception semantics WebKit does not expose. Those gaps are documented instead of being replaced with extension-specific shims or successful no-ops.
 
 For the implementation-level contract and pinned Chromium, Firefox, WebKit, and SDK revisions, see the [technical API matrix](https://github.com/pauljoda/Crest/blob/main/Documentation/ExtensionAPICompatibilityMatrix.md). For package-specific native limits, continue with [Direct build, App Store, and native companions](./native-companion-limits.md).

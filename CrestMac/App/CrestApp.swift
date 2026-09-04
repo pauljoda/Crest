@@ -22,6 +22,7 @@ struct CrestApp: App {
     @State private var splitFocus: BrowserSplitFocusPreferenceStore
     @State private var softwareUpdates: BrowserSoftwareUpdateService
     @State private var sidebarWidgets: BrowserSidebarWidgetRuntime
+    @State private var extensionSidebar: BrowserExtensionSidebarStore
     private let extensionControllerPool: BrowserExtensionControllerPool
     private let extensionCommandMonitor: BrowserExtensionCommandMonitor
     private let pagePoolRegistry: BrowserPagePoolRegistry
@@ -92,6 +93,23 @@ struct CrestApp: App {
             capturesExtensionConsole: capturesExtensionConsole
         )
         let privateExtensionControllerPool = BrowserExtensionControllerPool()
+        let sidebarDefaults: UserDefaults?
+        if usesIsolatedLaunch, let isolationID = launchEnvironment.persistentIsolationID {
+            sidebarDefaults = UserDefaults(
+                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: isolationID))
+        } else {
+            sidebarDefaults = utilityDefaults
+        }
+        let sidebarBehaviorPersistence: any BrowserExtensionSidebarBehaviorPersisting =
+            if let sidebarDefaults {
+                UserDefaultsBrowserExtensionSidebarBehaviorStore(defaults: sidebarDefaults)
+            } else {
+                InMemoryBrowserExtensionSidebarBehaviorStore()
+            }
+        let extensionSidebar = BrowserExtensionSidebarStore(behaviorPersistence: sidebarBehaviorPersistence)
+        extensionControllerPool.setSidebarService(extensionSidebar) {
+            NSApp.userInterfaceLayoutDirection == .rightToLeft ? "left" : "right"
+        }
         extensionControllerPool.setNativeMessagingHandler(
             usesIsolatedLaunch
                 ? BrowserNativeMessagingService(
@@ -111,10 +129,18 @@ struct CrestApp: App {
                             center: .current()
                         )
                     ),
+                    sidebarService: extensionSidebar,
+                    sidebarEventMessage: { [weak extensionControllerPool] event in
+                        extensionControllerPool?.sidebarEventMessage(event)
+                    },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
                 )
                 : BrowserNativeMessagingService.production(
+                    sidebarService: extensionSidebar,
+                    sidebarEventMessage: { [weak extensionControllerPool] event in
+                        extensionControllerPool?.sidebarEventMessage(event)
+                    },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
                 )
@@ -311,9 +337,11 @@ struct CrestApp: App {
             pageProvider: privatePages
         )
         let windowStatePersistence: any BrowserWindowStatePersisting =
-            usesIsolatedLaunch
-            ? InMemoryBrowserWindowStatePersistence()
-            : UserDefaultsBrowserWindowStatePersistence()
+            if let sidebarDefaults {
+                UserDefaultsBrowserWindowStatePersistence(defaults: sidebarDefaults)
+            } else {
+                InMemoryBrowserWindowStatePersistence()
+            }
         let startupBehavior =
             usesIsolatedLaunch
             ? BrowserStartupBehavior.lastActiveTab
@@ -376,6 +404,7 @@ struct CrestApp: App {
         )
         _softwareUpdates = State(initialValue: softwareUpdates)
         _sidebarWidgets = State(initialValue: sidebarWidgets)
+        _extensionSidebar = State(initialValue: extensionSidebar)
         _pages = State(initialValue: pages)
         _privatePages = State(initialValue: privatePages)
         self.extensionControllerPool = extensionControllerPool
@@ -471,6 +500,7 @@ struct CrestApp: App {
                         )
                         .environment(windowTransparency)
                         .environment(splitFocus)
+                        .environment(extensionSidebar)
                         .environment(
                             \.browserSidebarWidgetRuntime,
                             sidebarWidgets

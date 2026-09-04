@@ -127,10 +127,14 @@ enum BrowserSplitCardLiftPolicy {
     static func isOverDivider(
         _ point: CGPoint,
         orderedCardFrames: [CGRect],
+        panelFrame: CGRect? = nil,
         hitWidth: CGFloat = BrowserSplitLayoutMetrics.resizeHandleHitWidth
     ) -> Bool {
         let reach = max(0, hitWidth) / 2
-        return zip(orderedCardFrames, orderedCardFrames.dropFirst()).contains {
+        let frames = BrowserSplitDropPolicy.ordered(
+            orderedCardFrames + (panelFrame.map { [$0] } ?? [])
+        )
+        return zip(frames, frames.dropFirst()).contains {
             leading, trailing in
             abs(point.x - (leading.maxX + trailing.minX) / 2) <= reach
         }

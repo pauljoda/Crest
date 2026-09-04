@@ -72,6 +72,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private enum Watch {
         case idle(BrowserExtensionIdleWatch)
         case notifications(Task<Void, Never>)
+        case sidebar(Task<Void, Never>)
     }
 
     private let authorization: BrowserExtensionNativeMessagingAuthorization
@@ -79,6 +80,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
     private let publish: ([String: Any]) -> Void
     private let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
+    private let sidebarService: (any BrowserExtensionSidebarHandling)?
+    private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
     private var watch: Watch?
     private var webpageMenuClickObserver: UUID?
 
@@ -89,12 +92,16 @@ final class BrowserExtensionCapabilityBrokerConnection {
         idleStateProvider:
             @escaping (TimeInterval) -> BrowserExtensionSystemIdleState,
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry,
+        sidebarService: (any BrowserExtensionSidebarHandling)? = nil,
+        sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         publish: @escaping ([String: Any]) -> Void
     ) {
         self.authorization = authorization
         self.notificationService = notificationService
         self.idleStateProvider = idleStateProvider
         self.webpageMenuRegistry = webpageMenuRegistry
+        self.sidebarService = sidebarService
+        self.sidebarEventMessage = sidebarEventMessage
         self.publish = publish
     }
 
@@ -116,6 +123,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureIdleWatch(request)
         case "notifications.watch":
             try configureNotificationWatch()
+        case "sidebar.watch":
+            try configureSidebarWatch()
         default:
             throw BrowserExtensionCapabilityBrokerError.unsupportedAPI(api)
         }
@@ -134,7 +143,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let watch):
             watch.stop()
-        case .notifications(let task):
+        case .notifications(let task), .sidebar(let task):
             task.cancel()
         case nil:
             break
@@ -221,7 +230,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let existing):
             idleWatch = existing
-        case .notifications:
+        case .notifications, .sidebar:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             idleWatch = BrowserExtensionIdleWatch(
@@ -250,7 +259,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .notifications:
             return
-        case .idle:
+        case .idle, .sidebar:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             break
@@ -263,6 +272,29 @@ final class BrowserExtensionCapabilityBrokerConnection {
             }
         }
         watch = .notifications(task)
+    }
+
+    private func configureSidebarWatch() throws {
+        guard authorization.grants("sidePanel") || authorization.grants("sidebarAction") else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied("sidePanel")
+        }
+        guard let client = authorization.clientID, let sidebarService else {
+            throw BrowserExtensionCapabilityBrokerError.unsupportedAPI("sidebar")
+        }
+        switch watch {
+        case .sidebar: return
+        case .idle, .notifications: throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case nil: break
+        }
+        let events = sidebarService.events(for: client)
+        watch = .sidebar(
+            Task { @MainActor [weak self] in
+                for await event in events {
+                    guard !Task.isCancelled else { return }
+                    guard let self, let message = self.sidebarEventMessage(event) else { continue }
+                    self.publish(message)
+                }
+            })
     }
 
     private static func message(
@@ -362,7 +394,9 @@ final class BrowserNativeMessagingService:
     private let resolver: BrowserNativeMessagingHostManifestResolver
     private let replyTimeout: Duration
     private let notificationService: (any BrowserExtensionNotificationHandling)?
+    private let sidebarService: (any BrowserExtensionSidebarHandling)?
     private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
+    private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private var connections: [ObjectIdentifier: BrowserNativeMessagingPersistentConnection] = [:]
     private var capabilityConnections: [ObjectIdentifier: BrowserExtensionCapabilityBrokerConnection] = [:]
@@ -373,6 +407,8 @@ final class BrowserNativeMessagingService:
         replyTimeout: Duration = .seconds(30),
         notificationService:
             (any BrowserExtensionNotificationHandling)? = nil,
+        sidebarService: (any BrowserExtensionSidebarHandling)? = nil,
+        sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry(),
         idleStateProvider:
@@ -382,6 +418,8 @@ final class BrowserNativeMessagingService:
         self.resolver = resolver
         self.replyTimeout = replyTimeout
         self.notificationService = notificationService
+        self.sidebarService = sidebarService
+        self.sidebarEventMessage = sidebarEventMessage
         self.webpageMenuRegistry = webpageMenuRegistry
         if let idleStateProvider {
             self.idleStateProvider = idleStateProvider
@@ -394,6 +432,8 @@ final class BrowserNativeMessagingService:
     }
 
     static func production(
+        sidebarService: (any BrowserExtensionSidebarHandling)? = nil,
+        sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry()
     ) -> BrowserNativeMessagingService {
@@ -407,6 +447,8 @@ final class BrowserNativeMessagingService:
             notificationService: BrowserExtensionNotificationService(
                 center: notificationCenter
             ),
+            sidebarService: sidebarService,
+            sidebarEventMessage: sidebarEventMessage,
             webpageMenuRegistry: webpageMenuRegistry
         )
     }
@@ -525,6 +567,8 @@ final class BrowserNativeMessagingService:
                 notificationService: notificationService,
                 idleStateProvider: idleStateProvider,
                 webpageMenuRegistry: webpageMenuRegistry,
+                sidebarService: sidebarService,
+                sidebarEventMessage: sidebarEventMessage,
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }

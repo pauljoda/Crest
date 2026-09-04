@@ -8,15 +8,9 @@ import Foundation
 /// surface agrees on, so a run that one layer considers renderable is
 /// renderable in all of them.
 ///
-/// Reserved seam — extension side panels. A later release adds panel cards
-/// alongside web-view cards. Those panels are device-local by design (an
-/// extension's side panel is not a person's browsing state and must never
-/// sync), so they will live in a `BrowserLocalSplitPanelStore` keyed by
-/// `SplitGroupID` rather than as members of the run. Its repair pass drops
-/// every entry whose key is absent from `BrowserSpace.liveSplitGroupIDs`,
-/// which is what makes "break up a split on one device" converge cleanly on
-/// every other device without any cross-device panel record. Design note
-/// only: nothing below builds it.
+/// Extension side panels occupy a separate row slot keyed by native window
+/// and Space. They are not group members, do not affect column fractions,
+/// and never enter synced browsing state.
 enum BrowserSplitGroupPolicy {
     /// The largest number of tabs one split group renders as columns. Arc and
     /// Zen both stop at four, and four 240pt-minimum cards is already the

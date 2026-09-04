@@ -366,6 +366,11 @@ struct BrowserCommands: Commands {
                 action: actions.toggleSidebar
             )
             .keyboardShortcut(shortcut(.toggleSidebar))
+            Button("Toggle Extension Side Panel", systemImage: "sidebar.trailing") {
+                focusedContext?.extensionSidebar?.toggle()
+            }
+            .keyboardShortcut(shortcut(.toggleExtensionSidePanel))
+            .disabled(focusedContext?.extensionSidebar?.canToggle != true)
         }
 
         CommandGroup(after: .toolbar) {
@@ -398,7 +403,8 @@ struct BrowserCommands: Commands {
             chrome: commandChrome,
             openWindow: openWindow,
             targetWindowID: focusedContext?.windowID,
-            layoutDirection: layoutDirection
+            layoutDirection: layoutDirection,
+            extensionSidebar: focusedContext?.extensionSidebar
         )
     }
 

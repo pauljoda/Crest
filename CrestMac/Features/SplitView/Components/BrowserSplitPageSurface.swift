@@ -45,6 +45,7 @@ struct BrowserSplitPageSurface: View {
     /// Where the card-frame space begins in the window, so a pointer measured in
     /// one can be drawn in the other.
     @State private var surfaceOrigin = CGPoint.zero
+    @State private var panelFrame: CGRect?
 
     var body: some View {
         BrowserSplitColumnsView(
@@ -73,10 +74,25 @@ struct BrowserSplitPageSurface: View {
                         model.chrome.startPageFocusRequest,
                     isCommandPalettePresented:
                         model.chrome.isCommandPalettePresented,
+                    fitsBesideExtensionSidebar: model.extensionSidebar?.panel != nil,
                     cardFrames: cardFrames,
                     focusesOnHover: { focusesOnHover(member.id) },
                     onFocusRequest: { model.focusSplitCard(member.id) }
                 )
+            },
+            panel: model.extensionSidebar?.panel == nil
+                ? nil : .init(requestedWidth: model.extensionSidebar?.width ?? 360),
+            onPanelResizeCommit: { model.extensionSidebar?.commitWidth($0) },
+            panelContent: {
+                if let host = model.extensionSidebar, let panel = host.panel {
+                    BrowserExtensionSidebarCard(host: host, panel: panel)
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: BrowserSplitCardFrameRegistry.coordinateSpace)
+                        } action: {
+                            panelFrame = $0
+                        }
+                        .onDisappear { panelFrame = nil }
+                }
             }
         )
         .background {
@@ -189,7 +205,8 @@ struct BrowserSplitPageSurface: View {
                         .orderedMemberFrames(
                             members: members,
                             cardFrames: frames
-                        )
+                        ),
+                    panelFrame: panelFrame
                 ),
                 memberCount: members.count,
                 isDraggingSidebarItem:

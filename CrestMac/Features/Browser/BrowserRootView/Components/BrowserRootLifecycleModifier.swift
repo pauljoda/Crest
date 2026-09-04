@@ -138,7 +138,8 @@ struct BrowserRootLifecycleModifier: ViewModifier {
                     browser: model.browser,
                     pages: model.pages,
                     chrome: model.chrome,
-                    windowID: model.windowState?.id
+                    windowID: model.windowState?.id,
+                    extensionSidebar: model.extensionSidebar
                 )
             )
     }

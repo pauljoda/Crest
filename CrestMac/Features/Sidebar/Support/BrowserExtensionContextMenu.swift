@@ -80,6 +80,15 @@ final class BrowserExtensionContextMenu: NSObject {
                 }
             )
         }
+        if pool.tabWindowCoordinator.sidebarIsAvailable(for: action.context) {
+            menu.addItem(
+                item(
+                    title: pool.tabWindowCoordinator.sidebarIsOpen(for: action.context)
+                        ? String(localized: "Hide Side Panel") : String(localized: "Show Side Panel")
+                ) {
+                    pool.tabWindowCoordinator.performSidebarAction(for: action.context, invocation: .menu)
+                })
+        }
         menu.addItem(
             item(
                 title: action.isPinned

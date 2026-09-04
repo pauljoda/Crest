@@ -49,7 +49,7 @@ change.
 | Chromium schemas | `209681af9aaea48aa172a1a9eb1eb2cdc63c1e67` |
 | Firefox schemas | `5836a062726f715fda621338a17b51aff30d0a8c` |
 | WebKit extension IDL | `e4856c6696f58bae6f5cf1e864d0550f9eff09f8` |
-| Apple SDK | Xcode 27.0 (27A5237l), macOS 27.0 SDK |
+| Apple SDK | Xcode 27.0 (27A5252f), macOS 27.0 SDK |
 
 ### Namespace routes
 
@@ -83,8 +83,8 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `runtime` | Native | Native | Native | Native + patch | BG, EP, CS | — | Always | — |
 | `scripting` | Native | Native | Native | Native + patch | BG, EP | `scripting` | `scripting` | — |
 | `sessions` | Native | Native | Unavailable | Unavailable | BG, EP | `sessions` | `sessions` | — |
-| `sidePanel` | Native | Unavailable | Partial | Unavailable | BG, EP | `sidePanel` | `sidePanel` | — |
-| `sidebarAction` | Unavailable | Native | Partial | Unavailable | BG, EP | — | Always | — |
+| `sidePanel` | Native | Unavailable | Partial | Emulated | BG, EP | `sidePanel` | `sidePanel` | `sidePanel` |
+| `sidebarAction` | Unavailable | Native | Partial | Emulated | BG, EP | — | Manifest `sidebar_action` | — |
 | `storage` | Native | Native | Native | Native + patch | BG, EP, CS | `storage`, `unlimitedStorage` | `storage`, `unlimitedStorage` | — |
 | `tabs` | Native | Native | Native | Native + patch | BG, EP | `tabs` | Always | — |
 | `test` | Unavailable | Unavailable | Native | Unavailable | BG, EP, CS | — | Always | — |
@@ -178,6 +178,25 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `runtime.onUpdateAvailable` | Native | Native + patch | BG, EP | — |
 | `runtime.requestUpdateCheck` | Native | Native + patch | BG, EP | — |
 | `scripting.ExecutionWorld` | Native | Native + patch | BG, EP | — |
+| `sidePanel.Side` | Partial | Emulated | BG, EP | — |
+| `sidePanel.close` | Partial | Emulated | BG, EP | — |
+| `sidePanel.getLayout` | Partial | Emulated | BG, EP | — |
+| `sidePanel.getOptions` | Partial | Emulated | BG, EP | — |
+| `sidePanel.getPanelBehavior` | Partial | Emulated | BG, EP | — |
+| `sidePanel.onClosed` | Partial | Emulated | BG, EP | — |
+| `sidePanel.onOpened` | Partial | Emulated | BG, EP | — |
+| `sidePanel.open` | Partial | Emulated | BG, EP | — |
+| `sidePanel.setOptions` | Partial | Emulated | BG, EP | — |
+| `sidePanel.setPanelBehavior` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.close` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.getPanel` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.getTitle` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.isOpen` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.open` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.setIcon` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.setPanel` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.setTitle` | Partial | Emulated | BG, EP | — |
+| `sidebarAction.toggle` | Partial | Emulated | BG, EP | — |
 | `storage.local` | Native | Native + patch | BG, EP, CS | — |
 | `storage.managed` | Native | Native + patch | BG, EP, CS | — |
 | `storage.session` | Native | Native + patch | BG, EP, CS | — |
@@ -324,17 +343,16 @@ that reason.
   `runtime.getManifest()` returns the authored manifest rather than Crest's
   temporary worker redirection.
 - `scripting`: enum and member normalization; injection itself remains native.
-- `sidePanel`: **absent by design**, and that is the whole boundary. Crest has
-  no extension-owned panel surface, so there is nothing to be partly honest
-  about: extensions feature-detect the namespace and then use the schema behind
-  it, and Firefox — which publishes no `sidePanel` at all — is the reference
-  every portable package already handles. A one-member stub used to answer
-  here, which turned a successful detection into a `TypeError` thrown inside a
-  password manager's awaited worker bootstrap and stopped every later
-  initialization step. WebKit's own partial `sidePanel` is hidden when the
-  permission is requested, so absence holds on both roots rather than being an
-  invitation to a half-native panel; `sidebarAction` is unavailable for the
-  same reason.
+- `sidePanel` / `sidebarAction`: Crest hosts the extension document in a
+  trailing split-row card on macOS. Both namespaces publish their complete
+  implemented schema; WebKit's partial namespaces remain hidden. Chrome's API
+  requires Manifest V3 and `sidePanel`; Firefox's requires `sidebar_action`.
+  Opening requires a user gesture. Firefox close and toggle do too. Path icons
+  are supported; `setIcon({imageData})` rejects explicitly. The panel is not a
+  tab. Closing or switching to an inapplicable tab unloads its document, and
+  relaunch starts closed. Only action behavior, width, and last-used extension
+  persist. Top-level web links open a browser tab; embedded web content remains
+  subject to WebKit and the extension's content security policy.
 - `storage`: native local, sync, session, and managed areas with cross-context
   and event normalization.
 - `tabs` / `windows`: Crest's tab and window adapters are authoritative; a

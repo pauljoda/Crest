@@ -4,6 +4,12 @@ import WebKit
 @MainActor
 final class BrowserExtensionPermissionController {
     private let persistence: BrowserExtensionPersistenceController
+    private struct ManagedContext {
+        weak var context: WKWebExtensionContext?
+        var snapshot: BrowserExtensionPermissionSnapshot
+    }
+    private var managedContexts: [ObjectIdentifier: ManagedContext] = [:]
+    var browserManagedPermissionsDidChange: ((WKWebExtensionContext) -> Void)?
 
     init(persistence: BrowserExtensionPersistenceController) {
         self.persistence = persistence
@@ -21,6 +27,10 @@ final class BrowserExtensionPermissionController {
             )
         else {
             return .ask
+        }
+        if BrowserExtensionManagedPermissionPolicy.names.contains(permission) {
+            return BrowserExtensionManagedPermissionPolicy.decision(
+                for: permission, in: installation.permissionSnapshot)
         }
         if installation.permissionSnapshot
             .grantedPermissions[permission] != nil
@@ -77,6 +87,16 @@ final class BrowserExtensionPermissionController {
                 spaceID: spaceID,
                 nativeMessagingCapability: nativeMessagingCapability
             )
+            return
+        }
+        if BrowserExtensionManagedPermissionPolicy.names.contains(permission) {
+            var managed = managedSnapshot(for: context)
+            let previous = managed
+            managed.grantedPermissions[permission] = decision == .allow ? .distantFuture : nil
+            managed.deniedPermissions[permission] = decision == .block ? .distantFuture : nil
+            managedContexts[ObjectIdentifier(context)] = .init(context: context, snapshot: managed)
+            persistPermissionState(context: context, extensionID: extensionID, in: spaceID)
+            if previous != managed { browserManagedPermissionsDidChange?(context) }
             return
         }
         context.setPermissionStatus(
@@ -168,11 +188,14 @@ final class BrowserExtensionPermissionController {
         _ snapshot: BrowserExtensionPermissionSnapshot,
         to context: WKWebExtensionContext
     ) -> BrowserExtensionPermissionRestoreError? {
+        let previousManaged = managedSnapshot(for: context)
+        managedContexts[ObjectIdentifier(context)] = .init(
+            context: context, snapshot: BrowserExtensionManagedPermissionPolicy.managedSnapshot(from: snapshot))
         context.grantedPermissions = permissionDictionary(
-            snapshot.grantedPermissions
+            snapshot.grantedPermissions.filter { !BrowserExtensionManagedPermissionPolicy.names.contains($0.key) }
         )
         context.deniedPermissions = permissionDictionary(
-            snapshot.deniedPermissions
+            snapshot.deniedPermissions.filter { !BrowserExtensionManagedPermissionPolicy.names.contains($0.key) }
         )
         var droppedHostPatterns: [String] = []
         context.grantedPermissionMatchPatterns = hostDictionary(
@@ -185,6 +208,7 @@ final class BrowserExtensionPermissionController {
         )
         context.hasRequestedOptionalAccessToAllHosts =
             snapshot.hasRequestedOptionalAccessToAllHosts
+        if previousManaged != managedSnapshot(for: context) { browserManagedPermissionsDidChange?(context) }
         guard !droppedHostPatterns.isEmpty else { return nil }
         return BrowserExtensionPermissionRestoreError(
             droppedHostPatterns: droppedHostPatterns
@@ -195,7 +219,7 @@ final class BrowserExtensionPermissionController {
         for context: WKWebExtensionContext,
         excluding excludedPermissions: Set<String> = []
     ) -> BrowserExtensionPermissionSnapshot {
-        BrowserExtensionPermissionSnapshot(
+        let native = BrowserExtensionPermissionSnapshot(
             grantedPermissions: Dictionary(
                 uniqueKeysWithValues: context.grantedPermissions.map {
                     ($0.key.rawValue, $0.value)
@@ -221,6 +245,27 @@ final class BrowserExtensionPermissionController {
             hasRequestedOptionalAccessToAllHosts:
                 context.hasRequestedOptionalAccessToAllHosts
         )
+        return BrowserExtensionManagedPermissionPolicy.merge(
+            native: native, managed: managedSnapshot(for: context), excluding: excludedPermissions)
+    }
+
+    func hasBrowserManagedPermission(_ permission: String, for context: WKWebExtensionContext) -> Bool {
+        BrowserExtensionManagedPermissionPolicy.names.contains(permission)
+            && BrowserExtensionManagedPermissionPolicy.decision(for: permission, in: managedSnapshot(for: context))
+                == .allow
+    }
+
+    func releaseContext(_ context: WKWebExtensionContext) {
+        let previous = managedSnapshot(for: context)
+        managedContexts[ObjectIdentifier(context)] = nil
+        if previous != .empty { browserManagedPermissionsDidChange?(context) }
+    }
+
+    private func managedSnapshot(for context: WKWebExtensionContext) -> BrowserExtensionPermissionSnapshot {
+        guard let managed = managedContexts[ObjectIdentifier(context)], managed.context === context else {
+            return .empty
+        }
+        return managed.snapshot
     }
 
     private func permissionDictionary(

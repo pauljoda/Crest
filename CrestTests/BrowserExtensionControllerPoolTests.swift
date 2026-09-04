@@ -6,6 +6,75 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionControllerPoolTests: XCTestCase {
+    func testSidebarBrokerVerifiesGrantGestureAndOwningSpace() async throws {
+        let pool = BrowserExtensionControllerPool()
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let window = BrowserWindowID()
+        store.hostWindowResolver = { $0 == space.id ? window : nil }
+        pool.setSidebarService(store)
+        let pages = PageProviderSpy()
+        pool.connect(browser: browser, pageProvider: pages)
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "Fixtures/SidePanelProbeExtension", directoryHint: .isDirectory)
+        let context = try await pool.loadExtension(at: fixture, extensionID: "sidebar-probe", in: space)
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: "sidebar-probe", spaceID: space.id)
+        func authorize(_ permissions: Set<String>) {
+            pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+                .init(grantedPermissions: permissions, clientID: client, allowsInternalCapabilityBroker: true),
+                for: context
+            )
+        }
+        func send(_ payload: [String: Any]) throws -> [String: Any] {
+            var value: Any?
+            var failure: Error?
+            pool.tabWindowCoordinator.webExtensionController(
+                pool.controller(for: space), sendMessage: payload,
+                toApplicationWithIdentifier: BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier,
+                for: context
+            ) {
+                value = $0
+                failure = $1
+            }
+            if let failure { throw failure }
+            return try XCTUnwrap(value as? [String: Any])
+        }
+        authorize([])
+        XCTAssertThrowsError(try send(["api": "sidePanel.getOptions", "scope": ["kind": "default"]]))
+        authorize(["sidePanel"])
+        XCTAssertEqual(
+            try send(["api": "sidePanel.getOptions", "scope": ["kind": "default"]])["path"] as? String, "panel.html")
+        XCTAssertThrowsError(try send(["api": "sidePanel.open", "windowKind": "primary"])) { error in
+            XCTAssertEqual(
+                error.localizedDescription, "`sidePanel.open()` may only be called in response to a user gesture.")
+        }
+        pool.tabWindowCoordinator.noteUserGesture(for: context)
+        _ = try send(["api": "sidePanel.open", "windowKind": "primary"])
+        XCTAssertTrue(store.isOpen(for: client, in: window))
+        _ = try send(["api": "sidePanel.setOptions", "scope": ["kind": "default"], "enabled": false])
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+        let options = try send(["api": "sidePanel.getOptions", "scope": ["kind": "default"]])
+        XCTAssertEqual(options["path"] as? String, "panel.html")
+        XCTAssertEqual(options["enabled"] as? Bool, false)
+        XCTAssertThrowsError(try send(["api": "sidebarAction.getTitle", "scope": ["kind": "default"]]))
+    }
+
+    func testSidebarRegistersWithItsSpaceAndUnregistersOnRemoval() async throws {
+        let pool = BrowserExtensionControllerPool()
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        pool.setSidebarService(store)
+        let space = BrowserSession.preview.spaces[0]
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "Fixtures/SidePanelProbeExtension", directoryHint: .isDirectory)
+        let summary = try await pool.loadUnpackedExtension(from: fixture, in: space)
+        XCTAssertTrue(summary.hasSidebar)
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: summary.id, spaceID: space.id)
+        XCTAssertEqual(try store.resolvedOptions(for: nil, client: client).path, "panel.html")
+        try await pool.removeExtension(extensionID: summary.id, from: space)
+        XCTAssertThrowsError(try store.resolvedOptions(for: nil, client: client))
+    }
+
     private final class PageProviderSpy: BrowserExtensionPageProviding {
         private(set) var preparedSessions: [BrowserSession] = []
         private(set) var selectedSessions: [BrowserSession] = []

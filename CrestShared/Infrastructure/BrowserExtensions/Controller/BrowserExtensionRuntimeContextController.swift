@@ -141,6 +141,11 @@ final class BrowserExtensionRuntimeContextController {
     private let contextObserver: BrowserExtensionContextObserver
     private let commandController: BrowserExtensionCommandController
     private let tabWindowCoordinator: BrowserExtensionTabWindowCoordinator
+    func requestSidebarOpenAtInstall(extensionID: String, in spaceID: SpaceID, didOpen: @escaping () -> Void) {
+        tabWindowCoordinator.sidebarService?.requestOpenAtInstall(
+            for: .scoped(extensionID: extensionID, spaceID: spaceID), didOpen: didOpen
+        )
+    }
     private let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private let storedResourcePreparer: any BrowserExtensionStoredResourcePreparing
     private let usesEphemeralWebKitStorage: Bool
@@ -361,9 +366,9 @@ final class BrowserExtensionRuntimeContextController {
         capabilityBrokerGrantedPermissions: Set<String> = [],
         allowsInternalCapabilityBroker: Bool = false
     ) throws -> WKWebExtensionContext {
-        let authoredRequestedPermissions = webExtension.requestedPermissions
-            .map(\.rawValue)
-            .filter { !internalGrantedPermissions.contains($0) }
+        let authoredRequestedPermissions = BrowserExtensionManagedPermissionPolicy.requestedPermissions(
+            native: webExtension.requestedPermissions.map(\.rawValue), manifest: webExtension.manifest,
+            excluding: internalGrantedPermissions)
         let compatibility = BrowserExtensionCompatibilityPolicy.assess(
             extensionID: extensionID,
             requestedPermissions: authoredRequestedPermissions,
@@ -481,6 +486,7 @@ final class BrowserExtensionRuntimeContextController {
         do {
             try controller(for: space).load(context)
         } catch {
+            permissions.releaseContext(context)
             tabWindowCoordinator.unregisterNativeMessagingIdentity(
                 for: context,
                 in: space.id
@@ -492,6 +498,23 @@ final class BrowserExtensionRuntimeContextController {
         }
 
         contextsBySpace[space.id, default: [:]][extensionID] = context
+        let referenceEnvironment: BrowserExtensionReferenceEnvironment =
+            if case .mozillaAddons = source { .firefox } else { .chromium }
+        let sidebarDefaults =
+            BrowserExtensionSidebarManifestPolicy.defaults(
+                manifest: webExtension.manifest, referenceEnvironment: referenceEnvironment
+            )
+            ?? (authoredRequestedPermissions.contains("sidePanel")
+                ? BrowserExtensionSidebarDefaults(flavor: .sidePanel) : nil)
+        if let sidebarDefaults {
+            let sidebarClient = BrowserExtensionServiceClientID.scoped(extensionID: extensionID, spaceID: space.id)
+            tabWindowCoordinator.sidebarService?.register(
+                client: sidebarClient, spaceID: space.id,
+                defaults: sidebarDefaults, displayName: webExtension.displayName ?? extensionID,
+                baseURL: context.baseURL
+            )
+            tabWindowCoordinator.sidebarClientsByContext[ObjectIdentifier(context)] = sidebarClient
+        }
         internalGrantedPermissionsBySpace[space.id, default: [:]][extensionID] =
             internalGrantedPermissions
         commandController.captureDefaults(
@@ -632,6 +655,7 @@ final class BrowserExtensionRuntimeContextController {
             for: context,
             in: spaceID
         )
+        permissions.releaseContext(context)
         contextObserver.stopObserving(context)
         if contextsBySpace[spaceID]?.isEmpty == true {
             contextsBySpace.removeValue(forKey: spaceID)

@@ -22,7 +22,7 @@ import SwiftUI
 ///   the same gap, the same surface, and the same width arithmetic serve both,
 ///   and the slot under the pointer is already the exact width and position the
 ///   card that lands in it will have.
-/// - `ForEach` identity is the slot's `TabID` — `nil` for the placeholder — so a
+/// - `ForEach` identity distinguishes tabs, the placeholder, and the panel, so a
 ///   focus change, a resize, a neighbour arriving, or the drop itself updates a
 ///   card's host rather than remounting it. A remounted host would hand a live
 ///   `WKWebView` to a second superview.
@@ -40,7 +40,7 @@ import SwiftUI
 /// A resize also writes without an implicit animation — the settle animation
 /// below belongs to a column opening or closing, not to pointer tracking, which
 /// has to land on the frame it was measured for.
-struct BrowserSplitColumnsView<Content: View>: View {
+struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
     /// The presented cards, in session member order.
     let members: [BrowserTab]
     /// The one card browser chrome speaks for.
@@ -65,9 +65,13 @@ struct BrowserSplitColumnsView<Content: View>: View {
     let onFocus: (TabID) -> Void
     let usesTransparentInnerSurface: (BrowserTab) -> Bool
     @ViewBuilder let content: (BrowserTab, Bool) -> Content
+    let panel: BrowserSplitPanelColumn?
+    let onPanelResizeCommit: (CGFloat) -> Void
+    @ViewBuilder let panelContent: Panel
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
+    @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
 
     var body: some View {
         GeometryReader { proxy in
@@ -86,13 +90,22 @@ struct BrowserSplitColumnsView<Content: View>: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Split View Columns")
+        .onChange(of: panel) {
+            panelWidthTransaction = BrowserSplitPanelWidthTransaction()
+        }
     }
 
     private func columns(containerWidth: CGFloat) -> some View {
         let widths = slotWidths(containerWidth: containerWidth)
+        let memberWidth = memberContainerWidth(containerWidth: containerWidth)
         return ZStack(alignment: .leading) {
             cardRow(widths: widths)
-            dividers(cardWidths: widths, containerWidth: containerWidth)
+            dividers(cardWidths: widths, containerWidth: memberWidth)
+            if panel != nil, resolvedPlaceholderIndex == nil, liftedTabID == nil,
+                let panelWidth = widths.last, panelWidth > 0
+            {
+                panelDivider(cardWidths: widths, panelWidth: panelWidth)
+            }
         }
         .coordinateSpace(BrowserSplitResizeSpace.coordinateSpace)
     }
@@ -148,6 +161,8 @@ struct BrowserSplitColumnsView<Content: View>: View {
                 .allowsHitTesting(false)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Add to Split View")
+        case .panel:
+            surface
         }
     }
 
@@ -180,6 +195,8 @@ struct BrowserSplitColumnsView<Content: View>: View {
                     .opacity(isGap ? 0 : 1)
             case .placeholder:
                 BrowserSplitPlaceholderCard()
+            case .panel:
+                panelContent
             }
         }
     }
@@ -230,6 +247,38 @@ struct BrowserSplitColumnsView<Content: View>: View {
         }
     }
 
+    private func panelDivider(cardWidths: [CGFloat], panelWidth: CGFloat) -> some View {
+        BrowserSplitCardResizeHandle(
+            dividerIndex: members.count - 1,
+            resize: resizePanel,
+            commit: commitPanelResize,
+            accessibilityTitle: "Resize Extension Side Panel",
+            accessibilityMeasurement: "\(Int(panelWidth)) points",
+            accessibilityDirection: -1
+        )
+        .offset(
+            x: BrowserChromeDirectionPolicy.leadingOffset(
+                BrowserSplitColumnLayout.dividerLeadingDistance(
+                    after: members.count - 1, cardWidths: cardWidths
+                ),
+                layoutDirection: layoutDirection
+            ))
+    }
+
+    private func resizePanel(delta: CGFloat) {
+        guard let panel else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            panelWidthTransaction.resize(startingAt: panel.requestedWidth, delta: delta)
+        }
+    }
+
+    private func commitPanelResize() {
+        guard let width = panelWidthTransaction.commit() else { return }
+        onPanelResizeCommit(width)
+    }
+
     /// The gaps that carry a divider: one after every card but the last.
     ///
     /// A gesture in flight has none. The pointer already belongs to that gesture
@@ -247,7 +296,8 @@ struct BrowserSplitColumnsView<Content: View>: View {
     private var slots: [BrowserSplitColumnSlot] {
         BrowserSplitColumnSlot.slots(
             members: members,
-            placeholderIndex: placeholderIndex
+            placeholderIndex: placeholderIndex,
+            includesPanel: panel != nil
         )
     }
 
@@ -257,9 +307,28 @@ struct BrowserSplitColumnsView<Content: View>: View {
     /// card produces, spread across the same container. Nothing about the row
     /// changes on release except which view occupies the column.
     private func slotWidths(containerWidth: CGFloat) -> [CGFloat] {
-        BrowserSplitColumnLayout.widths(
-            containerWidth: containerWidth,
+        let widths = BrowserSplitColumnLayout.widths(
+            containerWidth: memberContainerWidth(containerWidth: containerWidth),
             fractions: slotFractions
+        )
+        guard panel != nil else { return widths }
+        return widths + [resolvedPanelWidth(containerWidth: containerWidth)]
+    }
+
+    private func memberContainerWidth(containerWidth: CGFloat) -> CGFloat {
+        guard panel != nil else { return containerWidth }
+        return BrowserSplitPanelLayout.memberContainerWidth(
+            containerWidth: containerWidth,
+            panelWidth: resolvedPanelWidth(containerWidth: containerWidth)
+        )
+    }
+
+    private func resolvedPanelWidth(containerWidth: CGFloat) -> CGFloat {
+        BrowserSplitPanelLayout.resolvedWidth(
+            requestedWidth: panelWidthTransaction.width ?? panel?.requestedWidth
+                ?? BrowserExtensionSidebarLayoutMetrics.defaultWidth,
+            containerWidth: containerWidth,
+            memberCount: members.count + (resolvedPlaceholderIndex == nil ? 0 : 1)
         )
     }
 
@@ -299,5 +368,26 @@ struct BrowserSplitColumnsView<Content: View>: View {
             member.id == focusedTabID
         else { return BrowserSplitLayoutMetrics.restingCardZIndex }
         return BrowserSplitLayoutMetrics.focusedCardZIndex
+    }
+}
+
+extension BrowserSplitColumnsView where Panel == EmptyView {
+    init(
+        members: [BrowserTab], focusedTabID: TabID?, frameInsets: EdgeInsets,
+        accent: Color, placeholderIndex: Int?, liftedTabID: TabID?,
+        widthTransaction: Binding<BrowserSplitWidthTransaction>,
+        onResizeCommit: @escaping ([Double]) -> Void,
+        onFocus: @escaping (TabID) -> Void,
+        usesTransparentInnerSurface: @escaping (BrowserTab) -> Bool,
+        @ViewBuilder content: @escaping (BrowserTab, Bool) -> Content
+    ) {
+        self.init(
+            members: members, focusedTabID: focusedTabID, frameInsets: frameInsets,
+            accent: accent, placeholderIndex: placeholderIndex, liftedTabID: liftedTabID,
+            widthTransaction: widthTransaction, onResizeCommit: onResizeCommit,
+            onFocus: onFocus, usesTransparentInnerSurface: usesTransparentInnerSurface,
+            content: content, panel: nil, onPanelResizeCommit: { _ in },
+            panelContent: { EmptyView() }
+        )
     }
 }

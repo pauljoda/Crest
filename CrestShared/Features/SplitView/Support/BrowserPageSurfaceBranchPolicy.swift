@@ -28,14 +28,15 @@ enum BrowserPageSurfaceBranchPolicy {
         isSelectedSpaceLocked: Bool,
         selectedTabID: TabID?,
         hasEnteredSplitContent: Bool,
-        resolvedTarget: BrowserSidebarReorderTarget?
+        resolvedTarget: BrowserSidebarReorderTarget?,
+        presentsTrailingPanel: Bool = false
     ) -> BrowserPageSurfacePresentation {
         guard let space = selectedSpace, !isSelectedSpaceLocked else {
             return .unavailable
         }
 
         let members = space.presentedSplitMembers(for: selectedTabID)
-        guard !members.isEmpty, members.count > 1 || hasEnteredSplitContent
+        guard !members.isEmpty, members.count > 1 || hasEnteredSplitContent || presentsTrailingPanel
         else {
             return .single(space: space, cardTabID: selectedTabID)
         }

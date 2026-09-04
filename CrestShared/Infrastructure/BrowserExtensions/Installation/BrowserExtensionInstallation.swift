@@ -24,6 +24,8 @@ struct BrowserExtensionInstallation:
     var sourceDisplayName: String? = nil
     var iconData: Data? = nil
     var hasOptionsPage: Bool? = nil
+    var hasSidebar: Bool? = nil
+    var didOpenSidebarAtInstall: Bool? = nil
     var hasCommands: Bool? = nil
     var isPinned: Bool? = nil
     var commandShortcutOverrides: [String: BrowserExtensionCommandShortcutOverride]? = nil

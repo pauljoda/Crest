@@ -186,9 +186,10 @@ extension BrowserExtensionCommandController {
             // Only the extension whose own shortcut matches earns the gesture;
             // an unrelated keystroke must not hand out activeTab.
             if let pressed,
-                context.commands.contains(where: { shortcut(for: $0) == pressed })
+                let command = context.commands.first(where: { shortcut(for: $0) == pressed })
             {
                 grantActiveTab(in: context, activeTab: activeTab)
+                if performSidebarCommand?(context, command.id) == true { return true }
             }
             if context.performCommand(for: event) {
                 return true
@@ -203,6 +204,7 @@ extension BrowserExtensionCommandController {
     ) {
         guard let context = command.command.webExtensionContext else { return }
         grantActiveTab(in: context, activeTab: activeTab)
+        if performSidebarCommand?(context, command.id) == true { return }
         context.performCommand(command.command)
     }
 
@@ -213,6 +215,7 @@ extension BrowserExtensionCommandController {
         in context: WKWebExtensionContext,
         activeTab: (WKWebExtensionContext) -> (any WKWebExtensionTab)?
     ) {
+        noteUserGesture?(context)
         guard let tab = activeTab(context) else { return }
         context.userGesturePerformed(in: tab)
     }

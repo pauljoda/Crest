@@ -1,0 +1,10 @@
+:root { color-scheme: light dark; font: 13px system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 12px; min-width: 0; }
+h1 { font-size: 18px; }
+p, pre { overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; font: 11px ui-monospace, monospace; }
+label, select, input, output, a { display: block; width: 100%; margin: 8px 0; }
+select, input, button { font: inherit; padding: 6px; min-width: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+output { min-height: 2em; }

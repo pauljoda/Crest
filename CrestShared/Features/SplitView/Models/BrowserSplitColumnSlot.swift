@@ -10,25 +10,27 @@
 /// its `TabID` for the life of the row, so the cards a drag never touched are
 /// never remounted — which matters more here than in an ordinary list, because a
 /// remounted card would hand a live `WKWebView` to a second superview. The
-/// placeholder is the one slot with no tab behind it, so `nil` is its identity:
+/// placeholder and extension panel have distinct identities without tabs:
 /// on release the placeholder leaves and the joining member arrives in the same
 /// position at the same width, and every other column holds still.
 enum BrowserSplitColumnSlot: Identifiable {
     case member(BrowserTab)
     /// The column a drag in flight would drop into.
     case placeholder
+    case panel
 
-    var id: TabID? {
+    var id: BrowserSplitColumnSlotID {
         switch self {
-        case .member(let tab): tab.id
-        case .placeholder: nil
+        case .member(let tab): .member(tab.id)
+        case .placeholder: .placeholder
+        case .panel: .panel
         }
     }
 
     var member: BrowserTab? {
         switch self {
         case .member(let tab): tab
-        case .placeholder: nil
+        case .placeholder, .panel: nil
         }
     }
 
@@ -39,14 +41,23 @@ enum BrowserSplitColumnSlot: Identifiable {
     /// as though no drag were in flight.
     static func slots(
         members: [BrowserTab],
-        placeholderIndex: Int?
+        placeholderIndex: Int?,
+        includesPanel: Bool = false
     ) -> [BrowserSplitColumnSlot] {
         var slots = members.map(BrowserSplitColumnSlot.member)
-        guard let placeholderIndex,
+        if let placeholderIndex,
             placeholderIndex >= 0,
             placeholderIndex <= members.count
-        else { return slots }
-        slots.insert(.placeholder, at: placeholderIndex)
+        {
+            slots.insert(.placeholder, at: placeholderIndex)
+        }
+        if includesPanel { slots.append(.panel) }
         return slots
     }
+}
+
+enum BrowserSplitColumnSlotID: Hashable {
+    case member(TabID)
+    case placeholder
+    case panel
 }

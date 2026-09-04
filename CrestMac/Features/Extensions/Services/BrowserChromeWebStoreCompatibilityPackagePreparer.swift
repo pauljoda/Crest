@@ -27,6 +27,9 @@ enum BrowserWebExtensionManifestCompatibilityPolicy {
         guard var commands = manifest["commands"] as? [String: Any]
         else { return }
 
+        // Keep `_execute_sidebar_action` as an ordinary WebKit command. Crest
+        // handles its native invocation before commands.onCommand is dispatched.
+
         // WebKit uses the cross-version action command name. Preserve the
         // extension-facing manifest in the generated runtime, while presenting
         // the equivalent modern spelling to WKWebExtension.
@@ -177,9 +180,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             // implement. Those are precisely the declarations Crest's broker
             // needs (for example `idle`), so recover them from the prepared
             // package instead of treating the lossy summary as authoritative.
-            let manifestPermissions = try Self.requiredPermissionNames(
+            let preparedManifest = try Self.packageManifest(
                 in: stagingResourceURL
             )
+            let manifestPermissions = preparedManifest["permissions"] as? [String] ?? []
             let effectiveRequestedPermissions = Array(
                 Set(requestedPermissions).union(manifestPermissions)
             )
@@ -224,7 +228,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 capabilityBrokerGrantedPermissions:
                     Self.capabilityBrokerGrantedPermissions(
                         requestedPermissions: effectiveRequestedPermissions
-                    ),
+                    ).union(
+                        BrowserExtensionAPICompatibilityMatrix.capabilityBrokerGrantedCapabilities(
+                            manifest: preparedManifest)),
                 allowsInternalCapabilityBroker: true
             )
         } catch {
@@ -657,15 +663,15 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             )
     }
 
-    private static func requiredPermissionNames(
+    private static func packageManifest(
         in resourceURL: URL
-    ) throws -> [String] {
+    ) throws -> [String: Any] {
         let manifestURL = resourceURL.appending(path: "manifest.json")
         let data = try Data(contentsOf: manifestURL)
         let manifest =
             try JSONSerialization.jsonObject(with: data)
             as? [String: Any]
-        return manifest?["permissions"] as? [String] ?? []
+        return manifest ?? [:]
     }
 
     private func installExtensionPageCompatibility(
@@ -955,6 +961,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             throw BrowserWebExtensionCompatibilityPackageError
                 .invalidBackgroundManifest
         }
+        let namespaceManifestKeysData = try JSONSerialization.data(
+            withJSONObject: BrowserExtensionAPICompatibilityMatrix.namespaceManifestKeys,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        let namespaceManifestKeysLiteral = String(decoding: namespaceManifestKeysData, as: UTF8.self)
         let memberRoutesData = try JSONSerialization.data(
             withJSONObject:
                 BrowserExtensionAPICompatibilityMatrix.memberRoutes,
@@ -1232,6 +1243,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const namespacePermissions = Object.freeze(
                     \(namespacePermissionsLiteral)
                 );
+                const namespaceManifestKeys = Object.freeze(\(namespaceManifestKeysLiteral));
                 const memberRoutes = Object.freeze(\(memberRoutesLiteral));
                 const namespaceEventMembers = Object.freeze(
                     \(namespaceEventMembersLiteral)
@@ -1290,17 +1302,14 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 // permissions count: Chrome exposes the namespace before the
                 // grant and fails the individual calls until it arrives.
                 const namespaceIsDeclared = (namespace) => {
-                    const permissions = namespacePermissions[namespace];
-                    if (
-                        !Array.isArray(permissions)
-                        || permissions.length === 0
-                    ) {
-                        return true;
-                    }
+                    if (namespace === "sidePanel" && declaredManifest.manifest_version !== 3) return false;
+                    const permissions = namespacePermissions[namespace] ?? [];
+                    const manifestKeys = namespaceManifestKeys[namespace] ?? [];
+                    if (permissions.length === 0 && manifestKeys.length === 0) return true;
                     return permissions.some(
                         (permission) =>
                             declaredPermissionNames.has(permission)
-                    );
+                    ) || manifestKeys.some((key) => Object.hasOwn(declaredManifest, key));
                 };
                 const namespaceUsesCompatibility = (namespace) =>
                     namespaceIsDeclared(namespace)
@@ -4707,14 +4716,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         );
                     }
                 };
-                // There is deliberately no `sidePanel` fallback. The matrix
-                // routes the namespace `unavailable`, so nothing here — and
-                // no cross-root alias, which `namespaceIsAliasable` refuses
-                // for an unavailable route — publishes it. A one-member stub
-                // used to live here, and a package that detected the
-                // namespace and then called the rest of the schema threw
-                // inside its own bootstrap. Firefox ships none, and the same
-                // packages handle that.
+                \(BrowserExtensionSidebarCompatibilityScript.source)
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 const isIdleState = (state) =>
@@ -4860,6 +4862,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         management,
                         downloads,
                         offscreen,
+                        sidePanel,
+                        sidebarAction,
                         idle,
                         webNavigation,
                         webRequest,

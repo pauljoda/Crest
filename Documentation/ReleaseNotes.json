@@ -429,6 +429,10 @@
     "2026-09-03-clear-link-space-destinations": {
       "category": "improved",
       "message": "Open links in the current Space or choose another Space from clearly labeled menu actions"
+    },
+    "2026-09-03-extension-side-panels": {
+      "category": "new",
+      "message": "Show extension side panels as a card beside your pages"
     }
   }
 }

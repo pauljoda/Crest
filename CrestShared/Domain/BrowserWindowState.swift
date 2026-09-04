@@ -22,6 +22,9 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
     /// window that has never been resized adds no key at all.
     private(set) var splitColumnFractionsByGroup: [SplitGroupID: [Double]]?
 
+    /// Device-local panel preferences. Older records decode the missing key as nil.
+    private(set) var extensionSidebarBySpace: [SpaceID: BrowserExtensionSidebarWindowState]?
+
     /// How far a captured fraction list may sit from summing to one before it
     /// is renormalized on store. Small enough that only rounding survives it.
     private static let fractionSumTolerance = 0.0001
@@ -131,9 +134,21 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
         splitColumnFractionsByGroup?[groupID]
     }
 
+    mutating func captureExtensionSidebar(_ preferences: BrowserExtensionSidebarWindowState, for spaceID: SpaceID) {
+        var valid = preferences
+        if let width = valid.width, !width.isFinite || width <= 0 { valid.width = nil }
+        var states = extensionSidebarBySpace ?? [:]
+        states[spaceID] = valid
+        extensionSidebarBySpace = states
+    }
+
     mutating func repair(using session: BrowserSession) {
         repairSplitLayout(using: session)
         let spaceIDs = Set(session.spaces.map(\.id))
+        if let states = extensionSidebarBySpace {
+            let live = states.filter { spaceIDs.contains($0.key) }
+            extensionSidebarBySpace = live.isEmpty ? nil : live
+        }
         selectedTabIDsBySpace = selectedTabIDsBySpace.filter { spaceID, tabID in
             spaceIDs.contains(spaceID) && session.space(id: spaceID)?.contains(tabID) == true
         }

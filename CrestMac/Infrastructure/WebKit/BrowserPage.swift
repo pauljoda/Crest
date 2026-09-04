@@ -84,6 +84,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private let supportsCredentialAccess: Bool
     @ObservationIgnored private var defaultPageZoom: CGFloat
     @ObservationIgnored private var hasTemporaryPageZoomOverride = false
+    @ObservationIgnored var viewportFitOwner: UUID?
+    @ObservationIgnored var viewportFitGeneration = 0
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter

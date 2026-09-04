@@ -63,8 +63,8 @@ final class BrowserExtensionInstallationController {
             let inspectedExtension = try await WKWebExtension(
                 resourceBaseURL: package.resourceURL
             )
-            let requestedPermissions = inspectedExtension
-                .requestedPermissions.map(\.rawValue).sorted()
+            let requestedPermissions = BrowserExtensionManagedPermissionPolicy.requestedPermissions(
+                native: inspectedExtension.requestedPermissions.map(\.rawValue), manifest: inspectedExtension.manifest)
             let permissionSnapshot =
                 previous?.permissionSnapshot
                 ?? BrowserExtensionPermissionSnapshot(
@@ -145,6 +145,8 @@ final class BrowserExtensionInstallationController {
                 installedAt: previous?.installedAt ?? now,
                 modifiedAt: now,
                 hasOptionsPage: summary.hasOptionsPage,
+                hasSidebar: summary.hasSidebar,
+                didOpenSidebarAtInstall: previous?.didOpenSidebarAtInstall,
                 hasCommands: summary.hasCommands,
                 isPinned: previous?.isPinned,
                 commandShortcutOverrides:
@@ -165,6 +167,12 @@ final class BrowserExtensionInstallationController {
                 in: space.id
             )
             persistence.updateSummary(summary, in: space.id)
+            if previous == nil {
+                runtime.requestSidebarOpenAtInstall(extensionID: package.extensionID, in: space.id) {
+                    [weak persistence] in
+                    persistence?.markSidebarOpenedAtInstall(extensionID: package.extensionID, in: space.id)
+                }
+            }
             if let retainedAccess = preparedResource.retainedAccess {
                 runtime.retainRuntimeResourceAccess(
                     retainedAccess,

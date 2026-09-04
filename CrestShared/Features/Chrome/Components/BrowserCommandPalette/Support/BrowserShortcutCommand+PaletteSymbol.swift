@@ -29,6 +29,7 @@ extension BrowserShortcutCommand {
         case .exportPDF, .saveWebArchive: "square.and.arrow.down"
         case .printPage: "printer"
         case .toggleSidebar: "sidebar.leading"
+        case .toggleExtensionSidePanel: "sidebar.trailing"
         case .showHistory: "clock"
         case .showArchive: "archivebox"
         case .showDownloads: "arrow.down.circle"

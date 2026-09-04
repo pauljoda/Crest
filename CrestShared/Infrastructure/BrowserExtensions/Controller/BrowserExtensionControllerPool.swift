@@ -53,6 +53,18 @@ final class BrowserExtensionControllerPool {
         let commandController = BrowserExtensionCommandController(
             persistence: persistenceController
         )
+        commandController.noteUserGesture = { [weak tabWindowCoordinator] context in
+            tabWindowCoordinator?.noteUserGesture(for: context)
+        }
+        commandController.performSidebarCommand = { [weak tabWindowCoordinator] context, commandID in
+            switch commandID {
+            case "_execute_sidebar_action":
+                return tabWindowCoordinator?.performSidebarAction(for: context, invocation: .sidebarCommand) == true
+            case "_execute_action":
+                return tabWindowCoordinator?.performSidebarAction(for: context, invocation: .action) == true
+            default: return false
+            }
+        }
         let runtimeContextController =
             BrowserExtensionRuntimeContextController(
                 persistence: persistenceController,
@@ -155,6 +167,14 @@ final class BrowserExtensionControllerPool {
         _ handler: BrowserExtensionNativeMessagingHandling?
     ) {
         tabWindowCoordinator.setNativeMessagingHandler(handler)
+    }
+
+    func setSidebarService(
+        _ service: (any BrowserExtensionSidebarHandling)?,
+        layoutSide: @escaping () -> String = { "right" }
+    ) {
+        tabWindowCoordinator.sidebarService = service
+        tabWindowCoordinator.sidebarLayoutSide = layoutSide
     }
 
     func setUpdateModel(_ model: BrowserExtensionUpdateModel?) {

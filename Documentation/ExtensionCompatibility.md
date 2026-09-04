@@ -862,12 +862,16 @@ refusing the package. Those surface in the review sheet's **WebKit Compatibility
 Warnings** section and are recorded with the installation; they do not block
 installation. Expect the following to be unavailable:
 
-- `sidebar_action` sidebars
 - `contextualIdentities` container tabs
 - `theme` and dynamic theme APIs
 - Blocking `webRequest` request cancellation and modification
 - `browserSettings`
 - `menus` beyond what WebKit's `contextMenus` implements
+
+On macOS, `sidebar_action` is emulated by Crest's trailing split-row panel,
+including title/panel overrides, path icons, the reserved sidebar command,
+and first-install opening. Image-data icons reject explicitly. WebKit's
+manifest warning does not describe Crest's host implementation.
 
 ### Firefox package audit
 

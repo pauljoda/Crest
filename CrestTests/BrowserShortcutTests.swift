@@ -249,6 +249,7 @@ final class BrowserShortcutTests: XCTestCase {
                 "separateSplitTabs=character:u:3",
                 "moveSplitCardLeft=special:leftArrow:9",
                 "moveSplitCardRight=special:rightArrow:9",
+                "toggleExtensionSidePanel=unassigned",
             ]
         )
     }

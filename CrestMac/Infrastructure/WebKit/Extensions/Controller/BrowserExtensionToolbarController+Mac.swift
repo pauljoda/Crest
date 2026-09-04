@@ -78,15 +78,19 @@ extension BrowserExtensionToolbarController {
         popupAnchor: BrowserExtensionPopupAnchor?
     ) {
         guard toolbarAction.isEnabled else { return }
+        tabWindowCoordinator.noteUserGesture(for: toolbarAction.context)
+        if tabWindowCoordinator.performSidebarAction(for: toolbarAction.context, invocation: .action) { return }
         guard toolbarAction.action.presentsPopup else {
             toolbarAction.context.performAction(
                 for: toolbarAction.tab
             )
             return
         }
-        guard !tabWindowCoordinator.isActionPopupLoading(
-            for: toolbarAction.context
-        ) else {
+        guard
+            !tabWindowCoordinator.isActionPopupLoading(
+                for: toolbarAction.context
+            )
+        else {
             return
         }
         if let tab = toolbarAction.tab {
@@ -116,6 +120,7 @@ extension BrowserExtensionToolbarController {
         _ menuItem: BrowserExtensionToolbarMenuItem,
         for toolbarAction: BrowserExtensionToolbarAction
     ) {
+        tabWindowCoordinator.noteUserGesture(for: toolbarAction.context)
         if let tab = toolbarAction.tab {
             toolbarAction.context.userGesturePerformed(in: tab)
         }

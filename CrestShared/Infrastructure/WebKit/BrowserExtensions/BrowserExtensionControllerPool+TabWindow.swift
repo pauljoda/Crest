@@ -42,6 +42,10 @@ extension BrowserExtensionControllerPool {
         tabWindowCoordinator.window(for: spaceID)
     }
 
+    func sidebarEventMessage(_ event: BrowserExtensionSidebarEvent) -> [String: Any]? {
+        tabWindowCoordinator.sidebarEventMessage(event)
+    }
+
     func extensionTab(
         _ tabID: TabID,
         in spaceID: SpaceID

@@ -81,6 +81,17 @@ final class BrowserWindowStateStore {
         persistence.save(state)
     }
 
+    func extensionSidebar(for spaceID: SpaceID) -> BrowserExtensionSidebarWindowState? {
+        state.extensionSidebarBySpace?[spaceID]
+    }
+
+    func captureExtensionSidebar(_ preferences: BrowserExtensionSidebarWindowState, for spaceID: SpaceID) {
+        let previousState = state
+        state.captureExtensionSidebar(preferences, for: spaceID)
+        guard state != previousState else { return }
+        persistence.save(state)
+    }
+
     func reconcile(with session: BrowserSession) {
         let previousState = state
         state.repair(using: session)

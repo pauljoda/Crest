@@ -73,7 +73,7 @@ checks. It supports:
   receiver-safe `runtime.getURL`, empty-message i18n semantics even for a
   non-augmentable native namespace, idle-callback scheduling, optional
   navigation events, `webRequest.handlerBehaviorChanged()` acknowledgement,
-  and the broker-backed `idle`, `notifications`, `contextMenus`, `offscreen`,
+  and the broker-backed `idle`, `notifications`, `contextMenus`, `offscreen`, `sidePanel`, `sidebarAction`,
   and `downloads.download` APIs. The offscreen document is hosted by Crest at
   the URL supplied by the extension.
 
@@ -86,9 +86,9 @@ Only the temporary copy is prepared; verified store bytes are never rewritten.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
 The capability broker currently connects notifications, system idle state,
-context menus and the install lifecycle, Crest-hosted offscreen documents, and
-`downloads.download`. Of those, only notifications is a port-backed app-side
-service; the rest are answered where the state already lives.
+context menus and the install lifecycle, Crest-hosted offscreen documents and
+side panels, and `downloads.download`. Notifications and side panels are
+port-backed app-side services; the rest are answered where the state already lives.
 Every request is authorized from the verified loaded context, and persistent
 event ports select one permission-checked capability after connection. Until
 another app-side service is connected, its local adapter must stay bounded or
@@ -233,14 +233,13 @@ still needs an enforceable request hook.
 
 ## App-side service layout
 
-**One app-side service exists today: notifications.** Everything else the
-capability broker answers is implemented where it is used rather than behind a
-port, and this section says so plainly so the layout below is read as the
-current tree and not as a plan.
+Notifications and side panels have Application-layer service ports. Other
+broker capabilities are implemented where their state lives.
 
 | Concern | Where it lives | Shape |
 | --- | --- | --- |
 | Notifications | `CrestShared/Domain/BrowserExtensionServices/Notifications/`, `CrestShared/Application/BrowserExtensionServices/Notifications/`, `CrestShared/Infrastructure/BrowserExtensionServices/Notifications/`, `CrestMac/Infrastructure/BrowserExtensionServices/` | Full port/adapter/double service: `BrowserExtensionNotificationHandling` and `BrowserExtensionNotificationCentering` ports, `BrowserExtensionNotificationService`, the `BrowserExtensionNotificationSystemCenter` platform adapter, and the `InMemoryBrowserExtensionNotificationCenter` double |
+| Side panels | `CrestShared/Domain/BrowserExtensionServices/Sidebar/`, `CrestShared/Application/BrowserExtensionServices/Sidebar/`, `CrestShared/Infrastructure/BrowserExtensionServices/Sidebar/`, `CrestMac/Features/ExtensionSidebar/` | `BrowserExtensionSidebarHandling`, observable store, behavior persistence adapters, per-window host and native document |
 | Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
 | Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
@@ -260,6 +259,34 @@ Extensions are identified to these services by
 `BrowserExtensionServiceClientID`, an opaque non-empty string. It is deliberately
 not `BrowserChromeExtensionID`, which only accepts 32-character Web Store
 identifiers and so cannot name an unpacked development extension.
+
+## Side panels — `chrome.sidePanel` and `browser.sidebarAction`
+
+Both APIs share a per-client options registry and one presentation per native
+window and Space. Chrome tab-specific options own a separate document; Firefox
+title, icon, and panel options inherit through tab, window, and default layers.
+The coordinator validates native tab/window identities and gesture eligibility
+before changing the store. `sidebar.watch` is a permission-checked event stream
+separate from notification and idle watches.
+
+The macOS host presents a trailing split-row card backed by an extension
+`WKWebView`, never a tab adapter. Closing, disabling, locking, or switching to
+an inapplicable tab releases its document. Width and last-used client are local
+window preferences; action behavior persists per client. Open intent and
+runtime options do not survive relaunch. Firefox fresh-install opening is
+consumed once when the host becomes available, not on restoration.
+
+The resident webpage receives the reduced card viewport as the panel opens or
+resizes. Responsive pages retain the requested zoom. An authored document/body
+CSS minimum width can temporarily reduce the displayed zoom to fit, bounded by
+the normal zoom floor; closing the panel restores the requested zoom. This does
+not rewrite the saved zoom or fit intentionally scrollable tables and carousels.
+
+Top-level web URLs open through Crest's tab path; remote frames remain subject
+to WebKit and extension CSP. Packaged path icons are supported, while
+`sidebarAction.setIcon({imageData})` rejects rather than reporting success.
+The compatibility matrix hides WebKit's partial namespaces and publishes the
+complete Chrome and Firefox member lists only in privileged extension contexts.
 
 ## Notifications — `chrome.notifications`
 

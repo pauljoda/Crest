@@ -14,6 +14,8 @@ final class BrowserRootModel {
     let spaceAccess: BrowserSpaceAccessController
     let windowState: BrowserWindowStateStore?
     let startupBehavior: BrowserStartupBehavior
+    let extensionSidebarWindowID: BrowserWindowID
+    var extensionSidebar: BrowserExtensionSidebarHost?
 
     var address = ""
     var isAddressEditing = false
@@ -73,6 +75,7 @@ final class BrowserRootModel {
         self.chrome = chrome
         self.spaceAccess = spaceAccess
         self.windowState = windowState
+        extensionSidebarWindowID = windowState?.id ?? BrowserWindowID()
         self.startupBehavior = startupBehavior
         sidebarWidthTransaction = BrowserSidebarWidthTransaction(
             persistedWidth: persistedSidebarWidth
@@ -281,6 +284,7 @@ extension BrowserRootModel {
     }
 
     func synchronizeAfterSelectionChange() {
+        extensionSidebar?.reconcile()
         guard hasRestoredExtensions else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
@@ -288,6 +292,7 @@ extension BrowserRootModel {
     }
 
     func synchronizeAfterSpaceChange() {
+        extensionSidebar?.reconcile()
         guard hasRestoredExtensions else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
@@ -301,6 +306,7 @@ extension BrowserRootModel {
     }
 
     func synchronizeAfterLockChange() {
+        extensionSidebar?.reconcile()
         guard hasRestoredExtensions else { return }
         synchronizeSelection()
     }

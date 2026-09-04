@@ -81,7 +81,9 @@ targets:
     sources:
       - path: CrestTests
         excludes:
-          - Fixtures/ContextMenusProbeExtension
+          # Fixtures are read relative to #filePath. Bundling their loose files
+          # flattens directories and collides on manifest.json/background.js.
+          - Fixtures
     dependencies:
       - target: Crest
     settings:

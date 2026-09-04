@@ -36,6 +36,7 @@ private struct BrowserExtensionInstallLifecycleEvent: Equatable {
 @MainActor
 final class BrowserExtensionWebpageMenuRegistry {
     typealias ClickPublisher = ([String: Any]) -> Void
+    var userDidInvoke: ((BrowserExtensionServiceClientID) -> Void)?
 
     private struct PendingClick {
         let id: UUID
@@ -196,6 +197,7 @@ final class BrowserExtensionWebpageMenuRegistry {
         tabID: TabID? = nil,
         for clientID: BrowserExtensionServiceClientID
     ) {
+        userDidInvoke?(clientID)
         if let tabID {
             pendingDownloadInvocationsByClient[clientID] =
                 PendingDownloadInvocation(

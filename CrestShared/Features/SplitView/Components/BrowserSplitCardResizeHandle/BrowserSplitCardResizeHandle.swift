@@ -26,6 +26,9 @@ struct BrowserSplitCardResizeHandle: View {
     /// the reading direction.
     let resize: (CGFloat) -> Void
     let commit: () -> Void
+    var accessibilityTitle: LocalizedStringKey = "Resize Split View Columns"
+    var accessibilityMeasurement: String?
+    var accessibilityDirection: CGFloat = 1
 
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var isDragging = false
@@ -58,8 +61,8 @@ struct BrowserSplitCardResizeHandle: View {
                 .onChanged(dragChanged)
                 .onEnded(dragEnded)
             )
-            .accessibilityLabel("Resize Split View Columns")
-            .accessibilityValue("Divider \(dividerIndex + 1)")
+            .accessibilityLabel(accessibilityTitle)
+            .accessibilityValue(accessibilityMeasurement ?? String(localized: "Divider \(dividerIndex + 1)"))
             .accessibilityAdjustableAction(adjustWidth)
     }
 
@@ -88,7 +91,7 @@ struct BrowserSplitCardResizeHandle: View {
             delta = 0
         }
         guard delta != 0 else { return }
-        resize(delta)
+        resize(delta * accessibilityDirection)
         commit()
     }
 

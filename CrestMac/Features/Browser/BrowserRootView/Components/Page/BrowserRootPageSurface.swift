@@ -32,7 +32,8 @@ struct BrowserRootPageSurface: View {
             selectedTabID: model.browser.selectedTab?.id,
             hasEnteredSplitContent:
                 model.browser.sidebarReorderState.hasEnteredSplitContent,
-            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget
+            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget,
+            presentsTrailingPanel: model.extensionSidebar?.panel != nil
         )
     }
 

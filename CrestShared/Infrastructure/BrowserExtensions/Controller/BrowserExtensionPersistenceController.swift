@@ -210,6 +210,15 @@ final class BrowserExtensionPersistenceController {
         registry.setPinned(pinned, extensionID: extensionID, in: spaceID)
     }
 
+    func markSidebarOpenedAtInstall(extensionID: String, in spaceID: SpaceID) {
+        guard var installation = installation(extensionID: extensionID, in: spaceID),
+            installation.didOpenSidebarAtInstall != true
+        else { return }
+        installation.didOpenSidebarAtInstall = true
+        installation.modifiedAt = .now
+        _ = registry.upsert(installation)
+    }
+
     func setCommandShortcutOverride(
         _ override: BrowserExtensionCommandShortcutOverride,
         commandID: String,
@@ -381,10 +390,9 @@ final class BrowserExtensionPersistenceController {
         let reportedDiagnostics = diagnosticsLog.entries(
             forContext: context.uniqueIdentifier
         ).filter { !runtimeReport.errors.contains($0) }
-        let requestedPermissions = context.webExtension.requestedPermissions
-            .map(\.rawValue)
-            .filter { !excludedPermissions.contains($0) }
-            .sorted()
+        let requestedPermissions = BrowserExtensionManagedPermissionPolicy.requestedPermissions(
+            native: context.webExtension.requestedPermissions.map(\.rawValue), manifest: context.webExtension.manifest,
+            excluding: excludedPermissions)
         // The runtime hides two different things through one WebKit property.
         // Everything the compatibility matrix contributes is a Crest routing
         // decision, recomputed from these permissions on every load. It is
@@ -419,6 +427,7 @@ final class BrowserExtensionPersistenceController {
             isLoaded: context.isLoaded,
             permissionSnapshot: permissionSnapshot,
             hasOptionsPage: context.webExtension.hasOptionsPage,
+            hasSidebar: BrowserExtensionSidebarManifestPolicy.declaresSidebar(manifest: context.webExtension.manifest),
             hasCommands: context.webExtension.hasCommands
         )
     }
@@ -454,6 +463,7 @@ final class BrowserExtensionPersistenceController {
                 for: installation.iconData
             ),
             hasOptionsPage: installation.hasOptionsPage ?? false,
+            hasSidebar: installation.hasSidebar ?? false,
             hasCommands: installation.hasCommands ?? false,
             isPinned: installation.isPinned == true
         )
@@ -502,6 +512,7 @@ final class BrowserExtensionPersistenceController {
             .production.payload(for: installation.iconData)
         runtimeSummary.hasOptionsPage =
             installation.hasOptionsPage ?? runtimeSummary.hasOptionsPage
+        runtimeSummary.hasSidebar = runtimeSummary.hasSidebar || installation.hasSidebar == true
         runtimeSummary.hasCommands =
             installation.hasCommands ?? runtimeSummary.hasCommands
         runtimeSummary.isPinned = installation.isPinned == true

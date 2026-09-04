@@ -45,6 +45,7 @@ enum BrowserExtensionReferenceEnvironment: String, Sendable {
 struct BrowserExtensionAPIContract: Sendable {
     let namespace: String
     let permissionNames: Set<String>
+    let manifestKeys: Set<String>
     let processes: Set<BrowserExtensionExecutionProcess>
     let chromium: BrowserExtensionReferenceSupport
     let firefox: BrowserExtensionReferenceSupport
@@ -97,7 +98,7 @@ enum BrowserExtensionAPICompatibilityMatrix {
         "5836a062726f715fda621338a17b51aff30d0a8c"
     static let webKitRevision =
         "e4856c6696f58bae6f5cf1e864d0550f9eff09f8"
-    static let appleSDKBuild = "Xcode 27.0 (27A5237l), macOS 27.0 SDK"
+    static let appleSDKBuild = "Xcode 27.0 (27A5252f), macOS 27.0 SDK"
 
     /// Every context value accepted by the pinned Chromium and Firefox menu
     /// schemas. Some values target browser chrome Crest does not present yet;
@@ -274,30 +275,24 @@ enum BrowserExtensionAPICompatibilityMatrix {
             webKit: .unavailable,
             crest: .unavailable
         ),
-        // Absent, not stubbed. A portable package tests the namespace and
-        // then uses the schema in the same expression — Bitwarden's worker
-        // bootstrap is one `await` over
-        // `chrome.sidePanel !== undefined && chrome.sidePanel.setOptions(…)`.
-        // A `sidePanel` object carrying only the one member Crest had an
-        // opinion about turned that detection into a `TypeError` thrown
-        // inside the awaited bootstrap, and every later init step — including
-        // the handler the popup asks for its data — never ran. Firefox ships
-        // no `sidePanel` at all and the same packages handle its absence, so
-        // absence is the contract that works. `webKit: .partial` stays: it is
-        // what arms `unsupportedWebKitAPIs`, so WebKit's own partial
-        // implementation cannot leak the namespace back either.
+        // Publish the complete implemented surface together. Keep WebKit's
+        // partial implementation hidden, including after its feature gate flips.
         contract(
             "sidePanel",
             permissions: ["sidePanel"],
             firefox: .unavailable,
             webKit: .partial,
-            crest: .unavailable
+            crest: .emulated,
+            runtime: true,
+            broker: ["sidePanel"]
         ),
         contract(
             "sidebarAction",
             chromium: .unavailable,
             webKit: .partial,
-            crest: .unavailable
+            crest: .emulated,
+            runtime: true,
+            manifestKeys: ["sidebar_action"]
         ),
         contract(
             "storage",
@@ -424,6 +419,13 @@ enum BrowserExtensionAPICompatibilityMatrix {
             "services",
             "websites",
         ],
+        "sidePanel": [
+            "setOptions", "getOptions", "setPanelBehavior", "getPanelBehavior", "open", "close", "getLayout",
+            "onOpened", "onClosed", "Side",
+        ],
+        "sidebarAction": [
+            "setTitle", "getTitle", "setIcon", "setPanel", "getPanel", "open", "close", "toggle", "isOpen",
+        ],
     ]
 
     /// Member-level routes for every API Crest currently changes or owns.
@@ -537,6 +539,25 @@ enum BrowserExtensionAPICompatibilityMatrix {
             crest: .emulated
         ),
         member("permissions.contains", crest: .nativePatched),
+        member("sidePanel.Side", webKit: .partial, crest: .emulated),
+        member("sidePanel.setOptions", webKit: .partial, crest: .emulated),
+        member("sidePanel.getOptions", webKit: .partial, crest: .emulated),
+        member("sidePanel.setPanelBehavior", webKit: .partial, crest: .emulated),
+        member("sidePanel.getPanelBehavior", webKit: .partial, crest: .emulated),
+        member("sidePanel.open", webKit: .partial, crest: .emulated),
+        member("sidePanel.close", webKit: .partial, crest: .emulated),
+        member("sidePanel.getLayout", webKit: .partial, crest: .emulated),
+        member("sidePanel.onOpened", webKit: .partial, crest: .emulated),
+        member("sidePanel.onClosed", webKit: .partial, crest: .emulated),
+        member("sidebarAction.setTitle", webKit: .partial, crest: .emulated),
+        member("sidebarAction.getTitle", webKit: .partial, crest: .emulated),
+        member("sidebarAction.setIcon", webKit: .partial, crest: .emulated),
+        member("sidebarAction.setPanel", webKit: .partial, crest: .emulated),
+        member("sidebarAction.getPanel", webKit: .partial, crest: .emulated),
+        member("sidebarAction.open", webKit: .partial, crest: .emulated),
+        member("sidebarAction.close", webKit: .partial, crest: .emulated),
+        member("sidebarAction.toggle", webKit: .partial, crest: .emulated),
+        member("sidebarAction.isOpen", webKit: .partial, crest: .emulated),
         member("permissions.getAll", crest: .nativePatched),
         member("permissions.remove", crest: .nativePatched),
         member("privacy.network", webKit: .unavailable, crest: .emulated),
@@ -761,6 +782,14 @@ enum BrowserExtensionAPICompatibilityMatrix {
         }
     )
 
+    static let namespaceManifestKeys: [String: [String]] = Dictionary(
+        uniqueKeysWithValues: contracts.map { ($0.namespace, $0.manifestKeys.sorted()) }
+    )
+
+    static func capabilityBrokerGrantedCapabilities(manifest: [String: Any]) -> Set<String> {
+        manifest["sidebar_action"] is [String: Any] ? ["sidebarAction"] : []
+    }
+
     static let memberRoutes = Dictionary(
         uniqueKeysWithValues: members.map {
             ($0.path, $0.crest.rawValue)
@@ -868,11 +897,13 @@ enum BrowserExtensionAPICompatibilityMatrix {
         ],
         runtime: Bool = false,
         broker: Set<String> = [],
-        hidden: Set<String> = []
+        hidden: Set<String> = [],
+        manifestKeys: Set<String> = []
     ) -> BrowserExtensionAPIContract {
         BrowserExtensionAPIContract(
             namespace: namespace,
             permissionNames: permissions,
+            manifestKeys: manifestKeys,
             processes: processes,
             chromium: chromium,
             firefox: firefox,

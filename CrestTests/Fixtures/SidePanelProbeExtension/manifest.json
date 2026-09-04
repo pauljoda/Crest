@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Side Panel Probe",
+  "version": "1.0.1",
+  "permissions": ["sidePanel", "tabs", "storage", "offscreen"],
+  "background": {"service_worker": "background.js"},
+  "options_ui": {"page": "options.html", "open_in_tab": true},
+  "action": {"default_title": "Side Panel Probe", "default_popup": "popup.html"},
+  "side_panel": {"default_path": "panel.html"}
+}

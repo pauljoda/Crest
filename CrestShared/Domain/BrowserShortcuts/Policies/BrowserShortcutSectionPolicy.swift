@@ -25,7 +25,7 @@ enum BrowserShortcutSectionPolicy {
             .copyPageLinkAsMarkdown, .sharePage, .exportPDF,
             .saveWebArchive, .printPage:
             .page
-        case .toggleSidebar, .showHistory, .showArchive, .showDownloads,
+        case .toggleSidebar, .toggleExtensionSidePanel, .showHistory, .showArchive, .showDownloads,
             .showWebInspector:
             .view
         }

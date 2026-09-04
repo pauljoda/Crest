@@ -22,6 +22,7 @@ struct BrowserExtensionSummary: Equatable, Identifiable {
     var sourceDisplayName: String? = nil
     var iconPayload: BrowserExtensionIconPayload? = nil
     var hasOptionsPage = false
+    var hasSidebar = false
     var hasCommands = false
     var isPinned = false
 
@@ -48,6 +49,7 @@ struct BrowserExtensionSummary: Equatable, Identifiable {
         sourceDisplayName: String? = nil,
         iconPayload: BrowserExtensionIconPayload? = nil,
         hasOptionsPage: Bool = false,
+        hasSidebar: Bool = false,
         hasCommands: Bool = false,
         isPinned: Bool = false
     ) {
@@ -67,6 +69,7 @@ struct BrowserExtensionSummary: Equatable, Identifiable {
         self.sourceDisplayName = sourceDisplayName
         self.iconPayload = iconPayload
         self.hasOptionsPage = hasOptionsPage
+        self.hasSidebar = hasSidebar
         self.hasCommands = hasCommands
         self.isPinned = isPinned
     }

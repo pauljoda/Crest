@@ -66,13 +66,13 @@ final class BrowserChromeWebStoreProvider {
             displayName: webExtension.displayName ?? item.slug,
             version: webExtension.displayVersion ?? webExtension.version,
             displayDescription: webExtension.displayDescription,
-            requestedPermissions: webExtension.requestedPermissions
-                .map(\.rawValue)
-                .sorted(),
+            requestedPermissions: BrowserExtensionManagedPermissionPolicy.requestedPermissions(
+                native: webExtension.requestedPermissions.map(\.rawValue), manifest: webExtension.manifest),
             requestedHosts: webExtension.allRequestedMatchPatterns
                 .map(\.string)
                 .sorted(),
-            errors: BrowserWebExtensionManifestCompatibilityPolicy
+            errors:
+                BrowserWebExtensionManifestCompatibilityPolicy
                 .displayErrors(for: webExtension),
             iconPayload: BrowserExtensionIconPayloadFactory.production
                 .payload(

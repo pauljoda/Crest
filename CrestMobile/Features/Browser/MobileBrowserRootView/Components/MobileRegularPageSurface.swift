@@ -43,7 +43,8 @@ struct MobileRegularPageSurface: View {
             selectedTabID: model.browser.selectedTab?.id,
             hasEnteredSplitContent:
                 model.browser.sidebarReorderState.hasEnteredSplitContent,
-            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget
+            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget,
+            presentsTrailingPanel: false
         )
     }
 

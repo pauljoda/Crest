@@ -1,0 +1,6 @@
+{
+  "manifest_version": 3,
+  "name": "Crest Debugger Permission Probe",
+  "version": "1.0",
+  "permissions": ["debugger", "storage"]
+}

@@ -48,6 +48,7 @@ enum BrowserShortcutDefaultPolicy {
         case .sharePage, .exportPDF, .saveWebArchive: nil
         case .printPage: character("p", [.command])
         case .toggleSidebar: character("s", [.command])
+        case .toggleExtensionSidePanel: nil
         case .showHistory: character("y", [.command])
         case .showArchive: nil
         case .showDownloads: character("j", [.command, .shift])

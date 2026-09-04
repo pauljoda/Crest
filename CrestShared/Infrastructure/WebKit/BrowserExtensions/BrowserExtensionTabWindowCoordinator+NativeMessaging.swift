@@ -36,6 +36,10 @@ extension BrowserExtensionTabWindowCoordinator {
         in owningSpaceID: SpaceID? = nil
     ) {
         let key = ObjectIdentifier(context)
+        if let client = sidebarClientsByContext.removeValue(forKey: key) {
+            sidebarUserGestures.remove(client: client)
+            sidebarService?.unregister(client: client)
+        }
         let resolvedSpaceID: SpaceID?
         if let owningSpaceID {
             resolvedSpaceID = owningSpaceID
@@ -50,6 +54,7 @@ extension BrowserExtensionTabWindowCoordinator {
             resolvedSpaceID = nil
         }
         if let resolvedSpaceID {
+            pageProvider?.closeExtensionSidebars(extensionBaseURL: context.baseURL, in: resolvedSpaceID)
             pageProvider?.closeExtensionOffscreenDocument(
                 extensionBaseURL: context.baseURL,
                 in: resolvedSpaceID
@@ -69,6 +74,15 @@ extension BrowserExtensionTabWindowCoordinator {
         if handleCapabilityBrokerDiagnostics(
             message,
             applicationIdentifier: applicationIdentifier,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerSidebar(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
             extensionContext: extensionContext,
             replyHandler: replyHandler
         ) {

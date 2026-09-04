@@ -172,7 +172,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 "manifest_version": 3,
                 "name": "Local CRX Probe",
                 "version": "1.0",
-                "permissions": ["storage"],
+                "permissions": ["debugger", "storage"],
             ] as [String: Any]
         ).write(to: sourceURL.appending(path: "manifest.json"))
         try createZipArchive(from: sourceURL, at: archiveURL)
@@ -192,11 +192,25 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(candidate.displayName, "Local CRX Probe")
         XCTAssertEqual(candidate.format, .chromeCRX3)
         XCTAssertEqual(candidate.package.archiveData, archiveData)
-        XCTAssertEqual(candidate.requestedPermissions, ["storage"])
+        XCTAssertEqual(candidate.requestedPermissions, ["debugger", "storage"])
         XCTAssertEqual(
             candidate.format.sourceDisplayName,
             "Local Chrome Package"
         )
+        let storeItem = try XCTUnwrap(
+            BrowserChromeWebStoreItem(
+                url: URL(
+                    string: "https://chromewebstore.google.com/detail/permission-probe/\(fixture.extensionID.rawValue)")!
+            ))
+        let storeProvider = BrowserChromeWebStoreProvider(
+            verifier: BrowserCRX3Verifier(requiredPublisherKeyHash: fixture.publisherKeyHash),
+            download: { url in
+                (fixture.crxData, HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            })
+        let storeCandidate = try await storeProvider.candidate(for: storeItem)
+        XCTAssertEqual(
+            storeCandidate.requestedPermissions, ["debugger", "storage"],
+            "The install review must disclose debugger access even when WebKit omits it.")
     }
 
     func testVerifierRejectsAMismatchedStoreIDAndTampering() throws {
@@ -2819,13 +2833,11 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     value: nativeChrome
                 });
                 \(source)
-                // `sidePanel` is absent by design, on both roots, even
-                // though this fixture requests the permission. A one-member
-                // stub used to answer here and it is what broke a package
-                // that detected the namespace and then used the rest of the
-                // schema in the same awaited expression.
+                // The complete namespace must accept the same awaited startup
+                // call that previously exposed the one-member stub regression.
                 const sidePanelType = typeof chrome.sidePanel;
                 const sidePanelBrowserType = typeof browser.sidePanel;
+                await chrome.sidePanel.setOptions({enabled: false});
                 await chrome.offscreen.createDocument({
                     url: chrome.runtime.getURL("offscreen.html"),
                     reasons: ["DOM_SCRAPING"],
@@ -2981,23 +2993,23 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(brokerAPIs.contains("runtime.onInstalled.ack"))
         XCTAssertEqual(
             result["sidePanelType"] as? String,
-            "undefined",
+            "object",
             """
-            A requested `sidePanel` permission must not produce a namespace. \
-            Feature detection is how a portable package decides whether the \
-            whole schema is there.
+            A requested sidePanel permission publishes the complete schema.
             """
         )
         XCTAssertEqual(
             result["sidePanelBrowserType"] as? String,
-            "undefined",
-            "Absence has to hold on the `browser` root too."
+            "object",
+            "The browser root aliases the same complete surface."
         )
         XCTAssertEqual(result["downloadID"] as? Int, 73)
         XCTAssertEqual(result["hasOffscreenDocument"] as? Bool, true)
         let brokerRequests = try XCTUnwrap(
             result["brokerRequests"] as? [[String: Any]]
         )
+        XCTAssertTrue(
+            brokerRequests.contains { ($0["message"] as? [String: Any])?["api"] as? String == "sidePanel.setOptions" })
         let offscreenCreateRequest = try XCTUnwrap(
             brokerRequests.first {
                 ($0["message"] as? [String: Any])?["api"] as? String
@@ -5134,7 +5146,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
     /// page, and returns its generated source.
     private func privilegedFixtureCompatibilityRuntime(
         named name: String,
-        permissions: [String]
+        permissions: [String],
+        manifestEntries: [String: Any] = [:]
     ) throws -> (root: URL, source: String) {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -5148,13 +5161,14 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         try Data("globalThis.started = true;".utf8).write(
             to: root.appending(path: "background.js")
         )
-        let manifest: [String: Any] = [
+        var manifest: [String: Any] = [
             "manifest_version": 3,
             "name": "Route Fixture",
             "version": "1.0",
             "permissions": permissions,
             "background": ["scripts": ["background.js"]],
         ]
+        manifest.merge(manifestEntries) { _, replacement in replacement }
         try JSONSerialization.data(withJSONObject: manifest).write(
             to: root.appending(path: "manifest.json")
         )
@@ -5377,20 +5391,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
     }
 
-    /// `sidePanel` is absent, and absence has to hold on both roots.
-    ///
-    /// Crest has no extension-owned panel surface, and WebKit 27 ships a
-    /// partial `sidePanel` of its own. The matrix routes the namespace
-    /// `unavailable` so Crest publishes nothing, and keeps `webKit: .partial`
-    /// so the same request that would have reached a Crest stub cannot reach
-    /// WebKit's half-implementation instead. Both halves of that are the
-    /// contract: a namespace that exists at all is a namespace a portable
-    /// package will use in full.
-    func testSidePanelIsHiddenFromTheNativeSurfaceWhenRequested() throws {
+    /// Crest owns every member and keeps WebKit's partial namespace hidden.
+    func testSidePanelIsEmulatedWhileNativeSurfaceIsHidden() throws {
         XCTAssertEqual(
             BrowserExtensionAPICompatibilityMatrix
                 .namespaceRoutes["sidePanel"],
-            "unavailable"
+            "emulated"
         )
         XCTAssertTrue(
             BrowserExtensionAPICompatibilityMatrix
@@ -5398,36 +5404,22 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 .contains("browser.sidePanel"),
             """
             A package requesting `sidePanel` must not reach WebKit's partial \
-            implementation either. Absence is the contract, so it has to hold \
-            on the native root as well as in the compatibility runtime.
+            implementation. Crest supplies the complete replacement.
             """
         )
-        XCTAssertTrue(
-            BrowserExtensionAPICompatibilityMatrix.memberRoutes.keys
-                .filter { $0.hasPrefix("sidePanel.") }
-                .isEmpty,
-            """
-            A member row for an unavailable namespace is a member the runtime \
-            would install, which is exactly what made the namespace detectable.
-            """
-        )
+        XCTAssertEqual(
+            BrowserExtensionAPICompatibilityMatrix.memberRoutes.filter { $0.key.hasPrefix("sidePanel.") }.count, 10)
     }
 
     /// A namespace Crest refuses is never published, however it is reached.
     ///
-    /// Bitwarden's worker bootstrap is one awaited expression:
-    /// `chrome.sidePanel !== undefined && await chrome.sidePanel.setOptions(…)`.
-    /// A `sidePanel` object carrying only `setPanelBehavior` passed the
-    /// detection and threw a `TypeError` on the next member, inside the
-    /// `await` — so every later initialization step, including the message
-    /// handler the popup asks for its data, never ran. Firefox publishes no
-    /// `sidePanel` at all and the same packages handle that, so absence is
-    /// the honest contract.
+    /// A refused namespace must remain absent even when WebKit supplies two
+    /// API roots and the extension requests the corresponding permission.
     func testARefusedNamespaceIsAbsentFromBothExtensionRoots() async throws {
         let fileManager = FileManager.default
         let fixture = try privilegedFixtureCompatibilityRuntime(
             named: "crest-webextension-refused-namespace-test",
-            permissions: ["sidePanel"]
+            permissions: ["history"]
         )
         defer { try? fileManager.removeItem(at: fixture.root) }
 
@@ -5442,7 +5434,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 }
             };
             // Two roots over one context, which is what WebKit publishes.
-            // Neither carries `sidePanel`, because `unsupportedWebKitAPIs`
+            // Neither carries `history`, because `unsupportedWebKitAPIs`
             // hides it — so a namespace appearing here could only have come
             // from Crest, or from Crest aliasing one root onto the other.
             Object.defineProperty(globalThis, "chrome", {
@@ -5455,12 +5447,12 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             });
             \(fixture.source)
             return JSON.stringify({
-                chromeType: typeof chrome.sidePanel,
-                browserType: typeof browser.sidePanel,
-                chromeInOperator: "sidePanel" in chrome,
-                browserInOperator: "sidePanel" in browser,
+                chromeType: typeof chrome.history,
+                browserType: typeof browser.history,
+                chromeInOperator: "history" in chrome,
+                browserInOperator: "history" in browser,
                 chromeKeys: Object.keys(chrome).filter(
-                    (key) => key.toLowerCase().includes("sidepanel")
+                    (key) => key.toLowerCase().includes("history")
                 ),
                 // The namespaces the manifest did ask for and Crest does
                 // implement are still there, so this is absence by route
@@ -5482,14 +5474,6 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertEqual(result["chromeInOperator"] as? Bool, false)
         XCTAssertEqual(result["browserInOperator"] as? Bool, false)
         XCTAssertEqual(result["chromeKeys"] as? [String], [])
-        XCTAssertFalse(
-            fixture.source.contains("setPanelBehavior"),
-            """
-            The generated runtime must carry no `sidePanel` implementation \
-            at all. A member the runtime knows how to install is a member \
-            some later routing change can publish by accident.
-            """
-        )
     }
 
     /// An emulated namespace publishes its whole schema or nothing.
@@ -5526,7 +5510,9 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             let declared = try XCTUnwrap(surface[namespace])
             let fixture = try privilegedFixtureCompatibilityRuntime(
                 named: "crest-webextension-emulated-surface-\(namespace)",
-                permissions: matrix.namespacePermissions[namespace] ?? []
+                permissions: matrix.namespacePermissions[namespace] ?? [],
+                manifestEntries: namespace == "sidebarAction"
+                    ? ["sidebar_action": ["default_panel": "panel.html"]] : [:]
             )
             defer { try? fileManager.removeItem(at: fixture.root) }
 

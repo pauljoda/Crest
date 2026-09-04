@@ -196,6 +196,8 @@ protocol BrowserExtensionPageProviding:
         in spaceID: SpaceID
     ) -> Bool
 
+    func closeExtensionSidebars(extensionBaseURL: URL, in spaceID: SpaceID)
+
     /// The placement of the real window presenting the Space, or
     /// `.unavailable` when no window is hosting it.
     func extensionWindowGeometry(
@@ -214,6 +216,8 @@ protocol BrowserExtensionPageProviding:
 }
 
 extension BrowserExtensionPageProviding {
+    func closeExtensionSidebars(extensionBaseURL: URL, in spaceID: SpaceID) {}
+
     func createExtensionOffscreenDocument(
         at url: URL,
         extensionBaseURL: URL,

@@ -24,6 +24,10 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     weak var pageProvider: (any BrowserExtensionPageProviding)?
     var openCommandSettings: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Bool)?
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
+    var sidebarService: (any BrowserExtensionSidebarHandling)?
+    var sidebarLayoutSide: () -> String = { "right" }
+    var sidebarUserGestures = BrowserExtensionUserGestureLedger()
+    var sidebarClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]
     var verifiedNativeMessagingIdentities: [ObjectIdentifier: BrowserExtensionNativeMessagingIdentity] = [:]
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
@@ -62,6 +66,9 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         self.webpageMenuRegistry = webpageMenuRegistry
         self.reportWindowFocus = reportWindowFocus
         super.init()
+        webpageMenuRegistry.userDidInvoke = { [weak self] client in
+            self?.noteUserGesture(for: client)
+        }
     }
 
     func connect<
@@ -146,6 +153,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     }
 
     func reconcile(session: BrowserSession) {
+        sidebarService?.repair(using: session)
         let newState = projectedState(for: session)
         let oldState = lastState
 

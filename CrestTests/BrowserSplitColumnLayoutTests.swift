@@ -371,12 +371,12 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
         XCTAssertEqual(
             BrowserSplitColumnSlot.slots(members: members, placeholderIndex: 1)
                 .map(\.id),
-            [members[0].id, nil, members[1].id]
+            [.member(members[0].id), .placeholder, .member(members[1].id)]
         )
         XCTAssertEqual(
             BrowserSplitColumnSlot.slots(members: members, placeholderIndex: 2)
                 .map(\.id),
-            [members[0].id, members[1].id, nil]
+            [.member(members[0].id), .member(members[1].id), .placeholder]
         )
         XCTAssertEqual(
             BrowserSplitColumnSlot.slots(members: members, placeholderIndex: 0)
@@ -397,7 +397,7 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
                     placeholderIndex: index
                 )
                 .map(\.id),
-                members.map { $0.id },
+                members.map { .member($0.id) },
                 "\(String(describing: index)) opened a column."
             )
         }

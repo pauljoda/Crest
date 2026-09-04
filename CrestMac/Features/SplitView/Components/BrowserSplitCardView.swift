@@ -36,6 +36,7 @@ struct BrowserSplitCardView: View {
     let tabPromotionNamespace: Namespace.ID
     let startPageFocusRequest: Int
     let isCommandPalettePresented: Bool
+    var fitsBesideExtensionSidebar = false
     /// Where this card records its bounds for the surface's click monitor.
     let cardFrames: BrowserSplitCardFrameRegistry
     /// Asked when the pointer enters the card, never during layout, so the guards
@@ -57,6 +58,7 @@ struct BrowserSplitCardView: View {
             startPageFocusRequest: startPageFocusRequest,
             isCommandPalettePresented: isCommandPalettePresented
         )
+        .modifier(BrowserExtensionSidebarPageFitModifier(page: page, isEnabled: fitsBesideExtensionSidebar))
         .modifier(
             BrowserSplitCardLifecycleModifier(
                 tab: tab,

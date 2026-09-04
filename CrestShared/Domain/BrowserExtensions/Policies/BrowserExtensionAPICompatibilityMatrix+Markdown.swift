@@ -138,11 +138,12 @@ extension BrowserExtensionAPICompatibilityMatrix {
     private static func documentationExposureGate(
         _ namespace: String
     ) -> String {
-        guard let permissions = namespacePermissions[namespace] else {
-            return "Always"
-        }
-        guard !permissions.isEmpty else { return "Always" }
-        return permissions.sorted().map { "`\($0)`" }
+        let permissions = namespacePermissions[namespace] ?? []
+        let keys = namespaceManifestKeys[namespace] ?? []
+        let requirements = permissions.sorted().map { "`\($0)`" } + keys.sorted().map { "Manifest `\($0)`" }
+        guard !requirements.isEmpty else { return "Always" }
+        return
+            requirements
             .joined(separator: ", ")
     }
 

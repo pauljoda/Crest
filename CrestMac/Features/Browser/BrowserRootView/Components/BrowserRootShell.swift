@@ -13,6 +13,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
 
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(BrowserExtensionSidebarStore.self) private var extensionSidebar: BrowserExtensionSidebarStore?
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -171,6 +172,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .onAppear { model.configureExtensionSidebar(extensionSidebar) }
+        .onChange(of: model.extensionSidebar?.panel) { model.extensionSidebar?.reconcile() }
+        .onDisappear { model.extensionSidebar?.release() }
     }
 
 }

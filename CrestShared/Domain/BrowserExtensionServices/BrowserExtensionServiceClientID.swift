@@ -11,6 +11,7 @@ import Foundation
 /// Chrome Web Store identifiers, unpacked development identifiers, and WebKit's
 /// own unique identifiers all encode cleanly.
 struct BrowserExtensionServiceClientID:
+    Codable,
     Comparable,
     Equatable,
     Hashable,

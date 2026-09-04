@@ -20,6 +20,7 @@ struct BrowserCommandActions {
     /// the screen. Only the split-card moves read it; see
     /// `BrowserSplitCardMoveDirection`.
     var layoutDirection: LayoutDirection = .leftToRight
+    var extensionSidebar: BrowserExtensionSidebarHost? = nil
 
     /// The commands the launcher offers on macOS.
     ///
@@ -67,6 +68,7 @@ struct BrowserCommandActions {
         .saveWebArchive,
         .printPage,
         .toggleSidebar,
+        .toggleExtensionSidePanel,
         .showHistory,
         .showArchive,
         .showDownloads,
@@ -127,6 +129,7 @@ struct BrowserCommandActions {
         case .saveWebArchive: pages.exportWebArchive()
         case .printPage: pages.printPage()
         case .toggleSidebar: toggleSidebar()
+        case .toggleExtensionSidePanel: extensionSidebar?.toggle()
         case .showHistory: chrome.presentHistory()
         case .showArchive: presentArchive()
         case .showDownloads: presentDownloads()

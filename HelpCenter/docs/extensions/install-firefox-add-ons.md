@@ -55,11 +55,14 @@ Crest resolves the listing through Mozilla's public add-ons API and then refuses
 
 Only listings for **extensions** are eligible. Themes, dictionaries, and language packs are not WebExtensions Crest can host, so **Add to Crest** does not appear on their pages.
 
+## Sidebars
+
+On macOS, Firefox extensions with `sidebar_action` can open a resizable card beside your tabs. Use the extension's **Show Side Panel** menu item or its sidebar shortcut. The panel closes when Crest quits; its width is remembered. Path-based icons are supported, while image-data icons are not.
+
 ## What is not supported
 
 Some Firefox capabilities have no equivalent in Crest's engine. An extension that depends on one of them still installs, but that feature will not work:
 
-- **Sidebars** (`sidebar_action`)
 - **Container tabs** (`contextualIdentities`)
 - **Browser themes** applied by an extension
 - **Request blocking and rewriting** through blocking `webRequest`, which is how some older content blockers work

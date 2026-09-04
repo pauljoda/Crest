@@ -6,4 +6,5 @@ struct BrowserCommandContext {
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
     let windowID: BrowserWindowID?
+    var extensionSidebar: BrowserExtensionSidebarHost? = nil
 }

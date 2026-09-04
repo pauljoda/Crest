@@ -8,6 +8,30 @@ import XCTest
 /// divergence would show up as one platform opening columns where the other
 /// keeps a single surface, which is a different host for the same live page.
 final class BrowserPageSurfaceBranchPolicyTests: XCTestCase {
+    func testLoneTabWithPanelUsesColumnsButEmptyAndLockedSpacesDoNot() {
+        let tab = makeTab("Only")
+        let space = makeSpace(tabs: [tab])
+        XCTAssertEqual(
+            BrowserPageSurfaceBranchPolicy.resolve(
+                selectedSpace: space, isSelectedSpaceLocked: false,
+                selectedTabID: tab.id, hasEnteredSplitContent: false,
+                resolvedTarget: nil, presentsTrailingPanel: true
+            ), .columns(space: space, members: [tab], placeholderIndex: nil))
+        XCTAssertEqual(
+            BrowserPageSurfaceBranchPolicy.resolve(
+                selectedSpace: space, isSelectedSpaceLocked: true,
+                selectedTabID: tab.id, hasEnteredSplitContent: false,
+                resolvedTarget: nil, presentsTrailingPanel: true
+            ), .unavailable)
+        let empty = makeSpace(tabs: [])
+        XCTAssertEqual(
+            BrowserPageSurfaceBranchPolicy.resolve(
+                selectedSpace: empty, isSelectedSpaceLocked: false,
+                selectedTabID: nil, hasEnteredSplitContent: false,
+                resolvedTarget: nil, presentsTrailingPanel: true
+            ), .single(space: empty, cardTabID: nil))
+    }
+
     func testNoSelectedSpacePresentsNothingToDropInto() {
         let presentation = BrowserPageSurfaceBranchPolicy.resolve(
             selectedSpace: nil,

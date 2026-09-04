@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "Crest Firefox Sidebar Probe",
+  "version": "1.0.1",
+  "default_locale": "en",
+  "permissions": ["tabs", "storage"],
+  "background": {"scripts": ["background.js"]},
+  "options_ui": {"page": "options.html", "open_in_tab": true},
+  "browser_action": {"default_title": "Firefox Sidebar Probe", "default_popup": "popup.html"},
+  "sidebar_action": {"default_panel": "panel.html", "default_title": "__MSG_title__", "open_at_install": true},
+  "commands": {"_execute_sidebar_action": {"suggested_key": {"default": "Ctrl+Shift+Y", "mac": "Command+Shift+Y"}, "description": "Toggle Probe Sidebar"}}
+}
