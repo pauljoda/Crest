@@ -302,7 +302,10 @@ final class BrowserExtensionRuntimeContextsCompatibilityScriptTests: XCTestCase 
                 sendNativeMessage() { return Promise.reject(new Error("no broker")); }
             };
             const nativeAction = {getUserSettings() { return "native"; }};
-            const nativeDNR = {updateDynamicRules() { return "native"; }};
+            let nativeDNROptions;
+            const nativeDNR = {
+                updateDynamicRules(options) { nativeDNROptions = options; return "native"; }
+            };
             const root = {
                 runtime: nativeRuntime, action: nativeAction, declarativeNetRequest: nativeDNR
             };
@@ -323,7 +326,18 @@ final class BrowserExtensionRuntimeContextsCompatibilityScriptTests: XCTestCase 
                 aliasedBadge: typeof chrome.browserAction?.setBadgeTextColor,
                 aliasedEvent: typeof chrome.browserAction?.onUserSettingsChanged?.addListener,
                 nativeUserSettings: chrome.action.getUserSettings(),
-                nativeRules: chrome.declarativeNetRequest.updateDynamicRules(),
+                // Wrapped for the header partition, and still WebKit's answer.
+                nativeRules: await chrome.declarativeNetRequest.updateDynamicRules({
+                    addRules: [{
+                        id: 1,
+                        action: {type: "modifyHeaders", requestHeaders: [
+                            {header: "anthropic-client-platform", operation: "set", value: "ext"}
+                        ]},
+                        condition: {urlFilter: "https://api.anthropic.com/*"}
+                    }]
+                }),
+                // WebKit would reject that rule whole, so it is not sent.
+                partitionedAddRules: nativeDNROptions?.addRules?.length,
                 modifyHeaders: chrome.declarativeNetRequest.RuleActionType?.MODIFY_HEADERS,
                 headerSet: chrome.declarativeNetRequest.HeaderOperation?.SET,
                 webSocket: chrome.declarativeNetRequest.ResourceType?.WEBSOCKET,
@@ -347,9 +361,12 @@ final class BrowserExtensionRuntimeContextsCompatibilityScriptTests: XCTestCase 
         XCTAssertEqual(result["onUserSettingsChanged"] as? String, "function")
         XCTAssertEqual(result["aliasedBadge"] as? String, "function")
         XCTAssertEqual(result["aliasedEvent"] as? String, "function")
-        // WebKit's own implementations stand.
+        // WebKit's own implementations stand. `updateDynamicRules` is wrapped
+        // so a rule can be partitioned around WebKit's header validation, and
+        // still answers with what WebKit returned.
         XCTAssertEqual(result["nativeUserSettings"] as? String, "native")
         XCTAssertEqual(result["nativeRules"] as? String, "native")
+        XCTAssertEqual(result["partitionedAddRules"] as? Int, 0)
         XCTAssertEqual(result["modifyHeaders"] as? String, "modifyHeaders")
         XCTAssertEqual(result["headerSet"] as? String, "set")
         XCTAssertEqual(result["webSocket"] as? String, "websocket")
@@ -460,6 +477,21 @@ final class BrowserExtensionRuntimeContextsCompatibilityScriptTests: XCTestCase 
             };
             const runtime = {};
             const action = {};
+            // The runtime seams the declarativeNetRequest header emulation
+            // reads. This fixture evaluates the fragment on its own, so they
+            // stand in for what the generated runtime defines above it.
+            const isPrivilegedExtensionContext = true;
+            const executionProcess = "background";
+            const capturesExtensionConsole = false;
+            const reportRuntimeTrace = () => {};
+            // The header emulation has its own fixture; leaving it off here
+            // keeps this one's broker-request assertions about `getContexts`.
+            const namespaceUsesCompatibility = (namespace) =>
+                namespace !== "declarativeNetRequest";
+            const memberUsesCompatibility = () => true;
+            const capabilityWatch = () => ({
+                connect() {}, disconnect() {}, resubscribe() {}
+            });
             \(BrowserExtensionRuntimeContextsCompatibilityScript.source)
             \(BrowserExtensionDeclarativeNetRequestCompatibilityScript.source)
             return JSON.stringify(await (async () => { \(body) })());

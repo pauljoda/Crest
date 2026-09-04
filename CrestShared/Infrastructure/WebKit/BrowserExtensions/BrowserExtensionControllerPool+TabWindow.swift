@@ -54,6 +54,12 @@ extension BrowserExtensionControllerPool {
         tabWindowCoordinator.debuggerEventMessage(event)
     }
 
+    func declarativeNetRequestEventMessage(
+        _ rulesets: BrowserExtensionEmulatedHeaderRulesets
+    ) -> [String: Any] {
+        tabWindowCoordinator.declarativeNetRequestEventMessage(rulesets)
+    }
+
     func debuggerIdentity(
         forTarget target: BrowserExtensionDebuggerTarget
     ) -> BrowserExtensionDebuggerIdentity? {

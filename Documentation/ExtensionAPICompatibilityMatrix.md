@@ -65,7 +65,7 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `contextMenus` | Native | Native | Native | Native + patch | BG, EP | `contextMenus`, `menus` | `contextMenus`, `menus` | `contextMenus`, `menus` |
 | `cookies` | Native | Native | Native | Native | BG, EP | `cookies` | `cookies` | — |
 | `debugger` | Native | Native | Unavailable | Emulated | BG, EP | `debugger` | `debugger` | `debugger` |
-| `declarativeNetRequest` | Native | Native | Partial | Native + patch | BG, EP | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | — |
+| `declarativeNetRequest` | Native | Native | Partial | Native + patch | BG, EP | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `declarativeNetRequestWithHostAccess` | `declarativeNetRequest`, `declarativeNetRequestWithHostAccess` |
 | `devtools` | Native | Native | Partial | Native | DT | — | Always | — |
 | `dom` | Native | Unavailable | Native | Native | EP, CS | — | Always | — |
 | `downloads` | Native | Native | Unavailable | Emulated | BG, EP | `downloads`, `downloads.open` | `downloads`, `downloads.open` | `downloads` |
@@ -141,6 +141,10 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `declarativeNetRequest.RuleActionType` | Unavailable | Emulated | BG, EP | — |
 | `declarativeNetRequest.SESSION_RULESET_ID` | Unavailable | Emulated | BG, EP | — |
 | `declarativeNetRequest.UnsupportedRegexReason` | Unavailable | Emulated | BG, EP | — |
+| `declarativeNetRequest.getDynamicRules` | Partial | Native + patch | BG, EP | — |
+| `declarativeNetRequest.getSessionRules` | Partial | Native + patch | BG, EP | — |
+| `declarativeNetRequest.updateDynamicRules` | Partial | Native + patch | BG, EP | — |
+| `declarativeNetRequest.updateSessionRules` | Partial | Native + patch | BG, EP | — |
 | `downloads.acceptDanger` | Unavailable | Presence only | BG, EP | — |
 | `downloads.cancel` | Unavailable | Presence only | BG, EP | — |
 | `downloads.download` | Unavailable | Emulated | BG, EP | — |

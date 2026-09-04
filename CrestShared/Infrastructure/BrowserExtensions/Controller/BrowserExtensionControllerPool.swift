@@ -181,6 +181,12 @@ final class BrowserExtensionControllerPool {
         tabWindowCoordinator.tabGroupService = service
     }
 
+    func setDeclarativeNetRequestService(
+        _ service: (any BrowserExtensionDeclarativeNetRequestHandling)?
+    ) {
+        tabWindowCoordinator.declarativeNetRequestService = service
+    }
+
     /// Installs the debugger session store and the consent gate in front of it.
     ///
     /// Both are supplied by the platform shell. Without a consent resolver no

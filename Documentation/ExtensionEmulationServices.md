@@ -323,6 +323,7 @@ ports. Other broker capabilities are implemented where their state lives.
 | Notifications | `CrestShared/Domain/BrowserExtensionServices/Notifications/`, `CrestShared/Application/BrowserExtensionServices/Notifications/`, `CrestShared/Infrastructure/BrowserExtensionServices/Notifications/`, `CrestMac/Infrastructure/BrowserExtensionServices/` | Full port/adapter/double service: `BrowserExtensionNotificationHandling` and `BrowserExtensionNotificationCentering` ports, `BrowserExtensionNotificationService`, the `BrowserExtensionNotificationSystemCenter` platform adapter, and the `InMemoryBrowserExtensionNotificationCenter` double |
 | Side panels | `CrestShared/Domain/BrowserExtensionServices/Sidebar/`, `CrestShared/Application/BrowserExtensionServices/Sidebar/`, `CrestShared/Infrastructure/BrowserExtensionServices/Sidebar/`, `CrestMac/Features/ExtensionSidebar/` | `BrowserExtensionSidebarHandling`, observable store, behavior persistence adapters, per-window host and native document |
 | Tab groups | `CrestShared/Domain/BrowserExtensionServices/TabGroups/`, `CrestShared/Application/BrowserExtensionServices/TabGroups/`, `CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionTabWindowCoordinator+TabGroups.swift` | `BrowserExtensionTabGroupHandling` port, observable store over a Space-scoped registry, and an async event hub that fans one change out to every extension in the Space. No persistence adapter: Chrome's group ids are session-local too |
+| Declarative header rules | `CrestShared/Domain/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Application/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Infrastructure/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionTabWindowCoordinator+DeclarativeNetRequest.swift` | `BrowserExtensionDeclarativeNetRequestHandling` port, observable store keyed by extension and Space, an event hub per client, and `UserDefaults`/in-memory persistence adapters for the dynamic ruleset |
 | Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
 | Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
@@ -477,6 +478,91 @@ throws. Crest adds every enum and constant the pinned Chromium
 `declarative_net_request.webidl` declares, in place on WebKit's own namespace
 object, and only when WebKit published that namespace at all: a namespace
 carrying constants and no `updateDynamicRules` is worse than an absent one.
+
+### Header rules WebKit refuses
+
+WebKit validates every `modifyHeaders` header name against a fixed list of
+standard names — `isHeaderNameValid` in
+`_WKWebExtensionDeclarativeNetRequestRule.mm` — and rejects the **whole rule**
+when one name is missing: *"Rule with id 1 is invalid. The header
+`anthropic-client-platform` is not recognized."* A custom header can never pass,
+and the standard headers in the same rule go down with it. Chrome applies such a
+rule to every request the extension makes, and packages depend on that: the
+official Claude extension sets `anthropic-client-platform` and
+`anthropic-client-version` on `https://api.anthropic.com/*` at worker startup,
+and without them the Messages API answers *"CORS requests are not allowed for
+this Organization because of its settings."*
+
+So Crest partitions the rule rather than dropping it.
+`updateSessionRules` and `updateDynamicRules` are wrapped in the compatibility
+runtime. For each added rule whose `action.type` is `modifyHeaders`,
+`action.requestHeaders` is split against
+`BrowserExtensionDeclarativeNetRequestHeaderPolicy.webKitAcceptedHeaderNames` —
+one Swift constant copied verbatim from WebKit at the matrix's pinned revision
+and serialized into the runtime. WebKit receives the rule with only the header
+operations it accepts; `responseHeaders` are never touched. A rule left with no
+header operation at all is not sent, because WebKit requires one. Everything
+rejected is recorded as an **emulated header rule** carrying the rule's `id`,
+`priority`, and condition. `removeRuleIds` applies to both halves, and
+`getSessionRules`/`getDynamicRules` merge the emulated operations back into
+their rule ids so the extension reads back what it set. If WebKit refuses the
+native call for any other reason, that error reaches the extension unchanged
+and nothing is recorded.
+
+The rules are set by the worker and needed by the side panel, popup, options
+page, and offscreen documents, so the table lives on the Swift side, per
+extension **and** Space, in `BrowserExtensionDeclarativeNetRequestStore`. Three
+broker envelopes carry it, all gated on `declarativeNetRequest` or
+`declarativeNetRequestWithHostAccess`:
+
+| Envelope | Direction | Shape |
+| --- | --- | --- |
+| `dnr.setEmulatedHeaderRules` | one-shot | `{api, ruleset: "session" \| "dynamic", rules: [rule]}` → `{ok: true}`. The runtime applies remove/add itself and sends the resulting ruleset, so the broker replaces rather than merges |
+| `dnr.emulatedHeaderRules` | one-shot | `{api}` → `{rulesets: {session: [rule], dynamic: [rule]}}` |
+| `dnr.watch` | watch port | pushes `{api: "dnr.event", rulesets: {session: [rule], dynamic: [rule]}}` on every change |
+
+A `rule` is Chrome's own vocabulary — `{id, priority, condition, requestHeaders}`
+— so the stored, persisted, and merged-back forms are one representation.
+Session rules are cleared when the extension's context unloads or reloads, as
+they are in Chrome; dynamic rules survive a relaunch through
+`BrowserExtensionDeclarativeNetRequestPersisting`, with a `UserDefaults` adapter
+and an in-memory double.
+
+### Applying them
+
+Every extension execution context the runtime already instruments — the
+background bootstrap document and extension pages, never a content script —
+wraps `fetch` and `XMLHttpRequest.open`/`setRequestHeader`/`send`. Each context
+reads the table once at start through `dnr.emulatedHeaderRules` and subscribes
+to `dnr.watch`; a request issued before the first table arrives is not modified,
+which is safe because the worker sets its rules long before a panel exists.
+
+A request is treated as resource type `xmlhttprequest`. A rule whose
+`resourceTypes` names neither `xmlhttprequest` nor `other` does not apply, and
+`excludedResourceTypes` and `requestMethods` are honoured.
+`urlFilter` implements Chrome's grammar — `||` host anchor, `|` start/end
+anchors, `*` wildcard, `^` separator (any character outside
+`[A-Za-z0-9_\-.%]`, or the end of the URL), case-insensitive unless
+`isUrlFilterCaseSensitive` — and `regexFilter` compiles to a `RegExp`, matching
+nothing if it will not compile. `set` replaces, `append` appends
+comma-separated per HTTP, `remove` deletes; one operation wins per header name,
+the highest `priority` first and the lowest rule id among ties.
+`BrowserExtensionEmulatedHeaderRuleMatcher` is the reference implementation of
+that grammar and the two are pinned by the same cases.
+
+**Scope.** Only requests the extension itself makes are covered. A content
+script's `fetch` runs on the page's origin and is untouched, as is anything a
+web page requests; a genuine `webRequest`-class interceptor is the only way to
+reach those, and it is the unbuilt work described earlier in this document.
+Headers the Fetch standard forbids a script from setting — `User-Agent`,
+`Host`, `Origin`, `Cookie`, `Referer`, `Sec-*`, `Proxy-*`, `Content-Length`,
+`Connection`, and the rest — are skipped, so an extension cannot change its
+user agent this way. `XMLHttpRequest` can only add to a header list, so a `set`
+over a header the caller already sent, and any `remove`, are skipped there too.
+Under console capture each skip is reported once per header name as
+`dnr.emulatedHeaders.skipped`, and each application once per host and header
+set as `dnr.emulatedHeaders.applied` — header **names** only, never values.
+
 ## Debugger — `chrome.debugger`
 
 WebKit publishes no debugger namespace and drops the `debugger` permission, so

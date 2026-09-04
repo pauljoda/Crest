@@ -42,6 +42,9 @@ extension BrowserExtensionTabWindowCoordinator {
         }
         if let client = verifiedNativeMessagingAuthorizations[key]?.clientID {
             tabGroupService?.unregister(client: client)
+            // Chrome drops session rules when an extension's context unloads
+            // or reloads and keeps dynamic ones.
+            declarativeNetRequestService?.unregister(client: client)
         }
         unregisterDebuggerClient(for: context)
         let resolvedSpaceID: SpaceID?
@@ -93,6 +96,15 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
         if handleCapabilityBrokerTabGroups(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerDeclarativeNetRequest(
             message,
             applicationIdentifier: applicationIdentifier,
             controller: controller,

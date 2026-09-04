@@ -236,6 +236,19 @@ an unpacked stored package. The current preparer recognizes that Crest-owned
 prelude and removes it only from the temporary runtime copy. It never rewrites
 the user's stored package and the migration does not inspect extension identity.
 
+The runtime also partitions `declarativeNetRequest` `modifyHeaders` rules.
+WebKit accepts only a fixed list of standard header names and rejects the whole
+rule when one is missing, so the official Claude extension's session rule — which
+sets `anthropic-client-platform` and `anthropic-client-version` on
+`https://api.anthropic.com/*` — was refused entirely, and the Messages API then
+answered its side panel with a CORS refusal. The wrapped `updateSessionRules`
+and `updateDynamicRules` send WebKit the header operations it accepts and keep
+the rest in a per-extension, per-Space table that every context of that
+extension reads, applying them to the extension's own `fetch` and
+`XMLHttpRequest` traffic. Content-script and web-page requests are outside that
+boundary. See `Documentation/ExtensionEmulationServices.md` for the partition,
+the broker envelopes, and what a script still may not set.
+
 Compatibility fixes are accepted only as reusable capabilities with a fixture.
 Crest does not carry extension-ID switches or literal patches to an extension's
 source. Engine-owned behavior such as isolated-world creation, CSP, request

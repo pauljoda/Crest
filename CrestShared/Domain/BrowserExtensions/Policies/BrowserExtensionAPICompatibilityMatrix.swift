@@ -163,7 +163,11 @@ enum BrowserExtensionAPICompatibilityMatrix {
                 "declarativeNetRequestWithHostAccess",
             ],
             webKit: .partial,
-            crest: .nativePatched
+            crest: .nativePatched,
+            broker: [
+                "declarativeNetRequest",
+                "declarativeNetRequestWithHostAccess",
+            ]
         ),
         contract(
             "devtools",
@@ -523,6 +527,34 @@ enum BrowserExtensionAPICompatibilityMatrix {
         // `RuleActionType.MODIFY_HEADERS` while composing a rule throws.
         // These are spec constants, identical in every browser that has them,
         // so Crest owns them outright.
+        // WebKit validates every `modifyHeaders` header name against a fixed
+        // list of standard names and rejects the whole rule when one name is
+        // missing, so a custom header — Claude's `anthropic-client-platform` —
+        // takes the rule's standard headers down with it. These four keep
+        // WebKit's implementation and split the rule around it: the accepted
+        // header operations go native, the rest are held by Crest and applied
+        // to the extension's own requests. `partial`, because what WebKit does
+        // implement still runs.
+        member(
+            "declarativeNetRequest.updateSessionRules",
+            webKit: .partial,
+            crest: .nativePatched
+        ),
+        member(
+            "declarativeNetRequest.updateDynamicRules",
+            webKit: .partial,
+            crest: .nativePatched
+        ),
+        member(
+            "declarativeNetRequest.getSessionRules",
+            webKit: .partial,
+            crest: .nativePatched
+        ),
+        member(
+            "declarativeNetRequest.getDynamicRules",
+            webKit: .partial,
+            crest: .nativePatched
+        ),
         member(
             "declarativeNetRequest.DomainType",
             webKit: .unavailable,

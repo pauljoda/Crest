@@ -517,6 +517,10 @@
     "2026-09-04-web-page-extension-last-error": {
       "category": "fixed",
       "message": "Report unanswered website-to-extension messages the way Chrome does, so Claude finishes signing in from its side panel"
+    },
+    "2026-09-04-extension-header-rule-emulation": {
+      "category": "fixed",
+      "message": "Apply the request header rules extensions declare even when WebKit refuses the header names, so Claude can reach its API from the side panel"
     }
   }
 }

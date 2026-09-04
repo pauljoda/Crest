@@ -26,6 +26,9 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
     var sidebarService: (any BrowserExtensionSidebarHandling)?
     var tabGroupService: (any BrowserExtensionTabGroupHandling)?
+    /// Holds the `modifyHeaders` request-header operations WebKit refuses, so
+    /// every context of one extension applies the same table.
+    var declarativeNetRequestService: (any BrowserExtensionDeclarativeNetRequestHandling)?
     var sidebarLayoutSide: () -> String = { "right" }
     var sidebarUserGestures = BrowserExtensionUserGestureLedger()
     var sidebarClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]

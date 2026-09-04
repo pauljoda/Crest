@@ -74,6 +74,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case notifications(Task<Void, Never>)
         case sidebar(Task<Void, Never>)
         case tabGroups(Task<Void, Never>)
+        case declarativeNetRequest(Task<Void, Never>)
         case debugger(Task<Void, Never>)
         case webSocket(BrowserExtensionBrokeredWebSocket)
     }
@@ -87,6 +88,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
     private let tabGroupService: (any BrowserExtensionTabGroupHandling)?
     private let tabGroupEventMessage: (BrowserExtensionTabGroupEvent) -> [String: Any]
+    private let declarativeNetRequestService: (any BrowserExtensionDeclarativeNetRequestHandling)?
+    private let declarativeNetRequestEventMessage: (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any]
     private let debuggerService: (any BrowserExtensionDebuggerHandling)?
     private let debuggerEventMessage: (BrowserExtensionDebuggerEvent) -> [String: Any]?
     private var watch: Watch?
@@ -103,6 +106,10 @@ final class BrowserExtensionCapabilityBrokerConnection {
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
         tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
+        declarativeNetRequestService:
+            (any BrowserExtensionDeclarativeNetRequestHandling)? = nil,
+        declarativeNetRequestEventMessage:
+            @escaping (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any] = { _ in [:] },
         debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
         debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
         publish: @escaping ([String: Any]) -> Void
@@ -115,6 +122,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         self.sidebarEventMessage = sidebarEventMessage
         self.tabGroupService = tabGroupService
         self.tabGroupEventMessage = tabGroupEventMessage
+        self.declarativeNetRequestService = declarativeNetRequestService
+        self.declarativeNetRequestEventMessage = declarativeNetRequestEventMessage
         self.debuggerService = debuggerService
         self.debuggerEventMessage = debuggerEventMessage
         self.publish = publish
@@ -142,6 +151,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureSidebarWatch()
         case "tabGroups.watch":
             try configureTabGroupsWatch()
+        case "dnr.watch":
+            try configureDeclarativeNetRequestWatch()
         case "debugger.watch":
             try configureDebuggerWatch()
         case "websocket.open":
@@ -169,7 +180,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case .idle(let watch):
             watch.stop()
         case .notifications(let task), .sidebar(let task), .tabGroups(let task),
-            .debugger(let task):
+            .declarativeNetRequest(let task), .debugger(let task):
             task.cancel()
         case .webSocket(let socket):
             socket.stop()
@@ -352,6 +363,39 @@ final class BrowserExtensionCapabilityBrokerConnection {
                     guard !Task.isCancelled else { return }
                     guard let self else { continue }
                     self.publish(self.tabGroupEventMessage(event))
+                }
+            })
+    }
+
+    /// The emulated `declarativeNetRequest` header table, gated on either
+    /// permission that publishes the namespace in Chrome.
+    ///
+    /// Every context of one extension opens its own port: the worker sets the
+    /// rules and the side panel is usually the context that makes the request
+    /// they were set for, so a single subscriber would leave the panel unaware.
+    private func configureDeclarativeNetRequestWatch() throws {
+        guard
+            BrowserExtensionDeclarativeNetRequestBrokerRequest.requiredCapabilities.contains(
+                where: authorization.grants)
+        else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied("declarativeNetRequest")
+        }
+        guard let client = authorization.clientID, let declarativeNetRequestService else {
+            throw BrowserExtensionCapabilityBrokerError.unsupportedAPI("declarativeNetRequest")
+        }
+        switch watch {
+        case .declarativeNetRequest: return
+        case .some:
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case nil: break
+        }
+        let events = declarativeNetRequestService.events(for: client)
+        watch = .declarativeNetRequest(
+            Task { @MainActor [weak self] in
+                for await rulesets in events {
+                    guard !Task.isCancelled else { return }
+                    guard let self else { continue }
+                    self.publish(self.declarativeNetRequestEventMessage(rulesets))
                 }
             })
     }
@@ -548,6 +592,8 @@ final class BrowserNativeMessagingService:
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
     private let tabGroupService: (any BrowserExtensionTabGroupHandling)?
     private let tabGroupEventMessage: (BrowserExtensionTabGroupEvent) -> [String: Any]
+    private let declarativeNetRequestService: (any BrowserExtensionDeclarativeNetRequestHandling)?
+    private let declarativeNetRequestEventMessage: (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any]
     private let debuggerService: (any BrowserExtensionDebuggerHandling)?
     private let debuggerEventMessage: (BrowserExtensionDebuggerEvent) -> [String: Any]?
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
@@ -564,6 +610,10 @@ final class BrowserNativeMessagingService:
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
         tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
+        declarativeNetRequestService:
+            (any BrowserExtensionDeclarativeNetRequestHandling)? = nil,
+        declarativeNetRequestEventMessage:
+            @escaping (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any] = { _ in [:] },
         debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
         debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
@@ -579,6 +629,8 @@ final class BrowserNativeMessagingService:
         self.sidebarEventMessage = sidebarEventMessage
         self.tabGroupService = tabGroupService
         self.tabGroupEventMessage = tabGroupEventMessage
+        self.declarativeNetRequestService = declarativeNetRequestService
+        self.declarativeNetRequestEventMessage = declarativeNetRequestEventMessage
         self.debuggerService = debuggerService
         self.debuggerEventMessage = debuggerEventMessage
         self.webpageMenuRegistry = webpageMenuRegistry
@@ -597,6 +649,10 @@ final class BrowserNativeMessagingService:
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
         tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
         tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
+        declarativeNetRequestService:
+            (any BrowserExtensionDeclarativeNetRequestHandling)? = nil,
+        declarativeNetRequestEventMessage:
+            @escaping (BrowserExtensionEmulatedHeaderRulesets) -> [String: Any] = { _ in [:] },
         debuggerService: (any BrowserExtensionDebuggerHandling)? = nil,
         debuggerEventMessage: @escaping (BrowserExtensionDebuggerEvent) -> [String: Any]? = { _ in nil },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
@@ -616,6 +672,8 @@ final class BrowserNativeMessagingService:
             sidebarEventMessage: sidebarEventMessage,
             tabGroupService: tabGroupService,
             tabGroupEventMessage: tabGroupEventMessage,
+            declarativeNetRequestService: declarativeNetRequestService,
+            declarativeNetRequestEventMessage: declarativeNetRequestEventMessage,
             debuggerService: debuggerService,
             debuggerEventMessage: debuggerEventMessage,
             webpageMenuRegistry: webpageMenuRegistry
@@ -740,6 +798,8 @@ final class BrowserNativeMessagingService:
                 sidebarEventMessage: sidebarEventMessage,
                 tabGroupService: tabGroupService,
                 tabGroupEventMessage: tabGroupEventMessage,
+                declarativeNetRequestService: declarativeNetRequestService,
+                declarativeNetRequestEventMessage: declarativeNetRequestEventMessage,
                 debuggerService: debuggerService,
                 debuggerEventMessage: debuggerEventMessage,
                 publish: { [weak port] message in

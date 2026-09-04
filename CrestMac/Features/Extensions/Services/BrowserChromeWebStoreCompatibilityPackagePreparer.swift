@@ -4942,6 +4942,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     if (!nativeRoot) return;
 
                     normalizeRuntime(nativeRoot.runtime);
+                    // The header-rule wrappers are defined on WebKit's own
+                    // `declarativeNetRequest` object, so this runs before the
+                    // schema constants below are installed onto it.
+                    let nativeDeclarativeNetRequestNamespace;
+                    try {
+                        nativeDeclarativeNetRequestNamespace =
+                            nativeRoot.declarativeNetRequest;
+                    } catch {}
+                    normalizeDeclarativeNetRequestNamespace(
+                        nativeDeclarativeNetRequestNamespace
+                    );
                     const normalizedI18n = normalizeI18n(nativeRoot.i18n);
                     if (
                         normalizedI18n

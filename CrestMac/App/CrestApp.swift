@@ -114,6 +114,19 @@ struct CrestApp: App {
         // Groups are session-local in Chrome too — nothing here is persisted.
         let extensionTabGroups = BrowserExtensionTabGroupStore()
         extensionControllerPool.setTabGroupService(extensionTabGroups)
+        // WebKit refuses a `modifyHeaders` rule that names a header outside
+        // its accepted list, so Crest holds that half of the rule instead.
+        // Chrome's dynamic rules survive a relaunch; session rules do not.
+        let declarativeNetRequestPersistence: any BrowserExtensionDeclarativeNetRequestPersisting =
+            if let sidebarDefaults {
+                UserDefaultsBrowserExtensionDeclarativeNetRequestStore(defaults: sidebarDefaults)
+            } else {
+                InMemoryBrowserExtensionDeclarativeNetRequestStore()
+            }
+        let extensionDeclarativeNetRequest = BrowserExtensionDeclarativeNetRequestStore(
+            persistence: declarativeNetRequestPersistence
+        )
+        extensionControllerPool.setDeclarativeNetRequestService(extensionDeclarativeNetRequest)
         // WebKit drops the `debugger` permission, so Crest owns the decision,
         // the prompt, and the live withdrawal behind it.
         let extensionDebugger = BrowserExtensionDebuggerInstallation.install(
@@ -152,6 +165,11 @@ struct CrestApp: App {
                     tabGroupEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
                     },
+                    declarativeNetRequestService: extensionDeclarativeNetRequest,
+                    declarativeNetRequestEventMessage: {
+                        [weak extensionControllerPool] rulesets in
+                        extensionControllerPool?.declarativeNetRequestEventMessage(rulesets) ?? [:]
+                    },
                     debuggerService: extensionDebugger,
                     debuggerEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.debuggerEventMessage(event)
@@ -167,6 +185,11 @@ struct CrestApp: App {
                     tabGroupService: extensionTabGroups,
                     tabGroupEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
+                    },
+                    declarativeNetRequestService: extensionDeclarativeNetRequest,
+                    declarativeNetRequestEventMessage: {
+                        [weak extensionControllerPool] rulesets in
+                        extensionControllerPool?.declarativeNetRequestEventMessage(rulesets) ?? [:]
                     },
                     debuggerService: extensionDebugger,
                     debuggerEventMessage: { [weak extensionControllerPool] event in
