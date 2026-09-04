@@ -86,6 +86,7 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `sidePanel` | Native | Unavailable | Partial | Emulated | BG, EP | `sidePanel` | `sidePanel` | `sidePanel` |
 | `sidebarAction` | Unavailable | Native | Partial | Emulated | BG, EP | — | Manifest `sidebar_action` | — |
 | `storage` | Native | Native | Native | Native + patch | BG, EP, CS | `storage`, `unlimitedStorage` | `storage`, `unlimitedStorage` | — |
+| `tabGroups` | Native | Native | Unavailable | Emulated | BG, EP | `tabGroups` | `tabGroups` | `tabGroups` |
 | `tabs` | Native | Native | Native | Native + patch | BG, EP | `tabs` | Always | — |
 | `test` | Unavailable | Unavailable | Native | Unavailable | BG, EP, CS | — | Always | — |
 | `topSites` | Native | Native | Unavailable | Unavailable | BG, EP | `topSites` | `topSites` | — |
@@ -201,9 +202,21 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `storage.managed` | Native | Native + patch | BG, EP, CS | — |
 | `storage.session` | Native | Native + patch | BG, EP, CS | — |
 | `storage.sync` | Native | Native + patch | BG, EP, CS | — |
+| `tabGroups.Color` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.TAB_GROUP_ID_NONE` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.get` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.move` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.onCreated` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.onMoved` | Unavailable | Presence only | BG, EP | — |
+| `tabGroups.onRemoved` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.onUpdated` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.query` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.update` | Unavailable | Emulated | BG, EP | — |
 | `tabs.get` | Native | Native + patch | BG, EP | — |
+| `tabs.group` | Unavailable | Emulated | BG, EP | — |
 | `tabs.query` | Native | Native + patch | BG, EP | — |
 | `tabs.sendMessage` | Native | Native + patch | BG, EP | — |
+| `tabs.ungroup` | Unavailable | Emulated | BG, EP | — |
 | `webNavigation.getAllFrames` | Native | Native + patch | BG, EP | — |
 | `webNavigation.onCreatedNavigationTarget` | Unavailable | Presence only | BG, EP | — |
 | `webNavigation.onHistoryStateUpdated` | Unavailable | Presence only | BG, EP | — |

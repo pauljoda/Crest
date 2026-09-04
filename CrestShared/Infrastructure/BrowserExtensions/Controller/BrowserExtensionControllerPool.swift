@@ -177,6 +177,10 @@ final class BrowserExtensionControllerPool {
         tabWindowCoordinator.sidebarLayoutSide = layoutSide
     }
 
+    func setTabGroupService(_ service: (any BrowserExtensionTabGroupHandling)?) {
+        tabWindowCoordinator.tabGroupService = service
+    }
+
     func setUpdateModel(_ model: BrowserExtensionUpdateModel?) {
         updateModel?.cancelScheduledUpdates()
         updateModel = model

@@ -73,6 +73,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case idle(BrowserExtensionIdleWatch)
         case notifications(Task<Void, Never>)
         case sidebar(Task<Void, Never>)
+        case tabGroups(Task<Void, Never>)
     }
 
     private let authorization: BrowserExtensionNativeMessagingAuthorization
@@ -82,6 +83,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private let sidebarService: (any BrowserExtensionSidebarHandling)?
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
+    private let tabGroupService: (any BrowserExtensionTabGroupHandling)?
+    private let tabGroupEventMessage: (BrowserExtensionTabGroupEvent) -> [String: Any]
     private var watch: Watch?
     private var webpageMenuClickObserver: UUID?
 
@@ -94,6 +97,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry,
         sidebarService: (any BrowserExtensionSidebarHandling)? = nil,
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
+        tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
+        tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
         publish: @escaping ([String: Any]) -> Void
     ) {
         self.authorization = authorization
@@ -102,6 +107,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         self.webpageMenuRegistry = webpageMenuRegistry
         self.sidebarService = sidebarService
         self.sidebarEventMessage = sidebarEventMessage
+        self.tabGroupService = tabGroupService
+        self.tabGroupEventMessage = tabGroupEventMessage
         self.publish = publish
     }
 
@@ -125,6 +132,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureNotificationWatch()
         case "sidebar.watch":
             try configureSidebarWatch()
+        case "tabGroups.watch":
+            try configureTabGroupsWatch()
         default:
             throw BrowserExtensionCapabilityBrokerError.unsupportedAPI(api)
         }
@@ -143,7 +152,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let watch):
             watch.stop()
-        case .notifications(let task), .sidebar(let task):
+        case .notifications(let task), .sidebar(let task), .tabGroups(let task):
             task.cancel()
         case nil:
             break
@@ -230,7 +239,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let existing):
             idleWatch = existing
-        case .notifications, .sidebar:
+        case .notifications, .sidebar, .tabGroups:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             idleWatch = BrowserExtensionIdleWatch(
@@ -259,7 +268,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .notifications:
             return
-        case .idle, .sidebar:
+        case .idle, .sidebar, .tabGroups:
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil:
             break
@@ -283,7 +292,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
         }
         switch watch {
         case .sidebar: return
-        case .idle, .notifications: throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case .idle, .notifications, .tabGroups:
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
         case nil: break
         }
         let events = sidebarService.events(for: client)
@@ -293,6 +303,34 @@ final class BrowserExtensionCapabilityBrokerConnection {
                     guard !Task.isCancelled else { return }
                     guard let self, let message = self.sidebarEventMessage(event) else { continue }
                     self.publish(message)
+                }
+            })
+    }
+
+    /// A tab-group watch, gated on the namespace's own permission.
+    ///
+    /// One port carries one watch, as it does for idle, notifications, and
+    /// the sidebar: an extension that wants two opens two connections.
+    private func configureTabGroupsWatch() throws {
+        guard authorization.grants("tabGroups") else {
+            throw BrowserExtensionCapabilityBrokerError.permissionDenied("tabGroups")
+        }
+        guard let client = authorization.clientID, let tabGroupService else {
+            throw BrowserExtensionCapabilityBrokerError.unsupportedAPI("tabGroups")
+        }
+        switch watch {
+        case .tabGroups: return
+        case .idle, .notifications, .sidebar:
+            throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case nil: break
+        }
+        let events = tabGroupService.events(for: client)
+        watch = .tabGroups(
+            Task { @MainActor [weak self] in
+                for await event in events {
+                    guard !Task.isCancelled else { return }
+                    guard let self else { continue }
+                    self.publish(self.tabGroupEventMessage(event))
                 }
             })
     }
@@ -397,6 +435,8 @@ final class BrowserNativeMessagingService:
     private let sidebarService: (any BrowserExtensionSidebarHandling)?
     private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
+    private let tabGroupService: (any BrowserExtensionTabGroupHandling)?
+    private let tabGroupEventMessage: (BrowserExtensionTabGroupEvent) -> [String: Any]
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private var connections: [ObjectIdentifier: BrowserNativeMessagingPersistentConnection] = [:]
     private var capabilityConnections: [ObjectIdentifier: BrowserExtensionCapabilityBrokerConnection] = [:]
@@ -409,6 +449,8 @@ final class BrowserNativeMessagingService:
             (any BrowserExtensionNotificationHandling)? = nil,
         sidebarService: (any BrowserExtensionSidebarHandling)? = nil,
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
+        tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
+        tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry(),
         idleStateProvider:
@@ -420,6 +462,8 @@ final class BrowserNativeMessagingService:
         self.notificationService = notificationService
         self.sidebarService = sidebarService
         self.sidebarEventMessage = sidebarEventMessage
+        self.tabGroupService = tabGroupService
+        self.tabGroupEventMessage = tabGroupEventMessage
         self.webpageMenuRegistry = webpageMenuRegistry
         if let idleStateProvider {
             self.idleStateProvider = idleStateProvider
@@ -434,6 +478,8 @@ final class BrowserNativeMessagingService:
     static func production(
         sidebarService: (any BrowserExtensionSidebarHandling)? = nil,
         sidebarEventMessage: @escaping (BrowserExtensionSidebarEvent) -> [String: Any]? = { _ in nil },
+        tabGroupService: (any BrowserExtensionTabGroupHandling)? = nil,
+        tabGroupEventMessage: @escaping (BrowserExtensionTabGroupEvent) -> [String: Any] = { _ in [:] },
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
             BrowserExtensionWebpageMenuRegistry()
     ) -> BrowserNativeMessagingService {
@@ -449,6 +495,8 @@ final class BrowserNativeMessagingService:
             ),
             sidebarService: sidebarService,
             sidebarEventMessage: sidebarEventMessage,
+            tabGroupService: tabGroupService,
+            tabGroupEventMessage: tabGroupEventMessage,
             webpageMenuRegistry: webpageMenuRegistry
         )
     }
@@ -569,6 +617,8 @@ final class BrowserNativeMessagingService:
                 webpageMenuRegistry: webpageMenuRegistry,
                 sidebarService: sidebarService,
                 sidebarEventMessage: sidebarEventMessage,
+                tabGroupService: tabGroupService,
+                tabGroupEventMessage: tabGroupEventMessage,
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }

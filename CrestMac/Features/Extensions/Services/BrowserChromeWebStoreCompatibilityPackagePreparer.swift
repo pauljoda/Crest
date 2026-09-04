@@ -2450,6 +2450,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         !memberUsesCompatibility("tabs.get")
                         && !memberUsesCompatibility("tabs.query")
                         && !memberUsesCompatibility("tabs.sendMessage")
+                        && !memberUsesCompatibility("tabs.group")
+                        && !memberUsesCompatibility("tabs.ungroup")
                     ) {
                         return nativeTabs;
                     }
@@ -2469,19 +2471,36 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // no resident WKWebView; project that host invariant into
                     // the Chromium/Firefox Tab.discarded contract so queries
                     // do not send script and frame operations to unloaded tabs.
+                    //
+                    // `groupId` is projected the same way and for the same
+                    // reason: WebKit has no tab-group concept, Crest's
+                    // registry does, and Chrome puts the field on every tab
+                    // object. `TAB_GROUP_ID_NONE` is the honest answer for a
+                    // tab in no group, which is every tab until some
+                    // extension calls `tabs.group`.
                     const normalizeTab = (tab) => {
                         if (!tab || typeof tab !== "object") return tab;
-                        if (typeof tab.discarded === "boolean") return tab;
+                        const grouped =
+                            typeof tab.groupId === "number"
+                                ? tab
+                                : {
+                                    ...tab,
+                                    groupId: tabGroupsProjectTab(tab)
+                                };
+                        if (typeof grouped.discarded === "boolean") {
+                            return grouped;
+                        }
                         const hasSize =
-                            typeof tab.width === "number"
-                            && typeof tab.height === "number";
-                        if (!hasSize) return tab;
+                            typeof grouped.width === "number"
+                            && typeof grouped.height === "number";
+                        if (!hasSize) return grouped;
                         return {
-                            ...tab,
-                            discarded: tab.width === 0 && tab.height === 0,
+                            ...grouped,
+                            discarded:
+                                grouped.width === 0 && grouped.height === 0,
                             autoDiscardable:
-                                typeof tab.autoDiscardable === "boolean"
-                                    ? tab.autoDiscardable
+                                typeof grouped.autoDiscardable === "boolean"
+                                    ? grouped.autoDiscardable
                                     : true
                         };
                     };
@@ -2526,10 +2545,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
                     const get = typeof nativeGet === "function"
                         && memberUsesCompatibility("tabs.get")
-                        ? (...inputArguments) => invokeTransformed(
-                            nativeGet,
-                            inputArguments,
-                            normalizeTab
+                        ? (...inputArguments) => tabGroupsWithMembership(
+                            typeof inputArguments.at(-1) === "function",
+                            () => invokeTransformed(
+                                nativeGet,
+                                inputArguments,
+                                normalizeTab
+                            )
                         )
                         : nativeGet;
                     const query = typeof nativeQuery === "function"
@@ -2539,28 +2561,53 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             const callback = typeof args.at(-1) === "function"
                                 ? args.pop()
                                 : undefined;
-                            const requested = args[0]
+                            const options = args[0]
                                 && typeof args[0] === "object"
-                                ? args[0].discarded
+                                ? args[0]
                                 : undefined;
-                            if (typeof requested === "boolean") {
-                                args[0] = { ...args[0] };
-                                delete args[0].discarded;
+                            const requested = options
+                                ? options.discarded
+                                : undefined;
+                            // Reads `groupId` and switches the `Tab.groupId`
+                            // mirror on: a package filtering by group has
+                            // asked for the field by name. WebKit knows
+                            // neither key, so both are stripped before the
+                            // native query and applied to its result here.
+                            const requestedGroup =
+                                tabGroupsQueryFilter(options);
+                            if (
+                                typeof requested === "boolean"
+                                || requestedGroup !== undefined
+                            ) {
+                                args[0] = { ...options };
+                                if (typeof requested === "boolean") {
+                                    delete args[0].discarded;
+                                }
+                                delete args[0].groupId;
                             }
                             const transform = (tabs) => {
                                 if (!Array.isArray(tabs)) return tabs;
-                                const normalized = tabs.map(normalizeTab);
-                                return typeof requested === "boolean"
-                                    ? normalized.filter(
+                                let normalized = tabs.map(normalizeTab);
+                                if (typeof requested === "boolean") {
+                                    normalized = normalized.filter(
                                         (tab) => tab.discarded === requested
-                                    )
-                                    : normalized;
+                                    );
+                                }
+                                if (requestedGroup !== undefined) {
+                                    normalized = normalized.filter(
+                                        (tab) => tab.groupId === requestedGroup
+                                    );
+                                }
+                                return normalized;
                             };
                             if (callback) args.push(callback);
-                            return invokeTransformed(
-                                nativeQuery,
-                                args,
-                                transform
+                            return tabGroupsWithMembership(
+                                callback !== undefined,
+                                () => invokeTransformed(
+                                    nativeQuery,
+                                    args,
+                                    transform
+                                )
                             );
                         }
                         : nativeQuery;
@@ -2616,6 +2663,14 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         && memberUsesCompatibility("tabs.sendMessage")
                     ) {
                         overlays.set("sendMessage", sendMessage);
+                    }
+                    // Grouping has no WebKit implementation to patch, so
+                    // these are installed outright rather than wrapped.
+                    if (memberUsesCompatibility("tabs.group")) {
+                        overlays.set("group", tabGroupsGroupTabs);
+                    }
+                    if (memberUsesCompatibility("tabs.ungroup")) {
+                        overlays.set("ungroup", tabGroupsUngroupTabs);
                     }
                     if (overlays.size === 0) {
                         normalizedTabsNamespaces.set(nativeTabs, nativeTabs);
@@ -4717,6 +4772,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                 };
                 \(BrowserExtensionSidebarCompatibilityScript.source)
+                \(BrowserExtensionTabGroupsCompatibilityScript.source)
                 const idleStateChangeListeners = new Set();
                 let idleDetectionIntervalInSeconds = 60;
                 const isIdleState = (state) =>
@@ -4864,6 +4920,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         offscreen,
                         sidePanel,
                         sidebarAction,
+                        tabGroups,
                         idle,
                         webNavigation,
                         webRequest,

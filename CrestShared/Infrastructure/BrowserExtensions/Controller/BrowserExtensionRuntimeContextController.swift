@@ -498,6 +498,14 @@ final class BrowserExtensionRuntimeContextController {
         }
 
         contextsBySpace[space.id, default: [:]][extensionID] = context
+        // Tab groups are browser-wide, so every extension in the Space is a
+        // potential reader whether or not it declared `tabGroups`. The
+        // registration only tells the store which Space this client watches;
+        // the broker still checks the grant on every call.
+        tabWindowCoordinator.tabGroupService?.register(
+            client: .scoped(extensionID: extensionID, spaceID: space.id),
+            spaceID: space.id
+        )
         let referenceEnvironment: BrowserExtensionReferenceEnvironment =
             if case .mozillaAddons = source { .firefox } else { .chromium }
         let sidebarDefaults =

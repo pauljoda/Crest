@@ -110,6 +110,9 @@ struct CrestApp: App {
         extensionControllerPool.setSidebarService(extensionSidebar) {
             NSApp.userInterfaceLayoutDirection == .rightToLeft ? "left" : "right"
         }
+        // Groups are session-local in Chrome too — nothing here is persisted.
+        let extensionTabGroups = BrowserExtensionTabGroupStore()
+        extensionControllerPool.setTabGroupService(extensionTabGroups)
         extensionControllerPool.setNativeMessagingHandler(
             usesIsolatedLaunch
                 ? BrowserNativeMessagingService(
@@ -133,6 +136,10 @@ struct CrestApp: App {
                     sidebarEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.sidebarEventMessage(event)
                     },
+                    tabGroupService: extensionTabGroups,
+                    tabGroupEventMessage: { [weak extensionControllerPool] event in
+                        extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
+                    },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry
                 )
@@ -140,6 +147,10 @@ struct CrestApp: App {
                     sidebarService: extensionSidebar,
                     sidebarEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.sidebarEventMessage(event)
+                    },
+                    tabGroupService: extensionTabGroups,
+                    tabGroupEventMessage: { [weak extensionControllerPool] event in
+                        extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
                     },
                     webpageMenuRegistry:
                         extensionControllerPool.webpageMenuRegistry

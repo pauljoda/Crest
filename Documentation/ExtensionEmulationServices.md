@@ -233,13 +233,14 @@ still needs an enforceable request hook.
 
 ## App-side service layout
 
-Notifications and side panels have Application-layer service ports. Other
-broker capabilities are implemented where their state lives.
+Notifications, side panels, and tab groups have Application-layer service
+ports. Other broker capabilities are implemented where their state lives.
 
 | Concern | Where it lives | Shape |
 | --- | --- | --- |
 | Notifications | `CrestShared/Domain/BrowserExtensionServices/Notifications/`, `CrestShared/Application/BrowserExtensionServices/Notifications/`, `CrestShared/Infrastructure/BrowserExtensionServices/Notifications/`, `CrestMac/Infrastructure/BrowserExtensionServices/` | Full port/adapter/double service: `BrowserExtensionNotificationHandling` and `BrowserExtensionNotificationCentering` ports, `BrowserExtensionNotificationService`, the `BrowserExtensionNotificationSystemCenter` platform adapter, and the `InMemoryBrowserExtensionNotificationCenter` double |
 | Side panels | `CrestShared/Domain/BrowserExtensionServices/Sidebar/`, `CrestShared/Application/BrowserExtensionServices/Sidebar/`, `CrestShared/Infrastructure/BrowserExtensionServices/Sidebar/`, `CrestMac/Features/ExtensionSidebar/` | `BrowserExtensionSidebarHandling`, observable store, behavior persistence adapters, per-window host and native document |
+| Tab groups | `CrestShared/Domain/BrowserExtensionServices/TabGroups/`, `CrestShared/Application/BrowserExtensionServices/TabGroups/`, `CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionTabWindowCoordinator+TabGroups.swift` | `BrowserExtensionTabGroupHandling` port, observable store over a Space-scoped registry, and an async event hub that fans one change out to every extension in the Space. No persistence adapter: Chrome's group ids are session-local too |
 | Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
 | Context menus and install lifecycle | `CrestShared/Infrastructure/BrowserExtensions/ContextMenus/BrowserExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/WebKit/BrowserExtensions/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
@@ -287,6 +288,55 @@ to WebKit and extension CSP. Packaged path icons are supported, while
 `sidebarAction.setIcon({imageData})` rejects rather than reporting success.
 The compatibility matrix hides WebKit's partial namespaces and publishes the
 complete Chrome and Firefox member lists only in privileged extension contexts.
+
+## Tab groups — `chrome.tabGroups`, `tabs.group`, `tabs.ungroup`
+
+One registry per Space, shared by every extension in it, because Chrome's
+groups are browser-wide rather than per package: an extension can read and
+update a group another extension created. `windowId` is always that Space's
+primary extension window — the compatibility runtime resolves the number from
+the native `windows.getCurrent()` rather than inventing an identifier, exactly
+as the sidebar fragment does, and the broker names the window only by kind.
+`tabGroups.watch` is a permission-checked event stream separate from the
+notification, idle, and sidebar watches. `tabGroups.*` require the `tabGroups`
+permission; `tabs.group`, `tabs.ungroup`, and the `Tab.groupId` mirror require
+`tabs`, which is where Chromium's schema puts them.
+
+The coordinator re-verifies every tab target against the live Space before the
+registry moves — the wire carries a tab index and the URL JavaScript saw, never
+a WebKit identifier — and a transient page such as a Peek is excluded, so it
+can never join a group. `reconcile(session:)` repairs the registry on every
+session change, dropping closed tabs and emitting `onRemoved` for a group its
+last tab has left.
+
+Crest v1 records grouping without drawing it, and says so rather than
+pretending otherwise:
+
+- There is no visible grouping in the sidebar and no tab is reordered to sit
+  beside its siblings. Membership, title, colour, and collapsed state are real,
+  durable, and queryable; the presentation is not built yet.
+- `tabGroups.move` therefore rejects with Chromium's own `Failed to move
+  group.` after validating the group id, so a wrong id still reports the wrong
+  id. It never silently succeeds.
+- `tabGroups.onMoved` is published as a real event object that keeps its
+  listeners and warns once that none of them will run — the matrix's
+  `presenceOnly` route — because Crest has no group ordering to change.
+- `Tab.groupId` is projected onto `tabs.get` and `tabs.query` results from a
+  mirror the broker refreshes. The mirror is switched on when a package
+  declares `tabGroups`, calls `tabs.group`/`tabs.ungroup`, or filters a query
+  by `groupId`; until then every tab reports `TAB_GROUP_ID_NONE`, which is what
+  a package that created no group would see anyway. The deviation is that a
+  package which never asks will not observe a group some *other* extension
+  made. The alternative was a native round trip on every `tabs.query` in every
+  extension for a field most never read.
+- `Tab.groupId` is not projected onto tab objects delivered by WebKit's own
+  `tabs.on*` events, and Crest does not fire `tabs.onUpdated(tabId, {groupId})`
+  when membership changes. Those events are native and unpatched; a package
+  that needs the change should use `tabGroups.onCreated`/`onRemoved` or re-read
+  the tab.
+- `TabGroup.shared` is always `false`. Chrome's shared and saved groups are a
+  sync feature Crest has no equivalent for, and reporting `false` is the truth
+  rather than a stub.
 
 ## Notifications — `chrome.notifications`
 

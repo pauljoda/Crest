@@ -301,6 +301,19 @@ enum BrowserExtensionAPICompatibilityMatrix {
             processes: [.background, .extensionPage, .contentScript],
             runtime: true
         ),
+        // WebKit has no tab-group surface at all — not a partial one — so
+        // nothing here displaces a native implementation and nothing needs
+        // hiding from `unsupportedWebKitAPIs`. Crest backs the namespace with
+        // a real Space-scoped registry; what it does not have is a *drawn*
+        // group, which is why `move` refuses and `onMoved` never fires.
+        contract(
+            "tabGroups",
+            permissions: ["tabGroups"],
+            webKit: .unavailable,
+            crest: .emulated,
+            runtime: true,
+            broker: ["tabGroups"]
+        ),
         contract("tabs", permissions: ["tabs"], crest: .nativePatched),
         contract(
             "test",
@@ -425,6 +438,15 @@ enum BrowserExtensionAPICompatibilityMatrix {
         ],
         "sidebarAction": [
             "setTitle", "getTitle", "setIcon", "setPanel", "getPanel", "open", "close", "toggle", "isOpen",
+        ],
+        // `TabGroup` is deliberately absent: Chromium declares it as a
+        // dictionary type, and Chrome publishes no property for it. `Color`
+        // and `TAB_GROUP_ID_NONE` are published, because Chrome does — the
+        // official Claude extension dereferences `tabGroups.Color` in a
+        // static class field, before its worker can do anything else.
+        "tabGroups": [
+            "get", "query", "update", "move", "onCreated", "onUpdated", "onMoved", "onRemoved",
+            "Color", "TAB_GROUP_ID_NONE",
         ],
     ]
 
@@ -625,7 +647,29 @@ enum BrowserExtensionAPICompatibilityMatrix {
             crest: .nativePatched,
             processes: [.background, .extensionPage, .contentScript]
         ),
+        // Every executable member of the namespace. `tabGroups.onMoved` is
+        // absent on purpose: Crest never reorders a group, so it becomes the
+        // `presenceOnly` filler `emulatedSurface` implies — an event object
+        // that keeps its listeners and says once that none of them will run.
+        member("tabGroups.Color", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.TAB_GROUP_ID_NONE", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.get", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.query", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.update", webKit: .unavailable, crest: .emulated),
+        // Implemented, and it refuses. A filler would reject with Crest's
+        // generic text; this one rejects with Chromium's own
+        // `kFailedToMoveGroupError` after validating the group id, which is
+        // the failure a portable package is written to handle.
+        member("tabGroups.move", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.onCreated", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.onUpdated", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.onRemoved", webKit: .unavailable, crest: .emulated),
         member("tabs.get", crest: .nativePatched),
+        // Chromium schedules grouping under `chrome.tabs`, not `tabGroups`,
+        // and gates it with the `tabs` permission. Crest keeps that split:
+        // these two are the only way a group is ever created.
+        member("tabs.group", webKit: .unavailable, crest: .emulated),
+        member("tabs.ungroup", webKit: .unavailable, crest: .emulated),
         member("tabs.query", crest: .nativePatched),
         member("tabs.sendMessage", crest: .nativePatched),
         member(

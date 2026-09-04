@@ -109,6 +109,7 @@ Routes are **Native** (WebKit unchanged), **Native + patch** (WebKit identity ke
 | `sidePanel` | Native | Unavailable | Partial | Emulated | BG, EP | `sidePanel` | `sidePanel` | `sidePanel` |
 | `sidebarAction` | Unavailable | Native | Partial | Emulated | BG, EP | — | Manifest `sidebar_action` | — |
 | `storage` | Native | Native | Native | Native + patch | BG, EP, CS | `storage`, `unlimitedStorage` | `storage`, `unlimitedStorage` | — |
+| `tabGroups` | Native | Native | Unavailable | Emulated | BG, EP | `tabGroups` | `tabGroups` | `tabGroups` |
 | `tabs` | Native | Native | Native | Native + patch | BG, EP | `tabs` | Always | — |
 | `test` | Unavailable | Unavailable | Native | Unavailable | BG, EP, CS | — | Always | — |
 | `topSites` | Native | Native | Unavailable | Unavailable | BG, EP | `topSites` | `topSites` | — |
@@ -224,9 +225,21 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `storage.managed` | Native | Native + patch | BG, EP, CS | — |
 | `storage.session` | Native | Native + patch | BG, EP, CS | — |
 | `storage.sync` | Native | Native + patch | BG, EP, CS | — |
+| `tabGroups.Color` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.TAB_GROUP_ID_NONE` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.get` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.move` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.onCreated` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.onMoved` | Unavailable | Presence only | BG, EP | — |
+| `tabGroups.onRemoved` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.onUpdated` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.query` | Unavailable | Emulated | BG, EP | — |
+| `tabGroups.update` | Unavailable | Emulated | BG, EP | — |
 | `tabs.get` | Native | Native + patch | BG, EP | — |
+| `tabs.group` | Unavailable | Emulated | BG, EP | — |
 | `tabs.query` | Native | Native + patch | BG, EP | — |
 | `tabs.sendMessage` | Native | Native + patch | BG, EP | — |
+| `tabs.ungroup` | Unavailable | Emulated | BG, EP | — |
 | `webNavigation.getAllFrames` | Native | Native + patch | BG, EP | — |
 | `webNavigation.onCreatedNavigationTarget` | Unavailable | Presence only | BG, EP | — |
 | `webNavigation.onHistoryStateUpdated` | Unavailable | Presence only | BG, EP | — |
@@ -260,7 +273,7 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 
 ## What this coverage means
 
-Crest currently routes **36 namespace contracts** and 122 individual members through one executable matrix. Twenty-eight namespaces are available in some form and eight are intentionally unavailable. Coverage includes runtime messaging, storage, tabs, injection, actions, auxiliary windows, side panels, permissions, notifications, menus, and lifecycle. API coverage alone does not certify every extension's account or native-companion workflow.
+Crest currently routes **37 namespace contracts** and 134 individual members through one executable matrix. Twenty-nine namespaces are available in some form and eight are intentionally unavailable. Coverage includes runtime messaging, storage, tabs, tab groups, injection, actions, auxiliary windows, side panels, permissions, notifications, menus, and lifecycle. API coverage alone does not certify every extension's account or native-companion workflow.
 
 The remaining gaps cluster around browser-owned data stores such as bookmarks, history, and sessions; the extension omnibox; and request interception semantics WebKit does not expose. Those gaps are documented instead of being replaced with extension-specific shims or successful no-ops.
 

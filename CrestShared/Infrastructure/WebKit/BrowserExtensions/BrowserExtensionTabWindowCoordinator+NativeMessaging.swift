@@ -40,6 +40,9 @@ extension BrowserExtensionTabWindowCoordinator {
             sidebarUserGestures.remove(client: client)
             sidebarService?.unregister(client: client)
         }
+        if let client = verifiedNativeMessagingAuthorizations[key]?.clientID {
+            tabGroupService?.unregister(client: client)
+        }
         let resolvedSpaceID: SpaceID?
         if let owningSpaceID {
             resolvedSpaceID = owningSpaceID
@@ -80,6 +83,15 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
         if handleCapabilityBrokerSidebar(
+            message,
+            applicationIdentifier: applicationIdentifier,
+            controller: controller,
+            extensionContext: extensionContext,
+            replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerTabGroups(
             message,
             applicationIdentifier: applicationIdentifier,
             controller: controller,

@@ -25,6 +25,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var openCommandSettings: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Bool)?
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
     var sidebarService: (any BrowserExtensionSidebarHandling)?
+    var tabGroupService: (any BrowserExtensionTabGroupHandling)?
     var sidebarLayoutSide: () -> String = { "right" }
     var sidebarUserGestures = BrowserExtensionUserGestureLedger()
     var sidebarClientsByContext: [ObjectIdentifier: BrowserExtensionServiceClientID] = [:]
@@ -154,6 +155,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
 
     func reconcile(session: BrowserSession) {
         sidebarService?.repair(using: session)
+        tabGroupService?.repair(using: session)
         let newState = projectedState(for: session)
         let oldState = lastState
 

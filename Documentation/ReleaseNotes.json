@@ -433,6 +433,10 @@
     "2026-09-03-extension-side-panels": {
       "category": "new",
       "message": "Show extension side panels as a card beside your pages"
+    },
+    "2026-09-03-extension-tab-groups": {
+      "category": "new",
+      "message": "Support extensions that organize tabs into groups"
     }
   }
 }
