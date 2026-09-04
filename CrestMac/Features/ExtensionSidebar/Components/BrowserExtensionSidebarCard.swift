@@ -13,35 +13,7 @@ struct BrowserExtensionSidebarCard: View {
                     Image(systemName: "puzzlepiece.extension.fill").frame(width: 16, height: 16)
                 }
                 if host.availablePanels.count > 1 {
-                    Menu {
-                        ForEach(host.availablePanels, id: \.clientID) { candidate in
-                            // A checked row per extension, each with its own
-                            // icon: the menu reads like the toolbar it stands
-                            // in for, not a list of names.
-                            Toggle(
-                                isOn: Binding(
-                                    get: { candidate.clientID == panel.clientID },
-                                    set: { isOn in if isOn { host.select(candidate) } }
-                                )
-                            ) {
-                                Label {
-                                    Text(verbatim: candidate.title)
-                                } icon: {
-                                    if let icon = host.icon(for: candidate) {
-                                        Image(nsImage: icon).resizable().scaledToFit()
-                                            .frame(width: 16, height: 16)
-                                    } else {
-                                        Image(systemName: "puzzlepiece.extension.fill")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        Text(verbatim: panel.title).font(.callout).lineLimit(1)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel("Choose Extension Side Panel")
+                    BrowserExtensionSidebarSwitcher(host: host, panel: panel)
                 } else {
                     Text(verbatim: panel.title).font(.callout).lineLimit(1)
                 }

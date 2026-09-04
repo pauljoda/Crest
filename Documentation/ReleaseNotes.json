@@ -485,6 +485,10 @@
     "2026-09-04-extension-side-panel-tab-close-crash": {
       "category": "fixed",
       "message": "Stop a crash when an extension opens a new tab while its tab-specific side panel is showing"
+    },
+    "2026-09-04-extension-side-panel-switcher-menu": {
+      "category": "fixed",
+      "message": "Show extension icons and the current selection in the side panel switcher menu on macOS"
     }
   }
 }
