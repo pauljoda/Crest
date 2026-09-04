@@ -489,6 +489,10 @@
     "2026-09-04-extension-side-panel-switcher-menu": {
       "category": "fixed",
       "message": "Show extension icons and the current selection in the side panel switcher menu on macOS"
+    },
+    "2026-09-04-externally-connectable-chrome-runtime": {
+      "category": "fixed",
+      "message": "Let websites that work with an installed extension message it the way they do in Chrome, so Claude can finish signing in from its side panel"
     }
   }
 }

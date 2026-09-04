@@ -335,6 +335,43 @@ and removal/clear behavior when the native writing page reports no event.
 pins delivery to an already-open extension page, including a stored `false`
 value of the kind that exposed the first-login deadlock.
 
+### Externally connectable web pages
+
+Chrome lets a website named in an extension's `externally_connectable.matches`
+call `chrome.runtime.sendMessage(extensionID, message)` and
+`chrome.runtime.connect(extensionID)`, and the extension answers through
+`runtime.onMessageExternal` / `runtime.onConnectExternal`. WebKit implements
+the same round trip — it parses the manifest key, installs a web-page
+namespace with exactly those two members, checks the patterns and the
+extension's host permission when the page sends, and reports the page's
+`origin`, `url` and `tab` in the sender — but it installs that namespace under
+`browser` only. Its `addBindingsToWebPageFrameIfNecessary` never sets `chrome`,
+so a page written for a Chrome Web Store package finds `chrome` undefined and
+gives up. Claude's sign-in is the concrete case: after claude.ai authorizes the
+extension it hands the OAuth code back with
+`chrome.runtime.sendMessage("fcoe…", { type: "oauth_redirect", redirect_uri })`
+and shows "Authorization failed" when nothing answers.
+
+Crest closes the gap with `BrowserExtensionWebPageRuntimeBridge`, a
+document-start user script in the page world of every web page Crest
+configures itself. It receives the union of the Space's authored
+`externally_connectable.matches` patterns
+(`BrowserExtensionControllerPool.externallyConnectableMatchPatterns(in:)`,
+read by `BrowserExtensionExternallyConnectablePolicy`) and, on a frame whose URL
+matches one of them while WebKit's `browser.runtime` is present, defines
+`chrome.runtime` with `sendMessage` and `connect` forwarding to WebKit's object.
+That is the exact footprint Chrome exposes there. Rules:
+
+- Frames that match no pattern keep `chrome` undefined, so ordinary websites
+  never mistake Crest for Chrome. Extension pages already carry `chrome`, a
+  popup runs its opener's scripts, and private Spaces load no extensions, so
+  none of them receive the script.
+- The pattern set is fixed when the page is created. A page that was already
+  open when an extension was installed gains the alias on its next load.
+- WebKit's web-page `sendMessage` resolves to `undefined` when no extension
+  accepts the message; Chrome sets `chrome.runtime.lastError` instead. The
+  alias does not invent that error.
+
 ### Extension-created popup windows
 
 WebKit's `windows.create({ type: "popup" })` result is context-dependent. An

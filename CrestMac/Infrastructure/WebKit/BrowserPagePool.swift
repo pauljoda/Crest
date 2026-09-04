@@ -1905,6 +1905,11 @@ final class BrowserPagePool:
             extensionBaseURL: extensionConfiguration?.baseURL,
             extensionContext: extensionConfiguration?.context,
             contentRuleLists: contentRuleLists,
+            externallyConnectableMatchPatterns: browsingMode.isPrivate
+                ? []
+                : extensionControllerPool.externallyConnectableMatchPatterns(
+                    in: space.id
+                ),
             ownsUserContentController: adoptedConfiguration == nil
                 && extensionConfiguration == nil,
             allowsCredentialAccess: !browsingMode.isPrivate,

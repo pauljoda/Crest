@@ -213,6 +213,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         extensionContext: WKWebExtensionContext? = nil,
         contentRuleList: WKContentRuleList? = nil,
         contentRuleLists: [WKContentRuleList] = [],
+        externallyConnectableMatchPatterns: [String] = [],
         ownsUserContentController: Bool = true,
         allowsCredentialAccess: Bool = true,
         isCredentialAccessEnabled: Bool = true,
@@ -462,6 +463,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                     self?.receiveGeolocationMessage(message)
                 }
             }
+        }
+        // Extension pages already carry `chrome`; a popup runs its opener's
+        // scripts. Only a web page Crest configured itself needs the alias.
+        if extensionBaseURL == nil, ownsUserContentController {
+            BrowserExtensionWebPageRuntimeBridge.install(
+                in: webView.configuration.userContentController,
+                matchPatterns: externallyConnectableMatchPatterns
+            )
         }
         if let hostedNotificationCenter,
             extensionBaseURL == nil,

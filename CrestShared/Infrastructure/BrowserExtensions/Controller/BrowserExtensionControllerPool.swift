@@ -458,6 +458,20 @@ extension BrowserExtensionControllerPool {
                 runtimeContextController.nativeMessagingCapability
         )
     }
+
+    /// Every `externally_connectable.matches` pattern authored by an extension
+    /// loaded in `spaceID`, sorted so a page's script is stable across launches.
+    /// Web pages matching one of them receive the page-world `chrome.runtime`
+    /// alias over WebKit's `browser.runtime`.
+    func externallyConnectableMatchPatterns(in spaceID: SpaceID) -> [String] {
+        Set(
+            runtimeContextController.contexts(in: spaceID).values.flatMap {
+                BrowserExtensionExternallyConnectablePolicy.matchPatterns(
+                    in: $0.webExtension.manifest
+                )
+            }
+        ).sorted()
+    }
 }
 
 // MARK: - Toolbar
