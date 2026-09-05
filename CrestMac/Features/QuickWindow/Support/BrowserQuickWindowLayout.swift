@@ -6,14 +6,14 @@ enum BrowserQuickWindowLayout {
     static let defaultHeight: CGFloat = 460
     static let minimumWidth: CGFloat = 600
     static let minimumHeight: CGFloat = 400
-    static let toolbarHeight: CGFloat = 56
+    // The page surface owns the gap below the controls through its frame inset.
+    static let toolbarHeight: CGFloat = controlHeight + toolbarTopPadding
     static let controlHeight: CGFloat = BrowserChromeLayout.addressHeight
     static let minimumMacHitTarget: CGFloat = 28
     static let addressMinimumWidth: CGFloat = 220
     static let addressVerticalPadding: CGFloat = 6
-    static let pageTopClearance: CGFloat = 6
     static let horizontalPadding: CGFloat = 10
-    static let toolbarVerticalPadding: CGFloat = horizontalPadding
+    static let toolbarTopPadding: CGFloat = horizontalPadding
     static let pageFrameInset: CGFloat = BrowserChromeLayout.pageFrameInset
     static let pageBrandSeamWidth: CGFloat = BrowserChromeLayout.pageBrandSeamWidth
     static let pageCornerRadius: CGFloat = BrowserChromeLayout.pageCornerRadius

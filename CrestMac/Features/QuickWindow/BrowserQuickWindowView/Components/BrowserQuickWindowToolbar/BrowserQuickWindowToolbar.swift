@@ -23,7 +23,7 @@ struct BrowserQuickWindowToolbar: View {
         }
         .padding(.leading, BrowserQuickWindowLayout.windowControlClearance)
         .padding(.trailing, BrowserQuickWindowLayout.horizontalPadding)
-        .padding(.vertical, BrowserQuickWindowLayout.toolbarVerticalPadding)
+        .padding(.top, BrowserQuickWindowLayout.toolbarTopPadding)
         .frame(maxWidth: .infinity)
         .frame(height: BrowserQuickWindowLayout.toolbarHeight)
     }

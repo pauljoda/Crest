@@ -1366,13 +1366,15 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
         XCTAssertGreaterThanOrEqual(BrowserQuickWindowLayout.minimumWidth, 560)
         XCTAssertGreaterThanOrEqual(BrowserQuickWindowLayout.addressMinimumWidth, 220)
-        XCTAssertEqual(BrowserQuickWindowLayout.toolbarHeight, 56)
+        XCTAssertEqual(
+            BrowserQuickWindowLayout.toolbarHeight,
+            BrowserQuickWindowLayout.controlHeight + BrowserQuickWindowLayout.horizontalPadding
+        )
         XCTAssertEqual(BrowserQuickWindowLayout.windowControlClearance, 92)
         XCTAssertEqual(
-            BrowserQuickWindowLayout.toolbarVerticalPadding,
+            BrowserQuickWindowLayout.toolbarTopPadding,
             BrowserQuickWindowLayout.horizontalPadding
         )
-        XCTAssertGreaterThan(BrowserQuickWindowLayout.pageTopClearance, 0)
         XCTAssertEqual(BrowserQuickWindowLayout.sourceChipHorizontalPadding, 9)
         XCTAssertEqual(
             BrowserQuickWindowLayout.pageBrandSeamWidth,

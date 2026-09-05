@@ -19,6 +19,5 @@ struct BrowserQuickWindowPageSurface: View {
         ) {
             BrowserQuickWindowPageContent(model: model)
         }
-        .padding(.top, BrowserQuickWindowLayout.pageTopClearance)
     }
 }

@@ -585,6 +585,10 @@
     "2026-09-05-native-desktop-picture-in-picture": {
       "category": "new",
       "message": "Keep videos visible in native Picture in Picture when switching Mac tabs, with an option to turn automatic entry off"
+    },
+    "2026-09-05-quick-window-even-page-border": {
+      "category": "fixed",
+      "message": "Give Quick Window pages an even border below the address bar and around the sides and bottom"
     }
   }
 }
