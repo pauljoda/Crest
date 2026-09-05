@@ -11,6 +11,8 @@ struct BrowserSidebarSpacePager<Page: View>: View {
     let context: BrowserSidebarContext
     @ViewBuilder let page: (BrowserSpace, Bool) -> Page
 
+    @State private var dropViewportID = UUID()
+
     var body: some View {
         if context.availableSpaces.isEmpty {
             ContentUnavailableView("No Spaces", systemImage: "square.grid.2x2")
@@ -21,8 +23,19 @@ struct BrowserSidebarSpacePager<Page: View>: View {
                 isInteractionLocked: isInteractionLocked,
                 selectSpace: context.selectSpace,
                 settledSpace: context.settleSpaceSelection,
-                content: page
+                content: { space, isSelected in
+                    page(space, isSelected)
+                        .environment(\.browserSidebarDropViewportID, dropViewportID)
+                }
             )
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+            } action: { frame in
+                context.browser.sidebarReorderState.register(sidebarViewport: frame, for: dropViewportID)
+            }
+            .onDisappear {
+                context.browser.sidebarReorderState.removeSidebarViewport(for: dropViewportID)
+            }
         }
     }
 

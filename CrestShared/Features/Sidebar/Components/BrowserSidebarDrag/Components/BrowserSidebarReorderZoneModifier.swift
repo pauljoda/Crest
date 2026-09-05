@@ -24,6 +24,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// key on the target or offscreen pages clobber the visible one.
     @State private var identity = UUID()
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
+    @Environment(\.browserSidebarDropViewportID) private var sidebarViewportID
 
     func body(content: Content) -> some View {
         content
@@ -40,6 +41,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
                         frame: resolvedFrame(frame), minimumHeight: minimumHeight
                     ),
                     for: identity,
+                    sidebarViewportID: sidebarViewportID,
                     scrollRegionID: scrollRegionID
                 )
             }

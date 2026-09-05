@@ -593,6 +593,14 @@
     "2026-09-05-macos-space-picker-alignment": {
       "category": "improved",
       "message": "Keep the Mac Space picker centered as it fills up, with arrows to reveal more Spaces"
+    },
+    "2026-09-05-preserve-saved-tabs-in-splits": {
+      "category": "fixed",
+      "message": "Keep saved and pinned tabs in place when adding copies to a split view, with independent page history"
+    },
+    "2026-09-05-split-preview-near-sidebar": {
+      "category": "improved",
+      "message": "Show the split preview just beyond the sidebar and update its landing position as you drag across the page"
     }
   }
 }

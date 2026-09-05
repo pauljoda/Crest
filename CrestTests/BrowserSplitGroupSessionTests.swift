@@ -941,7 +941,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
     }
 
     @MainActor
-    func testAFullGroupAndAPinnedOrDraftSelectionOfferNoCandidate() throws {
+    func testAFullGroupAndDraftSelectionOfferNoCandidateWhilePinnedTabsCanBeCopied() throws {
         let group = SplitGroupID()
         let members = (1...4).map { makeTab("Member \($0)", group: group) }
         let free = makeTab("Free")
@@ -957,7 +957,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             tabs: [pinned, pinnedNeighbour],
             selectedTabID: pinned.id
         )
-        XCTAssertNil(pinnedStore.nextSplitJoinCandidate)
+        XCTAssertEqual(pinnedStore.nextSplitJoinCandidate?.id, pinnedNeighbour.id)
 
         let draft = BrowserTab.startPage(lastActivatedAt: Date(timeIntervalSince1970: 0))
         let follower = makeTab("Follower")
@@ -983,7 +983,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
         XCTAssertTrue(
             store.canSplitTabWithSelectedTab(subject.id, matching: assignment),
-            "A pinned subject is allowed: the placement plan moves it out of pinned."
+            "A pinned subject contributes an independent Open copy."
         )
         XCTAssertTrue(
             store.splitTabWithSelectedTab(subject.id, matching: assignment)
@@ -991,15 +991,18 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
         let grouped = try XCTUnwrap(store.selectedSpace)
         let groupID = try XCTUnwrap(grouped.splitGroup(containing: selected.id))
+        let copied = try XCTUnwrap(store.selectedTab)
+        XCTAssertNotEqual(copied.id, subject.id)
+        XCTAssertEqual(copied.url, subject.url)
         XCTAssertEqual(
             grouped.splitGroupMembers(of: groupID).map(\.id),
-            [selected.id, subject.id]
+            [selected.id, copied.id]
         )
         XCTAssertEqual(
             grouped.tabs.first { $0.id == subject.id }?.placement,
-            .current
+            .pinned
         )
-        XCTAssertEqual(grouped.selectedTabID, subject.id)
+        XCTAssertEqual(grouped.selectedTabID, copied.id)
     }
 
     @MainActor
@@ -1097,7 +1100,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
     }
 
     @MainActor
-    func testTheWebContentMenuOmitsSplitViewForFullPinnedAndDraftCards() throws {
+    func testTheWebContentMenuOmitsSplitViewForFullAndDraftCardsButCanCopyPinnedCards() throws {
         let group = SplitGroupID()
         let members = (1...4).map { makeTab("Member \($0)", group: group) }
         let pinned = makeTab("Pinned", placement: .pinned)
@@ -1118,9 +1121,9 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
             store.canOpenLinkInSplit(joining: members[0].id, matching: assignment),
             "A group at capacity takes no more cards."
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             store.canOpenLinkInSplit(joining: pinned.id, matching: assignment),
-            "Pinned tabs never take part in a split."
+            "Pinned tabs contribute Open copies."
         )
         XCTAssertFalse(
             store.canOpenLinkInSplit(joining: draft.id, matching: assignment),

@@ -123,6 +123,8 @@ final class MobileBrowserWindowSceneModel {
             }
         )
 
+        browser.tabCopying = pages
+        privateBrowser.tabCopying = privatePages
         self.browser = browser
         self.navigation = navigation
         self.pages = pages

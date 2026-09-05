@@ -175,6 +175,7 @@ final class BrowserPagePool:
     /// private pool, so private browsing cannot write one even if an archive is
     /// handed in.
     @ObservationIgnored private let tabStateArchive: (any BrowserTabStateArchiving)?
+    @ObservationIgnored private var pendingTabCopyStates: [BrowserTabRuntimeAssignment: BrowserTabStateEnvelope] = [:]
     @ObservationIgnored private var lastPrunedTabIDsByProfileID: [UUID: Set<TabID>] = [:]
     @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
     @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
@@ -991,6 +992,7 @@ final class BrowserPagePool:
     }
 
     func reconcile(validTabIDs: Set<TabID>) {
+        pendingTabCopyStates = pendingTabCopyStates.filter { validTabIDs.contains($0.key.tabID) }
         let removedTabIDs = Set(pages.keys).subtracting(validTabIDs)
         for tabID in removedTabIDs {
             // These tabs are gone from the tab list rather than unloaded after
@@ -1015,6 +1017,8 @@ final class BrowserPagePool:
     }
 
     func reconcile(session: BrowserSession) {
+        let validCopyAssignments = Set(session.tabRuntimeAssignments)
+        pendingTabCopyStates = pendingTabCopyStates.filter { validCopyAssignments.contains($0.key) }
         let tabsByID = Dictionary(
             uniqueKeysWithValues: session.spaces.flatMap { space in
                 space.tabs.map { tab in
@@ -1157,9 +1161,19 @@ final class BrowserPagePool:
     /// that still belongs where the tab points.
     private func archivedInteractionState(
         for tab: BrowserTab,
+        spaceID: SpaceID,
         profileID: UUID,
-        expecting url: URL
+        expecting url: URL,
+        consumePendingCopy: Bool = true
     ) -> Data? {
+        let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: spaceID, profileID: profileID)
+        let pending = pendingTabCopyStates[assignment]
+        if consumePendingCopy { pendingTabCopyStates.removeValue(forKey: assignment) }
+        if let pending,
+            BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: pending.url, tabURL: url)
+        {
+            return pending.interactionState
+        }
         guard let tabStateArchive,
             let archived = tabStateArchive.archivedState(
                 profileID: profileID,
@@ -2154,6 +2168,7 @@ final class BrowserPagePool:
         // where the tab points — falls through to the plain load.
         if let state = archivedInteractionState(
             for: tab,
+            spaceID: page.spaceID,
             profileID: page.profileID,
             expecting: url
         ), page.restoreInteractionState(state, expecting: url) {
@@ -2571,5 +2586,24 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
         guard let loadContinuation else { return }
         self.loadContinuation = nil
         loadContinuation.resume(with: result)
+    }
+}
+
+extension BrowserPagePool: BrowserTabCopying {
+    func prepareTabCopy(from source: BrowserTab, to copy: inout BrowserTab, in space: BrowserSpace) {
+        let state: Data?
+        if let page = pages[source.id], page.spaceID == space.id, page.profileID == space.profile.id {
+            copy.url = page.displayURL ?? source.url
+            copy.title = page.title.isEmpty ? source.title : page.title
+            state = !page.wasOpenedAsPopup && page.url == copy.url ? page.interactionState : nil
+        } else if let url = source.url {
+            state = archivedInteractionState(
+                for: source, spaceID: space.id, profileID: space.profile.id, expecting: url, consumePendingCopy: false)
+        } else {
+            state = nil
+        }
+        guard let state else { return }
+        let assignment = BrowserTabRuntimeAssignment(tabID: copy.id, spaceID: space.id, profileID: space.profile.id)
+        pendingTabCopyStates[assignment] = BrowserTabStateEnvelope(interactionState: state, url: copy.url)
     }
 }

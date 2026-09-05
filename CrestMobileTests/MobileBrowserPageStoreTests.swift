@@ -6,6 +6,57 @@ import XCTest
 @MainActor
 final class MobileBrowserPageStoreTests: XCTestCase {
 
+    func testSplitCopiesDurablePagesWithIndependentNativeHistory() async throws {
+        let root = try XCTUnwrap(URL(string: "https://state.crest.test/root"))
+        let child = try XCTUnwrap(URL(string: "https://state.crest.test/child"))
+        var session = makeSession(index: 304)
+        let source = BrowserTab(title: "Saved", url: root, placement: .saved)
+        let target = BrowserTab(title: "Pinned", url: root, placement: .pinned)
+        session.spaces[0].tabs = [target, source]
+        session.spaces[0].selectedTabID = source.id
+        let space = try XCTUnwrap(session.selectedSpace)
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        browser.tabCopying = pages
+        pages.select(session: session)
+        let originalPage = try XCTUnwrap(pages.activePage)
+        for url in [root, child] {
+            originalPage.webView.frame = CGRect(x: 0, y: 0, width: 640, height: 480)
+            originalPage.webView.loadSimulatedRequest(
+                URLRequest(url: url),
+                responseHTML: "<html><title>State fixture</title><body>Native history</body></html>"
+            )
+            try await waitUntil { originalPage.webView.url == url && !originalPage.webView.isLoading }
+        }
+        browser.selectTab(target.id)
+        let originalPinnedTabs = browser.selectedSpace?.pinnedTabs
+
+        XCTAssertTrue(browser.splitTabWithSelectedTab(source.id, matching: BrowserSpaceRuntimeAssignment(space: space)))
+        let copy = try XCTUnwrap(browser.selectedTab)
+        XCTAssertEqual(copy.url, child)
+        XCTAssertNotEqual(copy.id, source.id)
+        XCTAssertEqual(browser.selectedSpace?.savedTabs, [source])
+        XCTAssertEqual(browser.selectedSpace?.pinnedTabs, originalPinnedTabs)
+        // Copying an unmaterialized copy must leave its own native state available.
+        var nextCopy = BrowserTab(title: copy.title, url: copy.url, placement: .current)
+        pages.prepareTabCopy(from: copy, to: &nextCopy, in: space)
+        pages.select(session: browser.session)
+        let copiedPage = try XCTUnwrap(pages.activePage)
+        XCTAssertFalse(copiedPage === originalPage)
+        XCTAssertEqual(copiedPage.webView.url, child)
+        XCTAssertTrue(copiedPage.webView.canGoBack)
+        XCTAssertEqual(
+            copiedPage.webView.backForwardList.backList.map(\.url),
+            originalPage.webView.backForwardList.backList.map(\.url))
+        XCTAssertEqual(originalPage.webView.url, child)
+        var nextSpace = try XCTUnwrap(browser.selectedSpace)
+        nextSpace.tabs.append(nextCopy)
+        nextSpace.selectedTabID = nextCopy.id
+        pages.select(session: BrowserSession(spaces: [nextSpace], selectedSpaceID: nextSpace.id))
+        XCTAssertTrue(try XCTUnwrap(pages.activePage).webView.canGoBack)
+        pages.reconcile(validTabIDs: [])
+    }
+
     func testStartPageCommandPaletteIssuesOneNavigationForAFreshPage() throws {
         let store = BrowserStore(
             session: makeSession(index: 0),

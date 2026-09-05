@@ -87,6 +87,9 @@ enum BrowserSidebarReorderPolicy {
     /// dragging into the empty space just below the final row.
     static let zoneSlop: CGFloat = 160
 
+    /// A small buffer beyond the visible sidebar before a tab offers a split.
+    static let sidebarExitBuffer: CGFloat = 24
+
     /// Fraction of a collapsed folder's row that nests rather than reorders.
     ///
     /// Dropping onto the middle of the row puts the item inside the folder; the

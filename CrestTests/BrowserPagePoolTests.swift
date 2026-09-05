@@ -2141,6 +2141,46 @@ final class BrowserPagePoolTests: XCTestCase {
 
     // MARK: - Archived tab state
 
+    func testSplitCopyUsesResidentChildURLAndIndependentNativeBackHistory() async throws {
+        let root = try XCTUnwrap(URL(string: "https://state.crest.test/root"))
+        let child = try XCTUnwrap(URL(string: "https://state.crest.test/child"))
+        let source = BrowserTab(title: "Saved", url: root, placement: .saved)
+        let target = BrowserTab(title: "Open", url: root, placement: .current)
+        let space = makeSpace(tabs: [source, target], selectedTabID: source.id)
+        let store = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let pool = BrowserPagePool()
+        store.tabCopying = pool
+        pool.select(tab: source, space: space)
+        let originalPage = try XCTUnwrap(pool.activePage)
+        try await load(root, in: originalPage)
+        try await load(child, in: originalPage)
+        store.selectTab(target.id)
+
+        XCTAssertTrue(store.splitTabWithSelectedTab(source.id, matching: BrowserSpaceRuntimeAssignment(space: space)))
+        let copy = try XCTUnwrap(store.selectedTab)
+        XCTAssertEqual(copy.url, child, "Resident state wins even before the page observation reaches the store.")
+        XCTAssertEqual(store.selectedSpace?.savedTabs, [source])
+        // Copying an unmaterialized copy must leave its own native state available.
+        var nextCopy = BrowserTab(title: copy.title, url: copy.url, placement: .current)
+        pool.prepareTabCopy(from: copy, to: &nextCopy, in: space)
+        pool.select(session: store.session)
+        let copyPage = try XCTUnwrap(pool.activePage)
+        XCTAssertFalse(copyPage === originalPage)
+        XCTAssertEqual(copyPage.webView.url, child)
+        XCTAssertEqual(
+            copyPage.webView.backForwardList.backList.map(\.url),
+            originalPage.webView.backForwardList.backList.map(\.url))
+        XCTAssertTrue(copyPage.webView.canGoBack)
+        XCTAssertEqual(originalPage.webView.url, child)
+        var nextSpace = try XCTUnwrap(store.selectedSpace)
+        nextSpace.tabs.append(nextCopy)
+        pool.select(tab: nextCopy, space: nextSpace)
+        XCTAssertTrue(try XCTUnwrap(pool.activePage).webView.canGoBack)
+        pool.reconcile(validTabIDs: [])
+    }
+
     func testManualUnloadingATabArchivesItsSessionStateAndReselectingRestoresIt() async throws {
         let archive = try makeTabStateArchive()
         let firstURL = try XCTUnwrap(URL(string: "https://state.crest.test/one"))

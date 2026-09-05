@@ -25,3 +25,15 @@ extension EnvironmentValues {
         set { self[BrowserSidebarScrollRegionIDKey.self] = newValue }
     }
 }
+
+/// The visible horizontal Space pager, independent of a page's vertical list.
+private struct BrowserSidebarDropViewportIDKey: EnvironmentKey {
+    static let defaultValue: UUID? = nil
+}
+
+extension EnvironmentValues {
+    var browserSidebarDropViewportID: UUID? {
+        get { self[BrowserSidebarDropViewportIDKey.self] }
+        set { self[BrowserSidebarDropViewportIDKey.self] = newValue }
+    }
+}

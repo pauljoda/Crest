@@ -26,6 +26,7 @@ final class BrowserStore {
     @ObservationIgnored var syncStageTask: Task<Void, Never>?
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored var tabSelectionHistory: BrowserTabSelectionHistory
+    @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
     var selectedSpace: BrowserSpace? {

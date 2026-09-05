@@ -291,6 +291,37 @@ final class BrowserSplitDropPolicyTests: XCTestCase {
         )
     }
 
+    func testHiddenSpaceCannotClaimThePageBeyondTheSidebarBuffer() {
+        for sidebarWidth: CGFloat in [220, 360] {
+            let state = Self.stateWithCards(count: 1)
+            let viewportID = UUID()
+            state.register(sidebarViewport: CGRect(x: 0, y: 0, width: sidebarWidth, height: 600), for: viewportID)
+            let current = BrowserSidebarReorderSection.tabs(placement: .current, folderID: nil)
+            for x in [CGFloat(0), sidebarWidth] {
+                state.register(
+                    zone: BrowserSidebarReorderZone(
+                        target: .section(current),
+                        frame: CGRect(x: x, y: 150, width: sidebarWidth, height: 400)),
+                    for: UUID(), sidebarViewportID: viewportID)
+            }
+            // Content begins at the visible sidebar edge, including narrow windows.
+            state.register(
+                zone: BrowserSidebarReorderZone(
+                    target: .splitContent(Self.assignment),
+                    frame: CGRect(x: sidebarWidth, y: 0, width: 900, height: 600)), for: UUID())
+            state.begin(item: Self.tabItem(in: Self.assignment), section: current, at: CGPoint(x: 100, y: 200))
+            state.update(pointer: CGPoint(x: sidebarWidth + 12, y: 300))
+            XCTAssertEqual(
+                state.resolvedTarget?.section, current, "A small buffer keeps a near-edge drag in the sidebar.")
+            state.update(pointer: CGPoint(x: sidebarWidth + 25, y: 300))
+            XCTAssertEqual(state.resolvedTarget?.kind, .splitInsert(assignment: Self.assignment, index: 0))
+            XCTAssertTrue(state.hasEnteredSplitContent)
+            state.update(pointer: CGPoint(x: sidebarWidth + 850, y: 300))
+            XCTAssertEqual(state.resolvedTarget?.kind, .splitInsert(assignment: Self.assignment, index: 1))
+            state.cancel()
+        }
+    }
+
     // MARK: - Acceptance: what the presented cards refuse
 
     /// A resolved target and the slot it names, from cards the state measured.

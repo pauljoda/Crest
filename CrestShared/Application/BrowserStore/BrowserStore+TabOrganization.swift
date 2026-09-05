@@ -306,16 +306,40 @@ extension BrowserStore {
             item.spaceID == session.selectedSpaceID,
             let space = space(matching: item.spaceAssignment),
             space.tabs.contains(where: { $0.id == item.tabID }),
-            space.tabs.contains(where: { $0.id == targetTabID }),
-            session.addTabToSplit(
+            space.tabs.contains(where: { $0.id == targetTabID })
+        else { return false }
+        var draft = session
+        guard
+            let copies = draft.addTabToSplitPreservingDurableTabs(
                 item.tabID,
                 joining: targetTabID,
                 at: memberIndex,
                 in: item.spaceID
             )
         else { return false }
-        persist(syncUrgency: .coalesced, scope: .core)
+        commitSplitCopies(copies, in: space, session: draft)
         return true
+    }
+
+    private func commitSplitCopies(
+        _ copies: [(source: TabID, copy: TabID)],
+        in space: BrowserSpace,
+        session draftSession: BrowserSession
+    ) {
+        var draft = draftSession
+        guard let spaceIndex = draft.spaces.firstIndex(where: { $0.id == space.id }) else { return }
+        for pair in copies {
+            guard let source = space.tabs.first(where: { $0.id == pair.source }),
+                let copyIndex = draft.spaces[spaceIndex].tabs.firstIndex(where: { $0.id == pair.copy })
+            else { continue }
+            tabCopying?.prepareTabCopy(from: source, to: &draft.spaces[spaceIndex].tabs[copyIndex], in: space)
+        }
+        session = draft
+        persist(
+            syncUrgency: .coalesced,
+            scope: BrowserSessionSaveScope(
+                writesCore: true, history: .nothing, favicons: .only(Set(copies.map(\.copy))))
+        )
     }
 
     /// Removal relocates the departing tab past its run, so it goes through the
@@ -469,15 +493,12 @@ extension BrowserStore {
 
     /// The selected tab, when it can host a split card at all.
     ///
-    /// Pinned tabs never take part in a split, and a Start Page is an
-    /// uncommitted navigation draft that the sidebar does not even list — a
-    /// group whose head is invisible in the tab list is a group nobody can
-    /// manage, so neither may anchor one.
+    /// Durable tabs contribute Open copies. A Start Page is an uncommitted
+    /// navigation draft, so it cannot anchor a group.
     private var splitTargetTab: BrowserTab? {
         guard let space = selectedSpace,
             let selectedTabID = space.selectedTabID,
             let selected = space.tabs.first(where: { $0.id == selectedTabID }),
-            BrowserSplitGroupPolicy.allowsMembership(placement: selected.placement),
             !selected.isStartPage
         else { return nil }
         let memberCount =
@@ -512,8 +533,8 @@ extension BrowserStore {
 
     /// Whether the tab-list menu's "Split with Current Tab" would do anything.
     ///
-    /// The joiner may be pinned or filed elsewhere: `addTabToSplit` routes it
-    /// through the placement plan, so it simply lands beside the selected tab.
+    /// The joiner may be pinned or filed elsewhere: durable tabs contribute
+    /// copies beside the selected tab, which also contributes a copy if durable.
     /// What it may not be is the selected tab itself, a member of the group it
     /// would join, or a tab in a Space that is not the selected one.
     func canSplitTabWithSelectedTab(
@@ -557,32 +578,28 @@ extension BrowserStore {
     /// "Open Link in Split View": the link opens as a new tab beside the tab it
     /// came from, and the two present as one split.
     ///
-    /// The tab is created through the ordinary new-tab path so it inherits the
-    /// same insertion position and selection behaviour as "open in new tab";
-    /// joining it afterwards moves it the short distance to the group and
-    /// leaves it focused, which is what every other creation affordance does.
+    /// Uses ordinary tab insertion in a draft session, then commits the new tab
+    /// and any durable destination copies together after the join succeeds.
     @discardableResult
     func openLinkInSplit(
         url: URL,
         joining targetTabID: TabID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> TabID? {
-        guard let space = space(matching: assignment),
-            space.id == session.selectedSpaceID,
-            space.tabs.contains(where: { $0.id == targetTabID }),
-            let openedID = openNewTab(url: url, matching: assignment)
+        guard canOpenLinkInSplit(joining: targetTabID, matching: assignment),
+            let space = space(matching: assignment)
         else { return nil }
-        // A refused join still leaves a perfectly good new tab behind, so the
-        // caller hears about the tab either way.
-        addTabToSplit(
-            BrowserTabDragItem(
-                tabID: openedID,
-                spaceID: assignment.spaceID,
-                profileID: assignment.profileID
+        var draft = session
+        guard
+            let openedID = draft.openTab(
+                title: url.host() ?? url.absoluteString, url: url, in: space.id,
+                requestedIndex: BrowserTabInsertionPolicy.requestedIndex(after: space.selectedTabID, in: space)
             ),
-            joining: targetTabID,
-            at: nil
-        )
+            let copies = draft.addTabToSplitPreservingDurableTabs(
+                openedID, joining: targetTabID, at: nil, in: space.id
+            )
+        else { return nil }
+        commitSplitCopies(copies, in: space, session: draft)
         return openedID
     }
 
@@ -592,8 +609,8 @@ extension BrowserStore {
     /// The web-content context menu asks this while AppKit holds the main
     /// thread, so it answers from state rather than starting anything. The
     /// conditions are the ones `splitTargetTab` already applies to the selected
-    /// tab, asked of the right-clicked card instead: a pinned tab never joins a
-    /// split, a Start Page is a draft the sidebar does not even list, and a
+    /// tab, asked of the right-clicked card instead: a Start Page is a draft
+    /// the sidebar does not even list, and a
     /// group already at `BrowserSplitGroupPolicy.maximumMembers` takes no more
     /// cards. A refusal omits the item rather than dimming it — a menu that is
     /// rarely relevant reads better without a permanently disabled row.
@@ -604,7 +621,6 @@ extension BrowserStore {
         guard let space = space(matching: assignment),
             space.id == session.selectedSpaceID,
             let tab = space.tabs.first(where: { $0.id == tabID }),
-            BrowserSplitGroupPolicy.allowsMembership(placement: tab.placement),
             !tab.isStartPage
         else { return false }
         let memberCount =

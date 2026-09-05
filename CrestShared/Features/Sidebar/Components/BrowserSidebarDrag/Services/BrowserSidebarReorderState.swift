@@ -74,6 +74,7 @@ final class BrowserSidebarReorderState {
     private var zones: [UUID: RegisteredZone] = [:]
     @ObservationIgnored
     private var scrollRegions: [UUID: CGRect] = [:]
+    @ObservationIgnored private var sidebarViewports: [UUID: CGRect] = [:]
 
     /// A registered row together with the view that registered it, so a
     /// departing row cannot clear the registration its replacement just made.
@@ -97,6 +98,7 @@ final class BrowserSidebarReorderState {
     /// expanded, but only the portion inside the viewport is a real target.
     private struct RegisteredZone {
         var zone: BrowserSidebarReorderZone
+        let sidebarViewportID: UUID?
         let scrollRegionID: UUID?
     }
 
@@ -285,13 +287,24 @@ final class BrowserSidebarReorderState {
     func register(
         zone: BrowserSidebarReorderZone,
         for id: UUID,
+        sidebarViewportID: UUID? = nil,
         scrollRegionID: UUID? = nil
     ) {
         guard !isDragging || zones[id] == nil else { return }
         zones[id] = RegisteredZone(
             zone: zone,
+            sidebarViewportID: sidebarViewportID,
             scrollRegionID: scrollRegionID
         )
+    }
+
+    func register(sidebarViewport frame: CGRect, for id: UUID) {
+        sidebarViewports[id] = frame
+    }
+
+    func removeSidebarViewport(for id: UUID) {
+        sidebarViewports[id] = nil
+        zones = zones.filter { $0.value.sidebarViewportID != id }
     }
 
     func removeZone(for id: UUID) {
@@ -358,17 +371,23 @@ final class BrowserSidebarReorderState {
             } else {
                 projected = layout.frame(for: registration.zone)
             }
-            guard let frame = projected else { return nil }
-            guard let regionID = registration.scrollRegionID else {
-                return BrowserSidebarReorderZone(target: registration.zone.target, frame: frame)
+            guard var frame = projected else { return nil }
+            if let regionID = registration.scrollRegionID {
+                guard let viewport = scrollRegions[regionID] else { return nil }
+                frame = frame.intersection(viewport)
             }
-            guard let viewport = scrollRegions[regionID] else { return nil }
-            let visibleFrame = frame.intersection(viewport)
-            guard !visibleFrame.isNull, !visibleFrame.isEmpty else { return nil }
-            return BrowserSidebarReorderZone(
-                target: registration.zone.target,
-                frame: visibleFrame
-            )
+            if let viewportID = registration.sidebarViewportID {
+                guard let viewport = sidebarViewports[viewportID] else { return nil }
+                frame = frame.intersection(viewport)
+                guard !frame.isNull, !frame.isEmpty else { return nil }
+                if case .section = registration.zone.target {
+                    // The visible list gets a small exit buffer. Hidden Space
+                    // pages must be clipped out before extending any target.
+                    frame.size.width = viewport.maxX + BrowserSidebarReorderPolicy.sidebarExitBuffer - frame.minX
+                }
+            }
+            guard !frame.isNull, !frame.isEmpty else { return nil }
+            return BrowserSidebarReorderZone(target: registration.zone.target, frame: frame)
         }
     }
 
