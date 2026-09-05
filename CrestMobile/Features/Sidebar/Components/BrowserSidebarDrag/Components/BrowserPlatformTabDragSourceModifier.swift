@@ -10,6 +10,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
 
     @State private var sessionToken: BrowserDragSessionToken?
     @State private var sourceSize = CGSize.zero
+    @Environment(\.colorScheme) private var colorScheme
 
     private var item: BrowserTabDragItem {
         BrowserTabDragItem(tabID: tab.id, spaceID: spaceID, profileID: profileID)
@@ -18,6 +19,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let reorder {
+            let shape = reorder.state.liftTargetShape ?? .resting(for: tab.placement)
             // The lift comes from drag-and-drop, not a gesture: a row carries a
             // context menu, and UIKit cancels a competing gesture the moment the
             // menu claims the touch. Holding still opens the menu, pulling lifts
@@ -31,7 +33,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                     ),
                     reorder: reorder
                 )
-                .onDrag {
+                .browserMobileDraggable(previewShape: shape) {
                     reorder.state.stage(
                         item: .tab(item),
                         section: .tabs(
@@ -40,22 +42,27 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                         )
                     )
                     let payload = (try? JSONEncoder().encode(item)) ?? Data()
-                    return NSItemProvider(
+                    let provider = NSItemProvider(
                         item: payload as NSData,
                         typeIdentifier: UTType.json.identifier
                     )
-                } preview: {
+                    let token = reorder.state.sessionToken
+                    return BrowserMobileDragSession(provider: provider) {
+                        guard let token else { return }
+                        reorder.state.cancel(session: token)
+                    }
+                } preview: { sourceWidth in
                     BrowserTabDragPreview(
                         tab: tab,
                         profileID: profileID,
-                        progress: BrowserTabDragPreviewLayout.progress(
-                            for: tab.placement
-                        )
+                        targetShape: shape,
+                        progress: shape == .row ? 0 : 1,
+                        rowWidth: tab.placement == .pinned
+                            ? BrowserTabDragPreviewLayout.defaultRowWidth : sourceWidth,
+                        rowMetrics: .touch
                     )
+                    .environment(\.colorScheme, colorScheme)
                 }
-                .modifier(
-                    BrowserMobileReorderSessionModifier(state: reorder.state)
-                )
         } else {
             legacyDraggable(content)
         }
@@ -86,6 +93,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                     profileID: profileID,
                     dragState: dragState
                 )
+                .environment(\.colorScheme, colorScheme)
             }
 
         #if compiler(>=6.4)

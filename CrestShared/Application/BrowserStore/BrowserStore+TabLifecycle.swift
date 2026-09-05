@@ -33,16 +33,18 @@ extension BrowserStore {
             session.selectTab(draft.id)
             return (draft.id, false)
         }
-        guard let tabID = session.openTab(
-            title: BrowserTab.startPageTitle,
-            url: nil,
-            symbol: BrowserTab.startPageSymbol,
-            in: space.id,
-            requestedIndex: BrowserTabInsertionPolicy.requestedIndex(
-                after: space.selectedTabID,
-                in: space
+        guard
+            let tabID = session.openTab(
+                title: BrowserTab.startPageTitle,
+                url: nil,
+                symbol: BrowserTab.startPageSymbol,
+                in: space.id,
+                requestedIndex: BrowserTabInsertionPolicy.requestedIndex(
+                    after: space.selectedTabID,
+                    in: space
+                )
             )
-        ) else { return nil }
+        else { return nil }
         return (tabID, true)
     }
 
@@ -177,6 +179,13 @@ extension BrowserStore {
         }
         persist(scope: .core)
         return tabID
+    }
+
+    func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int) -> Bool {
+        let before = session
+        guard session.moveExtensionTabs(ids, in: spaceID, to: index) else { return false }
+        if session != before { persist(scope: .core) }
+        return true
     }
 
     @discardableResult

@@ -117,6 +117,11 @@ final class BrowserWebInspectorProtocolConnection {
                         globalThis.webkit?.messageHandlers?.[messageName]?.postMessage({
                             method: event.method, parameters: event.params ?? {}
                         });
+                        if (connection.crestOwnsNetworkInterceptions &&
+                            (event.method === 'Network.requestIntercepted' ||
+                             event.method === 'Network.responseIntercepted')) {
+                            return;
+                        }
                     }
                     return Reflect.apply(originalDispatch, this, arguments);
                 };
@@ -127,7 +132,34 @@ final class BrowserWebInspectorProtocolConnection {
         }
     }
 
-    func sendCommand(_ method: String, parameters: [String: Any] = [:]) async throws -> [String: Any] {
+    /// Only an explicitly enabled interception adapter owns these events.
+    /// The Inspector frontend otherwise auto-continues requests that do not
+    /// match its local overrides, racing the client's pause/continue protocol.
+    func setNetworkInterceptionHandledByClient(_ enabled: Bool) async throws {
+        try authorizeCommand?()
+        guard isConnected, let frontend else { throw BrowserWebInspectorProtocolError.notConnected }
+        _ = try await frontend.callAsyncJavaScript(
+            "WI.pageTarget.connection.crestOwnsNetworkInterceptions = enabled;",
+            arguments: ["enabled": enabled], contentWorld: .page)
+    }
+
+    func setNetworkInterceptionEnabled(_ enabled: Bool) async throws {
+        try authorizeCommand?()
+        guard isConnected, let frontend else { throw BrowserWebInspectorProtocolError.notConnected }
+        _ = try await frontend.callAsyncJavaScript(
+            """
+            try {
+                await WI.pageTarget.NetworkAgent.setInterceptionEnabled.invoke({enabled});
+            } catch (error) {
+                const expected = 'Interception already ' + (enabled ? 'enabled' : 'disabled');
+                if (error?.message !== expected) throw error;
+            }
+            """, arguments: ["enabled": enabled], contentWorld: .page)
+    }
+
+    func sendCommand(
+        _ method: String, parameters: [String: Any] = [:], responseTimeoutMilliseconds: Double? = nil
+    ) async throws -> [String: Any] {
         try authorizeCommand?()
         guard isConnected, let frontend
         else { throw BrowserWebInspectorProtocolError.notConnected }
@@ -147,8 +179,34 @@ final class BrowserWebInspectorProtocolConnection {
                     throw new Error('WebKit does not support the protocol parameter: ' + method + '.' + name);
                 }
             }
-            return JSON.stringify(await command.invoke(parameters));
-            """, arguments: ["method": method, "parameters": parameters], contentWorld: .page)
+            const response = command.invoke(parameters);
+            if (responseTimeoutMilliseconds == null) return JSON.stringify(await response);
+            let timer;
+            let timedOut = false;
+            try {
+                return JSON.stringify(await Promise.race([
+                    response,
+                    new Promise((_, reject) => {
+                        timer = setTimeout(() => {
+                            timedOut = true;
+                            reject(new Error('Crest timed out waiting for evaluation. WebKit cannot terminate the script; it may still be running.'));
+                        }, Math.max(0, responseTimeoutMilliseconds));
+                    }),
+                ]));
+            } finally {
+                clearTimeout(timer);
+                if (timedOut) {
+                    response.then(value => {
+                        const objectId = value?.result?.objectId;
+                        if (objectId) target.RuntimeAgent.releaseObject.invoke({objectId}).catch(() => {});
+                    }, () => {});
+                }
+            }
+            """,
+            arguments: [
+                "method": method, "parameters": parameters,
+                "responseTimeoutMilliseconds": responseTimeoutMilliseconds as Any? ?? NSNull(),
+            ], contentWorld: .page)
         guard let json = result as? String,
             let response = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]
         else { throw BrowserWebInspectorProtocolError.invalidResponse }
@@ -163,6 +221,58 @@ final class BrowserWebInspectorProtocolConnection {
             BrowserWebInspectorExecutionContextScript.source,
             arguments: ["messageName": messageName, "subscription": subscription?.uuidString as Any? ?? NSNull()],
             contentWorld: .page)
+    }
+
+    /// Contexts created by our named snapshot world. The frame model supplies
+    /// identity, so duplicate URLs cannot cause one frame to impersonate another.
+    func snapshotContexts(worldName: String) async throws -> [[String: Any]] {
+        try authorizeCommand?()
+        guard isConnected, let frontend else { throw BrowserWebInspectorProtocolError.notConnected }
+        let result = try await frontend.callAsyncJavaScript(
+            """
+            const contexts = [];
+            for (const frame of WI.networkManager.frames) {
+                for (const context of frame.executionContextList.contexts) {
+                    if (context.name !== worldName) continue;
+                    if (context.target !== WI.pageTarget) {
+                        throw new Error('Crest cannot snapshot a frame in a separate Inspector target.');
+                    }
+                    contexts.push({id: context.id, frameId: frame.id});
+                }
+            }
+            return contexts;
+            """, arguments: ["worldName": worldName], contentWorld: .page)
+        try authorizeCommand?()
+        guard let contexts = result as? [[String: Any]] else { throw BrowserWebInspectorProtocolError.invalidResponse }
+        return contexts
+    }
+
+    /// Bind a bounded batch inside the Inspector frontend, avoiding a separate
+    /// WKWebView round trip for every node in a large snapshot. These objects
+    /// were produced in our isolated world, never supplied by page script.
+    func bindSnapshotNodes(objectIDs: [String]) async throws -> [Int] {
+        try authorizeCommand?()
+        guard isConnected, let frontend else { throw BrowserWebInspectorProtocolError.notConnected }
+        let result = try await frontend.callAsyncJavaScript(
+            """
+            const ids = [];
+            for (let start = 0; start < objectIDs.length; start += 64) {
+                const batch = await Promise.all(objectIDs.slice(start, start + 64).map(async (objectId, offset) => {
+                    try { return await WI.pageTarget.DOMAgent.requestNode.invoke({objectId}); }
+                    catch (error) { throw new Error(`Snapshot node ${start + offset}: ${error.message ?? JSON.stringify(error)}`); }
+                }));
+                for (const response of batch) {
+                    if (!Number.isInteger(response.nodeId) || response.nodeId <= 0) throw new Error('Snapshot node no longer exists.');
+                    ids.push(response.nodeId);
+                }
+            }
+            return ids;
+            """, arguments: ["objectIDs": objectIDs], contentWorld: .page)
+        try authorizeCommand?()
+        guard let ids = result as? [Int], ids.count == objectIDs.count else {
+            throw BrowserWebInspectorProtocolError.invalidResponse
+        }
+        return ids
     }
 
     func disconnect() {

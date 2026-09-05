@@ -1362,10 +1362,10 @@ final class BrowserSessionTests: XCTestCase {
     }
 
     func testFolderTreePreservesPreorderPathsAndAncestorDisclosure() throws {
-        let root = SavedFolder(title: "Projects")
-        let child = SavedFolder(title: "Crest", parentID: root.id)
-        let grandchild = SavedFolder(title: "Research", parentID: child.id)
-        let sibling = SavedFolder(title: "Travel")
+        let root = BrowserFolder(title: "Projects")
+        let child = BrowserFolder(title: "Crest", parentID: root.id)
+        let grandchild = BrowserFolder(title: "Research", parentID: child.id)
+        let sibling = BrowserFolder(title: "Travel")
         let tree = BrowserFolderTree(folders: [root, child, grandchild, sibling])
 
         XCTAssertTrue(tree.isValid)
@@ -1537,7 +1537,7 @@ final class BrowserSessionTests: XCTestCase {
     }
 
     func testLegacyFolderWithoutParentDecodesAsTopLevel() throws {
-        let source = SavedFolder(title: "Legacy")
+        let source = BrowserFolder(title: "Legacy")
         let encoded = try JSONEncoder().encode(source)
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
         object.removeValue(forKey: "parentID")
@@ -1546,7 +1546,7 @@ final class BrowserSessionTests: XCTestCase {
         object.removeValue(forKey: "collapseModifiedAt")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
-        let decoded = try JSONDecoder().decode(SavedFolder.self, from: legacyData)
+        let decoded = try JSONDecoder().decode(BrowserFolder.self, from: legacyData)
 
         XCTAssertNil(decoded.parentID)
         XCTAssertEqual(decoded.color, .folderDefault)
@@ -1623,11 +1623,11 @@ final class BrowserSessionTests: XCTestCase {
         let cycleAID = FolderID()
         let cycleBID = FolderID()
         let folders = [
-            SavedFolder(id: duplicateFolderID, title: "First"),
-            SavedFolder(id: duplicateFolderID, title: "Second"),
-            SavedFolder(id: cycleAID, title: "Cycle A", parentID: cycleBID),
-            SavedFolder(id: cycleBID, title: "Cycle B", parentID: cycleAID),
-            SavedFolder(title: "Orphan", parentID: FolderID()),
+            BrowserFolder(id: duplicateFolderID, title: "First"),
+            BrowserFolder(id: duplicateFolderID, title: "Second"),
+            BrowserFolder(id: cycleAID, title: "Cycle A", parentID: cycleBID),
+            BrowserFolder(id: cycleBID, title: "Cycle B", parentID: cycleAID),
+            BrowserFolder(title: "Orphan", parentID: FolderID()),
         ]
         var tabs = (0..<14).map {
             BrowserTab(title: "Pinned \($0)", url: nil, placement: .pinned, folderID: duplicateFolderID)

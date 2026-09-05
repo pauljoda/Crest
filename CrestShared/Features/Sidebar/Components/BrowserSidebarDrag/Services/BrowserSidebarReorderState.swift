@@ -21,11 +21,52 @@ final class BrowserSidebarReorderState {
         /// Where inside the row the pointer grabbed it, so a morphing lift can
         /// settle under the cursor instead of at the row's leading edge.
         let grabOffset: CGSize
+        /// Visible descendants at pickup, relative to the lifted section.
+        var previewRows: [BrowserSidebarReorderRow] = []
     }
 
     private(set) var lift: Lift?
     private(set) var pointer: CGPoint = .zero
     private(set) var resolvedTarget: BrowserSidebarReorderTarget?
+    private(set) var layout = BrowserSidebarReorderLayout()
+    private var lastPreviewShape: BrowserTabDragPreviewShape?
+    private(set) var landingPreview: BrowserSidebarFloatingLift?
+    private(set) var landingSessionToken: BrowserDragSessionToken?
+    @ObservationIgnored private var landingExpirationTask: Task<Void, Never>?
+    @ObservationIgnored private var needsLandingMeasurement = false
+    @ObservationIgnored private var landingSection: BrowserSidebarReorderSection?
+
+    func isRevealing(_ id: BrowserSidebarReorderItemID) -> Bool {
+        landingPreview?.item.id == id && landingPreview?.landing?.isRevealing == true
+    }
+
+    func revealLanding(_ id: UUID) {
+        guard landingPreview?.landing?.id == id else { return }
+        landingPreview?.landing?.isRevealing = true
+    }
+
+    func hidesSource(_ id: BrowserSidebarReorderItemID) -> Bool {
+        isLifted(id) || landingPreview?.item.id == id
+    }
+
+    func finishLanding(_ id: UUID) {
+        guard landingPreview?.landing?.id == id else { return }
+        landingPreview = nil
+        landingSessionToken = nil
+        needsLandingMeasurement = false
+        landingSection = nil
+        landingExpirationTask?.cancel()
+        landingExpirationTask = nil
+    }
+
+    /// Native drop callbacks keep their session identity while layout refines
+    /// the destination frame and replaces its animation identifier.
+    func finishLanding(session: BrowserDragSessionToken) {
+        guard landingSessionToken == session, let id = landingPreview?.landing?.id else { return }
+        finishLanding(id)
+    }
+
+    @ObservationIgnored private var verticalDirection: CGFloat = 0
 
     @ObservationIgnored
     private var rows: [BrowserSidebarReorderItemID: RegisteredRow] = [:]
@@ -177,6 +218,12 @@ final class BrowserSidebarReorderState {
     /// still travelling toward the edge.
     var hasLiftInFlight: Bool { lift != nil || stagedLift != nil }
 
+    @ObservationIgnored private var sessionGeneration: UInt64 = 0
+
+    var sessionToken: BrowserDragSessionToken? {
+        hasLiftInFlight ? BrowserDragSessionToken(generation: sessionGeneration) : nil
+    }
+
     func isLifted(_ id: BrowserSidebarReorderItemID) -> Bool {
         lift?.item.id == id
     }
@@ -200,6 +247,13 @@ final class BrowserSidebarReorderState {
             row: row,
             scrollRegionID: scrollRegionID
         )
+        if needsLandingMeasurement, var preview = landingPreview, preview.item.id == row.id,
+            !row.frame.isEmpty, landingSection == nil || landingSection == row.section,
+            preview.landing?.frame != row.frame, preview.landing?.isRevealing != true
+        {
+            preview.landing = BrowserSidebarReorderLanding(frame: row.frame)
+            landingPreview = preview
+        }
     }
 
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
@@ -233,6 +287,7 @@ final class BrowserSidebarReorderState {
         for id: UUID,
         scrollRegionID: UUID? = nil
     ) {
+        guard !isDragging || zones[id] == nil else { return }
         zones[id] = RegisteredZone(
             zone: zone,
             scrollRegionID: scrollRegionID
@@ -286,22 +341,57 @@ final class BrowserSidebarReorderState {
             zones[key] = registration
         }
 
+        refreshLayout()
         resolveTarget()
     }
 
     private var visibleZones: [BrowserSidebarReorderZone] {
-        zones.values.compactMap { registration in
+        let pinned = pinnedGeometry
+        return zones.values.compactMap { registration in
+            let projected: CGRect?
+            if case .section(let section) = registration.zone.target, section.usesGridOrdering,
+                let pinned, registration.zone.frame.intersects(pinned.frame)
+            {
+                projected = CGRect(
+                    origin: pinned.frame.origin,
+                    size: CGSize(width: pinned.frame.width, height: max(pinned.layout.height, pinned.emptyHeight)))
+            } else {
+                projected = layout.frame(for: registration.zone)
+            }
+            guard let frame = projected else { return nil }
             guard let regionID = registration.scrollRegionID else {
-                return registration.zone
+                return BrowserSidebarReorderZone(target: registration.zone.target, frame: frame)
             }
             guard let viewport = scrollRegions[regionID] else { return nil }
-            let visibleFrame = registration.zone.frame.intersection(viewport)
+            let visibleFrame = frame.intersection(viewport)
             guard !visibleFrame.isNull, !visibleFrame.isEmpty else { return nil }
             return BrowserSidebarReorderZone(
                 target: registration.zone.target,
                 frame: visibleFrame
             )
         }
+    }
+
+    func pinnedLayout(ids: [BrowserSidebarReorderItemID], in space: BrowserSpaceRuntimeAssignment)
+        -> BrowserPinnedTabReorderLayout
+    {
+        guard let lift, lift.item.spaceAssignment == space, case .tab = lift.item else {
+            return BrowserPinnedTabReorderLayout(ids: ids)
+        }
+        var result = BrowserPinnedTabReorderLayout(ids: ids, liftedID: lift.item.id)
+        if case .insert(let section, _, let index) = resolvedTarget?.kind, section.usesGridOrdering {
+            result.insertionIndex = index
+        }
+        return result
+    }
+
+    private var pinnedGeometry: (layout: BrowserPinnedTabReorderLayout, frame: CGRect, emptyHeight: CGFloat)? {
+        guard let lift, let source = rows[lift.item.id]?.row.frame else { return nil }
+        let section = BrowserSidebarReorderSection.tabs(placement: .pinned, folderID: nil)
+        guard let zone = restingZone(for: section, inColumn: source) else { return nil }
+        let ordered = BrowserSidebarReorderPolicy.rows(in: section, from: registeredRows(in: lift.item.spaceAssignment))
+        let emptyHeight = max(zone.minimumHeight, ordered.isEmpty ? zone.frame.height : 0)
+        return (pinnedLayout(ids: ordered.map(\.id), in: lift.item.spaceAssignment), zone.frame, emptyHeight)
     }
 
     /// Records where one presented card is, and which Space is presenting it. The
@@ -340,6 +430,8 @@ final class BrowserSidebarReorderState {
         item: BrowserSidebarReorderItem,
         section: BrowserSidebarReorderSection
     ) {
+        cancel()
+        sessionGeneration &+= 1
         stagedLift = (item, section)
         armStagedLiftExpiration()
     }
@@ -372,6 +464,10 @@ final class BrowserSidebarReorderState {
         section: BrowserSidebarReorderSection,
         at pointer: CGPoint
     ) {
+        if stagedLift?.item.id != item.id || stagedLift?.section != section {
+            sessionGeneration &+= 1
+        }
+        if let id = landingPreview?.landing?.id { finishLanding(id) }
         let frame = frame(ofRow: item.id)
         lift = Lift(
             item: item,
@@ -380,13 +476,46 @@ final class BrowserSidebarReorderState {
             grabOffset: CGSize(
                 width: pointer.x - (frame?.minX ?? pointer.x),
                 height: pointer.y - (frame?.minY ?? pointer.y)
-            )
+            ),
+            previewRows: folderPreviewRows(for: item)
         )
         stagedLift = nil
         cancelStagedLiftExpiration()
         hasEnteredSplitContent = false
+        verticalDirection = 0
+        lastPreviewShape = nil
         self.pointer = pointer
-        resolveTarget()
+        // Initially retain the original slot; subsequent samples move this one
+        // gap. Descendants of an expanded lift never become drop targets.
+        if let frame {
+            layout = BrowserSidebarReorderLayout(
+                sourceID: item.id, sourceFrame: frame,
+                hiddenIDs: Set((lift?.previewRows.map(\.id) ?? []) + [item.id]), sourceIsGrid: section.usesGridOrdering)
+            let ordered = BrowserSidebarReorderPolicy.rows(in: section, from: registeredRows(in: item.spaceAssignment))
+            let candidates = ordered.filter { !layout.hiddenIDs.contains($0.id) }
+            let index = ordered.prefix { $0.id != item.id }.filter { !layout.hiddenIDs.contains($0.id) }.count
+            resolvedTarget = BrowserSidebarReorderTarget(
+                kind: .insert(
+                    section: section, beforeID: candidates.dropFirst(index).first?.id, index: index))
+            refreshLayout()
+            lastPreviewShape = liftTargetShape
+        } else {
+            resolveTarget()
+        }
+    }
+
+    /// The row registry already describes precisely what an expanded folder
+    /// shows, including kept collapsed tabs and nested/split groups.
+    func folderPreviewRows(for item: BrowserSidebarReorderItem) -> [BrowserSidebarReorderRow] {
+        guard case .folder = item, let frame = frame(ofRow: item.id) else { return [] }
+        return registeredRows(in: item.spaceAssignment)
+            .filter { $0.id != item.id && frame.contains($0.frame) && $0.frame.minY > frame.minY }
+            .sorted { $0.frame.minY < $1.frame.minY }
+            .map { row in
+                BrowserSidebarReorderRow(
+                    id: row.id, space: row.space, section: row.section,
+                    frame: row.frame.offsetBy(dx: -frame.minX, dy: -frame.minY))
+            }
     }
 
     func update(pointer: CGPoint) {
@@ -396,48 +525,77 @@ final class BrowserSidebarReorderState {
             begin(item: staged.item, section: staged.section, at: pointer)
         }
         guard lift != nil else { return }
+        let delta = pointer.y - self.pointer.y
+        if abs(delta) > 0.5 { verticalDirection = delta > 0 ? 1 : -1 }
         self.pointer = pointer
         resolveTarget()
     }
 
     /// Clears the drag and returns the item and target to commit, if the drop
     /// resolved somewhere.
-    func end() -> (
+    func end(
+        retainingPreview: Bool = false, landingTimeout: Duration? = .seconds(1),
+        suppressReleaseActivation: Bool = true
+    ) -> (
         item: BrowserSidebarReorderItem,
         target: BrowserSidebarReorderTarget
     )? {
+        if retainingPreview, var preview = liftPreview, let frame = landingFrame {
+            preview.landing = BrowserSidebarReorderLanding(frame: frame)
+            landingPreview = preview
+            landingSessionToken = sessionToken
+            needsLandingMeasurement = true
+            landingSection = resolvedTarget == nil ? lift?.section : resolvedTarget?.section
+            landingExpirationTask?.cancel()
+            landingExpirationTask = nil
+            // A custom presenter has a bounded fallback. Native presenters use
+            // their destination animation's completion callback.
+            if let landingTimeout {
+                landingExpirationTask = Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: landingTimeout)
+                    guard !Task.isCancelled, let self, let id = landingPreview?.landing?.id else { return }
+                    finishLanding(id)
+                }
+            }
+        }
         defer {
-            if lift != nil { suppressActivation() }
+            if lift != nil, suppressReleaseActivation { suppressActivation() }
             lift = nil
             stagedLift = nil
             cancelStagedLiftExpiration()
             resolvedTarget = nil
+            layout = BrowserSidebarReorderLayout()
+            lastPreviewShape = nil
             hasEnteredSplitContent = false
         }
         guard let lift, let target = resolvedTarget else { return nil }
         return (lift.item, target)
     }
 
+    /// A native completion can arrive after another lift or a committed drop.
+    func cancel(session: BrowserDragSessionToken) {
+        guard sessionToken == session else { return }
+        cancel()
+    }
+
     func cancel() {
+        if let id = landingPreview?.landing?.id { finishLanding(id) }
         if lift != nil { suppressActivation() }
         lift = nil
         stagedLift = nil
         cancelStagedLiftExpiration()
         resolvedTarget = nil
+        layout = BrowserSidebarReorderLayout()
+        lastPreviewShape = nil
         hasEnteredSplitContent = false
     }
 
     /// Gives up a lift because something else took the touch that was carrying
     /// it — on a touch shell, the row's own context menu.
     ///
-    /// Nothing else can end that lift. A touch lift is staged when `.onDrag`'s
-    /// provider runs and promoted by the first position the drop delegate
-    /// reports, and both of those belong to a system drag session; a menu that
-    /// wins the press leaves the session either never begun or cancelled before
-    /// it reports a phase, so `BrowserMobileReorderSessionModifier` hears
-    /// nothing and no drop ever lands. Left alone the lift stays live for good —
-    /// neighbours frozen at the offsets they stepped aside to, and the lifted
-    /// row invisible in the slot it came from, under an open menu.
+    /// A source provider can stage a lift before UIKit decides whether the
+    /// touch becomes a drag or a context menu. The menu releases that pending
+    /// state immediately; a native completion arriving later is token guarded.
     ///
     /// Safe when there is nothing to give up: a lift that was only staged clears
     /// without suppressing the row's activation, because no drag ever happened.
@@ -461,6 +619,16 @@ final class BrowserSidebarReorderState {
 
     /// How far the row for `id` steps aside for the current target.
     func displacement(for id: BrowserSidebarReorderItemID) -> CGSize {
+        if let row = rows[id]?.row, row.usesGridOrdering, row.space == lift?.item.spaceAssignment,
+            let pinned = pinnedGeometry, let frame = pinned.layout.frame(for: .tab(id), in: pinned.frame)
+        {
+            return CGSize(width: frame.minX - row.frame.minX, height: frame.minY - row.frame.minY)
+        }
+        if layout.isActive, let row = rows[id]?.row, !row.usesGridOrdering,
+            row.space == lift?.item.spaceAssignment, let frame = layout.frame(for: row)
+        {
+            return CGSize(width: frame.minX - row.frame.minX, height: frame.minY - row.frame.minY)
+        }
         guard let context = insertionContext(for: id) else { return .zero }
         return BrowserSidebarReorderPolicy.displacement(
             candidateIndex: context.candidateIndex,
@@ -479,7 +647,7 @@ final class BrowserSidebarReorderState {
     func incomingLiftReservationHeight(
         for section: BrowserSidebarReorderSection
     ) -> CGFloat {
-        guard let lift,
+        guard !layout.isActive, let lift,
             lift.section != section,
             resolvedTarget?.section == section,
             !section.flowsHorizontally
@@ -575,12 +743,14 @@ final class BrowserSidebarReorderState {
         case .insert(let section, _, _):
             guard case .tabs(let placement, _) = section else { return nil }
             return .resting(for: placement)
-        case .intoFolder:
+        case .intoFolder, .createCurrentFolder:
             return .row
         case .splitInsert:
             return .webpageCard
         case .space, .none:
-            // Nowhere resolved yet: hold the shape it started as.
+            // A small overshoot outside the grid must not expand a tile back
+            // into a wide row at the left edge of the window.
+            if lastPreviewShape == .pinnedTile { return .pinnedTile }
             guard case .tabs(let placement, _) = lift.section else { return nil }
             return .resting(for: placement)
         }
@@ -602,18 +772,54 @@ final class BrowserSidebarReorderState {
     /// wherever they land — but all three are pointer-chasing visuals, and all
     /// three are clipped by the same things.
     var floatingLift: BrowserSidebarFloatingLift? {
-        guard BrowserSidebarReorderPolicy.drawsOwnLift, let lift else { return nil }
+        guard BrowserSidebarReorderPolicy.drawsOwnLift else { return nil }
+        return liftPreview
+    }
+
+    /// Both native and SwiftUI presenters use the same measured geometry.
+    var liftPreview: BrowserSidebarFloatingLift? {
+        if let landingPreview { return landingPreview }
+        guard let lift else { return nil }
         let shape = liftTargetShape ?? .row
+        let pinned = pinnedGeometry
+        var previewGrid = pinned?.layout
+        if shape == .pinnedTile, previewGrid?.insertionIndex == nil { previewGrid?.insertionIndex = 0 }
+        let pinnedSize =
+            pinned.flatMap { previewGrid?.frame(for: .gap, in: $0.frame)?.size }
+            ?? BrowserTabDragPreviewLayout.pinnedSize
         return BrowserSidebarFloatingLift(
             item: lift.item,
             shape: shape,
             progress: shape == .row ? 0 : 1,
             pointer: pointer,
             grabOffset: lift.grabOffset,
-            rowWidth: BrowserTabDragPreviewLayout.rowWidth(
-                forSourceWidth: lift.rowSize.width
-            )
+            rowWidth: lift.section.usesGridOrdering
+                ? pinned?.frame.width ?? BrowserTabDragPreviewLayout.defaultRowWidth
+                : max(lift.rowSize.width, 1),
+            sourceSize: lift.rowSize,
+            previewRows: lift.previewRows,
+            pinnedTileSize: pinnedSize,
+            sidebarBounds: pinned?.frame
         )
+    }
+
+    private var landingFrame: CGRect? {
+        guard let lift else { return nil }
+        switch resolvedTarget?.kind {
+        case .insert(let section, _, _):
+            if section.usesGridOrdering, let pinned = pinnedGeometry {
+                return pinned.layout.frame(for: .gap, in: pinned.frame)
+            }
+            return layout.gapFrame
+        case .intoFolder(let id):
+            return rows[.folder(id)].flatMap { layout.frame(for: $0.row) }
+        case .createCurrentFolder(let id):
+            return rows[.tab(id)].flatMap { layout.frame(for: $0.row) }
+        case .none:
+            return rows[lift.item.id]?.row.frame
+        case .space, .splitInsert:
+            return nil
+        }
     }
 
     // MARK: - Resolution
@@ -666,28 +872,50 @@ final class BrowserSidebarReorderState {
     }
 
     private func resolveTarget() {
+        let previousTarget = resolvedTarget
+        defer {
+            if resolvedTarget != previousTarget { refreshLayout() }
+            if resolvedTarget != nil { lastPreviewShape = liftTargetShape }
+        }
         guard let lift else {
             resolvedTarget = nil
             return
         }
+        // A stationary pointer in the open slot must not retarget itself just
+        // because its neighbours animated around it.
+        let point = insertionProbe(for: lift)
+        if let gap = layout.gapFrame, gap.contains(point) { return }
+        if let pinned = pinnedGeometry, let gap = pinned.layout.frame(for: .gap, in: pinned.frame),
+            gap.contains(pointer)
+        {
+            return
+        }
+        let available = visibleZones.filter { !$0.frame.isEmpty && allowsNesting(in: $0, for: lift) }
+        // Directly aiming at a collapsed folder still means filing into it.
+        // Its middle band is distinct from the surrounding insertion slots.
+        let direct = BrowserSidebarReorderPolicy.zone(at: pointer, in: available, accepting: lift.item)
+        let nesting: BrowserSidebarReorderZone? =
+            switch direct?.target {
+            case .folder, .currentFolder, .currentTab: direct
+            default: nil
+            }
         guard
-            let zone = BrowserSidebarReorderPolicy.zone(
-                at: pointer,
-                // An empty frame is a hidden duplicate of a live zone — an
-                // offscreen pager page or a collapsed picker — never a target.
-                in: visibleZones.filter { !$0.frame.isEmpty },
-                accepting: lift.item
-            )
+            let zone = nesting
+                ?? BrowserSidebarReorderPolicy.zone(
+                    at: point, in: available, accepting: lift.item
+                )
         else {
             resolvedTarget = nil
             return
         }
 
         switch zone.target {
+        case .currentTab(let tabID):
+            resolvedTarget = BrowserSidebarReorderTarget(kind: .createCurrentFolder(tabID))
         case .space(let assignment):
             resolvedTarget = BrowserSidebarReorderTarget(kind: .space(assignment))
 
-        case .folder(let folderID):
+        case .folder(let folderID), .currentFolder(let folderID):
             // A folder cannot be dropped into itself.
             resolvedTarget =
                 lift.item.id == .folder(folderID)
@@ -695,9 +923,19 @@ final class BrowserSidebarReorderState {
                 : BrowserSidebarReorderTarget(kind: .intoFolder(folderID))
 
         case .section(let section):
+            let pinned = pinnedGeometry
             let ordered = BrowserSidebarReorderPolicy.rows(
                 in: section,
-                from: registeredRows(in: lift.item.spaceAssignment)
+                from: registeredRows(in: lift.item.spaceAssignment).compactMap { row in
+                    let frame: CGRect?
+                    if row.usesGridOrdering, let pinned {
+                        frame = pinned.layout.frame(for: .tab(row.id), in: pinned.frame)
+                    } else {
+                        frame = layout.frame(for: row)
+                    }
+                    guard let frame else { return nil }
+                    return BrowserSidebarReorderRow(id: row.id, space: row.space, section: row.section, frame: frame)
+                }
             )
             // This Space's own rows, so a capped run is judged by what is in
             // it rather than by what every sidebar on screen adds up to.
@@ -714,7 +952,7 @@ final class BrowserSidebarReorderState {
                 return
             }
             let index = BrowserSidebarReorderPolicy.insertionIndex(
-                at: pointer,
+                at: point,
                 orderedRows: ordered,
                 excluding: lift.item.id
             )
@@ -731,6 +969,92 @@ final class BrowserSidebarReorderState {
             resolvedTarget = splitInsertTarget(assignment, for: lift)
             if resolvedTarget != nil { hasEnteredSplitContent = true }
         }
+    }
+
+    /// Tall blocks cross a neighbour with their moving edge. Requiring a
+    /// pointer grabbed at the header to traverse the entire expanded folder
+    /// makes the old gap appear stuck even though its contents have moved.
+    private func insertionProbe(for lift: Lift) -> CGPoint {
+        guard layout.isActive, lift.rowSize.height > CrestLayout.sidebarRowHeight * 1.5,
+            verticalDirection != 0
+        else { return pointer }
+        let top = pointer.y - lift.grabOffset.height
+        return CGPoint(x: pointer.x, y: verticalDirection > 0 ? top + lift.rowSize.height : top)
+    }
+
+    /// A vertical folder drag stays among siblings. Moving right admits a
+    /// deeper run; otherwise every expanded folder's body would steal a drag
+    /// that is simply passing it. A collapsed header remains a direct target.
+    private func allowsNesting(in zone: BrowserSidebarReorderZone, for lift: Lift) -> Bool {
+        guard case .folder = lift.item, case .section(let section) = zone.target else { return true }
+        let startX = layout.sourceFrame.minX + lift.grabOffset.width
+        let extraDepth = max(0, Int((pointer.x - startX) / BrowserFolderLayout.nestingIndent))
+        return folderDepth(of: section) <= folderDepth(of: lift.section) + extraDepth
+    }
+
+    private func folderDepth(of section: BrowserSidebarReorderSection) -> Int {
+        var ancestors: Set<FolderID> = []
+        var parent = section.parentFolderID
+        while let id = parent, ancestors.insert(id).inserted {
+            parent = rows[.folder(id)]?.row.section.parentFolderID
+        }
+        return ancestors.count
+    }
+
+    /// Rebuilt only when the destination changes, never once per rendered row.
+    /// Frames are resting measurements; animation callbacks cannot feed their
+    /// intermediate positions back into the next insertion decision.
+    private func refreshLayout() {
+        guard let lift, layout.isActive else { return }
+        var next = layout
+        next.sourceFrame = rows[lift.item.id]?.row.frame ?? layout.sourceFrame
+        if let pinned = pinnedGeometry {
+            next.gridFrame = pinned.frame
+            next.gridHeightDelta =
+                lift.section.usesGridOrdering || resolvedTarget?.section?.usesGridOrdering == true
+                ? max(pinned.emptyHeight, pinned.layout.height) - pinned.frame.height : 0
+        }
+        next.gap = nil
+        if case .insert(let section, let beforeID, _) = resolvedTarget?.kind,
+            !section.usesGridOrdering
+        {
+            let candidates = BrowserSidebarReorderPolicy.rows(
+                in: section, from: registeredRows(in: lift.item.spaceAssignment)
+            ).filter { !next.hiddenIDs.contains($0.id) }
+            let anchor: BrowserSidebarReorderLayout.Gap.Anchor
+            let frame: CGRect
+            if let beforeID, let row = candidates.first(where: { $0.id == beforeID }) {
+                anchor = .before(beforeID)
+                frame = row.frame
+            } else if let row = candidates.last {
+                anchor = .after(row.id)
+                frame = CGRect(x: row.frame.minX, y: row.frame.maxY, width: row.frame.width, height: 0)
+            } else if let zone = restingZone(for: section, inColumn: next.sourceFrame) {
+                anchor = .emptySection(section)
+                frame = CGRect(x: zone.frame.minX, y: zone.frame.maxY, width: zone.frame.width, height: 0)
+            } else {
+                if next != layout { layout = next }
+                return
+            }
+            var parents: Set<FolderID> = []
+            var parent = section.parentFolderID
+            while let id = parent, parents.insert(id).inserted {
+                parent = rows[.folder(id)]?.row.section.parentFolderID
+            }
+            next.gap = BrowserSidebarReorderLayout.Gap(
+                section: section, anchor: anchor, frame: frame, containingFolders: parents)
+        }
+        if next != layout { layout = next }
+    }
+
+    private func restingZone(for section: BrowserSidebarReorderSection, inColumn frame: CGRect)
+        -> BrowserSidebarReorderZone?
+    {
+        let target = BrowserSidebarReorderZone.Target.section(section)
+        let matching = zones.values.map { $0.zone }.filter { zone in
+            zone.target == target && zone.frame.maxX > frame.minX && zone.frame.minX < frame.maxX
+        }
+        return matching.min { $0.frame.height < $1.frame.height }
     }
 
     /// Where a tab would join the cards on show, or `nil` when it cannot.

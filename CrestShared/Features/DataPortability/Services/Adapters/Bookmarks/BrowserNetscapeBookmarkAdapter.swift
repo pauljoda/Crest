@@ -63,7 +63,7 @@ enum BrowserNetscapeBookmarkAdapter {
             indentation: indentation + 1,
             writer: &writer
         )
-        for folder in space.folderTree.children(of: nil) {
+        for folder in space.folderTree.children(of: nil) where folder.location == .saved {
             try encodeFolder(
                 folder,
                 space: space,
@@ -75,7 +75,7 @@ enum BrowserNetscapeBookmarkAdapter {
     }
 
     private static func encodeFolder(
-        _ folder: SavedFolder,
+        _ folder: BrowserFolder,
         space: BrowserSpace,
         indentation: Int,
         writer: inout BrowserBookmarkHTMLWriter

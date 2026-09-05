@@ -112,6 +112,7 @@ extension BrowserSession {
             return false
         }
         let wasSelected = spaces[spaceIndex].selectedTabID == tabID
+        preserveFolderOrder(in: spaceIndex, removing: [tabID])
         var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
         tab.placement = .current
         tab.folderID = nil
@@ -160,6 +161,7 @@ extension BrowserSession {
             })
         else { return }
         let wasSelected = spaces[spaceIndex].selectedTabID == tabID
+        preserveFolderOrder(in: spaceIndex, removing: [tabID])
         var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
         tab.faviconData = nil
         tab.splitGroupID = nil
@@ -205,6 +207,7 @@ extension BrowserSession {
             }
         )
         let currentTabIDs = Set(currentTabs.map(\.id))
+        preserveFolderOrder(in: spaceIndex, removing: currentTabIDs)
         spaces[spaceIndex].tabs.removeAll { currentTabIDs.contains($0.id) }
         ensureSelection(in: spaceID)
         normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date)
@@ -223,6 +226,7 @@ extension BrowserSession {
             return false
         }
         let wasSelected = spaces[spaceIndex].selectedTabID == tabID
+        preserveFolderOrder(in: spaceIndex, removing: [tabID])
         var tab = spaces[spaceIndex].tabs.remove(at: tabIndex)
         tab.placement = .current
         tab.folderID = nil
@@ -338,6 +342,7 @@ extension BrowserSession {
         {
             return false
         }
+        preserveFolderOrder(in: spaceIndex, removing: [tabID])
         var tab = spaces[spaceIndex].tabs.remove(at: sourceIndex)
         tab.placement = pinned ? .pinned : .current
         tab.folderID = nil
@@ -412,6 +417,7 @@ extension BrowserSession {
         // A move can land a tab in the middle of a split run, or carry a member
         // out of one. Repair the affected Space before anyone reads it; the
         // plain normalizer only clears membership, never reorders.
+        preserveFolderOrder(in: spaceIndex, removing: [tabID])
         spaces[spaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(destinationTabs)
         return true
     }
@@ -476,6 +482,7 @@ extension BrowserSession {
         }
 
         let sourceWasSelected = spaces[sourceSpaceIndex].selectedTabID == tabID
+        preserveFolderOrder(in: sourceSpaceIndex, removing: [tabID])
         spaces[sourceSpaceIndex].tabs.remove(at: sourceTabIndex)
         var movedTab = plan.placing(sourceTab)
         // Split groups never span Spaces, so a tab leaving one leaves its group

@@ -43,10 +43,11 @@ extension BrowserExtensionTabWindowCoordinator {
             else {
                 throw BrowserExtensionNativeMessagingError.unverifiedExtension
             }
-            guard authorization.allowsInternalCapabilityBroker,
-                authorization.grants(request.requiredCapability)
-            else {
-                throw BrowserExtensionCapabilityBrokerError.permissionDenied(request.requiredCapability)
+            guard authorization.allowsInternalCapabilityBroker else {
+                throw BrowserExtensionNativeMessagingError.unverifiedExtension
+            }
+            if let capability = request.requiredCapability, !authorization.grants(capability) {
+                throw BrowserExtensionCapabilityBrokerError.permissionDenied(capability)
             }
             guard let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: extensionContext),
                 let service = tabGroupService, let state = currentState?.space(spaceID)
@@ -87,25 +88,34 @@ extension BrowserExtensionTabWindowCoordinator {
                 isCollapsed: request.isCollapsed)
             return ["group": Self.tabGroupPayload(updated)]
         case .move:
-            // Validate first so a bad id still reports the bad id, then refuse
-            // the move itself: Crest has no group ordering to change.
-            _ = try group(request, service: service, in: space.id)
-            throw BrowserExtensionTabGroupBrokerError.failedToMove
+            let existing = try group(request, service: service, in: space.id)
+            guard let index = request.index else { throw BrowserExtensionTabGroupBrokerError.invalidRequest }
+            let moved = try service.move(existing.id, in: space.id, to: index)
+            reconcileCurrentSession()
+            return ["group": Self.tabGroupPayload(moved)]
         case .membership:
-            return ["membership": membershipPayload(service: service, space: space)]
+            let membership = membershipPayload(service: service, space: space)
+            return [
+                "membership": membership, "revision": service.revision,
+                "tabs": space.tabs.filter { auxiliaryWindowByTabID[$0.id] == nil }.map {
+                    ["tabIndex": $0.index, "tabToken": $0.id.rawValue.uuidString] as [String: Any]
+                },
+            ]
         case .group:
             let tabs = try request.resolveTabs(in: space, liveTabs: liveTabs)
             let existingID = try request.groupID.map { _ in
                 try group(request, service: service, in: space.id).id
             }
             let created = try service.group(tabs, in: space.id, into: existingID)
+            reconcileCurrentSession()
             return [
                 "groupId": created.id.rawValue,
-                "membership": membershipPayload(service: service, space: space),
+                "membership": membershipPayload(service: service, space: currentState?.space(space.id) ?? space),
             ]
         case .ungroup:
             service.ungroup(try request.resolveTabs(in: space, liveTabs: liveTabs), in: space.id)
-            return ["membership": membershipPayload(service: service, space: space)]
+            reconcileCurrentSession()
+            return ["membership": membershipPayload(service: service, space: currentState?.space(space.id) ?? space)]
         }
     }
 

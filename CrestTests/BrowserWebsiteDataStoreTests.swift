@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -45,6 +46,19 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
         )
     }
 
+    func testRemovingAProfileAlsoRemovesItsHostedExtensionStore() async throws {
+        let profile = BrowsingProfile()
+        let hostedID = BrowserExtensionHostedWebsiteDataStore.identifier(forProfileID: profile.id)
+        var removed: [UUID] = []
+        let remover = WebKitBrowserWebsiteDataStoreRemover(
+            identifierProvider: { [profile.id, hostedID] },
+            removeDataStore: { removed.append($0) },
+            clearDataStore: { _ in XCTFail("No fallback should be needed") })
+        try await remover.removePersistentDataStore(for: profile)
+        XCTAssertEqual(removed, [profile.id, hostedID])
+        XCTAssertNotEqual(hostedID, profile.id)
+    }
+
     func testRemovalRetriesTheFullDelayedReleaseSequenceBeforeSucceeding() async throws {
         let profile = BrowsingProfile()
         var removalAttempts = 0
@@ -52,7 +66,7 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
         let expectedDelays: [Duration] = [
             .milliseconds(10),
             .milliseconds(20),
-            .milliseconds(40)
+            .milliseconds(40),
         ]
         let remover = WebKitBrowserWebsiteDataStoreRemover(
             retryDelays: expectedDelays,
@@ -100,7 +114,7 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
         try await remover.removePersistentDataStore(for: profile)
 
         XCTAssertEqual(removalAttempts, 1)
-        XCTAssertEqual(identifierChecks, 2)
+        XCTAssertEqual(identifierChecks, 3)
     }
 
     func testRemovalSurfacesTheLastErrorAfterTheBoundedRetryBudget() async {

@@ -54,9 +54,11 @@ struct BrowserPinnedExtensionActionButton: View {
         .buttonStyle(.plain)
         .disabled(!action.isEnabled || action.isLoading)
         .accessibilityLabel(action.displayName)
-        .accessibilityValue(action.isLoading ? "Loading…" : "")
+        .accessibilityValue(
+            action.isLoading ? "Loading…" : ""
+        )
         .accessibilityIdentifier("pinned-extension-action-\(action.id)")
-        .help(action.displayName)
+        .help(Text(verbatim: action.displayName))
     }
 
     private func hoverChanged(_ isHovering: Bool) {

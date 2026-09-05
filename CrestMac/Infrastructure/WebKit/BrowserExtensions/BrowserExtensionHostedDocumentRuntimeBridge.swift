@@ -5,16 +5,10 @@ import WebKit
 /// the extension web views Crest hosts itself — the side panel and offscreen
 /// documents.
 ///
-/// A browser tab owns its user content controller, so `BrowserPage` simply adds
-/// its handlers and removes them when the page closes. An extension document
-/// does not: WebKit hands out a *copy* of the extension controller's web view
-/// configuration, and the copy carries the same `WKUserContentController`.
-/// Two windows each showing the same extension's panel, or a panel and that
-/// extension's offscreen document, therefore arrive at one controller — and
-/// adding a script message handler under a name it already holds raises. This
-/// type owns the installation for that controller instead: the first document
-/// installs, the rest join, and the handlers are removed when the last one
-/// closes.
+/// Each hosted document supplies its private navigation content controller.
+/// Never infer it from WebKit's configuration: that controller is registered
+/// with every extension in the Space. An installation is tracked by controller
+/// identity so repeated attachment cannot register a duplicate message handler.
 @MainActor
 enum BrowserExtensionHostedDocumentRuntimeBridge {
     /// One document's share of an installation. Releasing the last one removes
@@ -42,26 +36,23 @@ enum BrowserExtensionHostedDocumentRuntimeBridge {
         var relay: BrowserExtensionWebPageRuntimeRelay?
     }
 
-    /// Keyed weakly: WebKit hands out a configuration copy per document, the
-    /// copies share one controller, and an entry must not outlive the
-    /// controller it describes.
+    /// An installation must not outlive the private controller it describes.
     private static let installations =
         NSMapTable<WKUserContentController, Installation>.weakToStrongObjects()
 
     /// Adds the alias and the relay for `configuration`'s web view, or joins
-    /// the installation the controller already carries. `nil` when the Space
-    /// has no `externally_connectable` patterns at all, in which case no frame
+    /// the installation the controller already carries. `nil` when the owner
+    /// has no `externally_connectable` patterns, in which case no frame
     /// in this document could use either.
     static func install(
         for configuration: BrowserExtensionPageConfiguration,
+        in controller: WKUserContentController,
         reportsDiagnostics: Bool,
         resolveTarget: @escaping BrowserExtensionWebPageRuntimeRelay.Resolve
     ) -> Handle? {
         guard !configuration.externallyConnectableMatchPatterns.isEmpty else {
             return nil
         }
-        let controller =
-            configuration.webViewConfiguration.userContentController
         let installation =
             installations.object(forKey: controller)
             ?? {

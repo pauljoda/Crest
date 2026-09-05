@@ -225,6 +225,7 @@ extension BrowserSession {
                 return ArchivedTab(tab: tab, archivedAt: now, reason: .autoCleanup)
             })
         let expiredIDs = Set(expiredTabs.map(\.id))
+        preserveFolderOrder(in: index, removing: expiredIDs)
         spaces[index].tabs.removeAll { expiredIDs.contains($0.id) }
         ensureSelection(in: spaces[index].id)
     }

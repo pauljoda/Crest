@@ -8,6 +8,7 @@ struct BrowserTabPlacementPlan: Equatable, Sendable {
         to requestedPlacement: TabPlacement? = nil,
         folderID requestedFolderID: FolderID? = nil,
         before destinationTabID: TabID? = nil,
+        requestedIndex: Int? = nil,
         in destinationSpace: BrowserSpace,
         among destinationTabs: [BrowserTab]
     ) {
@@ -29,10 +30,12 @@ struct BrowserTabPlacementPlan: Equatable, Sendable {
         guard destinationSection.hasCapacity(in: destinationTabs) else { return nil }
 
         self.destinationSection = destinationSection
-        insertionIndex = destinationSection.insertionIndex(
-            before: destinationTabID,
-            in: destinationTabs
-        )
+        insertionIndex =
+            requestedIndex.map { min(max($0, 0), destinationTabs.count) }
+            ?? destinationSection.insertionIndex(
+                before: destinationTabID,
+                in: destinationTabs
+            )
     }
 
     var placement: TabPlacement {
@@ -61,9 +64,11 @@ struct BrowserTabPlacementPlan: Equatable, Sendable {
         for placement: TabPlacement,
         in destinationSpace: BrowserSpace
     ) -> FolderID? {
-        guard placement == .saved,
+        guard placement != .pinned,
             let requestedFolderID,
-            destinationSpace.folders.contains(where: { $0.id == requestedFolderID })
+            destinationSpace.folders.contains(where: {
+                $0.id == requestedFolderID && $0.location.tabPlacement == placement
+            })
         else {
             return nil
         }

@@ -61,7 +61,7 @@ enum BrowserPerformanceSoakFixture {
     ) -> BrowserSession? {
         let spaces = (1...6).compactMap { spaceIndex -> BrowserSpace? in
             let folders = (1...8).map { folderIndex in
-                SavedFolder(title: "Collection \(spaceIndex)-\(folderIndex)")
+                BrowserFolder(title: "Collection \(spaceIndex)-\(folderIndex)")
             }
             let tabs = (1...tabCount).compactMap { tabIndex -> BrowserTab? in
                 let placement: TabPlacement =

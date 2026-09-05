@@ -260,6 +260,27 @@ final class MobileBrowserPageStore:
         return page
     }
 
+    func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
+        guard let space = session.space(id: spaceID), let tab = space.tabs.first(where: { $0.id == tabID }),
+            !spacesReleasingData.contains(spaceID), !spacesDeletingData.contains(spaceID)
+        else { return }
+        if let existing = pagesByTabID[tabID], existing.spaceID == spaceID, existing.profileID == space.profile.id {
+            existing.updateNavigationContext(
+                tab: tab,
+                automaticallyOpensPeek: BrowserLinkPreferenceStore.shared.preferences.automaticallyOpensPeek)
+            stampPreparedPageIfNeeded(tabID, at: .now)
+            return
+        }
+        if let mismatched = pagesByTabID.removeValue(forKey: tabID) {
+            tabStateArchive?.removeState(profileID: mismatched.profileID, tabID: tabID)
+            mismatched.prepareForSpaceDeletion()
+            inactiveSinceByTabID[tabID] = nil
+        }
+        pagesByTabID[tabID] = makeResidentPage(for: tab, in: space, loadsInitialURL: false)
+        stampPreparedPageIfNeeded(tabID, at: .now)
+        residencyRevision &+= 1
+    }
+
     func prepareExtensionSelection(session: BrowserSession) {
         _ = prepareSelectedPage(in: session, at: .now)
     }

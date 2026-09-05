@@ -354,7 +354,7 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
     private func reviewedTabs(
         from review: BrowserImportSpaceReview,
         overflow: Set<TabID>,
-        folders: inout [SavedFolder],
+        folders: inout [BrowserFolder],
         folderIDMapping: [FolderID: FolderID]
     ) -> [BrowserTab] {
         var overflowFolderID = folders.first {
@@ -369,7 +369,7 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
                 if overflowFolderID == nil,
                     folders.count < BrowserSpace.maximumFolderCount
                 {
-                    let folder = SavedFolder(
+                    let folder = BrowserFolder(
                         title: "Imported Pinned Tabs",
                         symbol: "pin.slash"
                     )
@@ -390,7 +390,7 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
 
     private func requiredSourceFolders(
         for review: BrowserImportSpaceReview
-    ) -> [SavedFolder] {
+    ) -> [BrowserFolder] {
         let foldersByID = Dictionary(
             uniqueKeysWithValues: review.sourceSpace.folders.map { ($0.id, $0) }
         )
@@ -413,8 +413,8 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
     }
 
     private func integrateRequiredFolders(
-        from sourceFolders: [SavedFolder],
-        into destinationFolders: inout [SavedFolder]
+        from sourceFolders: [BrowserFolder],
+        into destinationFolders: inout [BrowserFolder]
     ) -> [FolderID: FolderID] {
         var folderIDMapping: [FolderID: FolderID] = [:]
         for sourceFolder in sourceFolders {
@@ -423,6 +423,7 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
             }
             if let match = destinationFolders.first(where: {
                 $0.parentID == destinationParentID
+                    && $0.location == sourceFolder.location
                     && Self.normalizedSpaceName($0.title)
                         == Self.normalizedSpaceName(sourceFolder.title)
             }) {
@@ -438,9 +439,10 @@ struct BrowserImportReviewPlan: Codable, Equatable, Sendable {
                     destinationID = FolderID()
                 } while destinationFolders.contains(where: { $0.id == destinationID })
             }
-            let folder = SavedFolder(
+            let folder = BrowserFolder(
                 id: destinationID,
                 title: sourceFolder.title,
+                location: sourceFolder.location,
                 symbol: sourceFolder.symbol,
                 color: sourceFolder.color,
                 parentID: destinationParentID

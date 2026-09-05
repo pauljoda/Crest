@@ -1003,6 +1003,7 @@ extension BrowserExtensionTabWindowCoordinator {
         selected: Bool,
         completionHandler: @escaping ((any WKWebExtensionTab)?, Error?) -> Void
     ) {
+        let url = BrowserExtensionNewTabURL.resolve(url)
         guard let browser,
             let tabID = browser.openExtensionTab(
                 url: url,
@@ -1016,17 +1017,21 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
         let session = browser.session
-        // Give WebKit the selected tab's web view before reporting the tab, then
-        // begin its navigation only after that report. Extension resources and
-        // runtime APIs are served through this exact three-phase association.
+        // Prepare every requested tab before reporting it, then navigate after
+        // the announcement. Inactive extension tabs also run immediately: an
+        // extension may use one for migration or other background page work.
         if selected {
             pageProvider?.prepareExtensionSelection(session: session)
+        } else {
+            pageProvider?.prepareExtensionTab(for: tabID, in: spaceID, session: session)
         }
         reconcile(session: session)
         let openedTab = adapter(for: tabID, in: spaceID)
         completionHandler(openedTab, nil)
         if selected {
             pageProvider?.select(session: browser.session)
+        } else if let url {
+            pageProvider?.loadExtensionURL(url, for: tabID, in: spaceID, session: browser.session)
         }
     }
 }
@@ -1311,7 +1316,7 @@ extension BrowserExtensionTabWindowCoordinator {
                 _ = browser?.activateExtensionTab(adapter.tabID, in: spaceID)
             }
         }
-        let urls = configuration.tabURLs
+        let urls = configuration.tabURLs.map(BrowserExtensionNewTabURL.resolve)
         if urls.isEmpty, configuration.tabs.isEmpty {
             _ = browser?.openExtensionTab(
                 url: nil,

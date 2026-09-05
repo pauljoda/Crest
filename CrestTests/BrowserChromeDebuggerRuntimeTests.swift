@@ -275,7 +275,7 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
 
     func testUnsupportedEvaluationConstraintsRejectBeforeExecutingTheExpression() async throws {
         try await withRuntime { runtime, _ in
-            for parameter in ["throwOnSideEffect", "replMode", "disableBreaks"] {
+            for parameter in ["throwOnSideEffect", "disableBreaks"] {
                 do {
                     _ = try await runtime.execute(
                         "Runtime.evaluate",
@@ -291,6 +291,35 @@ final class BrowserChromeDebuggerRuntimeTests: XCTestCase {
                     "expression": "typeof globalThis.crestUnexpectedEvaluation", "returnByValue": true,
                 ])
             XCTAssertEqual((value["result"] as? [String: Any])?["value"] as? String, "undefined")
+        }
+    }
+
+    func testREPLModeRunsOrdinaryBlockExpressionsWithAVendorTimeout() async throws {
+        try await withRuntime { runtime, _ in
+            let value = try await runtime.execute(
+                "Runtime.evaluate",
+                parameters: [
+                    "expression": "{document.title\n}", "replMode": true,
+                    "awaitPromise": true, "returnByValue": true, "timeout": 40_000,
+                ])
+            XCTAssertEqual((value["result"] as? [String: Any])?["value"] as? String, "Crest runtime test")
+        }
+    }
+
+    func testEvaluationTimeoutBoundsAnUnsettledPromiseAndReportsEngineLimitation() async throws {
+        try await withRuntime { runtime, _ in
+            do {
+                _ = try await runtime.execute(
+                    "Runtime.evaluate",
+                    parameters: [
+                        "expression": "new Promise(() => {})", "awaitPromise": true, "timeout": 100,
+                    ])
+                XCTFail("An unsettled promise must time out.")
+            } catch {
+                XCTAssertTrue(String(describing: error).contains("WebKit cannot terminate"))
+            }
+            let value = try await runtime.execute("Runtime.evaluate", parameters: ["expression": "6 * 7"])
+            XCTAssertEqual((value["result"] as? [String: Any])?["value"] as? Int, 42)
         }
     }
 

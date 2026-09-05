@@ -9,13 +9,18 @@ struct BrowserTabDragPreview: View {
     var targetShape = BrowserTabDragPreviewShape.pinnedTile
     let progress: CGFloat
     var rowWidth = BrowserTabDragPreviewLayout.rowSize.width
+    var pinnedSize = BrowserTabDragPreviewLayout.pinnedSize
+    var isSelected = false
+    var isLoaded = true
+    var rowMetrics = BrowserSidebarTabRowMetrics.pointer
 
     var body: some View {
         let metrics = BrowserTabDragPreviewLayout.metrics(
             from: .row,
             to: targetShape,
             progress: progress,
-            rowWidth: rowWidth
+            rowWidth: rowWidth,
+            pinnedSize: pinnedSize
         )
         let shape = RoundedRectangle(
             cornerRadius: metrics.cornerRadius,
@@ -33,21 +38,19 @@ struct BrowserTabDragPreview: View {
                     shape.strokeBorder(CrestColor.subtleBorder, lineWidth: 0.5)
                 }
 
-            TabFaviconView(tab: tab, profileID: profileID, size: 20)
-                .position(
-                    x: 22 + ((metrics.width / 2) - 22) * metrics.contentCentering,
-                    y: metrics.height / 2
-                )
-                .opacity(rowOpacity)
-
-            Text(tab.displayTitle)
-                .lineLimit(1)
-                .foregroundStyle(.primary)
-                .opacity(metrics.titleOpacity * rowOpacity)
-                .padding(.leading, 42)
-                .padding(.trailing, 12)
-                .frame(width: metrics.width, alignment: .leading)
-                .allowsHitTesting(false)
+            Button {
+            } label: {
+                BrowserSidebarTabLabel(
+                    tab: tab, profileID: profileID, isSelected: isSelected,
+                    isLoaded: isLoaded, metrics: rowMetrics,
+                    leadingInset: rowMetrics.surfaceHorizontalInset + rowMetrics.contentLeadingInset,
+                    titleOpacity: metrics.titleOpacity,
+                    iconOffset: ((metrics.width / 2) - rowIconCenter) * metrics.contentCentering)
+            }
+            .buttonStyle(.plain)
+            .frame(width: metrics.width, height: metrics.height)
+            .opacity(rowOpacity)
+            .allowsHitTesting(false)
 
             if metrics.cardContentWeight > 0 {
                 cardContent
@@ -62,6 +65,10 @@ struct BrowserTabDragPreview: View {
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.displayTitle)
+    }
+
+    private var rowIconCenter: CGFloat {
+        rowMetrics.surfaceHorizontalInset + rowMetrics.contentLeadingInset + (rowMetrics.faviconSlot?.width ?? 18) / 2
     }
 
     /// The page-shaped drop preview: what the tab looks like once it is a card.

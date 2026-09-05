@@ -9,26 +9,26 @@ enum BrowserSyncPayload: Codable, Equatable, Sendable {
 
     var recordID: BrowserSyncRecordID {
         switch self {
-        case let .space(space):
+        case .space(let space):
             BrowserSyncRecordID(kind: .space, value: space.id.rawValue)
-        case let .folder(folder):
+        case .folder(let folder):
             BrowserSyncRecordID(kind: .folder, value: folder.id.rawValue)
-        case let .tab(tab):
+        case .tab(let tab):
             BrowserSyncRecordID(kind: .tab, value: tab.id.rawValue)
-        case let .history(history):
+        case .history(let history):
             BrowserSyncRecordID(kind: .history, value: history.id)
-        case let .archive(archive):
+        case .archive(let archive):
             BrowserSyncRecordID(kind: .archive, value: archive.id.rawValue)
         }
     }
 
     var spaceID: SpaceID {
         switch self {
-        case let .space(space): space.id
-        case let .folder(folder): folder.spaceID
-        case let .tab(tab): tab.spaceID
-        case let .history(history): history.spaceID
-        case let .archive(archive): archive.spaceID
+        case .space(let space): space.id
+        case .folder(let folder): folder.spaceID
+        case .tab(let tab): tab.spaceID
+        case .history(let history): history.spaceID
+        case .archive(let archive): archive.spaceID
         }
     }
 
@@ -57,19 +57,19 @@ enum BrowserSyncPayload: Codable, Equatable, Sendable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case let .space(value):
+        case .space(let value):
             try container.encode(BrowserSyncRecordKind.space, forKey: .type)
             try container.encode(value, forKey: .value)
-        case let .folder(value):
+        case .folder(let value):
             try container.encode(BrowserSyncRecordKind.folder, forKey: .type)
             try container.encode(value, forKey: .value)
-        case let .tab(value):
+        case .tab(let value):
             try container.encode(BrowserSyncRecordKind.tab, forKey: .type)
             try container.encode(value, forKey: .value)
-        case let .history(value):
+        case .history(let value):
             try container.encode(BrowserSyncRecordKind.history, forKey: .type)
             try container.encode(value, forKey: .value)
-        case let .archive(value):
+        case .archive(let value):
             try container.encode(BrowserSyncRecordKind.archive, forKey: .type)
             try container.encode(value, forKey: .value)
         }

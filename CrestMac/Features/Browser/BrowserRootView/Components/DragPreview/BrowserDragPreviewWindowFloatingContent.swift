@@ -9,15 +9,19 @@ import SwiftUI
 /// card, and only the art differs. Each case is that feature's own preview,
 /// unchanged by being drawn somewhere else.
 struct BrowserDragPreviewWindowFloatingContent: View {
-    let content: BrowserDragPreviewWindowContent
+    let presentation: BrowserDragPreviewWindowPresentation
 
     var body: some View {
-        switch content {
+        switch presentation.content {
         case .sidebarLift(let sidebar):
             BrowserSidebarLiftFloatingPreview(
                 subject: sidebar.subject,
                 lift: sidebar.lift,
-                reduceMotion: sidebar.reduceMotion
+                reduceMotion: sidebar.reduceMotion,
+                onLandingComplete: presentation.onSidebarLandingComplete,
+                onLandingArrived: presentation.onSidebarLandingArrived,
+                selectedTabID: sidebar.selectedTabID,
+                loadedTabIDs: sidebar.loadedTabIDs
             )
         case .splitCardLift(let card):
             BrowserSplitCardLiftFloatingPreview(content: card)

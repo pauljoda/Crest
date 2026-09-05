@@ -907,8 +907,8 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
     @MainActor
     func testAFiledTabsJoinCandidateStaysInsideItsOwnFolder() throws {
-        let home = SavedFolder(title: "Home", symbol: "folder")
-        let other = SavedFolder(title: "Other", symbol: "folder")
+        let home = BrowserFolder(title: "Home", symbol: "folder")
+        let other = BrowserFolder(title: "Other", symbol: "folder")
         let head = makeTab("Head", placement: .saved, folderID: home.id)
         let interloper = makeTab("Interloper", placement: .saved, folderID: other.id)
         let sibling = makeTab("Sibling", placement: .saved, folderID: home.id)
@@ -1274,7 +1274,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
     @MainActor
     private func makeStore(
-        folders: [SavedFolder] = [],
+        folders: [BrowserFolder] = [],
         tabs: [BrowserTab],
         selectedTabID: TabID?
     ) -> BrowserStore {
@@ -1291,7 +1291,7 @@ final class BrowserSplitGroupSessionTests: XCTestCase {
 
     private func makeSpace(
         name: String = "Work",
-        folders: [SavedFolder] = [],
+        folders: [BrowserFolder] = [],
         tabs: [BrowserTab],
         selectedTabID: TabID?
     ) -> BrowserSpace {

@@ -62,7 +62,7 @@ enum BrowserSidebarInteractionPolicy {
     /// sit in the same column as the rows it opens onto.
     static func savedFolderHeaderMetrics(
         _ capabilities: BrowserInteractionCapabilities
-    ) -> BrowserSavedFolderHeaderMetrics {
+    ) -> BrowserFolderHeaderMetrics {
         capabilities.supportsTouch ? .touch : .pointer
     }
 

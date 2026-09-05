@@ -2,13 +2,15 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserFolderDragState
+    var memberTabIDs: [TabID]? = nil
     var reorder: BrowserSidebarReorderContext?
 
     @State private var sessionToken: BrowserDragSessionToken?
+    @Environment(\.colorScheme) private var colorScheme
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -18,30 +20,45 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
             let item = BrowserFolderDragItem(
                 folderID: folder.id,
                 spaceID: spaceID,
-                profileID: profileID
+                profileID: profileID,
+                memberTabIDs: memberTabIDs
             )
             content
                 .browserSidebarReorderSource(
                     item: .folder(item),
-                    section: .folders(parentID: folder.parentID),
-                    reorder: reorder
+                    section: folder.reorderSection,
+                    reorder: reorder,
+                    registersContainer: false
                 )
-                .onDrag {
+                .browserMobileDraggable {
                     reorder.state.stage(
                         item: .folder(item),
-                        section: .folders(parentID: folder.parentID)
+                        section: folder.reorderSection
                     )
                     let payload = (try? JSONEncoder().encode(item)) ?? Data()
-                    return NSItemProvider(
+                    let provider = NSItemProvider(
                         item: payload as NSData,
                         typeIdentifier: UTType.json.identifier
                     )
-                } preview: {
-                    BrowserFolderDragPreview(folder: folder)
+                    let token = reorder.state.sessionToken
+                    return BrowserMobileDragSession(provider: provider) {
+                        guard let token else { return }
+                        reorder.state.cancel(session: token)
+                    }
+                } preview: { _ in
+                    BrowserFolderDragPreview(
+                        folder: folder,
+                        sourceHeight: reorder.state.frame(ofRow: .folder(folder.id))?.height
+                            ?? BrowserFolderDragPreviewLayout.height,
+                        rows: reorder.browser.session.space(id: spaceID).map {
+                            BrowserFolderDragPreviewRow.resolve(
+                                reorder.state.folderPreviewRows(for: .folder(item)),
+                                in: $0, rootFolderID: folder.id)
+                        } ?? [],
+                        profileID: profileID
+                    )
+                    .environment(\.colorScheme, colorScheme)
                 }
-                .modifier(
-                    BrowserMobileReorderSessionModifier(state: reorder.state)
-                )
         } else {
             legacyDraggable(content)
         }
@@ -55,7 +72,8 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                 let item = BrowserFolderDragItem(
                     folderID: folder.id,
                     spaceID: spaceID,
-                    profileID: profileID
+                    profileID: profileID,
+                    memberTabIDs: memberTabIDs
                 )
                 sessionToken = dragState.begin(item: item)
                 let data = (try? JSONEncoder().encode(item)) ?? Data()
@@ -65,6 +83,7 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                 )
             } preview: {
                 BrowserFolderDragPreview(folder: folder)
+                    .environment(\.colorScheme, colorScheme)
             }
 
         #if compiler(>=6.4)

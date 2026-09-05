@@ -20,10 +20,6 @@ struct PinnedTabGridContent: View {
     var capabilities = BrowserInteractionCapabilities()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Read here rather than inside the tile: a tile is one button, so only the
-    /// value written at this level is ever spoken. See
-    /// `BrowserTabSidePanelAccessibility`.
-    @Environment(\.browserTabSidePanel) private var sidePanel
     @State private var isTrailingDropTargeted = false
     @State private var renamingAssignment: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
@@ -59,7 +55,7 @@ struct PinnedTabGridContent: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: CrestSpacing.small) {
+        BrowserPinnedTabSlotLayout(projection: projection) {
             ForEach(tabs) { tab in
                 let runtimeAssignment = runtimeAssignment(for: tab.id)
                 let loaded = isLoaded(runtimeAssignment)
@@ -93,15 +89,7 @@ struct PinnedTabGridContent: View {
                     )
                 )
                 .accessibilityLabel(tab.displayTitle)
-                .accessibilityValue(
-                    BrowserTabSidePanelAccessibility.value(
-                        BrowserChromeAccessibility.tabValue(isLoaded: loaded),
-                        panelTitle: sidePanel?.sidePanelPresentation(
-                            forTab: tab.id,
-                            in: assignment.spaceID
-                        )?.title
-                    )
-                )
+                .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: loaded))
                 .accessibilityAddTraits(tab.id == selectedTabID ? .isSelected : [])
                 .help(tab.displayTitle)
                 .simultaneousGesture(
@@ -151,7 +139,20 @@ struct PinnedTabGridContent: View {
                 )
                 .crestCollectionItemTransition()
             }
+            RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
+                .fill(.primary.opacity(0.035))
+                .overlay {
+                    RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
+                        .strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
+                }
+                .opacity(projection.insertionIndex == nil ? 0 : 1)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
+        .animation(
+            BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+            value: projection
+        )
         .crestCollectionMotion(ids: tabs.map(\.id))
         .overlay(alignment: .trailing) {
             if moveTab != nil, let dragState, dragState.item != nil {
@@ -212,11 +213,9 @@ struct PinnedTabGridContent: View {
         )
     }
 
-    private var columns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(), spacing: CrestSpacing.small),
-            count: PinnedTabGridLayout.columnCount(for: tabs.count)
-        )
+    private var projection: BrowserPinnedTabReorderLayout {
+        let ids = tabs.map { BrowserSidebarReorderItemID.tab($0.id) }
+        return reorderContext?.state.pinnedLayout(ids: ids, in: assignment) ?? BrowserPinnedTabReorderLayout(ids: ids)
     }
 
     private func dismissFromMiddleClick(

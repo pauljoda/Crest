@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct BrowserFolderDragSourceModifier: ViewModifier {
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserFolderDragState
+    var memberTabIDs: [TabID]? = nil
     var reorder: BrowserSidebarReorderContext?
     let isEnabled: Bool
 
@@ -16,7 +17,8 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
             let item = BrowserFolderDragItem(
                 folderID: folder.id,
                 spaceID: spaceID,
-                profileID: profileID
+                profileID: profileID,
+                memberTabIDs: memberTabIDs
             )
             let isDragging =
                 reorder == nil
@@ -56,6 +58,7 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
                         profileID: profileID,
                         spaceID: spaceID,
                         dragState: dragState,
+                        memberTabIDs: memberTabIDs,
                         reorder: reorder
                     )
                 )

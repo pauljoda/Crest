@@ -8,7 +8,7 @@ enum BrowserShowcaseSessionFactory {
     }
 
     private static func makeWorkSpace() -> BrowserSpace {
-        let folder = SavedFolder(title: "Launch Atlas", symbol: "folder.fill")
+        let folder = BrowserFolder(title: "Launch Atlas", symbol: "folder.fill")
         let splitGroupID = SplitGroupID()
         let secondSplitGroupID = SplitGroupID()
         let tabs = [
@@ -108,7 +108,7 @@ enum BrowserShowcaseSessionFactory {
     }
 
     private static func makePersonalSpace() -> BrowserSpace {
-        let folder = SavedFolder(title: "Weekend Plans", symbol: "folder.fill")
+        let folder = BrowserFolder(title: "Weekend Plans", symbol: "folder.fill")
         let tabs = [
             tab("Home", page(.personal, title: "Home", activeCard: 0), "🏡", .pinned),
             tab("Trips", page(.personal, title: "Trips", activeCard: 1), "🗺️", .pinned),

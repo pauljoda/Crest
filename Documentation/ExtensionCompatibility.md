@@ -487,10 +487,14 @@ claude.ai's scripts was refused under the extension's policy.
 `BrowserExtensionHostedPageConfigurationPolicy` clears the mode on the
 configuration copy Crest receives for the extension documents it hosts — the
 side panel, offscreen documents, and extension pages opened as tabs — so each
-document in those views is governed by its own policy, as on a web page. The
-trade-off, accepted for extensions within their Space, is that WebKit no longer
-enforces the manifest's Manifest V3 script restrictions on the extension's own
-page inside those views. WebKit-owned action popups are unaffected.
+document in those views is governed by its own policy, as on a web page.
+WebKit's `WebExtensionURLSchemeHandlerCocoa.mm` still supplies the manifest's
+`Content-Security-Policy` response header for extension resources. A native MV3
+fixture verifies that packaged scripts run, inline scripts and `eval` remain
+blocked, and the embedded website's scripts run under its own policy. The
+mode's additional source-list filtering is absent, however; this mechanism is
+not an MV3 manifest-policy validator for a package whose authored policy Chrome
+would reject. WebKit-owned action popups are unaffected.
 
 ### Extension-created popup windows
 
@@ -535,55 +539,46 @@ frame's document makes afterwards, because its site-for-cookies stays the top
 document. Chrome does not have this problem: an extension page holding host
 permission for a site is treated as first-party for that site's cookies.
 
-Crest adopts the same rule, and pays for it in the one currency it owns. When
-one of an extension's own pages frames a site the extension has host permission
-for, Crest rewrites that site's cookies **in that Space's website data store**
-to drop the `SameSite` attribute. Name, value, domain, path, expiry, `Secure`,
-`HttpOnly`, and port are all preserved; only `SameSite` is removed. WebKit does
-not apply Chromium's Lax-by-default, so a cookie carrying no `SameSite`
-attribute is simply sent, which is why removing the attribute is enough and
-nothing has to claim `SameSite=None`.
+Crest gives side panels and offscreen documents a separate hosted website data
+store for their Space. Only the hosted cookie copies have their `SameSite`
+restrictions relaxed. Opening a panel no longer removes cross-site protection
+from the normal browsing jar.
 
-The scope is deliberately narrow:
+A host becomes eligible only after an embedded HTTP(S) navigation and a native
+`WKWebExtensionContext.hasAccessToURL:` check. The coordinator copies the site's
+normal cookies into the hosted jar before allowing that navigation. It observes
+both jars so login refreshes and logout propagate. When a hosted refresh changes
+a cookie value, the normal copy retains its existing SameSite protection; a
+normal first-party response can still change its own policy. A normal-tab
+change wins if both jars change between synchronization passes. Names, values,
+expiry, Secure and HttpOnly are preserved, and relative Max-Age is not rebased.
 
-- **That Space only.** The jar is resolved from the Space's own extension
-  controller — the same `WKWebsiteDataStore` its extension web views were
-  configured with — never rebuilt from the profile. Other Spaces are untouched.
-- **Only hosts the extension has permission for.** The check is
-  `WKWebExtensionContext.hasAccessToURL:` against the granted match patterns,
-  which is the grant the user made at install.
-- **Only after one of its pages frames the site.** The trigger is a subframe
-  navigation to an `http(s)` URL from a Crest-owned extension document. A
-  main-frame load of the extension page itself, a non-web frame, and a host
-  with no permission all rewrite nothing.
-- **Enforcement lasts as long as the extension is loaded in that Space.** A
-  login response re-sets the same cookies as `Lax`, so a cookie-store observer
-  re-applies the rewrite. It is removed once no client in the Space still lists
-  the host.
-- **Nothing is persisted.** A fresh launch relaxes nothing until a frame loads
-  again. Cookies already rewritten stay rewritten — Crest does not invent a
-  `SameSite` value the site never sent — but the re-application stops.
+Hosted storage has a separate identifier derived from the Space's browsing
+profile. It is removed with that profile and included when clearing a site's
+data. Ephemeral profiles get ephemeral hosted storage. The eligible-host list
+is held only while the extension is loaded and still holds the host permission;
+revocation removes that host from pending and future synchronization. Startup
+copies from the normal jar again when a permitted frame first loads. Uninstall
+also clears that extension origin's hosted data without deleting the embedded
+website's own session or another extension's data.
 
-The trade-off is real and the user accepts it at install: within that Space,
-those cookies no longer carry the cross-site request protection `SameSite` gave
-them, so any cross-site request in that Space that reaches the host will send
-them. It is bounded by the Space, by the host permission the user granted, and
-by the extension staying loaded, but it is not free. Extensions already have
-full access within their Space, which is what makes the bound the meaningful
-one.
+The extension configuration's inherited `_relatedWebView` must be cleared
+before assigning the separate store: WebKit requires related views to share a
+store. The native extension controller is retained, so owner runtime messaging
+and `chrome.storage` still use the extension context. Web-platform storage such
+as localStorage and IndexedDB belongs to the hosted store; it is not shared
+with background documents using the normal store. This differs from Chrome and
+must be considered for packages relying on those cross-document stores.
 
-Crest owns the navigation delegate for the side panel document and the
-offscreen document, and both apply the rule. It does **not** own the action
-popup's web view: WebKit creates `WKWebExtensionAction.popupWebView` and is its
-own navigation delegate, so there is no Crest seam there and a site framed by a
-popup is still subject to WebCore's decision.
+The action popup remains owned and configured by WebKit. Crest does not replace
+its delegate or data store, so framed sites in native popups still follow
+WebKit's cookie behavior.
 
-`BrowserExtensionCookieAccessPolicyTests`,
-`BrowserExtensionCookieAccessStoreTests`,
-`BrowserExtensionCookieJarCoordinatorTests`, and
-`BrowserExtensionFramedSiteCookieAccessTests` pin the rewrite, the per-Space
-bookkeeping, the live `WKHTTPCookieStore` behavior including the observer, and
-the permission gate.
+`BrowserExtensionCookieJarCoordinatorTests` covers normal-jar preservation,
+hosted session refreshes, both logout directions, normal-change precedence,
+observer convergence, and host isolation. The content-isolation fixture also
+loads an extension document in an independent store and reaches its owning
+background while excluding a real foreign extension from its embedded site.
 
 ### Silent sign-in — `chrome.identity`
 

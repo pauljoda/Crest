@@ -111,8 +111,7 @@ struct CrestApp: App {
         extensionControllerPool.setSidebarService(extensionSidebar) {
             NSApp.userInterfaceLayoutDirection == .rightToLeft ? "left" : "right"
         }
-        // Groups are session-local in Chrome too — nothing here is persisted.
-        let extensionTabGroups = BrowserExtensionTabGroupStore()
+        let extensionTabGroups = browser.extensionTabGroups
         extensionControllerPool.setTabGroupService(extensionTabGroups)
         // WebKit refuses a `modifyHeaders` rule that names a header outside
         // its accepted list, so Crest holds that half of the rule instead.
@@ -127,18 +126,17 @@ struct CrestApp: App {
             persistence: declarativeNetRequestPersistence
         )
         extensionControllerPool.setDeclarativeNetRequestService(extensionDeclarativeNetRequest)
-        // WebKit decides `SameSite` from the top document, so a site framed by
-        // an extension page is cross-site to it and its session cookies are
-        // withheld. Crest drops the attribute for hosts the extension has
-        // permission for, in that Space's jar only. Nothing is persisted: a
-        // launch that never opens the page again rewrites nothing.
-        let extensionCookieAccess = BrowserExtensionCookieAccessStore(
-            cookieJar: BrowserExtensionCookieJarCoordinator {
-                [weak extensionControllerPool] spaceID in
-                extensionControllerPool?.extensionWebsiteDataStore(in: spaceID)
-            }
-        )
+        // Embedded sign-in uses a separate jar. Refreshes and logout remain
+        // synchronized while normal tabs keep their SameSite protection.
+        let extensionCookieJar = BrowserExtensionCookieJarCoordinator {
+            [weak extensionControllerPool] spaceID in
+            extensionControllerPool?.extensionWebsiteDataStore(in: spaceID)
+        }
+        let extensionCookieAccess = BrowserExtensionCookieAccessStore(cookieJar: extensionCookieJar)
         extensionControllerPool.setCookieAccessService(extensionCookieAccess)
+        extensionControllerPool.setHostedWebsiteDataStoreProvider { [extensionCookieJar] spaceID in
+            extensionCookieJar.hostedWebsiteDataStore(in: spaceID)
+        }
         // `chrome.identity.launchWebAuthFlow` runs in a Crest-owned web view
         // on the Space's own data store, so a provider the person is already
         // signed in to answers a `prompt=none` re-authorization silently and

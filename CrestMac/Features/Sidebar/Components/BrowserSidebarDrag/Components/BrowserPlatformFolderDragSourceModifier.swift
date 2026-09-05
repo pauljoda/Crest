@@ -1,17 +1,19 @@
 import SwiftUI
 
 struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let profileID: UUID
     let spaceID: SpaceID
     let dragState: BrowserFolderDragState
+    var memberTabIDs: [TabID]? = nil
     var reorder: BrowserSidebarReorderContext?
 
     private var item: BrowserFolderDragItem {
         BrowserFolderDragItem(
             folderID: folder.id,
             spaceID: spaceID,
-            profileID: profileID
+            profileID: profileID,
+            memberTabIDs: memberTabIDs
         )
     }
 
@@ -24,8 +26,9 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
             content
                 .browserSidebarReorderSource(
                     item: .folder(item),
-                    section: .folders(parentID: folder.parentID),
-                    reorder: reorder
+                    section: folder.reorderSection,
+                    reorder: reorder,
+                    registersContainer: false
                 )
         } else {
             // No reorder context: previews and fixtures render a static row.

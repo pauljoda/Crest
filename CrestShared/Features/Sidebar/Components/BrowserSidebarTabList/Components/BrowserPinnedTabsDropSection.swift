@@ -25,39 +25,30 @@ struct BrowserPinnedTabsDropSection: View {
 
     var body: some View {
         Group {
-            if tabSections.pinnedTabs.isEmpty {
-                // A grid nobody has filled still takes a drop, and without a
-                // band of its own it has no region to aim at and nowhere to
-                // draw its insertion line.
-                Color.clear
-                    .frame(height: metrics.sectionEndBandHeight)
-                    .contentShape(.rect)
-                    .accessibilityHidden(true)
-            } else {
-                PinnedTabGrid(
-                    tabs: tabSections.pinnedTabs,
-                    assignment: assignment,
-                    selectedTabID: space.selectedTabID,
-                    select: { runtimeAssignment in
-                        guard isCurrentAndUnlocked else { return }
-                        select(runtimeAssignment.tabID)
-                    },
-                    moveTab: move,
-                    dragState: browser.tabDragState,
-                    browser: browser,
-                    spaceAccess: spaceAccess,
-                    isLoaded: pageAccess.containsResidentPageMatching,
-                    unload: { runtimeAssignment in
-                        pageAccess.unloadPage(runtimeAssignment.tabID, assignment)
-                    },
-                    pullNewIcon: { pullNewIcon($0.tabID) },
-                    restoreSavedLocation: { restoreSavedLocation($0.tabID) },
-                    siteThemeAccent: pageAccess.siteThemeIconAccent,
-                    promotionNamespace: promotionNamespace,
-                    capabilities: capabilities
-                )
-            }
+            PinnedTabGrid(
+                tabs: tabSections.pinnedTabs,
+                assignment: assignment,
+                selectedTabID: space.selectedTabID,
+                select: { runtimeAssignment in
+                    guard isCurrentAndUnlocked else { return }
+                    select(runtimeAssignment.tabID)
+                },
+                moveTab: move,
+                dragState: browser.tabDragState,
+                browser: browser,
+                spaceAccess: spaceAccess,
+                isLoaded: pageAccess.containsResidentPageMatching,
+                unload: { runtimeAssignment in
+                    pageAccess.unloadPage(runtimeAssignment.tabID, assignment)
+                },
+                pullNewIcon: { pullNewIcon($0.tabID) },
+                restoreSavedLocation: { restoreSavedLocation($0.tabID) },
+                siteThemeAccent: pageAccess.siteThemeIconAccent,
+                promotionNamespace: promotionNamespace,
+                capabilities: capabilities
+            )
         }
+        .frame(minHeight: metrics.sectionEndBandHeight)
         .contentShape(.rect)
         .browserSidebarReorderSectionIndicator(
             .tabs(placement: .pinned, folderID: nil),
@@ -68,7 +59,8 @@ struct BrowserPinnedTabsDropSection: View {
         // populated grid becomes impossible.
         .browserSidebarReorderZone(
             .section(.tabs(placement: .pinned, folderID: nil)),
-            state: browser.sidebarReorderState
+            state: browser.sidebarReorderState,
+            minimumHeight: metrics.sectionEndBandHeight
         )
         .accessibilityHint("Drop a tab here to pin it")
     }

@@ -11,7 +11,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
     var symbol: String
     var accent: SpaceAccent
     var branding: BrowserSpaceBranding
-    var folders: [SavedFolder]
+    var folders: [BrowserFolder]
     var tabs: [BrowserTab]
     var splitGroups: [BrowserSplitGroupMetadata]
     var archivedTabs: [ArchivedTab]
@@ -30,7 +30,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
         symbol: String,
         accent: SpaceAccent,
         branding: BrowserSpaceBranding? = nil,
-        folders: [SavedFolder],
+        folders: [BrowserFolder],
         tabs: [BrowserTab],
         splitGroups: [BrowserSplitGroupMetadata] = [],
         archivedTabs: [ArchivedTab] = [],
@@ -129,7 +129,7 @@ struct BrowserSpace: Codable, Equatable, Identifiable, Sendable {
                 BrowserSpaceBranding.self,
                 forKey: .branding
             ) ?? .legacy(accent: accent, symbol: symbol)
-        folders = try container.decode([SavedFolder].self, forKey: .folders)
+        folders = try container.decode([BrowserFolder].self, forKey: .folders)
         tabs = try container.decode([BrowserTab].self, forKey: .tabs)
         splitGroups = BrowserSplitGroupMetadata.normalized(
             try container.decodeIfPresent(

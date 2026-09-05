@@ -84,6 +84,21 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                     dropTargetHeight: interaction.dropTargetHeight
                 )
             )
+            .browserSidebarReorderZone(
+                .currentTab(configuration.tab.id),
+                state: configuration.browser.sidebarReorderState,
+                isActive: configuration.tab.placement == .current
+                    && configuration.tab.folderID == nil
+                    && configuration.tab.splitGroupID == nil
+                    && configuration.isCurrentAndUnlocked
+            )
+            .overlay {
+                BrowserFolderNestDropHighlight(
+                    isTargeted: configuration.browser.sidebarReorderState.resolvedTarget?.kind
+                        == .createCurrentFolder(configuration.tab.id)
+                )
+                .allowsHitTesting(false)
+            }
             .crestCollectionItemTransition()
             .accessibilityElement(children: .contain)
             .contextMenu { organizationMenu }

@@ -20,6 +20,8 @@ struct BrowserCurrentTabsDropSection: View {
     let select: (TabID) -> Void
     let openNewTab: () -> Void
 
+    @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
+
     private var tabs: [BrowserTab] { tabSections.sidebarCurrentTabs }
 
     private var section: BrowserSidebarReorderSection {
@@ -83,7 +85,34 @@ struct BrowserCurrentTabsDropSection: View {
 
     @ViewBuilder
     private var rows: some View {
-        ForEach(items) { item in
+        let tree = space.folderTree
+        let ordering = BrowserSidebarFolderListItem.Projection(tabs: tabs, tree: tree, location: .current)
+        ForEach(ordering.items()) { item in
+            switch item {
+            case .folder(let node):
+                BrowserFolderGroup(
+                    node: node, tree: tree, ordering: ordering, tabSections: tabSections,
+                    spaceID: space.id, profileID: space.profile.id, selectedTabID: space.selectedTabID,
+                    browser: browser, pageAccess: pageAccess, spaceAccess: spaceAccess, capabilities: capabilities,
+                    promotionNamespace: promotionNamespace, pullNewIcon: pullNewIcon, select: select,
+                    isExpanded: Binding {
+                        !(browser.space(matching: assignment)?.folders.first { $0.id == node.id }?.isCollapsed ?? true)
+                    } set: { expanded in
+                        guard
+                            BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                                matching: assignment, in: browser, accessController: spaceAccess) != nil
+                        else { return }
+                        browser.setFolderCollapsed(node.id, matching: assignment, isCollapsed: !expanded)
+                    }, editingFolderRequest: $editingFolderRequest)
+            case .tabs(let row):
+                renderRows([row])
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func renderRows(_ rows: [BrowserSidebarTabListItem]) -> some View {
+        ForEach(rows) { item in
             switch item {
             case .tab(let tab):
                 let followingTabID = followingTabIDs[tab.id]

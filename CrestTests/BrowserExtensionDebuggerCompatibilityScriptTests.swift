@@ -5,6 +5,19 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionDebuggerCompatibilityScriptTests: XCTestCase {
+    func testAttachOmitsWithheldURLMetadataButKeepsTheNativeTabIndex() async throws {
+        let result = try await evaluate(
+            """
+            primaryRoot.tabs.get = async id => ({id, windowId: 12, index: 2, url: ''});
+            await debuggerNamespace.attach({tabId: 7}, "1.3");
+            return {requests};
+            """)
+        let request = try XCTUnwrap((result["requests"] as? [[String: Any]])?.first)
+        XCTAssertEqual(request["tabId"] as? Int, 7)
+        XCTAssertEqual(request["tabIndex"] as? Int, 2)
+        XCTAssertNil(request["url"], "An empty WebKit URL is unavailable metadata, not a different page.")
+    }
+
     func testFullSurfaceFrozenEnumsAndAttachRoundTrip() async throws {
         let result = try await evaluate(
             """

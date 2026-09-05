@@ -11,6 +11,30 @@ final class BrowserExtensionTabGroupEventHub {
     private var subscribers:
         [BrowserExtensionServiceClientID: [UUID: AsyncStream<BrowserExtensionTabGroupEvent>.Continuation]] =
             [:]
+    private var membershipSubscribers:
+        [BrowserExtensionServiceClientID: [UUID: AsyncStream<BrowserExtensionTabGroupEvent.Membership>.Continuation]] =
+            [:]
+
+    func membershipEvents(for client: BrowserExtensionServiceClientID)
+        -> AsyncStream<BrowserExtensionTabGroupEvent.Membership>
+    {
+        let (stream, continuation) = AsyncStream<BrowserExtensionTabGroupEvent.Membership>.makeStream()
+        let token = UUID()
+        membershipSubscribers[client, default: [:]][token] = continuation
+        continuation.onTermination = { [weak self] _ in
+            Task { @MainActor [weak self] in self?.membershipSubscribers[client]?[token] = nil }
+        }
+        return stream
+    }
+
+    func publishMembership(
+        _ event: BrowserExtensionTabGroupEvent.Membership,
+        to clients: some Sequence<BrowserExtensionServiceClientID>
+    ) {
+        for client in clients {
+            for subscriber in membershipSubscribers[client]?.values ?? [:].values { subscriber.yield(event) }
+        }
+    }
 
     func events(for client: BrowserExtensionServiceClientID)
         -> AsyncStream<BrowserExtensionTabGroupEvent>
@@ -35,5 +59,7 @@ final class BrowserExtensionTabGroupEventHub {
     func remove(client: BrowserExtensionServiceClientID) {
         let removed = subscribers.removeValue(forKey: client)
         for subscriber in removed?.values ?? [:].values { subscriber.finish() }
+        let memberships = membershipSubscribers.removeValue(forKey: client)
+        for subscriber in memberships?.values ?? [:].values { subscriber.finish() }
     }
 }

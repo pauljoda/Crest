@@ -33,11 +33,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
             .scrollClipDisabled(
-                !BrowserSidebarReorderVisuals.clipsScrollableRegion(
-                    clipsWhenIdle: BrowserSidebarScrollLayoutPolicy
-                        .clipsScrollableRegion,
-                    isDragging: browser.sidebarReorderState.isDragging
-                )
+                !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
             )
             .onGeometryChange(for: CGRect.self) { proxy in
                 proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
@@ -52,8 +48,6 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 BrowserSidebarDragAutoscrollObserver(
                     regionID: scrollRegionID,
                     viewport: scrollRegionFrame,
-                    pointer: browser.sidebarReorderState.pointer,
-                    isDragging: browser.sidebarReorderState.isDragging,
                     state: browser.sidebarReorderState
                 )
             }
@@ -75,7 +69,25 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
 /// zero-sized observer bridges only the live scroll offset: it advances the
 /// enclosing `NSScrollView` at an edge and tells the reorder registry the exact
 /// uniform translation applied to its otherwise-frozen row geometry.
-private struct BrowserSidebarDragAutoscrollObserver: NSViewRepresentable {
+private struct BrowserSidebarDragAutoscrollObserver: View {
+    let regionID: UUID
+    let viewport: CGRect
+    let state: BrowserSidebarReorderState
+
+    var body: some View {
+        // Pointer tracking must not invalidate the ancestor that builds every
+        // tab and folder. Only this small bridge updates for each pointer event.
+        BrowserSidebarDragAutoscrollBridge(
+            regionID: regionID,
+            viewport: viewport,
+            pointer: state.pointer,
+            isDragging: state.isDragging,
+            state: state
+        )
+    }
+}
+
+private struct BrowserSidebarDragAutoscrollBridge: NSViewRepresentable {
     let regionID: UUID
     let viewport: CGRect
     let pointer: CGPoint

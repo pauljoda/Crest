@@ -1,13 +1,8 @@
 import SwiftUI
 
-/// Feeds the reorder state the pointer samples a system drag reports, from one
-/// region of the touch shell.
-///
-/// A touch lift takes its positions from the drop side — there is no gesture
-/// streaming them, because `UIContextMenuInteraction` cancels anything that
-/// competes with a row's menu — so every region a finger may carry a lift over
-/// has to offer one of these. Two do: the sidebar, and the content area beside
-/// it through `MobileSplitContentDropFeed`.
+/// Hosts the native reorder destination for one region of the touch shell.
+/// Both the sidebar and `MobileSplitContentDropFeed` use this adapter, so drop
+/// positions, commits and immediate row activation follow the same path.
 ///
 /// Attached to a whole region rather than to the runs inside it. On the sidebar
 /// that is what reaches the pinned grid, which sits outside the scrolling list;
@@ -25,20 +20,23 @@ struct MobileBrowserReorderDropFeed: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .contentShape(.rect)
             .onGeometryChange(for: CGRect.self) { proxy in
                 proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
             } action: { frame in
                 origin = frame.origin
             }
-            .onDrop(
-                of: [.json],
-                delegate: BrowserSidebarReorderDropDelegate(
+            .overlay {
+                BrowserMobileReorderDropTarget(
                     reorder: BrowserSidebarReorderContext(
                         browser: browser,
                         spaceAccess: spaceAccess
                     ),
                     origin: origin
                 )
-            )
+                // A committed drop must not intercept the next tap.
+                .allowsHitTesting(browser.sidebarReorderState.hasLiftInFlight)
+                .accessibilityHidden(true)
+            }
     }
 }

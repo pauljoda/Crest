@@ -359,7 +359,7 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         var next: FolderID?
         switch payload {
         case .tab(let tab):
-            next = tab.placement == .saved ? tab.folderID : nil
+            next = tab.placement != .pinned ? tab.folderID : nil
         case .folder(let folder):
             next = folder.parentID
         case .space, .history, .archive:

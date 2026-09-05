@@ -10,6 +10,7 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
         )
         /// Land inside a collapsed folder.
         case intoFolder(FolderID)
+        case createCurrentFolder(TabID)
         /// Move to another space.
         case space(BrowserSpaceRuntimeAssignment)
         /// Join the cards the content area is presenting, as the card at
@@ -22,7 +23,7 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
     let kind: Kind
 
     var section: BrowserSidebarReorderSection? {
-        guard case let .insert(section, _, _) = kind else { return nil }
+        guard case .insert(let section, _, _) = kind else { return nil }
         return section
     }
 }

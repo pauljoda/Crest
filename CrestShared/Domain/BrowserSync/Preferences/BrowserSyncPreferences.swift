@@ -17,9 +17,9 @@ struct BrowserSyncPreferences: Codable, Equatable, Sendable {
         switch payload {
         case .space:
             true
-        case .folder:
-            savedStructure
-        case let .tab(tab):
+        case .folder(let folder):
+            folder.location == .current ? currentTabs : savedStructure
+        case .tab(let tab):
             tab.placement == .current ? currentTabs : savedStructure
         case .history, .archive:
             historyAndArchive

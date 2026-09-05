@@ -378,19 +378,23 @@ final class BrowserPagePool:
     ///
     /// A browser tab gets the alias from `BrowserPage`. A side panel or
     /// offscreen document is a web view Crest builds from WebKit's extension
-    /// configuration, so it installs its own — and, because those views share
-    /// one user content controller, shares the installation with every other
-    /// hosted document of the extension.
+    /// configuration, with a private navigation content controller. Its bridge
+    /// admits only the owning extension and never joins the Space's shared
+    /// injected content.
     func hostedDocumentRuntimeBridge(
         for configuration: BrowserExtensionPageConfiguration,
-        in spaceID: SpaceID
+        in spaceID: SpaceID,
+        contentController: WKUserContentController
     ) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? {
         guard !browsingMode.isPrivate else { return nil }
         return BrowserExtensionHostedDocumentRuntimeBridge.install(
             for: configuration,
+            in: contentController,
             reportsDiagnostics: capturesExtensionConsole
         ) { [weak self] extensionID in
-            guard let pool = self?.extensionControllerPool else { return nil }
+            guard let pool = self?.extensionControllerPool,
+                pool.loadedContext(extensionID: extensionID, in: spaceID) === configuration.context
+            else { return nil }
             return BrowserExtensionHostedDocumentRuntimeBridge.target(
                 extensionID: extensionID,
                 in: spaceID,
@@ -419,7 +423,11 @@ final class BrowserPagePool:
         else {
             throw BrowserExtensionOffscreenDocumentError.unavailable
         }
-        let document = BrowserExtensionOffscreenDocument(
+        if let hostedStore = extensionControllerPool.hostedWebsiteDataStore(in: spaceID) {
+            guard BrowserExtensionHostedWebsiteDataStore.apply(hostedStore, to: configuration.webViewConfiguration)
+            else { throw BrowserExtensionOffscreenDocumentError.unavailable }
+        }
+        let document = try BrowserExtensionOffscreenDocument(
             configuration: configuration.webViewConfiguration,
             cookieAccess: BrowserExtensionFramedSiteCookieAccess(
                 configuration: configuration,
@@ -429,10 +437,10 @@ final class BrowserPagePool:
             // An offscreen document frames websites too, and an externally
             // connectable site expects `chrome.runtime` in every frame Chrome
             // would give it one.
-            runtimeBridge: hostedDocumentRuntimeBridge(
-                for: configuration,
-                in: spaceID
-            )
+            installRuntimeBridge: { contentController in
+                hostedDocumentRuntimeBridge(
+                    for: configuration, in: spaceID, contentController: contentController)
+            }
         )
         extensionOffscreenDocuments[key] = document
         do {
@@ -582,6 +590,23 @@ final class BrowserPagePool:
             return nil
         }
         return page
+    }
+
+    func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
+        guard let space = session.space(id: spaceID), let tab = space.tabs.first(where: { $0.id == tabID }),
+            !spacesReleasingData.contains(spaceID), !spacesDeletingData.contains(spaceID)
+        else { return }
+        let page = page(for: tab, space: space)
+        if !presentedTabIDs.contains(tabID) {
+            // A new background page has no SwiftUI host to size it. Give it
+            // the current Space's viewport before navigation runs scripts.
+            if page.webView.bounds.isEmpty, let activePage,
+                activePage.spaceID == spaceID, !activePage.webView.bounds.isEmpty
+            {
+                page.webView.setFrameSize(activePage.webView.bounds.size)
+            }
+            observeBackgroundPage(page, for: tabID, in: space)
+        }
     }
 
     func prepareExtensionSelection(session: BrowserSession) {
@@ -2407,16 +2432,22 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
     private let webView: WKWebView
     private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
+    private let contentController = WKUserContentController()
     private var loadContinuation: CheckedContinuation<Void, any Error>?
 
     init(
         configuration: WKWebViewConfiguration,
         cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
-        runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle? = nil
-    ) {
+        installRuntimeBridge: (WKUserContentController) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? = { _ in
+            nil
+        }
+    ) throws {
+        guard BrowserExtensionHostedContentIsolationPolicy.isSupported else {
+            throw BrowserExtensionOffscreenDocumentError.unavailable
+        }
+        runtimeBridge = installRuntimeBridge(contentController)
         webView = WKWebView(frame: .zero, configuration: configuration)
         self.cookieAccess = cookieAccess
-        self.runtimeBridge = runtimeBridge
         super.init()
         webView.navigationDelegate = self
         webView.isInspectable = true
@@ -2426,6 +2457,18 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
     /// offscreen document frames sites too, and WebCore treats its
     /// `chrome-extension://` top document as cross-site in exactly the same
     /// way.
+    func webView(
+        _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+        preferences: WKWebpagePreferences,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
+    ) {
+        guard BrowserExtensionHostedContentIsolationPolicy.apply(contentController, to: preferences) else {
+            decisionHandler(.cancel, preferences)
+            return
+        }
+        self.webView(webView, decidePolicyFor: action) { policy in decisionHandler(policy, preferences) }
+    }
+
     func webView(
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction,

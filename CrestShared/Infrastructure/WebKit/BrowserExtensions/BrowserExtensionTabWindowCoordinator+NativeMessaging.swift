@@ -45,8 +45,8 @@ extension BrowserExtensionTabWindowCoordinator {
             // Chrome drops session rules when an extension's context unloads
             // or reloads and keeps dynamic ones.
             declarativeNetRequestService?.unregister(client: client)
-            // Relaxed cookies stay relaxed; what stops is re-applying the
-            // rewrite once the extension no longer frames the site.
+            // Stop syncing this client's embedded hosts. Normal browsing
+            // cookies retain their own SameSite attributes throughout.
             cookieAccessService?.unregister(client: client)
             // A context that unloads takes its `onMessageExternal` listeners
             // with it. Finishing the watch streams here ends any delivery
@@ -89,6 +89,27 @@ extension BrowserExtensionTabWindowCoordinator {
         for extensionContext: WKWebExtensionContext,
         replyHandler: @escaping (Any?, (any Error)?) -> Void
     ) {
+        if applicationIdentifier == BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier,
+            let payload = message as? [String: Any], payload["api"] as? String == "runtime.callbackError"
+        {
+            guard
+                verifiedNativeMessagingAuthorizations[ObjectIdentifier(extensionContext)]?
+                    .allowsInternalCapabilityBroker == true
+            else {
+                replyHandler(nil, BrowserExtensionNativeMessagingError.unverifiedExtension)
+                return
+            }
+            guard let description = payload["message"] as? String, !description.isEmpty,
+                description.utf8.count <= 16_384
+            else {
+                replyHandler(nil, BrowserExtensionCapabilityBrokerError.invalidRequest)
+                return
+            }
+            // WebKit owns runtime.lastError on native namespace objects. A
+            // native callback failure publishes it for exactly that callback.
+            replyHandler(nil, BrowserExtensionCapabilityBrokerError.serviceFailure(description))
+            return
+        }
         if handleCapabilityBrokerDiagnostics(
             message,
             applicationIdentifier: applicationIdentifier,
@@ -103,6 +124,12 @@ extension BrowserExtensionTabWindowCoordinator {
             controller: controller,
             extensionContext: extensionContext,
             replyHandler: replyHandler
+        ) {
+            return
+        }
+        if handleCapabilityBrokerTabMove(
+            message, applicationIdentifier: applicationIdentifier, controller: controller,
+            extensionContext: extensionContext, replyHandler: replyHandler
         ) {
             return
         }

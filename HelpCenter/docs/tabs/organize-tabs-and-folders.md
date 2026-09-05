@@ -23,7 +23,11 @@ A saved tab belongs to the durable sidebar, optionally inside a folder. Its save
 
 ## Folders
 
-Folders can nest. Rename them, choose a color or symbol, collapse them, reorder their contents, and move a complete subtree without flattening it. Drag a tab into a folder to save it there.
+Folders work in both Saved and Current Tabs. Rename them, choose a color or symbol, collapse them, nest them, and reorder their contents. Drag a complete folder between the two sections to move its tabs and nested folders together. You can also use the folder menu to change sections.
+
+Both kinds restore and sync with their section. Moving a folder preserves its name, color, hierarchy, and contents. Drag a tab onto another current tab to create a folder, or use its context menu to create or choose a folder.
+
+Drop along a folder’s top or bottom edge to place a tab beside it, including between empty folders. Drop inside the folder to file the tab.
 
 ## Context-menu actions
 

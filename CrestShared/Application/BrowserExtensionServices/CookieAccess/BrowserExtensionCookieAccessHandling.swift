@@ -13,8 +13,8 @@ import Foundation
 /// the extension is not loaded in.
 @MainActor
 protocol BrowserExtensionCookieAccessHandling: AnyObject {
-    /// Records `host` as relaxed for `client` in `spaceID` and rewrites that
-    /// Space's cookies for it now.
+    /// Records a permitted embedded host and synchronizes its normal and
+    /// hosted cookies, relaxing SameSite only in the hosted jar.
     func relaxCookies(
         for host: String,
         client: BrowserExtensionServiceClientID,
@@ -23,21 +23,27 @@ protocol BrowserExtensionCookieAccessHandling: AnyObject {
 
     /// Drops every host this client had relaxed.
     ///
-    /// Cookies already rewritten stay rewritten — the attribute is gone from
-    /// the jar and Crest does not invent a `SameSite` value the site never
-    /// sent. What stops is the *enforcement*: once no client in the Space
-    /// still lists a host, the site is free to re-set a `Lax` cookie and keep
-    /// it.
+    /// Synchronization stops when no remaining client frames the host. Normal
+    /// browsing cookies retain their own SameSite attributes throughout.
     func unregister(client: BrowserExtensionServiceClientID)
+
+    /// Removes previously framed hosts whose permission has been revoked.
+    func revalidatePermissions(
+        for client: BrowserExtensionServiceClientID,
+        allowing hostIsPermitted: (String) -> Bool
+    )
 }
 
 /// The cookie jar behind the store, expressed without WebKit so the
 /// Application layer keeps its Foundation-only import policy.
 @MainActor
 protocol BrowserExtensionCookieJarRelaxing: AnyObject {
-    /// Rewrites every cookie in `spaceID`'s jar that a request to `host` would
-    /// carry, dropping `SameSite` and preserving everything else.
+    /// Makes a permitted host usable in the separate hosted cookie jar while
+    /// preserving normal-tab cookie protection.
     func relax(host: String, in spaceID: SpaceID) async
+
+    /// Updates the live host set before queued synchronization can run.
+    func setSynchronizedHosts(_ hosts: Set<String>, in spaceID: SpaceID)
 
     /// Installs, replaces, or — with a `nil` handler — removes the observer
     /// that reports third-party writes to `spaceID`'s jar.

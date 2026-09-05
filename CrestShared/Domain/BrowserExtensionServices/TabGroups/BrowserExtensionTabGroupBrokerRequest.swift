@@ -13,9 +13,7 @@ enum BrowserExtensionTabGroupBrokerError: LocalizedError, Equatable {
     case staleTab
     /// `ExtensionTabUtil::kGroupNotFoundError`.
     case unknownGroup(Int)
-    /// `kFailedToMoveGroupError`. Crest does not reorder tabs for a group, so
-    /// every `tabGroups.move` ends here — after the group id is validated, so
-    /// a bad id still reports the bad id.
+    /// A destination that cannot preserve a contiguous folder hierarchy.
     case failedToMove
     case unavailable
 
@@ -86,17 +84,13 @@ struct BrowserExtensionTabGroupBrokerRequest {
         case query = "tabGroups.query"
         case update = "tabGroups.update"
         case move = "tabGroups.move"
-        /// The `Tab.groupId` mirror. Gated on `tabs`, not `tabGroups`: Chrome
-        /// puts `groupId` on every tab object a package with `tabs` can see.
+        /// Ordinary tab metadata; URL/title access stays with WebKit.
         case membership = "tabGroups.membership"
         case group = "tabs.group"
         case ungroup = "tabs.ungroup"
     }
 
-    struct TabTarget: Equatable, Sendable {
-        let index: Int
-        let url: String?
-    }
+    typealias TabTarget = BrowserExtensionTabTarget
 
     struct QueryFilter: Equatable, Sendable {
         var isCollapsed: Bool?
@@ -127,13 +121,14 @@ struct BrowserExtensionTabGroupBrokerRequest {
     let title: String?
     let color: BrowserExtensionTabGroupColor?
     let isCollapsed: Bool?
+    let index: Int?
 
     /// `tabGroups.*` are gated on the namespace's own permission. Grouping is
     /// part of `chrome.tabs` in Chromium's schema and gated with it here.
-    var requiredCapability: String {
+    var requiredCapability: String? {
         switch operation {
         case .get, .query, .update, .move: "tabGroups"
-        case .membership, .group, .ungroup: "tabs"
+        case .membership, .group, .ungroup: nil
         }
     }
 
@@ -142,6 +137,8 @@ struct BrowserExtensionTabGroupBrokerRequest {
             throw BrowserExtensionTabGroupBrokerError.invalidRequest
         }
         self.operation = operation
+        index = try Self.integer(message, "index", required: operation == .move)
+        if let index, index < -1 { throw BrowserExtensionTabGroupBrokerError.invalidRequest }
         title = try Self.string(message, "title")
         isCollapsed = try Self.boolean(message, "collapsed")
         if let rawColor = try Self.string(message, "color") {
@@ -176,7 +173,7 @@ struct BrowserExtensionTabGroupBrokerRequest {
             guard let rawTargets = message["tabs"] as? [[String: Any]], !rawTargets.isEmpty else {
                 throw BrowserExtensionTabGroupBrokerError.invalidRequest
             }
-            targets = try rawTargets.map(Self.target)
+            targets = try rawTargets.map { try BrowserExtensionTabTarget(message: $0) }
             filter = .init()
         }
     }
@@ -189,20 +186,7 @@ struct BrowserExtensionTabGroupBrokerRequest {
     func resolveTabs(
         in space: BrowserExtensionSpaceState, liveTabs: Set<TabID>
     ) throws -> [TabID] {
-        try targets.map { target in
-            guard let tab = space.tabs.first(where: { $0.index == target.index }),
-                liveTabs.contains(tab.id),
-                BrowserExtensionTabIdentity.urlMatches(reported: target.url, state: tab.url)
-            else { throw BrowserExtensionTabGroupBrokerError.staleTab }
-            return tab.id
-        }
-    }
-
-    private static func target(_ value: [String: Any]) throws -> TabTarget {
-        guard let index = try integer(value, "tabIndex", required: true), index >= 0 else {
-            throw BrowserExtensionTabGroupBrokerError.invalidRequest
-        }
-        return TabTarget(index: index, url: try string(value, "url"))
+        try targets.map { try $0.resolve(in: space, liveTabs: liveTabs) }
     }
 
     private static func integer(

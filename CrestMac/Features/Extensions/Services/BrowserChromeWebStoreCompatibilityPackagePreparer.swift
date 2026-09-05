@@ -473,7 +473,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             return false
         }
 
-        if let serviceWorker = background["service_worker"] as? String {
+        if let declaredWorker = background["service_worker"] as? String {
+            guard let serviceWorker = Self.normalizedRelativePath(declaredWorker) else {
+                throw BrowserWebExtensionCompatibilityPackageError.unsafeBackgroundPath
+            }
             let workerURL = try validatedResourceURL(
                 for: serviceWorker,
                 in: resourceURL
@@ -729,7 +732,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             let sandbox = manifest["sandbox"] as? [String: Any],
             let pages = sandbox["pages"] as? [String]
         else { return [] }
-        return Set(pages.filter(isSafeRelativePath))
+        return Set(pages.compactMap(normalizedRelativePath))
     }
 
     private static func installContentScriptCompatibility(
@@ -743,6 +746,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
         var installed = false
         for index in declarations.indices {
+            // MAIN scripts belong to the website's JavaScript environment.
+            // Normalizing an extension runtime there contaminates page globals
+            // and can replace another extension's externally-connectable API.
+            guard declarations[index]["world"] as? String != "MAIN" else { continue }
             guard var scripts = declarations[index]["js"] as? [String]
             else { continue }
             if !scripts.contains(compatibilityScriptName) {
@@ -802,7 +809,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         for relativePath: String,
         in resourceURL: URL
     ) throws -> URL {
-        guard Self.isSafeRelativePath(relativePath) else {
+        guard let relativePath = Self.normalizedRelativePath(relativePath) else {
             throw BrowserWebExtensionCompatibilityPackageError
                 .unsafeBackgroundPath
         }
@@ -843,15 +850,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         }
     }
 
-    private static func isSafeRelativePath(_ path: String) -> Bool {
+    /// Manifest resource URLs may contain a current-directory segment. Resolve
+    /// those consistently for both worker imports and sandbox exclusions while
+    /// keeping absolute paths, parent traversal and empty components rejected.
+    private static func normalizedRelativePath(_ path: String) -> String? {
         guard !path.isEmpty,
             !path.hasPrefix("/"),
             !path.contains("\\")
         else {
-            return false
+            return nil
         }
-        return path.split(separator: "/", omittingEmptySubsequences: false)
-            .allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+        let components = path.split(separator: "/", omittingEmptySubsequences: false)
+        guard components.allSatisfy({ !$0.isEmpty && $0 != ".." }) else { return nil }
+        let normalized = components.filter { $0 != "." }.joined(separator: "/")
+        return normalized.isEmpty ? nil : normalized
     }
 
     /// Re-indents a spliced script fragment so the generated runtime stays
@@ -1159,7 +1171,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const invokeCallbackWithLastError = (
                     callback,
                     message,
-                    value
+                    value,
+                    useNativeErrorChannel = true
                 ) => {
                     if (typeof callback !== "function") return;
                     const lastError = Object.freeze({
@@ -1186,6 +1199,47 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             continue;
                         }
                         published.push([target, previous]);
+                    }
+                    // Defining a property on WebKit's exotic runtime can
+                    // succeed while its native getter continues to win.
+                    // Verify publication before handing control to a package.
+                    const readable = lastErrorTargets().some(target => {
+                        try { return target.lastError === lastError; }
+                        catch { return false; }
+                    });
+                    wasRead = false;
+                    if (!readable && useNativeErrorChannel && isPrivilegedExtensionContext) {
+                        for (const [target, previous] of published) {
+                            try {
+                                if (previous) Object.defineProperty(target, "lastError", previous);
+                                else delete target.lastError;
+                            } catch {}
+                        }
+                        const runtime = nativeRuntimeWithMethod("sendNativeMessage");
+                        if (typeof runtime?.sendNativeMessage === "function") {
+                            let completed = false;
+                            const fallback = () => {
+                                if (completed) return;
+                                completed = true;
+                                invokeCallbackWithLastError(callback, message, value, false);
+                            };
+                            try {
+                                const returned = runtime.sendNativeMessage(capabilityBrokerHost,
+                                    {api: "runtime.callbackError", message: String(message)}, () => {
+                                        if (completed) return;
+                                        let error;
+                                        try { error = runtime.lastError; } catch {}
+                                        if (!error) { fallback(); return; }
+                                        completed = true;
+                                        // Remove WebKit's native-messaging prefix when
+                                        // its error object allows updating the message.
+                                        try { error.message = String(message); } catch {}
+                                        callback(value);
+                                    });
+                                if (returned?.then instanceof Function) returned.then(fallback, fallback);
+                                return;
+                            } catch { fallback(); return; }
+                        }
                     }
                     if (
                         published.length === 0
@@ -2385,6 +2439,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         && !memberUsesCompatibility("tabs.sendMessage")
                         && !memberUsesCompatibility("tabs.group")
                         && !memberUsesCompatibility("tabs.ungroup")
+                        && !memberUsesCompatibility("tabs.move")
                     ) {
                         return nativeTabs;
                     }
@@ -2408,9 +2463,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // `groupId` is projected the same way and for the same
                     // reason: WebKit has no tab-group concept, Crest's
                     // registry does, and Chrome puts the field on every tab
-                    // object. `TAB_GROUP_ID_NONE` is the honest answer for a
-                    // tab in no group, which is every tab until some
-                    // extension calls `tabs.group`.
+                    // object, including folders the user or another extension
+                    // created. Only genuinely ungrouped tabs report -1.
                     const normalizeTab = (tab) => {
                         if (!tab || typeof tab !== "object") return tab;
                         const grouped =
@@ -2501,10 +2555,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             const requested = options
                                 ? options.discarded
                                 : undefined;
-                            // Reads `groupId` and switches the `Tab.groupId`
-                            // mirror on: a package filtering by group has
-                            // asked for the field by name. WebKit knows
-                            // neither key, so both are stripped before the
+                            // WebKit knows neither filter key, so both are stripped before the
                             // native query and applied to its result here.
                             const requestedGroup =
                                 tabGroupsQueryFilter(options);
@@ -2588,6 +2639,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             nativeArguments
                         );
                     };
+                    tabGroupsObserveTabs(nativeTabs, normalizeTab);
                     const overlays = new Map();
                     if (get !== nativeGet) overlays.set("get", get);
                     if (query !== nativeQuery) overlays.set("query", query);
@@ -2605,18 +2657,26 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     if (memberUsesCompatibility("tabs.ungroup")) {
                         overlays.set("ungroup", tabGroupsUngroupTabs);
                     }
+                    if (memberUsesCompatibility("tabs.move")) {
+                        overlays.set("move", tabGroupsMoveTabs);
+                    }
                     if (overlays.size === 0) {
                         normalizedTabsNamespaces.set(nativeTabs, nativeTabs);
                         return nativeTabs;
                     }
-                    const facade = namespaceFacade(
-                        nativeTabs,
-                        {},
-                        overlays
-                    );
-                    normalizedTabsNamespaces.set(nativeTabs, facade);
-                    normalizedTabsNamespaces.set(facade, facade);
-                    return facade;
+                    // WebKit's Dynamic root getter keeps returning this
+                    // native object even when defining root.tabs succeeds.
+                    // Patch its methods, preserving both the native namespace
+                    // and event identities. The wrappers above captured the
+                    // original methods before any member is replaced.
+                    for (const [name, value] of overlays) {
+                        Object.defineProperty(nativeTabs, name, {
+                            value, writable: true, configurable: true,
+                            enumerable: true
+                        });
+                    }
+                    normalizedTabsNamespaces.set(nativeTabs, nativeTabs);
+                    return nativeTabs;
                 };
 
                 const normalizedWebNavigationNamespaces = new WeakMap();
@@ -5235,7 +5295,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     nativeValue,
                     fallback,
                     explicitOverlays = new Map(),
-                    hiddenProperties = new Set()
+                    hiddenProperties = new Set(),
+                    liveProperties = new Set()
                 ) => {
                     if (nativeValue === undefined || nativeValue === null) {
                         return fallback;
@@ -5316,6 +5377,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     const nestedFacades = new Map();
                     const nativePropertyValue = (property) => {
                         if (hiddenProperties.has(property)) return undefined;
+                        // Callback-scoped state is not a static capability.
+                        if (liveProperties.has(property)) {
+                            try { return Reflect.get(nativeValue, property, nativeValue); }
+                            catch { return undefined; }
+                        }
                         if (nativePropertyValues.has(property)) {
                             return nativePropertyValues.get(property);
                         }
@@ -5538,7 +5604,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         nativeRuntime,
                         {},
                         new Map(),
-                        workerHiddenRuntimeMembers
+                        workerHiddenRuntimeMembers,
+                        new Set(["lastError"])
                     );
                     normalizedWorkerRuntimeNamespaces.set(
                         nativeRuntime,
@@ -7045,33 +7112,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                                 }
                             }
                         }
-                        // A classic worker's bootstrap shadows `chrome` with
-                        // the scoped facade, so it sees `tabs.group`,
-                        // `tabs.ungroup`, and the `groupId` mirror. A module
-                        // worker has no lexical binding to shadow and reads
-                        // this live root — as every extension page does — so
-                        // the same facade is installed in place here, like
-                        // `alarms` above. Only the roots must stay WebKit's:
-                        // `enumerateFramesAndNamespaceObjects` unwraps the
-                        // global `browser`/`chrome` object and then reaches
-                        // `tabs()` and its events through WebKit's own object
-                        // graph, never through this JavaScript property. The
-                        // facade hands back WebKit's event objects untouched.
+                        // Module workers read WebKit's Dynamic namespace getter.
+                        // Patch the methods on that native object in place.
                         if (property === "tabs") {
-                            const originalTabs = nativeValue;
                             nativeValue = normalizeTabsNamespace(nativeValue);
-                            if (nativeValue !== originalTabs) {
-                                try {
-                                    Object.defineProperty(root, property, {
-                                        value: nativeValue,
-                                        writable: true,
-                                        configurable: true,
-                                        enumerable: true
-                                    });
-                                } catch {
-                                    try { root[property] = nativeValue; } catch {}
-                                }
-                            }
                         }
                         const fallback = fallbacks[property];
                         if (fallback === undefined) continue;

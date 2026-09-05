@@ -32,7 +32,7 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
     }
 
     func testSavedPlacementUsesRequestedFolderAndItsLastMatchingTab() throws {
-        let folder = SavedFolder(title: "Reading")
+        let folder = BrowserFolder(title: "Reading")
         let firstFiled = makeTab("First Filed", placement: .saved, folderID: folder.id)
         let rootSaved = makeTab("Root", placement: .saved)
         let lastFiled = makeTab("Last Filed", placement: .saved, folderID: folder.id)
@@ -59,7 +59,7 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
     }
 
     func testUnknownFolderNormalizesToSavedRootAndUsesRootSectionEnd() throws {
-        let existingFolder = SavedFolder(title: "Reading")
+        let existingFolder = BrowserFolder(title: "Reading")
         let filed = makeTab("Filed", placement: .saved, folderID: existingFolder.id)
         let rootSaved = makeTab("Root", placement: .saved)
         let current = makeTab("Current", placement: .current)
@@ -287,7 +287,7 @@ final class BrowserTabPlacementPlanTests: XCTestCase {
     }
 
     private func makeSpace(
-        folders: [SavedFolder] = [],
+        folders: [BrowserFolder] = [],
         tabs: [BrowserTab]
     ) -> BrowserSpace {
         BrowserSpace(

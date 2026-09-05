@@ -69,12 +69,8 @@ enum BrowserSidebarReorderPolicy {
     /// moved, and the only thing reading it is the Space pager, which holds
     /// still from the moment one exists. It is cleared by the promotion that
     /// turns it into a real lift, by the drop that ends that lift, or by a
-    /// context menu taking the press — and by nothing else on a runtime without
-    /// `onDragSessionUpdated`, where `BrowserMobileReorderSessionModifier`
-    /// compiles away to its content. A press that produces neither a session nor
-    /// a menu therefore left the pager locked for the life of the process, in
-    /// every sidebar the store puts on screen at once, with nothing on screen to
-    /// say why.
+    /// context menu taking the press. Native session completion also clears it.
+    /// This expiry only covers a provider query that never becomes a session.
     ///
     /// Thirty seconds, matching the expiry `BrowserTabDragState` and
     /// `BrowserFolderDragState` have always armed on their own pointer drags. It
@@ -108,7 +104,15 @@ enum BrowserSidebarReorderPolicy {
         accepting item: BrowserSidebarReorderItem
     ) -> BrowserSidebarReorderZone? {
         let usable = zones.filter { accepts(item: item, in: $0) }
-        let containing = usable.filter { $0.frame.contains(point) }
+        let containing = usable.filter { zone in
+            var frame = zone.frame
+            if case .section(let section) = zone.target, section.parentFolderID != nil {
+                // A folder owns its contents, while its outer edge belongs
+                // to its parent. This makes a seam between siblings usable.
+                frame = frame.insetBy(dx: 0, dy: min(8, frame.height / 4))
+            }
+            return frame.contains(point)
+        }
         let innermost = containing.max(by: isLessSpecific)
         if let innermost, !innermost.isContentArea {
             return innermost
@@ -139,6 +143,12 @@ enum BrowserSidebarReorderPolicy {
         switch zone.target {
         case .section(let section):
             return accepts(item: item, in: section)
+        case .currentTab(let tabID):
+            if case .tab(let tab) = item { return tab.tabID != tabID }
+            return false
+        case .currentFolder:
+            if case .tab = item { return true }
+            return false
         case .folder, .space:
             // A split group moves as one block inside its own Space: it never
             // nests into a folder row and never crosses to another Space in this
@@ -233,6 +243,8 @@ enum BrowserSidebarReorderPolicy {
         case (.splitGroup, .tabs(let placement, _)):
             BrowserSplitGroupPolicy.allowsMembership(placement: placement)
         case (.folder, .folders): true
+        case (.folder, .tabs(let placement, _)):
+            placement != .pinned
         default: false
         }
     }

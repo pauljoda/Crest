@@ -30,6 +30,8 @@ import SwiftUI
 /// that, SwiftUI hands the answer down, and this view puts a window around it.
 @MainActor
 final class BrowserDragPreviewWindowHostView: NSView {
+    var onSidebarLandingComplete: (UUID) -> Void = { _ in }
+    var onSidebarLandingArrived: (UUID) -> Void = { _ in }
     /// What to draw, or `nil` to take the window down.
     var content: BrowserDragPreviewWindowContent? {
         didSet {
@@ -38,6 +40,7 @@ final class BrowserDragPreviewWindowHostView: NSView {
         }
     }
 
+    private var presentation: BrowserDragPreviewWindowPresentation?
     private var panel: NSPanel?
     private var hostingView: NSHostingView<BrowserDragPreviewWindowFloatingContent>?
     private var windowObservers: [NSObjectProtocol] = []
@@ -60,6 +63,7 @@ final class BrowserDragPreviewWindowHostView: NSView {
         panel.orderOut(nil)
         panel.contentView = nil
         hostingView = nil
+        presentation = nil
         self.panel = nil
     }
 
@@ -69,11 +73,15 @@ final class BrowserDragPreviewWindowHostView: NSView {
             return
         }
         let panel = panel ?? makePanel(for: parent)
-        let hosted = BrowserDragPreviewWindowFloatingContent(content: content)
-        if let hostingView {
-            hostingView.rootView = hosted
+        if let presentation {
+            presentation.content = content
         } else {
-            let hostingView = NSHostingView(rootView: hosted)
+            let presentation = BrowserDragPreviewWindowPresentation(content: content)
+            presentation.onSidebarLandingComplete = { [weak self] id in self?.onSidebarLandingComplete(id) }
+            presentation.onSidebarLandingArrived = { [weak self] id in self?.onSidebarLandingArrived(id) }
+            self.presentation = presentation
+            let hostingView = NSHostingView(
+                rootView: BrowserDragPreviewWindowFloatingContent(presentation: presentation))
             hostingView.autoresizingMask = [.width, .height]
             panel.contentView = hostingView
             self.hostingView = hostingView
@@ -84,6 +92,7 @@ final class BrowserDragPreviewWindowHostView: NSView {
             panel.setFrame(frame, display: false)
         }
         if panel.parent !== parent {
+            hostingView?.layoutSubtreeIfNeeded()
             parent.addChildWindow(panel, ordered: .above)
         }
     }
@@ -124,6 +133,7 @@ final class BrowserDragPreviewWindowHostView: NSView {
         panel.orderOut(nil)
         panel.contentView = nil
         hostingView = nil
+        presentation = nil
         self.panel = nil
     }
 

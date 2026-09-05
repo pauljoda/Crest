@@ -14,7 +14,8 @@ struct BrowserTabReactiveDragPreview: View {
             profileID: profileID,
             progress: BrowserTabDragPreviewLayout.progress(
                 for: dragState.currentPlacement ?? tab.placement
-            )
+            ),
+            rowMetrics: .touch
         )
         .animation(
             BrowserVisualAccessibilityPolicy.animation(

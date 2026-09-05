@@ -5,7 +5,7 @@ import XCTest
 
 final class BrowserImportReviewPlanTests: XCTestCase {
     func testSourcePreviewPartitionsTabsAndFoldersInOneModel() {
-        let folder = SavedFolder(title: "Reading")
+        let folder = BrowserFolder(title: "Reading")
         let pinned = BrowserTab(title: "Pinned", url: nil, placement: .pinned)
         let filed = BrowserTab(
             title: "Filed",
@@ -430,12 +430,12 @@ final class BrowserImportReviewPlanTests: XCTestCase {
     }
 
     func testMergeReusesMatchingFolderAndDoesNotCreateExcludedFolders() throws {
-        let existingReadingFolder = SavedFolder(title: "Reading", symbol: "books.vertical")
+        let existingReadingFolder = BrowserFolder(title: "Reading", symbol: "books.vertical")
         var existing = makeExistingSession()
         existing.spaces[0].folders = [existingReadingFolder]
 
-        let sourceReadingFolder = SavedFolder(title: " reading ", symbol: "book")
-        let excludedFolder = SavedFolder(title: "Leave Behind", symbol: "archivebox")
+        let sourceReadingFolder = BrowserFolder(title: " reading ", symbol: "book")
+        let excludedFolder = BrowserFolder(title: "Leave Behind", symbol: "archivebox")
         let includedTab = BrowserTab(
             title: "Article",
             url: URL(string: "https://article.example/"),
@@ -476,8 +476,8 @@ final class BrowserImportReviewPlanTests: XCTestCase {
     }
 
     func testNewSpaceContainsOnlyFoldersUsedByIncludedTabs() throws {
-        let usedFolder = SavedFolder(title: "Used")
-        let unusedFolder = SavedFolder(title: "Unused")
+        let usedFolder = BrowserFolder(title: "Used")
+        let unusedFolder = BrowserFolder(title: "Unused")
         let includedTab = BrowserTab(
             title: "Keep",
             url: URL(string: "https://keep.example/"),

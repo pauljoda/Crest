@@ -36,8 +36,7 @@ struct BrowserSidebarTabRenameField: View {
             BrowserSidebarTabFavicon(
                 tab: tab,
                 profileID: profileID,
-                metrics: metrics,
-                sidePanelSpaceID: spaceID
+                metrics: metrics
             )
         }
         .padding(.leading, leadingInset)

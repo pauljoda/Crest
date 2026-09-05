@@ -1,6 +1,7 @@
 import Foundation
 import UniformTypeIdentifiers
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -18,20 +19,20 @@ final class BrowserMigrationTests: XCTestCase {
 
     func testNetscapeHTMLImportPreservesNestedFoldersAndSanitizesURLs() throws {
         let html = """
-        <!DOCTYPE NETSCAPE-Bookmark-file-1>
-        <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-        <TITLE>Bookmarks</TITLE>
-        <H1>Bookmarks</H1>
-        <DL><p>
-          <DT><H3 ADD_DATE="1700000000">Research &amp; Notes</H3>
-          <DL><p>
-            <DT><A HREF="https://user:secret@example.com/path?a=1&amp;b=2" ADD_DATE="1700000100">One &lt;Two&gt;</A>
-            <DT><A HREF="javascript:alert(1)">Unsupported</A>
-            <DT><H3>Nested</H3>
-            <DL><p><DT><A HREF='https://swift.org/'>Swift</A></DL><p>
-          </DL><p>
-        </DL><p>
-        """
+            <!DOCTYPE NETSCAPE-Bookmark-file-1>
+            <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+            <TITLE>Bookmarks</TITLE>
+            <H1>Bookmarks</H1>
+            <DL><p>
+              <DT><H3 ADD_DATE="1700000000">Research &amp; Notes</H3>
+              <DL><p>
+                <DT><A HREF="https://user:secret@example.com/path?a=1&amp;b=2" ADD_DATE="1700000100">One &lt;Two&gt;</A>
+                <DT><A HREF="javascript:alert(1)">Unsupported</A>
+                <DT><H3>Nested</H3>
+                <DL><p><DT><A HREF='https://swift.org/'>Swift</A></DL><p>
+              </DL><p>
+            </DL><p>
+            """
 
         let firstImport = try BrowserBookmarkMigration.decode(
             Data(html.utf8),
@@ -107,9 +108,9 @@ final class BrowserMigrationTests: XCTestCase {
                             "WebBookmarkType": "WebBookmarkTypeLeaf",
                             "URLString": "https://developer.apple.com/safari/",
                             "URIDictionary": ["title": "Safari"],
-                        ],
+                        ]
                     ],
-                ],
+                ]
             ],
         ]
         let data = try PropertyListSerialization.data(
@@ -133,29 +134,29 @@ final class BrowserMigrationTests: XCTestCase {
 
     func testChromeBookmarksJSONImportsEveryRoot() throws {
         let json = """
-        {
-          "checksum": "ignored",
-          "roots": {
-            "bookmark_bar": {
-              "type": "folder",
-              "name": "Bookmarks bar",
-              "children": [
-                {"type":"url","name":"Chromium","url":"https://www.chromium.org/","date_added":"13370000000000000"}
-              ]
-            },
-            "other": {
-              "type": "folder",
-              "name": "Other bookmarks",
-              "children": [
-                {"type":"folder","name":"Reference","children":[
-                  {"type":"url","name":"WebKit","url":"https://webkit.org/"}
-                ]}
-              ]
+            {
+              "checksum": "ignored",
+              "roots": {
+                "bookmark_bar": {
+                  "type": "folder",
+                  "name": "Bookmarks bar",
+                  "children": [
+                    {"type":"url","name":"Chromium","url":"https://www.chromium.org/","date_added":"13370000000000000"}
+                  ]
+                },
+                "other": {
+                  "type": "folder",
+                  "name": "Other bookmarks",
+                  "children": [
+                    {"type":"folder","name":"Reference","children":[
+                      {"type":"url","name":"WebKit","url":"https://webkit.org/"}
+                    ]}
+                  ]
+                }
+              },
+              "version": 1
             }
-          },
-          "version": 1
-        }
-        """
+            """
 
         let imported = try BrowserBookmarkMigration.decode(
             Data(json.utf8),
@@ -175,25 +176,25 @@ final class BrowserMigrationTests: XCTestCase {
 
     func testFirefoxJSONImportUnderstandsPlacesBackupShape() throws {
         let json = """
-        {
-          "title": "",
-          "type": "text/x-moz-place-container",
-          "children": [
             {
-              "title": "Bookmarks Menu",
+              "title": "",
               "type": "text/x-moz-place-container",
               "children": [
                 {
-                  "title": "Mozilla",
-                  "uri": "https://www.mozilla.org/",
-                  "type": "text/x-moz-place",
-                  "dateAdded": 1700000000000000
+                  "title": "Bookmarks Menu",
+                  "type": "text/x-moz-place-container",
+                  "children": [
+                    {
+                      "title": "Mozilla",
+                      "uri": "https://www.mozilla.org/",
+                      "type": "text/x-moz-place",
+                      "dateAdded": 1700000000000000
+                    }
+                  ]
                 }
               ]
             }
-          ]
-        }
-        """
+            """
 
         let imported = try BrowserBookmarkMigration.decode(
             Data(json.utf8),
@@ -209,30 +210,30 @@ final class BrowserMigrationTests: XCTestCase {
 
     func testArcSidebarImportPreservesArcSpacesFoldersAndTabs() throws {
         let json = """
-        {
-          "sidebar": {
-            "containers": [
-              {
-                "items": [
-                  "root",
-                  {"id":"root","title":"","childrenIds":["tab-one","folder"],"data":{"itemContainer":{"containerType":{"spaceItems":[null]}}}},
-                  "folder",
-                  {"id":"folder","title":"Docs","parentID":"root","childrenIds":["tab-two"],"data":{"list":{}}},
-                  "tab-one",
-                  {"id":"tab-one","title":"","parentID":"root","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/","timeLastActiveAt":1700000000}}},
-                  "tab-two",
-                  {"id":"tab-two","title":"","parentID":"folder","data":{"tab":{"savedTitle":"WebKit","savedURL":"https://webkit.org/","timeLastActiveAt":1700000100}}}
-                ],
-                "spaces": [
-                  "space-one",
-                  {"id":"space-one","title":"Work","containerIDs":["root"],"newContainerIDs":[]}
-                ],
-                "topAppsContainerIDs": []
+            {
+              "sidebar": {
+                "containers": [
+                  {
+                    "items": [
+                      "root",
+                      {"id":"root","title":"","childrenIds":["tab-one","folder"],"data":{"itemContainer":{"containerType":{"spaceItems":[null]}}}},
+                      "folder",
+                      {"id":"folder","title":"Docs","parentID":"root","childrenIds":["tab-two"],"data":{"list":{}}},
+                      "tab-one",
+                      {"id":"tab-one","title":"","parentID":"root","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/","timeLastActiveAt":1700000000}}},
+                      "tab-two",
+                      {"id":"tab-two","title":"","parentID":"folder","data":{"tab":{"savedTitle":"WebKit","savedURL":"https://webkit.org/","timeLastActiveAt":1700000100}}}
+                    ],
+                    "spaces": [
+                      "space-one",
+                      {"id":"space-one","title":"Work","containerIDs":["root"],"newContainerIDs":[]}
+                    ],
+                    "topAppsContainerIDs": []
+                  }
+                ]
               }
-            ]
-          }
-        }
-        """
+            }
+            """
 
         let imported = try BrowserBookmarkMigration.decode(
             Data(json.utf8),
@@ -251,26 +252,26 @@ final class BrowserMigrationTests: XCTestCase {
 
     func testBrowserWithoutAnExposedThemeUsesNeutralImportBranding() throws {
         let json = """
-        {
-          "sidebar": {
-            "containers": [
-              {
-                "items": [
-                  "root",
-                  {"id":"root","title":"","childrenIds":["tab-one"],"data":{"itemContainer":{"containerType":{"spaceItems":[null]}}}},
-                  "tab-one",
-                  {"id":"tab-one","title":"","parentID":"root","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/","timeLastActiveAt":1700000000}}}
-                ],
-                "spaces": [
-                  "space-one",
-                  {"id":"space-one","title":"Work","containerIDs":["root"],"newContainerIDs":[]}
-                ],
-                "topAppsContainerIDs": []
+            {
+              "sidebar": {
+                "containers": [
+                  {
+                    "items": [
+                      "root",
+                      {"id":"root","title":"","childrenIds":["tab-one"],"data":{"itemContainer":{"containerType":{"spaceItems":[null]}}}},
+                      "tab-one",
+                      {"id":"tab-one","title":"","parentID":"root","data":{"tab":{"savedTitle":"Arc","savedURL":"https://arc.net/","timeLastActiveAt":1700000000}}}
+                    ],
+                    "spaces": [
+                      "space-one",
+                      {"id":"space-one","title":"Work","containerIDs":["root"],"newContainerIDs":[]}
+                    ],
+                    "topAppsContainerIDs": []
+                  }
+                ]
               }
-            ]
-          }
-        }
-        """
+            }
+            """
 
         let imported = try BrowserTabMigration.decode(
             Data(json.utf8),
@@ -291,9 +292,9 @@ final class BrowserMigrationTests: XCTestCase {
         }.joined()
         let closingFolders = String(repeating: "</DL><p>", count: 17)
         let html = """
-        <!DOCTYPE NETSCAPE-Bookmark-file-1>
-        <DL><p>\(nestedFolders)<DT><A HREF="https://example.com/">Example</A>\(closingFolders)</DL><p>
-        """
+            <!DOCTYPE NETSCAPE-Bookmark-file-1>
+            <DL><p>\(nestedFolders)<DT><A HREF="https://example.com/">Example</A>\(closingFolders)</DL><p>
+            """
 
         XCTAssertThrowsError(
             try BrowserBookmarkMigration.decode(
@@ -313,9 +314,9 @@ final class BrowserMigrationTests: XCTestCase {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: .preview, persistence: persistence)
         let html = """
-        <!DOCTYPE NETSCAPE-Bookmark-file-1>
-        <DL><p><DT><A HREF="https://example.com/">Example</A></DL><p>
-        """
+            <!DOCTYPE NETSCAPE-Bookmark-file-1>
+            <DL><p><DT><A HREF="https://example.com/">Example</A></DL><p>
+            """
         let imported = try BrowserBookmarkMigration.decode(
             Data(html.utf8),
             source: .htmlBookmarks,
@@ -330,7 +331,7 @@ final class BrowserMigrationTests: XCTestCase {
     }
 
     private func makeExportFixture() -> BrowserSession {
-        let folder = SavedFolder(title: "Research", symbol: "folder")
+        let folder = BrowserFolder(title: "Research", symbol: "folder")
         let pinned = BrowserTab(
             title: "Pinned",
             url: URL(string: "https://user:secret@example.com/pinned"),

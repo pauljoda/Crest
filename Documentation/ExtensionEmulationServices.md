@@ -63,7 +63,7 @@ checks. It supports:
 - classic service workers through a generated classic-worker bootstrap that
   imports the compatibility runtime before the declared worker;
 - Manifest V2 `background.scripts` by inserting the runtime first;
-- declared content scripts and every packaged HTML extension page. This
+- declared isolated content scripts and every packaged HTML extension page. This
   includes internal routes reached from a popup or options page even when the
   manifest does not name them directly. Manifest sandbox pages are excluded,
   because injecting privileged extension APIs there would violate the sandbox;
@@ -83,6 +83,12 @@ bootstrap with the same classic-or-module shape. Generated filenames are
 content-addressed, so a runtime change forces WebKit to refresh the worker
 registration without changing the extension's context identity or storage.
 Only the temporary copy is prepared; verified store bytes are never rewritten.
+
+Content scripts declared with `world: "MAIN"` remain unchanged. They share the
+website's globals, so installing the extension runtime there would overwrite
+the page's externally-connectable messaging API with an unrelated extension's
+identity. Omitted `world` and explicit `ISOLATED` declarations retain the
+compatibility prelude.
 
 This is the reusable JavaScript/package foundation, not full Chrome parity.
 The capability broker currently connects notifications, system idle state,
@@ -118,6 +124,17 @@ returned unchanged, and original methods are bound to the native namespace.
 The roots, `runtime`, and messaging objects keep their native identity.
 `runtime.getManifest()` is the deliberate exception: it returns the extension's
 authored manifest rather than Crest's temporary worker redirection.
+
+The scoped worker view hides foreground-only runtime methods. Its
+`runtime.lastError` getter remains live: errors belong to a callback, not to
+the namespace's cached capability surface. For emulated callback failures,
+the runtime first verifies that an error property can actually be read back.
+WebKit's native runtime can reject or ignore that override. In that case the
+verified internal `runtime.callbackError` broker request returns the failure
+through WebKit itself, and the package callback runs while WebKit publishes
+`lastError`. This request performs no browser action and accepts only a bounded
+error message from an authorized extension context. Promise failures keep
+their existing rejection path.
 
 The host still has one required responsibility: every live web view that can
 run extension content must be announced to `WKWebExtensionController` before
@@ -352,19 +369,29 @@ identifiers and so cannot name an unpacked development extension.
 
 ## Side panels — `chrome.sidePanel` and `browser.sidebarAction`
 
-Both APIs share a per-client options registry and one presentation per native
-window and Space. Chrome tab-specific options own a separate document; Firefox
-title, icon, and panel options inherit through tab, window, and default layers.
+Both APIs share a per-client options registry and one selected document per native
+window and Space. Chrome tab-specific options choose the resource when opened;
+Firefox title, icon, and panel options inherit through tab, window, and default layers.
 The coordinator validates native tab/window identities and gesture eligibility
 before changing the store. `sidebar.watch` is a permission-checked event stream
 separate from notification and idle watches.
 
 The macOS host presents a trailing split-row card backed by an extension
-`WKWebView`, never a tab adapter. Closing, disabling, locking, or switching to
-an inapplicable tab releases its document. Width and last-used client are local
+`WKWebView`, never a tab adapter. Selecting another extension replaces the current
+panel throughout the Space. Switching tabs keeps the document mounted; native
+tab events update the extension's active-page context. Switching Spaces hides
+the document and restores that Space's selected panel. Closing, replacing,
+locking, or uninstalling releases the document. Disabling an option prevents
+new opens without dismissing an ongoing panel. Width and last-used client are local
 window preferences; action behavior persists per client. Open intent and
 runtime options do not survive relaunch. Firefox fresh-install opening is
 consumed once when the host becomes available, not on restoration.
+
+The card header names the selected extension. There are no per-tab panel
+selections, scope labels, or tab/toolbar panel indicators. Closing a panel cannot
+reveal an older selection. Removing the tab used to open a resource does not
+close the panel, and a Space with no tabs can keep its current panel. This
+presentation deliberately differs from Chrome's contextual-panel switching.
 
 The resident webpage receives the reduced card viewport as the panel opens or
 resizes. Responsive pages retain the requested zoom. An authored document/body
@@ -372,8 +399,20 @@ CSS minimum width can temporarily reduce the displayed zoom to fit, bounded by
 the normal zoom floor; closing the panel restores the requested zoom. This does
 not rewrite the saved zoom or fit intentionally scrollable tables and carousels.
 
-Top-level web URLs open through Crest's tab path; remote frames remain subject
-to WebKit and extension CSP. Packaged path icons are supported, while
+Top-level web URLs open through Crest's tab path. Sidepanel and offscreen
+documents use a private content controller applied to each navigation, including
+embedded websites, through WebKit's `_setUserContentController:` webpage preference.
+The native extension controller remains attached for the owner's origin, APIs,
+and background messaging; its shared scripts, styles, and content rules are
+excluded from the hosted document. New injections after opening are excluded too.
+The external website relay admits only the owning extension. Ordinary browser
+tabs and WebKit-owned popups retain their existing controllers. If the isolation
+SPI is unavailable, Crest refuses to load the hosted document.
+
+The navigation delegate receives WebKit's own preferences copy. Mutating the
+configuration's default preferences would also change other views because
+`WKWebViewConfiguration.copy` shares that object. Hosted documents still use the
+existing CSP compatibility policy described below. Packaged path icons are supported, while
 `sidebarAction.setIcon({imageData})` rejects rather than reporting success.
 The compatibility matrix hides WebKit's partial namespaces and publishes the
 complete Chrome and Firefox member lists only in privileged extension contexts.
@@ -388,8 +427,10 @@ the native `windows.getCurrent()` rather than inventing an identifier, exactly
 as the sidebar fragment does, and the broker names the window only by kind.
 `tabGroups.watch` is a permission-checked event stream separate from the
 notification, idle, and sidebar watches. `tabGroups.*` require the `tabGroups`
-permission; `tabs.group`, `tabs.ungroup`, and the `Tab.groupId` mirror require
-`tabs`, which is where Chromium's schema puts them.
+permission. `tabs.group`, `tabs.ungroup`, and the `Tab.groupId` mirror require
+a verified extension context in the owning Space, with no additional manifest
+permission. Chrome's `tabs` permission controls sensitive tab properties rather
+than access to ordinary tab operations; WebKit still filters those properties.
 
 The coordinator re-verifies every tab target against the live Space before the
 registry moves — the wire carries a tab index and the URL JavaScript saw, never
@@ -398,31 +439,54 @@ can never join a group. `reconcile(session:)` repairs the registry on every
 session change, dropping closed tabs and emitting `onRemoved` for a group its
 last tab has left.
 
-Crest v1 records grouping without drawing it, and says so rather than
-pretending otherwise:
+WebKit can return an empty URL when sensitive metadata is withheld. The
+compatibility runtime omits that unavailable identity hint instead of comparing
+it with the live URL and rejecting a valid tab. Native tab lookup and owning-Space
+validation still apply. Explicit `chrome://newtab` and `chrome://newtab/` requests
+when creating a tab or a normal window use Crest's native start page.
 
-- There is no visible grouping in the sidebar and no tab is reordered to sit
-  beside its siblings. Membership, title, colour, and collapsed state are real,
-  durable, and queryable; the presentation is not built yet.
-- `tabGroups.move` therefore rejects with Chromium's own `Failed to move
-  group.` after validating the group id, so a wrong id still reports the wrong
-  id. It never silently succeeds.
-- `tabGroups.onMoved` is published as a real event object that keeps its
-  listeners and warns once that none of them will run — the matrix's
-  `presenceOnly` route — because Crest has no group ordering to change.
-- `Tab.groupId` is projected onto `tabs.get` and `tabs.query` results from a
-  mirror the broker refreshes. The mirror is switched on when a package
-  declares `tabGroups`, calls `tabs.group`/`tabs.ungroup`, or filters a query
-  by `groupId`; until then every tab reports `TAB_GROUP_ID_NONE`, which is what
-  a package that created no group would see anyway. The deviation is that a
-  package which never asks will not observe a group some *other* extension
-  made. The alternative was a native round trip on every `tabs.query` in every
-  extension for a field most never read.
-- `Tab.groupId` is not projected onto tab objects delivered by WebKit's own
-  `tabs.on*` events, and Crest does not fire `tabs.onUpdated(tabId, {groupId})`
-  when membership changes. Those events are native and unpatched; a package
-  that needs the change should use `tabGroups.onCreated`/`onRemoved` or re-read
-  the tab.
+Groups project the same folder tree displayed in Saved and Current Tabs. The
+browser family shares one service across windows; the session restores membership,
+names, colors and collapse state. Moving a populated folder between sections
+preserves its extension group ID as well as its folder ID.
+
+- Dropping a current tab onto another tab creates a folder; the tab context menu
+  also creates folders or adds tabs to existing ones. Folder headers support
+  dropping tabs, renaming, color changes, collapse and ungrouping.
+- `tabs.group` and UI changes use the same membership. Members occupy one
+  contiguous run. A split view remains one row and joins as a whole.
+- New extension groups use the first requested tab's Saved or Current placement.
+  Adding tabs to an existing group uses that folder's placement. Ungrouping
+  preserves each tab's section and saved URL. Pinned and transient tabs remain
+  ineligible for grouping. Grouping and ungrouping reconcile native tab order
+  before replying with membership indexed against the updated session.
+- `tabGroups.move` moves the complete run and emits `onMoved`; it refuses a
+  destination that would split another group or insert into a different folder
+  hierarchy. Group indexes use the Space's primary extension window; an index
+  in another section moves the folder there. Native tab order and folder order
+  change in the same session transaction. Cross-Space group moves remain unavailable.
+- `Tab.groupId` is projected onto every `tabs.get` and `tabs.query` result from
+  a mirror the broker refreshes. Concurrent reads share the same refresh.
+  Folders created by the user or another extension are visible without an
+  opt-in or sensitive-tab permission. The internal response contains tab indexes, opaque identity tokens, a change
+  revision and group IDs, not names, URLs or titles.
+- `tabs.move` commits numeric-index moves through the same placement and folder
+  model. Single and multiple tab requests preserve selection and pinned state;
+  moving within a group keeps membership, and insertion between two members
+  joins their group. A singleton leaf folder moves with its identity. Results
+  are read back through WebKit so native tab IDs and sensitive-property access
+  remain authoritative. Only the Space's normal window accepts moves; auxiliary
+  windows and cross-Space destinations are refused. Nested folder boundaries
+  remain subject to the shared tree's movement constraints.
+- Native `tabs.onCreated` and `tabs.onUpdated` tab objects receive group metadata.
+  Folder membership changes also deliver `tabs.onUpdated(tabId, {groupId}, tab)`
+  through a separate, permission-free metadata watch. The store emits ordered
+  changes for surviving tabs, independently of group visual events. Before
+  correlating opaque session tokens with WebKit IDs, the runtime checks the host
+  revision around a native tab query; moving away and back invalidates that
+  attempt. Closed tabs are skipped and native getters retain sensitive-property
+  filtering. The original event objects and listener removal remain intact.
+  Metadata unavailable during a native event never suppresses that native event.
 - `TabGroup.shared` is always `false`. Chrome's shared and saved groups are a
   sync feature Crest has no equivalent for, and reporting `false` is the truth
   rather than a stub.
@@ -670,12 +734,82 @@ on those strings.
 | Domain | Implemented |
 | --- | --- |
 | `Runtime` | `enable`, `disable`, `evaluate`, `callFunctionOn`, `awaitPromise`, `getProperties`, `releaseObject`, `releaseObjectGroup`, plus `executionContextCreated`/`executionContextDestroyed`/`executionContextsCleared` events |
-| `Page` | `captureScreenshot` |
+| `Page` | `enable`, `disable`, `getFrameTree`, `getLayoutMetrics`, `setLifecycleEventsEnabled`, `navigate`, `reload`, `bringToFront`, `close`, `handleJavaScriptDialog`, `captureScreenshot` |
+| `Input` | `dispatchMouseEvent`, `dispatchKeyEvent`, `insertText` |
+| `Network` | `enable`, `disable`, `getResponseBody`, translated request/response/loading events |
+| `Fetch` | `enable`, `disable`, request/response `requestPaused`, `continueRequest`, unchanged `continueResponse`, request-stage `failRequest`, explicit-body `fulfillRequest`, native-cache `getResponseBody` |
+| `Target` | `getTargets`, `closeTarget` |
+| `Accessibility` | `enable`, `disable`, `getFullAXTree`, `getRootAXNode`, `getChildAXNodes` using native WebKit accessibility properties |
+| `DOM` | `resolveNode` for backend IDs returned by accessibility and DOM snapshots |
+| `DOMSnapshot` | `captureSnapshot` with DOM, frame, computed-style and measured layout data |
 
-Every other method rejects with the protocol's own `'<Domain.method>' wasn't
-found`, and each refusal is logged to the `extension-diagnostics` os_log
-category so real demand for `Input`, `Network`, `Emulation`, and `Target` is
-measured rather than guessed. Nothing is stubbed to look successful.
+Unsupported commands and parameters still reject and are logged to
+`extension-diagnostics`. `Runtime.evaluate` accepts ordinary WebKit expressions
+with `replMode`; V8's top-level await and lexical redeclaration semantics are not
+emulated. A positive `timeout` bounds the response wait, including an awaited
+promise. **WebKit cannot terminate execution at that deadline.** The timeout
+error states that the script may still be running; it does not claim cancellation.
+Side-effect-free evaluation constraints remain rejected before running code.
+
+`Page.captureScreenshot` supports PNG/JPEG, integer page-coordinate clips, and
+positive fractional clip scales. A clip is also supported with
+`captureBeyondViewport: false`, as used by Claude for background tabs. Capturing
+does not scroll or resize the target page. Empty clips, excessive output sizes,
+`fromSurface: false`, and `optimizeForSpeed: true` reject explicitly.
+
+
+Accessibility reads return WebKit's computed roles, names, supported states and
+DOM-backed tree. Repeated reads share one native document binding; navigation
+invalidates old IDs. `DOM.resolveNode` resolves those IDs to native Runtime
+objects. Explicit child-frame roots, anonymous platform AX objects, value/source
+annotations and AX change events remain unsupported. The adapter does not infer
+accessible names from page-defined JavaScript or silently fabricate these fields.
+
+`DOMSnapshot.captureSnapshot` reads ordinary DOM, open/closed shadow roots,
+template contents and frames through an owned named content world. Real native
+frame IDs link iframe documents. Page-defined JavaScript getters cannot replace
+the snapshot's geometry or traversal. DOM and accessibility share native node
+bindings. WebKit does not bind whitespace-only text nodes; bounded weak
+references in the owned world preserve their stable, resolvable backend IDs
+without retaining detached elements. Navigation invalidates both ID types.
+
+Snapshot layout uses element bounds and text Ranges in document coordinates.
+Text remains DOM source text; text boxes use measured Unicode character ranges
+with UTF-16 offsets, rather than Blink's inline-fragment partition. Stacking
+contexts are derived from computed CSS. Native pseudo-elements and anonymous
+renderer objects are not exposed. Paint order, DOMRects, blended background
+colors and text opacities reject when requested, as do frames in a separate
+Inspector target. These rendering limits are not represented by fabricated
+zero values. Reads are bounded per frame by node, text, string and elapsed-time
+limits; exceeding a limit fails the capture instead of truncating it.
+
+`Page.setLifecycleEventsEnabled` forwards subsequent native main-document
+`DOMContentLoaded` and `load` milestones with the actual loader and timestamp.
+Disabling it stops those events. WebKit does not supply Chrome's network-idle or
+paint milestones here, and previously fired milestones are not replayed.
+
+### Network interception
+
+`Fetch` belongs to the same authorized debugger attachment as the other domains.
+URL globs, resource types and request/response stages filter real WebKit
+interceptions. Omitted patterns match requests; an empty pattern list does not
+intercept. Each pause has a fresh ID mapped to its engine request and stage.
+Unmatched resources continue automatically. Repeated enable calls replace the
+match set, while disable and session teardown release pending network work.
+
+The transport claims interception events only while the Fetch adapter owns them;
+otherwise the borrowed Inspector frontend would automatically continue them
+before the extension could respond. Other network/Inspector events keep their
+existing delivery path.
+
+Request overrides support URL, method, headers and base64 POST data. Fulfillment
+supports explicit base64 bodies at either stage; request-stage fulfillment can
+also return an empty body. Authentication challenges, response-stage failure,
+redirect fulfillment, duplicate/binary response headers, per-request response
+interception overrides and modified `continueResponse` options are not emulated.
+They reject instead of reporting success. Response body reads use WebKit's native
+resource cache and can fail if the engine has not made the body available; no
+streaming body or early-response buffering is provided.
 
 ### Binding, consent, and the Stop control
 

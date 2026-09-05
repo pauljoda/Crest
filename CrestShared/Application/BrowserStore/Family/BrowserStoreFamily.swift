@@ -9,6 +9,7 @@ final class BrowserStoreFamily {
     }
 
     private var stores: [WeakStore] = []
+    let extensionTabGroups = BrowserExtensionTabGroupStore()
     private(set) var authoritativeSession: BrowserSession
     private(set) var syncRevision: BrowserStoreSyncRevision = .initial
     private(set) var deletingSpaceIDs: Set<SpaceID> = []
@@ -16,6 +17,13 @@ final class BrowserStoreFamily {
 
     init(session: BrowserSession) {
         authoritativeSession = session
+        extensionTabGroups.sessionSnapshot = { [weak self] in self?.authoritativeSession }
+        extensionTabGroups.commitSession = { [weak self] next in
+            guard let store = self?.stores.compactMap(\.value).first else { return }
+            store.receiveSharedSession(next)
+            store.persist(syncUrgency: .coalesced, scope: .core)
+        }
+        extensionTabGroups.repair(using: session)
     }
 
     func register(_ store: BrowserStore) {
@@ -32,6 +40,7 @@ final class BrowserStoreFamily {
         let revision = reservedRevision ?? reserveSyncRevision()
         precondition(revision == syncRevision)
         authoritativeSession = session
+        extensionTabGroups.repair(using: session)
         stores.removeAll { $0.value == nil }
         for store in stores.compactMap(\.value) where store !== source {
             store.receiveSharedSession(session)

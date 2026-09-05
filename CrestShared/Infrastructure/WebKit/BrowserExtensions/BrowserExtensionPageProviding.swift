@@ -163,6 +163,10 @@ protocol BrowserExtensionPageProviding:
 {
     func extensionWebView(for tabID: TabID, in spaceID: SpaceID) -> WKWebView?
 
+    /// Allocates an inactive tab's runtime before WebKit announces the tab.
+    /// Explicit extension-created pages must load even when not selected.
+    func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession)
+
     /// Loads an extension-requested URL into the tab runtime appropriate for
     /// that URL. Extension documents require their context's WebKit
     /// configuration, so a provider that owns page lifecycles may swap the
@@ -243,6 +247,8 @@ protocol BrowserExtensionPageProviding:
 }
 
 extension BrowserExtensionPageProviding {
+    func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {}
+
     func closeExtensionSidebars(extensionBaseURL: URL, in spaceID: SpaceID) {}
 
     func createExtensionOffscreenDocument(

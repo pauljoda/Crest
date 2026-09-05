@@ -17,6 +17,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// must not claim the group's own header row, or the header stops being a
     /// place to drop *beside* the folder.
     var topInset: CGFloat = 0
+    var minimumHeight: CGFloat = 0
 
     /// Identity for this registration. The mobile space pager keeps neighbouring
     /// pages alive and they register the same targets, so registrations must not
@@ -36,7 +37,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
                 state.register(
                     zone: BrowserSidebarReorderZone(
                         target: target,
-                        frame: resolvedFrame(frame)
+                        frame: resolvedFrame(frame), minimumHeight: minimumHeight
                     ),
                     for: identity,
                     scrollRegionID: scrollRegionID
@@ -53,8 +54,10 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// A nesting target claims only the middle of its row so the edges stay
     /// available for reordering past it.
     private func resolvedFrame(_ frame: CGRect) -> CGRect {
-        if case .folder = target {
+        switch target {
+        case .folder, .currentFolder, .currentTab:
             return BrowserSidebarReorderPolicy.nestingFrame(for: frame)
+        default: break
         }
         guard topInset > 0, frame.height > topInset else { return frame }
         return CGRect(
@@ -71,14 +74,15 @@ extension View {
         _ target: BrowserSidebarReorderZone.Target,
         state: BrowserSidebarReorderState,
         isActive: Bool = true,
-        topInset: CGFloat = 0
+        topInset: CGFloat = 0,
+        minimumHeight: CGFloat = 0
     ) -> some View {
         modifier(
             BrowserSidebarReorderZoneModifier(
                 target: target,
                 state: state,
                 isActive: isActive,
-                topInset: topInset
+                topInset: topInset, minimumHeight: minimumHeight
             )
         )
     }

@@ -25,6 +25,7 @@ extension BrowserSession {
         symbol: String = "folder",
         color: BrowserSpaceBrandColor = .folderDefault,
         parentID: FolderID? = nil,
+        location: BrowserFolderLocation = .saved,
         in spaceID: SpaceID
     ) -> FolderID? {
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
@@ -41,8 +42,9 @@ extension BrowserSession {
 
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
-        let folder = SavedFolder(
+        let folder = BrowserFolder(
             title: trimmedTitle.isEmpty ? "Untitled Folder" : trimmedTitle,
+            location: parentID.flatMap { id in spaces[spaceIndex].folders.first { $0.id == id }?.location } ?? location,
             symbol: trimmedSymbol.isEmpty ? "folder" : trimmedSymbol,
             color: color,
             parentID: parentID
@@ -142,52 +144,6 @@ extension BrowserSession {
         let subtreeMaximumDepth = descendants.compactMap(tree.depth).max() ?? sourceDepth
         let relativeDepth = subtreeMaximumDepth - sourceDepth
         return destinationDepth + relativeDepth < BrowserSpace.maximumFolderDepth
-    }
-
-    @discardableResult
-    mutating func moveFolder(
-        _ folderID: FolderID,
-        in spaceID: SpaceID,
-        into parentID: FolderID?,
-        before siblingID: FolderID? = nil
-    ) -> Bool {
-        guard canMoveFolder(folderID, in: spaceID, into: parentID),
-            let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID })
-        else {
-            return false
-        }
-        let tree = spaces[spaceIndex].folderTree
-        let subtreeIDs = tree.descendants(of: folderID).union([folderID])
-        guard siblingID.map({ !subtreeIDs.contains($0) }) ?? true else { return false }
-
-        var moving = spaces[spaceIndex].folders.filter { subtreeIDs.contains($0.id) }
-        var remaining = spaces[spaceIndex].folders.filter { !subtreeIDs.contains($0.id) }
-        guard let rootIndex = moving.firstIndex(where: { $0.id == folderID }) else { return false }
-        moving[rootIndex].parentID = parentID
-
-        let insertionIndex: Int
-        if let siblingID,
-            let siblingIndex = remaining.firstIndex(where: {
-                $0.id == siblingID && $0.parentID == parentID
-            })
-        {
-            insertionIndex = siblingIndex
-        } else if let parentID {
-            let remainingTree = BrowserFolderTree(folders: remaining)
-            let parentSubtreeIDs = remainingTree.descendants(of: parentID).union([parentID])
-            insertionIndex =
-                remaining.lastIndex {
-                    parentSubtreeIDs.contains($0.id)
-                }.map { remaining.index(after: $0) } ?? remaining.endIndex
-        } else {
-            insertionIndex = remaining.endIndex
-        }
-
-        remaining.insert(contentsOf: moving, at: insertionIndex)
-        let reordered = BrowserFolderTree(folders: remaining).foldersInDisplayOrder
-        guard reordered != spaces[spaceIndex].folders else { return false }
-        spaces[spaceIndex].folders = reordered
-        return true
     }
 
     /// Removes only the container. Direct tabs remain saved at the deleted folder's

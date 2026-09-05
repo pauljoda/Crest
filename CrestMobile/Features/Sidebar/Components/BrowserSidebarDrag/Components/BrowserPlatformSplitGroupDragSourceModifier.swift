@@ -9,17 +9,8 @@ import UniformTypeIdentifiers
 /// path the system arbitrates against a context menu — holding still opens the
 /// menu, pulling lifts the row.
 ///
-/// Three pieces have to line up, and each one broke the interaction on its own
-/// when it did not:
-///
-/// 1. The `.onDrag` provider only *stages* the lift. It runs at the press,
-///    before any session exists; beginning the lift here would hide the row
-///    while nothing is in flight, and a press released without pulling produces
-///    no session to clear it.
-/// 2. `BrowserSidebarReorderDropDelegate` promotes the stage on its first
-///    position — that sample is the proof a drag is genuinely under way.
-/// 3. `BrowserMobileReorderSessionModifier` clears a session that ends away
-///    from the sidebar, so the row is hidden only while genuinely lifted.
+/// The provider stages the shared lift, the drop feed supplies positions, and
+/// the native source completes cancellation on every supported iOS version.
 struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
     let item: BrowserSplitGroupDragItem
     /// The run this row stands for, used only to draw the lift preview.
@@ -39,21 +30,23 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
                 section: section,
                 reorder: reorder
             )
-            .onDrag {
+            .browserMobileDraggable {
                 reorder.state.stage(item: .splitGroup(item), section: section)
                 let payload = (try? JSONEncoder().encode(item)) ?? Data()
-                return NSItemProvider(
+                let provider = NSItemProvider(
                     item: payload as NSData,
                     typeIdentifier: UTType.json.identifier
                 )
-            } preview: {
+                let token = reorder.state.sessionToken
+                return BrowserMobileDragSession(provider: provider) {
+                    guard let token else { return }
+                    reorder.state.cancel(session: token)
+                }
+            } preview: { _ in
                 BrowserSplitGroupDragPreview(
                     members: members,
                     profileID: item.profileID
                 )
             }
-            .modifier(
-                BrowserMobileReorderSessionModifier(state: reorder.state)
-            )
     }
 }

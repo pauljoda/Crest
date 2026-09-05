@@ -22,7 +22,7 @@ import SwiftUI
 /// The layer only hit-tests while a lift is in flight, which costs the page
 /// nothing: a system drag already owns the touch that is carrying it, so there
 /// is no interaction being taken away. `hasLiftInFlight` rather than
-/// `isDragging`, because a lift is staged by `.onDrag`'s provider and promoted
+/// `isDragging`, because a lift is staged by the native source and promoted
 /// by the first position a delegate reports — and this feed may be the first
 /// delegate to report one, which it cannot do if the layer waits for the
 /// promotion it is supposed to cause.

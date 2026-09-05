@@ -1,13 +1,14 @@
 import CloudKit
 import Foundation
 import XCTest
+
 @testable import Crest
 
 final class BrowserCloudRecordCodecTests: XCTestCase {
     func testEveryAllowlistedRecordRoundTripsThroughCloudKit() throws {
         var session = BrowserSession.preview
         let rootFolder = try XCTUnwrap(session.spaces[0].folders.first)
-        let nestedFolder = SavedFolder(
+        let nestedFolder = BrowserFolder(
             title: "Nested",
             symbol: "folder.fill",
             parentID: rootFolder.id,
@@ -23,7 +24,7 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
             colors: [
                 .ink,
                 BrowserSpaceBrandColor(red: 0.08, green: 0.46, blue: 0.94),
-                .gold
+                .gold,
             ],
             bannerPattern: .chevron,
             bannerStrength: 0.52,
@@ -79,25 +80,28 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
 
         XCTAssertEqual(decoded, journal.records)
         XCTAssertEqual(Set(decoded.map(\.id.kind)), Set(BrowserSyncRecordKind.allCases))
-        XCTAssertTrue(decoded.contains { record in
-            guard case let .folder(folder)? = record.payload else { return false }
-            return folder.id == nestedFolder.id
-                && folder.parentID == rootFolder.id
-                && folder.isCollapsed
-                && folder.collapseModifiedAt == Date(timeIntervalSince1970: 125)
-        })
-        XCTAssertTrue(decoded.contains { record in
-            guard case let .space(space)? = record.payload else { return false }
-            return space.id == session.spaces[0].id
-                && space.branding == session.spaces[0].branding
-                && !space.isSavedTabsExpanded
-                && space.savedTabsExpansionModifiedAt
-                    == Date(timeIntervalSince1970: 126)
-        })
         XCTAssertTrue(
             decoded.contains { record in
-                guard case let .tab(tab)? = record.payload,
-                      tab.id == renamedID else { return false }
+                guard case .folder(let folder)? = record.payload else { return false }
+                return folder.id == nestedFolder.id
+                    && folder.parentID == rootFolder.id
+                    && folder.isCollapsed
+                    && folder.collapseModifiedAt == Date(timeIntervalSince1970: 125)
+            })
+        XCTAssertTrue(
+            decoded.contains { record in
+                guard case .space(let space)? = record.payload else { return false }
+                return space.id == session.spaces[0].id
+                    && space.branding == session.spaces[0].branding
+                    && !space.isSavedTabsExpanded
+                    && space.savedTabsExpansionModifiedAt
+                        == Date(timeIntervalSince1970: 126)
+            })
+        XCTAssertTrue(
+            decoded.contains { record in
+                guard case .tab(let tab)? = record.payload,
+                    tab.id == renamedID
+                else { return false }
                 return tab.customTitle == "Release Notes"
                     && tab.titleModifiedAt == Date(timeIntervalSince1970: 150)
             },
@@ -112,13 +116,14 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         var session = BrowserSession.preview
         let expanded: [BrowserSpaceCrestSymbol] = [
             .crown, .risingSun, .paw, .hound, .horn, .snowflake, .drop,
-            .flower, .crossedBanners
+            .flower, .crossedBanners,
         ]
         for index in session.spaces.indices {
             session.spaces[index].branding.iconStyle = .layeredCrest
-            session.spaces[index].branding.crest.symbol = expanded[
-                index % expanded.count
-            ]
+            session.spaces[index].branding.crest.symbol =
+                expanded[
+                    index % expanded.count
+                ]
         }
         var journal = BrowserSyncJournal(
             deviceID: UUID(uuidString: "10000000-0000-0000-0000-000000000009")!
@@ -132,8 +137,8 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
 
         XCTAssertFalse(decoded.isEmpty)
         for record in decoded {
-            guard case let .space(space)? = record.payload,
-                  let source = session.spaces.first(where: { $0.id == space.id })
+            guard case .space(let space)? = record.payload,
+                let source = session.spaces.first(where: { $0.id == space.id })
             else {
                 return XCTFail("A Space record lost its payload in transit.")
             }

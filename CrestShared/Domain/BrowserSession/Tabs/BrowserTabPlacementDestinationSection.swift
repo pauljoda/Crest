@@ -27,7 +27,7 @@ struct BrowserTabPlacementDestinationSection: Equatable, Sendable {
 
     func contains(_ tab: BrowserTab) -> Bool {
         guard tab.placement == placement else { return false }
-        return placement != .saved || tab.folderID == folderID
+        return tab.folderID == folderID
     }
 
     private func emptySectionInsertionIndex(in tabs: [BrowserTab]) -> Int {

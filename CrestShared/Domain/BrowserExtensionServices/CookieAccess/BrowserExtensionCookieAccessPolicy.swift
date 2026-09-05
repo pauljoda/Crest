@@ -93,6 +93,24 @@ enum BrowserExtensionCookieAccessPolicy {
         return HTTPCookie(properties: properties)
     }
 
+    /// A website may refresh a session from inside the panel. Keep the normal
+    /// jar's SameSite protection when mirroring a value from its relaxed copy.
+    /// A normal first-party response remains free to change its own policy.
+    static func normalCookie(_ cookie: HTTPCookie, preserving original: HTTPCookie?) -> HTTPCookie {
+        guard let original, restrictsCrossSiteUse(original),
+            var properties = cookie.properties
+        else { return cookie }
+        let originalIsStrict = original.sameSitePolicy == .sameSiteStrict
+        if !restrictsCrossSiteUse(cookie) || originalIsStrict {
+            properties[.sameSitePolicy] = original.sameSitePolicy?.rawValue
+        }
+        properties.removeValue(forKey: .maximumAge)
+        properties[.expires] = cookie.expiresDate
+        if cookie.isSecure { properties[.secure] = "TRUE" }
+        if cookie.isHTTPOnly { properties[httpOnlyPropertyKey] = "TRUE" }
+        return HTTPCookie(properties: properties) ?? cookie
+    }
+
     private static func normalized(_ value: String) -> String? {
         let trimmed = value.lowercased().trimmingCharacters(
             in: CharacterSet(charactersIn: ". \t")

@@ -6,24 +6,23 @@ import XCTest
 final class BrowserExtensionTabGroupBrokerRequestTests: XCTestCase {
     func testEveryOperationDeclaresTheGrantChromeGatesItWith() throws {
         for api in ["tabGroups.get", "tabGroups.update", "tabGroups.move"] {
-            let request = try BrowserExtensionTabGroupBrokerRequest(message: ["api": api, "groupId": 3])
+            let request = try BrowserExtensionTabGroupBrokerRequest(message: ["api": api, "groupId": 3, "index": -1])
             XCTAssertEqual(request.requiredCapability, "tabGroups", api)
             XCTAssertEqual(request.groupID, 3, api)
         }
         XCTAssertEqual(
             try BrowserExtensionTabGroupBrokerRequest(message: ["api": "tabGroups.query"])
                 .requiredCapability, "tabGroups")
-        // Chromium schedules grouping under `chrome.tabs`, and `Tab.groupId`
-        // is a tabs-level field, so neither needs the `tabGroups` permission.
+        // Ordinary tab metadata and grouping require no sensitive-tab grant.
         for api in ["tabs.group", "tabs.ungroup"] {
             let request = try BrowserExtensionTabGroupBrokerRequest(message: [
                 "api": api, "tabs": [["tabIndex": 0]],
             ])
-            XCTAssertEqual(request.requiredCapability, "tabs", api)
+            XCTAssertNil(request.requiredCapability, api)
         }
-        XCTAssertEqual(
+        XCTAssertNil(
             try BrowserExtensionTabGroupBrokerRequest(message: ["api": "tabGroups.membership"])
-                .requiredCapability, "tabs")
+                .requiredCapability)
     }
 
     func testTabTargetsAreReverifiedAgainstTheLiveSpace() throws {

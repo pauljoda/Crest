@@ -69,6 +69,14 @@ final class BrowserExtensionTransientTabAnnouncementTests: XCTestCase {
             pool.extensionWindowGeometry(in: spaceID)
         }
 
+        func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
+            pool.prepareExtensionTab(for: tabID, in: spaceID, session: session)
+        }
+
+        func loadExtensionURL(_ url: URL, for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
+            pool.loadExtensionURL(url, for: tabID, in: spaceID, session: session)
+        }
+
         func prepareExtensionSelection(session: BrowserSession) {
             pool.prepareExtensionSelection(session: session)
         }
@@ -213,6 +221,66 @@ final class BrowserExtensionTransientTabAnnouncementTests: XCTestCase {
                     )
                 ).isLoading
             )
+        }
+    }
+
+    func testInactiveExtensionTabIsAnnouncedThenLoadsWithoutChangingSelection() async throws {
+        let selected = BrowserTab(title: "Keep selected", url: URL(string: "about:blank"), placement: .current)
+        let space = makeSpace(tabs: [selected], selectedTabID: selected.id)
+        let harness = try makeHarness(space: space)
+        harness.pages.select(session: harness.browser.session)
+        let selectedView = try XCTUnwrap(harness.pages.activePage?.webView)
+        selectedView.frame = CGRect(x: 0, y: 0, width: 640, height: 480)
+        let html = """
+            <title>Background extension work</title><body><script>
+            document.body.dataset.viewport = JSON.stringify([innerWidth, innerHeight]);
+            document.body.dataset.loaded='yes';
+            </script>
+            """
+        let url = try XCTUnwrap(URL(string: "data:text/html;base64," + Data(html.utf8).base64EncodedString()))
+        var opened: (any WKWebExtensionTab)?
+        harness.extensions.tabWindowCoordinator.openTab(
+            url: url, spaceID: space.id, pinned: false, index: nil,
+            selected: false
+        ) { tab, error in
+            XCTAssertNil(error)
+            opened = tab
+        }
+        XCTAssertNotNil(opened)
+        let tab = try XCTUnwrap(harness.browser.session.space(id: space.id)?.tabs.first { $0.id != selected.id })
+        let view = try XCTUnwrap(harness.pages.extensionWebView(for: tab.id, in: space.id))
+        let before = try XCTUnwrap(harness.probe.loadingWhenResolved[tab.id])
+        XCTAssertFalse(before.isEmpty)
+        XCTAssertTrue(before.allSatisfy { !$0 }, "The inactive page must be announced before starting its navigation.")
+        try await BrowserChromeDebuggerDomainFixture.waitFor {
+            (try? await view.evaluateJavaScript("document.body?.dataset.loaded")) as? String == "yes"
+        }
+        XCTAssertEqual(view.title, "Background extension work")
+        let initialViewport = try await view.evaluateJavaScript("document.body.dataset.viewport") as? String
+        XCTAssertEqual(
+            initialViewport, "[640,480]", "An extension-created background tab needs a viewport before scripts run.")
+        XCTAssertEqual(harness.browser.session.selectedTab?.id, selected.id)
+        XCTAssertTrue(
+            harness.pages.activePage?.webView === harness.pages.extensionWebView(for: selected.id, in: space.id))
+        view.stopLoading()
+    }
+
+    func testExtensionChromeNewTabRequestsUseTheNativeStartPage() throws {
+        for rawURL in ["chrome://newtab", "chrome://newtab/"] {
+            let space = makeSpace(tabs: [])
+            let harness = try makeHarness(space: space)
+            var opened: (any WKWebExtensionTab)?
+            harness.extensions.tabWindowCoordinator.openTab(
+                url: try XCTUnwrap(URL(string: rawURL)), spaceID: space.id,
+                pinned: false, index: nil, selected: false
+            ) { tab, error in
+                XCTAssertNil(error)
+                opened = tab
+            }
+            XCTAssertNotNil(opened)
+            let tab = try XCTUnwrap(harness.browser.session.space(id: space.id)?.tabs.first)
+            XCTAssertNil(tab.url, "A browser-owned new-tab URL must not navigate to an external application.")
+            XCTAssertEqual(tab.title, BrowserTab.startPageTitle)
         }
     }
 

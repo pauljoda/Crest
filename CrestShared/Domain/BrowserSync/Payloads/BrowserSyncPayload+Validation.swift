@@ -63,7 +63,7 @@ extension BrowserSyncPayload {
             try validateText(tab.symbol, limit: 128, field: "tab.symbol")
             try validateOrderToken(tab.orderToken, field: "tab.orderToken")
             if let url = tab.url { try validateURL(url) }
-            if tab.placement != .saved, tab.folderID != nil {
+            if tab.placement == .pinned, tab.folderID != nil {
                 throw BrowserSyncError.invalidField("tab.folderID")
             }
         case .history(let history):

@@ -2,80 +2,185 @@ import Foundation
 import WebKit
 import os
 
-/// Applies `BrowserExtensionCookieAccessPolicy` to one Space's real cookie
-/// jar, and keeps applying it while an extension still frames the site.
-///
-/// The jar is resolved per Space from the extension controller's own
-/// `defaultWebsiteDataStore` — the same object the extension web views were
-/// configured with — rather than rebuilt from the profile. A rewrite that
-/// landed in a different store would be invisible to the frame it was meant
-/// for, and this way a Space with no loaded extension controller resolves to
-/// nothing and is left alone.
+/// Synchronizes a Space's normal and hosted cookie jars. SameSite relaxation
+/// is confined to the hosted jar; refreshing a session there never strips the
+/// protection from the normal jar. Normal-tab changes win simultaneous writes.
 @MainActor
 final class BrowserExtensionCookieJarCoordinator: BrowserExtensionCookieJarRelaxing {
     typealias WebsiteDataStoreProvider = @MainActor (SpaceID) -> WKWebsiteDataStore?
+    typealias HostedStoreFactory = @MainActor (WKWebsiteDataStore, SpaceID) -> WKWebsiteDataStore
 
-    private static let log = Logger(
-        subsystem: ProductIdentity.serviceNamespace,
-        category: "extension-cookie-access"
-    )
+    private struct CookieKey: Hashable {
+        let name: String
+        let domain: String
+        let path: String
+        init(_ cookie: HTTPCookie) {
+            name = cookie.name
+            domain = cookie.domain.lowercased()
+            path = cookie.path
+        }
+    }
+
+    private final class StorePair {
+        let normal: WKWebsiteDataStore
+        let hosted: WKWebsiteDataStore
+        var previousNormal: [CookieKey: HTTPCookie] = [:]
+        var previousHosted: [CookieKey: HTTPCookie] = [:]
+        var initializedHosts: Set<String> = []
+        var synchronizedHosts: Set<String>?
+        var observations: [BrowserExtensionCookieJarObservation] = []
+        var pendingPass: Task<Void, Never>?
+        var passID: UUID?
+        var isActive = true
+
+        init(normal: WKWebsiteDataStore, hosted: WKWebsiteDataStore) {
+            self.normal = normal
+            self.hosted = hosted
+        }
+    }
 
     private let websiteDataStore: WebsiteDataStoreProvider
+    private let makeHostedStore: HostedStoreFactory
     private let coalescingDelay: Duration
-    private var observations: [SpaceID: BrowserExtensionCookieJarObservation] = [:]
+    private var stores: [SpaceID: StorePair] = [:]
 
     init(
         coalescingDelay: Duration = .milliseconds(150),
+        makeHostedStore: @escaping HostedStoreFactory = BrowserExtensionHostedWebsiteDataStore.make,
         websiteDataStore: @escaping WebsiteDataStoreProvider
     ) {
         self.coalescingDelay = coalescingDelay
+        self.makeHostedStore = makeHostedStore
         self.websiteDataStore = websiteDataStore
     }
 
+    func hostedWebsiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
+        storePair(in: spaceID)?.hosted
+    }
+
+    func setSynchronizedHosts(_ hosts: Set<String>, in spaceID: SpaceID) {
+        storePair(in: spaceID)?.synchronizedHosts = hosts
+    }
+
+    private func storePair(in spaceID: SpaceID) -> StorePair? {
+        if let existing = stores[spaceID] { return existing }
+        guard let normal = websiteDataStore(spaceID) else { return nil }
+        let pair = StorePair(normal: normal, hosted: makeHostedStore(normal, spaceID))
+        precondition(pair.normal !== pair.hosted, "Hosted cookie relaxation needs its own store")
+        stores[spaceID] = pair
+        return pair
+    }
+
     func relax(host: String, in spaceID: SpaceID) async {
-        guard let cookieStore = websiteDataStore(spaceID)?.httpCookieStore else { return }
-        let observation = observations[spaceID]
-        // Our own writes wake the observer. Suppressing them here is what
-        // keeps a login from costing a burst of passes; anything the site
-        // wrote during the window is remembered and re-read once.
-        observation?.beginApplying()
-        defer { observation?.endApplying() }
-        let cookies = await cookieStore.allCookies()
-        var rewritten = 0
-        for cookie in cookies
-        where BrowserExtensionCookieAccessPolicy.appliesTo(cookie: cookie, host: host) {
-            // `relaxed` answers nil for a cookie that already carries no
-            // `SameSite`, which is what stops a rewrite pass from writing —
-            // and therefore from notifying — anything at all.
-            guard let relaxed = BrowserExtensionCookieAccessPolicy.relaxed(cookie) else { continue }
-            await cookieStore.setCookie(relaxed)
-            rewritten += 1
+        guard let pair = storePair(in: spaceID) else { return }
+        let predecessor = pair.pendingPass
+        let passID = UUID()
+        let task = Task { @MainActor [weak self] in
+            await predecessor?.value
+            guard let self, pair.isActive else { return }
+            await synchronize(host: host, pair: pair)
         }
-        guard rewritten > 0 else { return }
-        // The host and a count, never a cookie name or value: enough to tell a
-        // frame that was never relaxed from one whose jar had nothing to fix.
-        Self.log.info(
-            "relaxed SameSite on \(rewritten, privacy: .public) cookie(s) for \(host, privacy: .public)"
-        )
+        pair.passID = passID
+        pair.pendingPass = task
+        await task.value
+        if pair.passID == passID {
+            pair.pendingPass = nil
+            pair.passID = nil
+        }
+    }
+
+    private func synchronize(host: String, pair: StorePair) async {
+        guard pair.isActive, pair.synchronizedHosts?.contains(host) != false else { return }
+        for observation in pair.observations { observation.beginApplying() }
+        defer { for observation in pair.observations { observation.endApplying() } }
+        let normalStore = pair.normal.httpCookieStore
+        let hostedStore = pair.hosted.httpCookieStore
+        let normal = await matchingCookies(in: normalStore, host: host)
+        let hosted = await matchingCookies(in: hostedStore, host: host)
+        let isInitialCopy = !pair.initializedHosts.contains(host)
+        let previousKeys = pair.previousNormal.filter {
+            BrowserExtensionCookieAccessPolicy.appliesTo(cookie: $0.value, host: host)
+        }.keys
+        let previousHostedKeys = pair.previousHosted.filter {
+            BrowserExtensionCookieAccessPolicy.appliesTo(cookie: $0.value, host: host)
+        }.keys
+        let keys = Set(normal.keys).union(hosted.keys).union(previousKeys).union(previousHostedKeys)
+
+        for key in keys {
+            guard pair.isActive, pair.synchronizedHosts?.contains(host) != false else { return }
+            let source = normal[key]
+            let embedded = hosted[key]
+            let sourceChanged = !sameCookie(source, pair.previousNormal[key])
+            let hostedChanged = !sameCookie(embedded, pair.previousHosted[key])
+            if isInitialCopy || sourceChanged {
+                if let source {
+                    let copy = BrowserExtensionCookieAccessPolicy.relaxed(source) ?? source
+                    if !sameCookie(copy, embedded) { await hostedStore.setCookie(copy) }
+                    pair.previousHosted[key] = copy
+                } else {
+                    if let embedded { await hostedStore.deleteCookie(embedded) }
+                    pair.previousHosted[key] = nil
+                }
+                pair.previousNormal[key] = source
+            } else if hostedChanged {
+                if let embedded {
+                    let original = BrowserExtensionCookieAccessPolicy.normalCookie(embedded, preserving: source)
+                    if !sameCookie(original, source) { await normalStore.setCookie(original) }
+                    let relaxed = BrowserExtensionCookieAccessPolicy.relaxed(embedded) ?? embedded
+                    if !sameCookie(relaxed, embedded) { await hostedStore.setCookie(relaxed) }
+                    pair.previousNormal[key] = original
+                    pair.previousHosted[key] = relaxed
+                } else {
+                    if let source { await normalStore.deleteCookie(source) }
+                    pair.previousNormal[key] = nil
+                    pair.previousHosted[key] = nil
+                }
+            }
+        }
+        // Remember only values this pass actually synchronized. Reading a final
+        // snapshot here could swallow a site's concurrent write before copying
+        // it to the other jar; the observer must see that as a fresh change.
+        pair.initializedHosts.insert(host)
+    }
+
+    private func matchingCookies(in store: WKHTTPCookieStore, host: String) async -> [CookieKey: HTTPCookie] {
+        Dictionary(
+            (await store.allCookies()).filter {
+                BrowserExtensionCookieAccessPolicy.appliesTo(cookie: $0, host: host)
+            }.map { (CookieKey($0), $0) }, uniquingKeysWith: { _, latest in latest })
+    }
+
+    private func sameCookie(_ left: HTTPCookie?, _ right: HTTPCookie?) -> Bool {
+        guard let left, let right else { return left == nil && right == nil }
+        return left.name == right.name && left.domain == right.domain && left.path == right.path
+            && left.value == right.value && left.expiresDate == right.expiresDate
+            && left.isSecure == right.isSecure && left.isHTTPOnly == right.isHTTPOnly
+            && sameSiteValue(left) == sameSiteValue(right) && left.portList == right.portList
+    }
+
+    private func sameSiteValue(_ cookie: HTTPCookie) -> String {
+        cookie.sameSitePolicy?.rawValue.lowercased() ?? "none"
     }
 
     func observe(spaceID: SpaceID, onChange: (@MainActor () -> Void)?) {
         guard let onChange else {
-            observations.removeValue(forKey: spaceID)?.stop()
+            if let pair = stores.removeValue(forKey: spaceID) {
+                pair.isActive = false
+                for observation in pair.observations { observation.stop() }
+            }
             return
         }
-        if let existing = observations[spaceID] {
-            existing.onChange = onChange
+        guard let pair = storePair(in: spaceID) else { return }
+        if !pair.observations.isEmpty {
+            for observation in pair.observations { observation.onChange = onChange }
             return
         }
-        guard let cookieStore = websiteDataStore(spaceID)?.httpCookieStore else { return }
-        let observation = BrowserExtensionCookieJarObservation(
-            cookieStore: cookieStore,
-            coalescingDelay: coalescingDelay,
-            onChange: onChange
-        )
-        observations[spaceID] = observation
-        observation.start()
+        pair.observations = [pair.normal, pair.hosted].map {
+            BrowserExtensionCookieJarObservation(
+                cookieStore: $0.httpCookieStore,
+                coalescingDelay: coalescingDelay, onChange: onChange)
+        }
+        for observation in pair.observations { observation.start() }
     }
 }
 

@@ -73,6 +73,45 @@ struct BrowserTabOrganizationMenuContent: View {
             }
         }
 
+        if tab.placement == .current, !tab.isStartPage {
+            Menu("Add to Current Tabs Folder", systemImage: "folder.badge.plus") {
+                Group {
+                    Button("New Folder", systemImage: "folder.badge.plus") {
+                        performIfCurrent { liveTab in
+                            browser.createTabFolder([liveTab.id], in: assignment.spaceID)
+                        }
+                    }
+                    let folders =
+                        browser.space(matching: sourceAssignment)?.folders.filter { $0.location == .current } ?? []
+                    if !folders.isEmpty { Divider() }
+                    ForEach(folders, id: \.id) { folder in
+                        Button {
+                            performIfCurrent { liveTab in
+                                browser.fileTabs(
+                                    [liveTab.id], matching: sourceAssignment, into: folder.id, location: .current)
+                            }
+                        } label: {
+                            Label {
+                                Text(
+                                    verbatim: folder.title.isEmpty ? String(localized: "Folder") : folder.title)
+                            } icon: {
+                                BrowserFolderMenuIcon(systemName: "folder.fill", color: folder.color)
+                            }
+                        }
+                        .disabled(folder.id == tab.folderID)
+                    }
+                }
+                .crestMenuActionLabelStyle()
+            }
+            if tab.folderID != nil {
+                Button("Remove from Folder", systemImage: "folder.badge.minus") {
+                    performIfCurrent { liveTab in
+                        browser.fileTabs([liveTab.id], matching: sourceAssignment, into: nil, location: .current)
+                    }
+                }
+            }
+        }
+
         Menu("Save in Folder", systemImage: "folder") {
             Group {
                 Button("Saved Tabs", systemImage: "bookmark") {
@@ -90,7 +129,7 @@ struct BrowserTabOrganizationMenuContent: View {
                     !space.folders.isEmpty
                 {
                     Divider()
-                    let tree = space.folderTree
+                    let tree = BrowserFolderTree(folders: space.folders.filter { $0.location == .saved })
                     ForEach(tree.flattenedNodes(collapsedFolderIDs: [])) { node in
                         Button(
                             tree.pathTitle(for: node.id) ?? node.folder.title,

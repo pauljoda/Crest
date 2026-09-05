@@ -60,28 +60,34 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserWebsiteDataStoreRemoving {
     }
 
     func removePersistentDataStore(for profile: BrowsingProfile) async throws {
+        try await removePersistentDataStore(identifier: profile.id)
+        try await removePersistentDataStore(
+            identifier: BrowserExtensionHostedWebsiteDataStore.identifier(forProfileID: profile.id))
+    }
+
+    private func removePersistentDataStore(identifier: UUID) async throws {
         var lastError: Error?
         var clearedWebsiteData = false
 
         for attempt in 0...retryDelays.count {
             let identifiers = await identifierProvider()
-            guard identifiers.contains(profile.id) else {
-                completeCleanup(profile.id)
+            guard identifiers.contains(identifier) else {
+                completeCleanup(identifier)
                 return
             }
 
             do {
-                try await removeDataStore(profile.id)
-                completeCleanup(profile.id)
+                try await removeDataStore(identifier)
+                completeCleanup(identifier)
                 return
             } catch {
                 if !clearedWebsiteData {
-                    try await clearDataStore(profile.id)
+                    try await clearDataStore(identifier)
                     clearedWebsiteData = true
                 }
                 let remainingIdentifiers = await identifierProvider()
-                guard remainingIdentifiers.contains(profile.id) else {
-                    completeCleanup(profile.id)
+                guard remainingIdentifiers.contains(identifier) else {
+                    completeCleanup(identifier)
                     return
                 }
                 lastError = error
@@ -93,7 +99,7 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserWebsiteDataStoreRemoving {
         }
 
         if clearedWebsiteData, acceptsClearedStoreFallback {
-            recordDeferredCleanup(profile.id)
+            recordDeferredCleanup(identifier)
             return
         }
 

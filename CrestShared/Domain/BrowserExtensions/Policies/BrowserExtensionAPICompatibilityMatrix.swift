@@ -923,20 +923,14 @@ enum BrowserExtensionAPICompatibilityMatrix {
             crest: .nativePatched,
             processes: [.background, .extensionPage, .contentScript]
         ),
-        // Every executable member of the namespace. `tabGroups.onMoved` is
-        // absent on purpose: Crest never reorders a group, so it becomes the
-        // `presenceOnly` filler `emulatedSurface` implies — an event object
-        // that keeps its listeners and says once that none of them will run.
+        // Crest folders provide the browser-owned group surface.
         member("tabGroups.Color", webKit: .unavailable, crest: .emulated),
         member("tabGroups.TAB_GROUP_ID_NONE", webKit: .unavailable, crest: .emulated),
         member("tabGroups.get", webKit: .unavailable, crest: .emulated),
         member("tabGroups.query", webKit: .unavailable, crest: .emulated),
         member("tabGroups.update", webKit: .unavailable, crest: .emulated),
-        // Implemented, and it refuses. A filler would reject with Crest's
-        // generic text; this one rejects with Chromium's own
-        // `kFailedToMoveGroupError` after validating the group id, which is
-        // the failure a portable package is written to handle.
         member("tabGroups.move", webKit: .unavailable, crest: .emulated),
+        member("tabGroups.onMoved", webKit: .unavailable, crest: .emulated),
         member("tabGroups.onCreated", webKit: .unavailable, crest: .emulated),
         member("tabGroups.onUpdated", webKit: .unavailable, crest: .emulated),
         member("tabGroups.onRemoved", webKit: .unavailable, crest: .emulated),
@@ -946,6 +940,7 @@ enum BrowserExtensionAPICompatibilityMatrix {
         // these two are the only way a group is ever created.
         member("tabs.group", webKit: .unavailable, crest: .emulated),
         member("tabs.ungroup", webKit: .unavailable, crest: .emulated),
+        member("tabs.move", webKit: .unavailable, crest: .emulated),
         member("tabs.query", crest: .nativePatched),
         member("tabs.sendMessage", crest: .nativePatched),
         member(

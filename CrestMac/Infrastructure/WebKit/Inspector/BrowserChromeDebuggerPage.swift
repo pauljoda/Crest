@@ -18,6 +18,8 @@ final class BrowserChromeDebuggerPage {
     private let dialogs = BrowserExtensionDebuggerDialogInterceptor()
     private var enabledAttachment: UUID?
     private var mainFrameID = ""
+    private var mainLoaderID = ""
+    private var lifecycleAttachment: UUID?
 
     private var isEnabled: Bool {
         enabledAttachment != nil && enabledAttachment == connection.attachmentIdentifier
@@ -44,8 +46,19 @@ final class BrowserChromeDebuggerPage {
         case "Page.disable":
             detach()
             return [:]
+        case "Page.setLifecycleEventsEnabled":
+            guard parameters["enabled"] != nil else {
+                throw BrowserChromeDebuggerProtocolError.invalidParameter("enabled")
+            }
+            lifecycleAttachment =
+                try BrowserChromeDebuggerValues.boolean("enabled", in: parameters)
+                ? connection.attachmentIdentifier : nil
+            return [:]
         case "Page.getFrameTree":
             return ["frameTree": try await frameTree()]
+        case "Page.getLayoutMetrics":
+            guard let webView else { throw BrowserWebInspectorProtocolError.notConnected }
+            return try await BrowserChromeDebuggerLayoutMetrics.measure(webView)
         case "Page.navigate":
             return try await navigate(parameters)
         case "Page.reload":
@@ -64,17 +77,37 @@ final class BrowserChromeDebuggerPage {
     }
 
     func receive(_ method: String, parameters: [String: Any]) {
-        guard isEnabled, method == "Page.frameNavigated",
-            let frame = parameters["frame"] as? [String: Any]
+        guard isEnabled else { return }
+        if method == "Page.frameNavigated", let frame = parameters["frame"] as? [String: Any] {
+            if frame["parentId"] == nil, let id = frame["id"] as? String {
+                mainFrameID = id
+                mainLoaderID = frame["loaderId"] as? String ?? ""
+            }
+            onEvent?("Page.frameNavigated", ["frame": chromeFrame(frame), "type": "Navigation"])
+            return
+        }
+        guard ["Page.domContentEventFired", "Page.loadEventFired"].contains(method),
+            let timestamp = parameters["timestamp"] as? Double, timestamp.isFinite
         else { return }
-        if frame["parentId"] == nil, let id = frame["id"] as? String { mainFrameID = id }
-        onEvent?("Page.frameNavigated", ["frame": chromeFrame(frame), "type": "Navigation"])
+        onEvent?(method, ["timestamp": timestamp])
+        // These are main-document events in WebKit. Preserve their native
+        // timing and loader identity; do not invent paint or network-idle
+        // milestones that this engine event stream does not provide.
+        if lifecycleAttachment == connection.attachmentIdentifier, !mainFrameID.isEmpty, !mainLoaderID.isEmpty {
+            onEvent?(
+                "Page.lifecycleEvent",
+                [
+                    "frameId": mainFrameID, "loaderId": mainLoaderID, "timestamp": timestamp,
+                    "name": method == "Page.domContentEventFired" ? "DOMContentLoaded" : "load",
+                ])
+        }
     }
 
     /// Ends the session's hold on the page: no more events, and any dialog the
     /// page is blocked on is dismissed as a rejection rather than left waiting.
     func detach() {
         enabledAttachment = nil
+        lifecycleAttachment = nil
         // Cancelled before the listener goes: a client that is still there,
         // because it disabled the domain rather than detached, is owed the
         // close event for the dialog it was about to answer.
@@ -111,7 +144,10 @@ final class BrowserChromeDebuggerPage {
             }
             enabledAttachment = attachment
         }
-        mainFrameID = (try? await mainFrame()["id"] as? String) ?? mainFrameID
+        if let frame = try? await mainFrame() {
+            mainFrameID = frame["id"] as? String ?? mainFrameID
+            mainLoaderID = frame["loaderId"] as? String ?? mainLoaderID
+        }
         dialogs.onEvent = { [weak self] method, parameters in self?.onEvent?(method, parameters) }
         dialogHost()?.debuggerDialogInterceptor = dialogs
     }

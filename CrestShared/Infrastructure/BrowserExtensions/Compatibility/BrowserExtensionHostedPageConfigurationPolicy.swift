@@ -16,9 +16,11 @@ import WebKit
 /// Crest clears the mode on the configuration copy it receives for its own
 /// extension documents (side panel, offscreen documents, extension pages
 /// opened as tabs), so each document in those web views is governed by its own
-/// policy exactly as a web page would be. The trade-off, accepted for
-/// extensions within their Space: WebKit no longer enforces the manifest's
-/// Manifest V3 restrictions on the extension's own page in those web views.
+/// policy exactly as a web page would be. WebKit's extension scheme handler
+/// still delivers the manifest CSP in the extension document's response;
+/// clearing the mode does not remove that policy. It does remove the extra
+/// extension-mode source-list filtering, so this is not an MV3 manifest-policy
+/// validator for packages authored with a policy Chrome would reject.
 /// WebKit-owned popups are untouched. The mode is reached through its private
 /// setter's C entry point because KVC cannot resolve an underscore-prefixed
 /// custom setter, and absence of the SPI leaves the configuration alone.

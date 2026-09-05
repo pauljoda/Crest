@@ -9,7 +9,7 @@ import Foundation
 /// into three kinds of art without anything downstream branching on drag state.
 enum BrowserSidebarLiftPreviewSubject: Equatable {
     case tab(BrowserTab)
-    case folder(SavedFolder)
+    case folder(BrowserFolder, rows: [BrowserFolderDragPreviewRow])
     /// A whole split group, in member order.
     case splitGroup([BrowserTab])
 }

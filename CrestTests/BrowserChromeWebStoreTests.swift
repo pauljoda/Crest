@@ -415,6 +415,10 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         XCTAssertEqual(result["getStillWorks"] as? Bool, true)
         XCTAssertEqual(
+            result["nativeIdentity"] as? Bool, true,
+            "WebKit's dynamic namespace getter must keep returning its native object."
+        )
+        XCTAssertEqual(
             result["eventIdentity"] as? Bool, true,
             """
             The facade must hand back WebKit's own event object: WebKit \
@@ -431,6 +435,68 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         let array = String(decoding: data ?? Data(), as: UTF8.self)
         return String(array.dropFirst().dropLast())
+    }
+
+    func testWorkerCallbackErrorsRemainVisibleOnNativeAndScopedRuntime() async throws {
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-worker-callback-errors", permissions: ["debugger"],
+            manifestEntries: ["background": ["service_worker": "background.js"]])
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let native =
+            Self.moduleWorkerFixtureNativeRoot + """
+                let nativeFailure;
+                Object.defineProperty(chrome.runtime, 'lastError', {
+                    get: () => nativeFailure, configurable: false
+                });
+                chrome.runtime.sendNativeMessage = (host, request, callback) => {
+                    if (request.api !== 'runtime.callbackError') return Promise.reject(new Error('no broker'));
+                    queueMicrotask(() => {
+                        nativeFailure = new Error('Invalid call to runtime.sendNativeMessage(). ' + request.message);
+                        try { callback(); } finally { nativeFailure = undefined; }
+                    });
+                };
+                """
+        let probe = """
+            (async () => {
+                const scoped = globalThis.__crestWebExtensionScopedAPI.chrome;
+                const observations = [];
+                for (const tabId of [7, 9]) {
+                    observations.push(await new Promise(resolve => {
+                        chrome.debugger.sendCommand({tabId}, 'Runtime.evaluate', {}, () => resolve({
+                            direct: chrome.runtime.lastError?.message,
+                            scoped: scoped.runtime.lastError?.message
+                        }));
+                    }));
+                }
+                postMessage(JSON.stringify({observations,
+                    cleared: chrome.runtime.lastError === undefined && scoped.runtime.lastError === undefined}));
+            })();
+            """
+        let source = [native, fixture.source, probe].joined(separator: "\n")
+        let webView = WKWebView()
+        let output = try await webView.callAsyncJavaScript(
+            """
+            const url = URL.createObjectURL(new Blob([\(Self.javaScriptLiteral(source))], {type:'text/javascript'}));
+            const worker = new Worker(url);
+            try {
+                return await new Promise(resolve => {
+                    const timeout = setTimeout(() => resolve('worker timed out'), 4000);
+                    worker.onmessage = event => { clearTimeout(timeout); resolve(event.data); };
+                    worker.onerror = event => { clearTimeout(timeout); resolve(event.message); };
+                });
+            } finally { worker.terminate(); URL.revokeObjectURL(url); }
+            """, arguments: [:], contentWorld: .page)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(try XCTUnwrap(output as? String).utf8)) as? [String: Any])
+        XCTAssertEqual(result["cleared"] as? Bool, true)
+        let observations = try XCTUnwrap(result["observations"] as? [[String: String]])
+        XCTAssertEqual(
+            observations,
+            [7, 9].map { id in
+                let message = "Debugger is not attached to the tab with id: \(id)."
+                return ["direct": message, "scoped": message]
+            })
+        withExtendedLifetime(webView) {}
     }
 
     /// A worker-shaped WebKit root: no `document`, native `runtime` and
@@ -478,6 +544,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 onChanged: event()
             }
         };
+        // WebKit's Dynamic namespace getter still returns the native object
+        // after defineProperty reports success. A plain object fixture misses
+        // that behavior and lets a namespace replacement appear to work.
+        globalThis.chrome = new Proxy(globalThis.chrome, {
+            get(target, property, receiver) {
+                if (property === "tabs") return nativeTabs;
+                return Reflect.get(target, property, receiver);
+            }
+        });
         globalThis.browser = globalThis.chrome;
         """
 
@@ -495,6 +570,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 ungroup: typeof chrome.tabs.ungroup,
                 scopedGroup: typeof scoped?.tabs?.group,
                 sameFacade: scoped?.tabs === chrome.tabs,
+                nativeIdentity: chrome.tabs === globalThis.nativeTabs,
                 eventIdentity:
                     chrome.tabs.onUpdated === globalThis.nativeTabs.onUpdated,
                 getStillWorks
@@ -571,7 +647,17 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                 [
                     "matches": ["https://example.com/*"],
                     "js": ["content.js"],
-                ]
+                ],
+                [
+                    "matches": ["https://example.com/*"],
+                    "world": "MAIN",
+                    "js": ["content.js"],
+                ],
+                [
+                    "matches": ["https://example.com/*"],
+                    "world": "ISOLATED",
+                    "js": ["content.js"],
+                ],
             ],
         ]
         try JSONSerialization.data(withJSONObject: manifest).write(
@@ -618,6 +704,15 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         let compatibilityScriptName = try XCTUnwrap(
             preparedContentScripts.first
+        )
+        // MAIN scripts share the website's globals. Installing an extension's
+        // runtime there overwrites the externally-connectable page API with
+        // that extension's identity (as Dark Reader did on Claude's login page).
+        XCTAssertEqual(updatedContentScripts[1]["js"] as? [String], ["content.js"])
+        XCTAssertEqual(updatedContentScripts[1]["world"] as? String, "MAIN")
+        XCTAssertEqual(
+            updatedContentScripts[2]["js"] as? [String],
+            [compatibilityScriptName, "content.js"]
         )
         XCTAssertEqual(updated["manifest_version"] as? Int, 3)
         XCTAssertNotNil(updated["action"])
@@ -788,6 +883,61 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             preparedContentScripts,
             [compatibilityScriptName, "content.js"]
         )
+    }
+
+    func testCompatibilityPreparationNormalizesDotSegmentsWithoutInjectingSandboxPages() throws {
+        for isModule in [false, true] {
+            let root = FileManager.default.temporaryDirectory.appending(path: "crest-dot-paths-\(UUID())")
+            defer { try? FileManager.default.removeItem(at: root) }
+            for directory in ["scripts", "pages"] {
+                try FileManager.default.createDirectory(
+                    at: root.appending(path: directory), withIntermediateDirectories: true)
+            }
+            let worker = "globalThis.started = true;"
+            let sandbox = "<html><head></head><body>Sandbox</body></html>"
+            try worker.write(to: root.appending(path: "scripts/background.js"), atomically: true, encoding: .utf8)
+            try sandbox.write(to: root.appending(path: "pages/sandbox.html"), atomically: true, encoding: .utf8)
+            let manifest: [String: Any] = [
+                "manifest_version": 3, "name": "Dot paths", "version": "1.0",
+                "background": ["service_worker": "./scripts/./background.js", "type": isModule ? "module" : "classic"],
+                "sandbox": ["pages": ["./pages/./sandbox.html"]],
+            ]
+            try JSONSerialization.data(withJSONObject: manifest).write(to: root.appending(path: "manifest.json"))
+            XCTAssertTrue(
+                try BrowserChromeWebStoreCompatibilityPackagePreparer().installCompatibilityLayer(
+                    in: root, requestedPermissions: [], runtimeIdentity: fixtureRuntimeIdentity))
+            let prepared = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Data(contentsOf: root.appending(path: "manifest.json")))
+                    as? [String: Any])
+            let background = try XCTUnwrap(prepared["background"] as? [String: Any])
+            let bootstrap = try XCTUnwrap(background["service_worker"] as? String)
+            let script = try String(contentsOf: root.appending(path: bootstrap), encoding: .utf8)
+            XCTAssertTrue(script.contains(#""./scripts/background.js""#))
+            XCTAssertEqual(
+                try String(contentsOf: root.appending(path: "scripts/background.js"), encoding: .utf8), worker)
+            XCTAssertEqual(try String(contentsOf: root.appending(path: "pages/sandbox.html"), encoding: .utf8), sandbox)
+        }
+    }
+
+    func testCompatibilityPreparationStillRejectsEscapingWorkerPaths() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-rejected-paths-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        for path in ["../outside.js", "scripts/../../outside.js", "/outside.js", "scripts\\outside.js"] {
+            let manifest: [String: Any] = [
+                "manifest_version": 3, "name": "Unsafe path", "version": "1.0",
+                "background": ["service_worker": path],
+            ]
+            try JSONSerialization.data(withJSONObject: manifest).write(to: root.appending(path: "manifest.json"))
+            XCTAssertThrowsError(
+                try BrowserChromeWebStoreCompatibilityPackagePreparer().installCompatibilityLayer(
+                    in: root, requestedPermissions: [], runtimeIdentity: fixtureRuntimeIdentity)
+            ) { error in
+                guard case BrowserWebExtensionCompatibilityPackageError.unsafeBackgroundPath = error else {
+                    return XCTFail("Unexpected error for \(path): \(error)")
+                }
+            }
+        }
     }
 
     func testCompatibilityLayerKeepsAClassicWorkerBehindItsBootstrap() throws {

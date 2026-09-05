@@ -146,7 +146,11 @@ struct PortableSpace: Codable, Equatable, Sendable {
             symbol: symbol,
             accent: accent,
             branding: branding,
-            folders: folderTree.foldersInDisplayOrder,
+            folders: folderTree.foldersInDisplayOrder.map { source in
+                var folder = source
+                folder.orderAnchorTabID = source.orderAnchorTabID.flatMap { tabIDsBySourceID[$0.rawValue] }
+                return folder
+            },
             tabs: materializedTabs,
             splitGroups: materializedSplitGroups,
             archivedTabs: materializedArchive,

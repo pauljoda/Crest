@@ -1,11 +1,7 @@
 import SwiftUI
 
-/// The Space's saved tabs as one drop section, on every shell: its folder groups
-/// and, below them, the saved tabs that are in no folder.
-///
-/// The unfiled tabs are kept as a run of their own so the drop feedback for that
-/// run has somewhere to appear. The folder groups above share this section's
-/// zone, and the unfiled rows land below them.
+/// Saved folders and unfiled tabs share one ordered run, using the same
+/// projection as Current so a tab can remain between sibling folders.
 struct BrowserSavedTabsDropSection: View {
     let space: BrowserSpace
     let tabSections: BrowserTabSections
@@ -29,27 +25,6 @@ struct BrowserSavedTabsDropSection: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(folderNodes) { node in
-                BrowserSavedFolderGroup(
-                    node: node,
-                    tabs: tabSections.savedTabs(in: node.id),
-                    spaceID: space.id,
-                    profileID: space.profile.id,
-                    selectedTabID: space.selectedTabID,
-                    browser: browser,
-                    pageAccess: pageAccess,
-                    spaceAccess: spaceAccess,
-                    capabilities: capabilities,
-                    promotionNamespace: promotionNamespace,
-                    pullNewIcon: pullNewIcon,
-                    restoreSavedLocation: restoreSavedLocation,
-                    select: select,
-                    isExpanded: expansionBinding(for: node.id),
-                    editingFolderRequest: $editingFolderRequest
-                )
-                .crestCollectionItemTransition()
-            }
-
             if capabilities.showsRowDropIndicators {
                 VStack(spacing: 0) { rows }
 
@@ -92,10 +67,6 @@ struct BrowserSavedTabsDropSection: View {
             .section(section),
             state: browser.sidebarReorderState
         )
-        .browserSidebarReorderZone(
-            .section(.folders(parentID: nil)),
-            state: browser.sidebarReorderState
-        )
         .modifier(
             BrowserSidebarSectionReservation(
                 section: section,
@@ -108,7 +79,37 @@ struct BrowserSavedTabsDropSection: View {
 
     @ViewBuilder
     private var rows: some View {
-        ForEach(unfiledItems) { item in
+        let tree = space.folderTree
+        let ordering = BrowserSidebarFolderListItem.Projection(tabs: space.tabs, tree: tree, location: .saved)
+        ForEach(ordering.items()) { entry in
+            switch entry {
+            case .folder(let node):
+                BrowserFolderGroup(
+                    node: node,
+                    tree: tree, ordering: ordering, tabSections: tabSections,
+                    spaceID: space.id,
+                    profileID: space.profile.id,
+                    selectedTabID: space.selectedTabID,
+                    browser: browser,
+                    pageAccess: pageAccess,
+                    spaceAccess: spaceAccess,
+                    capabilities: capabilities,
+                    promotionNamespace: promotionNamespace,
+                    pullNewIcon: pullNewIcon,
+                    restoreSavedLocation: restoreSavedLocation,
+                    select: select,
+                    isExpanded: expansionBinding(for: node.id),
+                    editingFolderRequest: $editingFolderRequest
+                )
+            case .tabs(let item):
+                renderRows([item])
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func renderRows(_ items: [BrowserSidebarTabListItem]) -> some View {
+        ForEach(items) { item in
             switch item {
             case .tab(let tab):
                 let followingTabID = followingTabIDs[tab.id]

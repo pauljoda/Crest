@@ -12,4 +12,6 @@ struct BrowserSidebarLiftPreviewContent: Equatable {
     /// Passed in rather than read from the environment: the preview is hosted in
     /// a window of its own, which inherits nothing from the browser's.
     let reduceMotion: Bool
+    var selectedTabID: TabID?
+    var loadedTabIDs: Set<TabID> = []
 }

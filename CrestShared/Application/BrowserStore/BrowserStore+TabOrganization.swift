@@ -16,13 +16,13 @@ extension BrowserStore {
 
     func saveSelectedTab() {
         guard selectedSpace != nil else { return }
-        let folderID = selectedSpace?.folders.first?.id
+        let folderID = selectedSpace?.folders.first { $0.location == .saved }?.id
         session.moveSelectedTab(to: .saved, folderID: folderID)
         persist(scope: .core)
     }
 
     func saveTab(_ id: TabID) {
-        let folderID = selectedSpace?.folders.first?.id
+        let folderID = selectedSpace?.folders.first { $0.location == .saved }?.id
         guard let tab = selectedSpace?.tabs.first(where: { $0.id == id }),
             tab.placement != .saved || tab.folderID != folderID
         else { return }

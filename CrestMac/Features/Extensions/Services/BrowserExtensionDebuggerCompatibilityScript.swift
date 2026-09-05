@@ -39,7 +39,7 @@ enum BrowserExtensionDebuggerCompatibilityScript {
             let tab;
             try { tab = await sidebarNative("tabs", "get", tabId); } catch { throw new Error(`No tab with given id ${tabId}.`); }
             if (!Number.isInteger(tab?.index) || tab.index < 0) throw new Error(`No tab with given id ${tabId}.`);
-            return {tabIndex: tab.index, ...(typeof tab.url === "string" ? {url: tab.url} : {})};
+            return {tabIndex: tab.index, ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
         };
         const debuggerTabsByIndex = async () => {
             let windowId;

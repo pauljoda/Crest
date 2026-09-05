@@ -4,19 +4,7 @@ import SwiftUI
 
 @Observable
 @MainActor
-final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
-    /// What a resolved indicator image is filed under.
-    ///
-    /// The icon an extension names in its options is part of the identity, so
-    /// an extension that swaps its artwork resolves a fresh entry rather than
-    /// keeping the old one. A package replaced on disk under the same options
-    /// keeps its resolved image until the window releases the host.
-    private struct IndicatorIconKey: Hashable {
-        let clientID: BrowserExtensionServiceClientID
-        let spaceID: SpaceID
-        let iconPath: String?
-    }
-
+final class BrowserExtensionSidebarHost {
     let store: BrowserExtensionSidebarStore
     let windowID: BrowserWindowID
     private(set) var document: BrowserExtensionSidebarDocument?
@@ -27,11 +15,6 @@ final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
     private let pages: BrowserPagePool
     private let spaceAccess: BrowserSpaceAccessController
     private let windowState: BrowserWindowStateStore?
-    /// Sidebar rows ask for their mark on every layout pass, and package
-    /// artwork is read off disk, so a resolved image is kept rather than
-    /// re-read. Nothing observable is written, so filling the memo during a
-    /// view update cannot invalidate the update that asked for it.
-    @ObservationIgnored private var indicatorIcons: [IndicatorIconKey: Image?] = [:]
 
     init(
         store: BrowserExtensionSidebarStore, windowID: BrowserWindowID, browser: BrowserStore,
@@ -46,7 +29,7 @@ final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
     }
 
     var panel: BrowserExtensionSidebarPanel? {
-        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space), browser.selectedTab != nil,
+        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space),
             let panel = store.panel(in: windowID, spaceID: space.id, activeTab: browser.selectedTab?.id),
             let url = panel.documentURL,
             pages.extensionControllerPool.extensionPageConfiguration(for: url, in: space.id) != nil
@@ -69,10 +52,13 @@ final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
         if let space {
             store.reconcilePresentation(
                 in: windowID, spaceID: space.id, activeTab: browser.selectedTab?.id,
-                isAvailable: !spaceAccess.isLocked(space) && browser.selectedTab != nil)
+                isAvailable: !spaceAccess.isLocked(space))
         }
+        let retained = browser.session.spaces.filter { !spaceAccess.isLocked($0) }.flatMap { space in
+            store.retainedPanels(in: windowID, spaceID: space.id)
+        }
+        pages.retainExtensionSidebars(inWindow: windowID, panels: retained)
         guard let panel else {
-            pages.closeExtensionSidebars(inWindow: windowID)
             document = nil
             lastPanel = nil
             icon = nil
@@ -103,34 +89,8 @@ final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
         candidate.clientID == panel?.clientID ? icon : pages.extensionSidebarIcon(for: candidate)
     }
 
-    /// What the sidebar's row for `tabID` says about the panel bound to it.
-    ///
-    /// Only one panel presents at a time, so this answers for every tab in the
-    /// Space and not only the selected one: a row's mark promises that
-    /// selecting that tab brings its panel back, which is exactly what the
-    /// store's binding records. A window-level panel is not a binding and
-    /// marks no row — see `BrowserExtensionSidebarStore.boundPanel`.
-    func sidePanelPresentation(forTab tabID: TabID, in spaceID: SpaceID)
-        -> BrowserTabSidePanelPresentation?
-    {
-        guard let panel = store.boundPanel(for: tabID, in: windowID, spaceID: spaceID) else { return nil }
-        return BrowserTabSidePanelPresentation(title: panel.title, icon: indicatorIcon(for: panel))
-    }
-
-    private func indicatorIcon(for panel: BrowserExtensionSidebarPanel) -> Image? {
-        var iconPath: String?
-        if case .packagePath(let path) = panel.icon { iconPath = path }
-        let key = IndicatorIconKey(clientID: panel.clientID, spaceID: panel.spaceID, iconPath: iconPath)
-        if let resolved = indicatorIcons[key] { return resolved }
-        let resolved = pages.extensionSidebarIcon(for: panel).map {
-            Image(nsImage: $0).renderingMode(.original)
-        }
-        indicatorIcons[key] = resolved
-        return resolved
-    }
-
     var availablePanels: [BrowserExtensionSidebarPanel] {
-        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space), browser.selectedTab != nil else {
+        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space) else {
             return []
         }
         return store.availablePanels(in: windowID, spaceID: space.id, activeTab: browser.selectedTab?.id)
@@ -188,7 +148,6 @@ final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
     func release() {
         pages.closeExtensionSidebars(inWindow: windowID)
         document = nil
-        indicatorIcons.removeAll()
         store.release(window: windowID)
     }
 }

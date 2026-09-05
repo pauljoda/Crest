@@ -20,10 +20,14 @@ struct BrowserRootDragPreviewLayer: View {
     let reduceMotion: Bool
 
     var body: some View {
-        BrowserDragPreviewWindowBridge(content: content)
-            .frame(width: 0, height: 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        BrowserDragPreviewWindowBridge(
+            content: content,
+            onSidebarLandingComplete: model.browser.sidebarReorderState.finishLanding,
+            onSidebarLandingArrived: model.browser.sidebarReorderState.revealLanding
+        )
+        .frame(width: 0, height: 0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     private var content: BrowserDragPreviewWindowContent? {
@@ -67,7 +71,9 @@ struct BrowserRootDragPreviewLayer: View {
         return BrowserSidebarLiftPreviewContent(
             subject: subject,
             lift: lift,
-            reduceMotion: reduceMotion
+            reduceMotion: reduceMotion,
+            selectedTabID: space.selectedTabID,
+            loadedTabIDs: model.pages.retainedTabIDs
         )
     }
 
@@ -80,8 +86,12 @@ struct BrowserRootDragPreviewLayer: View {
             return space.tabs.first { $0.id == tab.tabID }
                 .map(BrowserSidebarLiftPreviewSubject.tab)
         case .folder(let folder):
+            let rows = BrowserFolderDragPreviewRow.resolve(
+                model.browser.sidebarReorderState.floatingLift?.previewRows ?? [],
+                in: space, rootFolderID: folder.folderID)
+
             return space.folders.first { $0.id == folder.folderID }
-                .map(BrowserSidebarLiftPreviewSubject.folder)
+                .map { .folder($0, rows: rows) }
         case .splitGroup(let group):
             // A run that has already lost its members has nothing to draw; the
             // drag itself is ended by the same change.

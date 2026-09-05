@@ -1,7 +1,7 @@
 import Foundation
 
 struct BrowserFolderNode: Equatable, Identifiable, Sendable {
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let depth: Int
     let hasChildren: Bool
 

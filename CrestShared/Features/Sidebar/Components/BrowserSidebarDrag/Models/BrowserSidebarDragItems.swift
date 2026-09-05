@@ -29,6 +29,8 @@ struct BrowserFolderDragItem: Codable, Equatable, Transferable, Sendable {
     let folderID: FolderID
     let spaceID: SpaceID
     let profileID: UUID
+    /// Snapshot of the whole subtree; detects membership changes during a lift.
+    var memberTabIDs: [TabID]? = nil
 
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         BrowserSpaceRuntimeAssignment(

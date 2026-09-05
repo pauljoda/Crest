@@ -9,6 +9,8 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         case section(BrowserSidebarReorderSection)
         /// A collapsed folder row: dropping lands the item inside the folder.
         case folder(FolderID)
+        case currentFolder(FolderID)
+        case currentTab(TabID)
         /// A space picker segment: dropping moves the item to that space.
         case space(BrowserSpaceRuntimeAssignment)
         /// The window's web-content area for a Space: dropping a tab there adds
@@ -18,6 +20,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
 
     let target: Target
     let frame: CGRect
+    var minimumHeight: CGFloat = 0
 
     /// Higher wins when zones overlap.
     ///
@@ -28,7 +31,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
     var specificity: Int {
         switch target {
         case .space: 3
-        case .folder: 2
+        case .folder, .currentFolder, .currentTab: 2
         case .section: 1
         case .splitContent: 0
         }
@@ -40,7 +43,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
     var isContentArea: Bool {
         switch target {
         case .splitContent: true
-        case .section, .folder, .space: false
+        case .section, .folder, .currentFolder, .currentTab, .space: false
         }
     }
 
@@ -50,7 +53,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
     var nestingDepth: Int {
         switch target {
         case .section(let section): section.nestingDepth
-        case .folder, .space, .splitContent: 0
+        case .folder, .currentFolder, .currentTab, .space, .splitContent: 0
         }
     }
 }

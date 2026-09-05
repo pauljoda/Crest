@@ -20,7 +20,7 @@ enum BrowserSidebarPreviewFixture {
             symbol: "paintpalette.fill"
         ),
         folders: [
-            SavedFolder(
+            BrowserFolder(
                 id: folderID,
                 title: "Design References",
                 symbol: "folder.fill"

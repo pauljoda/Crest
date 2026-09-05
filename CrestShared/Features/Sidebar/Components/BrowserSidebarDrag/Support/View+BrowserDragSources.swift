@@ -44,10 +44,11 @@ extension View {
     }
 
     func browserFolderDraggable(
-        folder: SavedFolder,
+        folder: BrowserFolder,
         profileID: UUID,
         spaceID: SpaceID,
         dragState: BrowserFolderDragState,
+        memberTabIDs: [TabID]? = nil,
         reorder: BrowserSidebarReorderContext? = nil,
         isEnabled: Bool = true
     ) -> some View {
@@ -57,6 +58,7 @@ extension View {
                 profileID: profileID,
                 spaceID: spaceID,
                 dragState: dragState,
+                memberTabIDs: memberTabIDs,
                 reorder: reorder,
                 isEnabled: isEnabled
             )

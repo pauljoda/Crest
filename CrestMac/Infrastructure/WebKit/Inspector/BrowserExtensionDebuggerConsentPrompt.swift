@@ -8,6 +8,7 @@ import AppKit
 /// describes what a debugger attachment actually does, and the copy could not
 /// be supplied from outside, so this is a second, deliberately narrow prompt
 /// rather than a widened first one.
+@MainActor
 enum BrowserExtensionDebuggerConsentPrompt {
     /// Presents the prompt and reports whether the user allowed it.
     ///

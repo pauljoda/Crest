@@ -283,13 +283,14 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `tabGroups.get` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.move` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.onCreated` | Unavailable | Emulated | BG, EP | — |
-| `tabGroups.onMoved` | Unavailable | Presence only | BG, EP | — |
+| `tabGroups.onMoved` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.onRemoved` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.onUpdated` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.query` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.update` | Unavailable | Emulated | BG, EP | — |
 | `tabs.get` | Native | Native + patch | BG, EP | — |
 | `tabs.group` | Unavailable | Emulated | BG, EP | — |
+| `tabs.move` | Unavailable | Emulated | BG, EP | — |
 | `tabs.query` | Native | Native + patch | BG, EP | — |
 | `tabs.sendMessage` | Native | Native + patch | BG, EP | — |
 | `tabs.ungroup` | Unavailable | Emulated | BG, EP | — |
@@ -318,7 +319,9 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 - **Browser data stores.** Bookmarks, history, top sites, and sessions are not exposed to extensions at all.
 - **Downloads.** An extension can start a download through <code>downloads.download</code>; Crest applies its own destination and safety policy. The rest of the namespace, including search and download history, is present but reports that Crest cannot do it, so an extension gets an error rather than a broken page.
 - **Offscreen documents.** Crest hosts the hidden document itself, using the page the extension bundles, so Chrome extensions that depend on an offscreen worker keep working.
-- **Side panels.** On macOS, Chrome <code>sidePanel</code> and Firefox <code>sidebarAction</code> open an extension-owned card beside your tabs. You can resize or close it, and choose another available extension from its title. Closing unloads the panel; restarting Crest leaves it closed. Firefox path icons work, but image-data icons are not supported.
+- **Side panels.** On macOS, Chrome <code>sidePanel</code> and Firefox <code>sidebarAction</code> open a card beside your tabs. Each Space has one selected panel that stays open as you switch tabs. Choosing another extension replaces it; switching Spaces hides it until you return. You can resize or close it. Other extensions cannot inject their scripts or styles into the panel or its embedded websites. Closing unloads the panel; restarting Crest leaves it closed. Firefox path icons work, but image-data icons are not supported.
+  Some extensions bind a conversation to the tab or folder where it started. Switching tabs keeps that conversation open but does not automatically change its scope. Claude 1.0.90 currently behaves this way.
+  ChatGPT 1.26.827.12125 keeps a separate conversation selection for each tab and restores it when you return. The extension controls this behavior inside the panel.
 - **Request blocking.** WebKit reports requests but does not consume blocking <code>webRequest</code> responses, so cancellation, redirection, header mutation, and authentication parity are unavailable. Declarative rules are translated by WebKit, and that translation is not lossless.
 - **Sign-in redirects.** <code>identity.launchWebAuthFlow</code> opens a Crest authentication window that shares the Space's cookies, so an extension you are already signed in to on the web can renew its session without asking you again — and only shows you a window when the provider actually needs you. The Google-account part of <code>identity</code> is different: Crest has no Google profile, so <code>getAuthToken</code> refuses and the account queries answer as a signed-out browser does.
 - **Extension management.** An extension can read its own record. Listing, enabling, or removing other extensions is refused.

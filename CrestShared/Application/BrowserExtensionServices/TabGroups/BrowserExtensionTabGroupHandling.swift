@@ -9,6 +9,7 @@ import Foundation
 /// here rather than approximated per package.
 @MainActor
 protocol BrowserExtensionTabGroupHandling: AnyObject {
+    var revision: Int { get }
     func register(client: BrowserExtensionServiceClientID, spaceID: SpaceID)
     func unregister(client: BrowserExtensionServiceClientID)
     func space(for client: BrowserExtensionServiceClientID) -> SpaceID?
@@ -28,6 +29,7 @@ protocol BrowserExtensionTabGroupHandling: AnyObject {
         title: String?, color: BrowserExtensionTabGroupColor?, isCollapsed: Bool?
     ) throws -> BrowserExtensionTabGroup
     func ungroup(_ tabs: [TabID], in spaceID: SpaceID)
+    func move(_ id: BrowserExtensionTabGroupID, in spaceID: SpaceID, to index: Int) throws -> BrowserExtensionTabGroup
 
     /// Drops closed tabs and Spaces, emitting `.removed` for every group the
     /// repair empties. Called from the extension coordinator's own reconcile,
@@ -35,4 +37,12 @@ protocol BrowserExtensionTabGroupHandling: AnyObject {
     func repair(using session: BrowserSession)
     func events(for client: BrowserExtensionServiceClientID)
         -> AsyncStream<BrowserExtensionTabGroupEvent>
+    func membershipEvents(for client: BrowserExtensionServiceClientID)
+        -> AsyncStream<BrowserExtensionTabGroupEvent.Membership>
+}
+
+extension BrowserExtensionTabGroupHandling {
+    func move(_ id: BrowserExtensionTabGroupID, in spaceID: SpaceID, to index: Int) throws -> BrowserExtensionTabGroup {
+        throw BrowserExtensionTabGroupBrokerError.failedToMove
+    }
 }

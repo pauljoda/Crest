@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserFolderOrganizationMenu: View {
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let assignment: BrowserFolderRuntimeAssignment
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController

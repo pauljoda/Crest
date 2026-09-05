@@ -6,8 +6,7 @@ struct BrowserExtensionSidebarBehavior: Codable, Equatable, Sendable {
 
 struct BrowserExtensionSidebarPresentation: Equatable, Sendable {
     let clientID: BrowserExtensionServiceClientID
-    let tabID: TabID?
-    let path: String
+    let options: BrowserExtensionSidebarResolvedOptions
 }
 
 struct BrowserExtensionSidebarPanel: Equatable, Sendable {
@@ -19,7 +18,6 @@ struct BrowserExtensionSidebarPanel: Equatable, Sendable {
     let icon: BrowserExtensionSidebarIcon?
     let tabID: TabID?
 
-    var isTabSpecific: Bool { tabID != nil }
 }
 
 struct BrowserExtensionSidebarEvent: Equatable, Sendable {

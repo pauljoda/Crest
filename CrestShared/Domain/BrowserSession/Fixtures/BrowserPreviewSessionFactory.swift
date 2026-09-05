@@ -8,7 +8,7 @@ enum BrowserPreviewSessionFactory {
     }
 
     private static func makeWorkSpace() -> BrowserSpace {
-        let folder = SavedFolder(title: "Build the Browser", symbol: "folder.fill")
+        let folder = BrowserFolder(title: "Build the Browser", symbol: "folder.fill")
         let tabs = workTabs(folderID: folder.id)
         return BrowserSpace(
             id: SpaceID(),
@@ -61,7 +61,7 @@ enum BrowserPreviewSessionFactory {
     }
 
     private static func makePersonalSpace() -> BrowserSpace {
-        let folder = SavedFolder(title: "Reading", symbol: "folder.fill")
+        let folder = BrowserFolder(title: "Reading", symbol: "folder.fill")
         let tabs = [
             tab("Apple", "https://apple.com", "apple.logo", .pinned),
             tab("YouTube", "https://youtube.com", "play.fill", .pinned),

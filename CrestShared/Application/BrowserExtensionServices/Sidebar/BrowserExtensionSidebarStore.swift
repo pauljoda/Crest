@@ -1,9 +1,9 @@
 import Foundation
 import Observation
 
-/// Open intent survives a temporarily inapplicable tab or a locked Space.
-/// Visible documents do not. The host reconciles its actual selection here;
-/// consumers receive close/open events when that document identity changes.
+/// One selected extension document per window and Space. Tab options choose
+/// the resource when opening; tab selection never replaces or closes it.
+/// Extensions receive native tab events to follow the active page themselves.
 @Observable
 @MainActor
 final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
@@ -19,9 +19,6 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     }
 
     private(set) var presentationsByWindow: [BrowserWindowID: [SpaceID: BrowserExtensionSidebarPresentation]] = [:]
-    private var contextualPresentations: [BrowserWindowID: [SpaceID: [TabID: BrowserExtensionSidebarPresentation]]] =
-        [:]
-    private var closedTabs: [BrowserWindowID: [SpaceID: Set<TabID>]] = [:]
     private(set) var optionsRevision = 0
     @ObservationIgnored private var registrations: [BrowserExtensionServiceClientID: Registration] = [:]
     @ObservationIgnored private var visibility: [BrowserWindowID: [SpaceID: Visibility]] = [:]
@@ -62,11 +59,6 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
             for (space, presentation) in spaces where presentation.clientID == client {
                 presentationsByWindow[window]?[space] = nil
                 refresh(in: window, spaceID: space)
-            }
-        }
-        for (window, spaces) in contextualPresentations {
-            for (space, tabs) in spaces {
-                contextualPresentations[window]?[space] = tabs.filter { $0.value.clientID != client }
             }
         }
         refreshPresentations()
@@ -175,26 +167,8 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         guard options.presentsPanel,
             BrowserExtensionSidebarResourcePolicy.documentURL(path: options.path, baseURL: registration.baseURL) != nil
         else { throw BrowserExtensionSidebarError.noActivePanel }
-        let tabID: TabID? = if case .tab(let id) = options.scope { id } else { nil }
-        let presentation = BrowserExtensionSidebarPresentation(
-            clientID: client, tabID: tabID, path: options.path
-        )
-        if let tabID, registration.registry.defaults.flavor == .sidePanel {
-            contextualPresentations[window, default: [:]][registration.spaceID, default: [:]][tabID] = presentation
-        } else {
-            if let tab { contextualPresentations[window]?[registration.spaceID]?[tab] = nil }
-            // Chrome shows whichever panel was opened last: a global panel
-            // opened while another extension's tab-specific panel is showing
-            // takes over that tab. Firefox has one sidebar per window anyway.
-            if let active = visibility[window]?[registration.spaceID]?.tabID {
-                contextualPresentations[window]?[registration.spaceID]?[active] = nil
-            }
-            presentationsByWindow[window, default: [:]][registration.spaceID] = presentation
-            closedTabs[window]?[registration.spaceID] = nil
-        }
-        if let tab = tab ?? visibility[window]?[registration.spaceID]?.tabID {
-            closedTabs[window]?[registration.spaceID]?.remove(tab)
-        }
+        presentationsByWindow[window, default: [:]][registration.spaceID] = .init(
+            clientID: client, options: options)
         if visibility[window]?[registration.spaceID] == nil {
             visibility[window, default: [:]][registration.spaceID] = .init(tabID: tab, isAvailable: true)
         }
@@ -206,72 +180,39 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         if let tab, registration.registry.resolved(for: tab).scope != .tab(tab) {
             throw BrowserExtensionSidebarError.noTabSpecificPanel
         }
-        guard isOpen(for: client, in: window) else { return }
-        if let tab, visiblePanels[window]?[registration.spaceID]?.tabID != tab { return }
-        presentationsByWindow[window]?[registration.spaceID] = nil
-        contextualPresentations[window]?[registration.spaceID] = nil
-        closedTabs[window]?[registration.spaceID] = nil
-        refresh(in: window, spaceID: registration.spaceID)
+        guard presentationsByWindow[window]?[registration.spaceID]?.clientID == client else { return }
+        closePresentedPanel(in: window, spaceID: registration.spaceID)
     }
 
     func closeChromePanel(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID, tab: TabID?) throws {
         let registration = try registration(for: client)
-        let spaceID = registration.spaceID
         if let tab {
             let options = registration.registry.resolved(for: tab)
             guard options.scope == .tab(tab), options.presentsPanel else {
                 throw BrowserExtensionSidebarError.noTabSpecificPanel
             }
-            if contextualPresentations[window]?[spaceID]?[tab]?.clientID == client {
-                contextualPresentations[window]?[spaceID]?[tab] = nil
-            }
-            if presentationsByWindow[window]?[spaceID]?.clientID == client {
-                closedTabs[window, default: [:]][spaceID, default: []].insert(tab)
-            }
-        } else {
-            guard registration.registry.resolved(at: .default).presentsPanel else {
-                throw BrowserExtensionSidebarError.noActivePanel
-            }
-            // Closing a global entry leaves a visible contextual entry alone.
-            if let current = visiblePanels[window]?[spaceID], current.clientID == client, let tab = current.tabID {
-                contextualPresentations[window, default: [:]][spaceID, default: [:]][tab] = .init(
-                    clientID: client, tabID: tab, path: current.path
-                )
-            }
-            if presentationsByWindow[window]?[spaceID]?.clientID == client {
-                presentationsByWindow[window]?[spaceID] = nil
-            }
+        } else if !registration.registry.resolved(at: .default).presentsPanel {
+            throw BrowserExtensionSidebarError.noActivePanel
         }
-        refresh(in: window, spaceID: spaceID)
+        // Chrome's target still validates the caller's configured resource.
+        // Crest has one selected panel, so there is no hidden tab selection
+        // to restore after closing it.
+        guard presentationsByWindow[window]?[registration.spaceID]?.clientID == client else { return }
+        closePresentedPanel(in: window, spaceID: registration.spaceID)
     }
 
-    /// The person's close control, and the action-click toggle while a panel
-    /// shows. Chrome's `SidePanelCoordinator::Close` resets the active entry
-    /// of the window's global registry and of the active tab's contextual
-    /// registry, and nothing else: another tab that opened its own panel keeps
-    /// it and shows it again when selected. Firefox has one sidebar per window,
-    /// so for it this is simply closing that sidebar.
     func closePresentedPanel(in window: BrowserWindowID, spaceID: SpaceID) {
-        guard let current = visiblePanels[window]?[spaceID] else { return }
-        if let tab = current.tabID ?? visibility[window]?[spaceID]?.tabID {
-            contextualPresentations[window]?[spaceID]?[tab] = nil
-        }
         presentationsByWindow[window]?[spaceID] = nil
-        closedTabs[window]?[spaceID] = nil
         refresh(in: window, spaceID: spaceID)
     }
 
     func toggle(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID, tab: TabID?) throws {
-        if isOpen(for: client, in: window) {
-            let registration = try registration(for: client)
-            closePresentedPanel(in: window, spaceID: registration.spaceID)
-            return
-        }
         let registration = try registration(for: client)
-        if let active = visibility[window]?[registration.spaceID]?.tabID {
-            contextualPresentations[window]?[registration.spaceID]?[active] = nil
+        if presentationsByWindow[window]?[registration.spaceID]?.clientID == client {
+            closePresentedPanel(in: window, spaceID: registration.spaceID)
+        } else {
+            try open(for: client, in: window, tab: tab)
         }
-        try open(for: client, in: window, tab: tab)
     }
 
     func isOpen(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID) -> Bool {
@@ -283,36 +224,19 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
 
     func panel(in window: BrowserWindowID, spaceID: SpaceID, activeTab: TabID?) -> BrowserExtensionSidebarPanel? {
         _ = optionsRevision
-        if let activeTab, closedTabs[window]?[spaceID]?.contains(activeTab) == true { return nil }
-        let contextual = activeTab.flatMap { contextualPresentations[window]?[spaceID]?[$0] }
-        guard let intent = contextual ?? presentationsByWindow[window]?[spaceID] else { return nil }
+        guard let intent = presentationsByWindow[window]?[spaceID] else { return nil }
         return makePanel(
-            client: intent.clientID, activeTab: activeTab,
+            client: intent.clientID, options: intent.options,
             isAvailable: visibility[window]?[spaceID]?.isAvailable ?? true)
     }
 
-    /// The panel bound to one tab: the contextual presentation an extension
-    /// opened for it, which selecting that tab would put back on screen.
-    ///
-    /// Only one panel presents at a time, so this deliberately answers for
-    /// tabs that are not the active one — that is the whole point of a per-row
-    /// mark. It is O(1) per tab, because the sidebar asks once per row.
-    ///
-    /// Window-level presentations are excluded on purpose. A global panel
-    /// applies to every tab in the Space, so binding it to rows would mark the
-    /// whole list while the card on screen already says the same thing. To
-    /// change that rule, fall back to `presentationsByWindow[window]?[spaceID]`
-    /// when there is no contextual entry.
-    func boundPanel(for tab: TabID, in window: BrowserWindowID, spaceID: SpaceID)
-        -> BrowserExtensionSidebarPanel?
-    {
-        _ = optionsRevision
-        guard closedTabs[window]?[spaceID]?.contains(tab) != true,
-            let intent = contextualPresentations[window]?[spaceID]?[tab],
-            let panel = makePanel(client: intent.clientID, activeTab: tab, isAvailable: true),
-            panel.documentURL != nil
-        else { return nil }
-        return panel
+    /// Keep the selected document alive when another Space is visible. A
+    /// replaced or closed panel is absent and is released by the page pool.
+    func retainedPanels(in window: BrowserWindowID, spaceID: SpaceID) -> [BrowserExtensionSidebarPanel] {
+        guard let intent = presentationsByWindow[window]?[spaceID],
+            let panel = makePanel(client: intent.clientID, options: intent.options, isAvailable: true)
+        else { return [] }
+        return [panel]
     }
 
     func availablePanels(in window: BrowserWindowID, spaceID: SpaceID, activeTab: TabID?)
@@ -349,8 +273,6 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         hostWindowsBySpace = hostWindowsBySpace.filter { $0.value != window }
         let spaces = Array(visiblePanels[window]?.keys ?? [:].keys)
         presentationsByWindow[window] = nil
-        contextualPresentations[window] = nil
-        closedTabs[window] = nil
         for space in spaces { refresh(in: window, spaceID: space) }
         visibility[window] = nil
         visiblePanels[window] = nil
@@ -364,23 +286,12 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     func repair(using session: BrowserSession) {
         let previousRegistrations = registrations
         let previousVisibility = visibility
-        let previousContextual = contextualPresentations
-        let previousClosedTabs = closedTabs
         for (client, registration) in registrations {
             guard let space = session.space(id: registration.spaceID) else {
                 unregister(client: client)
                 continue
             }
             registrations[client]?.registry.repair(liveTabs: Set(space.tabs.map(\.id)))
-            // `a?[k] = rhs` opens the write to `a` before evaluating `rhs`, so
-            // reading the same dictionary on the right side is an exclusivity
-            // violation. Compute the survivors first, then store them.
-            for window in Array(contextualPresentations.keys) {
-                let liveContextual = contextualPresentations[window]?[space.id]?.filter { space.contains($0.key) }
-                contextualPresentations[window]?[space.id] = liveContextual
-                let liveClosed = closedTabs[window]?[space.id]?.filter { space.contains($0) }
-                closedTabs[window]?[space.id] = liveClosed
-            }
             for (window, spaces) in visibility {
                 guard let current = spaces[space.id], let tab = current.tabID, !space.contains(tab) else { continue }
                 visibility[window]?[space.id]?.tabID = space.selectedTabID
@@ -388,7 +299,6 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         }
         guard
             registrations != previousRegistrations || visibility != previousVisibility
-                || contextualPresentations != previousContextual || closedTabs != previousClosedTabs
         else { return }
         optionsRevision &+= 1
         refreshPresentations()
@@ -401,10 +311,22 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     }
 
     private func update(_ client: BrowserExtensionServiceClientID, mutation: (inout Registration) -> Void) throws {
-        var value = try registration(for: client)
+        let previous = try registration(for: client)
+        var value = previous
         mutation(&value)
         guard registrations[client] != value else { return }
         registrations[client] = value
+        // Apply explicit option changes to the resource that was opened. An
+        // unrelated tab's options, disabled tabs and tab selection do not
+        // destroy an already open conversation. Disabling controls new opens.
+        for (window, spaces) in presentationsByWindow {
+            guard let intent = spaces[value.spaceID], intent.clientID == client else { continue }
+            let scope = intent.options.scope
+            let options = value.registry.resolved(at: scope)
+            if previous.registry.resolved(at: scope) != options, options.presentsPanel {
+                presentationsByWindow[window]?[value.spaceID] = .init(clientID: client, options: options)
+            }
+        }
         optionsRevision &+= 1
         refreshPresentations()
         consumeInstallOpen(for: client)
@@ -415,20 +337,27 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     {
         guard let registration = registrations[client] else { return nil }
         let options = registration.registry.resolved(for: activeTab)
+        guard options.presentsPanel else { return nil }
+        return makePanel(client: client, options: options, isAvailable: isAvailable)
+    }
+
+    private func makePanel(
+        client: BrowserExtensionServiceClientID, options: BrowserExtensionSidebarResolvedOptions, isAvailable: Bool
+    ) -> BrowserExtensionSidebarPanel? {
+        guard let registration = registrations[client] else { return nil }
         let url =
-            options.presentsPanel && isAvailable
+            isAvailable
             ? BrowserExtensionSidebarResourcePolicy.documentURL(path: options.path, baseURL: registration.baseURL) : nil
-        let tabID: TabID? = if case .tab(let id) = options.scope { id } else { nil }
         return .init(
             clientID: client, spaceID: registration.spaceID, documentURL: url,
-            path: options.path, title: options.title, icon: options.icon, tabID: tabID)
+            path: options.path, title: options.title, icon: options.icon, tabID: nil)
     }
 
     private func refreshPresentations() {
-        let windows = Set(presentationsByWindow.keys).union(contextualPresentations.keys).union(visiblePanels.keys)
+        let windows = Set(presentationsByWindow.keys).union(visiblePanels.keys)
         for window in windows {
             let spaces = Set(presentationsByWindow[window]?.keys ?? [:].keys)
-                .union(contextualPresentations[window]?.keys ?? [:].keys).union(visiblePanels[window]?.keys ?? [:].keys)
+                .union(visiblePanels[window]?.keys ?? [:].keys)
             for space in spaces { refresh(in: window, spaceID: space) }
         }
     }

@@ -38,11 +38,12 @@ enum BrowserTabDragPreviewLayout {
         from source: BrowserTabDragPreviewShape,
         to destination: BrowserTabDragPreviewShape,
         progress proposedProgress: CGFloat,
-        rowWidth: CGFloat = rowSize.width
+        rowWidth: CGFloat = rowSize.width,
+        pinnedSize: CGSize = BrowserTabDragPreviewLayout.pinnedSize
     ) -> BrowserTabDragPreviewMetrics {
         let progress = min(max(proposedProgress, 0), 1)
-        let sourceSize = source.size(rowWidth: rowWidth)
-        let destinationSize = destination.size(rowWidth: rowWidth)
+        let sourceSize = source.size(rowWidth: rowWidth, pinnedSize: pinnedSize)
+        let destinationSize = destination.size(rowWidth: rowWidth, pinnedSize: pinnedSize)
         return BrowserTabDragPreviewMetrics(
             width: lerp(sourceSize.width, destinationSize.width, progress),
             height: lerp(sourceSize.height, destinationSize.height, progress),

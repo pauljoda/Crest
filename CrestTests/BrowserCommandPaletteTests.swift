@@ -211,7 +211,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
     }
 
     func testTheWholeResultListBuildsFromNonAsciiTabsHistoryAndFolders() {
-        let folder = SavedFolder(title: "قراءة")
+        let folder = BrowserFolder(title: "قراءة")
         let space = makeSpace(
             name: "العمل",
             tabs: [tab("علامة التبويب الجديدة", "https://example.com/ar")],
@@ -537,7 +537,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
     }
 
     func testAMatchingFolderOpensTheFirstTabItHoldsAndSaysSoOnTheRow() {
-        let folder = SavedFolder(title: "Reading")
+        let folder = BrowserFolder(title: "Reading")
         let first = tab(
             "Long Article",
             "https://example.com/long",
@@ -567,7 +567,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
     }
 
     func testAnEmptyFolderIsNotOfferedBecauseThereIsNothingToOpen() {
-        let folder = SavedFolder(title: "Reading")
+        let folder = BrowserFolder(title: "Reading")
         let space = makeSpace(tabs: [], folders: [folder])
 
         let results = BrowserCommandPaletteResults.results(
@@ -627,7 +627,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
     // MARK: - Identity
 
     func testEveryResultCarriesADistinctIdentitySoTheListCanAnimate() {
-        let folder = SavedFolder(title: "Apple Reading")
+        let folder = BrowserFolder(title: "Apple Reading")
         let space = makeSpace(
             tabs: [tab("Apple Store", "https://apple.com/store")],
             pinned: [
@@ -714,7 +714,7 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         name: String = "Work",
         tabs: [BrowserTab],
         pinned: [BrowserTab] = [],
-        folders: [SavedFolder] = [],
+        folders: [BrowserFolder] = [],
         history: [BrowserHistoryEntry] = []
     ) -> BrowserSpace {
         BrowserSpace(

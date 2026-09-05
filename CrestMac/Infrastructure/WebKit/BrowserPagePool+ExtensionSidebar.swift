@@ -39,7 +39,11 @@ extension BrowserPagePool {
         {
             return existing
         }
-        closeExtensionSidebars(inWindow: window)
+        extensionSidebarDocuments.removeValue(forKey: key)?.close()
+        if let hostedStore = extensionControllerPool.hostedWebsiteDataStore(in: panel.spaceID) {
+            guard BrowserExtensionHostedWebsiteDataStore.apply(hostedStore, to: configuration.webViewConfiguration)
+            else { return nil }
+        }
         let document = BrowserExtensionSidebarDocument(
             url: url, tabID: panel.tabID, configuration: configuration,
             cookieAccess: BrowserExtensionFramedSiteCookieAccess(
@@ -48,13 +52,27 @@ extension BrowserPagePool {
             // A panel frames websites, and a website named in an extension's
             // `externally_connectable` expects `chrome.runtime` there exactly
             // as it would in a tab.
-            runtimeBridge: hostedDocumentRuntimeBridge(
-                for: configuration, in: panel.spaceID)
-        ) { [weak self] url in
-            self?.openExtensionSidebarLink(url)
-        }
+            installRuntimeBridge: { contentController in
+                hostedDocumentRuntimeBridge(
+                    for: configuration, in: panel.spaceID, contentController: contentController)
+            },
+            openTab: { [weak self] url in
+                self?.openExtensionSidebarLink(url)
+            }
+        )
         extensionSidebarDocuments[key] = document
         return document
+    }
+
+    func retainExtensionSidebars(inWindow window: BrowserWindowID, panels: [BrowserExtensionSidebarPanel]) {
+        let stale = extensionSidebarDocuments.keys.filter { key in
+            guard key.windowID == window, let document = extensionSidebarDocuments[key] else { return false }
+            return !panels.contains { panel in
+                panel.spaceID == key.spaceID
+                    && panel.documentURL == document.url
+            }
+        }
+        for key in stale { extensionSidebarDocuments.removeValue(forKey: key)?.close() }
     }
 
     func closeExtensionSidebars(

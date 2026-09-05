@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 /// Captures the inspected page through WebKit, without resizing its WKWebView
-/// or moving the user's scroll position. This is not yet an extension endpoint.
+/// or moving the user's scroll position.
 @MainActor
 final class BrowserChromeDebuggerScreenshot {
     private let connection: BrowserWebInspectorProtocolConnection
@@ -21,12 +21,33 @@ final class BrowserChromeDebuggerScreenshot {
         guard let dataURL = response["dataURL"] as? String, dataURL.hasPrefix(prefix),
             let png = Data(base64Encoded: String(dataURL.dropFirst(prefix.count)))
         else { throw BrowserChromeDebuggerProtocolError.invalidResult }
-        if options.format == "png" { return ["data": png.base64EncodedString()] }
-        guard let bitmap = NSBitmapImageRep(data: png),
-            let jpeg = bitmap.representation(
-                using: .jpeg, properties: [.compressionFactor: Double(options.quality) / 100])
+        if options.format == "png", options.scale == 1 { return ["data": png.base64EncodedString()] }
+        guard let bitmap = NSBitmapImageRep(data: png) else { throw BrowserChromeDebuggerProtocolError.invalidResult }
+        let scaled = try scaledBitmap(bitmap, scale: options.scale)
+        guard
+            let encoded = scaled.representation(
+                using: options.format == "png" ? .png : .jpeg,
+                properties: options.format == "png" ? [:] : [.compressionFactor: Double(options.quality) / 100])
         else { throw BrowserChromeDebuggerProtocolError.invalidResult }
-        return ["data": jpeg.base64EncodedString()]
+        return ["data": encoded.base64EncodedString()]
+    }
+
+    private func scaledBitmap(_ bitmap: NSBitmapImageRep, scale: Double) throws -> NSBitmapImageRep {
+        guard scale != 1 else { return bitmap }
+        guard let width = Int(exactly: max(1, (Double(bitmap.pixelsWide) * scale).rounded())),
+            let height = Int(exactly: max(1, (Double(bitmap.pixelsHigh) * scale).rounded())),
+            width <= 32768, height <= 32768, width * height <= 128_000_000
+        else { throw BrowserChromeDebuggerProtocolError.unsupportedParameter("clip.scale output size") }
+        guard let source = bitmap.cgImage,
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { throw BrowserChromeDebuggerProtocolError.invalidResult }
+        context.interpolationQuality = .high
+        context.draw(source, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let image = context.makeImage() else { throw BrowserChromeDebuggerProtocolError.invalidResult }
+        return NSBitmapImageRep(cgImage: image)
     }
 
     private func rectangle(for options: Options) async throws -> [String: Any] {
@@ -57,6 +78,7 @@ final class BrowserChromeDebuggerScreenshot {
         let format: String
         let quality: Int
         let beyondViewport: Bool
+        let scale: Double
         let rectangle: [String: Any]?
 
         init(_ parameters: [String: Any]) throws {
@@ -83,16 +105,16 @@ final class BrowserChromeDebuggerScreenshot {
                 parameters["captureBeyondViewport"], name: "captureBeyondViewport", default: false)
             guard let rawClip = parameters["clip"] else {
                 rectangle = nil
+                scale = 1
                 return
             }
             guard let clip = rawClip as? [String: Any] else {
                 throw BrowserChromeDebuggerProtocolError.invalidParameter("clip")
             }
-            guard beyondViewport else {
-                throw BrowserChromeDebuggerProtocolError.unsupportedParameter("clip with captureBeyondViewport=false")
-            }
-            let scale = try Self.integer(clip["scale"], name: "clip.scale")
-            guard scale == 1 else { throw BrowserChromeDebuggerProtocolError.unsupportedParameter("clip.scale") }
+            guard let scale = clip["scale"] as? NSNumber, CFGetTypeID(scale) != CFBooleanGetTypeID(),
+                scale.doubleValue.isFinite, scale.doubleValue > 0
+            else { throw BrowserChromeDebuggerProtocolError.invalidParameter("clip.scale") }
+            self.scale = scale.doubleValue
             let x = try Self.integer(clip["x"], name: "clip.x")
             let y = try Self.integer(clip["y"], name: "clip.y")
             let width = try Self.integer(clip["width"], name: "clip.width")

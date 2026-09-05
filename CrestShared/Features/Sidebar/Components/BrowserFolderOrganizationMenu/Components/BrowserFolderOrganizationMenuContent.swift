@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserFolderOrganizationMenuContent: View {
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let assignment: BrowserFolderRuntimeAssignment
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
@@ -31,6 +31,17 @@ struct BrowserFolderOrganizationMenuContent: View {
         }
         Button("Folder Color…", systemImage: "paintpalette") {
             performIfCurrent(changeColor)
+        }
+
+        Button(
+            folder.location == .current ? "Move to Saved Tabs" : "Move to Current Tabs",
+            systemImage: folder.location == .current ? "bookmark" : "rectangle.stack"
+        ) {
+            performIfCurrent {
+                browser.moveFolder(
+                    folder.id, matching: assignment.spaceAssignment,
+                    to: folder.location == .current ? .saved : .current)
+            }
         }
 
         Menu("Move to Folder", systemImage: "folder.badge.gearshape") {
@@ -101,7 +112,9 @@ struct BrowserFolderOrganizationMenuContent: View {
             }
             return BrowserFolderMoveDestination(
                 node: node,
-                path: tree.pathTitle(for: node.id) ?? node.folder.title
+                path: (node.folder.location == .saved
+                    ? String(localized: "Saved Tabs") : String(localized: "Current Tabs"))
+                    + " › " + (tree.pathTitle(for: node.id) ?? node.folder.title)
             )
         }
     }

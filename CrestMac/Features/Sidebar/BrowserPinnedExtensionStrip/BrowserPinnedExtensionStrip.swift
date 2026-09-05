@@ -40,8 +40,8 @@ struct BrowserPinnedExtensionStrip: View {
     }
 
     private var presentedActions: [BrowserExtensionActionPresentation] {
-        actionPresentationOverride
-            ?? toolbarActions.map(BrowserExtensionActionPresentation.init(action:))
+        if let actionPresentationOverride { return actionPresentationOverride }
+        return toolbarActions.map(BrowserExtensionActionPresentation.init(action:))
     }
 
     private func presentMenu(

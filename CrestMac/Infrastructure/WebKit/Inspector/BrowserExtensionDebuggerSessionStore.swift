@@ -10,7 +10,7 @@ enum BrowserExtensionDebuggerTargetAccess {
 
 /// Owns transient, exclusive Inspector sessions. The resolver must enforce live
 /// Space, URL, frame, and extension permissions; a resident page is not a grant.
-/// This service is not installed in CrestApp or exposed to extensions yet.
+/// Registered extension clients reach this service through the capability broker.
 @Observable
 @MainActor
 final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandling {
@@ -30,9 +30,13 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
         let screenshot: BrowserChromeDebuggerScreenshot
         let console: BrowserChromeDebuggerConsole
         let pageDomain: BrowserChromeDebuggerPage
+        let fetch: BrowserChromeDebuggerFetch
         let network: BrowserChromeDebuggerNetwork
         let input: BrowserChromeDebuggerInput
         let targetDomain: BrowserChromeDebuggerTarget
+        let dom: BrowserChromeDebuggerDOM
+        let accessibility: BrowserChromeDebuggerAccessibility
+        let snapshot: BrowserChromeDebuggerDOMSnapshot
         let unsupported = BrowserChromeDebuggerUnsupportedLog()
         var phase = BrowserExtensionDebuggerSession.Phase.attaching
         var pending: [UUID: PendingCommand] = [:]
@@ -50,9 +54,13 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             console = BrowserChromeDebuggerConsole(connection: connection)
             pageDomain = BrowserChromeDebuggerPage(
                 connection: connection, target: target, webView: page, tabHost: tabHost)
+            fetch = BrowserChromeDebuggerFetch(connection: connection)
             network = BrowserChromeDebuggerNetwork(connection: connection)
             input = BrowserChromeDebuggerInput(webView: page)
             targetDomain = BrowserChromeDebuggerTarget(target: target, webView: page, tabHost: tabHost)
+            dom = BrowserChromeDebuggerDOM(connection: connection)
+            accessibility = BrowserChromeDebuggerAccessibility(connection: connection, dom: dom)
+            snapshot = BrowserChromeDebuggerDOMSnapshot(connection: connection, dom: dom, webView: page)
         }
 
         /// Every engine event reaches every translator that wants one. A single
@@ -63,6 +71,8 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             console.receive(method, parameters: parameters)
             pageDomain.receive(method, parameters: parameters)
             network.receive(method, parameters: parameters)
+            fetch.receive(method, parameters: parameters)
+            dom.receive(method, parameters: parameters)
         }
 
         func publishEvents(_ publish: @escaping (String, [String: Any]) -> Void) {
@@ -70,6 +80,7 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             console.onEvent = publish
             pageDomain.onEvent = publish
             network.onEvent = publish
+            fetch.onEvent = publish
         }
 
         func stopPublishing() {
@@ -77,9 +88,13 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
             console.onEvent = nil
             pageDomain.onEvent = nil
             network.onEvent = nil
+            fetch.onEvent = nil
+            fetch.detach()
             console.disable()
             network.disable()
             pageDomain.detach()
+            accessibility.detach()
+            dom.detach()
         }
     }
 
@@ -286,12 +301,21 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
                 response = try await entry.screenshot.capture(parameters: parameters)
             } else if command.method.hasPrefix("Page.") {
                 response = try await entry.pageDomain.execute(command.method, parameters: parameters)
+            } else if command.method.hasPrefix("Fetch.") {
+                response = try await entry.fetch.execute(command.method, parameters: parameters)
             } else if command.method.hasPrefix("Network.") {
                 response = try await entry.network.execute(command.method, parameters: parameters)
             } else if command.method.hasPrefix("Input.") {
                 response = try await entry.input.execute(command.method, parameters: parameters)
             } else if command.method.hasPrefix("Target.") || command.method.hasPrefix("Emulation.") {
                 response = try await entry.targetDomain.execute(command.method, parameters: parameters)
+            } else if command.method == "DOMSnapshot.captureSnapshot" {
+                response = try await entry.snapshot.capture(parameters)
+            } else if command.method == "DOM.resolveNode" {
+                try entry.dom.activate()
+                response = try await entry.dom.resolveNode(parameters)
+            } else if command.method.hasPrefix("Accessibility.") {
+                response = try await entry.accessibility.execute(command.method, parameters: parameters)
             } else {
                 throw BrowserChromeDebuggerProtocolError.unsupportedCommand(command.method)
             }

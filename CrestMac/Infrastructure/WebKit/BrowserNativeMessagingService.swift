@@ -74,6 +74,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         case notifications(Task<Void, Never>)
         case sidebar(Task<Void, Never>)
         case tabGroups(Task<Void, Never>)
+        case tabMembership(Task<Void, Never>)
         case declarativeNetRequest(Task<Void, Never>)
         case debugger(Task<Void, Never>)
         case runtime(Task<Void, Never>)
@@ -159,6 +160,8 @@ final class BrowserExtensionCapabilityBrokerConnection {
             try configureSidebarWatch()
         case "tabGroups.watch":
             try configureTabGroupsWatch()
+        case "tabs.watchMembership":
+            try configureTabMembershipWatch()
         case "dnr.watch":
             try configureDeclarativeNetRequestWatch()
         case "debugger.watch":
@@ -189,7 +192,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         switch watch {
         case .idle(let watch):
             watch.stop()
-        case .notifications(let task), .sidebar(let task), .tabGroups(let task),
+        case .notifications(let task), .sidebar(let task), .tabGroups(let task), .tabMembership(let task),
             .declarativeNetRequest(let task), .debugger(let task),
             .runtime(let task):
             task.cancel()
@@ -378,6 +381,33 @@ final class BrowserExtensionCapabilityBrokerConnection {
                     self.publish(self.tabGroupEventMessage(event))
                 }
             })
+    }
+
+    /// Group membership is non-sensitive Tab metadata, not tabGroups access.
+    private func configureTabMembershipWatch() throws {
+        guard authorization.allowsInternalCapabilityBroker,
+            let client = authorization.clientID, let tabGroupService
+        else { throw BrowserExtensionCapabilityBrokerError.unsupportedAPI("tabs.watchMembership") }
+        switch watch {
+        case .tabMembership: return
+        case .some: throw BrowserExtensionCapabilityBrokerError.invalidRequest
+        case nil: break
+        }
+        let events = tabGroupService.membershipEvents(for: client)
+        watch = .tabMembership(
+            Task { @MainActor [weak self] in
+                for await event in events {
+                    guard !Task.isCancelled, let self else { return }
+                    self.publish([
+                        "api": "tabs.membership", "windowKind": "primary",
+                        "changes": event.changes.map {
+                            ["tabToken": $0.tabID.rawValue.uuidString, "groupId": $0.groupID?.rawValue ?? -1]
+                                as [String: Any]
+                        },
+                    ])
+                }
+            })
+        publish(["api": "tabs.membership", "windowKind": "primary", "changes": []])
     }
 
     /// The emulated `declarativeNetRequest` header table, gated on either

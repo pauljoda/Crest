@@ -46,7 +46,7 @@ struct PortableTab: Codable, Equatable, Sendable {
         )
 
         let materializedFolderID: FolderID?
-        if placement == .saved, let folderID {
+        if placement != .pinned, let folderID {
             guard let mappedID = folderIDsBySourceID[folderID] else {
                 throw BrowserPortableArchiveError.invalidContents
             }

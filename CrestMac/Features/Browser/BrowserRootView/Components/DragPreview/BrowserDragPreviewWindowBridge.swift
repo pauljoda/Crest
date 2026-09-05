@@ -10,9 +10,13 @@ import SwiftUI
 /// window follows the pointer for the same reason the rows and cards do.
 struct BrowserDragPreviewWindowBridge: NSViewRepresentable {
     let content: BrowserDragPreviewWindowContent?
+    var onSidebarLandingComplete: (UUID) -> Void = { _ in }
+    var onSidebarLandingArrived: (UUID) -> Void = { _ in }
 
     func makeNSView(context: Context) -> BrowserDragPreviewWindowHostView {
         let view = BrowserDragPreviewWindowHostView()
+        view.onSidebarLandingComplete = onSidebarLandingComplete
+        view.onSidebarLandingArrived = onSidebarLandingArrived
         view.content = content
         return view
     }
@@ -21,6 +25,8 @@ struct BrowserDragPreviewWindowBridge: NSViewRepresentable {
         _ nsView: BrowserDragPreviewWindowHostView,
         context: Context
     ) {
+        nsView.onSidebarLandingComplete = onSidebarLandingComplete
+        nsView.onSidebarLandingArrived = onSidebarLandingArrived
         nsView.content = content
     }
 

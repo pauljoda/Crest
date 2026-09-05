@@ -37,8 +37,11 @@ enum BrowserSyncProjection {
                         )
                     )))
 
-            if preferences.savedStructure {
-                let folderTree = space.folderTree
+            if preferences.savedStructure || preferences.currentTabs {
+                let folderTree = BrowserFolderTree(
+                    folders: space.folders.filter {
+                        $0.location == .current ? preferences.currentTabs : preferences.savedStructure
+                    })
                 guard folderTree.isValid else {
                     throw BrowserSyncError.invalidFolderHierarchy(space.id)
                 }
@@ -73,11 +76,13 @@ enum BrowserSyncProjection {
                                 id: folder.id,
                                 spaceID: space.id,
                                 title: folder.title,
+                                location: folder.location,
                                 symbol: folder.symbol,
                                 color: folder.color,
                                 parentID: folder.parentID,
                                 isCollapsed: folder.isCollapsed,
                                 collapseModifiedAt: folder.collapseModifiedAt,
+                                orderAnchorTabID: folder.orderAnchorTabID,
                                 orderToken: try requiredOrderToken(
                                     for: recordID,
                                     in: folderTokens

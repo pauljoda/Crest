@@ -10,17 +10,17 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
 
     var id: BrowserSidebarReorderItemID {
         switch self {
-        case let .tab(item): .tab(item.tabID)
-        case let .folder(item): .folder(item.folderID)
-        case let .splitGroup(item): .splitGroup(item.groupID)
+        case .tab(let item): .tab(item.tabID)
+        case .folder(let item): .folder(item.folderID)
+        case .splitGroup(let item): .splitGroup(item.groupID)
         }
     }
 
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         switch self {
-        case let .tab(item): item.spaceAssignment
-        case let .folder(item): item.spaceAssignment
-        case let .splitGroup(item): item.spaceAssignment
+        case .tab(let item): item.spaceAssignment
+        case .folder(let item): item.spaceAssignment
+        case .splitGroup(let item): item.spaceAssignment
         }
     }
 }
@@ -33,12 +33,12 @@ enum BrowserSidebarReorderItemID: Hashable, Sendable {
     case splitGroup(SplitGroupID)
 
     var folderID: FolderID? {
-        guard case let .folder(id) = self else { return nil }
+        guard case .folder(let id) = self else { return nil }
         return id
     }
 
     var tabID: TabID? {
-        guard case let .tab(id) = self else { return nil }
+        guard case .tab(let id) = self else { return nil }
         return id
     }
 }

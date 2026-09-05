@@ -121,10 +121,9 @@ struct BrowserExtensionPageConfiguration {
     /// document can reach one without re-deriving the extension identifier
     /// WebKit no longer carries on the context.
     let clientID: BrowserExtensionServiceClientID
-    /// The Space's union of authored `externally_connectable.matches`
-    /// patterns, so a Crest-hosted extension document installs the same
-    /// page-world `chrome.runtime` alias a browser tab gets. A site framed by
-    /// a side panel is on the web, and Chrome exposes the namespace there.
+    /// The owning extension's authored `externally_connectable.matches`
+    /// patterns. Embedded websites can talk to their owner without exposing
+    /// other extensions through the hosted document's bridge.
     let externallyConnectableMatchPatterns: [String]
 
     init(
@@ -332,7 +331,7 @@ final class BrowserExtensionRuntimeContextController {
                     webViewConfiguration: configuration,
                     clientID: .scoped(extensionID: extensionID, spaceID: spaceID),
                     externallyConnectableMatchPatterns:
-                        externallyConnectableMatchPatterns(in: spaceID)
+                        BrowserExtensionExternallyConnectablePolicy.matchPatterns(in: context.webExtension.manifest)
                 )
             }
         }
@@ -873,6 +872,17 @@ final class BrowserExtensionRuntimeContextController {
             in: spaceID,
             excluding: internalGrantedPermissions(for: context)
         )
+        tabWindowCoordinator.cookieAccessService?.revalidatePermissions(
+            for: .scoped(extensionID: extensionID, spaceID: spaceID)
+        ) { host in
+            ["https", "http"].contains { scheme in
+                var components = URLComponents()
+                components.scheme = scheme
+                components.host = host
+                components.path = "/"
+                return components.url.map { context.hasAccess(to: $0) } == true
+            }
+        }
     }
 
     private func persistRuntimeSummary(

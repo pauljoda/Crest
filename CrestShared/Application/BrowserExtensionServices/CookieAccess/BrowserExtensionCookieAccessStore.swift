@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Which hosts each extension has framed, per Space, and therefore which
-/// cookies stay rewritten.
+/// hosted cookies remain synchronized.
 ///
 /// Nothing here is persisted, deliberately. The relaxation is a consequence of
 /// a live extension page framing a site; a fresh launch that never opens that
@@ -53,6 +53,7 @@ final class BrowserExtensionCookieAccessStore: BrowserExtensionCookieAccessHandl
         if hostsByClient[client, default: []].insert(host).inserted {
             revision &+= 1
         }
+        cookieJar.setSynchronizedHosts(relaxedHosts(in: spaceID), in: spaceID)
         startObserving(spaceID)
         // Re-run even for a host already on the list. A frame reload is the
         // cheapest moment to notice a cookie the observer missed, and the jar
@@ -64,11 +65,28 @@ final class BrowserExtensionCookieAccessStore: BrowserExtensionCookieAccessHandl
         guard let spaceID = spacesByClient.removeValue(forKey: client) else { return }
         let hosts = hostsByClient.removeValue(forKey: client) ?? []
         if !hosts.isEmpty { revision &+= 1 }
+        cookieJar.setSynchronizedHosts(relaxedHosts(in: spaceID), in: spaceID)
         // Another extension in the same Space may still hold the same host, so
         // enforcement stops per Space rather than per client.
         guard relaxedHosts(in: spaceID).isEmpty else { return }
         observedSpaces.remove(spaceID)
         cookieJar.observe(spaceID: spaceID, onChange: nil)
+    }
+
+    func revalidatePermissions(
+        for client: BrowserExtensionServiceClientID,
+        allowing hostIsPermitted: (String) -> Bool
+    ) {
+        guard let spaceID = spacesByClient[client], let previous = hostsByClient[client] else { return }
+        let retained = previous.filter(hostIsPermitted)
+        guard retained != previous else { return }
+        if retained.isEmpty {
+            unregister(client: client)
+        } else {
+            hostsByClient[client] = retained
+            revision &+= 1
+            cookieJar.setSynchronizedHosts(relaxedHosts(in: spaceID), in: spaceID)
+        }
     }
 
     private func startObserving(_ spaceID: SpaceID) {
@@ -84,6 +102,7 @@ final class BrowserExtensionCookieAccessStore: BrowserExtensionCookieAccessHandl
         Task { @MainActor [weak self] in
             for host in hosts {
                 guard let self, self.observedSpaces.contains(spaceID) else { return }
+                guard self.relaxedHosts(in: spaceID).contains(host) else { continue }
                 await self.cookieJar.relax(host: host, in: spaceID)
             }
         }

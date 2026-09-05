@@ -25,6 +25,16 @@ enum BrowserWebsiteDataStore {
         for pageURL: URL,
         in dataStore: WKWebsiteDataStore
     ) async {
+        await clearSiteDataInStore(for: pageURL, in: dataStore)
+        if let identifier = dataStore.identifier {
+            let hostedID = BrowserExtensionHostedWebsiteDataStore.identifier(forProfileID: identifier)
+            if await WKWebsiteDataStore.allDataStoreIdentifiers.contains(hostedID) {
+                await clearSiteDataInStore(for: pageURL, in: WKWebsiteDataStore(forIdentifier: hostedID))
+            }
+        }
+    }
+
+    private static func clearSiteDataInStore(for pageURL: URL, in dataStore: WKWebsiteDataStore) async {
         guard let host = pageURL.host()?.lowercased(), !host.isEmpty else { return }
 
         let cookieStore = dataStore.httpCookieStore

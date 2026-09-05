@@ -31,24 +31,32 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     /// Absent when the pool has no cookie-access service behind it.
     @ObservationIgnored private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     @ObservationIgnored private var hasRecoveredProcess = false
-    /// The page-world `chrome.runtime` alias and its relay, shared with every
-    /// other Crest-hosted document on this extension's content controller.
+    /// The page-world `chrome.runtime` alias and relay on this document's
+    /// private content controller.
     @ObservationIgnored private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
+    @ObservationIgnored private let contentController = WKUserContentController()
 
     init(
         url: URL,
         tabID: TabID?,
         configuration: BrowserExtensionPageConfiguration,
         cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
-        runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle? = nil,
+        installRuntimeBridge: (WKUserContentController) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? = { _ in
+            nil
+        },
         openTab: @escaping (URL) -> Void
     ) {
         self.url = url
         self.tabID = tabID
         extensionBaseURL = configuration.baseURL
         self.cookieAccess = cookieAccess
-        self.runtimeBridge = runtimeBridge
         self.openTab = openTab
+        guard BrowserExtensionHostedContentIsolationPolicy.isSupported else {
+            super.init()
+            errorDescription = String(localized: "This version of WebKit cannot isolate extension side panels.")
+            return
+        }
+        runtimeBridge = installRuntimeBridge(contentController)
         let webView = WKWebView(frame: .zero, configuration: configuration.webViewConfiguration)
         self.webView = webView
         super.init()
@@ -71,6 +79,18 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
         (webView.superview as? BrowserWebHostView)?.detach()
         webView.removeFromSuperview()
         self.webView = nil
+    }
+
+    func webView(
+        _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+        preferences: WKWebpagePreferences,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
+    ) {
+        guard BrowserExtensionHostedContentIsolationPolicy.apply(contentController, to: preferences) else {
+            decisionHandler(.cancel, preferences)
+            return
+        }
+        self.webView(webView, decidePolicyFor: action) { policy in decisionHandler(policy, preferences) }
     }
 
     func webView(

@@ -899,10 +899,13 @@ final class BrowserInteractionModelTests: XCTestCase {
             outcome.kind,
             .insert(section: current, beforeID: sidebar.current[1], index: 1)
         )
-        XCTAssertEqual(outcome.displacements, [.zero, down])
+        XCTAssertEqual(
+            outcome.displacements, [CGSize(width: 0, height: -40), .zero],
+            "The source closes above Current while the new gap opens before its second row.")
         XCTAssertEqual(outcome.indicators, [nil, listLine])
 
-        // Current into the pinned grid: the cell it displaces wraps a line.
+        // Current into Pinned: two columns become three; the drop uses the
+        // final grid width rather than shifting a fixed grid off its edge.
         outcome = sidebar.crossing(
             lift: sidebar.current[0],
             from: current,
@@ -914,10 +917,9 @@ final class BrowserInteractionModelTests: XCTestCase {
             outcome.kind,
             .insert(section: pinned, beforeID: sidebar.pinned[1], index: 1)
         )
-        XCTAssertEqual(
-            outcome.displacements,
-            [.zero, CGSize(width: -100, height: 40)]
-        )
+        XCTAssertEqual(outcome.displacements[0], .zero)
+        XCTAssertEqual(outcome.displacements[1].width, 104.0 / 3, accuracy: 0.001)
+        XCTAssertEqual(outcome.displacements[1].height, 0)
         XCTAssertEqual(outcome.indicators, [nil, gridLine])
 
         // Pinned into the saved list.
@@ -941,14 +943,16 @@ final class BrowserInteractionModelTests: XCTestCase {
             lift: sidebar.saved[0],
             from: saved,
             at: CGPoint(x: 100, y: 110),
-            to: CGPoint(x: 150, y: 20),
+            to: CGPoint(x: 190, y: 20),
             watching: sidebar.pinned
         )
         XCTAssertEqual(
             outcome.kind,
             .insert(section: pinned, beforeID: nil, index: 2)
         )
-        XCTAssertEqual(outcome.displacements, [.zero, .zero])
+        XCTAssertEqual(outcome.displacements[0], .zero)
+        XCTAssertEqual(outcome.displacements[1].width, -104.0 / 3, accuracy: 0.001)
+        XCTAssertEqual(outcome.displacements[1].height, 0)
         XCTAssertEqual(
             outcome.indicators,
             [
@@ -1079,8 +1083,8 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
         XCTAssertEqual(
             state.displacement(for: unfiled),
-            .zero,
-            "The list behind the folder is not the section being dropped into."
+            CGSize(width: 0, height: 40),
+            "The parent grows around the gap, moving the following unfiled run with it."
         )
         state.cancel()
     }
@@ -1161,7 +1165,7 @@ final class BrowserInteractionModelTests: XCTestCase {
 
         init() {
             register(pinned, in: .tabs(placement: .pinned, folderID: nil)) {
-                CGRect(x: CGFloat($0) * 100, y: 0, width: 90, height: 40)
+                CGRect(x: CGFloat($0) * 104, y: 0, width: 96, height: 47)
             }
             register(saved, in: .tabs(placement: .saved, folderID: nil)) {
                 CGRect(x: 0, y: 100 + CGFloat($0) * 40, width: 200, height: 40)
@@ -1171,7 +1175,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             }
             register(
                 .tabs(placement: .pinned, folderID: nil),
-                over: CGRect(x: 0, y: 0, width: 200, height: 50)
+                over: CGRect(x: 0, y: 0, width: 200, height: 47)
             )
             register(
                 .tabs(placement: .saved, folderID: nil),

@@ -553,6 +553,30 @@
     "2026-09-04-module-worker-tabs-facade": {
       "category": "fixed",
       "message": "Give extensions with a module background worker the same tab grouping surface as classic workers, so Claude's browser tools can anchor to a tab group"
+    },
+    "2026-09-05-space-extension-sidebars": {
+      "category": "improved",
+      "message": "Keep one extension sidebar open in each Space and switch assistants from the toolbar"
+    },
+    "2026-09-05-extension-browser-tools": {
+      "category": "fixed",
+      "message": "Improve Claude and ChatGPT browser tools, sign-in, page reading and screenshots"
+    },
+    "2026-09-05-shared-open-tab-folders": {
+      "category": "new",
+      "message": "Organize open tabs in named, colored folders that sync and move between saved and open tabs"
+    },
+    "2026-09-05-folder-drag-placement": {
+      "category": "improved",
+      "message": "Move tabs and whole folders through the sidebar with clearer placement and immediate access after mobile drops"
+    },
+    "2026-09-05-sidepanel-content-isolation": {
+      "category": "fixed",
+      "message": "Keep website styling extensions from changing other extensions’ sidebars"
+    },
+    "2026-09-05-safe-extension-worker-paths": {
+      "category": "fixed",
+      "message": "Support extensions such as SponsorBlock that use relative background-worker paths"
     }
   }
 }

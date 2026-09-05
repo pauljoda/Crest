@@ -20,23 +20,30 @@ struct BrowserSidebarReorderSectionIndicatorModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var indicator: BrowserSidebarReorderIndicator? {
-        state.emptySectionIndicator(for: section)
+        state.layout.isActive || section.usesGridOrdering ? nil : state.emptySectionIndicator(for: section)
     }
 
     func body(content: Content) -> some View {
-        content
-            .overlay(alignment: alignment) {
-                if let indicator {
-                    BrowserSidebarReorderIndicatorLine(indicator: indicator)
-                }
+        VStack(spacing: 0) {
+            content
+            BrowserSidebarReorderGap(height: state.layout.emptySpace(for: section))
+        }
+        .animation(
+            BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
+            value: state.layout.emptySpace(for: section)
+        )
+        .overlay(alignment: alignment) {
+            if let indicator {
+                BrowserSidebarReorderIndicatorLine(indicator: indicator)
             }
-            .animation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.dragSource,
-                    reduceMotion: reduceMotion
-                ),
-                value: indicator
-            )
+        }
+        .animation(
+            BrowserVisualAccessibilityPolicy.animation(
+                CrestMotion.dragSource,
+                reduceMotion: reduceMotion
+            ),
+            value: indicator
+        )
     }
 
     /// An empty run inserts at index zero, so the line stands where its first

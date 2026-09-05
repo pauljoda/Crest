@@ -7,14 +7,14 @@ struct MobileBrowserSidebarPreviewFixture {
     let spaceAccess: BrowserSpaceAccessController
     let space: BrowserSpace
     let protectedSpace: BrowserSpace
-    let folder: SavedFolder
+    let folder: BrowserFolder
     let pinnedTab: BrowserTab
     let savedTab: BrowserTab
     let unfiledSavedTab: BrowserTab
     let currentTab: BrowserTab
 
     init() {
-        let folder = SavedFolder(
+        let folder = BrowserFolder(
             id: FolderID(rawValue: Self.uuid(0x21)),
             title: "Reading",
             color: .ocean,

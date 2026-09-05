@@ -12,10 +12,22 @@ import Foundation
 /// events instead. A store that published `.updated` for every regroup would
 /// hand portable packages an event Chrome never sends them.
 struct BrowserExtensionTabGroupEvent: Equatable, Sendable {
+    /// Separate from visual group events: these are ordinary tab metadata.
+    struct Membership: Equatable, Sendable {
+        struct Change: Equatable, Sendable {
+            let tabID: TabID
+            let groupID: BrowserExtensionTabGroupID?
+        }
+
+        let spaceID: SpaceID
+        let changes: [Change]
+    }
+
     enum Kind: String, Sendable {
         case created
         case updated
         case removed
+        case moved
     }
 
     let kind: Kind

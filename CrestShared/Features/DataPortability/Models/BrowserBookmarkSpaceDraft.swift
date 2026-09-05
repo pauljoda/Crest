@@ -15,7 +15,8 @@ struct BrowserBookmarkSpaceDraft: Equatable, Sendable {
         depth: Int
     ) throws -> UUID {
         guard depth < BrowserSpace.maximumFolderDepth,
-              folders.count < BrowserSpace.maximumFolderCount else {
+            folders.count < BrowserSpace.maximumFolderCount
+        else {
             throw BrowserBookmarkMigrationError.resourceLimitExceeded
         }
         let normalizedTitle = try BrowserBookmarkValueSanitizer.title(
@@ -64,7 +65,7 @@ struct BrowserBookmarkSpaceDraft: Equatable, Sendable {
         for folder in folders {
             folderIDs[folder.id] = FolderID()
         }
-        let materializedFolders = try folders.map { folder -> SavedFolder in
+        let materializedFolders = try folders.map { folder -> BrowserFolder in
             let parentID: FolderID?
             if let sourceParentID = folder.parentID {
                 guard let mappedParentID = folderIDs[sourceParentID] else {
@@ -77,7 +78,7 @@ struct BrowserBookmarkSpaceDraft: Equatable, Sendable {
             guard let id = folderIDs[folder.id] else {
                 throw BrowserBookmarkMigrationError.invalidContents
             }
-            return SavedFolder(
+            return BrowserFolder(
                 id: id,
                 title: folder.title,
                 symbol: "folder",

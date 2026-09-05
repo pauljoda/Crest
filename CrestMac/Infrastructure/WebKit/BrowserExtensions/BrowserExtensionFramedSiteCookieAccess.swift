@@ -6,7 +6,7 @@ import WebKit
 ///
 /// It answers one question at navigation time — is this a subframe load of a
 /// site this extension holds host permission for — and, when it is, waits for
-/// the Space's cookie jar to be rewritten before the frame is allowed to go.
+/// the Space's hosted cookie jar to be synchronized before the frame is allowed to go.
 /// Waiting is the whole point: the frame's own navigation is the first request
 /// that needs the cookie, so a rewrite that landed afterwards would still hand
 /// the site a logged-out document.

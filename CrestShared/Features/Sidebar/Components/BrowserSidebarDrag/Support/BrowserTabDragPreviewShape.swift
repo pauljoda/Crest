@@ -22,7 +22,7 @@ enum BrowserTabDragPreviewShape: Equatable, Sendable {
         placement == .pinned ? .pinnedTile : .row
     }
 
-    func size(rowWidth: CGFloat) -> CGSize {
+    func size(rowWidth: CGFloat, pinnedSize: CGSize = BrowserTabDragPreviewLayout.pinnedSize) -> CGSize {
         switch self {
         case .row:
             CGSize(
@@ -30,7 +30,7 @@ enum BrowserTabDragPreviewShape: Equatable, Sendable {
                 height: BrowserTabDragPreviewLayout.rowSize.height
             )
         case .pinnedTile:
-            BrowserTabDragPreviewLayout.pinnedSize
+            pinnedSize
         case .webpageCard:
             BrowserTabDragPreviewLayout.cardSize
         }

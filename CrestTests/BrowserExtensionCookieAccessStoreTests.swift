@@ -140,6 +140,36 @@ final class BrowserExtensionCookieAccessStoreTests: XCTestCase {
         XCTAssertEqual(jar.observedSpaces, [otherSpace])
     }
 
+    func testRevokingOneHostStopsQueuedSynchronizationButKeepsOtherClients() async {
+        let jar = InMemoryBrowserExtensionCookieJar()
+        let store = BrowserExtensionCookieAccessStore(cookieJar: jar)
+        await store.relaxCookies(for: "claude.ai", client: client, in: space)
+        await store.relaxCookies(for: "example.com", client: other, in: space)
+
+        jar.simulateCookieChange(in: space)
+        store.revalidatePermissions(for: client, allowing: { _ in false })
+        await settle()
+
+        XCTAssertTrue(store.relaxedHosts(for: client).isEmpty)
+        XCTAssertEqual(jar.synchronizedHosts[space], ["example.com"])
+        XCTAssertEqual(jar.relaxRequests[space], ["claude.ai", "example.com", "example.com"])
+        XCTAssertEqual(jar.observedSpaces, [space])
+    }
+
+    func testRevokingTheLastHostStopsObservationWithoutAddingNewGrants() async {
+        let jar = InMemoryBrowserExtensionCookieJar()
+        let store = BrowserExtensionCookieAccessStore(cookieJar: jar)
+        await store.relaxCookies(for: "claude.ai", client: client, in: space)
+        await store.relaxCookies(for: "example.com", client: client, in: space)
+        store.revalidatePermissions(for: client, allowing: { $0 == "example.com" })
+        XCTAssertEqual(store.relaxedHosts(for: client), ["example.com"])
+        store.revalidatePermissions(for: client, allowing: { _ in false })
+        XCTAssertTrue(jar.observedSpaces.isEmpty)
+        XCTAssertEqual(jar.synchronizedHosts[space], [])
+        store.revalidatePermissions(for: client, allowing: { _ in true })
+        XCTAssertTrue(store.relaxedHosts(for: client).isEmpty)
+    }
+
     /// Lets the store's re-apply task run; it hops through `Task { @MainActor }`
     /// so the change handler stays synchronous for the observer.
     private func settle() async {

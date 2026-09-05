@@ -45,21 +45,12 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
 
         // `Tab.groupId` mirror.
         //
-        // Chrome puts `groupId` on every tab object. Crest cannot: the field
-        // lives in a Space-scoped registry the broker owns, and reading it
-        // costs a native round trip that every `tabs.query` in every
-        // extension would otherwise pay for a field most packages never look
-        // at. So the mirror is switched on the moment a package shows it
-        // cares — it declared `tabGroups`, it grouped or ungrouped a tab, or
-        // it filtered a query by `groupId` — and until then every tab
-        // truthfully reports `TAB_GROUP_ID_NONE`, which is what a package
-        // that has created no group would see anyway. The deviation is that a
-        // package which never asks will not observe a group some *other*
-        // extension made.
-        let tabGroupsProjectsMembership = declaredPermissionNames.has("tabGroups");
+        // Membership is ordinary tab metadata, including folders created by
+        // the user or another extension. It does not require `tabs` or
+        // `tabGroups`; WebKit still owns sensitive URL/title filtering.
         let tabGroupsMembership = new Map();
         let tabGroupsMembershipRequest;
-        const tabGroupsEnableProjection = () => { tabGroupsProjectsMembership = true; };
+        let tabGroupsPrimaryWindow;
         const tabGroupsApplyMembership = (entries) => {
             const membership = new Map();
             for (const entry of Array.isArray(entries) ? entries : []) {
@@ -71,27 +62,30 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
         };
         // Concurrent tab reads share one refresh instead of racing the broker.
         const tabGroupsSyncMembership = () => {
-            if (!tabGroupsProjectsMembership) return undefined;
             if (tabGroupsMembershipRequest) return tabGroupsMembershipRequest;
             tabGroupsMembershipRequest = Promise.resolve()
-                .then(() => requestCapability("tabGroups.membership", {}, [], (response) => {
+                .then(async () => {
+                    const [response, windowId] = await Promise.all([
+                        requestCapability("tabGroups.membership", {}, []),
+                        tabGroupsPrimaryWindow ?? sidebarPrimaryWindowId()
+                    ]);
+                    tabGroupsPrimaryWindow = windowId;
                     tabGroupsApplyMembership(response?.membership);
-                }))
+                })
                 .catch(() => {})
                 .finally(() => { tabGroupsMembershipRequest = undefined; });
             return tabGroupsMembershipRequest;
         };
         const tabGroupsProjectTab = (tab) => {
             if (!Number.isInteger(tab?.index)) return tabGroupsIdNone;
+            if (Number.isInteger(tab.windowId) && tab.windowId !== tabGroupsPrimaryWindow) return tabGroupsIdNone;
             const groupId = tabGroupsMembership.get(tab.index);
             return Number.isInteger(groupId) ? groupId : tabGroupsIdNone;
         };
-        // Runs `invoke` once the mirror is current. Nothing to refresh means
-        // nothing is deferred, so a package that never touches groups keeps
-        // its `tabs.get`/`tabs.query` call synchronous and round-trip free.
+        // Runs the native tab read once the Space's membership is current.
+        // Concurrent calls share a refresh, including callback-style callers.
         const tabGroupsWithMembership = (usesCallback, invoke) => {
             const sync = tabGroupsSyncMembership();
-            if (!sync) return invoke();
             // The callback form returns nothing, so a deferred native throw
             // has nowhere to surface. Rethrow it on the task queue rather
             // than letting the refresh turn a loud argument error into a
@@ -107,7 +101,6 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
         const tabGroupsQueryFilter = (options) => {
             if (!options || typeof options !== "object" || options.groupId === undefined) return undefined;
             if (!Number.isInteger(options.groupId)) throw new Error("The tab group ID must be an integer.");
-            if (options.groupId !== tabGroupsIdNone) tabGroupsEnableProjection();
             return options.groupId;
         };
 
@@ -116,7 +109,12 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
             let tab;
             try { tab = await sidebarNative("tabs", "get", id); } catch { throw new Error(`No tab with id: ${id}.`); }
             if (!Number.isInteger(tab?.index) || tab.index < 0) throw new Error(`No tab with id: ${id}.`);
-            return {tabIndex: tab.index, ...(typeof tab.url === "string" ? {url: tab.url} : {})};
+            if (Number.isInteger(tab.windowId) && tab.windowId !== await sidebarPrimaryWindowId()) {
+                throw new Error(`No tab with id: ${id}.`);
+            }
+            // WebKit returns an empty string when the URL is withheld, including
+            // browser-owned new tabs. There is no URL identity to compare then.
+            return {tabIndex: tab.index, ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
         };
         const tabGroupsTabTargets = async (value) => {
             const ids = Array.isArray(value) ? value : [value];
@@ -141,21 +139,172 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
             }
             return payload;
         }, (response) => {
-            tabGroupsEnableProjection();
             tabGroupsApplyMembership(response?.membership);
             return response?.groupId;
         });
         const tabGroupsUngroupTabs = (...args) => sidebarCall("tabs.ungroup", args,
             async () => ({tabs: await tabGroupsTabTargets(args[0])}),
             (response) => {
-                tabGroupsEnableProjection();
                 tabGroupsApplyMembership(response?.membership);
                 return undefined;
             });
 
-        const tabGroupsListeners = {created: new Set(), updated: new Set(), removed: new Set()};
+        const tabGroupsMoveTabs = (...args) => {
+            let ids;
+            return sidebarCall("tabs.move", args, async () => {
+                const options = sidebarDetails(args.slice(1));
+                if (!Number.isInteger(options.index) || options.index < -1 || options.index > 2147483647) {
+                    throw new Error("The tab index must be an integer greater than or equal to -1.");
+                }
+                await tabGroupsResolveWindow(options.windowId);
+                ids = Array.isArray(args[0]) ? args[0].slice() : [args[0]];
+                return {index: options.index, tabs: await tabGroupsTabTargets(ids)};
+            }, async () => {
+                // Return WebKit's actual post-move values, including its own
+                // URL/title access checks. A single result is a Tab even when
+                // the caller supplied a one-element array.
+                await tabGroupsSyncMembership();
+                const tabs = await Promise.all(ids.map(id => sidebarNative("tabs", "get", id)));
+                return tabs.length === 1 ? tabs[0] : tabs;
+            });
+        };
+
+        // Event correlation is by an opaque session token, never by an old
+        // row index. Verify the host revision around the native query before
+        // pairing tokens with WebKit IDs; this also catches move-away-and-back.
+        const tabGroupsObserveTabs = (nativeTabs, normalizeTab) => {
+            const nativeQuery = nativeTabs.query;
+            const nativeGet = nativeTabs.get;
+            if (typeof nativeQuery !== "function" || typeof nativeGet !== "function") return;
+            const idsByToken = new Map();
+            const tokensById = new Map();
+            let queue = Promise.resolve();
+            const enqueue = work => {
+                const result = queue.then(work);
+                queue = result.catch(() => {});
+                return result;
+            };
+            const snapshot = () => requestCapability("tabGroups.membership", {}, []);
+            const identityKey = value => JSON.stringify([
+                value?.revision,
+                (value?.tabs ?? []).map(tab => [tab.tabToken, tab.tabIndex])
+            ]);
+            const resolveIdentity = async () => {
+                const windowId = await sidebarPrimaryWindowId();
+                tabGroupsPrimaryWindow = windowId;
+                for (let attempt = 0; attempt < 4; attempt++) {
+                    const before = await snapshot();
+                    const tabs = await Reflect.apply(nativeQuery, nativeTabs, [{windowId}]);
+                    const after = await snapshot();
+                    if (identityKey(before) !== identityKey(after)) continue;
+                    if (!Array.isArray(after?.tabs) || !Array.isArray(tabs)) return false;
+                    const native = tabs.filter(tab => tab.windowId === windowId);
+                    const indexed = new Map(native.map(tab => [tab.index, tab]));
+                    if (native.length !== after.tabs.length || indexed.size !== native.length
+                        || after.tabs.some(tab => typeof tab.tabToken !== "string"
+                            || !Number.isInteger(indexed.get(tab.tabIndex)?.id))) continue;
+                    // Bound correlation to currently live tabs. Queued events
+                    // for a closed tab can no longer deliver a native Tab.
+                    idsByToken.clear();
+                    tokensById.clear();
+                    for (const tab of after.tabs) {
+                        const id = indexed.get(tab.tabIndex).id;
+                        idsByToken.set(tab.tabToken, id);
+                        tokensById.set(id, tab.tabToken);
+                    }
+                    tabGroupsApplyMembership(after.membership);
+                    return true;
+                }
+                throw new Error("Tab order changed while resolving extension event identities.");
+            };
+            const updatedListeners = new Set();
+            const watch = capabilityWatch({
+                api: "tabMembership",
+                hasListeners: () => updatedListeners.size > 0,
+                subscription: () => ({api: "tabs.watchMembership"}),
+                onMessage: message => {
+                    if (message?.api !== "tabs.membership" || message.windowKind !== "primary") return queue;
+                    const listeners = [...updatedListeners];
+                    return enqueue(async () => {
+                        const changes = (Array.isArray(message.changes) ? message.changes : [])
+                            .filter(change => typeof change?.tabToken === "string" && Number.isInteger(change.groupId));
+                        if (changes.some(change => !idsByToken.has(change.tabToken))) await resolveIdentity();
+                        for (const change of changes) {
+                            const id = idsByToken.get(change.tabToken);
+                            if (!Number.isInteger(id)) continue;
+                            let tab;
+                            try { tab = await Reflect.apply(nativeGet, nativeTabs, [id]); } catch { continue; }
+                            if (!tab || tab.windowId !== tabGroupsPrimaryWindow) continue;
+                            const projected = normalizeTab({...tab, groupId: change.groupId});
+                            for (const listener of listeners) {
+                                if (!updatedListeners.has(listener)) continue;
+                                try { listener(id, {groupId: change.groupId}, projected); } catch {}
+                            }
+                        }
+                    });
+                }
+            });
+            const projectEventTab = async tab => {
+                if (!tab || typeof tab !== "object") return tab;
+                if (!tokensById.has(tab.id)) await resolveIdentity();
+                const token = tokensById.get(tab.id);
+                const current = await snapshot();
+                tabGroupsApplyMembership(current?.membership);
+                const identity = current?.tabs?.find(value => value.tabToken === token);
+                const groupId = identity ? tabGroupsProjectTab({index: identity.tabIndex, windowId: tab.windowId}) : -1;
+                return normalizeTab({...tab, groupId});
+            };
+            for (const name of ["onCreated", "onUpdated"]) {
+                const event = nativeTabs[name];
+                if (typeof event?.addListener !== "function") continue;
+                const add = event.addListener, remove = event.removeListener;
+                const has = event.hasListener, any = event.hasListeners;
+                const listeners = name === "onUpdated" ? updatedListeners : new Set();
+                const dispatch = (...args) => {
+                    const recipients = [...listeners];
+                    void enqueue(async () => {
+                        const index = name === "onCreated" ? 0 : 2;
+                        // Preserve the native event even if the metadata
+                        // service is temporarily unavailable.
+                        try { args[index] = await projectEventTab(args[index]); } catch {}
+                        for (const listener of recipients) {
+                            if (!listeners.has(listener)) continue;
+                            try { listener(...args); } catch {}
+                        }
+                    });
+                };
+                Object.defineProperties(event, {
+                    addListener: {configurable: true, value(listener, ...args) {
+                        if (typeof listener !== "function") return Reflect.apply(add, event, [listener, ...args]);
+                        if (listeners.has(listener)) return;
+                        const firstListener = listeners.size === 0;
+                        if (firstListener) Reflect.apply(add, event, [dispatch, ...args]);
+                        listeners.add(listener);
+                        if (name === "onUpdated") {
+                            watch.connect();
+                            // Seed correlation before the first regroup. This
+                            // is metadata-only and never grants tab access.
+                            if (firstListener) void enqueue(resolveIdentity).catch(() => {});
+                        }
+                    }},
+                    removeListener: {configurable: true, value(listener) {
+                        if (!listeners.delete(listener)) return Reflect.apply(remove, event, [listener]);
+                        if (listeners.size === 0) Reflect.apply(remove, event, [dispatch]);
+                        if (name === "onUpdated" && listeners.size === 0) watch.disconnect();
+                    }},
+                    hasListener: {configurable: true, value(listener) {
+                        return listeners.has(listener) || Reflect.apply(has, event, [listener]);
+                    }},
+                    hasListeners: {configurable: true, value() {
+                        return listeners.size > 0 || Reflect.apply(any, event, []);
+                    }}
+                });
+            }
+        };
+
+        const tabGroupsListeners = {created: new Set(), updated: new Set(), removed: new Set(), moved: new Set()};
         const tabGroupsListenerCount = () =>
-            tabGroupsListeners.created.size + tabGroupsListeners.updated.size + tabGroupsListeners.removed.size;
+            Object.values(tabGroupsListeners).reduce((count, listeners) => count + listeners.size, 0);
         let tabGroupsEventQueue = Promise.resolve();
         const tabGroupsWatch = capabilityWatch({
             api: "tabGroups",
@@ -238,22 +387,22 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                     return payload;
                 }, (response) => tabGroupsProject(response?.group, windowId));
             },
-            // Crest keeps group membership without reordering tabs, so there
-            // is no position to move a group to. Chrome's own refusal text is
-            // used rather than a Crest-flavoured one, and the broker still
-            // validates the id first so a wrong id reports the wrong id.
             move(...args) {
+                let windowId;
                 return sidebarCall("tabGroups.move", args, async () => {
                     const groupId = tabGroupsGroupId(args[0]);
                     const options = sidebarDetails(args.slice(1));
                     const index = sidebarProperty(options, "index", "number");
                     if (index === undefined) throw new Error("Missing required property 'index'.");
+                    if (index < -1) throw new Error("Invalid tab group index.");
                     if (options.windowId !== undefined) await tabGroupsResolveWindow(options.windowId);
+                    windowId = await sidebarPrimaryWindowId();
                     return {groupId, index};
-                }, () => undefined);
+                }, (response) => tabGroupsProject(response?.group, windowId));
             },
             onCreated: tabGroupsEvent("created"),
             onUpdated: tabGroupsEvent("updated"),
+            onMoved: tabGroupsEvent("moved"),
             onRemoved: tabGroupsEvent("removed")
         };
         """#

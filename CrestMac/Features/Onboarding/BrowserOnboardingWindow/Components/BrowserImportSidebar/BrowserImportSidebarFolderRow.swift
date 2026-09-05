@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserImportSidebarFolderRow: View {
-    let folder: SavedFolder
+    let folder: BrowserFolder
 
     var body: some View {
         HStack(spacing: 7) {

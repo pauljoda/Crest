@@ -1641,19 +1641,19 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testRootFoldersAlignWithRootSavedTabs() {
         XCTAssertEqual(
-            BrowserSavedFolderLayout.headerLeadingInset(
+            BrowserFolderLayout.headerLeadingInset(
                 depth: 0,
                 tabRowMetrics: .touch
             ),
             BrowserSidebarTabRowMetrics.touch.contentLeadingInset
         )
         XCTAssertEqual(
-            BrowserSavedFolderLayout.headerLeadingInset(
+            BrowserFolderLayout.headerLeadingInset(
                 depth: 1,
                 tabRowMetrics: .touch
             ),
             BrowserSidebarTabRowMetrics.touch.contentLeadingInset
-                + BrowserSavedFolderLayout.nestingIndent
+                + BrowserFolderLayout.nestingIndent
         )
     }
 
@@ -1661,12 +1661,12 @@ final class MobileBrowserNavigationTests: XCTestCase {
     /// folder's header lands in the same column as the rows above it.
     func testFolderRowsStepInOneIndentPastTheirFolder() {
         XCTAssertEqual(
-            BrowserSavedFolderLayout.rowLeadingInset(depth: 0),
-            BrowserSavedFolderLayout.nestingIndent
+            BrowserFolderLayout.rowLeadingInset(depth: 0),
+            BrowserFolderLayout.nestingIndent
         )
         XCTAssertEqual(
-            BrowserSavedFolderLayout.rowLeadingInset(depth: 1),
-            BrowserSavedFolderLayout.nestingIndent * 2
+            BrowserFolderLayout.rowLeadingInset(depth: 1),
+            BrowserFolderLayout.nestingIndent * 2
         )
     }
 

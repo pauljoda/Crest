@@ -82,7 +82,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         XCTAssertTrue(json.contains(BrowserPortableArchive.formatIdentifier))
     }
 
-    func testVersionThreeArchiveKeepsItsCanonicalJSONKeys() throws {
+    func testVersionFourArchiveKeepsItsCanonicalJSONKeys() throws {
         let data = try BrowserPortableArchive.encode(
             session: try makePortableFixture(),
             exportedAt: Date(timeIntervalSince1970: 1_800_000_000)
@@ -97,7 +97,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         let archivedTabs = try XCTUnwrap(space["archivedTabs"] as? [[String: Any]])
         let history = try XCTUnwrap(space["history"] as? [[String: Any]])
 
-        XCTAssertEqual(root["schemaVersion"] as? Int, 3)
+        XCTAssertEqual(root["schemaVersion"] as? Int, 4)
         XCTAssertEqual(
             Set(root.keys),
             Set(["exportedAt", "format", "schemaVersion", "spaces"])
@@ -112,11 +112,11 @@ final class BrowserPortableArchiveTests: XCTestCase {
         )
         XCTAssertEqual(
             Set(try XCTUnwrap(folders.first).keys),
-            Set(["color", "id", "isCollapsed", "symbol", "title"])
+            Set(["color", "id", "isCollapsed", "location", "symbol", "title"])
         )
         XCTAssertEqual(
             Set(try XCTUnwrap(folders.last).keys),
-            Set(["color", "id", "isCollapsed", "parentID", "symbol", "title"])
+            Set(["color", "id", "isCollapsed", "location", "parentID", "symbol", "title"])
         )
         XCTAssertEqual(
             Set(try XCTUnwrap(tabs.first).keys),
@@ -406,12 +406,12 @@ final class BrowserPortableArchiveTests: XCTestCase {
     }
 
     private func makePortableFixture() throws -> BrowserSession {
-        let folder = SavedFolder(
+        let folder = BrowserFolder(
             title: "Research",
             symbol: "folder.fill",
             color: BrowserSpaceBrandColor(red: 0.18, green: 0.42, blue: 0.72)
         )
-        let nestedFolder = SavedFolder(
+        let nestedFolder = BrowserFolder(
             title: "WebKit",
             symbol: "folder.fill",
             parentID: folder.id,

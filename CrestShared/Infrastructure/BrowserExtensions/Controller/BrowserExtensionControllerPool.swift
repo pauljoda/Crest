@@ -192,6 +192,16 @@ final class BrowserExtensionControllerPool {
     ///
     /// Absent by default: without a platform cookie jar behind it, a pool
     /// assembled for a test or a preview rewrites nothing.
+    private var hostedWebsiteDataStoreProvider: (@MainActor (SpaceID) -> WKWebsiteDataStore?)?
+
+    func setHostedWebsiteDataStoreProvider(_ provider: @escaping @MainActor (SpaceID) -> WKWebsiteDataStore?) {
+        hostedWebsiteDataStoreProvider = provider
+    }
+
+    func hostedWebsiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
+        hostedWebsiteDataStoreProvider?(spaceID)
+    }
+
     func setCookieAccessService(
         _ service: (any BrowserExtensionCookieAccessHandling)?
     ) {
@@ -286,10 +296,32 @@ extension BrowserExtensionControllerPool {
         extensionID: String,
         from space: BrowserSpace
     ) async throws {
+        guard let installation = persistenceController.installation(extensionID: extensionID, in: space.id) else {
+            return
+        }
+        // Native extension storage belongs to the controller. DOM storage in
+        // hosted panels belongs to our separate website store and needs the
+        // same uninstall lifecycle, including when the extension is disabled.
+        let hostedStore = hostedWebsiteDataStore(in: space.id)
+        var origins = Set(
+            [false, true].map {
+                BrowserExtensionRuntimeIdentifierPolicy.identity(
+                    extensionID: extensionID, source: installation.source, spaceID: space.id,
+                    sharesDataStoreWithAnotherContext: $0
+                ).baseURL
+            })
+        if let context = loadedContext(extensionID: extensionID, in: space.id) {
+            origins.insert(context.baseURL)
+        }
         try await installationController.removeExtension(
             extensionID: extensionID,
             from: space
         )
+        if let hostedStore {
+            for origin in origins {
+                await BrowserWebsiteDataStore.clearSiteData(for: origin, in: hostedStore)
+            }
+        }
     }
 
     func deleteData(

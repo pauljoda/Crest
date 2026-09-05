@@ -29,6 +29,106 @@ final class BrowserWebInspectorProtocolTests: XCTestCase {
         }
     }
 
+    func testInterceptedRequestWaitsForTheOwningClientToContinue() async throws {
+        let fixture = try await BrowserChromeDebuggerDomainFixture.make()
+        defer { fixture.tearDown() }
+        fixture.route([fixture.recorder()])
+        _ = try await fixture.connection.sendCommand("Network.enable")
+        // The borrowed frontend may already have enabled interception for its
+        // own overrides. Establish a known state on this disposable page.
+        _ = try? await fixture.connection.sendCommand("Network.setInterceptionEnabled", parameters: ["enabled": false])
+        _ = try await fixture.connection.sendCommand(
+            "Network.addInterception", parameters: ["url": "", "stage": "request"])
+        try await fixture.connection.setNetworkInterceptionHandledByClient(true)
+        _ = try await fixture.connection.sendCommand("Network.setInterceptionEnabled", parameters: ["enabled": true])
+        _ = try await fixture.page.evaluateJavaScript(
+            """
+            globalThis.crestInterceptResult = 'pending';
+            fetch('https://crest.invalid/interception-check').then(
+                () => { crestInterceptResult = 'finished'; },
+                () => { crestInterceptResult = 'failed'; });
+            undefined
+            """)
+        try await fixture.waitForEvent("Network.requestIntercepted")
+        let requestID = try XCTUnwrap(fixture.first("Network.requestIntercepted")?["requestId"] as? String)
+        try await Task.sleep(for: .milliseconds(250))
+        let beforeContinue = try await fixture.page.evaluateJavaScript("crestInterceptResult") as? String
+        XCTAssertEqual(beforeContinue, "pending", "The Inspector frontend must not resume a request owned by Crest.")
+        _ = try await fixture.connection.sendCommand(
+            "Network.interceptContinue", parameters: ["requestId": requestID, "stage": "request"])
+        try await BrowserChromeDebuggerDomainFixture.waitFor {
+            (try await fixture.page.evaluateJavaScript("crestInterceptResult")) as? String != "pending"
+        }
+    }
+
+    func testInterceptedResponseWaitsUntilContinued() async throws {
+        let fixture = try await BrowserChromeDebuggerDomainFixture.make()
+        defer { fixture.tearDown() }
+        fixture.route([fixture.recorder()])
+        _ = try await fixture.connection.sendCommand("Network.enable")
+        _ = try? await fixture.connection.sendCommand("Network.setInterceptionEnabled", parameters: ["enabled": false])
+        _ = try await fixture.connection.sendCommand(
+            "Network.addInterception", parameters: ["url": "", "stage": "response"])
+        try await fixture.connection.setNetworkInterceptionHandledByClient(true)
+        _ = try await fixture.connection.sendCommand("Network.setInterceptionEnabled", parameters: ["enabled": true])
+        _ = try await fixture.page.evaluateJavaScript(
+            """
+            globalThis.crestResponseResult = 'pending';
+            const url = URL.createObjectURL(new Blob(['crest-response-body'], {type: 'text/plain'}));
+            fetch(url).then(response => response.text()).then(
+                text => { crestResponseResult = text; },
+                () => { crestResponseResult = 'failed'; });
+            undefined
+            """)
+        try await fixture.waitForEvent("Network.responseIntercepted")
+        let requestID = try XCTUnwrap(fixture.first("Network.responseIntercepted")?["requestId"] as? String)
+        try await Task.sleep(for: .milliseconds(250))
+        let beforeContinue = try await fixture.page.evaluateJavaScript("crestResponseResult") as? String
+        XCTAssertEqual(beforeContinue, "pending")
+        _ = try await fixture.connection.sendCommand(
+            "Network.interceptContinue", parameters: ["requestId": requestID, "stage": "response"])
+        try await BrowserChromeDebuggerDomainFixture.waitFor {
+            (try await fixture.page.evaluateJavaScript("crestResponseResult")) as? String == "crest-response-body"
+        }
+    }
+
+    func testDisablingOrDisconnectingReleasesAnInterceptedRequest() async throws {
+        for disconnect in [false, true] {
+            let fixture = try await BrowserChromeDebuggerDomainFixture.make()
+            defer { fixture.tearDown() }
+            fixture.route([fixture.recorder()])
+            _ = try await fixture.connection.sendCommand("Network.enable")
+            _ = try? await fixture.connection.sendCommand(
+                "Network.setInterceptionEnabled", parameters: ["enabled": false])
+            _ = try await fixture.connection.sendCommand(
+                "Network.addInterception", parameters: ["url": "", "stage": "request"])
+            try await fixture.connection.setNetworkInterceptionHandledByClient(true)
+            _ = try await fixture.connection.sendCommand(
+                "Network.setInterceptionEnabled", parameters: ["enabled": true])
+            _ = try await fixture.page.evaluateJavaScript(
+                """
+                globalThis.crestReleaseResult = 'pending';
+                fetch('https://crest.invalid/interception-release').then(
+                    () => { crestReleaseResult = 'finished'; },
+                    () => { crestReleaseResult = 'failed'; });
+                undefined
+                """)
+            try await fixture.waitForEvent("Network.requestIntercepted")
+            let paused = try await fixture.page.evaluateJavaScript("crestReleaseResult") as? String
+            XCTAssertEqual(paused, "pending")
+            if disconnect {
+                fixture.connection.disconnect()
+            } else {
+                _ = try await fixture.connection.sendCommand(
+                    "Network.setInterceptionEnabled", parameters: ["enabled": false])
+                try await fixture.connection.setNetworkInterceptionHandledByClient(false)
+            }
+            try await BrowserChromeDebuggerDomainFixture.waitFor {
+                (try await fixture.page.evaluateJavaScript("crestReleaseResult")) as? String != "pending"
+            }
+        }
+    }
+
     func testSecondConnectionCannotTakeOverAnExistingInspector() async throws {
         let page = try await disposablePage()
         let first = BrowserWebInspectorProtocolConnection(webView: page)

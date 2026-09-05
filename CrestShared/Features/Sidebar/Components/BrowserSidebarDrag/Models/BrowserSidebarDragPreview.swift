@@ -33,6 +33,11 @@ struct BrowserSidebarFloatingLift: Equatable, Sendable {
     let grabOffset: CGSize
     /// The width the row form of the preview is drawn at.
     let rowWidth: CGFloat
+    var sourceSize: CGSize = .zero
+    var previewRows: [BrowserSidebarReorderRow] = []
+    var pinnedTileSize = BrowserTabDragPreviewLayout.pinnedSize
+    var sidebarBounds: CGRect?
+    var landing: BrowserSidebarReorderLanding?
 
     /// The Space profile the preview resolves favicons against.
     var profileID: UUID {
@@ -46,14 +51,44 @@ struct BrowserSidebarFloatingLift: Equatable, Sendable {
 
     /// Top-left of the preview, in the same global space as `pointer`.
     var origin: CGPoint {
-        BrowserTabDragPreviewLayout.pointerAnchoredOrigin(
-            pointer: pointer,
-            grabOffset: grabOffset,
-            targetShape: shape,
-            progress: progress,
-            rowWidth: rowWidth
-        )
+        CGPoint(x: presentationPointer.x - anchorOffset.width, y: presentationPointer.y - anchorOffset.height)
     }
+
+    var anchorFraction: CGPoint {
+        let size = sourceSize == .zero ? BrowserTabDragPreviewLayout.rowSize : sourceSize
+        return CGPoint(
+            x: min(max(grabOffset.width / max(size.width, 1), 0), 1),
+            y: min(max(grabOffset.height / max(size.height, 1), 0), 1))
+    }
+
+    var anchorOffset: CGSize {
+        guard case .tab = item else { return grabOffset }
+        let metrics = BrowserTabDragPreviewLayout.metrics(
+            from: .row, to: shape, progress: progress,
+            rowWidth: rowWidth, pinnedSize: pinnedTileSize)
+        return CGSize(width: anchorFraction.x * metrics.width, height: anchorFraction.y * metrics.height)
+    }
+
+    /// A tile at the sidebar's left edge stays visible during a small pointer
+    /// overshoot. Leaving the sidebar toward the page remains unconstrained.
+    var presentationPointer: CGPoint {
+        guard shape == .pinnedTile, let sidebarBounds,
+            pointer.x <= sidebarBounds.maxX,
+            pointer.x >= sidebarBounds.minX - BrowserSidebarReorderPolicy.zoneSlop
+        else { return pointer }
+        let leading = sidebarBounds.minX + 2
+        let trailing = max(leading, sidebarBounds.maxX - pinnedTileSize.width - 2)
+        let x = min(max(pointer.x - anchorOffset.width, leading), trailing) + anchorOffset.width
+        return CGPoint(x: x, y: pointer.y)
+    }
+}
+
+/// A presentation handoff, not another reorder. The model has already moved;
+/// the floating component covers its replacement until the animation finishes.
+struct BrowserSidebarReorderLanding: Equatable, Sendable {
+    var id = UUID()
+    var frame: CGRect
+    var isRevealing = false
 }
 
 /// The measured appearance of a drag preview part-way between two shapes.

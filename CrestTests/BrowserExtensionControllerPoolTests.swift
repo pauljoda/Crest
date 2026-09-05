@@ -6,6 +6,75 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionControllerPoolTests: XCTestCase {
+    func testTabMembershipRequiresVerifiedSpaceButNotSensitiveTabPermission() async throws {
+        var space = BrowserSession.preview.spaces[0]
+        let tab = BrowserTab(
+            title: "Private title", url: URL(string: "https://example.com/private"), placement: .current)
+        space.tabs = [tab]
+        let browser = BrowserStore(
+            session: .init(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let folder = try XCTUnwrap(browser.extensionTabGroups.group([tab.id], in: space.id, into: nil))
+        let pool = BrowserExtensionControllerPool()
+        let pages = PageProviderSpy()
+        pool.connect(browser: browser, pageProvider: pages)
+        pool.setTabGroupService(browser.extensionTabGroups)
+        let context = try await pool.loadExtension(at: fixtureURL, extensionID: extensionID, in: space)
+        func send(_ payload: [String: Any]) throws -> [String: Any] {
+            var result: Any?
+            var failure: Error?
+            pool.tabWindowCoordinator.webExtensionController(
+                pool.controller(for: space), sendMessage: payload,
+                toApplicationWithIdentifier: BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier,
+                for: context
+            ) {
+                result = $0
+                failure = $1
+            }
+            if let failure { throw failure }
+            return try XCTUnwrap(result as? [String: Any])
+        }
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: extensionID, spaceID: space.id)
+        pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+            .init(grantedPermissions: [], clientID: client, allowsInternalCapabilityBroker: false), for: context)
+        XCTAssertThrowsError(try send(["api": "tabGroups.membership"]))
+        XCTAssertThrowsError(try send(["api": "runtime.callbackError", "message": "Callback failure"]))
+        pool.tabWindowCoordinator.registerCapabilityBrokerAuthorization(
+            .init(grantedPermissions: [], clientID: client, allowsInternalCapabilityBroker: true), for: context)
+        let response = try send(["api": "tabGroups.membership"])
+        XCTAssertThrowsError(try send(["api": "runtime.callbackError", "message": "Callback failure"])) { error in
+            XCTAssertEqual(error as? BrowserExtensionCapabilityBrokerError, .serviceFailure("Callback failure"))
+        }
+        XCTAssertThrowsError(try send(["api": "runtime.callbackError", "message": ""])) { error in
+            XCTAssertEqual(error as? BrowserExtensionCapabilityBrokerError, .invalidRequest)
+        }
+        let membership = try XCTUnwrap(response["membership"] as? [[String: Int]])
+        XCTAssertEqual(membership, [["tabIndex": 0, "groupId": folder.id.rawValue]])
+        XCTAssertThrowsError(try send(["api": "tabGroups.query"]), "Group titles and colors still need tabGroups.")
+        XCTAssertEqual(
+            try send(["api": "tabs.group", "tabs": [["tabIndex": 0]], "groupId": folder.id.rawValue])["groupId"]
+                as? Int, folder.id.rawValue)
+    }
+
+    func testNativeHostPermissionRevocationStopsHostedCookieSynchronization() async throws {
+        let pool = BrowserExtensionControllerPool()
+        let jar = InMemoryBrowserExtensionCookieJar()
+        let cookies = BrowserExtensionCookieAccessStore(cookieJar: jar)
+        pool.setCookieAccessService(cookies)
+        let space = BrowserSession.preview.spaces[0]
+        let context = try await pool.loadExtension(at: fixtureURL, extensionID: extensionID, in: space)
+        let pattern = try WKWebExtension.MatchPattern(string: "https://extension-probe.crest.test/*")
+        context.setPermissionStatus(.grantedExplicitly, for: pattern)
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: extensionID, spaceID: space.id)
+        await cookies.relaxCookies(for: "extension-probe.crest.test", client: client, in: space.id)
+        context.setPermissionStatus(.deniedExplicitly, for: pattern)
+        for _ in 0..<100 where !cookies.relaxedHosts(for: client).isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertTrue(cookies.relaxedHosts(for: client).isEmpty)
+        XCTAssertTrue(jar.observedSpaces.isEmpty)
+    }
+
     func testSidebarBrokerVerifiesGrantGestureAndOwningSpace() async throws {
         let pool = BrowserExtensionControllerPool()
         let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
@@ -53,7 +122,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         _ = try send(["api": "sidePanel.open", "windowKind": "primary"])
         XCTAssertTrue(store.isOpen(for: client, in: window))
         _ = try send(["api": "sidePanel.setOptions", "scope": ["kind": "default"], "enabled": false])
-        XCTAssertFalse(store.isOpen(for: client, in: window))
+        XCTAssertTrue(
+            store.isOpen(for: client, in: window), "Disabling new opens must not dismiss an ongoing Space panel.")
         let options = try send(["api": "sidePanel.getOptions", "scope": ["kind": "default"]])
         XCTAssertEqual(options["path"] as? String, "panel.html")
         XCTAssertEqual(options["enabled"] as? Bool, false)
@@ -3410,6 +3480,21 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 in: work.id
             )
         )
+        let hostedStore = WKWebsiteDataStore.nonPersistent()
+        pool.setHostedWebsiteDataStoreProvider { $0 == work.id ? hostedStore : nil }
+        let extensionCookie = try XCTUnwrap(
+            HTTPCookie(properties: [
+                .name: "hosted-extension-state", .value: "remove-me", .path: "/",
+                .domain: try XCTUnwrap(workContext.baseURL.host()),
+            ]))
+        let websiteCookie = try XCTUnwrap(
+            HTTPCookie(properties: [
+                .name: "website-session", .value: "keep-me", .path: "/", .domain: "example.com",
+            ]))
+        await hostedStore.httpCookieStore.setCookie(extensionCookie)
+        await hostedStore.httpCookieStore.setCookie(websiteCookie)
+        let hostedBefore = await hostedStore.httpCookieStore.allCookies()
+        XCTAssertEqual(Set(hostedBefore.map(\.name)), ["hosted-extension-state", "website-session"])
         let personalExtension = try await pool.loadUnpackedExtension(
             from: fixtureURL,
             in: personal
@@ -3448,6 +3533,9 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             extensionID: workExtension.id,
             from: work
         )
+
+        let hostedAfter = await hostedStore.httpCookieStore.allCookies()
+        XCTAssertEqual(hostedAfter.map(\.name), ["website-session"])
 
         XCTAssertTrue(pool.extensions(in: work.id).isEmpty)
         XCTAssertNil(

@@ -64,7 +64,7 @@ enum BrowserSyncMergeResolver {
             if let latestPosition = latestPosition(firstTab, secondTab) {
                 merged.placement = latestPosition.placement
                 merged.folderID =
-                    latestPosition.placement == .saved
+                    latestPosition.placement != .pinned
                     ? latestPosition.folderID
                     : nil
                 merged.orderToken = latestPosition.orderToken
@@ -100,7 +100,7 @@ enum BrowserSyncMergeResolver {
                     firstTab.placement,
                     secondTab.placement
                 )
-                if merged.placement != .saved {
+                if merged.placement == .pinned {
                     merged.folderID = nil
                 } else if merged.folderID == nil {
                     merged.folderID = firstTab.folderID ?? secondTab.folderID

@@ -88,6 +88,52 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
         )
     }
 
+    func testFolderLiftKeepsTheExpandedBlockAndOnlyItsVisibleDescendants() {
+        let state = BrowserSidebarReorderState()
+        let folderID = FolderID()
+        let childID = FolderID()
+        let tabID = TabID()
+        let outsideID = TabID()
+        let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
+        let foreign = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
+        let section = BrowserSidebarReorderSection.folders(parentID: nil)
+        func register(
+            _ id: BrowserSidebarReorderItemID, _ space: BrowserSpaceRuntimeAssignment,
+            _ section: BrowserSidebarReorderSection, _ frame: CGRect
+        ) {
+            state.register(
+                row: BrowserSidebarReorderRow(id: id, space: space, section: section, frame: frame), owner: UUID())
+        }
+        register(.folder(folderID), assignment, section, CGRect(x: 8, y: 100, width: 280, height: 160))
+        register(
+            .folder(childID), assignment, .folders(parentID: folderID), CGRect(x: 8, y: 140, width: 280, height: 120))
+        register(
+            .tab(tabID), assignment, .tabs(placement: .saved, folderID: childID),
+            CGRect(x: 22, y: 180, width: 252, height: 40))
+        register(
+            .tab(outsideID), assignment, .tabs(placement: .saved, folderID: nil),
+            CGRect(x: 8, y: 260, width: 280, height: 40))
+        register(
+            .tab(TabID()), foreign, .tabs(placement: .saved, folderID: nil),
+            CGRect(x: 22, y: 220, width: 252, height: 40))
+        let item = BrowserSidebarReorderItem.folder(
+            BrowserFolderDragItem(
+                folderID: folderID, spaceID: assignment.spaceID, profileID: assignment.profileID))
+        state.begin(item: item, section: section, at: CGPoint(x: 80, y: 120))
+        XCTAssertEqual(state.lift?.rowSize, CGSize(width: 280, height: 160))
+        XCTAssertEqual(state.lift?.previewRows.map(\.id), [.folder(childID), .tab(tabID)])
+        XCTAssertEqual(state.lift?.previewRows.last?.frame, CGRect(x: 14, y: 80, width: 252, height: 40))
+
+        // A later layout change cannot shrink the already lifted preview.
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(tabID), space: assignment,
+                section: .tabs(placement: .saved, folderID: childID), frame: .zero), owner: UUID())
+        XCTAssertEqual(state.floatingLift?.sourceSize.height, 160)
+        XCTAssertEqual(state.floatingLift?.previewRows.count, 2)
+        _ = state.end()
+    }
+
     // MARK: - Presented cards
 
     /// A drag into the content area joins the cards of the Space that content

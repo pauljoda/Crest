@@ -436,12 +436,12 @@ final class BrowserSyncTests: XCTestCase {
 
     func testNestedFoldersProjectAndMaterializeInSiblingOrder() throws {
         var session = oneSpaceSession()
-        let root = SavedFolder(
+        let root = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(240)),
             title: "Projects",
             symbol: "folder"
         )
-        let child = SavedFolder(
+        let child = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(241)),
             title: "Crest",
             symbol: "folder.fill",
@@ -450,7 +450,7 @@ final class BrowserSyncTests: XCTestCase {
             isCollapsed: true,
             collapseModifiedAt: fixedDate(90)
         )
-        let sibling = SavedFolder(
+        let sibling = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(242)),
             title: "Reading",
             symbol: "books.vertical"
@@ -790,7 +790,7 @@ final class BrowserSyncTests: XCTestCase {
 
     func testAContainerWithoutExplicitRemovalIntentIsNeverTombstoned() throws {
         var session = oneSpaceSession()
-        let folder = SavedFolder(title: "Retained", symbol: "folder")
+        let folder = BrowserFolder(title: "Retained", symbol: "folder")
         session.spaces[0].folders.append(folder)
         var journal = BrowserSyncJournal(deviceID: fixedUUID(302))
         try journal.stage(session: session, at: fixedDate(100))
@@ -2605,7 +2605,7 @@ final class BrowserSyncTests: XCTestCase {
     /// good.
     func testSavedTabArrivingBeforeItsFolderSurvivesTheNextBatch() throws {
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(980))
-        let folder = SavedFolder(
+        let folder = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(981)),
             title: "Reading",
             symbol: "folder"
@@ -2699,7 +2699,7 @@ final class BrowserSyncTests: XCTestCase {
     /// is promoted rather than deleted with it.
     func testFolderDeletionImmediatelyPromotesItsPreservedTab() throws {
         let spaceID = SpaceID(rawValue: fixedUUID(990))
-        let folder = SavedFolder(
+        let folder = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(991)),
             title: "Reading",
             symbol: "folder"
@@ -2803,18 +2803,18 @@ final class BrowserSyncTests: XCTestCase {
     /// that folder's parent — the record still missing is two levels up.
     func testNestedFoldersArrivingBeforeTheirRootSurviveTheNextBatch() throws {
         let cloudSpaceID = SpaceID(rawValue: fixedUUID(1_010))
-        let root = SavedFolder(
+        let root = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(1_011)),
             title: "Root",
             symbol: "folder"
         )
-        let middle = SavedFolder(
+        let middle = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(1_012)),
             title: "Middle",
             symbol: "folder",
             parentID: root.id
         )
-        let leaf = SavedFolder(
+        let leaf = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(1_013)),
             title: "Leaf",
             symbol: "folder",
@@ -2911,18 +2911,18 @@ final class BrowserSyncTests: XCTestCase {
     /// tombstoned while waiting for the rest of the batch.
     func testDeletingAParentFolderPreservesItsWaitingSubtreeRecords() throws {
         let spaceID = SpaceID(rawValue: fixedUUID(1_020))
-        let root = SavedFolder(
+        let root = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(1_021)),
             title: "Root",
             symbol: "folder"
         )
-        let middle = SavedFolder(
+        let middle = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(1_022)),
             title: "Middle",
             symbol: "folder",
             parentID: root.id
         )
-        let leaf = SavedFolder(
+        let leaf = BrowserFolder(
             id: FolderID(rawValue: fixedUUID(1_023)),
             title: "Leaf",
             symbol: "folder",

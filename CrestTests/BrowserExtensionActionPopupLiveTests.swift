@@ -286,7 +286,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         )
     }
 
-    func testLiveOnePasswordPopupCompletesItsBackgroundHandshake() async throws {
+    func testLiveOnePasswordSignedOutActionOpensOnboardingAcrossRestoration() async throws {
         try skipUnlessLiveRunRequested()
         let candidate = try await candidate(
             extensionID: onePasswordID,
@@ -305,26 +305,23 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             )
             let phase = viaRestoration ? "after restoration" : "after install"
 
-            XCTAssertTrue(outcome.presentsPopup)
-            XCTAssertNotNil(
-                outcome.readyMilliseconds,
-                """
-                1Password's popup never received its initial view from the \
-                background worker \(phase). Text: \
-                \(outcome.renderedText.prefix(300)). Runtime errors: \
-                \(outcome.contextErrors)
-                """
-            )
-            XCTAssertFalse(
-                outcome.renderedText.trimmingCharacters(
-                    in: .whitespacesAndNewlines
-                ).isEmpty,
-                "1Password left only its loading spinner visible \(phase)."
-            )
+            // Current 1Password clears action.default_popup while it has no
+            // accounts or desktop connection; action.onClicked opens setup.
+            XCTAssertFalse(outcome.presentsPopup)
+            XCTAssertEqual(outcome.actionPageURL?.scheme, "chrome-extension")
+            XCTAssertEqual(outcome.actionPageURL?.host, onePasswordID)
+            XCTAssertEqual(outcome.actionPageURL?.path, "/app/app.html")
             XCTAssertTrue(
-                outcome.contextErrors.isEmpty,
-                "1Password reported runtime errors \(phase): "
-                    + "\(outcome.contextErrors)"
+                outcome.actionPageText.contains("Welcome to 1Password")
+                    || outcome.actionPageText.contains("Start setup"),
+                "1Password did not render its signed-out setup \(phase): \(outcome.actionPageText.prefix(300))")
+            let absentCompanions = ["com.1password.1password", "com.1password.1password7"]
+            let unexpectedErrors = outcome.contextErrors.filter { error in
+                !absentCompanions.contains { error.contains("The native companion \($0) is not installed.") }
+            }
+            XCTAssertTrue(
+                unexpectedErrors.isEmpty,
+                "1Password reported runtime errors \(phase): \(unexpectedErrors)"
             )
         }
     }
@@ -408,10 +405,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         for call in hostCalls where call.contains("TIMEOUT") {
             XCTFail(
                 """
-                A host call the popup depends on never settled for \(label): \
-                \(call). Dark Reader's background answers `ui-bg-get-data` \
-                without a `.catch` and its popup request has no timeout, so a \
-                stalled host call strands the popup on its startup loader.
+                A supplementary host API probe did not settle for \(label): \(call).
+                Full host probe: \(hostCalls).
                 """
             )
         }
@@ -456,11 +451,13 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         // compatibility gate would block password managers before any popup
         // exists to test. These live tests cover the popup lifecycle, not
         // the capability gate, so they run as the entitled release build.
-        return .chrome(
-            try await BrowserChromeWebStoreProvider(
-                nativeMessagingCapability: .available
-            ).candidate(for: item)
+        let candidate = try await BrowserChromeWebStoreProvider(
+            nativeMessagingCapability: .available
+        ).candidate(for: item)
+        print(
+            "Live extension package: \(extensionID) version=\(candidate.version ?? "unknown") crxSHA256=\(candidate.source.crxSHA256Hex)"
         )
+        return .chrome(candidate)
     }
 
     private func mozillaCandidate(slug: String) async throws -> LiveCandidate {
@@ -484,6 +481,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         var hostCalls: [String]
         var contextErrors: [String]
         var permissionProbeStatus: WKWebExtensionContext.PermissionStatus?
+        var actionPageURL: URL?
+        var actionPageText = ""
     }
 
     private struct OptionsPageOutcome {
@@ -545,9 +544,10 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 registry: BrowserExtensionRegistry(
                     persistence: registryPersistence
                 ),
+                storedResourcePreparer: BrowserStoreWebExtensionStoredResourcePreparer(),
                 usesEphemeralWebKitStorage: false
             )
-            pool.setNativeMessagingHandler(AbsentHostNativeMessagingHandler())
+            pool.setNativeMessagingHandler(PopupFixtureNativeMessagingHandler(pool: pool, browser: browser))
             return pool
         }
 
@@ -687,12 +687,12 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 registry: BrowserExtensionRegistry(
                     persistence: registryPersistence
                 ),
+                storedResourcePreparer: BrowserStoreWebExtensionStoredResourcePreparer(),
                 usesEphemeralWebKitStorage: usesEphemeralWebKitStorage
             )
             // An available transport whose hosts are all absent: extensions
             // that talk to a companion app must still bring up their popup
             // and report its signed-out state.
-            pool.setNativeMessagingHandler(AbsentHostNativeMessagingHandler())
             return pool
         }
 
@@ -701,6 +701,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         // alive itself or every session-backed call (tabs.create during an
         // extension's install onboarding, most visibly) fails midway.
         var retainedBrowser: BrowserStore?
+        var retainedPages: BrowserPagePool?
         func attach(
             to pool: BrowserExtensionControllerPool
         ) -> WKWebView {
@@ -712,6 +713,19 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 persistence: InMemoryBrowserSessionPersistence()
             )
             retainedBrowser = browser
+            pool.setNativeMessagingHandler(PopupFixtureNativeMessagingHandler(pool: pool, browser: browser))
+            if activeTabURL != nil {
+                let pages = BrowserPagePool(
+                    monitorsMemoryPressure: false,
+                    usesEphemeralWebsiteDataStores: usesEphemeralWebKitStorage,
+                    extensionControllerPool: pool)
+                retainedPages = pages
+                pool.connect(browser: browser, pageProvider: pages)
+                pages.select(session: browser.session)
+                if let webView = pages.extensionWebView(for: tab.id, in: space.id) {
+                    return webView
+                }
+            }
             let webView = WKWebView(
                 frame: CGRect(x: 0, y: 0, width: 900, height: 700),
                 configuration: BrowserPageConfiguration.make(
@@ -730,7 +744,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
 
         var pool = makePool()
         var webView = attach(to: pool)
-        defer { _ = retainedBrowser }
+        defer { _ = (retainedBrowser, retainedPages) }
         func cleanUpPersistentStorage() async {
             guard !usesEphemeralWebKitStorage else { return }
             _ = try? await pool.deleteData(for: space)
@@ -753,6 +767,9 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             // Stand in for a relaunch: every runtime object is replaced and
             // the extension comes back from persisted installation state
             // alone, so its background content has not run this session.
+            if let oldContext = pool.loadedContext(extensionID: extensionID, in: space.id) {
+                try pool.controller(for: space).unload(oldContext)
+            }
             pool = makePool()
             webView = attach(to: pool)
             await pool.restoreEnabledExtensions(in: [space])
@@ -834,13 +851,31 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             )
         }
         guard let popupWebView = action.popupWebView else {
+            let actionPage = retainedPages?.activePage?.webView
+            // Onboarding is a normal tab. Give it the same visible viewport
+            // that the browser supplies, rather than inspecting a zero-size,
+            // unattached page from the page pool.
+            let pageWindow = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 900, height: 700),
+                styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            if let actionPage {
+                pageWindow.contentView = actionPage
+                pageWindow.orderFront(nil)
+            }
+            defer {
+                pageWindow.contentView = nil
+                pageWindow.orderOut(nil)
+            }
+            let actionPageText = if let actionPage { await renderedBodyText(in: actionPage) } else { "" }
             let outcome = PopupOutcome(
                 presentsPopup: presentsPopup,
                 readyMilliseconds: nil,
                 renderedText: "",
                 hostCalls: [],
                 contextErrors: Self.errorDescriptions(context.errors),
-                permissionProbeStatus: permissionProbeStatus
+                permissionProbeStatus: permissionProbeStatus,
+                actionPageURL: actionPage?.url,
+                actionPageText: actionPageText
             )
             await cleanUpPersistentStorage()
             return outcome
@@ -892,6 +927,11 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             contextErrors: Self.errorDescriptions(context.errors),
             permissionProbeStatus: permissionProbeStatus
         )
+        if hostCalls.contains(where: { $0.contains("TIMEOUT") }) {
+            print(
+                "Popup probe timeout: extension=\(extensionID) restored=\(viaRestoration) readyMilliseconds=\(String(describing: readyMilliseconds)) pageLoading=\(webView.isLoading) pageURL=\(webView.url?.absoluteString ?? "none") calls=\(hostCalls)"
+            )
+        }
         await cleanUpPersistentStorage()
         return outcome
     }
@@ -992,10 +1032,38 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
 }
 
 @MainActor
-private final class AbsentHostNativeMessagingHandler:
+private final class PopupFixtureNativeMessagingHandler:
     BrowserExtensionNativeMessagingHandling
 {
     let capability = BrowserExtensionNativeMessagingCapability.available
+    // Use the real internal broker. Only external companions and notification
+    // delivery are isolated; bypassing preparation or rejecting broker calls
+    // would exercise a different extension runtime from the app.
+    private let service: BrowserNativeMessagingService
+
+    init(pool: BrowserExtensionControllerPool, browser: BrowserStore) {
+        let sidebar = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        let tabGroups = browser.extensionTabGroups
+        let rules = BrowserExtensionDeclarativeNetRequestStore(
+            persistence: InMemoryBrowserExtensionDeclarativeNetRequestStore())
+        pool.setSidebarService(sidebar)
+        pool.setTabGroupService(tabGroups)
+        pool.setDeclarativeNetRequestService(rules)
+        service = BrowserNativeMessagingService(
+            capability: .available,
+            resolver: BrowserNativeMessagingHostManifestResolver(searchDirectories: []),
+            notificationService: BrowserExtensionNotificationService(
+                center: InMemoryBrowserExtensionNotificationCenter()),
+            sidebarService: sidebar,
+            sidebarEventMessage: { [weak pool] in pool?.sidebarEventMessage($0) },
+            tabGroupService: tabGroups,
+            tabGroupEventMessage: { [weak pool] in pool?.tabGroupEventMessage($0) ?? [:] },
+            declarativeNetRequestService: rules,
+            declarativeNetRequestEventMessage: { [weak pool] in pool?.declarativeNetRequestEventMessage($0) ?? [:] },
+            externalMessageService: pool.externalMessageService,
+            externalMessageEventMessage: { [weak pool] in pool?.externalMessageEventMessage($0) },
+            webpageMenuRegistry: pool.webpageMenuRegistry)
+    }
 
     func sendMessage(
         _ message: Any,
@@ -1004,7 +1072,9 @@ private final class AbsentHostNativeMessagingHandler:
         authorization: BrowserExtensionNativeMessagingAuthorization,
         replyHandler: @escaping (Any?, Error?) -> Void
     ) {
-        replyHandler(nil, BrowserExtensionNativeMessagingError.unavailable)
+        service.sendMessage(
+            message, applicationIdentifier: applicationIdentifier, extensionIdentity: extensionIdentity,
+            authorization: authorization, replyHandler: replyHandler)
     }
 
     func connect(
@@ -1013,7 +1083,9 @@ private final class AbsentHostNativeMessagingHandler:
         authorization: BrowserExtensionNativeMessagingAuthorization,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        completionHandler(BrowserExtensionNativeMessagingError.unavailable)
+        service.connect(
+            port: port, extensionIdentity: extensionIdentity, authorization: authorization,
+            completionHandler: completionHandler)
     }
 }
 

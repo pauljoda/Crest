@@ -139,10 +139,11 @@ enum BrowserSyncMaterializer {
         local: BrowserSpace?,
         folderRecordSpaceIDs: [FolderID: SpaceID],
         tombstonedFolderIDs: Set<FolderID>
-    ) throws -> [SavedFolder] {
-        guard preferences.savedStructure else { return local?.folders ?? [] }
+    ) throws -> [BrowserFolder] {
         let synced = records.compactMap { record -> BrowserSyncFolder? in
-            guard case .folder(let folder)? = record.payload, folder.spaceID == spaceID else { return nil }
+            guard case .folder(let folder)? = record.payload, folder.spaceID == spaceID,
+                folder.location == .current ? preferences.currentTabs : preferences.savedStructure
+            else { return nil }
             return folder
         }
         guard synced.count <= BrowserSpace.maximumFolderCount else {
@@ -200,7 +201,7 @@ enum BrowserSyncMaterializer {
         }
 
         var visited: Set<FolderID> = []
-        var materialized: [SavedFolder] = []
+        var materialized: [BrowserFolder] = []
         func append(_ folder: BrowserSyncFolder, depth: Int) throws {
             guard depth < BrowserSpace.maximumFolderDepth,
                 visited.insert(folder.id).inserted
@@ -214,14 +215,16 @@ enum BrowserSyncMaterializer {
                 parentID = folder.parentID
             }
             materialized.append(
-                SavedFolder(
+                BrowserFolder(
                     id: folder.id,
                     title: folder.title,
+                    location: folder.location,
                     symbol: folder.symbol,
                     color: folder.color,
                     parentID: parentID,
                     isCollapsed: folder.isCollapsed,
-                    collapseModifiedAt: folder.collapseModifiedAt
+                    collapseModifiedAt: folder.collapseModifiedAt,
+                    orderAnchorTabID: folder.orderAnchorTabID
                 ))
             for child in childrenByParentID[folder.id] ?? [] {
                 try append(child, depth: depth + 1)
@@ -242,7 +245,12 @@ enum BrowserSyncMaterializer {
         else {
             throw BrowserSyncError.invalidFolderHierarchy(spaceID)
         }
-        return materialized
+        let includedIDs = Set(materialized.map(\.id))
+        let retained = (local?.folders ?? []).filter {
+            !includedIDs.contains($0.id)
+                && ($0.location == .current ? !preferences.currentTabs : !preferences.savedStructure)
+        }
+        return materialized + retained
     }
 
     /// The folders waiting for an ancestor, plus everything beneath them.
@@ -270,7 +278,7 @@ enum BrowserSyncMaterializer {
         records: [BrowserSyncRecord],
         preferences: BrowserSyncPreferences,
         local: BrowserSpace?,
-        folders: [SavedFolder],
+        folders: [BrowserFolder],
         folderRecordSpaceIDs: [FolderID: SpaceID],
         tombstonedFolderIDs: Set<FolderID>
     ) throws -> [BrowserTab] {
@@ -300,7 +308,7 @@ enum BrowserSyncMaterializer {
 
         for tab in synced {
             var materializedFolderID = tab.folderID
-            if tab.placement == .saved,
+            if tab.placement != .pinned,
                 let folderID = tab.folderID,
                 !folderIDs.contains(folderID)
             {
@@ -335,7 +343,7 @@ enum BrowserSyncMaterializer {
                     iconAccent: localTabsByID[tab.id]?.iconAccent,
                     iconMode: localTabsByID[tab.id]?.iconMode,
                     placement: tab.placement,
-                    folderID: tab.placement == .saved
+                    folderID: tab.placement != .pinned
                         ? materializedFolderID
                         : nil,
                     // Membership is carried through as written. A member whose
@@ -367,7 +375,7 @@ enum BrowserSyncMaterializer {
     private static func promotedParent(
         replacing folderID: FolderID,
         activeFolderIDs: Set<FolderID>,
-        localFoldersByID: [FolderID: SavedFolder],
+        localFoldersByID: [FolderID: BrowserFolder],
         tombstonedFolderIDs: Set<FolderID>
     ) -> FolderParentResolution? {
         var candidate: FolderID? = folderID

@@ -6,6 +6,52 @@ import XCTest
 
 @MainActor
 final class BrowserChromeDebuggerScreenshotTests: XCTestCase {
+    func testAResidentPageKeepsItsViewportAfterItsHostDisplaysAnotherTab() async throws {
+        try await withPage { _, page in
+            let frame = CGRect(x: 0, y: 0, width: 640, height: 480)
+            let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            let host = BrowserWebHostView(frame: frame)
+            window.contentView = host
+            host.attach(page)
+            window.orderFrontRegardless()
+            defer {
+                host.detach()
+                window.close()
+            }
+            host.layoutSubtreeIfNeeded()
+            let before = try await page.evaluateJavaScript("JSON.stringify([innerWidth,innerHeight])") as? String
+            host.attach(WKWebView(frame: frame))
+            host.layoutSubtreeIfNeeded()
+            let after = try await page.evaluateJavaScript("JSON.stringify([innerWidth,innerHeight])") as? String
+            XCTAssertEqual(before, "[640,480]")
+            XCTAssertEqual(after, before)
+            XCTAssertEqual(page.frame.size, frame.size)
+        }
+    }
+
+    func testClippedViewportScreenshotSupportsVendorScalingWithoutMovingThePage() async throws {
+        try await withPage { capture, page in
+            _ = try await page.evaluateJavaScript("scrollTo(0, 400)")
+            let before =
+                try await page.evaluateJavaScript("JSON.stringify([scrollX,scrollY,innerWidth,innerHeight])") as? String
+            let response = try await capture.capture(parameters: [
+                "format": "png", "captureBeyondViewport": false, "fromSurface": true,
+                "clip": ["x": 0, "y": 400, "width": 200, "height": 100, "scale": 0.5],
+            ])
+            let bitmap = try XCTUnwrap(
+                NSBitmapImageRep(data: try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(response["data"] as? String)))))
+            let scaleValue = try await page.evaluateJavaScript("devicePixelRatio")
+            let nativeScale = try XCTUnwrap(scaleValue as? Double)
+            XCTAssertEqual(bitmap.pixelsWide, Int(100 * nativeScale))
+            XCTAssertEqual(bitmap.pixelsHigh, Int(50 * nativeScale))
+            XCTAssertEqual(rgbPixel(in: bitmap, x: 10, y: 10), [0, 0, 255])
+            let after =
+                try await page.evaluateJavaScript("JSON.stringify([scrollX,scrollY,innerWidth,innerHeight])") as? String
+            XCTAssertEqual(after, before)
+        }
+    }
+
     func testViewportCaptureContainsRealRenderedPixels() async throws {
         try await withPage { capture, page in
             let response = try await capture.capture(parameters: [:])

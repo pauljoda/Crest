@@ -9,6 +9,7 @@ import Foundation
 final class InMemoryBrowserExtensionCookieJar: BrowserExtensionCookieJarRelaxing {
     /// Every `relax` call in arrival order, per Space.
     private(set) var relaxRequests: [SpaceID: [String]] = [:]
+    private(set) var synchronizedHosts: [SpaceID: Set<String>] = [:]
 
     private var observers: [SpaceID: @MainActor () -> Void] = [:]
 
@@ -22,6 +23,10 @@ final class InMemoryBrowserExtensionCookieJar: BrowserExtensionCookieJarRelaxing
 
     func relax(host: String, in spaceID: SpaceID) async {
         relaxRequests[spaceID, default: []].append(host)
+    }
+
+    func setSynchronizedHosts(_ hosts: Set<String>, in spaceID: SpaceID) {
+        synchronizedHosts[spaceID] = hosts
     }
 
     func observe(spaceID: SpaceID, onChange: (@MainActor () -> Void)?) {

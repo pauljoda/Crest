@@ -180,22 +180,26 @@ extension BrowserSession {
             var validFolderIDs: Set<FolderID> = []
             let uniquelyIdentifiedFolders = source.folders.map { folder in
                 guard validFolderIDs.insert(folder.id).inserted else {
-                    var replacement = SavedFolder(
+                    var replacement = BrowserFolder(
                         title: folder.title,
+                        location: folder.location,
                         symbol: folder.symbol,
                         color: folder.color,
                         parentID: folder.parentID,
                         isCollapsed: folder.isCollapsed,
-                        collapseModifiedAt: folder.collapseModifiedAt
+                        collapseModifiedAt: folder.collapseModifiedAt,
+                        orderAnchorTabID: folder.orderAnchorTabID
                     )
                     while !validFolderIDs.insert(replacement.id).inserted {
-                        replacement = SavedFolder(
+                        replacement = BrowserFolder(
                             title: folder.title,
+                            location: folder.location,
                             symbol: folder.symbol,
                             color: folder.color,
                             parentID: folder.parentID,
                             isCollapsed: folder.isCollapsed,
-                            collapseModifiedAt: folder.collapseModifiedAt
+                            collapseModifiedAt: folder.collapseModifiedAt,
+                            orderAnchorTabID: folder.orderAnchorTabID
                         )
                     }
                     return replacement
@@ -223,8 +227,8 @@ extension BrowserSession {
                     }
                 }
                 let repairedFolderID =
-                    placement == .saved
-                        && tab.folderID.map(validFolderIDs.contains) == true
+                    placement != .pinned
+                        && repairedFolders.contains { $0.id == tab.folderID && $0.location.tabPlacement == placement }
                     ? tab.folderID
                     : nil
                 let isStartPage = tab.url == nil

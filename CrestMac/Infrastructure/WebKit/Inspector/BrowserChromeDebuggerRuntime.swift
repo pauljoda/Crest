@@ -16,8 +16,10 @@ enum BrowserChromeDebuggerProtocolError: Error, Equatable, LocalizedError {
     }
 }
 
-/// Converts supported CDP Runtime operations to WebKit's protocol. Unsupported
-/// execution constraints reject before evaluation; this is not a raw passthrough.
+/// Converts CDP Runtime operations to WebKit's protocol. REPL expressions use
+/// WebKit's native syntax and lexical scope; V8-only top-level await and lexical
+/// redeclaration remain unavailable. A timeout bounds the response wait, since
+/// WebKit exposes no equivalent to V8's hard execution termination.
 @MainActor
 final class BrowserChromeDebuggerRuntime {
     var onEvent: ((String, [String: Any]) -> Void)?
@@ -127,8 +129,12 @@ final class BrowserChromeDebuggerRuntime {
                 "expression", "objectGroup", "includeCommandLineAPI", "contextId",
             ])
         let awaitsPromise = try boolean("awaitPromise", in: parameters)
+        let timeout = (parameters["timeout"] as? NSNumber)?.doubleValue ?? 0
+        let deadline = timeout > 0 ? Date(timeIntervalSinceNow: timeout / 1_000) : nil
         if awaitsPromise { request["returnByValue"] = false }
-        let response = try await connection.sendCommand("Runtime.evaluate", parameters: request)
+        let response = try await connection.sendCommand(
+            "Runtime.evaluate", parameters: request,
+            responseTimeoutMilliseconds: deadline.map { max(0, $0.timeIntervalSinceNow * 1_000) })
         guard awaitsPromise, response["wasThrown"] as? Bool != true,
             let object = response["result"] as? [String: Any], let objectID = object["objectId"] as? String
         else { return try evaluationResult(response) }
@@ -140,7 +146,15 @@ final class BrowserChromeDebuggerRuntime {
         awaitRequest["objectId"] = objectID
         awaitRequest["functionDeclaration"] = "function() { return this; }"
         awaitRequest["awaitPromise"] = true
-        let awaited = try await connection.sendCommand("Runtime.callFunctionOn", parameters: awaitRequest)
+        let awaited: [String: Any]
+        do {
+            awaited = try await connection.sendCommand(
+                "Runtime.callFunctionOn", parameters: awaitRequest,
+                responseTimeoutMilliseconds: deadline.map { max(0, $0.timeIntervalSinceNow * 1_000) })
+        } catch {
+            _ = try? await connection.sendCommand("Runtime.releaseObject", parameters: ["objectId": objectID])
+            throw error
+        }
         if (awaited["result"] as? [String: Any])?["objectId"] as? String != objectID {
             _ = try? await connection.sendCommand("Runtime.releaseObject", parameters: ["objectId": objectID])
         }
@@ -224,7 +238,8 @@ final class BrowserChromeDebuggerRuntime {
     }
 
     private func validateExecutionConstraints(_ parameters: [String: Any]) throws {
-        for name in ["throwOnSideEffect", "replMode", "disableBreaks"] {
+        _ = try boolean("replMode", in: parameters)
+        for name in ["throwOnSideEffect", "disableBreaks"] {
             if try boolean(name, in: parameters) {
                 throw BrowserChromeDebuggerProtocolError.unsupportedParameter(name)
             }
@@ -236,7 +251,6 @@ final class BrowserChromeDebuggerRuntime {
             guard let number = timeout as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
                 number.doubleValue.isFinite, number.doubleValue >= 0
             else { throw BrowserChromeDebuggerProtocolError.invalidParameter("timeout") }
-            if number.doubleValue > 0 { throw BrowserChromeDebuggerProtocolError.unsupportedParameter("timeout") }
         }
         if parameters["allowUnsafeEvalBlockedByCSP"] != nil,
             try !boolean("allowUnsafeEvalBlockedByCSP", in: parameters)

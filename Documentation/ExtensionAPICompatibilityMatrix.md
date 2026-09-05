@@ -30,7 +30,7 @@ intent and boundaries that no array can express.
   [`5836a062726f715fda621338a17b51aff30d0a8c`](https://github.com/mozilla/gecko-dev/tree/5836a062726f715fda621338a17b51aff30d0a8c/toolkit/components/extensions/schemas).
 - WebKit extension IDL/runtime:
   [`e4856c6696f58bae6f5cf1e864d0550f9eff09f8`](https://github.com/WebKit/WebKit/tree/e4856c6696f58bae6f5cf1e864d0550f9eff09f8/Source/WebKit/WebProcess/Extensions/API).
-- Shipping interface used by this pass: Xcode 27.0 (27A5237l), macOS 27.0
+- Shipping interface used by this pass: Xcode 27.0 (27A5252f), macOS 27.0
   SDK. The installed `WKWebExtensionContext.h` is authoritative for the host
   API Crest can call.
 
@@ -260,13 +260,14 @@ A namespace can stay native while a single dynamic member is replaced. **Hidden 
 | `tabGroups.get` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.move` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.onCreated` | Unavailable | Emulated | BG, EP | — |
-| `tabGroups.onMoved` | Unavailable | Presence only | BG, EP | — |
+| `tabGroups.onMoved` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.onRemoved` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.onUpdated` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.query` | Unavailable | Emulated | BG, EP | — |
 | `tabGroups.update` | Unavailable | Emulated | BG, EP | — |
 | `tabs.get` | Native | Native + patch | BG, EP | — |
 | `tabs.group` | Unavailable | Emulated | BG, EP | — |
+| `tabs.move` | Unavailable | Emulated | BG, EP | — |
 | `tabs.query` | Native | Native + patch | BG, EP | — |
 | `tabs.sendMessage` | Native | Native + patch | BG, EP | — |
 | `tabs.ungroup` | Unavailable | Emulated | BG, EP | — |
@@ -421,12 +422,33 @@ that reason.
   requires Manifest V3 and `sidePanel`; Firefox's requires `sidebar_action`.
   Opening requires a user gesture. Firefox close and toggle do too. Path icons
   are supported; `setIcon({imageData})` rejects explicitly. The panel is not a
-  tab. Closing or switching to an inapplicable tab unloads its document, and
-  relaunch starts closed. Only action behavior, width, and last-used extension
-  persist. Top-level web links open a browser tab; embedded web content remains
-  subject to WebKit and the extension's content security policy.
+  tab. One selected panel remains open across tabs within its Space; choosing
+  another extension replaces it. Space changes hide and restore each Space's
+  selection. Closing, replacing, or locking unloads its document, and relaunch
+  starts closed. Only action behavior, width, and last-used extension persist.
+  A tab-scoped open retains its initial resource across tab switches. Native
+  tab queries and activation events remain available, but Crest does not rewrite
+  the extension's captured tab IDs or reload its conversation to retarget it.
+  Extensions that bind a conversation to the opening tab or group therefore
+  keep that context. Unchanged Claude 1.0.90 exhibits this limitation in live
+  testing; automatic conversation retargeting is not supported.
+  ChatGPT 1.26.827.12125 instead observes activation and keys its own conversation
+  router by active tab ID. Live tab switching restores each tab's prior chat.
+  Keeping one host document does not override either vendor's conversation model.
+  Top-level web links open a browser tab. A private navigation content controller
+  isolates sidepanel/offscreen documents and their web frames from shared extension
+  scripts, styles, and content rules while retaining the owner's native runtime.
+  This uses guarded WebKit SPI; hosted documents fail closed without it. The
+  hosted-page CSP compatibility policy remains a separate limitation.
 - `storage`: native local, sync, session, and managed areas with cross-context
   and event normalization.
+  DOM `window.localStorage` is separate from `chrome.storage.local`. WebKit's
+  persistent DOM storage has a fixed 5 MiB limit; the extension's
+  `unlimitedStorage` permission does not raise it. ChatGPT's Statsig cache has
+  exceeded that limit in isolated testing. Manual cache recovery restored tools,
+  but Crest has no durable quota workaround and does not evict vendor keys
+  automatically. See [WebKit's storage implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/NetworkProcess/storage/LocalStorageManager.cpp)
+  and [the permission contract](https://developer.apple.com/documentation/webkit/wkwebextension/permission/unlimitedstorage).
 - `tabs` / `windows`: Crest's tab and window adapters are authoritative; a
   single-URL popup request can become a native Crest auxiliary window.
 - `test`: a reference-browser internal namespace that is never exposed.

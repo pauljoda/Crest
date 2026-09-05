@@ -847,9 +847,9 @@ final class BrowserStoreTests: XCTestCase {
             )
         )
 
-        let currentTabIDs = try XCTUnwrap(store.selectedSpace).currentTabs.map(\.id)
-        let originIndex = try XCTUnwrap(currentTabIDs.firstIndex(of: originID))
-        XCTAssertEqual(currentTabIDs.index(after: originIndex), currentTabIDs.firstIndex(of: openedID))
+        let memberTabIDs = try XCTUnwrap(store.selectedSpace).currentTabs.map(\.id)
+        let originIndex = try XCTUnwrap(memberTabIDs.firstIndex(of: originID))
+        XCTAssertEqual(memberTabIDs.index(after: originIndex), memberTabIDs.firstIndex(of: openedID))
         XCTAssertEqual(store.selectedTab?.id, originID)
     }
 
@@ -1642,7 +1642,7 @@ final class BrowserStoreTests: XCTestCase {
 
     func testCoordinatorRejectsAStageOlderThanThePublishedFamilyRevision() throws {
         var session = BrowserSession.preview
-        let folder = SavedFolder(title: "Keep Me", symbol: "folder")
+        let folder = BrowserFolder(title: "Keep Me", symbol: "folder")
         session.spaces[0].folders.append(folder)
         let coordinator = BrowserSyncCoordinator(
             persistence: InMemoryBrowserSyncJournalPersistence(),

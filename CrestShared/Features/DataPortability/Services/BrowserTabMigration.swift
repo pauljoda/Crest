@@ -53,7 +53,8 @@ enum BrowserTabMigration {
             throw BrowserTabMigrationError.noImportableTabs
         }
         guard drafts.count <= BrowserPortableArchive.maximumSpaceCount,
-              drafts.allSatisfy({ $0.tabs.count <= maximumTabCountPerSpace }) else {
+            drafts.allSatisfy({ $0.tabs.count <= maximumTabCountPerSpace })
+        else {
             throw BrowserTabMigrationError.resourceLimitExceeded
         }
 
@@ -94,11 +95,12 @@ enum BrowserTabMigration {
             }
             folderIDsBySourceID[folder.sourceID] = FolderID()
         }
-        var folders = try draft.folders.map { folder -> SavedFolder in
+        var folders = try draft.folders.map { folder -> BrowserFolder in
             let parentID: FolderID?
             if let parentSourceID = folder.parentSourceID {
                 guard parentSourceID != folder.sourceID,
-                      let resolvedParentID = folderIDsBySourceID[parentSourceID] else {
+                    let resolvedParentID = folderIDsBySourceID[parentSourceID]
+                else {
                     throw BrowserTabMigrationError.invalidContents
                 }
                 parentID = resolvedParentID
@@ -108,7 +110,7 @@ enum BrowserTabMigration {
             guard let id = folderIDsBySourceID[folder.sourceID] else {
                 throw BrowserTabMigrationError.invalidContents
             }
-            return SavedFolder(
+            return BrowserFolder(
                 id: id,
                 title: try BrowserTabMigrationSanitizer.title(
                     folder.title,
@@ -131,8 +133,9 @@ enum BrowserTabMigration {
             var placement = sourceTab.placement
             var folderID = sourceTab.folderSourceID.flatMap { folderIDsBySourceID[$0] }
             if placement == .saved,
-               sourceTab.folderSourceID != nil,
-               folderID == nil {
+                sourceTab.folderSourceID != nil,
+                folderID == nil
+            {
                 throw BrowserTabMigrationError.invalidContents
             }
             if placement == .pinned, pinnedCount < BrowserSpace.maximumPinnedTabs {
@@ -140,7 +143,7 @@ enum BrowserTabMigration {
             } else if placement == .pinned {
                 placement = .saved
                 if overflowFolderID == nil {
-                    let folder = SavedFolder(
+                    let folder = BrowserFolder(
                         title: "Imported Pinned Tabs",
                         symbol: "pin.slash"
                     )
@@ -149,22 +152,24 @@ enum BrowserTabMigration {
                 }
                 folderID = overflowFolderID
             }
-            tabs.append(BrowserTab(
-                title: try BrowserTabMigrationSanitizer.title(
-                    sourceTab.title,
-                    fallback: sourceTab.url.host ?? sourceTab.url.absoluteString
-                ),
-                url: sourceTab.url,
-                symbol: placement == .pinned ? "pin.fill" : "globe",
-                placement: placement,
-                folderID: placement == .saved ? folderID : nil,
-                lastActivatedAt: sourceTab.lastActivatedAt
-                    .timeIntervalSinceReferenceDate.isFinite
-                    ? sourceTab.lastActivatedAt
-                    : importedAt
-            ))
+            tabs.append(
+                BrowserTab(
+                    title: try BrowserTabMigrationSanitizer.title(
+                        sourceTab.title,
+                        fallback: sourceTab.url.host ?? sourceTab.url.absoluteString
+                    ),
+                    url: sourceTab.url,
+                    symbol: placement == .pinned ? "pin.fill" : "globe",
+                    placement: placement,
+                    folderID: placement == .saved ? folderID : nil,
+                    lastActivatedAt: sourceTab.lastActivatedAt
+                        .timeIntervalSinceReferenceDate.isFinite
+                        ? sourceTab.lastActivatedAt
+                        : importedAt
+                ))
         }
-        let fallbackName = usesWindowSuffix
+        let fallbackName =
+            usesWindowSuffix
             ? windowName(source: source, ordinal: draft.sourceOrdinal)
             : String(localized: source.importedSpaceName)
         let name = try BrowserTabMigrationSanitizer.title(
@@ -179,9 +184,10 @@ enum BrowserTabMigration {
             name: name,
             symbol: draft.symbol ?? source.symbol,
             accent: draft.accent ?? source.accent,
-            branding: draft.branding ?? .neutralImport(
-                symbol: draft.symbol ?? source.symbol
-            ),
+            branding: draft.branding
+                ?? .neutralImport(
+                    symbol: draft.symbol ?? source.symbol
+                ),
             folders: BrowserFolderTree(folders: folders).foldersInDisplayOrder,
             tabs: tabs,
             archivedTabs: [],
