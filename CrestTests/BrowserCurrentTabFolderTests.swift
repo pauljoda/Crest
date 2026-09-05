@@ -419,7 +419,11 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
         _ = browser.session.setFolderCollapsed(root, in: space.id, isCollapsed: true)
         let payloads = try BrowserSyncProjection.payloads(
             from: browser.session, preferences: .default, existingRecords: [])
-        let records = payloads.map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
+        let codec = BrowserCloudRecordCodec()
+        let records = try payloads.map {
+            let record = BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID()))
+            return try codec.decode(codec.encode(record))
+        }
         for record in records { try record.validate() }
         let remote = try BrowserSyncMaterializer.materialize(
             records: records, preferences: .default, localSession: .freshInstallSeed)
@@ -453,7 +457,11 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             return nil
         }
         XCTAssertEqual(folderIDs, [saved])
-        let records = payloads.map { BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID())) }
+        let codec = BrowserCloudRecordCodec()
+        let records = try payloads.map {
+            let record = BrowserSyncRecord.save($0, version: .init(logicalClock: 1, deviceID: UUID()))
+            return try codec.decode(codec.encode(record))
+        }
         let refreshed = try BrowserSyncMaterializer.materialize(
             records: records, preferences: preferences, localSession: browser.session)
         XCTAssertTrue(refreshed.spaces[0].folders.contains { $0.id == current && $0.location == .current })

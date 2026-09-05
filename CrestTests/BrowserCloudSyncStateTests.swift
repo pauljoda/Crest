@@ -143,11 +143,31 @@ final class BrowserCloudSyncStateTests: XCTestCase {
 
         XCTAssertEqual(
             Set(object.keys),
-            ["systemFields", "reconciliationReason", "conflictResolution"]
+            ["recordSchemaVersion", "systemFields", "reconciliationReason", "conflictResolution"]
         )
         XCTAssertEqual(object["reconciliationReason"] as? String, "accountChange")
         XCTAssertEqual(object["conflictResolution"] as? String, "useThisDevice")
         XCTAssertNil(object["requiresAccountConfirmation"])
+    }
+
+    func testSchemaUpgradeDiscardsCursorAndChangeTagsButKeepsAccountDecision() throws {
+        let record = try BrowserCloudRecordCodec().encode(testSpaceRecord(index: 6))
+        var fields = BrowserCloudRecordSystemFields()
+        fields.update(with: record)
+        let state = BrowserCloudSyncState(systemFields: fields, reconciliationReason: .accountChange)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(state)) as? [String: Any])
+        object.removeValue(forKey: "recordSchemaVersion")
+        // The old cursor is opaque. Upgrading must discard it before decoding,
+        // otherwise records previously skipped by schema 1 never get replayed.
+        object["engineStateSerialization"] = "opaque cursor from older SDK"
+        let upgraded = try JSONDecoder().decode(
+            BrowserCloudSyncState.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(upgraded.engineStateSerialization)
+        XCTAssertNil(upgraded.systemFields.record(for: record.recordID))
+        XCTAssertTrue(upgraded.requiresAccountConfirmation)
+        let encoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(upgraded)) as? [String: Any])
+        XCTAssertEqual(encoded["recordSchemaVersion"] as? Int, 2)
     }
 
     func testCloudTransportUsesItsStableDefaultsKey() throws {
@@ -251,7 +271,7 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         let current = try codec.encode(testSpaceRecord(index: 4))
         let newer = try codec.encode(testSpaceRecord(index: 5))
         newer["schemaVersion"] = NSNumber(
-            value: BrowserSyncJournal.currentSchemaVersion + 1
+            value: BrowserCloudRecordCodec.currentSchemaVersion + 1
         )
 
         let batch = BrowserCloudSyncEngine.fetchedBatch(decoding: [newer, current])

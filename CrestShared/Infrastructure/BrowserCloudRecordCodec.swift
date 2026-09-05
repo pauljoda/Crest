@@ -2,6 +2,9 @@ import CloudKit
 import Foundation
 
 struct BrowserCloudRecordCodec: Sendable {
+    /// Cloud payload compatibility is independent of the local journal format.
+    static let currentSchemaVersion = 2
+
     static let zoneName = "CrestPrivate"
     static let zoneID = CKRecordZone.ID(zoneName: zoneName)
     static let recordZone = CKRecordZone(zoneID: zoneID)
@@ -18,12 +21,17 @@ struct BrowserCloudRecordCodec: Sendable {
             guard baseRecord.recordID == recordID, baseRecord.recordType == recordType else {
                 throw BrowserCloudRecordCodecError.mismatchedBaseRecord(source.id.recordName)
             }
+            if let schema = (baseRecord[Field.schemaVersion] as? NSNumber)?.intValue,
+                schema > Self.currentSchemaVersion
+            {
+                throw BrowserSyncError.unsupportedSchema(schema)
+            }
             record = baseRecord
         } else {
             record = CKRecord(recordType: recordType, recordID: recordID)
         }
 
-        record[Field.schemaVersion] = NSNumber(value: BrowserSyncJournal.currentSchemaVersion)
+        record[Field.schemaVersion] = NSNumber(value: Self.requiredSchemaVersion(for: source))
         record[Field.spaceID] = source.spaceID.rawValue.uuidString.lowercased() as CKRecordValue
         record[Field.logicalClock] = NSNumber(value: source.version.logicalClock)
         record[Field.deviceID] = source.version.deviceID.uuidString.lowercased() as CKRecordValue
@@ -73,7 +81,7 @@ struct BrowserCloudRecordCodec: Sendable {
         // refused, and the engine skips just that record rather than losing the
         // batch it arrived in, so one record from a newer build cannot stop an
         // older build from syncing.
-        guard (1...BrowserSyncJournal.currentSchemaVersion).contains(schema) else {
+        guard (1...Self.currentSchemaVersion).contains(schema) else {
             throw BrowserSyncError.unsupportedSchema(schema)
         }
         guard let spaceIDString = record[Field.spaceID] as? String,
@@ -116,6 +124,20 @@ struct BrowserCloudRecordCodec: Sendable {
         )
         try result.validate()
         return result
+    }
+
+    /// Older clients can keep syncing familiar records while skipping only
+    /// folder locations and memberships they cannot represent. Tombstones use
+    /// schema 1 so those clients can still remove a stale local copy.
+    private static func requiredSchemaVersion(for record: BrowserSyncRecord) -> Int {
+        switch record.payload {
+        case .folder(let folder) where folder.location == .current:
+            2
+        case .tab(let tab) where tab.placement == .current && tab.folderID != nil:
+            2
+        default:
+            1
+        }
     }
 
     private enum Field {

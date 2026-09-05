@@ -339,7 +339,7 @@ actor BrowserCloudSyncEngine {
             do {
                 decoded.append(try codec.decode(record))
             } catch BrowserSyncError.unsupportedSchema(let schema)
-                where schema > BrowserSyncJournal.currentSchemaVersion
+                where schema > BrowserCloudRecordCodec.currentSchemaVersion
             {
                 // A newer build of Crest wrote this. Leaving it alone keeps the
                 // rest of the batch, and the signal tells the person why one

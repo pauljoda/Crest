@@ -24,6 +24,7 @@ struct BrowserCloudSyncState: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
+        case recordSchemaVersion
         case engineStateSerialization
         case systemFields
         case reconciliationReason
@@ -33,15 +34,20 @@ struct BrowserCloudSyncState: Codable, Sendable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        engineStateSerialization = try container.decodeIfPresent(
-            CKSyncEngine.State.Serialization.self,
-            forKey: .engineStateSerialization
-        )
-        systemFields =
-            try container.decodeIfPresent(
-                BrowserCloudRecordSystemFields.self,
-                forKey: .systemFields
-            ) ?? BrowserCloudRecordSystemFields()
+        let previousSchema = try container.decodeIfPresent(Int.self, forKey: .recordSchemaVersion) ?? 1
+        if previousSchema < BrowserCloudRecordCodec.currentSchemaVersion {
+            // A skipped record still advances CKSyncEngine's cursor. Replay
+            // after upgrading, and discard stale change tags so an upload must
+            // resolve against the server before replacing an unread old copy.
+            engineStateSerialization = nil
+            systemFields = BrowserCloudRecordSystemFields()
+        } else {
+            engineStateSerialization = try container.decodeIfPresent(
+                CKSyncEngine.State.Serialization.self, forKey: .engineStateSerialization)
+            systemFields =
+                try container.decodeIfPresent(
+                    BrowserCloudRecordSystemFields.self, forKey: .systemFields) ?? BrowserCloudRecordSystemFields()
+        }
         conflictResolution = try container.decodeIfPresent(
             BrowserCloudConflictResolution.self,
             forKey: .conflictResolution
@@ -65,6 +71,7 @@ struct BrowserCloudSyncState: Codable, Sendable {
 
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(BrowserCloudRecordCodec.currentSchemaVersion, forKey: .recordSchemaVersion)
         try container.encodeIfPresent(
             engineStateSerialization,
             forKey: .engineStateSerialization

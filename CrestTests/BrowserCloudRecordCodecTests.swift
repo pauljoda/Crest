@@ -249,6 +249,82 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         XCTAssertNil(fields.record(for: cloudRecord.recordID))
     }
 
+    func testOpenFolderRecordsDeclareTheirRequiredCloudSchema() throws {
+        let original = try makeTabRecord()
+        var tab = try XCTUnwrap(original.payload?.tabValue)
+        let folder = BrowserSyncFolder(
+            id: FolderID(), spaceID: tab.spaceID, title: "Open research",
+            location: .current, symbol: "folder", orderToken: "a")
+        tab.folderID = folder.id
+        let records: [BrowserSyncRecord] = [
+            .save(.folder(folder), version: original.version),
+            .save(.tab(tab), version: original.version),
+        ]
+        for source in records {
+            let cloud = try BrowserCloudRecordCodec().encode(source)
+            XCTAssertEqual((cloud["schemaVersion"] as? NSNumber)?.intValue, 2)
+            XCTAssertEqual(try BrowserCloudRecordCodec().decode(cloud), source)
+        }
+        let ordinary = try BrowserCloudRecordCodec().encode(original)
+        XCTAssertEqual((ordinary["schemaVersion"] as? NSNumber)?.intValue, 1)
+    }
+
+    func testReturningAnOpenFolderToSavedAndDeletingItRemainLegacyReadable() throws {
+        let source = try makeTabRecord()
+        var folder = BrowserSyncFolder(
+            id: FolderID(), spaceID: source.spaceID, title: "Research",
+            location: .current, symbol: "folder", orderToken: "a")
+        let open = BrowserSyncRecord.save(.folder(folder), version: source.version)
+        let codec = BrowserCloudRecordCodec()
+        let cloud = try codec.encode(open)
+        XCTAssertEqual((cloud["schemaVersion"] as? NSNumber)?.intValue, 2)
+
+        folder.location = .saved
+        let saved = BrowserSyncRecord.save(
+            .folder(folder), version: .init(logicalClock: 2, deviceID: source.version.deviceID))
+        let promoted = try codec.encode(saved, reusing: cloud)
+        XCTAssertEqual((promoted["schemaVersion"] as? NSNumber)?.intValue, 1)
+        XCTAssertEqual(try codec.decode(promoted), saved)
+
+        let deleted = BrowserSyncRecord.delete(
+            id: open.id, spaceID: source.spaceID,
+            version: .init(logicalClock: 3, deviceID: source.version.deviceID),
+            reason: .explicitDelete, at: Date(timeIntervalSince1970: 300))
+        let tombstone = try codec.encode(deleted, reusing: cloud)
+        XCTAssertEqual((tombstone["schemaVersion"] as? NSNumber)?.intValue, 1)
+        XCTAssertNil(tombstone.encryptedValues["payload"])
+        XCTAssertEqual(try codec.decode(tombstone), deleted)
+    }
+
+    func testNewerServerSchemaCannotBeOverwrittenUsingRestoredSystemFields() throws {
+        let source = try makeTabRecord()
+        let server = try BrowserCloudRecordCodec().encode(source)
+        server["schemaVersion"] = NSNumber(value: 99)
+        var fields = BrowserCloudRecordSystemFields()
+        fields.update(with: server)
+        let restoredFields = try JSONDecoder().decode(
+            BrowserCloudRecordSystemFields.self, from: JSONEncoder().encode(fields))
+        let base = try XCTUnwrap(restoredFields.record(for: server.recordID))
+        XCTAssertThrowsError(try BrowserCloudRecordCodec().encode(source, reusing: base)) { error in
+            XCTAssertEqual(error as? BrowserSyncError, .unsupportedSchema(99))
+        }
+        XCTAssertNil(base.encryptedValues["payload"])
+    }
+
+    func testLegacySystemFieldsStillRestoreWithoutSchemaMetadata() throws {
+        let source = try makeTabRecord()
+        let cloud = try BrowserCloudRecordCodec().encode(source)
+        var fields = BrowserCloudRecordSystemFields()
+        fields.update(with: cloud)
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(fields)) as? [String: Any])
+        json.removeValue(forKey: "schemaVersionsByName")
+        let legacy = try JSONDecoder().decode(
+            BrowserCloudRecordSystemFields.self, from: JSONSerialization.data(withJSONObject: json))
+        let base = try XCTUnwrap(legacy.record(for: cloud.recordID))
+        XCTAssertEqual(
+            try BrowserCloudRecordCodec().decode(BrowserCloudRecordCodec().encode(source, reusing: base)), source)
+    }
+
     private func makeTabRecord() throws -> BrowserSyncRecord {
         let spaceID = SpaceID(
             rawValue: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!

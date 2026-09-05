@@ -2,13 +2,13 @@
 
 The core implementation is committed separately from the follow-ups below. This is a local development checkpoint, not a claim of full Chrome parity or distribution readiness. Mobile cold-start selection is already tracked as APP-306 in Crest 0.6.
 
-## APP-311: mixed-version folder sync release gate
+## APP-311: best-effort mixed-version folder sync
 
-The new folder model reads prior Saved folders and migrates the intermediate currentTabFolders representation. Current-code round trips, sync projection/materialization and archive import/export are covered. That does not establish compatibility with an older Crest device.
+Open folders and their Current-tab memberships use cloud record schema 2. Saved folders, ordinary tabs and tombstones continue using schema 1. Older readers that reject newer schemas can therefore skip unsupported folders while continuing to process familiar records. Updating both platforms is the supported way to keep the full folder structure aligned; no parallel legacy folder model or separate sync store is introduced.
 
-Cloud records still advertise schema 1. Before this change, BrowserSyncPayload validation rejected folderID on Current tabs, and BrowserSyncFolder had no location field: the old materializer always created SavedFolder. An older reader can therefore reject Current-tab membership and interpret its accompanying folder as Saved. These findings come from the pre-change source, not a live mixed-version CloudKit test. No data-loss outcome is claimed.
+When cloud schema support increases, Crest clears the persisted CKSyncEngine cursor and cached change tags so records skipped before the update are fetched again. The session, local journal, sync preferences and account-change decision are retained. Cloud schema versioning is separate from the local journal format. The metadata cache now preserves each server record's schema, and encoding refuses a cached record from a future schema before changing its payload.
 
-Before distribution, define and test forward compatibility for folder and membership records across versions, including edits from the older device, tombstones, an offline upgrade and disabled sync sections. Do not address this merely by removing Current-folder sync, which is an explicit feature requirement. Keep the schema/migration decision separate from marketing version changes.
+This is deliberately best-effort compatibility, as requested. Already-shipped clients cannot acquire the new write guard: they may retain stale Saved copies or overwrite records during concurrent edits. The schema marker does not prevent that older-writer behavior. No claim of perfect old/new convergence or live mixed-version CloudKit validation is made. Current-version cloud codec, journal/materialization, nested folders, disabled sections, return-to-Saved, tombstone and upgrade-state tests cover the implemented behavior.
 
 ## APP-310: mobile drag polish
 

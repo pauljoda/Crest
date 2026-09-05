@@ -577,6 +577,10 @@
     "2026-09-05-safe-extension-worker-paths": {
       "category": "fixed",
       "message": "Support extensions such as SponsorBlock that use relative background-worker paths"
+    },
+    "2026-09-05-open-folder-sync-upgrades": {
+      "category": "fixed",
+      "message": "Recover synced open-tab folders after updating Crest and handle unsupported folder records on older versions"
     }
   }
 }
