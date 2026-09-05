@@ -27,7 +27,8 @@ struct BrowserCommandPalette: View {
         presentation: BrowserCommandPalettePresentation = .overlay,
         morphNamespace: Namespace.ID? = nil,
         morphID: String? = nil,
-        overlayContentLeadingInset: CGFloat = 0
+        overlayContentLeadingInset: CGFloat = 0,
+        emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
@@ -43,7 +44,8 @@ struct BrowserCommandPalette: View {
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectTab,
                 openURL: openURL,
-                dismiss: dismiss
+                dismiss: dismiss,
+                emptySelectionActions: emptySelectionActions
             ))
     }
 

@@ -81,7 +81,7 @@ struct MobileRegularPageSurface: View {
             BrowserRootDetailSurface(
                 adjoinsLeadingSidebar: adjoinsLeadingSidebar,
                 usesBorderlessFrame: usesCollapsedSidebarBorderlessFrame,
-                isStartPage: model.browser.selectedTab?.isStartPage == true,
+                isStartPage: model.browser.selectedTab?.isStartPage != false,
                 hasActivePage: model.selectedPage != nil,
                 completedNavigationCount:
                     model.selectedPage?.completedNavigationCount ?? 0,

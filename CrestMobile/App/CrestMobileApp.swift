@@ -137,10 +137,21 @@ struct CrestMobileApp: App {
         pageStoreRegistry = MobileBrowserPageStoreRegistry(primary: pages)
         self.mediaSessions = mediaSessions
         self.tabStateArchive = tabStateArchive
-        windowStatePersistence =
-            usesIsolatedLaunch
-            ? InMemoryBrowserWindowStatePersistence()
-            : UserDefaultsBrowserWindowStatePersistence()
+        if usesIsolatedLaunch {
+            if let isolationID = launchEnvironment.persistentIsolationID,
+                let defaults = UserDefaults(
+                    suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                        isolationID: isolationID
+                    )
+                )
+            {
+                windowStatePersistence = UserDefaultsBrowserWindowStatePersistence(defaults: defaults)
+            } else {
+                windowStatePersistence = InMemoryBrowserWindowStatePersistence()
+            }
+        } else {
+            windowStatePersistence = UserDefaultsBrowserWindowStatePersistence()
+        }
         automaticallyPresentsOnboarding =
             MobileBrowserAutomaticOnboardingPolicy
             .shouldPresent(

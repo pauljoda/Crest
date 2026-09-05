@@ -1,9 +1,10 @@
 import XCTest
+
 @testable import CrestMobile
 
 @MainActor
 final class MobileBrowserWindowSceneModelTests: XCTestCase {
-    func testStartupWaitsInTheTabViewerUnlessLastActiveTabIsEnabled() {
+    func testColdStartupLeavesTabsUnselectedRegardlessOfLegacyPreference() {
         for behavior in [
             BrowserStartupBehavior.showStartPage,
             .lastActiveTab,
@@ -27,9 +28,12 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
                 monitorsMemoryPressure: false
             )
 
+            XCTAssertFalse(model.navigation.compactShowsPage)
+            XCTAssertNil(model.browser.selectedTab)
+            XCTAssertTrue(model.browser.session.spaces.allSatisfy { $0.selectedTabID == nil })
             XCTAssertEqual(
-                model.navigation.compactShowsPage,
-                behavior.activatesRestoredTab
+                model.browser.session.spaces.flatMap(\.tabs).map(\.id),
+                rootBrowser.session.spaces.flatMap(\.tabs).map(\.id)
             )
             XCTAssertEqual(model.pages.residentPageCount, 0)
         }
@@ -58,6 +62,8 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
             usesEphemeralWebsiteDataStores: true
         )
 
+        let tabID = try XCTUnwrap(model.browser.selectedSpace?.tabs.first?.id)
+        model.browser.selectTab(tabID)
         model.pages.select(session: model.browser.session)
 
         let store = try XCTUnwrap(

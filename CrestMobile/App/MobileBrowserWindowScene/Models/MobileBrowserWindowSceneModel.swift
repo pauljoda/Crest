@@ -38,11 +38,14 @@ final class MobileBrowserWindowSceneModel {
             session: rootBrowser.session,
             persistence: windowStatePersistence
         )
-        let browser = rootBrowser.makeWindowStore(restoring: windowState.state)
+        let browser = rootBrowser.makeWindowStore(
+            restoring: windowState.state,
+            restoresTabSelection: false
+        )
         let sidebarIsPresented = windowState.sidebarIsPresented ?? true
         let navigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented,
-            initiallyShowsCompactPage: startupBehavior.activatesRestoredTab
+            initiallyShowsCompactPage: !sidebarIsPresented
         )
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(

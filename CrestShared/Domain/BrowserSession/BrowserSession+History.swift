@@ -227,7 +227,11 @@ extension BrowserSession {
         let expiredIDs = Set(expiredTabs.map(\.id))
         preserveFolderOrder(in: index, removing: expiredIDs)
         spaces[index].tabs.removeAll { expiredIDs.contains($0.id) }
-        ensureSelection(in: spaces[index].id)
+        // Background maintenance must preserve an intentionally empty window.
+        // Repair only a selection that existed before the sweep.
+        if selectedID != nil {
+            ensureSelection(in: spaces[index].id)
+        }
     }
 
 }

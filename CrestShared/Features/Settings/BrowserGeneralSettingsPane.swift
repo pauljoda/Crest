@@ -39,11 +39,13 @@ struct BrowserGeneralSettingsPane: View {
     var body: some View {
         BrowserSettingsPane(.general) {
             Section("Startup") {
-                Picker("When Crest opens", selection: startupBehavior) {
-                    ForEach(BrowserStartupBehavior.allCases) { behavior in
-                        Text(behavior.title).tag(behavior)
+                #if os(macOS)
+                    Picker("When Crest opens", selection: startupBehavior) {
+                        ForEach(BrowserStartupBehavior.allCases) { behavior in
+                            Text(behavior.title).tag(behavior)
+                        }
                     }
-                }
+                #endif
 
                 CrestSpaceMenuPicker(
                     "Default Space",

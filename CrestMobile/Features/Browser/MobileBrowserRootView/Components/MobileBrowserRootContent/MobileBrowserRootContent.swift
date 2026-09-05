@@ -71,7 +71,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 layoutDirection: layoutDirection,
                 usesBorderlessFloatingPageFrame:
                     usesCollapsedSidebarBorderlessFrame,
-                isStartPage: browser.selectedTab?.isStartPage == true,
+                isStartPage: browser.selectedTab?.isStartPage != false,
                 hasActivePage: model.selectedPage != nil,
                 completedNavigationCount:
                     model.selectedPage?.completedNavigationCount ?? 0,
@@ -176,7 +176,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         navigation.completePagePresentation,
                     backdrop: MobileCompactPageBackdrop(
                         isStartPage:
-                            browser.selectedTab?.isStartPage == true,
+                            browser.selectedTab?.isStartPage != false,
                         hasSelectedPage: model.selectedPage != nil,
                         pageThemeColor: model.selectedPage?.themeColor,
                         underPageBackgroundColor:

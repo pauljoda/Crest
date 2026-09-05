@@ -40,7 +40,8 @@ struct BrowserStartPageCommandPalette: View {
             selectTab: page.selectTab,
             openURL: page.openURL,
             dismiss: {},
-            presentation: .embedded
+            presentation: .embedded,
+            emptySelectionActions: page.emptySelectionActions
         )
         .id(
             BrowserCommandPalettePresentationIdentity(

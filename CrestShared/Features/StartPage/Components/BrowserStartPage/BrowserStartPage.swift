@@ -34,6 +34,7 @@ struct BrowserStartPage: View {
     /// The appearance the header reads its text tone from, for a shell that
     /// draws the header over Space branding. `nil` inherits the environment.
     var headerColorScheme: ColorScheme? = nil
+    var emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil
 
     var body: some View {
         ZStack {

@@ -36,6 +36,7 @@ final class BrowserCommandPaletteModel {
         ) -> Bool
     private let openURLAction: (BrowserTabRuntimeAssignment, URL) -> Bool
     private let dismissAction: () -> Void
+    private let emptySelectionActions: BrowserEmptySelectionPaletteActions?
 
     init(
         space: BrowserSpace?,
@@ -61,7 +62,8 @@ final class BrowserCommandPaletteModel {
                 BrowserTabRuntimeAssignment
             ) -> Bool,
         openURL: @escaping (BrowserTabRuntimeAssignment, URL) -> Bool,
-        dismiss: @escaping () -> Void
+        dismiss: @escaping () -> Void,
+        emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil
     ) {
         let input = BrowserCommandPaletteInput(
             query: initialQuery,
@@ -86,6 +88,7 @@ final class BrowserCommandPaletteModel {
         selectTabAction = selectTab
         openURLAction = openURL
         dismissAction = dismiss
+        self.emptySelectionActions = emptySelectionActions
     }
 
     func moveSelection(by offset: Int) {
@@ -105,6 +108,24 @@ final class BrowserCommandPaletteModel {
 
     func activate(_ result: BrowserCommandPaletteResult) {
         guard publishedQuery == query else { return }
+
+        if selectedTabID == nil {
+            guard let actions = emptySelectionActions,
+                let space,
+                actions.source == BrowserSpaceRuntimeAssignment(space: space),
+                actions.isAvailable
+            else { return }
+            let didActivate: Bool
+            switch result.target {
+            case .tab(let target): didActivate = actions.selectTab(target)
+            case .url(let url): didActivate = actions.openURL(url)
+            case .command(let command):
+                commands?.perform(command)
+                didActivate = commands != nil
+            }
+            if didActivate { dismiss() }
+            return
+        }
 
         let didActivate: Bool
         switch result.target {

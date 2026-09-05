@@ -27,6 +27,7 @@ final class BrowserStore {
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored var tabSelectionHistory: BrowserTabSelectionHistory
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
+    @ObservationIgnored private var preservesEmptyWindowSelection = false
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
     var selectedSpace: BrowserSpace? {
@@ -108,7 +109,10 @@ extension BrowserStore {
         persistence.save(session)
     }
 
-    func makeWindowStore(restoring savedState: BrowserWindowState? = nil) -> BrowserStore {
+    func makeWindowStore(
+        restoring savedState: BrowserWindowState? = nil,
+        restoresTabSelection: Bool = true
+    ) -> BrowserStore {
         var windowSession = family.authoritativeSession
         if var savedState {
             savedState.repair(using: windowSession)
@@ -123,6 +127,11 @@ extension BrowserStore {
         }
         windowSession.selectDefaultSpaceForLaunch()
         windowSession.repairRuntimeIntegrity()
+        if !restoresTabSelection {
+            for index in windowSession.spaces.indices {
+                windowSession.spaces[index].selectedTabID = nil
+            }
+        }
         let store = BrowserStore(
             session: windowSession,
             persistence: persistence,
@@ -134,6 +143,7 @@ extension BrowserStore {
             cloudSyncChangeHandler: cloudSyncChangeHandler
         )
         store.localSyncErrorDescription = localSyncErrorDescription
+        store.preservesEmptyWindowSelection = !restoresTabSelection
         return store
     }
 }
@@ -272,6 +282,12 @@ extension BrowserStore {
 
     func receiveSharedSession(_ sharedSession: BrowserSession) {
         let selectedSpaceID = session.selectedSpaceID
+        // An empty mobile window is an intentional local selection. A delayed
+        // family/sync publication must not activate the root store's fallback.
+        let unselectedSpaceIDs = Set(
+            session.spaces.compactMap { space in
+                space.selectedTabID == nil ? space.id : nil
+            })
         let selectedTabIDs: [SpaceID: TabID] = Dictionary(
             uniqueKeysWithValues: session.spaces.compactMap { space in
                 guard let tabID = space.selectedTabID else { return nil }
@@ -292,6 +308,12 @@ extension BrowserStore {
             session.spaces[index].selectedTabID = tabID
         }
         session.repairRuntimeIntegrity()
+        if preservesEmptyWindowSelection {
+            for index in session.spaces.indices
+            where unselectedSpaceIDs.contains(session.spaces[index].id) {
+                session.spaces[index].selectedTabID = nil
+            }
+        }
     }
 
     func invalidatePendingSyncStage() {

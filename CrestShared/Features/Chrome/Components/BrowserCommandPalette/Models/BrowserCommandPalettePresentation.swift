@@ -9,6 +9,7 @@ struct BrowserCommandPalettePresentationIdentity: Hashable {
     let mode: BrowserCommandPaletteMode?
     let focusRequest: Int?
     let source: BrowserTabRuntimeAssignment?
+    let spaceAssignment: BrowserSpaceRuntimeAssignment?
     let searchProvider: BrowserSearchProvider?
     let searchSuggestionsEnabled: Bool?
 
@@ -20,6 +21,7 @@ struct BrowserCommandPalettePresentationIdentity: Hashable {
         self.mode = mode
         focusRequest = nil
         self.source = source
+        spaceAssignment = space.map(BrowserSpaceRuntimeAssignment.init(space:))
         searchProvider = space?.browsingPreferences.searchProvider
         searchSuggestionsEnabled =
             space?.browsingPreferences.searchSuggestionsEnabled
@@ -33,6 +35,7 @@ struct BrowserCommandPalettePresentationIdentity: Hashable {
         mode = nil
         self.focusRequest = focusRequest
         self.source = source
+        spaceAssignment = space.map(BrowserSpaceRuntimeAssignment.init(space:))
         searchProvider = space?.browsingPreferences.searchProvider
         searchSuggestionsEnabled =
             space?.browsingPreferences.searchSuggestionsEnabled

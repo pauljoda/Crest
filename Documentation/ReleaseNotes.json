@@ -601,6 +601,10 @@
     "2026-09-05-split-preview-near-sidebar": {
       "category": "improved",
       "message": "Show the split preview just beyond the sidebar and update its landing position as you drag across the page"
+    },
+    "2026-09-05-mobile-empty-launch-selection": {
+      "category": "fixed",
+      "message": "Start fresh mobile sessions on the sidebar or start page without automatically selecting a saved tab or split view"
     }
   }
 }

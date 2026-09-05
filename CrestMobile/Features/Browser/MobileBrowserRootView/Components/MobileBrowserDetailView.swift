@@ -56,10 +56,10 @@ struct MobileBrowserDetailView: View {
                 .ignoresSafeArea(.container, edges: .vertical)
             } else {
                 switch pagePresentation {
-                case .noSelection, .unloaded:
+                case .unloaded:
                     unloadedPageSurface
-                case .startPage:
-                    if browser.selectedTab != nil {
+                case .noSelection, .startPage:
+                    if browser.selectedSpace != nil {
                         BrowserStartPage(
                             space: browser.selectedSpace,
                             isPrivateBrowsing: browser.isPrivateBrowsing,
@@ -70,7 +70,8 @@ struct MobileBrowserDetailView: View {
                             isCommandPaletteObscured: isCommandPalettePresented,
                             layout: isCompact ? .mobileCompactPage : .mobileRegularPage,
                             focusRequest: addressFocusRequest,
-                            headerColorScheme: startPageHeaderColorScheme
+                            headerColorScheme: startPageHeaderColorScheme,
+                            emptySelectionActions: emptySelectionPaletteActions
                         )
                         .onChange(of: isCompact, initial: true) { _, compact in
                             if compact { address = "" }
@@ -143,7 +144,7 @@ struct MobileBrowserDetailView: View {
         }
         .overlay(alignment: .bottom) {
             if isCompact, showsCompactToolbar {
-                if browser.selectedTab?.isStartPage == true {
+                if browser.selectedTab?.isStartPage != false {
                     MobileCompactStartPageToolbar(showTabViewer: showTabViewer)
                         .safeAreaPadding(.bottom, 0)
                         .zIndex(1)
@@ -448,6 +449,19 @@ struct MobileBrowserDetailView: View {
 
     private func restoreSelectedTab() {
         pages.select(session: browser.session)
+    }
+
+    private var emptySelectionPaletteActions: BrowserEmptySelectionPaletteActions? {
+        guard let space = browser.selectedSpace, browser.selectedTab == nil else { return nil }
+        return BrowserEmptySelectionPaletteActions(
+            source: BrowserSpaceRuntimeAssignment(space: space),
+            browser: browser,
+            accessController: spaceAccess,
+            didSelectTab: {
+                pages.select(session: browser.session)
+                address = browser.selectedTab?.url?.absoluteString ?? ""
+            }
+        )
     }
 
     private func openStartPageURL(

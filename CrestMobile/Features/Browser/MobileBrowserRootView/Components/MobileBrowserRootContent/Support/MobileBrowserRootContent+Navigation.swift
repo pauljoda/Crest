@@ -30,7 +30,7 @@ extension MobileBrowserRootContent {
             addressFocusRequest &+= 1
         } else {
             switch MobileStartPageSearchPolicy.destination(
-                isStartPage: browser.selectedTab?.isStartPage == true,
+                isStartPage: browser.selectedTab?.isStartPage != false,
                 presentation: presentation
             ) {
             case .embeddedStartPage:
@@ -56,7 +56,7 @@ extension MobileBrowserRootContent {
 
         showRegularSidebar()
         switch MobileStartPageSearchPolicy.destination(
-            isStartPage: browser.selectedTab?.isStartPage == true,
+            isStartPage: browser.selectedTab?.isStartPage != false,
             presentation: presentation
         ) {
         case .embeddedStartPage:
