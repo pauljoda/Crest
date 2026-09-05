@@ -1218,6 +1218,7 @@ final class BrowserPagePoolTests: XCTestCase {
             firstPage.webView.configuration.userContentController.userScripts
                 .map(\.source),
             [
+                BrowserPictureInPictureScript.source,
                 BrowserLinkHoverContentBridge.source,
                 BrowserLinkContextContentBridge.source,
                 BrowserBlockedPopupContentBridge.source,
@@ -1225,7 +1226,7 @@ final class BrowserPagePoolTests: XCTestCase {
             ],
             """
             A private page carries only nonpersistent browsing bridges for link \
-            hover, link context, blocked popups and geolocation, with no \
+            hover, link context, blocked popups, geolocation and Picture in Picture, with no \
             credential or extension script.
             """
         )

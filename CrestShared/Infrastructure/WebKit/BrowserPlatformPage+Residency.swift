@@ -7,9 +7,14 @@ extension BrowserPlatformPage {
                 continuation.resume(returning: state)
             }
         }
+        #if os(macOS)
+            let hasPresentedVideo = pictureInPicture.protectsPageResidency
+        #else
+            let hasPresentedVideo = false
+        #endif
         return BrowserPageResidencyDecision(
             isSelected: isSelected,
-            keepsPageLoaded: navigationContext?.keepsPageLoaded == true,
+            keepsPageLoaded: navigationContext?.keepsPageLoaded == true || hasPresentedVideo,
             isPlayingMedia: playbackState == .playing,
             isCapturingMedia: webView.cameraCaptureState != .none
                 || webView.microphoneCaptureState != .none

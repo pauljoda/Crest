@@ -66,6 +66,7 @@ struct BrowserGeneralSettingsPane: View {
             )
 
             #if os(macOS)
+                BrowserPictureInPictureSettingsSection()
                 BrowserSpellCheckingSettingsSection()
             #endif
 

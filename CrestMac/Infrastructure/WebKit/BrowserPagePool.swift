@@ -868,6 +868,7 @@ final class BrowserPagePool:
     /// a split open has to take every card away, and half a split left on
     /// screen would be the privacy failure the gate exists to prevent.
     func deactivatePagePresentation(at time: Date = .now) {
+        for page in pages.values { page.pictureInPicture.invalidate() }
         guard activeTabID != nil || !presentedTabIDs.isEmpty else { return }
         for tabID in presentedTabIDs {
             pages[tabID]?.focusRestoration.invalidate()
@@ -1683,6 +1684,7 @@ final class BrowserPagePool:
             + transientLeases.values.compactMap { $0.value?.page }
         for page in retainedPages where page.spaceID == space.id {
             page.focusRestoration.invalidate()
+            page.pictureInPicture.invalidate()
         }
         if activePage?.spaceID == space.id
             || presentedTabIDs.contains(where: { pages[$0]?.spaceID == space.id })
@@ -2212,6 +2214,17 @@ final class BrowserPagePool:
     ) {
         prepareFocusTransition(to: pages[tabID])
         let departed = Set(self.presentedTabIDs).subtracting(presentedTabIDs)
+        // Only pages leaving the visible set qualify. Moving focus within a
+        // split must not float a video that is still visible beside the tab.
+        let departures = ([activeTabID].compactMap { $0 } + self.presentedTabIDs)
+            .filter { departed.contains($0) }
+        var requested: Set<TabID> = []
+        for departedTabID in departures where requested.insert(departedTabID).inserted {
+            pages[departedTabID]?.pictureInPicture.leaveTab()
+        }
+        for arrivingTabID in presentedTabIDs where !self.presentedTabIDs.contains(arrivingTabID) {
+            pages[arrivingTabID]?.pictureInPicture.returnToTab()
+        }
         for departedTabID in departed where pages[departedTabID] != nil {
             inactiveSinceByTabID[departedTabID] = time
         }

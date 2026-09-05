@@ -19,6 +19,8 @@ engineering contracts needed to build and maintain it.
 
 ## Browser and extension behavior
 
+- [Desktop Picture in Picture](Architecture/DesktopPictureInPicture.md) — native
+  presentation, automatic player selection, lifecycle, and validation.
 - [Extension compatibility](ExtensionCompatibility.md) — supported package
   shapes and current WebKit boundaries.
 - [Extension emulation services](ExtensionEmulationServices.md) — bounded

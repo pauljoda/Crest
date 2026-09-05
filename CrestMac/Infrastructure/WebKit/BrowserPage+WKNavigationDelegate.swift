@@ -15,6 +15,7 @@ extension BrowserPage: WKNavigationDelegate {
         // app-level load path. Retire the old document's session as soon as
         // WebKit starts any replacement navigation.
         mediaSessionCoordinator?.prepareForNavigation()
+        pictureInPicture.invalidate()
         isAwaitingPopupNavigation = false
         beginBlockedPopupNavigation()
         beginGeolocationNavigation()
@@ -34,6 +35,7 @@ extension BrowserPage: WKNavigationDelegate {
         guard isCurrentNavigation(navigation) else { return }
         linkHover.didCommitNavigation()
         mediaSessionCoordinator?.didCommitNavigation()
+        pictureInPicture.navigationDidCommit()
         committedNavigationCount += 1
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
     }
@@ -307,6 +309,7 @@ extension BrowserPage: WKNavigationDelegate {
         linkHover.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
+        pictureInPicture.invalidate()
         credentialState.webContentProcessDidTerminate()
         httpAuthenticationSession.authenticationFailed()
         processTerminationCount += 1

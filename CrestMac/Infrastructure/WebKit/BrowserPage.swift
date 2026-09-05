@@ -15,6 +15,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     )
 
     @ObservationIgnored let webView: WKWebView
+    @ObservationIgnored let pictureInPicture: BrowserPictureInPicturePageController
     @ObservationIgnored lazy var linkHover = BrowserLinkHoverController(webView: webView)
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
         let controller = BrowserWebFocusRestorationController(webView: webView)
@@ -356,11 +357,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         BrowserWebInspectorAccess.enableDeveloperExtras(
             in: configuration.preferences
         )
+        BrowserDesktopPictureInPictureAccess.enable(in: configuration.preferences)
+        BrowserPictureInPictureContentBridge.shared.install(in: configuration.userContentController)
         let desktopWebView = BrowserDesktopWebView(
             frame: .zero,
             configuration: configuration
         )
         webView = desktopWebView
+        pictureInPicture = BrowserPictureInPicturePageController(webView: desktopWebView)
         webView.underPageBackgroundColor = .clear
         Self.lifecycleSignposter.endInterval("Initialize WKWebView", webViewInterval)
         super.init()
@@ -742,6 +746,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         extensionBackgroundActivityLease?.cancel()
         extensionBackgroundActivityLease = nil
         mediaSessionCoordinator?.prepareForRemoval()
+        pictureInPicture.invalidate()
         chromeWebStoreTask?.cancel()
         chromeWebStoreTask = nil
         mozillaAddonsInstall.cancel()
@@ -1529,6 +1534,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        pictureInPicture.invalidate()
         linkHover.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.prepareForNavigation()

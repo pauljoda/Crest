@@ -581,6 +581,10 @@
     "2026-09-05-open-folder-sync-upgrades": {
       "category": "fixed",
       "message": "Recover synced open-tab folders after updating Crest and handle unsupported folder records on older versions"
+    },
+    "2026-09-05-native-desktop-picture-in-picture": {
+      "category": "new",
+      "message": "Keep videos visible in native Picture in Picture when switching Mac tabs, with an option to turn automatic entry off"
     }
   }
 }

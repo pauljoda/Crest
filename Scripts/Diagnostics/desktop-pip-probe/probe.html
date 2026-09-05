@@ -1,0 +1,60 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Crest desktop PiP probe</title>
+<style>
+  body { background: #17202b; color: white; font: 18px system-ui; padding: 24px; }
+  video { width: 100%; max-height: 400px; }
+  button { font: inherit; padding: 8px; margin-right: 8px; }
+</style>
+<h1>Desktop PiP investigation</h1>
+<video id="video" src="sample.mp4" muted loop playsinline controls preload="auto"></video>
+<p><button onclick="video.play()">Play</button><button onclick="attemptNative('standard')">Standard PiP</button><button onclick="attemptNative('prefixed')">WebKit PiP</button></p>
+<script>
+  const video = document.querySelector('video');
+  const report = value => window.webkit.messageHandlers.probe.postMessage(value);
+  window.ready = new Promise((resolve, reject) => {
+    if (video.readyState >= 2) resolve();
+    video.addEventListener('loadeddata', resolve, { once: true });
+    video.addEventListener('error', () => reject(new Error('Fixture video failed to load')), { once: true });
+  });
+  function state() {
+    return {
+      readyState: video.readyState, width: video.videoWidth, height: video.videoHeight,
+      currentTime: video.currentTime, paused: video.paused,
+      decodedFrames: video.getVideoPlaybackQuality().totalVideoFrames,
+      standardMethod: typeof video.requestPictureInPicture,
+      documentPiPAPI: typeof window.documentPictureInPicture,
+      documentEnabled: document.pictureInPictureEnabled,
+      webkitSupported: video.webkitSupportsPresentationMode?.('picture-in-picture'),
+      mode: video.webkitPresentationMode, elementIsPiP: document.pictureInPictureElement === video,
+      activation: navigator.userActivation?.isActive, visibility: document.visibilityState,
+      src: video.currentSrc, identity: window.documentIdentity,
+      flyoutStyled: !!document.querySelector('#probe-flyout-style')
+    };
+  }
+  window.documentIdentity = crypto.randomUUID();
+  function enterFlyout() {
+    const style = document.createElement('style');
+    style.id = 'probe-flyout-style';
+    style.textContent = 'html, body { margin: 0 !important; padding: 0 !important; overflow: hidden !important; background: black !important; } body > :not(video) { display: none !important; } video { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; object-fit: contain !important; }';
+    document.head.append(style);
+  }
+  function exitFlyout() { document.querySelector('#probe-flyout-style')?.remove(); }
+  function attemptNative(api) {
+    report({ attempt: api, before: state() });
+    try {
+      if (api === 'standard') {
+        video.requestPictureInPicture().then(
+          window => report({ resolved: api, width: window.width, height: window.height }),
+          error => report({ rejected: api, name: error.name, message: error.message })
+        );
+      } else {
+        video.webkitSetPresentationMode('picture-in-picture');
+        report({ returned: api, after: state() });
+      }
+    } catch (error) { report({ thrown: api, name: error.name, message: error.message }); }
+  }
+  for (const event of ['enterpictureinpicture', 'leavepictureinpicture', 'webkitpresentationmodechanged', 'pause', 'playing']) {
+    video.addEventListener(event, () => report({ event, state: state() }));
+  }
+</script>

@@ -9,6 +9,13 @@ import os
 extension BrowserPage: BrowserExtensionDebuggerDialogHosting {}
 
 extension BrowserPage: WKUIDelegate {
+    /// WebKit's desktop presentation callback also covers entry from its own
+    /// video context menu, including videos inside cross-origin frames.
+    @objc(_webView:hasVideoInPictureInPictureDidChange:)
+    func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
+        pictureInPicture.nativePresentationDidChange(isActive: isActive)
+    }
+
     /// Returns the popup's web view built from WebKit's own configuration, which
     /// is what keeps `window.open()` non-null, `window.opener` connected, and
     /// `about:blank` popups writable. Crest never loads that web view itself:
