@@ -16,6 +16,8 @@ enum BrowserSpaceSwitcherLayout {
     static let segmentWidth = CrestSpaceIconPickerMetrics.segmentWidth
     static let segmentHeight = CrestSpaceIconPickerMetrics.segmentHeight
     static let cornerRadius = CrestSpaceIconPickerMetrics.cornerRadius
+    static let pickerHeight = segmentHeight + 2 * CrestSpaceIconPickerMetrics.trackPadding
+    static let overflowButtonWidth: CGFloat = 28
 
     /// The band the compact strip occupies, which is what holds the picker
     /// clear of the sidebar's bottom edge and the utilities either side of it.
@@ -132,6 +134,10 @@ struct BrowserSpaceSwitcherCompactAllocation: Equatable, Sendable {
 
     var usesOverflow: Bool {
         pickerContentWidth > pickerViewportWidth
+    }
+
+    var scrollViewportWidth: CGFloat {
+        max(0, pickerViewportWidth - (usesOverflow ? 2 * BrowserSpaceSwitcherLayout.overflowButtonWidth : 0))
     }
 
     /// The scroll track expands to the viewport only while its intrinsic

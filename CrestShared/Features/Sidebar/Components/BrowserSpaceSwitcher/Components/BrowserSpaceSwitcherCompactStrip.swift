@@ -15,8 +15,6 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     let accessories: BrowserSpaceSwitcherAccessories
     let downloads: BrowserSpaceSwitcherDownloads
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
         GeometryReader { geometry in
             let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
@@ -47,77 +45,20 @@ struct BrowserSpaceSwitcherCompactStrip: View {
                     BrowserSpaceSwitcherLayout.compactStripHorizontalInset
                 )
 
-                picker(viewportWidth: allocation.pickerViewportWidth)
+                BrowserSpaceSwitcherCompactPicker(
+                    spaces: spaces,
+                    selectedSpaceID: selectedSpaceID,
+                    reorderState: reorderState,
+                    metrics: metrics,
+                    selectSpace: selectSpace,
+                    allocation: allocation
+                )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(height: BrowserSpaceSwitcherLayout.compactStripHeight)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Spaces")
-    }
-
-    private func picker(viewportWidth: CGFloat) -> some View {
-        ScrollViewReader { reader in
-            ScrollView(.horizontal) {
-                CrestSpaceIconPicker(
-                    spaces: spaces,
-                    selectedSpaceID: selectedSpaceID,
-                    selectSpace: selectSpace,
-                    accessibilityIdentifier: "space-switcher-picker"
-                ) { space in
-                    BrowserSpacePickerSegment(
-                        space: space,
-                        reorderState: reorderState,
-                        metrics: metrics
-                    )
-                }
-                .frame(minWidth: viewportWidth, alignment: .center)
-            }
-            .scrollIndicators(.hidden)
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-            .frame(
-                width: viewportWidth,
-                height: BrowserSpaceSwitcherLayout.segmentHeight
-                    + 2 * CrestSpaceIconPickerMetrics.trackPadding
-            )
-            .task(id: selectedSpaceID) {
-                await Task.yield()
-                revealSelection(reader, animated: true)
-            }
-            .onChange(of: viewportWidth) {
-                revealSelection(reader, animated: false)
-            }
-            .onChange(of: BrowserSpaceSwitcherLayout.segmentIDs(for: spaces)) {
-                revealSelection(reader, animated: false)
-            }
-            .accessibilitySortPriority(
-                BrowserSpaceSwitcherLayout.pickerAccessibilityPriority
-            )
-        }
-    }
-
-    private func revealSelection(
-        _ reader: ScrollViewProxy,
-        animated: Bool
-    ) {
-        guard
-            let target = BrowserSpaceSwitcherLayout.compactScrollTarget(
-                spaceIDs: BrowserSpaceSwitcherLayout.segmentIDs(for: spaces),
-                selectedSpaceID: selectedSpaceID
-            )
-        else { return }
-
-        if animated {
-            withAnimation(
-                BrowserVisualAccessibilityPolicy.animation(
-                    CrestMotion.scrollAlignment,
-                    reduceMotion: reduceMotion
-                )
-            ) {
-                reader.scrollTo(target, anchor: .center)
-            }
-        } else {
-            reader.scrollTo(target, anchor: .center)
-        }
     }
 
     private func toggleButton(

@@ -589,6 +589,10 @@
     "2026-09-05-quick-window-even-page-border": {
       "category": "fixed",
       "message": "Give Quick Window pages an even border below the address bar and around the sides and bottom"
+    },
+    "2026-09-05-macos-space-picker-alignment": {
+      "category": "improved",
+      "message": "Keep the Mac Space picker centered as it fills up, with arrows to reveal more Spaces"
     }
   }
 }

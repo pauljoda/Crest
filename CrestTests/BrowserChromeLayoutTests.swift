@@ -6,6 +6,100 @@ import XCTest
 
 final class BrowserChromeLayoutTests: XCTestCase {
     @MainActor
+    func testCompactSpacePickerKeepsItsFullHeightWithLegacyScrollbars() throws {
+        let spaces = (1...10).map {
+            BrowserSpace(
+                id: SpaceID(), profile: BrowsingProfile(),
+                name: "Space \($0)", symbol: "star", accent: .indigo,
+                folders: [], tabs: [], selectedTabID: nil)
+        }
+        let host = NSHostingView(
+            rootView: BrowserSpaceSwitcherCompactStrip(
+                spaces: spaces, selectedSpaceID: spaces[0].id,
+                reorderState: BrowserSidebarReorderState(), metrics: .pointer,
+                selectSpace: { _ in }, accessories: .init(), downloads: .none
+            ))
+        let window = NSWindow(
+            contentRect: CGRect(x: 100, y: 100, width: 260, height: 50),
+            styleMask: [.borderless], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        window.orderFront(nil)
+        defer { window.close() }
+        host.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        let scroll = try XCTUnwrap(spacePickerScrollView(in: host))
+        for style: NSScroller.Style in [.legacy, .overlay] {
+            scroll.scrollerStyle = style
+            for width in [260.0, 540.0, 289.0, 380.0, 260.0] {
+                window.setContentSize(CGSize(width: width, height: 50))
+                host.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+                scroll.tile()
+                let frame = scroll.contentView.convert(scroll.contentView.bounds, to: host)
+                XCTAssertEqual(frame.height, 36, accuracy: 0.5)
+                XCTAssertEqual(frame.midY, host.bounds.midY, accuracy: 0.5)
+                XCTAssertFalse(scroll.hasHorizontalScroller)
+            }
+        }
+    }
+
+    @MainActor
+    private func spacePickerScrollView(in view: NSView) -> NSScrollView? {
+        if let scroll = view as? NSScrollView { return scroll }
+        return view.subviews.lazy.compactMap { self.spacePickerScrollView(in: $0) }.first
+    }
+
+    func testSpacePickerOverflowTargetsHiddenSegmentsAndStopsAtBothEnds() {
+        let contentWidth: CGFloat = 415
+        let first = BrowserSpacePickerOverflow(
+            visibleRect: CGRect(x: 0, y: 0, width: 141, height: 36),
+            contentWidth: contentWidth, spaceCount: 10
+        )
+        XCTAssertNil(first.previousIndex)
+        XCTAssertEqual(first.nextIndex, 3)
+        let middle = BrowserSpacePickerOverflow(
+            visibleRect: CGRect(x: 123, y: 0, width: 141, height: 36),
+            contentWidth: contentWidth, spaceCount: 10
+        )
+        XCTAssertEqual(middle.previousIndex, 2)
+        XCTAssertEqual(middle.nextIndex, 6)
+        let last = BrowserSpacePickerOverflow(
+            visibleRect: CGRect(x: 274, y: 0, width: 141, height: 36),
+            contentWidth: contentWidth, spaceCount: 10
+        )
+        XCTAssertEqual(last.previousIndex, 6)
+        XCTAssertNil(last.nextIndex)
+        let fitting = BrowserSpacePickerOverflow(
+            visibleRect: CGRect(x: 0, y: 0, width: 500, height: 36),
+            contentWidth: 500, spaceCount: 10
+        )
+        XCTAssertEqual(fitting, BrowserSpacePickerOverflow())
+        XCTAssertEqual(
+            BrowserSpacePickerOverflow(
+                visibleRect: CGRect(x: -20, y: 0, width: 500, height: 36),
+                contentWidth: 0, spaceCount: 0
+            ), BrowserSpacePickerOverflow())
+    }
+
+    func testOverflowControlsStayInsideTheBalancedPickerBudget() {
+        for width in [260.0, 289.0, 380.0] {
+            for count in [1, 4, 5, 7, 20] {
+                let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
+                    availableWidth: width, spaceCount: count,
+                    leadingUtilityWidth: 0, trailingUtilityWidth: 32
+                )
+                XCTAssertTrue(allocation.keepsUtilitiesClear)
+                XCTAssertEqual((allocation.pickerMinX + allocation.pickerMaxX) / 2, width / 2)
+                XCTAssertGreaterThanOrEqual(allocation.scrollViewportWidth, 40)
+                let controls = allocation.usesOverflow ? 56.0 : 0
+                XCTAssertEqual(allocation.scrollViewportWidth + controls, allocation.pickerViewportWidth)
+            }
+        }
+    }
+
+    @MainActor
     func testPinnedExtensionButtonsStayCenteredDuringLayoutChanges() throws {
         let actions = (0..<3).map {
             BrowserExtensionActionPresentation(
