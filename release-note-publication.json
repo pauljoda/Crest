@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-09-03-refresh-before-update-download",
+    "development": "2026-09-05-native-desktop-picture-in-picture",
     "nightly": "2026-09-03-hover-link-destinations"
   }
 }

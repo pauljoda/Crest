@@ -6,41 +6,52 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.27</title>
-            <pubDate>Thu, 03 Sep 2026 14:49:09 +0000</pubDate>
+            <title>0.5.65</title>
+            <pubDate>Sat, 05 Sep 2026 22:14:58 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1068</sparkle:version>
-            <sparkle:shortVersionString>0.5.27</sparkle:shortVersionString>
+            <sparkle:version>1071</sparkle:version>
+            <sparkle:shortVersionString>0.5.65</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 42 user-facing changes.
+
+### New
+
+- Let extensions sign you in silently through their web authentication flow, so Claude stays signed in across launches
+- Organize open tabs in named, colored folders that sync and move between saved and open tabs
+- Keep videos visible in native Picture in Picture when switching Mac tabs, with an option to turn automatic entry off
+
 ### Improved
 
-- Show the focused tab title in macOS window lists while keeping locked Spaces private
-- Find builds by release channel with clear publication dates and a separate download for every build
+- Keep one extension sidebar open in each Space and switch assistants from the toolbar
+- Move tabs and whole folders through the sidebar with clearer placement and immediate access after mobile drops
 
 ### Fixed
 
-- Prevent the page loading bar from staying visible after in-page navigation
-- Switch Spaces without flashing blank pages on macOS
-- Unlock private Spaces comfortably at larger text sizes and keep loaded tabs in place when locking
-- Check for the newest build in your channel before downloading an update
+- Deliver messages from websites embedded in an extension’s side panel back to that extension, as Chrome does
+- Let extensions group tabs and open side panels in your window even while one of their popup windows has focus
+- Give extensions with a module background worker the same tab grouping surface as classic workers, so Claude's browser tools can anchor to a tab group
+- Improve Claude and ChatGPT browser tools, sign-in, page reading and screenshots
+- Keep website styling extensions from changing other extensions’ sidebars
+- Support extensions such as SponsorBlock that use relative background-worker paths
+- Recover synced open-tab folders after updating Crest and handle unsupported folder records on older versions
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/65e0d3cd309e64621c5c24331fad57d0001ed058...712e72cbf055fed88d913ce58b9225c3d012bd1d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.27-2026-09-03-1068-r68.1/Installer-Crest-0.5.27-development-2026-09-03-712e72c-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/712e72cbf055fed88d913ce58b9225c3d012bd1d...56bc3649f1c26c54b19efd00cd329eec2a7b7238) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.65-2026-09-05-1071-r71.1/Installer-Crest-0.5.65-development-2026-09-05-56bc364-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.27-2026-09-03-1068-r68.1/Installer-Crest-0.5.27-development-2026-09-03-712e72c-arm64.dmg" length="9017632" type="application/octet-stream" sparkle:edSignature="ggTJNvmeeLb6eJvYhOaf3rMVqsiCTXGe+2ucQIWrlyK53P0gWodwTo+nidiTJ/kOXBlYnsZDl+Bj9sElxovoAQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.65-2026-09-05-1071-r71.1/Installer-Crest-0.5.65-development-2026-09-05-56bc364-arm64.dmg" length="9933598" type="application/octet-stream" sparkle:edSignature="yUaEHSEYywLw9m4jW0WsLOTLCj0K6JrVfco8cSqoc0FOr0c9AeEfpu9P9httxcw5rVfHxbxNuHHUGIHP2fRRDg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: wqcZ2MagAq5D5IduV10Em5+Eod5iYC+gBGGriE5v6Rr8owuPJNH4ubjQGoF9FKKAjlVqAvpYe7e+n3Cfh0uxBA==
-length: 2465
+edSignature: dU7X9MLncQtyncJfPTyAMxMv5Dm1NANeJASarB9QGB+zcb/UJPZEP2DxiQcCbL1+2hj3nSQ7x7m1CBF8YMqYAQ==
+length: 3311
 -->
