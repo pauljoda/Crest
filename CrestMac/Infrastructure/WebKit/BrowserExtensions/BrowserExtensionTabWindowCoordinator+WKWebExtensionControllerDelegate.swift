@@ -10,12 +10,38 @@ private let browserExtensionPopupLog = Logger(
 extension BrowserExtensionTabWindowCoordinator:
     WKWebExtensionControllerDelegate
 {
+    /// A no-popup action still depends on a background listener. Wake it before
+    /// dispatch, just as we do before a popup sends its first runtime message.
+    func requestToolbarAction(for context: WKWebExtensionContext, tab: (any WKWebExtensionTab)?) {
+        let key = ObjectIdentifier(context)
+        guard pendingToolbarActionContexts.insert(key).inserted else { return }
+        actionDidUpdate?()
+        prepareActionPopupBackground(for: context) { [weak self, weak context] _ in
+            guard let self else { return }
+            self.pendingToolbarActionContexts.remove(key)
+            self.actionDidUpdate?()
+            guard let context, let controller = context.webExtensionController,
+                self.verifiedEntry(controller: controller, context: context) != nil
+            else { return }
+            // This is the original host click, deferred during wake-up. Start
+            // its short authorization window when the worker can receive it.
+            self.noteUserGesture(for: context)
+            if let tab { context.userGesturePerformed(in: tab) }
+            browserExtensionPopupLog.notice(
+                "dispatching toolbar action after background preparation for \(context.uniqueIdentifier, privacy: .public)"
+            )
+            context.performAction(for: tab)
+        }
+    }
+
     func requestActionPopup(
         _ action: WKWebExtension.Action,
         for context: WKWebExtensionContext,
         anchor: BrowserExtensionPopupAnchor?
     ) {
         let key = ObjectIdentifier(context)
+        if popupToggle.consumeDismissal(for: key) { return }
+        if popupToggle.closeIfShown(for: key) { return }
         guard pendingActionPopupRequests[key] == nil else { return }
         let request = BrowserExtensionActionPopupRequest(
             id: UUID(),
@@ -29,10 +55,13 @@ extension BrowserExtensionTabWindowCoordinator:
                     completion(.timedOut)
                     return
                 }
-                self.prepareActionPopupBackground(
-                    for: context,
-                    completion: completion
-                )
+                self.popupToggle.afterClosing(key) { [weak self, weak context] in
+                    guard let self, let context else {
+                        completion(.timedOut)
+                        return
+                    }
+                    self.prepareActionPopupBackground(for: context, completion: completion)
+                }
             },
             performAction: { [weak self] in
                 guard let self,
@@ -130,54 +159,91 @@ extension BrowserExtensionTabWindowCoordinator:
         for context: WKWebExtensionContext
     ) {
         guard action.presentsPopup else { return }
-        prepareActionPopupBackground(for: context) { _ in }
+        prepareActionPopupBackground(for: context, allowsRecovery: false) { _ in }
     }
 
     func isActionPopupLoading(
         for context: WKWebExtensionContext
     ) -> Bool {
         pendingActionPopupRequests[ObjectIdentifier(context)] != nil
+            || pendingToolbarActionContexts.contains(ObjectIdentifier(context))
     }
 
     private func prepareActionPopupBackground(
         for context: WKWebExtensionContext,
+        allowsRecovery: Bool = true,
         completion: @escaping BrowserExtensionPopupBackgroundWarmUpObserver
     ) {
         let key = ObjectIdentifier(context)
+        if allowsRecovery { popupBackgroundRecoveryRequests.insert(key) }
         let now = popupBackgroundClock.now
-        if let readyUntil = popupBackgroundReadyUntil[key],
-            now < readyUntil
-        {
-            completion(.loaded)
-            return
-        }
-        popupBackgroundReadyUntil.removeValue(forKey: key)
+        let recentlyPrepared = popupBackgroundReadyUntil[key].map { now < $0 } == true
+        if !recentlyPrepared { popupBackgroundReadyUntil.removeValue(forKey: key) }
         if popupBackgroundWarmUpObservers[key] != nil {
             popupBackgroundWarmUpObservers[key]?.append(completion)
             return
         }
         popupBackgroundWarmUpObservers[key] = [completion]
-        BrowserExtensionPopupBackgroundWarmUp(
-            context: context,
-            deadline: popupBackgroundWarmUpDeadline
-        ).prepare { [weak self] outcome in
+        let finish: BrowserExtensionPopupBackgroundWarmUpObserver = { [weak self] outcome in
             guard let self else {
                 completion(outcome)
                 return
             }
-            if case .loaded = outcome {
-                self.popupBackgroundReadyUntil[key] =
-                    self.popupBackgroundClock.now.advanced(
-                        by: self.popupBackgroundWarmCacheDuration
-                    )
-            }
-            let observers = self.popupBackgroundWarmUpObservers.removeValue(
-                forKey: key
-            ) ?? []
-            for observer in observers {
-                observer(outcome)
+            Task { @MainActor in
+                let verifiedOutcome = await self.verifyActionBackground(context, outcome: outcome)
+                if case .loaded = verifiedOutcome {
+                    self.popupBackgroundReadyUntil[key] =
+                        self.popupBackgroundClock.now.advanced(by: self.popupBackgroundWarmCacheDuration)
+                }
+                let observers = self.popupBackgroundWarmUpObservers.removeValue(forKey: key) ?? []
+                self.popupBackgroundRecoveryRequests.remove(key)
+                for observer in observers { observer(verifiedOutcome) }
             }
         }
+        if recentlyPrepared {
+            finish(.loaded)
+        } else {
+            BrowserExtensionPopupBackgroundWarmUp(context: context, deadline: popupBackgroundWarmUpDeadline)
+                .prepare(finish)
+        }
+    }
+
+    private func verifyActionBackground(
+        _ context: WKWebExtensionContext, outcome: BrowserExtensionBackgroundWarmUp.Outcome
+    ) async -> BrowserExtensionBackgroundWarmUp.Outcome {
+        let key = ObjectIdentifier(context)
+        guard case .loaded = outcome, backgroundHealthContexts.contains(key), nativeMessagingHandler != nil,
+            let client = verifiedNativeMessagingAuthorizations[key]?.clientID,
+            let controller = context.webExtensionController,
+            verifiedEntry(controller: controller, context: context) != nil
+        else { return outcome }
+        if await BrowserExtensionBackgroundHealth.shared.responds(client: client) { return .loaded }
+        // Hover can prepare a background, but only an actual action may reload
+        // it. A click joining a pending hover request upgrades that request.
+        guard popupBackgroundRecoveryRequests.contains(key), backgroundHealthContexts.contains(key),
+            context.webExtensionController === controller,
+            verifiedEntry(controller: controller, context: context) != nil,
+            controller.configuration.isPersistent
+        else { return .timedOut }
+        browserExtensionPopupLog.error(
+            "background did not answer; reloading context for \(context.uniqueIdentifier, privacy: .public)")
+        do {
+            // Preserve the context identity, grants and persistent storage. A
+            // full context reload closes WebKit's lingering background page;
+            // loadBackgroundContent alone cannot restart its stopped worker.
+            try controller.unload(context)
+            try controller.load(context)
+        } catch { return .failed(error) }
+        let recovered = await BrowserExtensionBackgroundWarmUp(context: context).prepare()
+        guard case .loaded = recovered else { return recovered }
+        guard await BrowserExtensionBackgroundHealth.shared.responds(client: client) else {
+            browserExtensionPopupLog.error(
+                "background did not answer after recovery for \(context.uniqueIdentifier, privacy: .public)")
+            return .timedOut
+        }
+        browserExtensionPopupLog.notice(
+            "background recovered for \(context.uniqueIdentifier, privacy: .public)")
+        return .loaded
     }
 
     @discardableResult
@@ -220,6 +286,9 @@ extension BrowserExtensionTabWindowCoordinator:
         if popover.isShown {
             action.closePopup()
             return true
+        }
+        if let context = action.webExtensionContext {
+            popupToggle.observe(popover, action: action, key: ObjectIdentifier(context), anchor: anchor)
         }
         popover.show(
             relativeTo: presentationSource.rect,

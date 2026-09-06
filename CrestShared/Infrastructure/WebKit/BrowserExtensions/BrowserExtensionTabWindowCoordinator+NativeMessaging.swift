@@ -36,6 +36,14 @@ extension BrowserExtensionTabWindowCoordinator {
         in owningSpaceID: SpaceID? = nil
     ) {
         let key = ObjectIdentifier(context)
+        #if os(macOS)
+            BrowserExtensionClipboardBridge.shared.unregister(context: context)
+            backgroundHealthContexts.remove(key)
+            pendingActionPopupRequests[key] = nil
+            pendingToolbarActionContexts.remove(key)
+            popupBackgroundReadyUntil[key] = nil
+            popupToggle.forget(key)
+        #endif
         if let client = sidebarClientsByContext.removeValue(forKey: key) {
             sidebarUserGestures.remove(client: client)
             sidebarService?.unregister(client: client)
@@ -89,6 +97,30 @@ extension BrowserExtensionTabWindowCoordinator {
         for extensionContext: WKWebExtensionContext,
         replyHandler: @escaping (Any?, (any Error)?) -> Void
     ) {
+        #if os(macOS)
+            if applicationIdentifier == BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier,
+                let payload = message as? [String: Any], let api = payload["api"] as? String,
+                api == "clipboard.readText" || api == "clipboard.permission"
+            {
+                guard
+                    verifiedNativeMessagingAuthorizations[ObjectIdentifier(extensionContext)]?
+                        .allowsInternalCapabilityBroker == true,
+                    verifiedEntry(controller: controller, context: extensionContext) != nil
+                else {
+                    replyHandler(nil, BrowserExtensionNativeMessagingError.unverifiedExtension)
+                    return
+                }
+                let clipboard = BrowserExtensionClipboardBridge.shared
+                if api == "clipboard.permission" {
+                    replyHandler(["granted": clipboard.hasReadPermission(context: extensionContext)], nil)
+                } else if let text = clipboard.readText(context: extensionContext) {
+                    replyHandler(["text": text], nil)
+                } else {
+                    replyHandler(nil, BrowserExtensionCapabilityBrokerError.permissionDenied("clipboardRead"))
+                }
+                return
+            }
+        #endif
         if applicationIdentifier == BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier,
             let payload = message as? [String: Any], payload["api"] as? String == "runtime.callbackError"
         {

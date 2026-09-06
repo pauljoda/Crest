@@ -61,6 +61,10 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var verifiedNativeMessagingAuthorizations: [ObjectIdentifier: BrowserExtensionNativeMessagingAuthorization] = [:]
     #if os(macOS)
         var pendingActionPopupRequests: [ObjectIdentifier: BrowserExtensionActionPopupRequest] = [:]
+        var pendingToolbarActionContexts: Set<ObjectIdentifier> = []
+        let popupToggle = BrowserExtensionPopupToggle()
+        var backgroundHealthContexts: Set<ObjectIdentifier> = []
+        var popupBackgroundRecoveryRequests: Set<ObjectIdentifier> = []
         var popupBackgroundWarmUpObservers: [ObjectIdentifier: [BrowserExtensionPopupBackgroundWarmUpObserver]] = [:]
         var popupBackgroundReadyUntil: [ObjectIdentifier: ContinuousClock.Instant] = [:]
         let popupBackgroundClock = ContinuousClock()

@@ -54,6 +54,57 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         return webView
     }
 
+    func testClipboardCapabilityIsPrivateAndStableAcrossPreparation() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-clipboard-package-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("// vendor script".utf8).write(to: root.appending(path: "content.js"))
+        let manifest: [String: Any] = [
+            "manifest_version": 3, "name": "Clipboard", "version": "1.0",
+            "permissions": ["clipboardRead"],
+            "content_scripts": [
+                ["matches": ["https://example.com/*"], "js": ["content.js"]],
+                ["matches": ["https://example.com/*"], "js": ["content.js"], "world": "MAIN"],
+            ],
+            "web_accessible_resources": [["resources": ["*"], "matches": ["<all_urls>"]]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(to: root.appending(path: "manifest.json"))
+        let preparer = BrowserWebExtensionCompatibilityPackagePreparer()
+        let first = try XCTUnwrap(
+            preparer.prepareStoredResource(
+                root, requestedPermissions: ["clipboardRead"], runtimeIdentity: fixtureRuntimeIdentity))
+        defer { try? FileManager.default.removeItem(at: first.resourceURL.deletingLastPathComponent()) }
+        let firstManifest = try Data(contentsOf: first.resourceURL.appending(path: "manifest.json"))
+        let token = try String(
+            contentsOf: first.resourceURL.appending(path: BrowserExtensionClipboardCompatibility.tokenResource),
+            encoding: .utf8)
+        XCTAssertNotNil(UUID(uuidString: token))
+        let second = try XCTUnwrap(
+            preparer.prepareStoredResource(
+                root, requestedPermissions: ["clipboardRead"], runtimeIdentity: fixtureRuntimeIdentity))
+        XCTAssertEqual(first.resourceURL, second.resourceURL)
+        XCTAssertEqual(try Data(contentsOf: second.resourceURL.appending(path: "manifest.json")), firstManifest)
+        XCTAssertEqual(
+            try String(
+                contentsOf: second.resourceURL.appending(path: BrowserExtensionClipboardCompatibility.tokenResource),
+                encoding: .utf8), token)
+        let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: firstManifest) as? [String: Any])
+        let resources = try XCTUnwrap(
+            (decoded["web_accessible_resources"] as? [[String: Any]])?.first?["resources"] as? [String])
+        XCTAssertTrue(resources.contains("content.js"))
+        XCTAssertFalse(
+            resources.contains {
+                $0.hasPrefix(BrowserExtensionClipboardCompatibility.resourcePrefix) || $0.contains("*")
+            })
+        let scripts = try XCTUnwrap(decoded["content_scripts"] as? [[String: Any]])
+        XCTAssertTrue(
+            (scripts[0]["js"] as? [String] ?? []).contains {
+                $0.hasPrefix(BrowserExtensionClipboardCompatibility.resourcePrefix)
+            })
+        XCTAssertEqual(scripts[1]["js"] as? [String], ["content.js"])
+        XCTAssertFalse(String(decoding: firstManifest, as: UTF8.self).contains(token))
+    }
+
     func testStoreItemRecognizesDarkReaderAndRejectsUntrustedLookalikes() throws {
         let item = try XCTUnwrap(
             BrowserChromeWebStoreItem(

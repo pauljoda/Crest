@@ -75,6 +75,11 @@ final class BrowserExtensionPopupAnchor {
         sourceWindow?.contentView ?? fallbackWindow?.contentView
     }
 
+    func contains(event: NSEvent) -> Bool {
+        guard let sourceView, let window = sourceView.window, event.window === window else { return false }
+        return sourceView.bounds.contains(sourceView.convert(event.locationInWindow, from: nil))
+    }
+
     func presentationSource(
         fallbackWindow: NSWindow?
     ) -> (view: NSView, rect: CGRect)? {

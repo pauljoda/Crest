@@ -369,7 +369,7 @@ final class BrowserExtensionRuntimeContextController {
         let webExtension = try await WKWebExtension(
             resourceBaseURL: resourceBaseURL
         )
-        return try load(
+        let context = try load(
             webExtension: webExtension,
             extensionID: extensionID,
             in: space,
@@ -382,6 +382,26 @@ final class BrowserExtensionRuntimeContextController {
                 capabilityBrokerGrantedPermissions,
             allowsInternalCapabilityBroker: allowsInternalCapabilityBroker
         )
+        #if os(macOS)
+            if allowsInternalCapabilityBroker,
+                let token = try? String(
+                    contentsOf: resourceBaseURL.appending(path: BrowserExtensionClipboardCompatibility.tokenResource),
+                    encoding: .utf8),
+                UUID(uuidString: token) != nil
+            {
+                BrowserExtensionClipboardBridge.shared.register(token: token, context: context) {
+                    [weak permissions, weak context] in
+                    guard let permissions, let context else { return false }
+                    return permissions.hasBrowserManagedPermission("clipboardRead", for: context)
+                }
+            }
+            if FileManager.default.fileExists(
+                atPath: resourceBaseURL.appending(path: BrowserExtensionBackgroundHealth.resourceName).path)
+            {
+                tabWindowCoordinator.backgroundHealthContexts.insert(ObjectIdentifier(context))
+            }
+        #endif
+        return context
     }
 
     func loadInstallation(

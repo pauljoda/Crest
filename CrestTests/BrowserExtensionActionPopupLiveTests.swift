@@ -26,6 +26,28 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
     /// nothing left to do.
     private static let backgroundEvictionIdleSeconds = 45
 
+    func testLiveFirefoxDarkReaderPopupCompletesAcrossPersistentRestoration() async throws {
+        try skipUnlessLiveRunRequested()
+        let candidate = try await mozillaCandidate(slug: "darkreader")
+        for restored in [false, true] {
+            let outcome = try await popupOutcome(
+                candidate: candidate,
+                extensionID: "addon@darkreader.org",
+                activeTabURL: URL(string: "https://example.com/"),
+                viaRestoration: restored,
+                viaPopover: true,
+                idleSecondsBeforePresenting: restored ? Self.backgroundEvictionIdleSeconds : 0,
+                usesEphemeralWebKitStorage: false,
+                warmsPopupBeforeMeasurement: false
+            )
+            XCTAssertNotNil(
+                outcome.readyMilliseconds,
+                "Firefox Dark Reader stalled, restored=\(restored). Host calls: \(outcome.hostCalls). Errors: \(outcome.contextErrors)"
+            )
+            assertNoStalledHostCall(outcome.hostCalls, label: "Firefox persistent restoration=\(restored)")
+        }
+    }
+
     func testLiveDarkReaderPopupCompletesOnEveryActiveTabAcrossRestoration()
         async throws
     {
@@ -461,6 +483,35 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
     }
 
     private func mozillaCandidate(slug: String) async throws -> LiveCandidate {
+        if let fixtureRoot = ProcessInfo.processInfo.environment["CREST_FIREFOX_PACKAGE_FIXTURE"] {
+            let root = URL(filePath: fixtureRoot).appending(path: slug)
+            let record = try JSONDecoder().decode(
+                BrowserExtensionInstallation.self,
+                from: Data(contentsOf: root.appending(path: "installation.json"))
+            )
+            guard case .mozillaAddons(let source) = record.source else {
+                throw XCTSkip("The supplied fixture is not a Firefox installation.")
+            }
+            let item = try XCTUnwrap(BrowserMozillaAddonsItem(url: source.storeURL))
+            let archive = try Data(contentsOf: root.appending(path: "package.xpi"))
+            let package = try BrowserXPIVerifier().verify(
+                archive,
+                expectedSHA256Hex: source.xpiSHA256Hex,
+                expectedByteCount: archive.count,
+                extensionID: source.extensionID
+            )
+            print("Installed Firefox fixture: \(record.displayName) \(record.version ?? "unknown")")
+            return .mozilla(
+                .init(
+                    item: item, source: source,
+                    verifiedPackage: package,
+                    displayName: record.displayName, version: record.version, displayDescription: nil,
+                    requestedPermissions: record.requestedPermissions, requestedHosts: record.requestedHosts,
+                    errors: [], iconPayload: nil, hasOptionsPage: record.hasOptionsPage == true,
+                    hasCommands: record.hasCommands == true, isMozillaRecommended: false,
+                    nativeMessagingCapability: .available
+                ))
+        }
         let item = try XCTUnwrap(
             BrowserMozillaAddonsItem(
                 url: URL(

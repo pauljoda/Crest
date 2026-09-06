@@ -170,7 +170,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             let installed = try installCompatibilityLayer(
                 in: stagingResourceURL,
                 requestedPermissions: requestedPermissions,
-                runtimeIdentity: runtimeIdentity
+                runtimeIdentity: runtimeIdentity,
+                clipboardCapability: try? String(
+                    contentsOf: resourceURL.appending(path: BrowserExtensionClipboardCompatibility.tokenResource),
+                    encoding: .utf8)
             )
             guard installed else {
                 try? fileManager.removeItem(at: stagingRootURL)
@@ -363,7 +366,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
     func installCompatibilityLayer(
         in resourceURL: URL,
         requestedPermissions: [String],
-        runtimeIdentity: BrowserExtensionRuntimeIdentity
+        runtimeIdentity: BrowserExtensionRuntimeIdentity,
+        clipboardCapability: String? = nil
     ) throws -> Bool {
         guard
             Self.requiresCompatibilityLayer(
@@ -428,6 +432,23 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 at: resourceURL.appending(path: compatibilityScriptName)
             )
             return false
+        }
+        let clipboardPermissions = Set(
+            (manifest["permissions"] as? [String] ?? []) + (manifest["optional_permissions"] as? [String] ?? []))
+        if clipboardPermissions.contains("clipboardRead") {
+            let token = clipboardCapability.flatMap { UUID(uuidString: $0)?.uuidString } ?? UUID().uuidString
+            try token.write(
+                to: resourceURL.appending(path: BrowserExtensionClipboardCompatibility.tokenResource), atomically: true,
+                encoding: .utf8)
+            let script = BrowserExtensionClipboardCompatibility.script(token: token)
+            let name = Self.generatedJavaScriptName(
+                prefix: BrowserExtensionClipboardCompatibility.resourcePrefix, source: script)
+            try script.write(to: resourceURL.appending(path: name), atomically: true, encoding: .utf8)
+            _ = Self.installContentScriptCompatibility(in: &manifest, compatibilityScriptName: name)
+            try BrowserExtensionClipboardCompatibility.protectResources(in: &manifest, resourceURL: resourceURL)
+        }
+        if manifest["background"] != nil {
+            try Data().write(to: resourceURL.appending(path: BrowserExtensionBackgroundHealth.resourceName))
         }
         let updatedManifestData = try JSONSerialization.data(
             withJSONObject: manifest,
@@ -3901,6 +3922,11 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         if (permissionRequestContainsInternalAccess(request)) {
                             return Promise.resolve(false);
                         }
+                        if (isPrivilegedExtensionContext && request?.permissions?.includes("clipboardRead")) {
+                            const remaining = {...request, permissions: request.permissions.filter(name => name !== "clipboardRead")};
+                            return requestCapability("clipboard.permission", {}, []).then(response =>
+                                response.granted ? containsOperation(remaining, failure) : false);
+                        }
                         const partition = partitionPermissionRequest(request);
                         if (partition.emulated.some((permission) =>
                             !requiredPermissionNames.has(permission)
@@ -3946,7 +3972,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             if (!Array.isArray(result.origins)) {
                                 result.origins = [];
                             }
-                            resolve(result);
+                            if (isPrivilegedExtensionContext && [...(declaredManifest.permissions ?? []), ...(declaredManifest.optional_permissions ?? [])].includes("clipboardRead")) {
+                                result.permissions = result.permissions.filter(name => name !== "clipboardRead");
+                                requestCapability("clipboard.permission", {}, []).then(response => {
+                                    if (response.granted) result.permissions.push("clipboardRead");
+                                    resolve(result);
+                                }, () => resolve(result));
+                            } else resolve(result);
                         };
                         const timeout = globalThis.setTimeout(
                             () => {
@@ -4122,7 +4154,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     // how it settled. This is what shows whether an extension
                     // asked Crest for something and what Crest answered.
                     const traceCapability = (suffix, detail) => {
-                        if (!capturesExtensionConsole) return;
+                        if (!capturesExtensionConsole || api.startsWith("clipboard.")) return;
                         try {
                             reportRuntimeTrace(`capability.${api}${suffix}`, {
                                 context: executionProcess,
@@ -4188,6 +4220,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     }
                     return response;
                 };
+                if (isPrivilegedExtensionContext && globalThis.navigator?.clipboard
+                    && [...(declaredManifest.permissions ?? []), ...(declaredManifest.optional_permissions ?? [])].includes("clipboardRead")) {
+                    Object.defineProperty(globalThis.navigator.clipboard, "readText", {
+                        configurable: true,
+                        value: () => requestCapability("clipboard.readText", {}, [], response => response.text)
+                    });
+                }
                 const uncontrollableSetting = (effectiveValue) =>
                     Object.freeze({
                         onChange: noopEvent,
@@ -4377,7 +4416,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                             // A delivered event proves the watch works, so the
                             // next disconnect starts a fresh budget.
                             failures = 0;
-                            onMessage(message);
+                            onMessage(message, connected);
                         });
                         port.onDisconnect?.addListener(() => {
                             port = undefined;
@@ -4404,6 +4443,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         resubscribe
                     });
                 };
+                // Only the background answers this host liveness challenge.
+                // The host sends no periodic health traffic; WebKit owns
+                // the native port and background process lifetime.
+                if (isBackgroundContext) {
+                    capabilityWatch({
+                        api: "background.health",
+                        hasListeners: () => true,
+                        subscription: () => ({api: "background.health.watch"}),
+                        onMessage: (message, port) => {
+                            if (message?.api !== "background.health.ping" || typeof message.nonce !== "string") return;
+                            try { port.postMessage({api: "background.health.pong", nonce: message.nonce}); } catch {}
+                        }
+                    }).connect();
+                }
                 const notificationListeners = Object.freeze({
                     clicked: new Set(),
                     buttonClicked: new Set(),

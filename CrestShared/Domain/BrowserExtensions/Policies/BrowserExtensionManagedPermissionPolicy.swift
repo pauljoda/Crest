@@ -3,7 +3,7 @@ import Foundation
 /// Permissions whose user decisions Crest owns because WebKit does not retain
 /// them. Declaring a permission is not a grant, and this does not publish an API.
 enum BrowserExtensionManagedPermissionPolicy {
-    static let names: Set<String> = ["debugger"]
+    static let names: Set<String> = ["debugger", "clipboardRead"]
 
     static func requestedPermissions(
         native: [String], manifest: [String: Any], excluding excluded: Set<String> = []

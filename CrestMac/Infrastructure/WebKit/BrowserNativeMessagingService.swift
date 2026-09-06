@@ -98,6 +98,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let externalMessageEventMessage: (BrowserExtensionExternalMessageDelivery) -> [String: Any]?
     private var watch: Watch?
     private var webpageMenuClickObserver: UUID?
+    private var backgroundHealthEndpoint: UUID?
 
     init(
         authorization: BrowserExtensionNativeMessagingAuthorization,
@@ -146,6 +147,20 @@ final class BrowserExtensionCapabilityBrokerConnection {
             throw BrowserExtensionCapabilityBrokerError.invalidRequest
         }
         switch api {
+        case "background.health.watch":
+            guard authorization.allowsInternalCapabilityBroker, let client = authorization.clientID else {
+                throw BrowserExtensionCapabilityBrokerError.permissionDenied("internalCapabilityBroker")
+            }
+            if backgroundHealthEndpoint == nil {
+                let id = UUID()
+                backgroundHealthEndpoint = id
+                BrowserExtensionBackgroundHealth.shared.register(client: client, id: id, publish: publish)
+            }
+        case "background.health.pong":
+            guard let endpoint = backgroundHealthEndpoint, let nonce = request["nonce"] as? String else {
+                throw BrowserExtensionCapabilityBrokerError.invalidRequest
+            }
+            BrowserExtensionBackgroundHealth.shared.acknowledge(nonce: nonce, endpoint: endpoint)
         case "contextMenus.replace":
             try replaceContextMenus(request)
         case "contextMenus.ready":
@@ -180,6 +195,10 @@ final class BrowserExtensionCapabilityBrokerConnection {
     }
 
     func stop() {
+        if let endpoint = backgroundHealthEndpoint, let client = authorization.clientID {
+            BrowserExtensionBackgroundHealth.shared.unregister(client: client, id: endpoint)
+        }
+        backgroundHealthEndpoint = nil
         if let clientID = authorization.clientID,
             let webpageMenuClickObserver
         {

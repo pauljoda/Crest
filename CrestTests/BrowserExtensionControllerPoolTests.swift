@@ -511,6 +511,204 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 .configuration.isPersistent)
     }
 
+    func testGradeTransfererClipboardRead() async throws {
+        guard ProcessInfo.processInfo.environment["CREST_RUN_CLIPBOARD_VALIDATION"] == "1" else {
+            throw XCTSkip(
+                "Set CREST_RUN_CLIPBOARD_VALIDATION=1 to exercise the system clipboard with synthetic grades.")
+        }
+        let board = NSPasteboard.general
+        let saved = (board.pasteboardItems ?? []).map { item in
+            Dictionary(
+                uniqueKeysWithValues: item.types.compactMap { type in item.data(forType: type).map { (type, $0) } })
+        }
+        board.clearContents()
+        let sample = "Example Student\t91\nSample Learner\t84"
+        XCTAssertTrue(board.setString(sample, forType: .string))
+        let changeCount = board.changeCount
+        defer {
+            if board.changeCount == changeCount {
+                board.clearContents()
+                board.writeObjects(
+                    saved.map { data in
+                        let item = NSPasteboardItem()
+                        for (type, bytes) in data { item.setData(bytes, forType: type) }
+                        return item
+                    })
+            }
+        }
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-clipboard-diagnostic-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try JSONSerialization.data(withJSONObject: [
+            "manifest_version": 3, "name": "Clipboard Read Diagnostic", "version": "1.0",
+            "permissions": ["clipboardRead"], "action": [:],
+            "web_accessible_resources": [["resources": ["*"], "matches": ["https://clipboard.example/*"]]],
+            "content_scripts": [["matches": ["https://clipboard.example/*"], "js": ["content.js"]]],
+        ]).write(to: root.appending(path: "manifest.json"))
+        try Data(
+            """
+            const importClipboard = () => {
+                const input = document.createElement('textarea');
+                document.body.appendChild(input); input.select();
+                const accepted = document.execCommand('paste');
+                const value = input.value;
+                input.blur(); input.remove();
+                navigator.clipboard.readText().then(text => {
+                    document.documentElement.dataset.clipboardDiagnostic = JSON.stringify({accepted, value, text});
+                }, error => {
+                    document.documentElement.dataset.clipboardDiagnostic = JSON.stringify({accepted, value, error: error.name});
+                });
+            };
+            document.addEventListener('crest-import-test', importClipboard);
+            importClipboard();
+            """.utf8
+        ).write(to: root.appending(path: "content.js"))
+        try Data("<html><body><script src='clipboard-page.js'></script></body></html>".utf8).write(
+            to: root.appending(path: "clipboard-page.html"))
+        try Data(
+            """
+            const readClipboard = () => Promise.all([
+                navigator.clipboard.readText().then(text => ({text}), error => ({error: String(error)})),
+                chrome.permissions.contains({permissions:['clipboardRead']}), chrome.permissions.getAll()
+            ]).then(([read, granted, all]) => { document.documentElement.dataset.result = JSON.stringify({...read, granted, listed: all.permissions.includes('clipboardRead')}); });
+            document.addEventListener('crest-import-test', readClipboard);
+            readClipboard();
+            """.utf8
+        ).write(to: root.appending(path: "clipboard-page.js"))
+        let space = BrowserSession.preview.spaces[0]
+        let pool = BrowserExtensionControllerPool(
+            storedResourcePreparer: BrowserStoreWebExtensionStoredResourcePreparer())
+        let summary = try await pool.loadUnpackedExtension(from: root, in: space)
+        pool.setPermissionDecision(.allow, for: "clipboardRead", extensionID: summary.id, in: space.id)
+        let context = try XCTUnwrap(pool.toolbarActions(in: space.id, tabID: nil).first?.context)
+        context.setPermissionStatus(.grantedExplicitly, for: URL(string: "https://clipboard.example/")!)
+        let configuration = BrowserPageConfiguration.make(
+            for: space.profile, webExtensionController: pool.controller(for: space))
+        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        let clipboardDelegate = ClipboardValidationDelegate()
+        webView.uiDelegate = clipboardDelegate
+        let waiter = ExtensionNavigationWaiter(webView: webView)
+        try await waiter.load(
+            simulatedRequest: URLRequest(url: URL(string: "https://clipboard.example/")!),
+            responseHTML: "<!doctype html><body>Clipboard simulation</body>")
+        func result() async throws -> [String: Any] {
+            for _ in 0..<200 {
+                if let value = try await webView.evaluateJavaScript(
+                    "document.documentElement.dataset.clipboardDiagnostic") as? String
+                {
+                    return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(value.utf8)) as? [String: Any])
+                }
+                try await Task.sleep(for: .milliseconds(25))
+            }
+            throw NSError(domain: "ClipboardFixtureTimeout", code: 1)
+        }
+        func importAgain() async throws -> [String: Any] {
+            _ = try await webView.evaluateJavaScript(
+                "delete document.documentElement.dataset.clipboardDiagnostic; document.dispatchEvent(new Event('crest-import-test')); true"
+            )
+            return try await result()
+        }
+        let decoded = try await result()
+        XCTAssertEqual(decoded["value"] as? String, sample)
+        XCTAssertEqual(decoded["accepted"] as? Bool, true)
+        XCTAssertEqual(decoded["text"] as? String, sample)
+
+        // A real page paste may show WebKit's native confirmation. Check the
+        // world's native function identity without opening that interactive menu.
+        let websitePasteIsNative =
+            try await webView.evaluateJavaScript("Document.prototype.execCommand.toString().includes('[native code]')")
+            as? Bool
+        XCTAssertEqual(websitePasteIsNative, true)
+        let forged = try await webView.evaluateJavaScript("prompt('crest-extension-clipboard:forged', '')")
+        XCTAssertTrue(forged is NSNull)
+
+        let fetchResults: Any? =
+            try await webView.callAsyncJavaScript(
+                "return JSON.stringify(await Promise.all([publicURL, privateURL].map(url => fetch(url).then(response => Boolean(response.ok)).catch(() => false))))",
+                arguments: [
+                    "publicURL": context.baseURL.appending(path: "content.js").absoluteString,
+                    "privateURL": context.baseURL.appending(path: BrowserExtensionClipboardCompatibility.tokenResource)
+                        .absoluteString,
+                ],
+                in: nil, contentWorld: .page)
+        XCTAssertEqual(
+            fetchResults as? String, "[true,false]",
+            "Websites may read authored public resources, never the clipboard capability.")
+
+        let extensionView = WKWebView(frame: .zero, configuration: try XCTUnwrap(context.webViewConfiguration))
+        extensionView.load(URLRequest(url: context.baseURL.appending(path: "clipboard-page.html")))
+        func extensionResult() async throws -> [String: Any] {
+            for _ in 0..<200 {
+                if let value = try? await extensionView.evaluateJavaScript("document.documentElement.dataset.result")
+                    as? String
+                {
+                    return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(value.utf8)) as? [String: Any])
+                }
+                try await Task.sleep(for: .milliseconds(25))
+            }
+            throw NSError(domain: "ClipboardPageTimeout", code: 1)
+        }
+        let modern = try await extensionResult()
+        XCTAssertEqual(modern["text"] as? String, sample)
+        XCTAssertEqual(modern["granted"] as? Bool, true)
+        XCTAssertEqual(modern["listed"] as? Bool, true)
+
+        pool.setPermissionDecision(.block, for: "clipboardRead", extensionID: summary.id, in: space.id)
+        _ = try await extensionView.evaluateJavaScript(
+            "delete document.documentElement.dataset.result; document.dispatchEvent(new Event('crest-import-test')); true"
+        )
+        let modernDenied = try await extensionResult()
+        XCTAssertNil(modernDenied["text"])
+        XCTAssertEqual(modernDenied["granted"] as? Bool, false)
+        XCTAssertEqual(modernDenied["listed"] as? Bool, false)
+        let denied = try await importAgain()
+        XCTAssertEqual(denied["accepted"] as? Bool, false)
+        XCTAssertEqual(denied["value"] as? String, "")
+        XCTAssertEqual(denied["error"] as? String, "NotAllowedError")
+        pool.setPermissionDecision(.allow, for: "clipboardRead", extensionID: summary.id, in: space.id)
+        let restored = try await importAgain()
+        XCTAssertEqual(restored["value"] as? String, sample)
+        context.setPermissionStatus(.deniedExplicitly, for: URL(string: "https://clipboard.example/")!)
+        let hostDenied = try await importAgain()
+        XCTAssertEqual(hostDenied["value"] as? String, "")
+        XCTAssertEqual(hostDenied["error"] as? String, "NotAllowedError")
+        withExtendedLifetime(clipboardDelegate) {}
+    }
+
+    func testToolbarWithoutPopupWaitsForBackgroundAndCoalescesPendingClicks() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-action-readiness-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try JSONSerialization.data(withJSONObject: [
+            "manifest_version": 3,
+            "name": "Toolbar Readiness",
+            "version": "1.0",
+            "background": ["service_worker": "background.js"],
+            "action": [:],
+        ]).write(to: root.appending(path: "manifest.json"))
+        try Data(
+            """
+            let clicks = 0;
+            setTimeout(() => chrome.action.onClicked.addListener(() => {
+                chrome.action.setBadgeText({text: String(++clicks)});
+            }), 200);
+            """.utf8
+        ).write(to: root.appending(path: "background.js"))
+        let pool = BrowserExtensionControllerPool()
+        let space = BrowserSession.preview.spaces[0]
+        _ = try await pool.loadUnpackedExtension(from: root, in: space)
+        let action = try XCTUnwrap(pool.toolbarActions(in: space.id, tabID: nil).first)
+        XCTAssertFalse(action.action.presentsPopup)
+        pool.perform(action, popupAnchor: nil)
+        XCTAssertTrue(pool.tabWindowCoordinator.isActionPopupLoading(for: action.context))
+        pool.perform(action, popupAnchor: nil)
+        for _ in 0..<400 where action.action.badgeText.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(action.action.badgeText, "1", "The prepared action should reach its listener exactly once.")
+        XCTAssertFalse(pool.tabWindowCoordinator.isActionPopupLoading(for: action.context))
+    }
+
     /// Reading `popupPopover` preloads the popup document, so Crest asks WebKit
     /// to load the extension background before performing the action. The
     /// action itself must still go through `WKWebExtensionContext` so WebKit
@@ -572,6 +770,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             backing: .buffered,
             defer: false
         )
+        // Swift owns this fixture; close must not release it a second time.
+        window.isReleasedWhenClosed = false
         let sourceView = NSView(
             frame: CGRect(x: 20, y: 540, width: 24, height: 24)
         )
@@ -709,6 +909,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             backing: .buffered,
             defer: false
         )
+        // Swift owns this fixture; close must not release it a second time.
+        window.isReleasedWhenClosed = false
         let sourceView = NSView(frame: CGRect(x: 20, y: 540, width: 24, height: 24))
         window.contentView?.addSubview(sourceView)
         window.orderFront(nil)
@@ -5804,4 +6006,19 @@ private final class ExtensionNavigationWaiter: NSObject, WKNavigationDelegate {
 private enum BrowserExtensionFixtureError: Error {
     case injectionTimedOut
     case releasedWebView
+}
+
+@MainActor
+private final class ClipboardValidationDelegate: NSObject, WKUIDelegate {
+    func webView(
+        _ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String,
+        defaultText: String?, initiatedByFrame frame: WKFrameInfo,
+        completionHandler: @escaping @MainActor @Sendable (String?) -> Void
+    ) {
+        if !BrowserExtensionClipboardBridge.shared.handlePrompt(
+            prompt, webView: webView, frame: frame, reply: completionHandler)
+        {
+            completionHandler(nil)
+        }
+    }
 }

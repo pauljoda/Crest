@@ -81,8 +81,9 @@ extension BrowserExtensionToolbarController {
         tabWindowCoordinator.noteUserGesture(for: toolbarAction.context)
         if tabWindowCoordinator.performSidebarAction(for: toolbarAction.context, invocation: .action) { return }
         guard toolbarAction.action.presentsPopup else {
-            toolbarAction.context.performAction(
-                for: toolbarAction.tab
+            tabWindowCoordinator.requestToolbarAction(
+                for: toolbarAction.context,
+                tab: toolbarAction.tab
             )
             return
         }

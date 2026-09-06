@@ -605,6 +605,14 @@
     "2026-09-05-mobile-empty-launch-selection": {
       "category": "fixed",
       "message": "Start fresh mobile sessions on the sidebar or start page without automatically selecting a saved tab or split view"
+    },
+    "2026-09-05-extension-toolbar-idle-and-popup-toggle": {
+      "category": "fixed",
+      "message": "Open extension panels reliably after idle and dismiss popups when clicking their toolbar icon again"
+    },
+    "2026-09-05-extension-clipboard-text-import": {
+      "category": "new",
+      "message": "Let permitted extensions read clipboard text, including grade-transfer tools that use legacy paste"
     }
   }
 }

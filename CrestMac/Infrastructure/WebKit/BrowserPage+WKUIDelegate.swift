@@ -106,6 +106,11 @@ extension BrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         completionHandler: @escaping @MainActor @Sendable (String?) -> Void
     ) {
+        if BrowserExtensionClipboardBridge.shared.handlePrompt(
+            prompt, webView: webView, frame: frame, reply: completionHandler)
+        {
+            return
+        }
         guard
             !interceptDebuggerDialog(
                 .prompt,
