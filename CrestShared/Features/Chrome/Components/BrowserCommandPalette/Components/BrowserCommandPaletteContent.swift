@@ -23,10 +23,12 @@ struct BrowserCommandPaletteContent: View {
             queryIsFocused = true
         }
         .onKeyPress(.downArrow) {
+            guard !model.completionEditing.isComposing else { return .ignored }
             model.moveSelection(by: 1)
             return .handled
         }
         .onKeyPress(.upArrow) {
+            guard !model.completionEditing.isComposing else { return .ignored }
             model.moveSelection(by: -1)
             return .handled
         }

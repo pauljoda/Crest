@@ -641,6 +641,14 @@
     "2026-09-06-start-page-destination-loading": {
       "category": "fixed",
       "message": "Load pages immediately when selected from Start Page, including after launch or switching to a Space with unloaded tabs"
+    },
+    "2026-09-06-space-local-url-autocomplete": {
+      "category": "new",
+      "message": "Complete addresses from the current Space with a subtle preview, then press Tab or Right Arrow to accept"
+    },
+    "2026-09-06-expanded-sidebar-bottom-spacing": {
+      "category": "fixed",
+      "message": "Remove excess bottom space from expanded browser layouts while keeping sidebar controls comfortably inset"
     }
   }
 }

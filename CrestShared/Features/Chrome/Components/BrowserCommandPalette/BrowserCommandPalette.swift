@@ -57,6 +57,10 @@ struct BrowserCommandPalette: View {
             morphID: morphID,
             overlayContentLeadingInset: overlayContentLeadingInset
         )
+        .onChange(of: model.isCompletionSourceAvailable) { _, available in
+            if !available { model.invalidateURLCompletion() }
+        }
+        .onDisappear { model.invalidateURLCompletion() }
     }
 }
 

@@ -34,7 +34,9 @@ struct MobileBrowserSidebarBottomChrome: View {
         .padding(
             .bottom,
             configuration.sidebarIsDocked
-                ? 0
+                ? configuration.reservesBottomChromeInset
+                    ? 0
+                    : BrowserChromeLayout.pageFrameInset
                 : MobileBrowserRootLayout.floatingSidebarBottomChromeInset
         )
     }

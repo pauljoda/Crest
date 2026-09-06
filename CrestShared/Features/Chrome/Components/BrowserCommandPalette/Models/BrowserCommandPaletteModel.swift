@@ -13,8 +13,58 @@ final class BrowserCommandPaletteModel {
         didSet {
             guard query != oldValue else { return }
             selectedResultIndex = 0
+            completionProposal =
+                isCompletionSourceAvailable
+                ? BrowserURLCompletion.proposal(query: query, space: space) : nil
             scheduleResultsRebuild()
         }
+    }
+
+    private var completionProposal: BrowserURLCompletion?
+    private(set) var completionEditing = BrowserURLCompletionEditingState()
+    @ObservationIgnored var applyCompletion: ((String, NSRange) -> Void)?
+
+    var urlCompletion: BrowserURLCompletion? {
+        guard isCompletionSourceAvailable, completionEditing.canPropose(for: query) else { return nil }
+        return completionProposal
+    }
+
+    func updateCompletionEditing(text: String, selection: NSRange, isComposing: Bool) {
+        completionEditing.update(text: text, selection: selection, isComposing: isComposing)
+        if !isComposing { query = text }
+    }
+
+    func rejectURLCompletion() { completionEditing.reject() }
+
+    func invalidateURLCompletion() {
+        completionProposal = nil
+        completionEditing.reject()
+    }
+
+    @discardableResult
+    func acceptURLCompletion() -> Bool {
+        guard let proposal = urlCompletion, let applyCompletion else { return false }
+        completionEditing.reject()
+        applyCompletion(proposal.insertionText, proposal.insertionRange)
+        // Enter immediately after Tab must see the accepted URL intent even if
+        // the asynchronous local-result rebuild has not been scheduled yet.
+        if query == proposal.acceptedQuery {
+            let prepared = BrowserCommandPaletteResultPreparation.prepare(for: input(query: query))
+            publishedQuery = prepared.query
+            results = prepared.results
+            resultGroups = prepared.groups
+            selectedResultIndex = 0
+        }
+        completionEditing.reject()
+        return true
+    }
+
+    var isCompletionSourceAvailable: Bool {
+        if selectedTabID != nil { return availableSourceAssignment != nil }
+        guard let space, let actions = emptySelectionActions,
+            actions.source == BrowserSpaceRuntimeAssignment(space: space)
+        else { return false }
+        return actions.isAvailable
     }
 
     private(set) var selectedResultIndex = 0
@@ -92,11 +142,13 @@ final class BrowserCommandPaletteModel {
     }
 
     func moveSelection(by offset: Int) {
+        rejectURLCompletion()
         guard publishedQuery == query, !results.isEmpty else { return }
         selectedResultIndex = (selectedResultIndex + offset + results.count) % results.count
     }
 
     func selectResult(at index: Int) {
+        rejectURLCompletion()
         guard publishedQuery == query, results.indices.contains(index) else { return }
         selectedResultIndex = index
     }
