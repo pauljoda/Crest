@@ -500,12 +500,12 @@ struct BrowserCommandActions {
 
     func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) {
         guard browser.selectAdjacentSpace(direction) != nil else { return }
-        pages.select(session: browser.session)
+        pages.selectSpace(in: browser)
     }
 
     func selectSpace(at index: Int) {
         guard browser.session.spaces.indices.contains(index) else { return }
         browser.selectSpace(browser.session.spaces[index].id)
-        pages.select(session: browser.session)
+        pages.selectSpace(in: browser)
     }
 }

@@ -613,6 +613,10 @@
     "2026-09-05-extension-clipboard-text-import": {
       "category": "new",
       "message": "Let permitted extensions read clipboard text, including grade-transfer tools that use legacy paste"
+    },
+    "2026-09-06-space-entry-keeps-tabs-unloaded": {
+      "category": "improved",
+      "message": "Show Start Page when entering a Mac Space with an unloaded tab, keeping the page unloaded until you select it"
     }
   }
 }

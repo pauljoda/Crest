@@ -757,6 +757,144 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(persistence.savedScopes.count, savedScopeCount)
     }
 
+    func testSpaceEntryLeavesAnUnloadedTabUntouchedUntilManualSelection() throws {
+        let tab = BrowserTab(title: "Remembered", url: URL(string: "about:blank#remembered"), placement: .pinned)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let persistence = InMemoryBrowserSessionPersistence()
+        persistence.save(session)
+        let browser = BrowserStore(session: session, persistence: persistence)
+        let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
+        let savedCount = persistence.savedScopes.count
+
+        pages.selectSpace(in: browser)
+
+        XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
+        XCTAssertEqual(browser.selectedSpace?.tabs.first(where: { $0.id == tab.id }), tab)
+        XCTAssertTrue(pages.retainedTabIDs.isEmpty)
+        XCTAssertNil(pages.activePage)
+        XCTAssertEqual(persistence.session?.selectedTab?.id, tab.id)
+        XCTAssertEqual(persistence.savedScopes.count, savedCount)
+
+        browser.selectTab(tab.id)
+        pages.select(session: browser.session)
+        XCTAssertEqual(pages.activeTabID, tab.id)
+        XCTAssertTrue(pages.containsResidentPage(for: tab.id))
+    }
+
+    func testSpaceEntryRootObserversKeepStartPageUnloadedUntilATabIsChosen() async throws {
+        let tab = BrowserTab(title: "Remembered", url: URL(string: "about:blank#remembered"), placement: .current)
+        let sourceTab = BrowserTab(title: BrowserTab.startPageTitle, url: nil, placement: .current)
+        let source = makeSpace(tabs: [sourceTab], selectedTabID: sourceTab.id)
+        let destination = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [source, destination], selectedSpaceID: source.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
+        let model = BrowserRootModel(
+            browser: browser, pages: pages, chrome: BrowserChromeState(),
+            spaceAccess: BrowserSpaceAccessController(), windowState: nil,
+            startupBehavior: .showStartPage, persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
+        )
+        await model.prepareBrowser()
+
+        browser.selectSpace(destination.id)
+        model.synchronizeAfterSpaceChange()
+        model.synchronizeAfterSelectionChange()
+
+        XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
+        XCTAssertTrue(pages.retainedTabIDs.isEmpty)
+        XCTAssertEqual(model.address, "")
+
+        browser.selectTab(tab.id)
+        model.synchronizeAfterSelectionChange()
+        XCTAssertEqual(pages.activeTabID, tab.id)
+        XCTAssertEqual(model.address, tab.url?.absoluteString)
+    }
+
+    func testSpaceEntryReusesAResidentTabWithoutChangingItsRuntime() throws {
+        let tab = BrowserTab(title: "Resident", url: URL(string: "about:blank#resident"), placement: .current)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
+        pages.select(session: browser.session)
+        let resident = try XCTUnwrap(pages.activePage)
+        let pending = resident.pendingNavigationURL
+        pages.deactivatePagePresentation()
+
+        pages.selectSpace(in: browser)
+
+        XCTAssertEqual(browser.selectedTab?.id, tab.id)
+        XCTAssertTrue(pages.activePage === resident)
+        XCTAssertEqual(resident.pendingNavigationURL, pending)
+        XCTAssertEqual(pages.retainedTabIDs, [tab.id])
+    }
+
+    func testSpaceEntryReusesTheSameStartPageAcrossRepeatedVisits() throws {
+        let tab = BrowserTab(title: "Unloaded", url: URL(string: "about:blank#unloaded"), placement: .current)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let pages = BrowserPagePool()
+        pages.selectSpace(in: browser)
+        let draft = try XCTUnwrap(browser.selectedTab)
+
+        for _ in 0..<4 { pages.selectSpace(in: browser) }
+
+        XCTAssertEqual(browser.selectedTab?.id, draft.id)
+        XCTAssertEqual(browser.selectedSpace?.tabs.filter(\.isStartPage).count, 1)
+        XCTAssertTrue(pages.retainedTabIDs.isEmpty)
+    }
+
+    func testSpaceEntryDoesNotReuseAResidentPageFromAnOldProfile() throws {
+        let tab = BrowserTab(title: "Moved", url: URL(string: "about:blank#moved"), placement: .current)
+        let old = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let current = BrowserSpace(
+            id: old.id, profile: BrowsingProfile(), name: old.name, symbol: old.symbol,
+            accent: old.accent, folders: [], tabs: [tab], selectedTabID: tab.id
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [current], selectedSpaceID: current.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
+        pages.select(tab: tab, space: old)
+
+        pages.selectSpace(in: browser)
+
+        XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
+        XCTAssertNil(pages.activePage)
+        XCTAssertFalse(
+            pages.containsResidentPage(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: tab.id,
+                    spaceID: current.id, profileID: current.profile.id)))
+    }
+
+    func testSpaceEntryDoesNotLoadAnUnloadedSplitMemberOrReuseItsStartPage() throws {
+        let group = SplitGroupID()
+        let draft = BrowserTab(title: BrowserTab.startPageTitle, url: nil, placement: .current, splitGroupID: group)
+        let unloaded = BrowserTab(
+            title: "Unloaded split", url: URL(string: "about:blank#split"), placement: .current, splitGroupID: group)
+        let space = makeSpace(tabs: [draft, unloaded], selectedTabID: unloaded.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let pages = BrowserPagePool()
+
+        pages.selectSpace(in: browser)
+
+        let selected = try XCTUnwrap(browser.selectedTab)
+        XCTAssertTrue(selected.isStartPage)
+        XCTAssertNotEqual(selected.id, draft.id)
+        XCTAssertNil(browser.selectedSpace?.splitGroup(containing: selected.id))
+        XCTAssertEqual(browser.selectedSpace?.tabs.first(where: { $0.id == unloaded.id })?.splitGroupID, group)
+        XCTAssertTrue(pages.retainedTabIDs.isEmpty)
+    }
+
     func testUnloadingAPinnedPageReleasesOnlyItsResidentWebViewAndCanRehydrate() {
         let first = BrowserTab(title: "Pinned", url: nil, placement: .pinned)
         let second = BrowserTab(title: "Current", url: nil, placement: .current)

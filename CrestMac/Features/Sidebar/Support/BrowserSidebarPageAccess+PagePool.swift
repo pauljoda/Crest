@@ -18,7 +18,7 @@ extension BrowserSidebarPageAccess {
                 pages.siteThemeIconAccent(matching: assignment)
             },
             residencyRevision: { pages.residencyRevision },
-            selectPages: { pages.select(session: browser.session) },
+            selectPages: { pages.selectSpace(in: browser) },
             deactivatePagePresentation: { pages.deactivatePagePresentation() },
             unloadPage: { tabID, assignment in
                 pages.unloadPage(for: tabID, matching: assignment)

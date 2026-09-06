@@ -299,7 +299,12 @@ extension BrowserRootModel {
         if !BrowserSpaceContentSelectionPolicy.rootObserverDefersSpaceChanges,
             selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.session)
         {
-            synchronizeSelection()
+            if selectedSpaceIsLocked {
+                pages.deactivatePagePresentation()
+            } else {
+                pages.selectSpace(in: browser)
+            }
+            address = selectedSpaceIsLocked ? "" : browser.selectedTab?.url?.absoluteString ?? ""
             return
         }
         address = browser.selectedTab?.url?.absoluteString ?? ""
@@ -317,7 +322,13 @@ extension BrowserRootModel {
             address = ""
             return
         }
-        pages.select(session: browser.session)
+        if let tab = browser.selectedTab, tab.isStartPage,
+            browser.selectedSpace?.splitGroup(containing: tab.id) == nil
+        {
+            pages.deactivatePagePresentation()
+        } else {
+            pages.select(session: browser.session)
+        }
         address = browser.selectedTab?.url?.absoluteString ?? ""
     }
 
@@ -332,7 +343,7 @@ extension BrowserRootModel {
             direction = .next
         }
         guard browser.selectAdjacentSpace(direction) != nil else { return }
-        pages.select(session: browser.session)
+        pages.selectSpace(in: browser)
     }
 }
 

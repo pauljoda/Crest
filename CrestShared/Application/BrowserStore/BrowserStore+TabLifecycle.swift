@@ -24,12 +24,21 @@ extension BrowserStore {
         selectOrCreateStartPageDraft()?.tabID
     }
 
-    private func selectOrCreateStartPageDraft() -> (
+    /// Like launch presentation, entering an unloaded Space keeps the
+    /// remembered tab intact and does not persist a replacement selection.
+    @discardableResult
+    func presentStartPageForSpaceEntry() -> TabID? {
+        selectOrCreateStartPageDraft(excludingSplitGroups: true)?.tabID
+    }
+
+    private func selectOrCreateStartPageDraft(excludingSplitGroups: Bool = false) -> (
         tabID: TabID,
         wasCreated: Bool
     )? {
         guard let space = selectedSpace else { return nil }
-        if let draft = space.currentTabs.first(where: \.isStartPage) {
+        if let draft = space.currentTabs.first(where: {
+            $0.isStartPage && (!excludingSplitGroups || space.splitGroup(containing: $0.id) == nil)
+        }) {
             session.selectTab(draft.id)
             return (draft.id, false)
         }
