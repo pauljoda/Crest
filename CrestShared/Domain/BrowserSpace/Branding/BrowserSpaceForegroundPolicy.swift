@@ -4,6 +4,7 @@ enum BrowserSpaceForegroundPolicy {
     static func tone(
         for branding: BrowserSpaceBranding
     ) -> BrowserSpaceForegroundTone {
+        if let override = branding.textColorMode.foregroundTone { return override }
         let colors = branding.colors.isEmpty ? [.indigo] : branding.colors
         let lightContrast = minimumContrast(
             for: .light,

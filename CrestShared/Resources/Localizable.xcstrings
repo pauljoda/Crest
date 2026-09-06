@@ -1494,6 +1494,9 @@
         }
       }
     },
+    "A little room to read" : {
+
+    },
     "A preset replaces the curated selection and turns off custom lists. You can then adjust any list below to create a custom setup." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1529,6 +1532,12 @@
 
     },
     "About" : {
+
+    },
+    "Accept URL completion" : {
+
+    },
+    "Accept URL completion (Tab or Right Arrow)" : {
 
     },
     "Accepted %lld, skipped %lld, reviewed %lld warnings, and rejected %lld from the selected file." : {
@@ -1730,6 +1739,9 @@
           }
         }
       }
+    },
+    "Add to Current Tabs Folder" : {
+
     },
     "Add to Split View" : {
       "localizations" : {
@@ -2121,6 +2133,9 @@
         }
       }
     },
+    "After closing" : {
+
+    },
     "After content started loading" : {
       "localizations" : {
         "ar" : {
@@ -2244,6 +2259,9 @@
         }
       }
     },
+    "Always show folder highlights" : {
+
+    },
     "An open source browser for Mac, iPhone, and iPad." : {
 
     },
@@ -2260,6 +2278,9 @@
           }
         }
       }
+    },
+    "Another tab" : {
+
     },
     "App" : {
       "extractionState" : "stale",
@@ -2313,6 +2334,9 @@
           }
         }
       }
+    },
+    "Applies to folders in every Space. Adjust color intensity in each Space's settings." : {
+
     },
     "Arc" : {
       "localizations" : {
@@ -2534,6 +2558,12 @@
         }
       }
     },
+    "Authentication didn’t complete. Try again." : {
+
+    },
+    "Authentication failed. Try again." : {
+
+    },
     "Authentication tokens and other secrets cannot be stored in a search template. Sign in on the search engine website instead." : {
 
     },
@@ -2546,6 +2576,12 @@
           }
         }
       }
+    },
+    "Automatic" : {
+
+    },
+    "Automatic chooses text contrast from this Space’s colors. Light and Dark override it." : {
+
     },
     "Automatic Pop-ups" : {
 
@@ -2830,6 +2866,9 @@
         }
       }
     },
+    "Borderless" : {
+
+    },
     "Bordure" : {
       "localizations" : {
         "ar" : {
@@ -2925,7 +2964,7 @@
         }
       }
     },
-    "browser startup default Space transparency sidebar interface page zoom percentage typing smart quotes punctuation" : {
+    "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview" : {
 
     },
     "Browsing" : {
@@ -3004,6 +3043,9 @@
     "Change Icon…" : {
 
     },
+    "Changes folder highlights in this Space, from the original transparency to solid color." : {
+
+    },
     "Changes which Space supplies cookies and passwords" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3044,6 +3086,9 @@
           }
         }
       }
+    },
+    "Check Automatically" : {
+
     },
     "Check for Updates Now" : {
       "localizations" : {
@@ -3107,6 +3152,9 @@
           }
         }
       }
+    },
+    "Checking for Updates" : {
+
     },
     "Checking passkey access" : {
       "localizations" : {
@@ -3284,6 +3332,9 @@
           }
         }
       }
+    },
+    "Choose where pinned and saved tabs open after you close them. Switching Spaces or unloading inactive pages keeps your last location." : {
+
     },
     "Choose Which Copy to Keep" : {
       "localizations" : {
@@ -4538,6 +4589,9 @@
         }
       }
     },
+    "Crest Is Up to Date" : {
+
+    },
     "Crest only allows verified Chrome Web Store extensions to contact native companion apps." : {
       "localizations" : {
         "ar" : {
@@ -4771,6 +4825,9 @@
         }
       }
     },
+    "Current Tabs" : {
+
+    },
     "Custom" : {
       "localizations" : {
         "ar" : {
@@ -4889,6 +4946,9 @@
           }
         }
       }
+    },
+    "Dark" : {
+
     },
     "Data ownership" : {
       "extractionState" : "stale",
@@ -5165,6 +5225,7 @@
       }
     },
     "Device authentication isn’t available right now." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -5301,6 +5362,9 @@
       }
     },
     "Download Update" : {
+
+    },
+    "Downloading Update" : {
 
     },
     "Downloading…" : {
@@ -5803,6 +5867,9 @@
         }
       }
     },
+    "Example folder" : {
+
+    },
     "example.com" : {
       "localizations" : {
         "ar" : {
@@ -5975,6 +6042,9 @@
         }
       }
     },
+    "extension sidepanel sidebar panel toggle" : {
+
+    },
     "Extensions" : {
       "localizations" : {
         "ar" : {
@@ -6111,6 +6181,9 @@
           }
         }
       }
+    },
+    "Fills the address without opening it. Press Tab or Right Arrow to accept." : {
+
     },
     "Filter" : {
       "localizations" : {
@@ -6270,6 +6343,9 @@
         }
       }
     },
+    "Focus new tabs opened from links" : {
+
+    },
     "Focus Next Split Card" : {
       "localizations" : {
         "ar" : {
@@ -6300,6 +6376,9 @@
         }
       }
     },
+    "Folder" : {
+
+    },
     "Folder Color" : {
       "localizations" : {
         "ar" : {
@@ -6309,6 +6388,9 @@
           }
         }
       }
+    },
+    "Folder color intensity" : {
+
     },
     "Folder Color…" : {
       "localizations" : {
@@ -6329,6 +6411,15 @@
           }
         }
       }
+    },
+    "Folder preview" : {
+
+    },
+    "Folder preview in %@" : {
+
+    },
+    "Folders" : {
+
     },
     "Follow planned and completed public work on GitHub" : {
 
@@ -6873,9 +6964,6 @@
           }
         }
       }
-    },
-    "Ignore this update build" : {
-
     },
     "Import" : {
 
@@ -7711,6 +7799,9 @@
         }
       }
     },
+    "Installing Update" : {
+
+    },
     "Interface" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7765,7 +7856,11 @@
         }
       }
     },
+    "Its tabs stay in this section, and any nested folders move up one level." : {
+
+    },
     "Its tabs stay saved, and any nested folders move up one level." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7785,6 +7880,9 @@
           }
         }
       }
+    },
+    "Keep Crest Up to Date" : {
+
     },
     "Keep current password" : {
 
@@ -7964,6 +8062,9 @@
           }
         }
       }
+    },
+    "Light" : {
+
     },
     "Lightning" : {
       "localizations" : {
@@ -8390,6 +8491,9 @@
           }
         }
       }
+    },
+    "Move to Saved Tabs" : {
+
     },
     "Move to Space" : {
       "localizations" : {
@@ -9111,6 +9215,9 @@
         }
       }
     },
+    "Opaque" : {
+
+    },
     "Open" : {
       "localizations" : {
         "ar" : {
@@ -9530,6 +9637,9 @@
           }
         }
       }
+    },
+    "Page preview" : {
+
     },
     "Page Stopped" : {
       "extractionState" : "stale",
@@ -9984,6 +10094,9 @@
         }
       }
     },
+    "Pinned and saved tabs" : {
+
+    },
     "Pinned tabs" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10066,6 +10179,9 @@
         }
       }
     },
+    "Preparing Update" : {
+
+    },
     "Preparing…" : {
       "localizations" : {
         "ar" : {
@@ -10086,6 +10202,9 @@
           }
         }
       }
+    },
+    "Preview" : {
+
     },
     "Preview open" : {
       "extractionState" : "stale",
@@ -10278,6 +10397,7 @@
       }
     },
     "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10286,6 +10406,9 @@
           }
         }
       }
+    },
+    "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview" : {
+
     },
     "Profiles and appearance" : {
       "localizations" : {
@@ -10573,6 +10696,9 @@
     "Ready to import" : {
 
     },
+    "Ready to Install" : {
+
+    },
     "Reconnect to Wi-Fi or Ethernet, then try again." : {
       "localizations" : {
         "ar" : {
@@ -10780,6 +10906,9 @@
           }
         }
       }
+    },
+    "Remove from Folder" : {
+
     },
     "Remove from Split" : {
       "localizations" : {
@@ -11089,6 +11218,9 @@
         }
       }
     },
+    "Resize Extension Side Panel" : {
+
+    },
     "Resize Sidebar" : {
       "localizations" : {
         "ar" : {
@@ -11108,6 +11240,9 @@
           }
         }
       }
+    },
+    "Restart" : {
+
     },
     "Restart and Update" : {
 
@@ -11135,6 +11270,9 @@
     "Restores each site's default permission behavior" : {
 
     },
+    "Resume last location" : {
+
+    },
     "Retention is set separately for this Space. Crest checks when it opens, after sync, and every 15 minutes while active. Download cleanup removes Crest’s record only; downloaded files stay on disk." : {
       "localizations" : {
         "ar" : {
@@ -11155,6 +11293,9 @@
         }
       }
     },
+    "Retry" : {
+
+    },
     "Retry the action on the page. Crest did not reopen the blocked pop-up." : {
 
     },
@@ -11167,6 +11308,9 @@
           }
         }
       }
+    },
+    "Return to saved URL" : {
+
     },
     "Return to Saved URL" : {
       "localizations" : {
@@ -11226,6 +11370,9 @@
           }
         }
       }
+    },
+    "Review update details" : {
+
     },
     "right arrow" : {
       "localizations" : {
@@ -11368,6 +11515,9 @@
           }
         }
       }
+    },
+    "Sample page" : {
+
     },
     "Save" : {
 
@@ -11847,6 +11997,9 @@
         }
       }
     },
+    "Selected tab" : {
+
+    },
     "Selected, Open Space" : {
       "localizations" : {
         "ar" : {
@@ -11866,6 +12019,9 @@
           }
         }
       }
+    },
+    "Selects tabs opened with Command-click or middle-click when the webpage supports it. Add Shift to reverse this choice. Background tabs load immediately." : {
+
     },
     "Send a reproducible bug report through GitHub Issues" : {
 
@@ -12059,6 +12215,12 @@
     "Show Emoji Variations" : {
 
     },
+    "Show folder color borders" : {
+
+    },
+    "Show folder tab counts" : {
+
+    },
     "Show History" : {
       "localizations" : {
         "ar" : {
@@ -12079,6 +12241,9 @@
         }
       }
     },
+    "Show Next Spaces" : {
+
+    },
     "Show or Hide Reader" : {
       "localizations" : {
         "ar" : {
@@ -12098,6 +12263,9 @@
           }
         }
       }
+    },
+    "Show Previous Spaces" : {
+
     },
     "Show Reader" : {
       "localizations" : {
@@ -12153,6 +12321,9 @@
       }
     },
     "Shows recent changes" : {
+
+    },
+    "Sidebar" : {
 
     },
     "Sidebar Widgets" : {
@@ -12230,7 +12401,13 @@
         }
       }
     },
+    "Skip" : {
+
+    },
     "Skip this account" : {
+
+    },
+    "Skip This Version" : {
 
     },
     "Smileys & People" : {
@@ -12278,6 +12455,9 @@
           }
         }
       }
+    },
+    "Software Update Unavailable" : {
+
     },
     "Solid" : {
       "localizations" : {
@@ -12379,6 +12559,9 @@
           }
         }
       }
+    },
+    "Space Locked" : {
+
     },
     "Space name" : {
       "localizations" : {
@@ -12834,6 +13017,9 @@
         }
       }
     },
+    "Subtle" : {
+
+    },
     "Suggestion URL" : {
 
     },
@@ -13173,6 +13359,12 @@
     "Test fixture" : {
 
     },
+    "Text and images grow together. Choose a comfortable size for your everyday browsing." : {
+
+    },
+    "Text Color" : {
+
+    },
     "Texture" : {
       "localizations" : {
         "ar" : {
@@ -13444,6 +13636,7 @@
       }
     },
     "The Space remains locked." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13483,6 +13676,9 @@
           }
         }
       }
+    },
+    "Themed border" : {
+
     },
     "These credentials are valid and will be imported. Review the security limitation before continuing." : {
 
@@ -13897,6 +14093,9 @@
         }
       }
     },
+    "Toggle Extension Side Panel" : {
+
+    },
     "toggle recent switch tabs" : {
       "localizations" : {
         "ar" : {
@@ -14029,6 +14228,9 @@
           }
         }
       }
+    },
+    "Try Quitting Again" : {
+
     },
     "Try reloading the page in a fresh web content process." : {
       "localizations" : {
@@ -14242,7 +14444,11 @@
     "Undock Sidebar" : {
 
     },
+    "Undocked sidebar page preview" : {
+
+    },
     "Unload %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14253,6 +14459,7 @@
       }
     },
     "Unload %arg" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14323,7 +14530,11 @@
         }
       }
     },
+    "Unlock to view your tabs." : {
+
+    },
     "Unlock with Face ID, Touch ID, or your device passcode or password. Until then, this Space’s tabs, site data, and credentials stay hidden." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -14372,6 +14583,9 @@
     "Update Available" : {
 
     },
+    "Update Check Failed" : {
+
+    },
     "Update Extensions Automatically" : {
       "localizations" : {
         "ar" : {
@@ -14411,6 +14625,9 @@
           }
         }
       }
+    },
+    "Update Installed" : {
+
     },
     "Update password?" : {
       "localizations" : {
@@ -14608,6 +14825,9 @@
         }
       }
     },
+    "URL completion: %@. Press Tab or Right Arrow to accept." : {
+
+    },
     "URL Copied" : {
       "localizations" : {
         "ar" : {
@@ -14787,6 +15007,9 @@
     "View Passwords" : {
 
     },
+    "View Release" : {
+
+    },
     "View the Crest Roadmap" : {
 
     },
@@ -14952,6 +15175,9 @@
           }
         }
       }
+    },
+    "What's New" : {
+
     },
     "What's New in Crest %@" : {
 

@@ -2,7 +2,9 @@ import SwiftUI
 
 /// One hover boundary for a folder's header and all of its visible contents.
 struct BrowserFolderSectionSurface: ViewModifier {
-    let color: Color
+    let color: BrowserSpaceBrandColor
+    var intensity: Double = 0
+    var textColorMode: BrowserSpaceTextColorMode = .automatic
     var leadingInset: CGFloat = CrestSpacing.small
     var hasVisibleContents = false
     let folderID: FolderID
@@ -11,24 +13,24 @@ struct BrowserFolderSectionSurface: ViewModifier {
 
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
+    private var alwaysVisible = false
+    @AppStorage(BrowserFolderAppearancePreference.showsBordersKey, store: BrowserFolderAppearancePreference.defaults)
+    private var showsBorders = true
 
     func body(content: Content) -> some View {
         content
-            .padding(.bottom, hasVisibleContents ? CrestSpacing.small : 0)
+            .padding(.bottom, hasVisibleContents ? BrowserFolderAppearancePolicy.regionInset : 0)
             .contentShape(.rect)
-            .background {
-                if isHovered || isTargeted {
-                    RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
-                        .fill(reduceTransparency ? color.opacity(0.28) : color.opacity(0.12))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
-                                .strokeBorder(color.opacity(0.28), lineWidth: 0.5)
-                        }
-                        .padding(.leading, leadingInset)
-                        .padding(.trailing, CrestSpacing.small)
-                }
-            }
+            .modifier(
+                BrowserFolderHighlightSurface(
+                    color: color, intensity: intensity,
+                    textColorMode: textColorMode,
+                    showsFill: BrowserFolderAppearancePolicy.showsFill(
+                        alwaysVisible: alwaysVisible, isHovered: isHovered, isTargeted: isTargeted),
+                    showsBorders: showsBorders, leadingInset: leadingInset,
+                    emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
+            )
             .onHover { isHovered = $0 }
             .animation(
                 BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),

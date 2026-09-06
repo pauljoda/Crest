@@ -21,6 +21,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     var showsTexture: Bool
     var iconStyle: BrowserSpaceIconStyle
     var crest: BrowserSpaceCrest
+    var folderColorIntensity: Double
+    var textColorMode: BrowserSpaceTextColorMode
 
     var keepsControlsReadable: Bool {
         get { readabilityFade > 0 }
@@ -47,9 +49,12 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         gradientAngle: Double = 0,
         showsTexture: Bool = false,
         iconStyle: BrowserSpaceIconStyle = .simpleSymbol,
-        crest: BrowserSpaceCrest = BrowserSpaceCrest()
+        crest: BrowserSpaceCrest = BrowserSpaceCrest(),
+        folderColorIntensity: Double = 0,
+        textColorMode: BrowserSpaceTextColorMode = .automatic
     ) {
-        let normalizedColors = colors.isEmpty
+        let normalizedColors =
+            colors.isEmpty
             ? [.indigo]
             : Array(colors.prefix(Self.maximumColorCount))
         self.colors = normalizedColors
@@ -64,6 +69,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         self.showsTexture = showsTexture
         self.iconStyle = iconStyle
         self.crest = crest.normalized(forColorCount: normalizedColors.count)
+        self.folderColorIntensity = folderColorIntensity.isFinite ? min(max(folderColorIntensity, 0), 1) : 0
+        self.textColorMode = textColorMode
     }
 
     static func legacy(accent: SpaceAccent, symbol: String) -> BrowserSpaceBranding {
@@ -113,11 +120,13 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
 
     static func neutralImport(symbol: String) -> BrowserSpaceBranding {
         BrowserSpaceBranding(
-            colors: [BrowserSpaceBrandColor(
-                red: 0.24,
-                green: 0.25,
-                blue: 0.27
-            )],
+            colors: [
+                BrowserSpaceBrandColor(
+                    red: 0.24,
+                    green: 0.25,
+                    blue: 0.27
+                )
+            ],
             bannerPattern: .solid,
             bannerStrength: 1,
             readabilityFade: 0.34,
@@ -138,7 +147,9 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
             gradientAngle: gradientAngle,
             showsTexture: showsTexture,
             iconStyle: iconStyle,
-            crest: crest
+            crest: crest,
+            folderColorIntensity: folderColorIntensity,
+            textColorMode: textColorMode
         )
     }
 
@@ -187,24 +198,30 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         case iconStyle
         case crest
         case renderingVersion
+        case folderColorIntensity
+        case textColorMode
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let legacyReadability = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .keepsControlsReadable
-        ) ?? true
-        let decodedFade = try container.decodeIfPresent(
-            Double.self,
-            forKey: .readabilityFade
-        ) ?? (legacyReadability ? 0.25 : 0)
+        let legacyReadability =
+            try container.decodeIfPresent(
+                Bool.self,
+                forKey: .keepsControlsReadable
+            ) ?? true
+        let decodedFade =
+            try container.decodeIfPresent(
+                Double.self,
+                forKey: .readabilityFade
+            ) ?? (legacyReadability ? 0.25 : 0)
         let storedStrength = try container.decode(Double.self, forKey: .bannerStrength)
-        let renderingVersion = try container.decodeIfPresent(
-            Int.self,
-            forKey: .renderingVersion
-        ) ?? 1
-        let migratedStrength = renderingVersion >= Self.baselineRenderingVersion
+        let renderingVersion =
+            try container.decodeIfPresent(
+                Int.self,
+                forKey: .renderingVersion
+            ) ?? 1
+        let migratedStrength =
+            renderingVersion >= Self.baselineRenderingVersion
             ? storedStrength
             : min(1, 0.72 + storedStrength * 0.28)
         self.init(
@@ -222,7 +239,9 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
                 forKey: .showsTexture
             ) ?? false,
             iconStyle: container.decodeTolerantly(.iconStyle, default: .simpleSymbol),
-            crest: try container.decode(BrowserSpaceCrest.self, forKey: .crest)
+            crest: try container.decode(BrowserSpaceCrest.self, forKey: .crest),
+            folderColorIntensity: (try? container.decodeIfPresent(Double.self, forKey: .folderColorIntensity)) ?? 0,
+            textColorMode: container.decodeTolerantly(.textColorMode, default: .automatic)
         )
     }
 
@@ -239,5 +258,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         try container.encode(iconStyle, forKey: .iconStyle)
         try container.encode(crest, forKey: .crest)
         try container.encode(renderingVersion, forKey: .renderingVersion)
+        try container.encode(normalized().folderColorIntensity, forKey: .folderColorIntensity)
+        try container.encode(textColorMode, forKey: .textColorMode)
     }
 }

@@ -653,6 +653,22 @@
     "2026-09-06-pointer-download-start-feedback": {
       "category": "improved",
       "message": "See downloads begin at your cursor and fly into Archive, with clear bottom-left feedback when the sidebar is hidden"
+    },
+    "2026-09-06-folder-appearance-controls": {
+      "category": "new",
+      "message": "Choose persistent folder highlights, tab counts and borders, with evenly inset tabs and nested folders"
+    },
+    "2026-09-06-space-text-and-folder-colors": {
+      "category": "new",
+      "message": "Adjust folder color intensity and choose automatic, light or dark text for each Space"
+    },
+    "2026-09-06-live-settings-previews": {
+      "category": "improved",
+      "message": "Preview folder appearance, text color, page zoom, transparency and page borders directly in Settings"
+    },
+    "2026-09-06-readable-site-controls": {
+      "category": "fixed",
+      "message": "Keep Site Controls readable over bright pages"
     }
   }
 }

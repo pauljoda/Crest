@@ -6,7 +6,8 @@ import CoreGraphics
 /// advance by the same step, so a nested group keeps the rhythm of the folder
 /// that holds it instead of drifting out of it.
 enum BrowserFolderLayout {
-    static let nestingIndent: CGFloat = 14
+    static let contentsInset: CGFloat = 6
+    static let nestingIndent = contentsInset
 
     /// How far a row *inside* a folder sits from the sidebar's leading edge:
     /// one step for the folder itself, plus one per level above it. Tab rows

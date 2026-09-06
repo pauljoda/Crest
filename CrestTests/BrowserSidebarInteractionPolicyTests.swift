@@ -173,7 +173,10 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(pointer, .pointer)
         XCTAssertEqual(pointer.contentSpacing, 0)
         XCTAssertEqual(pointer.contentLeadingInset, 9)
-        XCTAssertEqual(pointer.contentTrailingInset, 9)
+        XCTAssertEqual(
+            pointer.contentTrailingInset,
+            (CrestLayout.sidebarRowHeight - BrowserTabTrailingControlMetrics.pointer.controlSize.height) / 2
+        )
         XCTAssertEqual(pointer.surfaceHorizontalInset, 8)
         XCTAssertNil(pointer.faviconSlot)
         XCTAssertTrue(pointer.fillsRowHeight)

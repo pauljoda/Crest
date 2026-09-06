@@ -30,6 +30,8 @@ struct BrowserFolderTabRow: View {
             select: configuration.select
         )
         .padding(.leading, configuration.rowLeadingInset)
+        .padding(.trailing, BrowserFolderLayout.contentsInset)
+        .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
     }
 
     /// Both actions are the host's to provide, so a row offers each one only

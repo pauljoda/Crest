@@ -51,13 +51,13 @@ extension BrowserSettingsDestination {
     var searchTerms: LocalizedStringResource {
         switch self {
         case .general:
-            "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs Command-click middle-click pinned saved close resume restore root URL"
+            "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview"
         case .links:
             "external apps Quick Window Peek pinned saved routing open"
         case .shortcuts:
             "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page"
         case .spaces:
-            "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence"
+            "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview"
         case .sync:
             "iCloud CloudKit account upload download conflict status monitor diagnostics pending records"
         case .privacy:

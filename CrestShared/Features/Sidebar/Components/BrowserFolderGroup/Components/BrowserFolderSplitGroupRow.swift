@@ -30,5 +30,7 @@ struct BrowserFolderSplitGroupRow: View {
             select: configuration.select
         )
         .padding(.leading, configuration.rowLeadingInset)
+        .padding(.trailing, BrowserFolderLayout.contentsInset)
+        .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
     }
 }

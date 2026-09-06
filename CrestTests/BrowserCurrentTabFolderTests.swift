@@ -416,7 +416,8 @@ final class BrowserCurrentTabFolderTests: XCTestCase {
             browser.session.addFolder(title: "Nested", color: .rose, parentID: root, in: space.id))
         XCTAssertTrue(
             browser.session.fileTabs([space.currentTabs[0].id], in: space.id, into: child, location: .current))
-        _ = browser.session.setFolderCollapsed(root, in: space.id, isCollapsed: true)
+        _ = browser.session.setFolderCollapsed(
+            root, in: space.id, isCollapsed: true, at: Date(timeIntervalSince1970: 1_800_000_000))
         let payloads = try BrowserSyncProjection.payloads(
             from: browser.session, preferences: .default, existingRecords: [])
         let codec = BrowserCloudRecordCodec()
