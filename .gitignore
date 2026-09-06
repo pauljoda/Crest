@@ -45,3 +45,4 @@ GEMINI.md
 # Language tool caches
 __pycache__/
 *.py[cod]
+/.crest-review
