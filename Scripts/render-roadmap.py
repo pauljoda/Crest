@@ -72,7 +72,7 @@ def load_snapshot(
             "--label",
             "roadmap",
             "--json",
-            "number,title,url,state,labels,milestone,body,closedAt",
+            "number,title,url,state,stateReason,labels,milestone,body,closedAt",
         ]
     )
     milestone_pages = run_json(
@@ -168,7 +168,16 @@ def render_managed_section(
         issues = sorted(grouped[title], key=lambda issue: int(issue["number"]))
         open_issues = [issue for issue in issues if issue.get("state") != "CLOSED"]
         completed_issues = [
-            issue for issue in issues if issue.get("state") == "CLOSED"
+            issue
+            for issue in issues
+            if issue.get("state") == "CLOSED"
+            and issue.get("stateReason") != "NOT_PLANNED"
+        ]
+        canceled_issues = [
+            issue
+            for issue in issues
+            if issue.get("state") == "CLOSED"
+            and issue.get("stateReason") == "NOT_PLANNED"
         ]
 
         if open_issues:
@@ -177,6 +186,9 @@ def render_managed_section(
         if completed_issues:
             lines.extend(["", "#### Completed", ""])
             lines.extend(issue_line(issue, repository) for issue in completed_issues)
+        if canceled_issues:
+            lines.extend(["", "#### Not planned", ""])
+            lines.extend(issue_line(issue, repository) for issue in canceled_issues)
 
     lines.extend(["", END_MARKER])
     return "\n".join(lines)

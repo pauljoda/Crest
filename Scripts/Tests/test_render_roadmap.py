@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -94,6 +95,46 @@ new generated content
         self.assertIn("new generated content", rendered)
         self.assertNotIn("old generated content", rendered)
         self.assertIn("## Release gates\n\n- Keep this text.", rendered)
+
+    def test_canceled_work_is_not_presented_as_delivered(self) -> None:
+        snapshot = {
+            "milestones": [{"number": 2, "title": "0.6", "state": "open"}],
+            "issues": [
+                {
+                    "number": number,
+                    "title": title,
+                    "url": f"https://github.com/pauljoda/Crest/issues/{number}",
+                    "state": state,
+                    "stateReason": reason,
+                    "labels": ["roadmap"],
+                    "milestone": {"title": "0.6"},
+                    "body": "",
+                }
+                for number, title, state, reason in [
+                    (1, "Shipped fix", "CLOSED", "COMPLETED"),
+                    (2, "Withdrawn proposal", "CLOSED", "NOT_PLANNED"),
+                    (3, "Reopened proposal", "OPEN", "REOPENED"),
+                ]
+            ],
+        }
+
+        rendered = self.renderer.render_managed_section(snapshot, "pauljoda/Crest")
+
+        planned, rest = rendered.split("#### Completed", 1)
+        completed, withdrawn = rest.split("#### Not planned", 1)
+        self.assertIn("Reopened proposal", planned)
+        self.assertIn("Shipped fix", completed)
+        self.assertNotIn("Withdrawn proposal", completed)
+        self.assertIn("Withdrawn proposal", withdrawn)
+        self.assertNotIn("Shipped fix", withdrawn)
+
+    def test_live_snapshot_requests_issue_state_reasons(self) -> None:
+        with patch.object(self.renderer, "run_json", side_effect=[[], [[]]]) as run:
+            self.renderer.load_snapshot(None, "pauljoda/Crest")
+
+        command = run.call_args_list[0].args[0]
+        fields = command[command.index("--json") + 1].split(",")
+        self.assertIn("stateReason", fields)
 
 
 if __name__ == "__main__":
