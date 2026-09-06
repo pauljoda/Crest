@@ -13,6 +13,7 @@ struct BrowserCommandActions {
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
     let openWindow: OpenWindowAction
+    var spaceAccess = BrowserSpaceAccessController()
     /// The window a Quick Window should hand its result back to, when the
     /// command was issued from a focused browser window.
     var targetWindowID: BrowserWindowID?
@@ -201,9 +202,17 @@ struct BrowserCommandActions {
                 archiveSelectedTab()
             }
         case .unloadPage:
-            browser.selectDismissalFallback(afterDismissing: selectedTab.id)
-            pages.unloadPage(for: selectedTab.id)
-            pages.select(session: browser.session)
+            guard let space = browser.selectedSpace else { return }
+            if BrowserDurableTabCloseAction(
+                browser: browser, spaceAccess: spaceAccess,
+                closePage: { pages.closeDurablePage($0, discardState: $1) }
+            ).perform(
+                BrowserTabRuntimeAssignment(
+                    tabID: selectedTab.id, spaceID: space.id, profileID: space.profile.id
+                ))
+            {
+                pages.select(session: browser.session)
+            }
         case .closeWindow:
             closeKeyWindow()
         }

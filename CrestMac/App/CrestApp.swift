@@ -629,7 +629,8 @@ struct CrestApp: App {
                 pages: pages,
                 chrome: chrome,
                 shortcuts: shortcuts,
-                softwareUpdates: softwareUpdates
+                softwareUpdates: softwareUpdates,
+                spaceAccess: spaceAccess
             )
         }
 

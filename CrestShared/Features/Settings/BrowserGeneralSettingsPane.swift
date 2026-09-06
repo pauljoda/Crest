@@ -61,6 +61,8 @@ struct BrowserGeneralSettingsPane: View {
 
             BrowserNewTabSettingsSection(preferences: linkPreferences)
 
+            BrowserDurableTabSettingsSection(preferences: .shared)
+
             BrowserPlatformAppearanceSettingsSection()
 
             BrowserDefaultPageZoomSettingsSection(

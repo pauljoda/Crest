@@ -6,6 +6,223 @@ import XCTest
 
 @MainActor
 final class BrowserPagePoolTests: XCTestCase {
+    func testColdStartPageURLActionLoadsWithoutAnotherTabSelection() async throws {
+        let draft = BrowserTab.startPage()
+        let space = makeSpace(tabs: [draft], selectedTabID: draft.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        let url = try XCTUnwrap(URL(string: "about:blank#cold-start-palette"))
+        let action = BrowserStartPageNavigationAction(
+            browser: browser, pages: pages, spaceAccess: BrowserSpaceAccessController()
+        )
+        XCTAssertNil(pages.activePage)
+
+        XCTAssertTrue(
+            action.perform(
+                BrowserTabRuntimeAssignment(tabID: draft.id, spaceID: space.id, profileID: space.profile.id),
+                url: url
+            ))
+
+        XCTAssertEqual(browser.selectedTab?.id, draft.id)
+        XCTAssertEqual(browser.selectedTab?.url, url)
+        XCTAssertEqual(pages.activeTabID, draft.id)
+        let page = try XCTUnwrap(pages.activePage)
+        try await waitForURL(url, in: page.webView)
+    }
+
+    func testUnloadedSpaceStartPageURLActionLoadsOnlyTheChosenDestination() async throws {
+        let remembered = BrowserTab(
+            title: "Remembered", url: URL(string: "about:blank#remembered"), placement: .pinned
+        )
+        let space = makeSpace(tabs: [remembered], selectedTabID: remembered.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        pages.selectSpace(in: browser)
+        let draft = try XCTUnwrap(browser.selectedTab)
+        XCTAssertTrue(draft.isStartPage)
+        XCTAssertNil(pages.activePage)
+        let url = try XCTUnwrap(URL(string: "about:blank#space-entry-palette"))
+
+        XCTAssertTrue(
+            BrowserStartPageNavigationAction(
+                browser: browser, pages: pages, spaceAccess: BrowserSpaceAccessController()
+            ).perform(
+                BrowserTabRuntimeAssignment(tabID: draft.id, spaceID: space.id, profileID: space.profile.id),
+                url: url
+            ))
+
+        let page = try XCTUnwrap(pages.activePage)
+        try await waitForURL(url, in: page.webView)
+        XCTAssertEqual(pages.activeTabID, draft.id)
+        XCTAssertEqual(pages.retainedTabIDs, [draft.id])
+        XCTAssertEqual(browser.selectedSpace?.tabs.first(where: { $0.id == remembered.id }), remembered)
+    }
+
+    func testStartPageURLActionRejectsStaleLockedAndAlreadyNavigatedSources() throws {
+        let draft = BrowserTab.startPage()
+        let space = makeSpace(tabs: [draft], selectedTabID: draft.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        let action = BrowserStartPageNavigationAction(
+            browser: browser, pages: pages, spaceAccess: BrowserSpaceAccessController()
+        )
+        let url = try XCTUnwrap(URL(string: "about:blank#rejected"))
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: draft.id, spaceID: space.id, profileID: space.profile.id
+        )
+        XCTAssertFalse(
+            action.perform(
+                BrowserTabRuntimeAssignment(tabID: draft.id, spaceID: space.id, profileID: UUID()), url: url
+            ))
+        XCTAssertEqual(browser.selectedTab, draft)
+
+        var locked = space
+        locked.accessPolicy = .deviceOwnerAuthentication
+        browser.session = BrowserSession(spaces: [locked], selectedSpaceID: locked.id)
+        XCTAssertFalse(action.perform(assignment, url: url))
+        XCTAssertEqual(browser.selectedTab, draft)
+
+        browser.session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+        let previousURL = try XCTUnwrap(URL(string: "about:blank#already-navigated"))
+        browser.navigateSelectedTab(to: previousURL)
+        XCTAssertFalse(action.perform(assignment, url: url))
+        XCTAssertEqual(browser.selectedTab?.url, previousURL)
+        XCTAssertNil(pages.activePage)
+    }
+
+    func testDurableClosePolicyControlsNativeStateAndFreshPoolRestoration() async throws {
+        for policy in BrowserDurableTabClosePolicy.allCases {
+            let archive = try makeTabStateArchive()
+            let root = try XCTUnwrap(URL(string: "https://state.crest.test/root"))
+            let child = try XCTUnwrap(URL(string: "https://state.crest.test/child"))
+            let tab = BrowserTab(title: "Saved", url: nil, savedURL: root, placement: .saved)
+            let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+            let persistence = InMemoryBrowserSessionPersistence()
+            let browser = BrowserStore(
+                session: BrowserSession(spaces: [space], selectedSpaceID: space.id), persistence: persistence
+            )
+            let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
+            defer { pool.reconcile(validTabIDs: []) }
+            pool.select(session: browser.session)
+            let page = try XCTUnwrap(pool.activePage)
+            try await load(root, in: page)
+            try await load(child, in: page)
+            browser.navigateSelectedTab(to: child)
+            let unrelatedID = TabID()
+            archive.archive(
+                interactionState: Data("unrelated archive".utf8), url: child,
+                profileID: space.profile.id, tabID: unrelatedID)
+            let unrelatedState = archive.archivedState(profileID: space.profile.id, tabID: unrelatedID)
+            let preferences = BrowserDurableTabPreferenceStore()
+            preferences.closePolicy = policy
+            let action = BrowserDurableTabCloseAction(
+                browser: browser, spaceAccess: BrowserSpaceAccessController(), preferences: preferences,
+                closePage: { pool.closeDurablePage($0, discardState: $1) }
+            )
+            XCTAssertTrue(
+                action.perform(
+                    BrowserTabRuntimeAssignment(
+                        tabID: tab.id, spaceID: space.id, profileID: space.profile.id
+                    )))
+            XCTAssertNil(pool.activePage)
+            XCTAssertTrue(pool.retainedTabIDs.isEmpty)
+            XCTAssertEqual(archive.archivedState(profileID: space.profile.id, tabID: unrelatedID), unrelatedState)
+            let savedTab = try XCTUnwrap(persistence.session?.selectedSpace?.tabs.first)
+            XCTAssertEqual(savedTab.url, policy == .returnToSavedURL ? root : child)
+            let state = archive.archivedState(profileID: space.profile.id, tabID: tab.id)
+            XCTAssertEqual(state == nil, policy == .returnToSavedURL)
+
+            let nextLaunch = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
+            defer { nextLaunch.reconcile(validTabIDs: []) }
+            nextLaunch.select(tab: savedTab, space: space)
+            let reopened = try XCTUnwrap(nextLaunch.activePage)
+            XCTAssertFalse(reopened === page)
+            if policy == .resumeLastLocation {
+                XCTAssertEqual(reopened.webView.url, child)
+                XCTAssertEqual(reopened.webView.backForwardList.backList.map(\.url), [root])
+            } else {
+                XCTAssertEqual(reopened.pendingNavigationURL, root)
+                XCTAssertFalse(reopened.webView.canGoBack)
+            }
+        }
+    }
+
+    func testExplicitSavedLocationResetKeepsItsPageAndHistoryButRemovesOldArchive() async throws {
+        let archive = try makeTabStateArchive()
+        let root = try XCTUnwrap(URL(string: "https://state.crest.test/root"))
+        let child = try XCTUnwrap(URL(string: "https://state.crest.test/child"))
+        let tab = BrowserTab(title: "Saved", url: nil, savedURL: root, placement: .saved)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
+        defer { pool.reconcile(validTabIDs: []) }
+        pool.select(session: browser.session)
+        let page = try XCTUnwrap(pool.activePage)
+        try await load(root, in: page)
+        try await load(child, in: page)
+        browser.navigateSelectedTab(to: child)
+        pool.archiveResidentTabStates()
+        XCTAssertNotNil(archive.archivedState(profileID: space.profile.id, tabID: tab.id))
+        let action = BrowserSavedLocationRestoreAction(
+            browser: browser, pages: pool, spaceAccess: BrowserSpaceAccessController()
+        )
+
+        XCTAssertTrue(
+            action.perform(
+                BrowserTabRuntimeAssignment(
+                    tabID: tab.id, spaceID: space.id, profileID: space.profile.id
+                )))
+
+        XCTAssertTrue(pool.activePage === page)
+        XCTAssertEqual(page.pendingNavigationURL, root)
+        XCTAssertEqual(browser.selectedTab?.id, tab.id)
+        XCTAssertFalse(try XCTUnwrap(browser.selectedTab).isAwayFromSavedLocation)
+        XCTAssertNil(archive.archivedState(profileID: space.profile.id, tabID: tab.id))
+        try await load(root, in: page)
+        XCTAssertTrue(page.webView.backForwardList.backList.contains { $0.url == child })
+    }
+
+    func testResetOnCloseCancelsInflightNavigationAndDoesNotLoadTheRoot() throws {
+        let root = try XCTUnwrap(URL(string: "https://state.crest.test/root"))
+        let tab = BrowserTab(title: "Pinned", url: root, placement: .pinned)
+        let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pool.reconcile(validTabIDs: []) }
+        pool.select(session: browser.session)
+        let page = try XCTUnwrap(pool.activePage)
+        page.load(try XCTUnwrap(URL(string: "https://state.crest.test/slow-child")))
+        let preferences = BrowserDurableTabPreferenceStore()
+        preferences.closePolicy = .returnToSavedURL
+        XCTAssertTrue(
+            BrowserDurableTabCloseAction(
+                browser: browser, spaceAccess: BrowserSpaceAccessController(), preferences: preferences,
+                closePage: { pool.closeDurablePage($0, discardState: $1) }
+            ).perform(BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: space.id, profileID: space.profile.id)))
+        XCTAssertNil(pool.activePage)
+        XCTAssertTrue(pool.retainedTabIDs.isEmpty)
+        XCTAssertEqual(browser.selectedSpace?.tabs.first?.url, root)
+        XCTAssertNil(browser.selectedTab)
+    }
+
     func testBackgroundModifiedLinkStartsLoadingWithoutChangingSelection() async throws {
         let context = try makeModifiedLinkContext()
         let destinationURL = try XCTUnwrap(URL(string: "about:blank#background"))

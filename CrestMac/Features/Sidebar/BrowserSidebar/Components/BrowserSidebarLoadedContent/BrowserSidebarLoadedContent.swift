@@ -370,7 +370,7 @@ final class BrowserSidebarWidgetDeckScrollObserverView: NSView {
     let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
     BrowserSidebar(
         browser: browser,
-        pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser),
+        pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess),
         spaceAccess: spaceAccess,
         capabilities: BrowserInteractionCapabilities(),
         utilityCoordinator: BrowserSidebarUtilityCoordinator(

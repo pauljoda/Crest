@@ -46,17 +46,18 @@ struct BrowserStartPageContent: View {
         _ source: BrowserTabRuntimeAssignment,
         _ url: URL
     ) -> Bool {
-        guard isSourceAvailable(source) else { return false }
-        withAnimation(
+        return withAnimation(
             BrowserVisualAccessibilityPolicy.animation(
                 CrestMotion.contentNavigation,
                 reduceMotion: reduceMotion
             )
         ) {
-            browser.navigateSelectedTab(to: url)
-            pages.load(url)
+            BrowserStartPageNavigationAction(
+                browser: browser,
+                pages: pages,
+                spaceAccess: spaceAccess
+            ).perform(source, url: url)
         }
-        return true
     }
 
     private func selectStartPageTab(

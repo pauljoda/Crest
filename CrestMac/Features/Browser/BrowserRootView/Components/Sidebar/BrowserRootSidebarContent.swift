@@ -52,7 +52,7 @@ struct BrowserRootSidebarContent: View {
     }
 
     private var pageAccess: BrowserSidebarPageAccess {
-        BrowserSidebarPageAccess(pages: model.pages, browser: model.browser)
+        BrowserSidebarPageAccess(pages: model.pages, browser: model.browser, spaceAccess: model.spaceAccess)
     }
 
     private var utilityCoordinator: BrowserSidebarUtilityCoordinator {

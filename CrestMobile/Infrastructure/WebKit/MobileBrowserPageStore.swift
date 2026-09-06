@@ -1062,12 +1062,34 @@ final class MobileBrowserPageStore:
         activePage?.goForward(toDepth: item.depth)
     }
 
+    /// Explicit durable close differs from residency eviction only when the
+    /// person chose to return to the saved URL on the next open.
+    func closeDurablePage(_ assignment: BrowserTabRuntimeAssignment, discardState: Bool) -> Bool {
+        guard
+            pagesByTabID[assignment.tabID].map({
+                $0.spaceID == assignment.spaceID && $0.profileID == assignment.profileID
+            }) ?? true
+        else { return false }
+        unloadPage(for: assignment.tabID, preservingTabState: !discardState)
+        if discardState { discardArchivedTabState(matching: assignment) }
+        return true
+    }
+
+    func discardArchivedTabState(matching assignment: BrowserTabRuntimeAssignment) {
+        pendingTabCopyStates.removeValue(forKey: assignment)
+        tabStateArchive?.removeState(profileID: assignment.profileID, tabID: assignment.tabID)
+    }
+
     func unloadPage(for tabID: TabID) {
+        unloadPage(for: tabID, preservingTabState: true)
+    }
+
+    private func unloadPage(for tabID: TabID, preservingTabState: Bool) {
         forgetBackgroundPageObservation(for: tabID)
         // Archived before the page is torn down: a tab closed by hand can be
         // reopened, and a tab unloaded by hand is expected to come back where it
         // was left.
-        archiveTabState(for: tabID)
+        if preservingTabState { archiveTabState(for: tabID) }
         guard let page = pagesByTabID.removeValue(forKey: tabID) else { return }
         page.prepareForSpaceDeletion()
         inactiveSinceByTabID[tabID] = nil

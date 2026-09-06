@@ -9,7 +9,9 @@ struct BrowserTabSavedLocationIndicator: View {
             .foregroundStyle(.tertiary)
             .frame(width: 14, height: CrestLayout.minimumHitTarget)
             .contentShape(.rect)
-            .onTapGesture(count: 2, perform: restore)
+            #if os(iOS)
+                .onTapGesture(count: 2, perform: restore)
+            #endif
             .help("Away from saved location — double-click to return")
             .accessibilityElement()
             .accessibilityLabel("Away from saved location")

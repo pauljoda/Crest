@@ -100,7 +100,7 @@ struct MobileBrowserSpacePage: View {
     }
 
     private var pageAccess: BrowserSidebarPageAccess {
-        BrowserSidebarPageAccess(pages: pages, browser: browser)
+        BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess)
     }
 
     private var tabActions: BrowserSidebarTabActions {
@@ -122,7 +122,8 @@ struct MobileBrowserSpacePage: View {
         MobileSavedLocationRestoreAction(
             browser: browser,
             pages: pages,
-            selectTab: selectTab
+            selectTab: selectTab,
+            spaceAccess: spaceAccess
         ).perform(
             BrowserTabRuntimeAssignment(
                 tabID: tabID,

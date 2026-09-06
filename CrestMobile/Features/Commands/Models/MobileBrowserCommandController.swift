@@ -4,6 +4,7 @@ import SwiftUI
 struct MobileBrowserCommandController {
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
+    var spaceAccess = BrowserSpaceAccessController()
 
     var orderedTabs: [BrowserTab] {
         browser.selectedSpace?.tabs ?? []
@@ -60,8 +61,15 @@ struct MobileBrowserCommandController {
             }
             return archiveSelectedTab()
         case .unloadPage:
-            browser.selectDismissalFallback(afterDismissing: selectedTab.id)
-            pages.unloadPage(for: selectedTab.id)
+            guard let space = browser.selectedSpace,
+                BrowserDurableTabCloseAction(
+                    browser: browser, spaceAccess: spaceAccess,
+                    closePage: { pages.closeDurablePage($0, discardState: $1) }
+                ).perform(
+                    BrowserTabRuntimeAssignment(
+                        tabID: selectedTab.id, spaceID: space.id, profileID: space.profile.id
+                    ))
+            else { return nil }
             synchronizePages()
             return selectedTab.id
         case .closeWindow:

@@ -2,7 +2,7 @@ import SwiftUI
 
 extension MobileBrowserRootModel {
     var commandController: MobileBrowserCommandController {
-        MobileBrowserCommandController(browser: browser, pages: pages)
+        MobileBrowserCommandController(browser: browser, pages: pages, spaceAccess: spaceAccess)
     }
 
     func commandContext(

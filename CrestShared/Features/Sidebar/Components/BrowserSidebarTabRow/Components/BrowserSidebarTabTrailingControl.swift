@@ -78,7 +78,7 @@ private struct BrowserSidebarTabUnloadButton: View {
             unload(configuration.tab.id)
         } label: {
             BrowserSidebarTabTrailingControlLabel(
-                systemName: "minus",
+                systemName: "xmark",
                 metrics: metrics
             )
         }
@@ -87,8 +87,8 @@ private struct BrowserSidebarTabUnloadButton: View {
         .opacity(isVisible ? 1 : 0)
         .disabled(!configuration.isLoaded || !configuration.isCurrentAndUnlocked)
         .allowsHitTesting(isVisible)
-        .accessibilityLabel("Unload \(configuration.tab.displayTitle)")
-        .help("Unload Tab")
+        .accessibilityLabel("Close \(configuration.tab.displayTitle)")
+        .help("Close Tab")
     }
 
     private var metrics: BrowserTabTrailingControlMetrics {

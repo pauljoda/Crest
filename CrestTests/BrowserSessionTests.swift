@@ -71,7 +71,7 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(session.selectedTab).isAwayFromSavedLocation)
     }
 
-    func testPinnedTabDoubleClickRequestsItsSavedLocationOnlyWhenAway() throws {
+    func testPinnedTabDoubleClickLetsThePageActionCheckPendingNavigation() throws {
         var tab = BrowserTab(
             title: "Media Library",
             url: try XCTUnwrap(URL(string: "https://media.example/audio/episode")),
@@ -82,7 +82,12 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertTrue(BrowserPinnedTabInteraction.shouldRestoreSavedLocation(for: tab))
 
         tab.url = tab.savedURL
-        XCTAssertFalse(BrowserPinnedTabInteraction.shouldRestoreSavedLocation(for: tab))
+        XCTAssertTrue(BrowserPinnedTabInteraction.shouldRestoreSavedLocation(for: tab))
+        XCTAssertFalse(BrowserSavedLocationRestorePolicy.shouldRestore(tab, pendingURL: nil))
+        XCTAssertTrue(
+            BrowserSavedLocationRestorePolicy.shouldRestore(
+                tab, pendingURL: URL(string: "https://media.example/next")
+            ))
     }
 
     func testTabSectionsPartitionLargeFolderedSpaceInOneStableOrder() {

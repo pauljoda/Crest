@@ -7,6 +7,7 @@ struct BrowserCommands: Commands {
     let chrome: BrowserChromeState
     let shortcuts: BrowserShortcutStore
     let softwareUpdates: BrowserSoftwareUpdateService
+    let spaceAccess: BrowserSpaceAccessController
     @Environment(\.openWindow) private var openWindow
     @Environment(\.layoutDirection) private var layoutDirection
     @FocusedValue(\.browserCommandContext) private var focusedContext
@@ -402,6 +403,7 @@ struct BrowserCommands: Commands {
             pages: commandPages,
             chrome: commandChrome,
             openWindow: openWindow,
+            spaceAccess: focusedContext?.spaceAccess ?? spaceAccess,
             targetWindowID: focusedContext?.windowID,
             layoutDirection: layoutDirection,
             extensionSidebar: focusedContext?.extensionSidebar

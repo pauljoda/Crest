@@ -30,6 +30,14 @@ struct BrowserSidebarTabActivationButton: View {
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
         .contentShape(.rect)
+        #if os(macOS)
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    guard tab.placement == .saved else { return }
+                    restoreSavedLocation?()
+                }
+            )
+        #endif
         .overlay(alignment: .leading) {
             Color.clear
                 .frame(

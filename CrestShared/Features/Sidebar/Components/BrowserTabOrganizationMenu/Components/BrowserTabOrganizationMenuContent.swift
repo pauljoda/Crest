@@ -249,7 +249,10 @@ struct BrowserTabOrganizationMenuContent: View {
         }
 
         if let unload, isLoaded {
-            Button("Unload Tab", systemImage: "minus") {
+            Button(
+                tab.placement == .current ? "Unload Tab" : "Close Tab",
+                systemImage: tab.placement == .current ? "minus" : "xmark"
+            ) {
                 performIfCurrent { liveTab in
                     unload(liveTab.id)
                 }

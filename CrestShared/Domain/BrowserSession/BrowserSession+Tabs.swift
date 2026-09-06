@@ -691,7 +691,7 @@ extension BrowserSession {
     ) -> URL? {
         guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
             let tabIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),
-            spaces[spaceIndex].tabs[tabIndex].isAwayFromSavedLocation,
+            spaces[spaceIndex].tabs[tabIndex].supportsSavedLocationEditing,
             let savedURL = spaces[spaceIndex].tabs[tabIndex].savedSiteURL
         else {
             return nil

@@ -119,7 +119,7 @@ struct SpaceSidebarBrowsingContent: View {
     }
 
     private var pageAccess: BrowserSidebarPageAccess {
-        BrowserSidebarPageAccess(pages: pages, browser: browser)
+        BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess)
     }
 
     private var tabActions: BrowserSidebarTabActions {

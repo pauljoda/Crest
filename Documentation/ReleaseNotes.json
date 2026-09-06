@@ -633,6 +633,14 @@
     "2026-09-06-consistent-link-tab-focus": {
       "category": "improved",
       "message": "Apply your link-opening focus preference across supported links and new windows, with background tabs loading immediately on Mac and iPad"
+    },
+    "2026-09-06-pinned-and-saved-tab-root-restore": {
+      "category": "improved",
+      "message": "Return pinned and saved tabs to their saved URL with a double-click or an optional reset when closing"
+    },
+    "2026-09-06-start-page-destination-loading": {
+      "category": "fixed",
+      "message": "Load pages immediately when selected from Start Page, including after launch or switching to a Space with unloaded tabs"
     }
   }
 }
