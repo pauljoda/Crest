@@ -22,15 +22,16 @@
 enum BrowserExtensionExternalMessagingCompatibilityScript {
     static let source = #"""
         // Runs one relayed web-page message through every registered
-        // `onMessageExternal` listener and hands back the first Promise a
-        // listener produced. That is what the runtime's listener wrapper
+        // `onMessageExternal` listener and waits for the first answer. A
+        // listener returning true keeps its channel alive without reserving
+        // the response. That is what the runtime's listener wrapper
         // returns for `return true` plus `sendResponse`, for a returned
         // Promise, and for a synchronous `sendResponse`, so a relayed delivery
         // claims a response by exactly the rules a native one does.
         // `undefined` means nobody claimed it, which is Chrome's "the
         // receiving end does not exist".
         const dispatchRelayedExternalMessage = (message, sender) => {
-            let claimed;
+            const responses = [];
             for (const wrapper of Array.from(
                 externalMessageListeners.values()
             )) {
@@ -40,11 +41,14 @@ enum BrowserExtensionExternalMessagingCompatibilityScript {
                 } catch {
                     continue;
                 }
-                if (claimed === undefined && result?.then instanceof Function) {
-                    claimed = result;
+                if (typeof result?.then === "function") {
+                    responses.push(result);
                 }
             }
-            return claimed;
+            // Observe every promise, including later rejections. Selecting
+            // the first promise strands a valid reply behind a silent
+            // callback listener until the host's delivery timeout.
+            return responses.length > 0 ? Promise.race(responses) : undefined;
         };
         // The one-shot answer that completes the page's promise. An omitted
         // `response` is Chrome's unanswered message; `null` would be a value

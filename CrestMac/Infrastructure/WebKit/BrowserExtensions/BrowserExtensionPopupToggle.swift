@@ -51,7 +51,9 @@ final class BrowserExtensionPopupToggle {
     }
 
     func observe(
-        _ popover: NSPopover, action: WKWebExtension.Action, key: ObjectIdentifier, anchor: BrowserExtensionPopupAnchor?
+        _ popover: NSPopover, action: WKWebExtension.Action, key: ObjectIdentifier,
+        anchor: BrowserExtensionPopupAnchor?,
+        runtimeDidReload: @escaping @MainActor () -> Void = {}
     ) {
         presentedPopups[key] = PresentedPopup(popover, action: action)
         if monitor == nil {
@@ -85,6 +87,25 @@ final class BrowserExtensionPopupToggle {
             forName: NSPopover.didCloseNotification, object: popover, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.finishedClosing(key) }
+        }
+        // WebKit exposes no runtime reload notification and leaves a
+        // host-presented popover alive after replacing its action. Check only
+        // while this popup is visible; ordinary browsing has no polling work.
+        Task { @MainActor [weak self, weak popover, weak action] in
+            while true {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard let self, let popover, popover.isShown,
+                    self.presentedPopups[key]?.popover === popover
+                else { return }
+                guard let action, let context = action.webExtensionContext, context.isLoaded,
+                    context.action(for: action.associatedTab) === action
+                else {
+                    if let action { action.closePopup() }
+                    if popover.isShown { popover.close() }
+                    runtimeDidReload()
+                    return
+                }
+            }
         }
     }
 

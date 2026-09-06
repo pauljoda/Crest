@@ -105,6 +105,71 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertFalse(String(decoding: firstManifest, as: UTF8.self).contains(token))
     }
 
+    func testProgrammaticDeclaredContentScriptsReceiveTheirPreludeWithoutChangingNativeResults() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-dynamic-content-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("globalThis.vendorRuns = (globalThis.vendorRuns || 0) + 1;".utf8)
+            .write(to: root.appending(path: "content.js"))
+        let manifest: [String: Any] = [
+            "manifest_version": 3, "name": "Dynamic content", "version": "1.0",
+            "permissions": ["scripting", "clipboardRead"],
+            "content_scripts": [["matches": ["https://example.com/*"], "js": ["content.js"]]],
+        ]
+        try JSONSerialization.data(withJSONObject: manifest).write(to: root.appending(path: "manifest.json"))
+        XCTAssertTrue(
+            try BrowserWebExtensionCompatibilityPackagePreparer().installCompatibilityLayer(
+                in: root, requestedPermissions: ["scripting", "clipboardRead"], runtimeIdentity: fixtureRuntimeIdentity)
+        )
+        let preparedManifest = try String(contentsOf: root.appending(path: "manifest.json"), encoding: .utf8)
+        let source = try String(
+            contentsOf: generatedJavaScriptURL(in: root, prefix: "crest-webextension-compatibility"), encoding: .utf8)
+        let output = try await WKWebView().callAsyncJavaScript(
+            """
+            const calls = [];
+            const nativeResult = Promise.resolve([{frameId: 0, result: "vendor result"}]);
+            const scripting = {executeScript(details, callback) {
+                calls.push({details, receiver: this === scripting, callback: typeof callback});
+                if (callback) { callback([{frameId: 0, result: "callback result"}]); return; }
+                return nativeResult;
+            }};
+            globalThis.chrome = {runtime: {id: "fixture-extension-id", getManifest: () => (\(preparedManifest))}, scripting};
+            \(source)
+            const original = {target: {tabId: 7, allFrames: true}, files: ["content.js"], injectImmediately: true};
+            const returned = chrome.scripting.executeScript(original);
+            const firstWrapper = scripting.executeScript;
+            \(source)
+            let callbackResult;
+            chrome.scripting.executeScript(original, value => callbackResult = value);
+            chrome.scripting.executeScript({...original, world: "MAIN"});
+            chrome.scripting.executeScript({...original, files: ["unrelated.js"]});
+            chrome.scripting.executeScript({target: {tabId: 7}, func: () => 42});
+            return JSON.stringify({calls, original, callbackResult, sameResult: returned === nativeResult,
+                sameWrapper: firstWrapper === scripting.executeScript, declaredFiles: chrome.runtime.getManifest().content_scripts[0].js});
+            """, contentWorld: .page)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(try XCTUnwrap(output as? String).utf8)) as? [String: Any])
+        let calls = try XCTUnwrap(result["calls"] as? [[String: Any]])
+        XCTAssertEqual(calls.count, 5)
+        let details = try XCTUnwrap(calls[0]["details"] as? [String: Any])
+        let files = try XCTUnwrap(details["files"] as? [String])
+        XCTAssertEqual(files.count, 3)
+        XCTAssertTrue(files[0].hasPrefix("crest-webextension-clipboard-"))
+        XCTAssertTrue(files[1].hasPrefix("crest-webextension-compatibility-"))
+        XCTAssertEqual(files.last, "content.js")
+        XCTAssertEqual(details["target"] as? [String: Int], ["tabId": 7, "allFrames": 1])
+        XCTAssertEqual(details["injectImmediately"] as? Bool, true)
+        XCTAssertEqual((calls[2]["details"] as? [String: Any])?["files"] as? [String], ["content.js"])
+        XCTAssertEqual((calls[3]["details"] as? [String: Any])?["files"] as? [String], ["unrelated.js"])
+        XCTAssertNil((calls[4]["details"] as? [String: Any])?["files"])
+        XCTAssertTrue(calls.allSatisfy { $0["receiver"] as? Bool == true })
+        XCTAssertEqual(result["sameResult"] as? Bool, true)
+        XCTAssertEqual(result["sameWrapper"] as? Bool, true)
+        XCTAssertEqual((result["original"] as? [String: Any])?["files"] as? [String], ["content.js"])
+        XCTAssertEqual(result["declaredFiles"] as? [String], ["content.js"])
+        XCTAssertEqual((result["callbackResult"] as? [[String: Any]])?.first?["result"] as? String, "callback result")
+    }
+
     func testStoreItemRecognizesDarkReaderAndRejectsUntrustedLookalikes() throws {
         let item = try XCTUnwrap(
             BrowserChromeWebStoreItem(

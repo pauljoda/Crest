@@ -102,10 +102,9 @@ final class BrowserExtensionExternalMessagingCompatibilityScriptTests: XCTestCas
         XCTAssertEqual(result["hasResponseKey"] as? [Bool], [false])
     }
 
-    /// Every context of the extension hears the delivery, and the first one to
-    /// claim it owns the answer. A later listener's response is dropped rather
-    /// than sent as a second reply.
-    func testTheFirstClaimingListenerOwnsTheAnswer() async throws {
+    /// Every listener hears the delivery, but keeping a channel open does not
+    /// reserve its answer. Only the first actual response wins.
+    func testTheFirstRespondingListenerOwnsTheAnswer() async throws {
         let result = try await evaluate(
             """
             const seen = [];
@@ -123,6 +122,42 @@ final class BrowserExtensionExternalMessagingCompatibilityScriptTests: XCTestCas
         let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
         XCTAssertEqual(requests.count, 1)
         XCTAssertEqual(requests[0]["response"] as? String, "second")
+    }
+
+    func testASilentCallbackListenerDoesNotBlockALaterResponse() async throws {
+        let result = try await evaluate(
+            """
+            let lateReply;
+            addExternalMessageListener((message, sender, reply) => {
+                lateReply = reply;
+                return true;
+            });
+            addExternalMessageListener(async () => "ready");
+            deliver({api: "runtime.externalMessage", requestId: "startup", message: {type: "ready"}});
+            await settle();
+            const beforeLateReply = requests.map(request => request.response);
+            lateReply("too late");
+            await settle();
+            return {beforeLateReply, requests};
+            """)
+        XCTAssertEqual(result["beforeLateReply"] as? [String], ["ready"])
+        let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(requests[0]["response"] as? String, "ready")
+    }
+
+    func testARejectedListenerSettlesTheDeliveryWithoutAnUnhandledRejection() async throws {
+        let result = try await evaluate(
+            """
+            addExternalMessageListener(() => new Promise(() => {}));
+            addExternalMessageListener(() => Promise.reject(new Error("unavailable")));
+            deliver({api: "runtime.externalMessage", requestId: "rejected", message: {}});
+            await settle();
+            return {requests};
+            """)
+        let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertNil(requests.first?["response"])
     }
 
     /// The watch is a live native port, so it exists only while somebody is

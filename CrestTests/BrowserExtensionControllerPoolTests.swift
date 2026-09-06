@@ -541,12 +541,13 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
         try JSONSerialization.data(withJSONObject: [
             "manifest_version": 3, "name": "Clipboard Read Diagnostic", "version": "1.0",
-            "permissions": ["clipboardRead"], "action": [:],
+            "permissions": ["clipboardRead", "scripting", "tabs"], "action": [:],
             "web_accessible_resources": [["resources": ["*"], "matches": ["https://clipboard.example/*"]]],
             "content_scripts": [["matches": ["https://clipboard.example/*"], "js": ["content.js"]]],
         ]).write(to: root.appending(path: "manifest.json"))
         try Data(
             """
+            (() => {
             const importClipboard = () => {
                 const input = document.createElement('textarea');
                 document.body.appendChild(input); input.select();
@@ -561,6 +562,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             };
             document.addEventListener('crest-import-test', importClipboard);
             importClipboard();
+            })();
             """.utf8
         ).write(to: root.appending(path: "content.js"))
         try Data("<html><body><script src='clipboard-page.js'></script></body></html>".utf8).write(
@@ -575,11 +577,22 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             readClipboard();
             """.utf8
         ).write(to: root.appending(path: "clipboard-page.js"))
-        let space = BrowserSession.preview.spaces[0]
+        var space = BrowserSession.preview.spaces[0]
+        let dynamicTab = BrowserTab(
+            title: "Existing page", url: URL(string: "https://dynamic.example/")!, placement: .current)
+        space.tabs = [dynamicTab]
+        space.selectedTabID = dynamicTab.id
+        let browser = BrowserStore(
+            session: .init(spaces: [space], selectedSpaceID: space.id), persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = PageProviderSpy()
         let pool = BrowserExtensionControllerPool(
             storedResourcePreparer: BrowserStoreWebExtensionStoredResourcePreparer())
+        pool.connect(browser: browser, pageProvider: pages)
         let summary = try await pool.loadUnpackedExtension(from: root, in: space)
         pool.setPermissionDecision(.allow, for: "clipboardRead", extensionID: summary.id, in: space.id)
+        pool.setPermissionDecision(.allow, for: "scripting", extensionID: summary.id, in: space.id)
+        pool.setPermissionDecision(.allow, for: "tabs", extensionID: summary.id, in: space.id)
         let context = try XCTUnwrap(pool.toolbarActions(in: space.id, tabID: nil).first?.context)
         context.setPermissionStatus(.grantedExplicitly, for: URL(string: "https://clipboard.example/")!)
         let configuration = BrowserPageConfiguration.make(
@@ -652,6 +665,45 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(modern["text"] as? String, sample)
         XCTAssertEqual(modern["granted"] as? Bool, true)
         XCTAssertEqual(modern["listed"] as? Bool, true)
+
+        // GradeTransferer uses getManifest().content_scripts[0].js to inject
+        // into a page which may predate installation. No automatic content
+        // script matches this second origin: the programmatic route must
+        // install its own compatibility prelude before the vendor file.
+        context.setPermissionStatus(.grantedExplicitly, for: dynamicTab.url!)
+        let dynamicView = WKWebView(frame: webView.frame, configuration: configuration)
+        dynamicView.uiDelegate = clipboardDelegate
+        pages.webViews[dynamicTab.id] = dynamicView
+        let dynamicNavigation = ExtensionNavigationWaiter(webView: dynamicView)
+        try await dynamicNavigation.load(
+            simulatedRequest: URLRequest(url: dynamicTab.url!),
+            responseHTML: "<!doctype html><body>Existing page</body>")
+        let beforeInjection = try await dynamicView.evaluateJavaScript(
+            "typeof document.documentElement.dataset.clipboardDiagnostic")
+        XCTAssertEqual(beforeInjection as? String, "undefined")
+        for _ in 0..<2 {
+            _ = try await dynamicView.evaluateJavaScript(
+                "delete document.documentElement.dataset.clipboardDiagnostic; true")
+            _ = try await extensionView.callAsyncJavaScript(
+                """
+                const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+                await chrome.scripting.executeScript({target: {tabId: tab.id}, files: chrome.runtime.getManifest().content_scripts[0].js});
+                return true;
+                """, contentWorld: .page)
+            var dynamicResult: [String: Any]?
+            for _ in 0..<200 where dynamicResult == nil {
+                if let text = try await dynamicView.evaluateJavaScript(
+                    "document.documentElement.dataset.clipboardDiagnostic") as? String
+                {
+                    dynamicResult = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any]
+                } else {
+                    try await Task.sleep(for: .milliseconds(25))
+                }
+            }
+            XCTAssertEqual(dynamicResult?["value"] as? String, sample)
+            XCTAssertEqual(dynamicResult?["accepted"] as? Bool, true)
+            XCTAssertEqual(dynamicResult?["text"] as? String, sample)
+        }
 
         pool.setPermissionDecision(.block, for: "clipboardRead", extensionID: summary.id, in: space.id)
         _ = try await extensionView.evaluateJavaScript(
@@ -747,7 +799,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         try Data(
             """
             <!doctype html><title>Ready</title>
-            <body>Loading</body><script src="popup.js"></script>
+            <body style="background: white">Loading</body><script src="popup.js"></script>
             """.utf8
         ).write(to: extensionURL.appending(path: "popup.html"))
         try Data(
@@ -772,6 +824,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         // Swift owns this fixture; close must not release it a second time.
         window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
         let sourceView = NSView(
             frame: CGRect(x: 20, y: 540, width: 24, height: 24)
         )
@@ -838,6 +891,11 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 "Ready",
                 "The presented popup never had its opening message answered."
             )
+            let textColor =
+                try await popupWebView.evaluateJavaScript("getComputedStyle(document.body).color") as? String
+            XCTAssertEqual(
+                textColor, "rgb(0, 0, 0)",
+                "A popup without dark color-scheme support must keep readable text on its authored white background.")
         } catch {
             await cleanUpPresentedPopup()
             throw error
@@ -871,6 +929,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         try Data(
             """
             chrome.runtime.onMessage.addListener((message, sender, reply) => {
+                if (message.reload) { chrome.runtime.reload(); return; }
                 reply({ready: true});
                 return true;
             });
@@ -881,6 +940,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         try Data(
             """
             <!doctype html><title>Ready</title>
+            <meta name="color-scheme" content="light dark">
             <body>Loading</body><script src="popup.js"></script>
             """.utf8
         ).write(
@@ -911,6 +971,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
         // Swift owns this fixture; close must not release it a second time.
         window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
         let sourceView = NSView(frame: CGRect(x: 20, y: 540, width: 24, height: 24))
         window.contentView?.addSubview(sourceView)
         window.orderFront(nil)
@@ -941,6 +1002,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         }
         XCTAssertTrue(action.action.popupPopover?.isShown == true)
         XCTAssertEqual(popupText, "Ready")
+        let initialColor = try await popupWebView.evaluateJavaScript("getComputedStyle(document.body).color") as? String
+        XCTAssertEqual(initialColor, "rgb(255, 255, 255)", "An adaptive popup should retain native dark appearance.")
 
         pool.perform(
             action,
@@ -978,13 +1041,37 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             reopenedPopupText,
             "Ready"
         )
-        pool.perform(
-            action,
-            popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView)
-        )
-        for _ in 0..<200 where action.action.popupPopover?.isShown == true {
-            try await Task.sleep(for: .milliseconds(10))
+        let reopenedColor =
+            try await reopenedPopupWebView.evaluateJavaScript("getComputedStyle(document.body).color") as? String
+        XCTAssertEqual(reopenedColor, "rgb(255, 255, 255)")
+        // An extension's own Refresh command reloads its runtime. The old
+        // popup must disappear rather than continue displaying a dead page.
+        var reloadAction = action
+        var reloadView = reopenedPopupWebView
+        for request in ["chrome.runtime.reload()", "void chrome.runtime.sendMessage({reload: true})"] {
+            let obsoletePopover = try XCTUnwrap(reloadAction.action.popupPopover)
+            let revision = pool.actionRevision
+            _ = try? await reloadView.evaluateJavaScript(request)
+            for _ in 0..<200 where obsoletePopover.isShown {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            XCTAssertFalse(obsoletePopover.isShown, "runtime.reload() left the obsolete popup visible.")
+            XCTAssertGreaterThan(pool.actionRevision, revision)
+            let refreshedAction = try XCTUnwrap(pool.toolbarActions(in: space.id, tabID: nil).first)
+            XCTAssertTrue(refreshedAction.context === action.context)
+            XCTAssertFalse(refreshedAction.action === reloadAction.action)
+            pool.perform(refreshedAction, popupAnchor: BrowserExtensionPopupAnchor(sourceView: sourceView))
+            for _ in 0..<500 where refreshedAction.action.popupPopover?.isShown != true {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            let refreshedPopup = try XCTUnwrap(refreshedAction.action.popupWebView)
+            XCTAssertTrue(refreshedAction.action.popupPopover?.isShown == true)
+            let refreshedText = try await refreshedPopup.evaluateJavaScript("document.body.innerText") as? String
+            XCTAssertEqual(refreshedText, "Ready", "The new popup must reach the reloaded background.")
+            reloadAction = refreshedAction
+            reloadView = refreshedPopup
         }
+        reloadAction.action.closePopup()
         try await Task.sleep(for: .milliseconds(250))
         window.close()
     }

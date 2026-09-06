@@ -1117,6 +1117,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                 const primaryRoot = nativeChrome ?? nativeBrowser;
                 if (!primaryRoot) return;
                 const extensionBaseURL = \(javascriptStringLiteral(runtimeIdentity.baseURL.absoluteString));
+                const compatibilityInstallation = Symbol.for("crest.compatibility:" + extensionBaseURL);
+                if (globalThis[compatibilityInstallation]) return;
                 const appendsChromiumNavigatorFamilyMarker = \(appendsChromiumNavigatorFamilyMarker ? "true" : "false");
                 const isBackgroundWorker =
                     typeof globalThis.document === "undefined";
@@ -1126,6 +1128,20 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         .startsWith(extensionBaseURL);
                 const nativeRuntime = nativeBrowser?.runtime
                     ?? nativeChrome?.runtime;
+                // Capture WebKit's prepared declarations before getManifest
+                // is restored to the author's manifest. Programmatic file
+                // injection needs the same prelude as automatic injection.
+                const contentScriptPreludes = new Map();
+                try {
+                    for (const declaration of nativeRuntime.getManifest().content_scripts ?? []) {
+                        if (declaration.world === "MAIN" || !Array.isArray(declaration.js)) continue;
+                        const preludes = declaration.js.filter(path =>
+                            /^crest-webextension-(compatibility|clipboard)-[a-f0-9]+\\.js$/.test(path));
+                        for (const path of declaration.js) {
+                            if (!preludes.includes(path)) contentScriptPreludes.set(path, preludes);
+                        }
+                    }
+                } catch {}
                 const nativeRuntimeWithMethod = (methodName) => {
                     // WebKit can refresh the live extension facade after this
                     // compatibility script starts (notably when an emulated
@@ -5123,10 +5139,36 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                     }
                 };
+                const patchedScriptingNamespaces = new WeakSet();
+                const installScriptingPrelude = (scripting) => {
+                    if (!scripting || patchedScriptingNamespaces.has(scripting)
+                        || typeof scripting.executeScript !== "function") return;
+                    const executeScript = scripting.executeScript;
+                    const wrapped = function(details, ...args) {
+                        if (details && (details.world === undefined || details.world === "ISOLATED")
+                            && Array.isArray(details.files) && details.files.length > 0 && !details.func) {
+                            const preludes = [...new Set(details.files.flatMap(path =>
+                                contentScriptPreludes.get(path) ?? []))];
+                            if (preludes.length > 0) {
+                                details = {...details, files: [
+                                    ...preludes.filter(path => !details.files.includes(path)), ...details.files
+                                ]};
+                            }
+                        }
+                        return Reflect.apply(executeScript, scripting, [details, ...args]);
+                    };
+                    try {
+                        Object.defineProperty(scripting, "executeScript", {
+                            value: wrapped, configurable: true, writable: true, enumerable: true
+                        });
+                        patchedScriptingNamespaces.add(scripting);
+                    } catch {}
+                };
                 const installCompatibility = (nativeRoot) => {
                     if (!nativeRoot) return;
 
                     normalizeRuntime(nativeRoot.runtime);
+                    installScriptingPrelude(nativeRoot.scripting);
                     // The header-rule wrappers are defined on WebKit's own
                     // `declarativeNetRequest` object, so this runs before the
                     // schema constants below are installed onto it.
@@ -7428,6 +7470,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                         }
                     );
                 } catch {}
+                Object.defineProperty(globalThis, compatibilityInstallation, {value: true});
             })();
             """
     }

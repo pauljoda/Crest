@@ -416,6 +416,13 @@ that reason.
   `runtime.getManifest()` returns the authored manifest rather than Crest's
   temporary worker redirection.
 - `scripting`: enum and member normalization; injection itself remains native.
+  `executeScript({files})` includes Crest's prepared compatibility and clipboard
+  preludes when injecting an authored, declared content-script file into the
+  isolated world. This also supports pages open before installation, without
+  requiring a page reload. The authored manifest, native return value, callback,
+  and target are preserved. Function injection, unrelated files, and `MAIN`
+  world injection do not receive these preludes. Repeated execution leaves
+  existing compatibility wrappers intact.
 - `sidePanel` / `sidebarAction`: Crest hosts the extension document in a
   trailing split-row card on macOS. Both namespaces publish their complete
   implemented schema; WebKit's partial namespaces remain hidden. Chrome's API

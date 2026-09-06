@@ -695,9 +695,10 @@ The watch asks for no permission grant, only the broker authorization the port
 already holds, for the same reason `runtime.getContexts` and
 `diagnostics.report` do: no `chrome.*` permission stands in front of
 `onMessageExternal` in Chrome either. Every context of the extension opens its
-own port and hears every delivery, as it would natively; the first listener to
-claim a message owns the answer and a later one is dropped, exactly as Chrome
-drops a late `sendResponse`. A delivery a listener claims but never answers,
+own port and hears every delivery, as it would natively; the first response
+settles the delivery and later answers are dropped. Returning `true` keeps a
+listener's channel open without reserving the response: a later listener can
+still answer while that callback remains silent. A delivery nobody answers,
 and one that reaches an extension whose worker was evicted mid-dispatch, ends
 at 30 seconds with the same "receiving end does not exist" rather than holding
 the page's promise for the life of the panel.

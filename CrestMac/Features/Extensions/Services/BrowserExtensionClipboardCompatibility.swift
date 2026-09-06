@@ -12,6 +12,8 @@ enum BrowserExtensionClipboardCompatibility {
         return #"""
             (() => {
                 if (typeof document === 'undefined' || !(globalThis.chrome ?? globalThis.browser)?.runtime?.id) return;
+                const installation = Symbol.for('crest.clipboard:\#(token)');
+                if (globalThis[installation]) return;
                 const nativePrompt = globalThis.prompt.bind(globalThis);
                 const nativeExec = Document.prototype.execCommand;
                 const read = () => {
@@ -44,6 +46,7 @@ enum BrowserExtensionClipboardCompatibility {
                         configurable: true, value: async () => read()
                     });
                 }
+                Object.defineProperty(globalThis, installation, {value: true});
             })();
             """#
     }

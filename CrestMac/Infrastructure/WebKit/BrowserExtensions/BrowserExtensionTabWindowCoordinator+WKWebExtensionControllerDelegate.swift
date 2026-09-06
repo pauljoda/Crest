@@ -272,34 +272,25 @@ extension BrowserExtensionTabWindowCoordinator:
         else {
             return false
         }
-        // WebKit creates an extension action's popover outside Crest's SwiftUI
-        // view hierarchy. Without an explicit appearance, that auxiliary
-        // window can remain Aqua even while the browser and system are dark;
-        // `prefers-color-scheme` then also reports the wrong value to every
-        // extension popup. Carry the invoking window's resolved appearance
-        // onto both WebKit-owned surfaces before presentation. Applying it to
-        // the web view also updates a page that finished loading while WebKit
-        // was constructing the popover.
-        let appearance = presentationSource.view.effectiveAppearance
-        popover.appearance = appearance
-        action.popupWebView?.appearance = appearance
+        // WebKit chooses the popup appearance from the document's supported
+        // color schemes. Forcing the browser's dark appearance onto its web
+        // view gives light-only extensions white text on white backgrounds.
         if popover.isShown {
             action.closePopup()
             return true
         }
         if let context = action.webExtensionContext {
-            popupToggle.observe(popover, action: action, key: ObjectIdentifier(context), anchor: anchor)
+            let key = ObjectIdentifier(context)
+            popupToggle.observe(popover, action: action, key: key, anchor: anchor) { [weak self] in
+                self?.popupBackgroundReadyUntil[key] = nil
+                self?.actionDidUpdate?()
+            }
         }
         popover.show(
             relativeTo: presentationSource.rect,
             of: presentationSource.view,
             preferredEdge: .maxY
         )
-        // `NSPopover.show` creates its private window and can replace the
-        // popover object's inherited appearance while doing so. Apply the
-        // same resolved value to that concrete window once it exists.
-        popover.contentViewController?.view.window?.appearance = appearance
-        action.popupWebView?.appearance = appearance
         return true
     }
 

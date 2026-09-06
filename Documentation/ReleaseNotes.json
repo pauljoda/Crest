@@ -617,6 +617,18 @@
     "2026-09-06-space-entry-keeps-tabs-unloaded": {
       "category": "improved",
       "message": "Show Start Page when entering a Mac Space with an unloaded tab, keeping the page unloaded until you select it"
+    },
+    "2026-09-06-extension-popup-appearance-and-reload": {
+      "category": "fixed",
+      "message": "Keep extension popup text readable and dismiss outdated popups when an extension reloads"
+    },
+    "2026-09-06-extension-content-script-startup": {
+      "category": "fixed",
+      "message": "Keep extension clipboard tools working when they initialize on pages that were already open"
+    },
+    "2026-09-06-extension-website-message-responses": {
+      "category": "fixed",
+      "message": "Avoid delays when extensions handle website messages through multiple listeners"
     }
   }
 }

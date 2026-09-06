@@ -22,6 +22,9 @@ Do not publish a blanket claim that all Chrome or all Firefox extensions work.
 
 ## Product behavior
 
+- An extension's `runtime.reload()` closes its obsolete action popup and uses
+  WebKit's unload/load lifecycle. The next toolbar click opens a fresh document
+  with the same extension identity, permissions, and persistent storage.
 - The Chrome Web Store page opens a native Crest review sheet. Crest verifies
   the signed CRX3 package, shows requested permissions and website access, and
   installs the extension into the selected Space.
@@ -859,6 +862,24 @@ pins the ordering against a real unpacked extension: it fails when the popover
 is shown inside the call that asked for it.
 `BrowserExtensionActionPopupLiveTests.testLiveDarkReaderPopupCompletesAfterItsBackgroundIsEvicted`
 drives the real presentation path after a 45-second idle.
+
+Popup appearance belongs to WebKit and the extension's declared `color-scheme`.
+Crest does not force the browser window's appearance onto the popup, its window,
+or its web view. That override made default text white in light-only documents
+with authored white backgrounds, hiding GradeTransferer's first-use checkbox
+label. The native popup tests cover readable light-only content inside a dark
+browser window and dark adaptive content across closing and reopening. This
+does not change the extension's HTML, CSS, or first-use agreement.
+
+`runtime.reload()` remains WebKit's native API. WebKit replaces its action
+objects during reload but does not notify Crest or dismiss a host-presented
+popover. While a popup is visible, Crest checks its action identity every
+250 milliseconds and closes it if the runtime replaced or unloaded it. Closing
+the popup ends the check. An invalidation also clears the background readiness
+cache and refreshes the toolbar action, so the next click opens a fresh document.
+Native popup tests exercise reloads initiated by both the popup and its worker,
+including communication with the restarted worker. Storage remains owned by
+WebKit; the popup presenter does not read or rewrite it.
 
 ### Where the warm-up is still lied to, and why nothing else ships
 
