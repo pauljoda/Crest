@@ -17,7 +17,7 @@ the live status for each issue.
 
 - [x] [Add global sidebar widgets for updates and media](https://github.com/pauljoda/Crest/issues/4) — [`a499b614`](https://github.com/pauljoda/Crest/commit/a499b614fc9d3532bfb8d436ab3efc653d78e476)
 - [x] [Add website notification support with clear per-Space controls](https://github.com/pauljoda/Crest/issues/5) — [`116cecc8`](https://github.com/pauljoda/Crest/commit/116cecc871a8cd369ce567e93535fa5ff1c0ca01)
-- [x] [Support video picture-in-picture and optional automatic PiP](https://github.com/pauljoda/Crest/issues/6)
+- [x] [Support video picture-in-picture and optional automatic PiP](https://github.com/pauljoda/Crest/issues/6) — [`56bc3649`](https://github.com/pauljoda/Crest/commit/56bc3649f1c26c54b19efd00cd329eec2a7b7238)
 - [x] [Add an About section for build, updates, and community links](https://github.com/pauljoda/Crest/issues/7) — [`553f4abf`](https://github.com/pauljoda/Crest/commit/553f4abf18ea79411c3e1a2ee647010492ebca1a)
 - [x] [Make the full sidebar adaptive across iPad and wider iPhone layouts](https://github.com/pauljoda/Crest/issues/8)
 - [x] [Add native emoji picking to icon customization](https://github.com/pauljoda/Crest/issues/9) — [`de12c20d`](https://github.com/pauljoda/Crest/commit/de12c20d14c5b2b0c5af0f310ac2a426bd8c40ad), [`fcf72347`](https://github.com/pauljoda/Crest/commit/fcf72347760c4ae73403fbe37ebf46ab1f1fe4d8)
@@ -55,34 +55,50 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [Restore pinned and saved tabs to their root URL predictably](https://github.com/pauljoda/Crest/issues/41)
 - [ ] [Select and act on multiple tabs](https://github.com/pauljoda/Crest/issues/42)
 - [ ] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43)
-- [ ] [Make link-opening behavior configurable](https://github.com/pauljoda/Crest/issues/48)
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
-- [ ] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
-- [ ] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70)
-- [ ] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
-- [ ] [Preview link destinations on hover](https://github.com/pauljoda/Crest/issues/75)
-- [ ] [Clarify link and tab context-menu destinations](https://github.com/pauljoda/Crest/issues/78)
-- [ ] [Make the mobile sidebar control unmistakable](https://github.com/pauljoda/Crest/issues/79)
 - [ ] [Improve onboarding and Space customization](https://github.com/pauljoda/Crest/issues/83)
 
 #### Completed
 
+- [x] [Restore pinned and saved tabs to their root URL predictably](https://github.com/pauljoda/Crest/issues/41)
+- [x] [Make new-link focus preferences consistent](https://github.com/pauljoda/Crest/issues/48) — [`143a9f0e`](https://github.com/pauljoda/Crest/commit/143a9f0ef4dfc35f2e4f774ba756f0952f799d87)
 - [x] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62) — [`5e6f4ca0`](https://github.com/pauljoda/Crest/commit/5e6f4ca04c373444d31ec886ecf98f8583f521f9)
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
-- [x] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64)
-- [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66)
+- [x] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64) — [`3f7513f2`](https://github.com/pauljoda/Crest/commit/3f7513f216cb6d650d18867545d4c16c423e4feb)
+- [x] [Offer Space-local URL autocomplete](https://github.com/pauljoda/Crest/issues/65)
+- [x] [Keep Search Engine settings open on mobile](https://github.com/pauljoda/Crest/issues/66) — [`550b4a8c`](https://github.com/pauljoda/Crest/commit/550b4a8c4f278e37ce8343c5167fd280d71ec398)
 - [x] [Handle direct media-file links predictably](https://github.com/pauljoda/Crest/issues/68) — [`3ec94181`](https://github.com/pauljoda/Crest/commit/3ec941810b3ebe38c628e17a06cbb418fa4b3634)
 - [x] [Keep mobile launch and new-tab searches responsive](https://github.com/pauljoda/Crest/issues/69)
+- [x] [Show the focused page in the window title](https://github.com/pauljoda/Crest/issues/70) — [`4e49d3ca`](https://github.com/pauljoda/Crest/commit/4e49d3ca15c192c9e759787da0644acd830140c0)
 - [x] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71) — [`807b4919`](https://github.com/pauljoda/Crest/commit/807b49199698b34b478ce531b2a66dbd0aa2f951)
+- [x] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72) — [`96f03717`](https://github.com/pauljoda/Crest/commit/96f03717d1a02e6635a229fa4af796a5f85294bc)
 - [x] [Match visited links to exact history entries](https://github.com/pauljoda/Crest/issues/73) — [`fe50f3af`](https://github.com/pauljoda/Crest/commit/fe50f3afe1bb5403dcb6e705e2c978fec70d8fd7)
+- [x] [Preview link destinations on hover](https://github.com/pauljoda/Crest/issues/75) — [`db22c259`](https://github.com/pauljoda/Crest/commit/db22c259fd7b810bad0162975ffb2f1e7fbe9f63)
 - [x] [Reveal page progress before navigation finishes](https://github.com/pauljoda/Crest/issues/77) — [`a8e2f29e`](https://github.com/pauljoda/Crest/commit/a8e2f29ee2a9dcd955b03d738e32e79683110933)
-- [x] [Diagnose blurry Google Docs canvas rendering on macOS 26](https://github.com/pauljoda/Crest/issues/80)
+- [x] [Clarify webpage link destinations across Spaces](https://github.com/pauljoda/Crest/issues/78) — [`0cceb2d3`](https://github.com/pauljoda/Crest/commit/0cceb2d3bda5ef74803b09b3f7ef4f9b4a20bccf)
+- [x] [Fix blurry Google Docs rendering on macOS 26](https://github.com/pauljoda/Crest/issues/80) — [`65e0d3cd`](https://github.com/pauljoda/Crest/commit/65e0d3cd309e64621c5c24331fad57d0001ed058)
 - [x] [Profile and eliminate Space-switching hitches](https://github.com/pauljoda/Crest/issues/81) — [`7b6b15f7`](https://github.com/pauljoda/Crest/commit/7b6b15f7ff329509276fd2472fcc9d233bb06193)
+- [x] [Make new downloads easier to notice](https://github.com/pauljoda/Crest/issues/85)
+- [x] [Customize persistent folder colors and tab counts](https://github.com/pauljoda/Crest/issues/86)
+- [x] [Review mobile drag preview alignment and responsiveness](https://github.com/pauljoda/Crest/issues/87)
+- [x] [Keep unloaded tabs idle when entering a Mac Space](https://github.com/pauljoda/Crest/issues/88) — [`e8b82899`](https://github.com/pauljoda/Crest/commit/e8b82899ca9c08576531213c3570b5d4ea8b4d3d)
+- [x] [Validate first mobile tab navigation](https://github.com/pauljoda/Crest/issues/89)
+- [x] [Start mobile sessions without selecting a tab](https://github.com/pauljoda/Crest/issues/90) — [`cc6c6f0c`](https://github.com/pauljoda/Crest/commit/cc6c6f0c4d851c2df63c3bfc846a940c4e3dec02)
+- [x] [Preserve saved and pinned tabs when creating splits](https://github.com/pauljoda/Crest/issues/91) — [`e8b7c7f2`](https://github.com/pauljoda/Crest/commit/e8b7c7f209d6b9b98b020d27f78062a32a83a393)
+- [x] [Keep the Mac Space picker centered during overflow](https://github.com/pauljoda/Crest/issues/92) — [`6c677d9f`](https://github.com/pauljoda/Crest/commit/6c677d9f79542a528dce72deabdb11e775914826)
+- [x] [Remove excess spacing below Quick Window controls](https://github.com/pauljoda/Crest/issues/93) — [`87442217`](https://github.com/pauljoda/Crest/commit/87442217787be88c4f44164b09eb327b03a12934)
+- [x] [Handle shared folder compatibility across versions](https://github.com/pauljoda/Crest/issues/94) — [`95960a75`](https://github.com/pauljoda/Crest/commit/95960a75228d1428b8bd7e6afa4aafe87ee4e307)
+- [x] [Support Space-scoped extension sidebars and shared tab folders](https://github.com/pauljoda/Crest/issues/95) — [`ec590e43`](https://github.com/pauljoda/Crest/commit/ec590e436ae072ff733730e9b0403eadbd626939)
+- [x] [Restore webpage editor focus after returning to a Space](https://github.com/pauljoda/Crest/issues/96) — [`7de193d6`](https://github.com/pauljoda/Crest/commit/7de193d62711775b661ba9d937f28c0c1f9c1312)
+- [x] [Avoid invalid-key feedback for webpage controls](https://github.com/pauljoda/Crest/issues/97) — [`10d124d7`](https://github.com/pauljoda/Crest/commit/10d124d781689b1abf579fa0e5cf0bd4f863a6de)
+
+#### Not planned
+
+- [x] [Make the mobile sidebar control unmistakable](https://github.com/pauljoda/Crest/issues/79)
 
 <!-- crest-roadmap-sync:end -->
 

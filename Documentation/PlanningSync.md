@@ -30,6 +30,13 @@ identity; titles can change without creating duplicate issues.
 | Completed | Closed as completed | Done |
 | Canceled or duplicate | Closed as not planned | Done |
 
+Before moving an existing completed outcome to not planned, check whether the
+cancellation predates verified delivery or an explicit user correction. If the
+records conflict, preserve the completed public status and report the conflict.
+Normal sync does not write back to Linear. Correct stale source metadata only
+when separately authorized, then resume the mapping above. Do not encode
+issue-specific exceptions in the roadmap renderer.
+
 The `roadmap` label adds an issue to the shared Crest Roadmap project. Platform
 and feature labels are derived from the user-facing scope and existing GitHub
 labels. The sync preserves unrelated labels, discussion, and manually added
