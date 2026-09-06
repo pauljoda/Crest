@@ -272,6 +272,9 @@ final class BrowserDownloadCenter: NSObject {
             ?? download.originalRequest?.url?.lastPathComponent
         let filename = requestedFilename.flatMap { $0.isEmpty ? nil : $0 } ?? "download"
         let itemID = ledger.begin(profileID: profileID, filename: filename)
+        #if os(macOS)
+            let feedbackSource = BrowserMacDownloadFeedbackSource.capture(in: webView) ?? feedbackSource
+        #endif
         if let feedbackSource {
             presentFeedback(
                 BrowserDownloadFeedbackEvent(

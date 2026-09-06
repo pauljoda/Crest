@@ -14,6 +14,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(BrowserExtensionSidebarStore.self) private var extensionSidebar: BrowserExtensionSidebarStore?
+    @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -82,6 +83,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             BrowserRootUtilityFanLayer(model: model)
                 .zIndex(BrowserRootMetrics.utilityFanZIndex)
 
+            BrowserMacDownloadFeedbackLayer(model: model, feedback: downloadFeedback)
+                .zIndex(BrowserRootMetrics.utilityFanZIndex + 1)
+
             BrowserRootDragPreviewLayer(
                 model: model,
                 reduceMotion: reduceMotion
@@ -124,6 +128,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // One per-window host answers for every row and tile in this shell,
         // so the sidebar reads it from here rather than being handed a value
         // per tab through the tree between them.
+        .environment(downloadFeedback)
         .environment(
             \.browserWebFocusRestorationGate,
             BrowserWebFocusRestorationGate(

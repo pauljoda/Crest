@@ -19,13 +19,6 @@ struct BrowserRootUtilityFanLayer: View {
                     layoutDirection: layoutDirection
                 )
 
-                BrowserDownloadFeedbackLayer(
-                    events: model.pages.downloadCenter.feedbackEvents,
-                    profileID: model.browser.selectedSpace?.profile.id,
-                    spaceID: model.browser.selectedSpace?.id,
-                    destinationFrameInGlobal: triggerFrame
-                )
-                .zIndex(1)
             }
         }
     }

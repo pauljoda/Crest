@@ -11,6 +11,10 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
     let recordFrame: (CGRect) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if os(macOS)
+        @Environment(BrowserMacDownloadFeedbackState.self) private var downloadFeedback:
+            BrowserMacDownloadFeedbackState?
+    #endif
 
     var body: some View {
         Button("Common Lists", systemImage: "archivebox", action: action)
@@ -23,7 +27,7 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
             .symbolVariant(isExpanded ? .fill : .none)
             .symbolEffect(
                 .bounce,
-                value: reduceMotion ? nil : newDownloads.first?.id
+                value: reduceMotion ? nil : arrivalTrigger
             )
             .overlay(alignment: .topTrailing) {
                 if !newDownloads.isEmpty {
@@ -57,5 +61,17 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
         let state = isExpanded ? "Expanded" : "Collapsed"
         guard !newDownloads.isEmpty else { return state }
         return "\(state), \(newDownloads.count) new downloads"
+    }
+
+    private enum ArrivalTrigger: Equatable {
+        case flight(Int)
+        case download(UUID?)
+    }
+
+    private var arrivalTrigger: ArrivalTrigger {
+        #if os(macOS)
+            if let downloadFeedback { return .flight(downloadFeedback.arrivalCount) }
+        #endif
+        return .download(newDownloads.first?.id)
     }
 }

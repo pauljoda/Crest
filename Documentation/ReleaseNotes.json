@@ -649,6 +649,10 @@
     "2026-09-06-expanded-sidebar-bottom-spacing": {
       "category": "fixed",
       "message": "Remove excess bottom space from expanded browser layouts while keeping sidebar controls comfortably inset"
+    },
+    "2026-09-06-pointer-download-start-feedback": {
+      "category": "improved",
+      "message": "See downloads begin at your cursor and fly into Archive, with clear bottom-left feedback when the sidebar is hidden"
     }
   }
 }
