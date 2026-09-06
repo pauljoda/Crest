@@ -5,11 +5,11 @@ import WebKit
 /// synchronous because WebKit demands the popup's web view before it returns.
 @MainActor
 struct BrowserPopupTabHost {
-    var openTab: (URL?, SpaceID) -> BrowserPopupTabRegistration?
+    var openTab: (URL?, SpaceID, Bool) -> BrowserPopupTabRegistration?
     var closeTab: (TabID, SpaceID) -> Void
 
     init(
-        openTab: @escaping (URL?, SpaceID) -> BrowserPopupTabRegistration?,
+        openTab: @escaping (URL?, SpaceID, Bool) -> BrowserPopupTabRegistration?,
         closeTab: @escaping (TabID, SpaceID) -> Void
     ) {
         self.openTab = openTab
@@ -19,7 +19,7 @@ struct BrowserPopupTabHost {
     /// Declines every popup. Pools built without a tab host (tests, previews)
     /// fall back to the URL-routed path instead of adopting.
     static let unavailable = BrowserPopupTabHost(
-        openTab: { _, _ in nil },
+        openTab: { _, _, _ in nil },
         closeTab: { _, _ in }
     )
 }

@@ -125,7 +125,7 @@ extension BrowserStore {
     /// consulting session state itself. `window.open()` without a destination
     /// arrives as a nil URL and becomes an `about:blank` tab, because a tab
     /// without a URL is a start page rather than a web page.
-    func openPopupTab(url: URL?, in spaceID: SpaceID) -> BrowserPopupTabRegistration? {
+    func openPopupTab(url: URL?, in spaceID: SpaceID, selecting: Bool = true) -> BrowserPopupTabRegistration? {
         guard !deletingSpaceIDs.contains(spaceID),
             let space = session.space(id: spaceID),
             let destinationURL = url ?? URL(string: "about:blank")
@@ -134,14 +134,14 @@ extension BrowserStore {
             after: space.selectedTabID,
             in: space
         )
-        session.selectSpace(spaceID)
+        if selecting { session.selectSpace(spaceID) }
         guard
             let tabID = session.openTab(
                 title: destinationURL.host() ?? destinationURL.absoluteString,
                 url: destinationURL,
                 in: spaceID,
                 requestedIndex: requestedIndex,
-                shouldSelect: true
+                shouldSelect: selecting
             ),
             let updatedSpace = session.space(id: spaceID),
             let tab = updatedSpace.tabs.first(where: { $0.id == tabID })
@@ -155,8 +155,8 @@ extension BrowserStore {
     /// the tab list does.
     var popupTabHost: BrowserPopupTabHost {
         BrowserPopupTabHost(
-            openTab: { [weak self] url, spaceID in
-                self?.openPopupTab(url: url, in: spaceID)
+            openTab: { [weak self] url, spaceID, selecting in
+                self?.openPopupTab(url: url, in: spaceID, selecting: selecting)
             },
             closeTab: { [weak self] tabID, spaceID in
                 _ = self?.closeTab(tabID, in: spaceID)
@@ -603,6 +603,16 @@ extension BrowserStore {
             scope: updatesAutomaticIcon ? .favicon(for: tabID) : .core
         )
         return true
+    }
+
+    func updateBackgroundPage(_ update: BrowserBackgroundPageUpdate) {
+        updateTabFromPage(
+            url: update.url, title: update.title, faviconData: update.faviconData,
+            iconAccent: update.iconAccent, for: update.tabID, matching: update.assignment
+        )
+        if let url = update.completedNavigationURL {
+            recordVisit(url: url, title: update.title, matching: update.assignment)
+        }
     }
 
 }

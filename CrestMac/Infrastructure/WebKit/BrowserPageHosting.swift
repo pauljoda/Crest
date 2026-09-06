@@ -30,7 +30,8 @@ protocol BrowserPageHosting: AnyObject {
     func adoptPopupWebView(
         configuration: WKWebViewConfiguration,
         requestedURL: URL?,
-        opener: BrowserPage
+        opener: BrowserPage,
+        selecting: Bool
     ) -> WKWebView?
 
     /// Honors `window.close()` for a page the web content itself opened.

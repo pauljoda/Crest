@@ -29,7 +29,8 @@ enum BrowserModifiedLinkDisposition: Equatable, Sendable {
         isUserActivatedLink: Bool,
         isCommandModified: Bool,
         isShiftModified: Bool,
-        isMiddleClick: Bool
+        isMiddleClick: Bool,
+        focusesNewTabs: Bool = false
     ) -> BrowserModifiedLinkDisposition {
         guard isUserActivatedLink,
             isCommandModified || isMiddleClick,
@@ -38,8 +39,26 @@ enum BrowserModifiedLinkDisposition: Equatable, Sendable {
         else {
             return .navigate
         }
-        return isShiftModified
+        return BrowserLinkOpeningPolicy.selectsNewTab(
+            isNewTabGesture: true,
+            isShiftModified: isShiftModified,
+            focusesNewTabs: focusesNewTabs
+        )
             ? .foregroundTab(destinationURL)
             : .backgroundTab(destinationURL)
+    }
+}
+
+/// Selection is independent of how WebKit loads the destination. An ordinary
+/// new-window request retains its foreground behavior; Shift reverses the
+/// stored choice only when WebKit reports a new-tab gesture.
+enum BrowserLinkOpeningPolicy {
+    static func selectsNewTab(
+        isNewTabGesture: Bool,
+        isShiftModified: Bool,
+        focusesNewTabs: Bool
+    ) -> Bool {
+        guard isNewTabGesture else { return true }
+        return focusesNewTabs != isShiftModified
     }
 }

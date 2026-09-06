@@ -468,6 +468,57 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
     }
 
+    func testNativeWindowFocusUsesTheSharedChoiceForCommandMiddleClickAndShift() {
+        for focus in [false, true] {
+            for shift in [false, true] {
+                for middle in [false, true] {
+                    var preferences = BrowserLinkPreferences.default
+                    preferences.focusesNewTabsOpenedFromLinks = focus
+                    var flags: UIKeyModifierFlags = middle ? [] : .command
+                    if shift { flags.insert(.shift) }
+                    let action = StubPopupNavigationAction(
+                        url: nil, navigationType: .other, modifierFlags: flags,
+                        buttonNumber: middle ? UIEvent.ButtonMask(rawValue: 1 << 2) : []
+                    )
+                    XCTAssertEqual(action.selectsOpenedLink(using: preferences), focus != shift)
+                }
+            }
+        }
+    }
+
+    func testBackgroundNativeWindowUpdatesItsOwnTabAndBecomesPressureEligibleAfterLoading() async throws {
+        let saved = BrowserLinkPreferenceStore.shared.preferences
+        defer { BrowserLinkPreferenceStore.shared.update { $0 = saved } }
+        BrowserLinkPreferenceStore.shared.focusesNewTabsOpenedFromLinks = false
+        let context = try makePopupContext()
+        let sourceID = context.store.selectedTab?.id
+        let url = try XCTUnwrap(URL(string: "https://example.com/research"))
+        let popup = try XCTUnwrap(
+            context.opener.webView(
+                context.opener.webView,
+                createWebViewWith: context.opener.webView.configuration,
+                for: StubPopupNavigationAction(url: url, navigationType: .other, modifierFlags: .command),
+                windowFeatures: WKWindowFeatures()
+            ))
+        let tabID = try XCTUnwrap(context.store.selectedSpace?.tabs.first { $0.id != sourceID }?.id)
+        XCTAssertEqual(context.store.selectedTab?.id, sourceID)
+        XCTAssertTrue(context.pages.activePage === context.opener)
+        context.pages.handleMemoryPressure(.critical, at: Date())
+        await context.pages.waitForPendingMemoryPressureResponse()
+        XCTAssertTrue(context.pages.containsResidentPage(for: tabID))
+
+        popup.loadSimulatedRequest(URLRequest(url: url), responseHTML: "<title>Background ready</title><p>Ready</p>")
+        try await waitUntil(timeout: 5) {
+            context.store.selectedSpace?.tabs.first { $0.id == tabID }?.title == "Background ready"
+                && context.store.selectedSpace?.history.contains { $0.url == url } == true
+        }
+        XCTAssertEqual(context.store.selectedTab?.id, sourceID)
+        context.pages.handleMemoryPressure(.critical, at: Date().addingTimeInterval(5))
+        await context.pages.waitForPendingMemoryPressureResponse()
+        XCTAssertFalse(context.pages.containsResidentPage(for: tabID))
+        XCTAssertTrue(context.pages.activePage === context.opener)
+    }
+
     func testAutomaticPopupBridgeBlocksCoalescesAndAllowsOnlyANewAttempt() async throws {
         let context = try makePopupContext()
         let origin = try XCTUnwrap(URL(string: "https://mobile-popups.crest.test/"))
@@ -1455,7 +1506,8 @@ final class MobileBrowserInteropTests: XCTestCase {
             browsingMode: browsingMode,
             usesEphemeralWebsiteDataStores: tabStateArchive == nil,
             tabStateArchive: tabStateArchive,
-            popupTabHost: store.popupTabHost
+            popupTabHost: store.popupTabHost,
+            backgroundPageDidUpdate: { store.updateBackgroundPage($0) }
         )
         pages.select(session: store.session)
         return MobilePopupAdoptionContext(
@@ -1527,20 +1579,29 @@ private final class StubPopupNavigationAction: WKNavigationAction,
 {
     private let stubRequest: URLRequest
     private let stubNavigationType: WKNavigationType
+    private let stubModifierFlags: UIKeyModifierFlags
+    private let stubButtonNumber: UIEvent.ButtonMask
 
-    init(url: URL?, navigationType: WKNavigationType) {
+    init(
+        url: URL?, navigationType: WKNavigationType, modifierFlags: UIKeyModifierFlags = [],
+        buttonNumber: UIEvent.ButtonMask = []
+    ) {
         // `window.open()` without a destination reaches WebKit as a request
         // without a URL, which a stub can only reproduce by clearing it.
         var request = URLRequest(url: URL(fileURLWithPath: "/"))
         request.url = url
         stubRequest = request
         stubNavigationType = navigationType
+        stubModifierFlags = modifierFlags
+        stubButtonNumber = buttonNumber
         super.init()
     }
 
     override var request: URLRequest { stubRequest }
     override var navigationType: WKNavigationType { stubNavigationType }
     override var targetFrame: WKFrameInfo? { nil }
+    override var modifierFlags: UIKeyModifierFlags { stubModifierFlags }
+    override var buttonNumber: UIEvent.ButtonMask { stubButtonNumber }
     var browserSourceOrigin: BrowserSiteOrigin? { nil }
 }
 

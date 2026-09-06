@@ -5,53 +5,6 @@ import Observation
 import WebKit
 import os
 
-struct BrowserModifiedLinkRegistration {
-    let tab: BrowserTab
-    let space: BrowserSpace
-    let session: BrowserSession
-}
-
-struct BrowserBackgroundPageUpdate {
-    let tabID: TabID
-    let assignment: BrowserSpaceRuntimeAssignment
-    let url: URL?
-    let title: String
-    let faviconData: Data?
-    let iconAccent: BrowserTabIconAccent?
-    let estimatedProgress: Double
-    let isLoading: Bool
-    let readerModeState: BrowserReaderModeState
-    let completedNavigationURL: URL?
-    let processTerminationCount: Int
-}
-
-@MainActor
-private struct BrowserBackgroundPageSnapshot: Equatable {
-    let url: URL?
-    let title: String
-    let faviconData: Data?
-    let iconAccent: BrowserTabIconAccent?
-    let estimatedProgress: Double
-    let isLoading: Bool
-    let readerModeState: BrowserReaderModeState
-    let completedNavigationCount: Int
-    let processTerminationCount: Int
-    let hasNavigationFailure: Bool
-
-    init(page: BrowserPage) {
-        url = page.displayURL
-        title = page.navigationFailure?.displayHost ?? page.title
-        faviconData = page.faviconData
-        iconAccent = page.siteThemeIconAccent
-        estimatedProgress = page.estimatedProgress
-        isLoading = page.isLoading
-        readerModeState = page.readerModeState
-        completedNavigationCount = page.completedNavigationCount
-        processTerminationCount = page.processTerminationCount
-        hasNavigationFailure = page.navigationFailure != nil
-    }
-}
-
 @Observable
 @MainActor
 final class BrowserPagePool:
@@ -723,14 +676,15 @@ final class BrowserPagePool:
     }
 
     private func openModifiedLink(
-        _ url: URL,
+        _ request: URLRequest,
         in spaceID: SpaceID,
         selecting: Bool
     ) {
-        guard let registration = openModifiedLink(url, spaceID, selecting) else {
+        guard let url = request.url,
+            let registration = openModifiedLink(url, spaceID, selecting)
+        else {
             return
         }
-        guard !selecting else { return }
         let page = page(for: registration.tab, space: registration.space)
         observeBackgroundPage(
             page,
@@ -738,7 +692,8 @@ final class BrowserPagePool:
             in: registration.space
         )
         extensionControllerPool.reconcileExtensionState(in: registration.session)
-        loadInitialURL(for: registration.tab, into: page)
+        page.load(request)
+        if selecting { select(session: registration.session) }
         reconcileCredentialAccess(in: registration.session)
     }
 
@@ -1467,12 +1422,13 @@ final class BrowserPagePool:
     func adoptPopupWebView(
         configuration: WKWebViewConfiguration,
         requestedURL: URL?,
-        opener: BrowserPage
+        opener: BrowserPage,
+        selecting: Bool = true
     ) -> WKWebView? {
         guard tabID(for: opener) != nil,
             !spacesReleasingData.contains(opener.spaceID),
             !spacesDeletingData.contains(opener.spaceID),
-            let registration = popupTabHost.openTab(requestedURL, opener.spaceID),
+            let registration = popupTabHost.openTab(requestedURL, opener.spaceID, selecting),
             registration.space.id == opener.spaceID,
             registration.space.profile.id == opener.profileID
         else { return nil }
@@ -1490,7 +1446,11 @@ final class BrowserPagePool:
         )
         pages[registration.tab.id] = page
         residencyRevision &+= 1
-        activate(registration.tab.id, at: .now)
+        if selecting {
+            activate(registration.tab.id, at: .now)
+        } else {
+            observeBackgroundPage(page, for: registration.tab.id, in: registration.space)
+        }
         return page.webView
     }
 
@@ -2160,7 +2120,7 @@ final class BrowserPagePool:
         // WebKit owns an adopted popup's first navigation. Loading it here would
         // replace the document `window.open()` handed to the opener.
         guard !page.isAwaitingPopupNavigation else { return }
-        guard page.url == nil, let url = tab.url else { return }
+        guard page.url == nil, page.pendingNavigationURL == nil, let url = tab.url else { return }
         let interval = Self.lifecycleSignposter.beginInterval("Start Initial Navigation")
         // Restoring WebKit's session state performs its own navigation, so it
         // replaces the plain load rather than preceding it. Anything WebKit will

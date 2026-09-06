@@ -269,7 +269,7 @@ struct BrowserNewTabSettingsSection: View {
             .accessibilityIdentifier(Self.controlIdentifier)
 
             CrestFormFootnote(
-                "Selects tabs opened with Command-click or middle-click."
+                "Selects tabs opened with Command-click or middle-click when the webpage supports it. Add Shift to reverse this choice. Background tabs load immediately."
             )
         }
     }

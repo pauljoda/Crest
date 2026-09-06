@@ -94,7 +94,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
         XCTAssertEqual(pages.activePage?.appInitiatedNavigationCount, 1)
     }
 
-    func testBackgroundModifiedLinkWaitsForSelectionThenLoadsExactlyOnce() throws {
+    func testBackgroundModifiedLinkLoadsBeforeSelectionAndIsReused() throws {
         let store = BrowserStore(
             session: makeSession(index: 91),
             persistence: InMemoryBrowserSessionPersistence()
@@ -111,7 +111,7 @@ final class MobileBrowserPageStoreTests: XCTestCase {
             store.selectedSpace?.tabs.first { $0.id != sourceTabID }
         )
         XCTAssertEqual(store.selectedTab?.id, sourceTabID)
-        XCTAssertFalse(pages.containsResidentPage(for: openedTab.id))
+        XCTAssertTrue(pages.containsResidentPage(for: openedTab.id))
 
         store.selectTab(openedTab.id)
         pages.select(session: store.session)
@@ -825,13 +825,15 @@ final class MobileBrowserPageStoreTests: XCTestCase {
             usesEphemeralWebsiteDataStores: true,
             openModifiedLink: { url, spaceID, selecting in
                 guard
-                    browser.openNewTab(
+                    let tabID = browser.openNewTab(
                         url: url,
                         in: spaceID,
                         selecting: selecting
-                    ) != nil
+                    ),
+                    let space = browser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return browser.session
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
             }
         )
     }

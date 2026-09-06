@@ -113,7 +113,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// The URL Crest asked this page to load, as opposed to one web content
     /// asked for. Only an app-initiated load may reach a `file:` URL.
     @ObservationIgnored private var appInitiatedURL: URL?
-    @ObservationIgnored let openModifiedLink: (URL, SpaceID, Bool) -> Void
+    @ObservationIgnored let openModifiedLink: (URLRequest, SpaceID, Bool) -> Void
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored var navigationContext: BrowserPageNavigationContext?
     @ObservationIgnored var activeNavigation: WKNavigation?
@@ -250,7 +250,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         saveHTTPAuthenticationCredential:
             @escaping BrowserHTTPAuthenticationSession.SaveCredential = { _ in },
         openNewTab: @escaping (URL) -> Void,
-        openModifiedLink: @escaping (URL, SpaceID, Bool) -> Void = { _, _, _ in },
+        openModifiedLink: @escaping (URLRequest, SpaceID, Bool) -> Void = { _, _, _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
@@ -518,9 +518,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func load(_ url: URL) {
-        appInitiatedURL = url
-        prepareForNavigation(to: url)
-        webView.load(URLRequest(url: url))
+        load(URLRequest(url: url))
+    }
+
+    func load(_ request: URLRequest) {
+        appInitiatedURL = request.url
+        prepareForNavigation(to: request.url)
+        webView.load(request)
     }
 
     /// Replays a request WebKit classified as web-content navigation in this

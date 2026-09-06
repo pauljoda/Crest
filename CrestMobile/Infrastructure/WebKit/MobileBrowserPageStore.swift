@@ -27,7 +27,11 @@ final class MobileBrowserPageStore:
         @MainActor (MobileBrowserPage, Bool) async -> BrowserPageResidencyDecision
 
     typealias ModifiedLinkOpener =
-        @MainActor (URL, SpaceID, Bool) -> BrowserSession?
+        @MainActor (URL, SpaceID, Bool) -> BrowserModifiedLinkRegistration?
+
+    @ObservationIgnored private let backgroundPageDidUpdate: (BrowserBackgroundPageUpdate) -> Void
+    @ObservationIgnored private var backgroundPageSnapshots: [TabID: BrowserBackgroundPageSnapshot] = [:]
+    @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
     /// One resident page memory pressure may consider, with the idle stamp its
     /// least-recently-used ordering comes from.
@@ -124,6 +128,7 @@ final class MobileBrowserPageStore:
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         openNewTab: @escaping (URL) -> Void = { _ in },
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
+        backgroundPageDidUpdate: @escaping (BrowserBackgroundPageUpdate) -> Void = { _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
         stagePeek: ((BrowserPeekRequest) -> Void)? = nil,
         commitPeek: ((BrowserPeekRequest) -> Void)? = nil,
@@ -153,6 +158,7 @@ final class MobileBrowserPageStore:
         self.linkDestinationHost = linkDestinationHost
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
+        self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
         self.stagePeek = stagePeek
         self.commitPeek = commitPeek
@@ -407,8 +413,62 @@ final class MobileBrowserPageStore:
         reconcileCredentialAccess(in: session)
     }
 
-    func activateOpenedLink(_ url: URL, in session: BrowserSession) {
-        selectAndLoad(url, in: session)
+    func loadOpenedLink(_ registration: BrowserModifiedLinkRegistration, request: URLRequest, selecting: Bool) {
+        let space = registration.space
+        guard !spacesReleasingData.contains(space.id),
+            !spacesDeletingData.contains(space.id)
+        else { return }
+        let page = makeResidentPage(for: registration.tab, in: space, loadsInitialURL: false)
+        pagesByTabID[registration.tab.id] = page
+        residencyRevision &+= 1
+        observeBackgroundPage(page, in: space)
+        page.load(request)
+        if selecting { select(session: registration.session) }
+    }
+
+    private func observeBackgroundPage(_ page: MobileBrowserPage, in space: BrowserSpace) {
+        backgroundPageAssignments[page.tabID] = BrowserSpaceRuntimeAssignment(space: space)
+        backgroundPageSnapshots[page.tabID] = BrowserBackgroundPageSnapshot(page: page)
+        trackBackgroundPageChanges(page)
+    }
+
+    private func trackBackgroundPageChanges(_ page: MobileBrowserPage) {
+        withObservationTracking {
+            _ = BrowserBackgroundPageSnapshot(page: page)
+        } onChange: { [weak self, weak page] in
+            Task { @MainActor in
+                guard let self, let page else { return }
+                self.backgroundPageDidChange(page)
+            }
+        }
+    }
+
+    private func backgroundPageDidChange(_ page: MobileBrowserPage) {
+        let tabID = page.tabID
+        guard pagesByTabID[tabID] === page,
+            let assignment = backgroundPageAssignments[tabID]
+        else { return }
+        let previous = backgroundPageSnapshots[tabID]
+        let current = BrowserBackgroundPageSnapshot(page: page)
+        backgroundPageSnapshots[tabID] = current
+        trackBackgroundPageChanges(page)
+        if current.completedNavigationCount > 0 || current.hasNavigationFailure
+            || (previous?.isLoading == true && !current.isLoading)
+        {
+            stampPreparedPageIfNeeded(tabID, at: .now)
+        }
+        guard previous != current, !presentedTabIDs.contains(tabID) else { return }
+        let completedURL =
+            current.completedNavigationCount > (previous?.completedNavigationCount ?? 0)
+            ? page.url : nil
+        backgroundPageDidUpdate(
+            BrowserBackgroundPageUpdate(
+                tabID: tabID, assignment: assignment, url: current.url,
+                title: current.title, faviconData: current.faviconData,
+                iconAccent: current.iconAccent, estimatedProgress: current.estimatedProgress,
+                isLoading: current.isLoading, readerModeState: current.readerModeState,
+                completedNavigationURL: completedURL, processTerminationCount: 0
+            ))
     }
 
     private func prepareSelectedPage(
@@ -759,6 +819,8 @@ final class MobileBrowserPageStore:
             page.prepareForSpaceDeletion()
         }
         pagesByTabID.removeAll()
+        backgroundPageSnapshots.removeAll()
+        backgroundPageAssignments.removeAll()
         residencyRevision &+= 1
         inactiveSinceByTabID.removeAll()
         memoryPressureReleaseTask?.cancel()
@@ -907,12 +969,13 @@ final class MobileBrowserPageStore:
     func adoptPopupWebView(
         configuration: WKWebViewConfiguration,
         requestedURL: URL?,
-        opener: MobileBrowserPage
+        opener: MobileBrowserPage,
+        selecting: Bool = true
     ) -> WKWebView? {
         guard tabID(for: opener) != nil,
             !spacesReleasingData.contains(opener.spaceID),
             !spacesDeletingData.contains(opener.spaceID),
-            let registration = popupTabHost.openTab(requestedURL, opener.spaceID),
+            let registration = popupTabHost.openTab(requestedURL, opener.spaceID, selecting),
             registration.space.id == opener.spaceID,
             registration.space.profile.id == opener.profileID
         else { return nil }
@@ -925,7 +988,11 @@ final class MobileBrowserPageStore:
         page.markOpenedAsPopup()
         pagesByTabID[registration.tab.id] = page
         residencyRevision &+= 1
-        activate(page, at: .now)
+        if selecting {
+            activate(page, at: .now)
+        } else {
+            observeBackgroundPage(page, in: registration.space)
+        }
         return page.webView
     }
 
@@ -996,6 +1063,7 @@ final class MobileBrowserPageStore:
     }
 
     func unloadPage(for tabID: TabID) {
+        forgetBackgroundPageObservation(for: tabID)
         // Archived before the page is torn down: a tab closed by hand can be
         // reopened, and a tab unloaded by hand is expected to come back where it
         // was left.
@@ -1387,6 +1455,7 @@ final class MobileBrowserPageStore:
         var releasedAnyPage = false
         var probes: [BrowserSpaceDataReleaseProbe] = []
         for tabID in tabIDs {
+            forgetBackgroundPageObservation(for: tabID)
             if let page = pagesByTabID.removeValue(forKey: tabID) {
                 probes.append(BrowserSpaceDataReleaseProbe(page))
                 page.prepareForSpaceDeletion()
@@ -1486,6 +1555,7 @@ final class MobileBrowserPageStore:
     }
 
     private func evictPage(_ tabID: TabID, preservingTabState: Bool = true) {
+        forgetBackgroundPageObservation(for: tabID)
         if preservingTabState {
             archiveTabState(for: tabID)
         }
@@ -1493,6 +1563,11 @@ final class MobileBrowserPageStore:
         page.prepareForSpaceDeletion()
         residencyRevision &+= 1
         inactiveSinceByTabID[tabID] = nil
+    }
+
+    private func forgetBackgroundPageObservation(for tabID: TabID) {
+        backgroundPageAssignments[tabID] = nil
+        backgroundPageSnapshots[tabID] = nil
     }
 
     /// Writes out the WebKit session state of every resident page. The app calls

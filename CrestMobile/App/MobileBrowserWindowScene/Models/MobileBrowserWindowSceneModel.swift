@@ -76,14 +76,17 @@ final class MobileBrowserWindowSceneModel {
             openNewTab: { url in browser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 guard
-                    browser.openNewTab(
+                    let tabID = browser.openNewTab(
                         url: url,
                         in: spaceID,
                         selecting: selecting
-                    ) != nil
+                    ),
+                    let space = browser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return browser.session
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
             },
+            backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
             openPeek: { request in transientBrowsing.presentPeek(request) },
             stagePeek: { request in transientBrowsing.stagePeek(request) },
             commitPeek: { request in transientBrowsing.commitPeek(request) },
@@ -104,14 +107,17 @@ final class MobileBrowserWindowSceneModel {
             openNewTab: { url in privateBrowser.openNewTab(url: url) },
             openModifiedLink: { url, spaceID, selecting in
                 guard
-                    privateBrowser.openNewTab(
+                    let tabID = privateBrowser.openNewTab(
                         url: url,
                         in: spaceID,
                         selecting: selecting
-                    ) != nil
+                    ),
+                    let space = privateBrowser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
                 else { return nil }
-                return privateBrowser.session
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: privateBrowser.session)
             },
+            backgroundPageDidUpdate: { privateBrowser.updateBackgroundPage($0) },
             openPeek: { request in
                 privateTransientBrowsing.presentPeek(request)
             },

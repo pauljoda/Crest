@@ -629,6 +629,10 @@
     "2026-09-06-extension-website-message-responses": {
       "category": "fixed",
       "message": "Avoid delays when extensions handle website messages through multiple listeners"
+    },
+    "2026-09-06-consistent-link-tab-focus": {
+      "category": "improved",
+      "message": "Apply your link-opening focus preference across supported links and new windows, with background tabs loading immediately on Mac and iPad"
     }
   }
 }

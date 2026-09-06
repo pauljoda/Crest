@@ -68,7 +68,10 @@ extension MobileBrowserPage: WKUIDelegate {
             return host.adoptPopupWebView(
                 configuration: configuration,
                 requestedURL: requestedURL,
-                opener: self
+                opener: self,
+                selecting: navigationAction.selectsOpenedLink(
+                    using: BrowserLinkPreferenceStore.shared.preferences
+                )
             )
         }
     }

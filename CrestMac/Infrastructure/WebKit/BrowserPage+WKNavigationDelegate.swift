@@ -132,21 +132,17 @@ extension BrowserPage: WKNavigationDelegate {
             isUserActivatedLink: navigationAction.navigationType == .linkActivated,
             isCommandModified: clickIntent == .newTab,
             isShiftModified: isShiftModified,
-            isMiddleClick: isMiddleClick
+            isMiddleClick: isMiddleClick,
+            focusesNewTabs: BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks
         ) {
         case .navigate:
             break
-        case .backgroundTab(let url):
-            openModifiedLink(
-                url,
-                spaceID,
-                BrowserLinkPreferenceStore.shared.preferences
-                    .focusesNewTabsOpenedFromLinks
-            )
+        case .backgroundTab:
+            openModifiedLink(navigationAction.request, spaceID, false)
             decisionHandler(.cancel)
             return
-        case .foregroundTab(let url):
-            openModifiedLink(url, spaceID, true)
+        case .foregroundTab:
+            openModifiedLink(navigationAction.request, spaceID, true)
             decisionHandler(.cancel)
             return
         }

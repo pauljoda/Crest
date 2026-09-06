@@ -146,16 +146,17 @@ extension MobileBrowserPage: WKNavigationDelegate {
             isUserActivatedLink: navigationAction.navigationType == .linkActivated,
             isCommandModified: clickIntent == .newTab,
             isShiftModified: isShiftModified,
-            isMiddleClick: isMiddleClick
+            isMiddleClick: isMiddleClick,
+            focusesNewTabs: BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks
         ) {
         case .navigate:
             break
-        case .backgroundTab(let url):
-            routeModifiedLink(url, selecting: false)
+        case .backgroundTab:
+            routeModifiedLink(navigationAction.request, selecting: false)
             decisionHandler(.cancel)
             return
-        case .foregroundTab(let url):
-            routeModifiedLink(url, selecting: true)
+        case .foregroundTab:
+            routeModifiedLink(navigationAction.request, selecting: true)
             decisionHandler(.cancel)
             return
         }

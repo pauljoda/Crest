@@ -375,18 +375,26 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func load(_ url: URL) {
+        load(URLRequest(url: url))
+    }
+
+    func load(_ request: URLRequest) {
         appInitiatedNavigationCount &+= 1
-        self.url = url
-        appInitiatedURL = url
-        prepareForNavigation(to: url)
-        webView.load(URLRequest(url: url))
+        url = request.url
+        appInitiatedURL = request.url
+        prepareForNavigation(to: request.url)
+        webView.load(request)
     }
 
     func routeModifiedLink(_ url: URL, selecting: Bool) {
-        guard let session = openModifiedLink(url, spaceID, selecting) else { return }
-        if selecting {
-            host?.activateOpenedLink(url, in: session)
-        }
+        routeModifiedLink(URLRequest(url: url), selecting: selecting)
+    }
+
+    func routeModifiedLink(_ request: URLRequest, selecting: Bool) {
+        guard let url = request.url,
+            let registration = openModifiedLink(url, spaceID, selecting)
+        else { return }
+        host?.loadOpenedLink(registration, request: request, selecting: selecting)
     }
 
     /// WebKit's own opaque per-view session state: the back/forward list and the

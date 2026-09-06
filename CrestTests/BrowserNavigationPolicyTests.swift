@@ -5,6 +5,37 @@ import XCTest
 @testable import Crest
 
 final class BrowserNavigationPolicyTests: XCTestCase {
+    func testModifiedLinkFocusChoiceAndShiftInversion() throws {
+        let url = try XCTUnwrap(URL(string: "https://example.com/research"))
+        for focusesNewTabs in [false, true] {
+            for shift in [false, true] {
+                XCTAssertEqual(
+                    BrowserModifiedLinkDisposition.classify(
+                        destinationURL: url,
+                        isUserActivatedLink: true,
+                        isCommandModified: true,
+                        isShiftModified: shift,
+                        isMiddleClick: false,
+                        focusesNewTabs: focusesNewTabs
+                    ),
+                    focusesNewTabs != shift ? .foregroundTab(url) : .backgroundTab(url)
+                )
+            }
+        }
+    }
+
+    func testUnmodifiedNativeWindowsKeepTheirForegroundSemantics() {
+        for focusesNewTabs in [false, true] {
+            XCTAssertTrue(
+                BrowserLinkOpeningPolicy.selectsNewTab(
+                    isNewTabGesture: false,
+                    isShiftModified: true,
+                    focusesNewTabs: focusesNewTabs
+                )
+            )
+        }
+    }
+
     func testInlineDirectVideoUsesBrowserOwnedPlaybackDocument() throws {
         let url = try XCTUnwrap(
             URL(string: "https://media.example/watch?id=direct&quality=source")

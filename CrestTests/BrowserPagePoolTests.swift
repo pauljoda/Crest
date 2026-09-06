@@ -146,7 +146,7 @@ final class BrowserPagePoolTests: XCTestCase {
 
         let foregroundTab = try XCTUnwrap(context.openedTabs.first)
         XCTAssertEqual(context.store.selectedTab?.id, foregroundTab.id)
-        XCTAssertFalse(context.pool.containsResidentPage(for: foregroundTab.id))
+        XCTAssertTrue(context.pool.containsResidentPage(for: foregroundTab.id))
 
         context.pool.select(session: context.store.session)
 
@@ -1624,6 +1624,35 @@ final class BrowserPagePoolTests: XCTestCase {
             popupWebView.configuration.userContentController
                 === context.opener.webView.configuration.userContentController
         )
+    }
+
+    func testModifiedScriptedWindowKeepsTheSourceSelectedAndAdoptsOriginalConfiguration() throws {
+        let saved = BrowserLinkPreferenceStore.shared.preferences
+        defer { BrowserLinkPreferenceStore.shared.update { $0 = saved } }
+        BrowserLinkPreferenceStore.shared.focusesNewTabsOpenedFromLinks = false
+        let context = try makePopupContext()
+        let sourceID = context.store.selectedTab?.id
+        let configuration = context.opener.webView.configuration
+        let popup = try XCTUnwrap(
+            context.opener.webView(
+                context.opener.webView,
+                createWebViewWith: configuration,
+                for: StubPopupNavigationAction(
+                    url: URL(string: "https://example.com/scripted"),
+                    navigationType: .other,
+                    modifierFlags: .command
+                ),
+                windowFeatures: WKWindowFeatures()
+            ))
+        XCTAssertEqual(context.store.selectedTab?.id, sourceID)
+        XCTAssertEqual(context.pool.activeTabID, sourceID)
+        let tab = try XCTUnwrap(context.store.selectedSpace?.tabs.first { $0.id != sourceID })
+        XCTAssertTrue(context.pool.extensionWebView(for: tab.id, in: context.opener.spaceID) === popup)
+        XCTAssertTrue(popup.configuration.websiteDataStore === configuration.websiteDataStore)
+        context.store.selectTab(tab.id)
+        context.pool.select(session: context.store.session)
+        XCTAssertTrue(context.pool.activePage?.isAwaitingPopupNavigation == true)
+        XCTAssertNil(context.pool.activePage?.pendingNavigationURL)
     }
 
     func testAdoptedPopupWebViewIsTheOneRegisteredForItsPopupTab() throws {
@@ -3366,7 +3395,7 @@ private struct ModifiedLinkContext {
     }
 
     func open(_ url: URL, selecting: Bool) {
-        sourcePage.openModifiedLink(url, spaceID, selecting)
+        sourcePage.openModifiedLink(URLRequest(url: url), spaceID, selecting)
     }
 }
 
@@ -3421,20 +3450,24 @@ final class StubPopupNavigationAction: WKNavigationAction,
 {
     private let stubRequest: URLRequest
     private let stubNavigationType: WKNavigationType
+    private let stubModifierFlags: NSEvent.ModifierFlags
 
-    init(url: URL?, navigationType: WKNavigationType) {
+    init(url: URL?, navigationType: WKNavigationType, modifierFlags: NSEvent.ModifierFlags = []) {
         // `window.open()` without a destination reaches WebKit as a request
         // without a URL, which a stub can only reproduce by clearing it.
         var request = URLRequest(url: URL(fileURLWithPath: "/"))
         request.url = url
         stubRequest = request
         stubNavigationType = navigationType
+        stubModifierFlags = modifierFlags
         super.init()
     }
 
     override var request: URLRequest { stubRequest }
     override var navigationType: WKNavigationType { stubNavigationType }
     override var targetFrame: WKFrameInfo? { nil }
+    override var modifierFlags: NSEvent.ModifierFlags { stubModifierFlags }
+    override var buttonNumber: Int { 0 }
     var browserSourceOrigin: BrowserSiteOrigin? { nil }
 }
 
