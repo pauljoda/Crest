@@ -10,6 +10,11 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
     private(set) var tabLayers: [TabID: BrowserExtensionSidebarOptions] = [:]
     private var chromeTabIDs: Set<TabID> = []
 
+    init(defaults: BrowserExtensionSidebarDefaults, displayName: String) {
+        self.defaults = defaults
+        self.displayName = displayName
+    }
+
     func layer(_ scope: BrowserExtensionSidebarScope) -> BrowserExtensionSidebarOptions {
         switch scope {
         case .default: defaultLayer

@@ -669,6 +669,10 @@
     "2026-09-06-readable-site-controls": {
       "category": "fixed",
       "message": "Keep Site Controls readable over bright pages"
+    },
+    "2026-09-06-sidebar-registry-build-initializer": {
+      "category": "internal",
+      "message": "Restore iOS builds with an explicit extension sidebar registry initializer"
     }
   }
 }
