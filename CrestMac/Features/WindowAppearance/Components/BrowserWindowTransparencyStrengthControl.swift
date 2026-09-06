@@ -12,6 +12,8 @@ struct BrowserWindowTransparencyStrengthControl: View {
                     in: BrowserWindowTransparencyPolicy.strengthRange
                 )
                 .frame(minWidth: 180)
+                .accessibilityLabel("Transparency")
+                .accessibilityIdentifier("window-transparency-strength")
 
                 Text(strength, format: .percent.precision(.fractionLength(0)))
                     .monospacedDigit()
@@ -19,6 +21,7 @@ struct BrowserWindowTransparencyStrengthControl: View {
                     .frame(width: 42, alignment: .trailing)
             }
         }
+        .accessibilityElement(children: .contain)
         .disabled(!isEnabled)
     }
 }

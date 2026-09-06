@@ -63,6 +63,8 @@ struct BrowserGeneralSettingsPane: View {
 
             BrowserDurableTabSettingsSection(preferences: .shared)
 
+            BrowserFolderAppearanceSettingsSection()
+
             BrowserPlatformAppearanceSettingsSection()
 
             BrowserDefaultPageZoomSettingsSection(
@@ -87,6 +89,7 @@ struct BrowserGeneralSettingsPane: View {
                     CrestFormFootnote(
                         "Removes the themed border around a single webpage whenever the sidebar is undocked. Split View always keeps its border."
                     )
+                    MobileBrowserPageFrameSettingsPreview(isEnabled: collapsedSidebarFullscreenIsEnabled)
                 }
             #endif
 
@@ -356,6 +359,12 @@ struct BrowserDefaultPageZoomSettingsSection: View {
             CrestFormFootnote(
                 "Pages using the default update immediately. Page Zoom commands temporarily override it while you navigate; Actual Size returns to this value, and recreated pages start here."
             )
+            BrowserSettingsPagePreview(zoom: preferences.defaultZoom)
+                .clipShape(.rect(cornerRadius: 10))
+                .frame(maxWidth: 340)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .accessibilityIdentifier("default-page-zoom-preview")
         }
     }
 }

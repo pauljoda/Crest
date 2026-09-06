@@ -15,6 +15,10 @@ struct BrowserSiteControlButton: View {
                 configuration: configuration,
                 dismiss: { presentationBinding.wrappedValue = false }
             )
+            // Bright page content must not wash out the popover's light labels.
+            .presentationBackground(Color(white: 0.12))
+            .preferredColorScheme(.dark)
+            .environment(\.colorScheme, .dark)
         }
         .onDisappear {
             guard isPresented else { return }

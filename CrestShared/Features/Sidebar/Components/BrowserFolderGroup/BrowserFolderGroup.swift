@@ -99,7 +99,9 @@ struct BrowserFolderGroup: View {
         }
         .modifier(
             BrowserFolderSectionSurface(
-                color: folder.color.color,
+                color: folder.color,
+                intensity: browser.session.space(id: spaceID)?.branding.folderColorIntensity ?? 0,
+                textColorMode: browser.session.space(id: spaceID)?.branding.textColorMode ?? .automatic,
                 leadingInset: CrestSpacing.small + CGFloat(node.depth) * BrowserFolderLayout.nestingIndent,
                 hasVisibleContents: isExpanded || configuration.keptCollapsedItem(for: collapsedTabVisibility) != nil,
                 folderID: folder.id, reorder: browser.sidebarReorderState)
@@ -129,6 +131,7 @@ struct BrowserFolderGroup: View {
         .onChange(of: configuration.isCurrentAndUnlocked) { _, _ in
             clearUnavailableDeferredActions()
         }
+        .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
     }
 
     /// Nested folders are children of the section they move with, so a parent's
@@ -168,7 +171,7 @@ struct BrowserFolderGroup: View {
                         },
                         editingFolderRequest: $editingFolderRequest
                     )
-                    .padding(.trailing, CrestSpacing.extraSmall)
+                    .padding(.trailing, BrowserFolderLayout.contentsInset)
                     .crestCollectionItemTransition()
                 }
             }

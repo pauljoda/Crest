@@ -23,6 +23,8 @@ struct BrowserSpaceSettingsSections: View {
     var dismissKeyboard: @MainActor () -> Void = {}
 
     var body: some View {
+        BrowserSpaceFolderAppearanceSection(browser: browser, space: space)
+
         BrowserSpaceBrowsingSection(
             browser: browser,
             space: space,

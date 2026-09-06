@@ -5,6 +5,20 @@ enum BrowserSpaceForegroundTone: Equatable, Sendable {
     case dark
 }
 
+enum BrowserSpaceTextColorMode: String, Codable, CaseIterable, Equatable, Sendable {
+    case automatic
+    case light
+    case dark
+
+    var foregroundTone: BrowserSpaceForegroundTone? {
+        switch self {
+        case .automatic: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
 enum BrowserSpaceIconStyle: String, Codable, CaseIterable, Equatable, Sendable {
     case simpleSymbol
     case layeredCrest

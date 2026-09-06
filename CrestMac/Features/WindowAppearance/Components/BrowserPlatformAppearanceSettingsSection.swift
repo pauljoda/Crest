@@ -13,6 +13,7 @@ struct BrowserPlatformAppearanceSettingsSection: View {
             CrestFormFootnote(
                 "Only the Space atmosphere becomes translucent while the window is active. Web pages, text, and controls stay opaque; inactive windows return to opaque."
             )
+            BrowserWindowTransparencySettingsPreview()
         }
 
         BrowserSplitFocusSettingsSection()

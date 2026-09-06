@@ -47,7 +47,8 @@ struct BrowserSidebarTabRowMetrics: Equatable, Sendable {
     static let pointer = BrowserSidebarTabRowMetrics(
         contentSpacing: 0,
         contentLeadingInset: 9,
-        contentTrailingInset: 9,
+        contentTrailingInset: (CrestLayout.sidebarRowHeight
+            - BrowserTabTrailingControlMetrics.pointer.controlSize.height) / 2,
         surfaceHorizontalInset: 8,
         faviconSlot: nil,
         fillsRowHeight: true

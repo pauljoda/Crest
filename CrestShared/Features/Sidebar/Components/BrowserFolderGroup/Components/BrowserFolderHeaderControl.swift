@@ -12,6 +12,10 @@ struct BrowserFolderHeaderControl: View {
     let interaction: BrowserFolderGroupInteractionContext
 
     private var folder: BrowserFolder { configuration.folder }
+    @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
+    private var showsTabCounts = true
+    @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
+    private var alwaysVisible = false
 
     private var isEditing: Bool {
         interaction.editingFolderRequest.wrappedValue
@@ -52,12 +56,15 @@ struct BrowserFolderHeaderControl: View {
 
                         Text(folder.title.isEmpty ? String(localized: "Folder") : folder.title)
                             .foregroundStyle(.primary)
+                            .fontWeight(containsCurrentTab ? .semibold : .regular)
                             .lineLimit(1)
 
                         Spacer(minLength: 8)
-                        Text(configuration.subtreeTabIDs.count, format: .number)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if showsTabCounts {
+                            Text(configuration.subtreeTabIDs.count, format: .number)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .browserSavedFolderHeaderLayout(configuration: configuration)
                     .contentShape(.rect)
@@ -65,5 +72,10 @@ struct BrowserFolderHeaderControl: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private var containsCurrentTab: Bool {
+        guard alwaysVisible, let selected = configuration.selectedTabID else { return false }
+        return configuration.subtreeTabIDs.contains(selected)
     }
 }

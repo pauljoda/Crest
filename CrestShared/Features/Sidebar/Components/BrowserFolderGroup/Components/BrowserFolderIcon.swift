@@ -5,6 +5,7 @@ struct BrowserFolderIcon: View {
     let folder: BrowserFolder
     let isExpanded: Bool
     let metrics: BrowserFolderHeaderMetrics
+    @Environment(\.folderUsesContrastingForeground) private var usesContrastingForeground
 
     var body: some View {
         Image(
@@ -13,7 +14,9 @@ struct BrowserFolderIcon: View {
             )
         )
         .modifier(BrowserFolderIconColumn(metrics: metrics))
-        .foregroundStyle(folder.color.color.opacity(0.86))
+        .foregroundStyle(
+            usesContrastingForeground ? AnyShapeStyle(.primary) : AnyShapeStyle(folder.color.color.opacity(0.86))
+        )
         .accessibilityHidden(true)
     }
 }
