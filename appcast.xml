@@ -6,44 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.32</title>
-            <pubDate>Fri, 04 Sep 2026 12:49:45 +0000</pubDate>
+            <title>0.5.71</title>
+            <pubDate>Sun, 06 Sep 2026 12:15:33 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1069</sparkle:version>
-            <sparkle:shortVersionString>0.5.32</sparkle:shortVersionString>
+            <sparkle:version>1073</sparkle:version>
+            <sparkle:shortVersionString>0.5.71</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 44 user-facing changes.
+
 ### New
 
-- Double-click or double-tap empty sidebar space to open a new tab
-- Preview link destinations after hovering for a moment on macOS
+- Keep videos visible in native Picture in Picture when switching Mac tabs, with an option to turn automatic entry off
+- Let permitted extensions read clipboard text, including grade-transfer tools that use legacy paste
 
 ### Improved
 
-- Show the focused tab title in macOS window lists while keeping locked Spaces private
-- Find builds by release channel with clear publication dates and a separate download for every build
-- Keep sidebar update buttons compact and readable with shorter labels, icons, and more breathing room
+- Keep the Mac Space picker centered as it fills up, with arrows to reveal more Spaces
+- Show the split preview just beyond the sidebar and update its landing position as you drag across the page
+- Show Start Page when entering a Mac Space with an unloaded tab, keeping the page unloaded until you select it
 
 ### Fixed
 
-- Unlock private Spaces comfortably at larger text sizes and keep loaded tabs in place when locking
-- Check for the newest build in your channel before downloading an update
-- Keep the command palette centered over page content as the sidebar and search results change
-- Use webpage keyboard controls without unnecessary alert sounds on macOS
-- Continue typing where you left off in webpage editors after switching Spaces on macOS
+- Keep website styling extensions from changing other extensions’ sidebars
+- Support extensions such as SponsorBlock that use relative background-worker paths
+- Recover synced open-tab folders after updating Crest and handle unsupported folder records on older versions
+- Give Quick Window pages an even border below the address bar and around the sides and bottom
+- Keep saved and pinned tabs in place when adding copies to a split view, with independent page history
+- Start fresh mobile sessions on the sidebar or start page without automatically selecting a saved tab or split view
+- Open extension panels reliably after idle and dismiss popups when clicking their toolbar icon again
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/176cf568bf586b5a2a8ed24afe330cfa9cb94f3c...db22c259fd7b810bad0162975ffb2f1e7fbe9f63) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.32-2026-09-04-1069-r69.1/Installer-Crest-0.5.32-nightly-2026-09-04-db22c25-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/db22c259fd7b810bad0162975ffb2f1e7fbe9f63...2fac85f52ba7781e5ef6e6cda95503a5b4a3b029) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.71-2026-09-06-1073-r73.1/Installer-Crest-0.5.71-nightly-2026-09-06-2fac85f-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.32-2026-09-04-1069-r69.1/Installer-Crest-0.5.32-nightly-2026-09-04-db22c25-arm64.dmg" length="9037079" type="application/octet-stream" sparkle:edSignature="o+7vxHyaKImacDU9xj4Ee6WJi4wofjbk2vsCewCtdgbwVzoS/P6ysU8TMsuhqv0ME585ohfxwtv4XVmfPHfxCA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.71-2026-09-06-1073-r73.1/Installer-Crest-0.5.71-nightly-2026-09-06-2fac85f-arm64.dmg" length="10020118" type="application/octet-stream" sparkle:edSignature="uqEd4XveKliS32QAJ8+TZw8YR0iZ/Ur/ME9gg7u5o4yrELRvBjVDKloQ9R2GUZaeUOjkrsPDphc4s6nZHQoTDA=="/>
         </item>
         <item>
             <title>0.5.7</title>
@@ -89,6 +93,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: eM0AjYT+vW274BgcbjVw8801f8Ro3UaEVxgNyAfnZQnoRTTDLCtIxxpWzTeV36d4gekjVTYkOWI/QAgDZ6zcAw==
-length: 5118
+edSignature: lkfbViT0y77MGZFwdTrRPDcmM7eifSLD44+3SRlYqEc6tbR/Khqcexx1U6QWAP4lqXsWTCLe+AAAXqzH+msfAw==
+length: 5550
 -->
