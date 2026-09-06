@@ -6,45 +6,39 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.70</title>
-            <pubDate>Sun, 06 Sep 2026 01:31:21 +0000</pubDate>
+            <title>0.5.72</title>
+            <pubDate>Sun, 06 Sep 2026 14:03:16 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1072</sparkle:version>
-            <sparkle:shortVersionString>0.5.70</sparkle:shortVersionString>
+            <sparkle:version>1074</sparkle:version>
+            <sparkle:shortVersionString>0.5.72</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Let permitted extensions read clipboard text, including grade-transfer tools that use legacy paste
-
 ### Improved
 
-- Keep the Mac Space picker centered as it fills up, with arrows to reveal more Spaces
-- Show the split preview just beyond the sidebar and update its landing position as you drag across the page
+- Show Start Page when entering a Mac Space with an unloaded tab, keeping the page unloaded until you select it
 
 ### Fixed
 
-- Give Quick Window pages an even border below the address bar and around the sides and bottom
-- Keep saved and pinned tabs in place when adding copies to a split view, with independent page history
-- Start fresh mobile sessions on the sidebar or start page without automatically selecting a saved tab or split view
-- Open extension panels reliably after idle and dismiss popups when clicking their toolbar icon again
+- Keep extension popup text readable and dismiss outdated popups when an extension reloads
+- Keep extension clipboard tools working when they initialize on pages that were already open
+- Avoid delays when extensions handle website messages through multiple listeners
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/56bc3649f1c26c54b19efd00cd329eec2a7b7238...7a0a80acec0ae157833dc8ce2b55b3f5fdacc81b) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.70-2026-09-06-1072-r72.1/Installer-Crest-0.5.70-development-2026-09-06-7a0a80a-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/7a0a80acec0ae157833dc8ce2b55b3f5fdacc81b...9bb643ecc1d223430569a2fce4febff0d2fbfdde) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.72-2026-09-06-1074-r74.1/Installer-Crest-0.5.72-development-2026-09-06-9bb643e-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.70-2026-09-06-1072-r72.1/Installer-Crest-0.5.70-development-2026-09-06-7a0a80a-arm64.dmg" length="10022687" type="application/octet-stream" sparkle:edSignature="IxVYJASYBAyKDfuLE/5ltbX0CTE7Izx8zViMLezxO1vNdgap5KI7eQiOt+/kymxNv2T7ABop+AwSW5pMqsd8Cg=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.72-2026-09-06-1074-r74.1/Installer-Crest-0.5.72-development-2026-09-06-9bb643e-arm64.dmg" length="10023199" type="application/octet-stream" sparkle:edSignature="BMdZhNdixHuosWV4cGpNextZ8ZbbD+ce3uC9QshkkK5Y1xTT59zKs0w/DtQZMNCMniYN0QblFR8KYNNEJo33Bw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: sRmPowGUQ5rbvzNJXfxMS5H60QPrrBOC4S/pbC5MgOLi9iT5gud2LJRgaQMNPVRDAg9rYYFRBjXemsaFjb1xCg==
-length: 2697
+edSignature: nuIQCC6jsH26XWBc7i6KyVUiCNk+J8RwQdHmgfVtslPRkyDOAhfcKVARDKB21RjCxcmIU9ylLu44WpYqfHRDCQ==
+length: 2351
 -->
