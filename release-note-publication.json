@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-09-06-extension-website-message-responses",
+    "development": "2026-09-06-readable-site-controls",
     "nightly": "2026-09-06-space-entry-keeps-tabs-unloaded"
   }
 }

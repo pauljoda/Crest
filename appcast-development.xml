@@ -6,39 +6,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.72</title>
-            <pubDate>Sun, 06 Sep 2026 14:03:16 +0000</pubDate>
+            <title>0.5.77</title>
+            <pubDate>Sun, 06 Sep 2026 18:59:25 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1074</sparkle:version>
-            <sparkle:shortVersionString>0.5.72</sparkle:shortVersionString>
+            <sparkle:version>1075</sparkle:version>
+            <sparkle:shortVersionString>0.5.77</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Complete addresses from the current Space with a subtle preview, then press Tab or Right Arrow to accept
+- Choose persistent folder highlights, tab counts and borders, with evenly inset tabs and nested folders
+- Adjust folder color intensity and choose automatic, light or dark text for each Space
+
 ### Improved
 
-- Show Start Page when entering a Mac Space with an unloaded tab, keeping the page unloaded until you select it
+- Apply your link-opening focus preference across supported links and new windows, with background tabs loading immediately on Mac and iPad
+- Return pinned and saved tabs to their saved URL with a double-click or an optional reset when closing
+- See downloads begin at your cursor and fly into Archive, with clear bottom-left feedback when the sidebar is hidden
+- Preview folder appearance, text color, page zoom, transparency and page borders directly in Settings
 
 ### Fixed
 
-- Keep extension popup text readable and dismiss outdated popups when an extension reloads
-- Keep extension clipboard tools working when they initialize on pages that were already open
-- Avoid delays when extensions handle website messages through multiple listeners
+- Load pages immediately when selected from Start Page, including after launch or switching to a Space with unloaded tabs
+- Remove excess bottom space from expanded browser layouts while keeping sidebar controls comfortably inset
+- Keep Site Controls readable over bright pages
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/7a0a80acec0ae157833dc8ce2b55b3f5fdacc81b...9bb643ecc1d223430569a2fce4febff0d2fbfdde) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.72-2026-09-06-1074-r74.1/Installer-Crest-0.5.72-development-2026-09-06-9bb643e-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/9bb643ecc1d223430569a2fce4febff0d2fbfdde...d4f1b886d726b5859d0268a88d5ec729e5ea1d76) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.77-2026-09-06-1075-r75.1/Installer-Crest-0.5.77-development-2026-09-06-d4f1b88-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.72-2026-09-06-1074-r74.1/Installer-Crest-0.5.72-development-2026-09-06-9bb643e-arm64.dmg" length="10023199" type="application/octet-stream" sparkle:edSignature="BMdZhNdixHuosWV4cGpNextZ8ZbbD+ce3uC9QshkkK5Y1xTT59zKs0w/DtQZMNCMniYN0QblFR8KYNNEJo33Bw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.77-2026-09-06-1075-r75.1/Installer-Crest-0.5.77-development-2026-09-06-d4f1b88-arm64.dmg" length="10138912" type="application/octet-stream" sparkle:edSignature="h0i0uBtnKzDqQvKfQ3sQifFMFvwXp1SrH0A7a1qYeH7skPYpQK3ZU/m2QSoBcHRFgYUSpmzhEvGVJ62W+YURDA=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: nuIQCC6jsH26XWBc7i6KyVUiCNk+J8RwQdHmgfVtslPRkyDOAhfcKVARDKB21RjCxcmIU9ylLu44WpYqfHRDCQ==
-length: 2351
+edSignature: fTq70GgBR6XbhjJof5y8w9xPwz0RPXrDAC0GE1FMpx3P2h3noQENuIpauZkYwJI7I+jisRof8/xXWHUZrAj5Ag==
+length: 3025
 -->
