@@ -1,0 +1,149 @@
+{
+  "revision": "457ac1d2c9bc78011e595664053f24df50ae2249",
+  "method": "All .swift files recursively under each named root; raw lines include comments, blanks, generated Swift and embedded JavaScript. Counts are not behavior shares.",
+  "roots": {
+    "CrestShared": {
+      "files": 1446,
+      "raw_lines": 134179
+    },
+    "CrestMac": {
+      "files": 579,
+      "raw_lines": 62680
+    },
+    "CrestMobile": {
+      "files": 262,
+      "raw_lines": 20707
+    },
+    "CrestTests": {
+      "files": 236,
+      "raw_lines": 107661
+    },
+    "CrestMobileTests": {
+      "files": 36,
+      "raw_lines": 15045
+    }
+  },
+  "generated_emoji_catalog_lines": 27625,
+  "shared_raw_line_share_percent": 61.7,
+  "shared_line_share_excluding_generated_emoji_percent": 56.1,
+  "full_production_swift_format": {
+    "exit_code": 1,
+    "files_scanned": 2287,
+    "files_with_diagnostics": 38,
+    "diagnostics": 252,
+    "rules": {
+      "AddLines": 70,
+      "Indentation": 160,
+      "UseLetInEveryBoundCaseVariable": 19,
+      "LineLength": 2,
+      "TrailingComma": 1
+    },
+    "by_file": {
+      "CrestMac/Features/Extensions/Services/BrowserMozillaAddonsProvider.swift": 1,
+      "CrestMac/Features/Extensions/Services/BrowserSafariCustomExtensionProvider.swift": 1,
+      "CrestMac/Features/Extensions/Services/BrowserSafariWebExtensionInspector.swift": 1,
+      "CrestMac/Infrastructure/BrowserDefaultBrowser/BrowserPlatformDefaultBrowserSystem.swift": 4,
+      "CrestMac/Infrastructure/BrowserPasskeyAccess/BrowserPasskeyAccessSystem.swift": 6,
+      "CrestMac/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionPopupBackgroundWarmUp.swift": 1,
+      "CrestMac/Infrastructure/WebKit/BrowserNativeMessagingHostManifestResolver.swift": 1,
+      "CrestMobile/App/MobileBrowserWindowScene/Models/MobileBrowserWindowSceneRoute.swift": 6,
+      "CrestMobile/Infrastructure/BrowserDefaultBrowser/BrowserPlatformDefaultBrowserErrorPolicy.swift": 3,
+      "CrestMobile/Infrastructure/BrowserDefaultBrowser/BrowserPlatformDefaultBrowserSystem.swift": 4,
+      "CrestShared/Application/BrowserDefaultBrowser/BrowserDefaultBrowserController.swift": 1,
+      "CrestShared/Application/BrowserStore/Policies/BrowserStartupPreference.swift": 2,
+      "CrestShared/DesignSystem/Components/CrestButtonStyle/Styles/CrestButtonSurface.swift": 1,
+      "CrestShared/DesignSystem/Components/CrestSelectableCard/Styles/CrestSelectableCardSurface.swift": 5,
+      "CrestShared/Domain/BrowserCredential/Capture/BrowserCredentialSaveCandidate.swift": 1,
+      "CrestShared/Domain/BrowserCredential/Models/BrowserCredentialScope.swift": 2,
+      "CrestShared/Domain/BrowserCredential/Models/CredentialDescriptor.swift": 1,
+      "CrestShared/Domain/BrowserCredential/Models/CredentialOrigin.swift": 19,
+      "CrestShared/Domain/BrowserCredential/Policies/BrowserCredentialCapturePolicy.swift": 3,
+      "CrestShared/Domain/BrowserDefaultBrowser/Policies/BrowserExternalURLPolicy.swift": 2,
+      "CrestShared/Domain/BrowserSpace/Branding/BrowserSpaceBrandColor.swift": 4,
+      "CrestShared/Domain/BrowserSpace/Credentials/BrowserCredentialPreferences.swift": 12,
+      "CrestShared/Domain/BrowserSync/Ordering/BrowserSyncOrderTokenAllocator.swift": 21,
+      "CrestShared/Domain/BrowserTransientBrowsing/Peek/BrowserPeekSourcePresentation.swift": 9,
+      "CrestShared/Domain/BrowserTransientBrowsing/SavedSites/BrowserSavedSitePolicy.swift": 2,
+      "CrestShared/Features/Chrome/BrowserAddressContent/Models/BrowserAddressPresentation.swift": 4,
+      "CrestShared/Features/DataPortability/Services/BrowserBookmarkMigration.swift": 19,
+      "CrestShared/Features/Settings/BrowserPasswordSettingsPane/Components/BrowserPasswordDescriptorRow.swift": 1,
+      "CrestShared/Features/Settings/BrowserPasswordSettingsPane/Models/BrowserCredentialSpaceStore.swift": 40,
+      "CrestShared/Features/Settings/BrowserPasswordSettingsPane/Services/BrowserCredentialCSVDocument.swift": 12,
+      "CrestShared/Features/Settings/BrowserPasswordSettingsPane/Support/BrowserCredentialSettingsPolicy.swift": 1,
+      "CrestShared/Features/Sidebar/Support/BrowserSidebarTabListItem.swift": 6,
+      "CrestShared/Features/Utilities/Models/BrowserUtilityTimeSection.swift": 12,
+      "CrestShared/Infrastructure/BrowserPageActions/Developer/BrowserDeveloperCapturePolicy.swift": 3,
+      "CrestShared/Infrastructure/BrowserPageActions/Developer/BrowserDeveloperModePolicy.swift": 1,
+      "CrestShared/Infrastructure/BrowserPasskeyAccess/BrowserPasskeyAuthorizationState+AuthenticationServices.swift": 10,
+      "CrestShared/Infrastructure/UserActivity/BrowserUserActivityBridge.swift": 27,
+      "CrestShared/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionWindowAdapter.swift": 3
+    }
+  },
+  "legacy_observation_and_type_erasure": {
+    "ObservableObject": 0,
+    "Published": 0,
+    "AnyView": 0,
+    "Observable": 78
+  },
+  "organization": {
+    "shared_infrastructure_files": 266,
+    "shared_infrastructure_raw_lines": 23402,
+    "immediate_directories": 30,
+    "browser_prefixed_immediate_directories": 22,
+    "loose_swift_files": 52,
+    "extension_infrastructure_files_across_scattered_owners": 102,
+    "extension_infrastructure_raw_lines": 12919,
+    "production_browser_prefixed_filenames": 1875
+  },
+  "test_retention": {
+    "method_count_method": "Declared test methods, excluding three private test-prefixed fixture helpers; inventory, not an executed-test count.",
+    "before": {
+      "macOS": 2945,
+      "iOS": 436,
+      "python": 169
+    },
+    "after": {
+      "macOS": 2935,
+      "iOS": 436,
+      "python": 168
+    },
+    "removed_methods": 11,
+    "removed_duplicate_extension_assertion_evaluations": 7,
+    "removed_source_lines": 209,
+    "modified_test_files": 6,
+    "post_cleanup_validation": {
+      "swift_tests_passed": 221,
+      "swift_tests_failed": 0,
+      "python_tests_passed": 11,
+      "python_tests_failed": 0
+    }
+  },
+  "mac_time_profiler_baseline": {
+    "production_revision": "457ac1d2c9bc78011e595664053f24df50ae2249",
+    "template": "Time Profiler",
+    "build": "isolated locally ad-hoc signed optimized Release",
+    "trace_duration_seconds": 12.918348,
+    "warm_space_requests": 12,
+    "spaces": 6,
+    "tabs_per_space": 24,
+    "cpu_sample_count": 6293,
+    "main_thread_sample_count": 5765,
+    "microhang_count": 1,
+    "worst_microhang_ms": 267.45,
+    "animation_hitch_lane_available": false,
+    "swiftui_cause_lane_available": false,
+    "speedup_measured": false
+  },
+  "computer_use_follow_up": {
+    "template": "Time Profiler",
+    "duration_seconds": 21.313435,
+    "warm_space_requests": 6,
+    "each_destination_verified_in_AX_state": true,
+    "main_thread_samples": 5504,
+    "potential_hang_count": 6,
+    "worst_potential_hang_ms": 1085.61,
+    "workload_caveat": "Repeated AX state inspection; timing is not equivalent to unaided gesture latency. No before/after optimization.",
+    "requests_issued_within_recorded_trace": 4,
+    "request_already_in_flight_at_trace_start": 1
+  }
+}

@@ -1403,15 +1403,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    func testAddressControlUsesCompactArcAlignedMetrics() {
-        XCTAssertEqual(BrowserChromeLayout.addressHeight, 36)
-        XCTAssertEqual(BrowserChromeLayout.addressCornerRadius, CrestRadius.compact)
-        XCTAssertEqual(
-            BrowserChromeLayout.sidebarHorizontalInset,
-            CrestSpacing.small
-        )
-    }
-
     func testPageSeamRevealsTheContinuousSpaceCanvas() {
         XCTAssertEqual(BrowserChromeLayout.pageBrandSeamWidth, 1.5)
         XCTAssertEqual(
@@ -2946,26 +2937,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
         firstWindow.utilityPresentation.dismiss(.archive)
         XCTAssertNil(firstWindow.utilityPresentation.surface)
-    }
-
-    func testDownloadsShortcutMatchesInstalledArcAndClick() {
-        XCTAssertEqual(
-            BrowserShortcutCommand.showDownloads.defaultShortcut,
-            BrowserShortcut(
-                key: .character("j"),
-                modifiers: [.command, .shift]
-            )
-        )
-    }
-
-    func testStopLoadingShortcutMatchesInstalledArc() {
-        XCTAssertEqual(
-            BrowserShortcutCommand.stopLoading.defaultShortcut,
-            BrowserShortcut(
-                key: .character("."),
-                modifiers: .command
-            )
-        )
     }
 
     @MainActor

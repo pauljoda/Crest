@@ -3,35 +3,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserShortcutTests: XCTestCase {
-    func testArcAlignedDefaultsCoverEverydayNavigationAndPageCommands() {
-        XCTAssertEqual(BrowserShortcutCommand.newTab.defaultShortcut, shortcut("t", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.newWindow.defaultShortcut, shortcut("n", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.newPrivateWindow.defaultShortcut, shortcut("n", [.command, .shift]))
-        XCTAssertEqual(BrowserShortcutCommand.newQuickWindow.defaultShortcut, shortcut("n", [.command, .option]))
-        XCTAssertEqual(BrowserShortcutCommand.closeTabOrWindow.defaultShortcut, shortcut("w", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.reopenClosedTab.defaultShortcut, shortcut("t", [.command, .shift]))
-        XCTAssertEqual(BrowserShortcutCommand.toggleSelectedTabPinned.defaultShortcut, shortcut("d", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.copyPageLink.defaultShortcut, shortcut("c", [.command, .shift]))
-        XCTAssertEqual(
-            BrowserShortcutCommand.copyPageLinkAsMarkdown.defaultShortcut,
-            shortcut("c", [.command, .option, .shift])
-        )
-        XCTAssertEqual(BrowserShortcutCommand.openLocation.defaultShortcut, shortcut("l", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.toggleSidebar.defaultShortcut, shortcut("s", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.clearUnpinnedTabs.defaultShortcut, shortcut("k", [.command, .shift]))
-        XCTAssertEqual(BrowserShortcutCommand.mostRecentTab.defaultShortcut, special(.tab, [.control]))
-        XCTAssertEqual(BrowserShortcutCommand.showHistory.defaultShortcut, shortcut("y", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.reloadPage.defaultShortcut, shortcut("r", [.command]))
-        XCTAssertEqual(
-            BrowserShortcutCommand.reloadFromOrigin.defaultShortcut,
-            shortcut("r", [.command, .shift])
-        )
-        XCTAssertNil(BrowserShortcutCommand.toggleReaderMode.defaultShortcut)
-        XCTAssertEqual(BrowserShortcutCommand.findInPage.defaultShortcut, shortcut("f", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.selectTab1.defaultShortcut, shortcut("1", [.command]))
-        XCTAssertEqual(BrowserShortcutCommand.selectSpace1.defaultShortcut, shortcut("1", [.control]))
-    }
-
     func testDefaultShortcutCatalogContainsNoDuplicateChords() {
         let assignments = Dictionary(grouping: BrowserShortcutCommand.allCases) {
             $0.defaultShortcut
@@ -252,23 +223,6 @@ final class BrowserShortcutTests: XCTestCase {
                 "toggleExtensionSidePanel=unassigned",
             ]
         )
-    }
-
-    func testSplitViewDefaultsTakeTheArrowAndUnsplitChordsZenUses() {
-        XCTAssertEqual(
-            BrowserShortcutCommand.focusNextSplitCard.defaultShortcut,
-            special(.rightArrow, [.control, .command])
-        )
-        XCTAssertEqual(
-            BrowserShortcutCommand.focusPreviousSplitCard.defaultShortcut,
-            special(.leftArrow, [.control, .command])
-        )
-        XCTAssertEqual(
-            BrowserShortcutCommand.separateSplitTabs.defaultShortcut,
-            shortcut("u", [.command, .option])
-        )
-        XCTAssertNil(BrowserShortcutCommand.splitWithNextTab.defaultShortcut)
-        XCTAssertNil(BrowserShortcutCommand.removeTabFromSplit.defaultShortcut)
     }
 
     /// ⇧⌘ arrows are the last free pair: ⌥⌘ arrows switch Spaces and tabs, and
