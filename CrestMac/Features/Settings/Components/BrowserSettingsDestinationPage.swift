@@ -56,7 +56,7 @@ struct BrowserSettingsDestinationPage: View {
                 id: "manual-setup",
                 title: "Review & Customize Setup…",
                 symbol: "sparkles",
-                help: "Edit current Spaces or add Spaces and tabs in the setup preview"
+                help: "Customize current Spaces or add new Spaces"
             ) {
                 presentSetup(.manualSetup)
             },

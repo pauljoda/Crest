@@ -31,7 +31,7 @@ struct BrowserDetailView: View {
     ) -> BrowserPagePresentation {
         BrowserPagePresentationPolicy.resolve(
             BrowserPagePresentationInput(
-                selection: tab.map { $0.isStartPage ? .startPage : .webPage }
+                selection: tab.map { $0.pagePresentationSelection }
                     ?? .none,
                 hasActivePage: page != nil,
                 hasNavigationFailure: page?.navigationFailure != nil,

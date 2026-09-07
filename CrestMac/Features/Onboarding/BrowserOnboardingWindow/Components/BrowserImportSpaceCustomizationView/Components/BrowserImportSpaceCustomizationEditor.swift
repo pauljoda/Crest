@@ -16,7 +16,7 @@ struct BrowserImportSpaceCustomizationEditor: View {
                         Text("Name")
                             .font(.headline)
                         TextField("Space name", text: $name)
-                            .textFieldStyle(.roundedBorder)
+                            .crestTextField()
                             .font(.title3)
                     }
 
@@ -29,8 +29,10 @@ struct BrowserImportSpaceCustomizationEditor: View {
                 }
                 .padding(.bottom, 32)
             }
+            .contentMargins(.trailing, 16, for: .scrollContent)
             .frame(maxWidth: 640)
         }
+        .scrollsSpaceAppearancePages()
         .frame(maxWidth: 1_080, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 38)
         .padding(.vertical, 28)

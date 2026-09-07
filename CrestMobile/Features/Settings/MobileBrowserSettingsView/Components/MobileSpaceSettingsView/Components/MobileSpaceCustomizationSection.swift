@@ -1,55 +1,31 @@
 import SwiftUI
 
 struct MobileSpaceCustomizationSection: View {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
     let browser: BrowserStore
     let space: BrowserSpace
+    let editAppearance: () -> Void
 
     var body: some View {
-        Section("Customize") {
-            if Self.usesStableCompactLayout(for: horizontalSizeClass) {
-                compactLayout
-            } else {
-                ViewThatFits(in: .horizontal) {
-                    wideLayout
-                    compactLayout
+        Section("Appearance") {
+            Button(action: editAppearance) {
+                HStack(spacing: 16) {
+                    BrowserSpaceIdentityIcon(space: browser.liveSpace(space), size: 44)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(browser.liveSpace(space).name).font(.headline)
+                        Text("Name, crest, colors, and background").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
                 }
+                .padding(.vertical, 8)
+                .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("mobile-space-customize")
         }
     }
 
-    static func usesStableCompactLayout(
-        for horizontalSizeClass: UserInterfaceSizeClass?
-    ) -> Bool {
+    static func usesStableCompactLayout(for horizontalSizeClass: UserInterfaceSizeClass?) -> Bool {
         horizontalSizeClass != .regular
-    }
-
-    private var wideLayout: some View {
-        HStack(alignment: .top, spacing: 12) {
-            MobileSpaceCustomizationPreview(
-                space: browser.liveSpace(space),
-                wide: true
-            )
-            MobileSpaceCustomizationControls(
-                browser: browser,
-                space: space,
-                compact: false
-            )
-        }
-    }
-
-    private var compactLayout: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            MobileSpaceCustomizationPreview(
-                space: browser.liveSpace(space),
-                wide: false
-            )
-            MobileSpaceCustomizationControls(
-                browser: browser,
-                space: space,
-                compact: true
-            )
-        }
     }
 }

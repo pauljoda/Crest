@@ -25,25 +25,6 @@ struct BrowserManualSetupEditor: View {
                     model: model
                 )
 
-                BrowserManualSetupSiteEditor(
-                    plan: $plan,
-                    spaceID: draft.id,
-                    existingSession: existingSession,
-                    model: model
-                )
-
-                let manualTabs = model.manuallyAddedTabs(in: draft)
-                if !manualTabs.isEmpty {
-                    BrowserManualSetupAddedTabList(
-                        plan: $plan,
-                        draft: draft,
-                        tabs: manualTabs,
-                        model: model
-                    )
-                }
-
-                Divider()
-
                 BrowserSpaceBrandingEditor(
                     branding: model.brandingBinding(
                         for: draft.id,
@@ -56,6 +37,30 @@ struct BrowserManualSetupEditor: View {
                     compact: compact,
                     showsPreview: false
                 )
+
+                DisclosureGroup("Add starting sites (optional)") {
+                    VStack(alignment: .leading, spacing: CrestSpacing.medium) {
+                        BrowserManualSetupSiteEditor(
+                            plan: $plan,
+                            spaceID: draft.id,
+                            existingSession: existingSession,
+                            model: model
+                        )
+
+                        let manualTabs = model.manuallyAddedTabs(in: draft)
+                        if !manualTabs.isEmpty {
+                            BrowserManualSetupAddedTabList(
+                                plan: $plan,
+                                draft: draft,
+                                tabs: manualTabs,
+                                model: model
+                            )
+                        }
+
+                    }
+                    .padding(.top, CrestSpacing.medium)
+                }
+                .accessibilityIdentifier("manual-setup-starting-sites")
             }
         }
     }

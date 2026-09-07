@@ -374,6 +374,13 @@ struct BrowserCommands: Commands {
             .disabled(focusedContext?.extensionSidebar?.canToggle != true)
         }
 
+        CommandGroup(replacing: .help) {
+            Button("Getting Started with Crest") {
+                commandBrowser.openGettingStarted()
+                commandPages.select(session: commandBrowser.session)
+            }
+        }
+
         CommandGroup(after: .toolbar) {
             Button(
                 "Show History",

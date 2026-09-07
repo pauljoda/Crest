@@ -33,6 +33,37 @@ enum BrowserSpaceHousePalette: String, CaseIterable, Equatable, Sendable {
         }
     }
 
+    /// Resolved artwork copied into new Spaces and explicitly chosen presets.
+    /// Existing Spaces keep their stored crest when these templates change.
+    var crest: BrowserSpaceCrest {
+        let shape: BrowserSpaceCrestBackplate
+        let division: BrowserSpaceCrestFieldDivision
+        let symbol: BrowserSpaceCrestSymbol
+        let trim: BrowserSpaceCrestTrim
+        switch self {
+        case .winter: (shape, division, symbol, trim) = (.shield, .perChevron, .snowflake, .shield)
+        case .lion: (shape, division, symbol, trim) = (.shield, .plain, .crown, .laurel)
+        case .storm: (shape, division, symbol, trim) = (.hexagon, .perBend, .lightning, .none)
+        case .dragon: (shape, division, symbol, trim) = (.shield, .perPale, .flame, .shield)
+        case .meadow: (shape, division, symbol, trim) = (.circle, .plain, .leaf, .laurel)
+        case .iron: (shape, division, symbol, trim) = (.hexagon, .perFess, .hammer, .none)
+        case .river: (shape, division, symbol, trim) = (.shield, .perBend, .sailboat, .shield)
+        case .sun: (shape, division, symbol, trim) = (.circle, .plain, .sun, .sunburst)
+        case .vigil: (shape, division, symbol, trim) = (.diamond, .perPale, .tower, .none)
+        }
+        return BrowserSpaceCrest(
+            backplate: shape,
+            fieldDivision: division,
+            trim: trim,
+            symbol: symbol,
+            backplateColorIndex: 0,
+            secondaryFieldColorIndex: 1,
+            ordinaryColorIndex: 1,
+            trimColorIndex: 2,
+            symbolColorIndex: 2
+        )
+    }
+
     var colors: [BrowserSpaceBrandColor] {
         switch self {
         // Cool neutrals: one blue-grey hue family, chroma held low so the ice

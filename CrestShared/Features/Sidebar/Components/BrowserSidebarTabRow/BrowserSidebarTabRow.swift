@@ -77,7 +77,7 @@ struct BrowserSidebarTabRow: View {
             browser: browser,
             spaceAccess: spaceAccess,
             capabilities: capabilities,
-            isLoaded: isLoaded,
+            isLoaded: tab.nativeContent != nil ? isSelected : isLoaded,
             unload: unload,
             pullNewIcon: pullNewIcon,
             restoreSavedLocation: restoreSavedLocation,

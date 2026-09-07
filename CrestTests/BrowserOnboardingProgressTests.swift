@@ -1,7 +1,50 @@
 import XCTest
+
 @testable import Crest
 
 final class BrowserOnboardingProgressTests: XCTestCase {
+    @MainActor
+    func testGettingStartedIsConsumedOnceForThisInstall() throws {
+        let suite = "BrowserOnboardingProgressTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = BrowserOnboardingProgressStore(defaults: defaults)
+        XCTAssertTrue(first.completeSetup(for: .firstRun))
+        XCTAssertFalse(first.completeSetup(for: .firstRun))
+        let relaunched = BrowserOnboardingProgressStore(defaults: defaults)
+        XCTAssertFalse(relaunched.shouldPresentWelcome)
+        XCTAssertFalse(relaunched.completeSetup(for: .firstRun))
+        let forced = BrowserOnboardingProgressStore(defaults: defaults, forceWelcome: true, forceSetup: true)
+        XCTAssertFalse(forced.hasCompletedSetup)
+        XCTAssertFalse(forced.completeSetup(for: .firstRun))
+    }
+
+    @MainActor
+    func testManualSetupAndImportNeverAutomaticallyOpenGettingStarted() {
+        for entryPoint in [BrowserOnboardingEntryPoint.manualSetup, .importBrowser] {
+            let persistence = InMemoryBrowserOnboardingProgressPersistence()
+            let progress = BrowserOnboardingProgressStore(persistence: persistence)
+            XCTAssertFalse(progress.completeSetup(for: entryPoint))
+            XCTAssertTrue(persistence.hasCompletedSetup)
+            XCTAssertFalse(progress.completeSetup(for: .firstRun))
+        }
+    }
+
+    @MainActor
+    func testNamedIsolatedInstallKeepsCompletionAcrossLaunches() throws {
+        let id = "onboarding-test-\(UUID().uuidString)"
+        let suite = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id)
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = BrowserOnboardingProgressStore.launchStore(
+            isIsolated: true, forceWelcome: true, forceSetup: false, persistentIsolationID: id)
+        XCTAssertTrue(first.completeSetup(for: .firstRun))
+        let next = BrowserOnboardingProgressStore.launchStore(
+            isIsolated: true, forceWelcome: false, forceSetup: false, persistentIsolationID: id)
+        XCTAssertFalse(next.shouldPresentWelcome)
+        XCTAssertFalse(next.completeSetup(for: .firstRun))
+    }
+
     @MainActor
     func testOrdinaryIsolatedLaunchDoesNotOpenLiveOnboardingDiscovery() {
         let progress = BrowserOnboardingProgressStore.launchStore(

@@ -1,8 +1,68 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 final class BrowserManualSetupPlanTests: XCTestCase {
+    func testReorderingExistingSpacesPreservesSelectionAndContents() throws {
+        var existing = makeSession()
+        let firstID = existing.selectedSpaceID
+        existing.addSpace()
+        let secondID = existing.selectedSpaceID
+        existing.repairRuntimeIntegrity()
+        let selectedTabID = existing.space(id: secondID)?.selectedTabID
+        var plan = BrowserManualSetupPlan(existing: existing)
+
+        plan.moveSpace(secondID, to: firstID)
+        let preview = try plan.preview(mergingInto: existing)
+
+        XCTAssertEqual(preview.spaces.map(\.id), [secondID, firstID])
+        XCTAssertEqual(preview.selectedSpaceID, secondID)
+        XCTAssertEqual(preview.space(id: secondID)?.selectedTabID, selectedTabID)
+        XCTAssertEqual(preview.defaultSpaceID, existing.defaultSpaceID)
+        for space in existing.spaces {
+            XCTAssertEqual(preview.space(id: space.id)?.tabs, space.tabs)
+            XCTAssertEqual(preview.space(id: space.id)?.profile, space.profile)
+        }
+        plan.moveSpace(secondID, to: firstID)
+        XCTAssertEqual(try plan.preview(mergingInto: existing).spaces.map(\.id), [firstID, secondID])
+    }
+
+    func testDraftOrderSurvivesResumeAndKeepsConcurrentlyAddedSpaces() throws {
+        var existing = makeSession()
+        let firstID = existing.selectedSpaceID
+        var plan = BrowserManualSetupPlan(existing: existing)
+        let newID = try plan.addSpace()
+        plan.moveSpace(newID, to: firstID)
+        var resumed = try JSONDecoder().decode(
+            BrowserManualSetupPlan.self, from: JSONEncoder().encode(plan))
+        existing.addSpace()
+        let concurrentID = existing.selectedSpaceID
+
+        XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [newID, firstID, concurrentID])
+        resumed.reconcile(with: existing)
+        XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [newID, firstID, concurrentID])
+    }
+
+    func testLegacyDraftAndInvalidMovesDoNotOverrideLiveSpaceOrder() throws {
+        var existing = makeSession()
+        let firstID = existing.selectedSpaceID
+        existing.addSpace()
+        let secondID = existing.selectedSpaceID
+        let plan = BrowserManualSetupPlan(existing: existing)
+        var encoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as? [String: Any])
+        encoded.removeValue(forKey: "spaceOrderWasEdited")
+        var resumed = try JSONDecoder().decode(
+            BrowserManualSetupPlan.self, from: JSONSerialization.data(withJSONObject: encoded))
+        resumed.moveSpace(SpaceID(), to: firstID)
+        resumed.moveSpace(firstID, to: SpaceID())
+        resumed.moveSpace(firstID, to: firstID)
+        existing.moveSpaces(from: IndexSet(integer: 1), to: 0)
+
+        XCTAssertEqual(try resumed.preview(mergingInto: existing).spaces.map(\.id), [secondID, firstID])
+    }
+
     func testDiscardingAddedTabsKeepsSpaceCustomization() throws {
         let existing = BrowserSession.preview
         var plan = BrowserManualSetupPlan(existing: existing)

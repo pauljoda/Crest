@@ -300,7 +300,7 @@ struct BrowserSplitPageSurface: View {
             BrowserSplitCardLiftPolicy.picturesPage(
                 BrowserPagePresentationPolicy.resolve(
                     BrowserPagePresentationInput(
-                        selection: member.isStartPage ? .startPage : .webPage,
+                        selection: member.pagePresentationSelection,
                         hasActivePage: page != nil,
                         hasNavigationFailure: page?.navigationFailure != nil,
                         hasProcessFailure: page?.webContentFailureMessage != nil,

@@ -235,26 +235,35 @@ struct BrowserTabOrganizationMenuContent: View {
 
         Divider()
 
-        Button(
-            tab.keepsPageLoaded ? "Stop Keeping Loaded" : "Keep Loaded",
-            systemImage: tab.keepsPageLoaded ? "lock.open" : "lock"
-        ) {
-            performIfCurrent { liveTab in
-                browser.setTabKeepsPageLoaded(
-                    !liveTab.keepsPageLoaded,
-                    for: liveTab.id,
-                    matching: sourceAssignment
-                )
-            }
-        }
-
-        if let unload, isLoaded {
+        if tab.nativeContent == nil {
             Button(
-                tab.placement == .current ? "Unload Tab" : "Close Tab",
-                systemImage: tab.placement == .current ? "minus" : "xmark"
+                tab.keepsPageLoaded ? "Stop Keeping Loaded" : "Keep Loaded",
+                systemImage: tab.keepsPageLoaded ? "lock.open" : "lock"
             ) {
                 performIfCurrent { liveTab in
-                    unload(liveTab.id)
+                    browser.setTabKeepsPageLoaded(
+                        !liveTab.keepsPageLoaded,
+                        for: liveTab.id,
+                        matching: sourceAssignment
+                    )
+                }
+            }
+
+            if let unload, isLoaded {
+                Button(
+                    tab.placement == .current ? "Unload Tab" : "Close Tab",
+                    systemImage: tab.placement == .current ? "minus" : "xmark"
+                ) {
+                    performIfCurrent { liveTab in
+                        unload(liveTab.id)
+                    }
+                }
+            }
+
+        } else if tab.placement != .current, browser.selectedTab?.id == tab.id {
+            Button("Close Tab", systemImage: "xmark") {
+                performIfCurrent { liveTab in
+                    browser.dismissNativeTab(liveTab.id, matching: sourceAssignment)
                 }
             }
         }

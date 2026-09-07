@@ -9,10 +9,13 @@ struct BrowserTabIconActions: View {
     let changeIcon: (BrowserTab) -> Void
 
     var body: some View {
-        Button("Pull New Icon", systemImage: "arrow.clockwise.circle") {
-            performIfCurrent { _ in pullNewIcon?() }
+        if tab.nativeContent == nil {
+            Button("Pull New Icon", systemImage: "arrow.clockwise.circle") {
+                performIfCurrent { _ in pullNewIcon?() }
+            }
+            .disabled(!isLoaded || pullNewIcon == nil)
+
         }
-        .disabled(!isLoaded || pullNewIcon == nil)
 
         Button("Clear Icon", systemImage: "xmark.circle") {
             performIfCurrent(clearIcon)

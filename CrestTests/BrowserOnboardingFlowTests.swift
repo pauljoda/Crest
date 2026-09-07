@@ -284,7 +284,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         XCTAssertTrue(flow.browser.session.spaces.contains { $0.id == imported.id })
     }
 
-    func testFinalFirstRunImportAdvancesToCompletion() async {
+    func testFinalFirstRunImportAdvancesToSpaceCustomization() async {
         let flow = makeFlow(
             entryPoint: .firstRun,
             sourceDiscovery: StubSourceDiscovery(sources: [source(.safari)]),
@@ -305,10 +305,10 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         await waitUntil { flow.state == .reviewing(.safari) }
 
         flow.commitReviewedImport()
-        await waitUntil { flow.state == .complete }
+        await waitUntil { flow.state == .manualSetup }
 
-        XCTAssertEqual(flow.state, .complete)
-        XCTAssertNil(flow.manualPlan)
+        XCTAssertEqual(flow.state, .manualSetup)
+        XCTAssertNotNil(flow.manualPlan)
     }
 
     func testCommitRequiresAtLeastOneIncludedSpace() async throws {

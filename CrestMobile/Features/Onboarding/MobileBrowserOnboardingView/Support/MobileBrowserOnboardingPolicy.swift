@@ -8,7 +8,7 @@ enum MobileBrowserOnboardingPolicy {
         case .importBrowser:
             .macImport
         case .manualSetup:
-            .featureSpaces
+            .manualSetup
         }
     }
 
@@ -17,7 +17,7 @@ enum MobileBrowserOnboardingPolicy {
     ) -> MobileBrowserOnboardingStep? {
         switch step {
         case .welcome:
-            .featureSpaces
+            .manualSetup
         case .featureSpaces:
             .featureTabs
         case .featureTabs:

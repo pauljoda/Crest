@@ -15,7 +15,7 @@ struct PinnedTabSelectionButton: View {
         Button(action: select) {
             TabFaviconView(tab: tab, profileID: profileID, size: 19)
                 .font(.system(size: 17, weight: .medium))
-                .browserTabResidency(isLoaded: isLoaded)
+                .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
                 .frame(maxWidth: .infinity)
                 .frame(height: BrowserPinnedTabReorderLayout.cellHeight)
                 .contentShape(.rect)

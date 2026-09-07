@@ -8,12 +8,13 @@ struct BrowserSpaceOptionGallery<
     let options: [Option]
     let minimumWidth: CGFloat
     let isSelected: (Option) -> Bool
+    var columns: [GridItem]?
     let select: (Option) -> Void
     @ViewBuilder let artwork: (Option) -> Artwork
 
     var body: some View {
         LazyVGrid(
-            columns: [
+            columns: columns ?? [
                 GridItem(
                     .adaptive(minimum: minimumWidth),
                     spacing: BrowserSpaceForgeMetrics.gridSpacing

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import CrestMobile
 
 final class MobileBrowserOnboardingPolicyTests: XCTestCase {
@@ -57,10 +58,10 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         )
     }
 
-    func testSettingsReplayStartsAtTheFeatureTour() {
+    func testSettingsReplayStartsAtSpaceCustomization() {
         XCTAssertEqual(
             MobileBrowserOnboardingPolicy.initialStep(for: .manualSetup),
-            .featureSpaces
+            .manualSetup
         )
     }
 
@@ -71,10 +72,10 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         )
     }
 
-    func testFirstRunTeachesCoreFeaturesBeforeSpaceSetup() {
+    func testFirstRunMovesDirectlyToSpaceSetup() {
         XCTAssertEqual(
             MobileBrowserOnboardingPolicy.nextStep(after: .welcome),
-            .featureSpaces
+            .manualSetup
         )
         XCTAssertEqual(
             MobileBrowserOnboardingPolicy.nextStep(after: .featureSpaces),

@@ -269,6 +269,7 @@ final class MobileBrowserPageStore:
 
     func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
         guard let space = session.space(id: spaceID), let tab = space.tabs.first(where: { $0.id == tabID }),
+            tab.nativeContent == nil,
             !spacesReleasingData.contains(spaceID), !spacesDeletingData.contains(spaceID)
         else { return }
         if let existing = pagesByTabID[tabID], existing.spaceID == spaceID, existing.profileID == space.profile.id {
@@ -415,7 +416,7 @@ final class MobileBrowserPageStore:
 
     func loadOpenedLink(_ registration: BrowserModifiedLinkRegistration, request: URLRequest, selecting: Bool) {
         let space = registration.space
-        guard !spacesReleasingData.contains(space.id),
+        guard registration.tab.nativeContent == nil, !spacesReleasingData.contains(space.id),
             !spacesDeletingData.contains(space.id)
         else { return }
         let page = makeResidentPage(for: registration.tab, in: space, loadsInitialURL: false)
@@ -488,6 +489,11 @@ final class MobileBrowserPageStore:
         // `prepareResidentPage(for:in:)` as it approaches, which is what keeps a
         // four-member group to focused ±1 live web views on a phone.
         let presented = presentedMemberIDs(for: tab, in: space)
+        if tab.nativeContent != nil {
+            deactivatePagePresentation(at: time)
+            presentedTabIDs = presented
+            return true
+        }
         if let existing = pagesByTabID[tab.id],
             existing.spaceID == space.id,
             existing.profileID == space.profile.id
@@ -552,6 +558,7 @@ final class MobileBrowserPageStore:
     ) -> MobileBrowserPage? {
         guard let space = session.selectedSpace,
             let tab = space.tabs.first(where: { $0.id == tabID }),
+            tab.nativeContent == nil,
             !spacesReleasingData.contains(space.id),
             !spacesDeletingData.contains(space.id)
         else { return nil }
@@ -685,6 +692,7 @@ final class MobileBrowserPageStore:
         let invalidTabIDs: Set<TabID> = Set(
             pagesByTabID.compactMap { tabID, page in
                 guard let assignment = assignments[tabID],
+                    tabsByID[tabID]?.tab.nativeContent == nil,
                     assignment.spaceID == page.spaceID,
                     assignment.profileID == page.profileID
                 else {

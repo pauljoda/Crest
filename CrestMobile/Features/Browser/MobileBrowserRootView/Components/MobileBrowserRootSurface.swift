@@ -46,9 +46,6 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                             palette(layout)
                         }
                 }
-                // The shared page frame supplies the bottom border. Reserving
-                // the system safe area outside it adds a second, wider band.
-                .ignoresSafeArea(.container, edges: .bottom)
             }
         }
         .overlay {

@@ -90,6 +90,14 @@ final class MobileBrowserNavigationState {
         }
     }
 
+    /// Setup can finish before the new browser root has resolved its width.
+    /// Retain the requested page even if the previous presentation was regular.
+    func presentSelectedTabAfterSetup() {
+        dockRegularSidebar()
+        compactToolbarIsHidden = false
+        compactPagePresentationPhase = .presentingPage
+    }
+
     func showTabViewer() {
         compactToolbarIsHidden = false
         compactPagePresentationPhase = .tabViewer

@@ -8,7 +8,7 @@ extension BrowserPagePool {
         }
         let members = space.presentedSplitMembers(for: tab.id)
         let requiresLoading = members.contains { member in
-            !member.isStartPage
+            member.isWebPage
                 && !containsResidentPage(
                     matching: BrowserTabRuntimeAssignment(
                         tabID: member.id, spaceID: space.id, profileID: space.profile.id

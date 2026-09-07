@@ -1,11 +1,12 @@
 import XCTest
+
 @testable import Crest
 
 final class BrowserMacOnboardingPolicyTests: XCTestCase {
-    func testFirstRunTeachesCoreFeaturesBeforeOptionalImport() {
+    func testFirstRunMovesDirectlyToOptionalImport() {
         XCTAssertEqual(
             BrowserMacOnboardingPolicy.nextFirstRunStep(after: .welcome),
-            .featureSpaces
+            .importBrowser
         )
         XCTAssertEqual(
             BrowserMacOnboardingPolicy.nextFirstRunStep(after: .featureSpaces),
@@ -30,10 +31,10 @@ final class BrowserMacOnboardingPolicyTests: XCTestCase {
         )
     }
 
-    func testEverySuccessfulImportContinuesToCompletion() {
+    func testFirstRunImportContinuesToSpaceCustomization() {
         XCTAssertEqual(
             BrowserMacOnboardingPolicy.destinationAfterImport(for: .firstRun),
-            .complete
+            .manualSetup
         )
         XCTAssertEqual(
             BrowserMacOnboardingPolicy.destinationAfterImport(for: .importBrowser),

@@ -8,6 +8,7 @@ struct MobileSpaceSettingsView: View {
 
     @State private var selectedSpaceID: SpaceID?
     @State private var managedSearchEngineSpace: BrowserSpace?
+    @State private var editingAppearanceSpace: BrowserSpace?
 
     var body: some View {
         BrowserSettingsPane(.spaces) {
@@ -19,7 +20,8 @@ struct MobileSpaceSettingsView: View {
             if let space, canReveal(space) {
                 MobileSpaceCustomizationSection(
                     browser: browser,
-                    space: space
+                    space: space,
+                    editAppearance: { editingAppearanceSpace = space }
                 )
 
                 // Touch takes the shared superset without downloads — the
@@ -44,7 +46,31 @@ struct MobileSpaceSettingsView: View {
                 )
             }
         }
+        .scrollsSpaceAppearancePages()
         .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        // Present from the stable pane, outside the Form's section hosting
+        // controllers. A section presenter can dismiss during its first update.
+        .fullScreenCover(item: $editingAppearanceSpace) { space in
+            NavigationStack {
+                Group {
+                    if let currentSpace = browser.session.space(id: space.id), canReveal(currentSpace) {
+                        BrowserMobileSpaceAppearanceWorkspace(
+                            branding: browser.spaceBrandingBinding(in: currentSpace),
+                            symbol: browser.spaceIdentityBinding(\.symbol, in: currentSpace),
+                            name: browser.spaceIdentityBinding(\.name, in: currentSpace),
+                            space: currentSpace
+                        )
+                    }
+                }
+                .navigationTitle("Space appearance")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { editingAppearanceSpace = nil }
+                    }
+                }
+            }
+        }
         .sheet(item: $managedSearchEngineSpace) { space in
             BrowserSearchEngineManager(
                 browser: browser,

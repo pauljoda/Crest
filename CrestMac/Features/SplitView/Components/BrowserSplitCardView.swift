@@ -104,7 +104,7 @@ struct BrowserSplitCardView: View {
     ) -> BrowserPagePresentation {
         BrowserPagePresentationPolicy.resolve(
             BrowserPagePresentationInput(
-                selection: tab.isStartPage ? .startPage : .webPage,
+                selection: tab.pagePresentationSelection,
                 hasActivePage: page != nil,
                 hasNavigationFailure: page?.navigationFailure != nil,
                 hasProcessFailure: page?.webContentFailureMessage != nil,

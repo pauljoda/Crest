@@ -464,7 +464,8 @@ final class BrowserPagePool:
         // tab has a live WebKit runtime to navigate now.
         guard let currentPage = pages[tabID],
             let space = session.space(id: spaceID),
-            let tab = space.tabs.first(where: { $0.id == tabID })
+            let tab = space.tabs.first(where: { $0.id == tabID }),
+            tab.nativeContent == nil
         else { return }
         let replacesExtensionRuntime =
             currentPage.extensionBaseURL != nil
@@ -548,7 +549,7 @@ final class BrowserPagePool:
 
     func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
         guard let space = session.space(id: spaceID), let tab = space.tabs.first(where: { $0.id == tabID }),
-            !spacesReleasingData.contains(spaceID), !spacesDeletingData.contains(spaceID)
+            !spacesReleasingData.contains(spaceID), !spacesDeletingData.contains(spaceID), tab.nativeContent == nil
         else { return }
         let page = page(for: tab, space: space)
         if !presentedTabIDs.contains(tabID) {
@@ -564,7 +565,7 @@ final class BrowserPagePool:
     }
 
     func prepareExtensionSelection(session: BrowserSession) {
-        guard let tab = session.selectedTab,
+        guard let tab = session.selectedTab, tab.nativeContent == nil,
             let space = session.selectedSpace,
             !spacesReleasingData.contains(space.id),
             !spacesDeletingData.contains(space.id)
@@ -662,7 +663,9 @@ final class BrowserPagePool:
         // each one is built and started here. A card the person can see must
         // never wait for focus to load: lazy loading is for tabs off screen.
         let members = presentedMembers(for: tab, in: space)
-        let memberPages = members.map { (tab: $0, page: page(for: $0, space: space)) }
+        let memberPages = members.filter { $0.nativeContent == nil }.map {
+            (tab: $0, page: page(for: $0, space: space))
+        }
         activate(tab.id, presenting: members.map(\.id), at: time)
         return memberPages
     }
@@ -989,6 +992,7 @@ final class BrowserPagePool:
         let invalidTabIDs: Set<TabID> = Set(
             pages.compactMap { tabID, page in
                 guard let assignment = assignments[tabID],
+                    tabsByID[tabID]?.tab.nativeContent == nil,
                     assignment.spaceID == page.spaceID,
                     assignment.profileID == page.profileID
                 else {

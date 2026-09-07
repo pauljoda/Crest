@@ -36,18 +36,13 @@ struct MobileOnboardingCurrentPage: View {
                 primaryAction: context.advance
             )
         case .manualSetup:
-            MobileOnboardingSpaceSetupPage(
+            BrowserSpaceSetupWizard(
                 plan: context.plan,
                 selectedSpaceID: context.selectedSpaceID,
-                existingSession: context.existingSession,
-                horizontalSizeClass: context.horizontalSizeClass,
                 errorMessage: context.errorMessage,
-                secondaryTitle: context.setupSecondaryTitle,
-                secondaryAction: context.setupSecondaryAction,
-                finish: context.finish,
-                addSpace: context.addSpace,
-                customize: context.customize,
-                remove: context.remove
+                opensGettingStarted: context.opensGettingStarted,
+                back: context.setupSecondaryAction,
+                finish: context.finish
             )
         case .macImport:
             MobileOnboardingMacImportPage(

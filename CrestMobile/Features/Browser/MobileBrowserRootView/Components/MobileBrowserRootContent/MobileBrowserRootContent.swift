@@ -195,7 +195,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             commandPaletteMode != nil,
                         isCompact: true,
                         obscuresSystemSafeAreas:
-                            usesCollapsedSidebarBorderlessFrame,
+                            MobileBrowserViewportPolicy.usesEdgeToEdgeWebViewport(
+                                isPhone: UIDevice.current.userInterfaceIdiom == .phone,
+                                presentation: presentation,
+                                sidebarPresentation: navigation.regularSidebarPresentation),
                         showsCompactToolbar: showsCompactPageToolbar,
                         compactToolbarIsHidden:
                             navigation.compactToolbarIsHidden,

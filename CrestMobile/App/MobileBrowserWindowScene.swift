@@ -194,7 +194,8 @@ struct MobileBrowserWindowScene: View {
             browser: model.browser,
             cloudSync: cloudSync,
             progress: onboardingProgress,
-            coordinator: onboardingCoordinator
+            coordinator: onboardingCoordinator,
+            didOpenGettingStarted: { model.navigation.presentSelectedTabAfterSetup() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())

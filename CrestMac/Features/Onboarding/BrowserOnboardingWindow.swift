@@ -59,7 +59,9 @@ struct BrowserOnboardingWindow: View {
     }
 
     private func openCrest() {
-        progress.markCompleted()
+        if progress.completeSetup(for: request.entryPoint) {
+            flow.browser.openGettingStarted()
+        }
         // The launch gate retired the existing browser window. Restore it
         // before asking SwiftUI to open that scene so it can reuse the window.
         BrowserOnboardingLaunchGateWindow.restore()

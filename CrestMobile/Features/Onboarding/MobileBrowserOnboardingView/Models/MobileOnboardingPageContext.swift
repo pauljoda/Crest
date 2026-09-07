@@ -15,6 +15,7 @@ struct MobileOnboardingPageContext {
     let existingSession: BrowserSession
     let horizontalSizeClass: UserInterfaceSizeClass?
     let errorMessage: String?
+    var opensGettingStarted = false
     let setupSecondaryTitle: String
     let welcomePrimaryAction: () -> Void
     let advance: () -> Void

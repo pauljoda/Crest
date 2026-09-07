@@ -21,7 +21,7 @@ struct BrowserOnboardingStepContent: View {
                 hasCompletedSetup: progress.hasCompletedSetup,
                 hasDisposableSeedState:
                     flow.browser.session.hasDisposableSeedState,
-                continueSetup: { transition(to: .featureSpaces) },
+                continueSetup: { transition(to: .importBrowser) },
                 openCrest: openCrest
             )
         case .featureSpaces:
@@ -46,7 +46,7 @@ struct BrowserOnboardingStepContent: View {
                 toggleSelection: flow.toggleImportSelection,
                 beginManualSetup: beginManualSetup,
                 continueImport: flow.continueImportQueue,
-                back: { transition(to: .featureSync) },
+                back: { transition(to: .welcome) },
                 close: close
             )
         case .review:
@@ -63,8 +63,10 @@ struct BrowserOnboardingStepContent: View {
             BrowserOnboardingManualSetupPage(
                 flow: flow,
                 browserSession: flow.browser.session,
+                opensGettingStarted: flow.request.entryPoint == .firstRun && progress.willOpenGettingStarted,
                 selectedSpaceID: $selectedManualSpaceID,
-                back: { transition(to: .importBrowser) }
+                back: { transition(to: .importBrowser) },
+                openCrest: openCrest
             )
         case .complete:
             BrowserOnboardingCompletionPage(

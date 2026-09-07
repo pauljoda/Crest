@@ -9,6 +9,7 @@ struct MobileBrowserOnboardingView: View {
     let draftPersistence: MobileOnboardingDraftPersistence
     let tutorialPersonalSpace: BrowserSpace
     let tutorialWorkSpace: BrowserSpace
+    let didOpenGettingStarted: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -24,6 +25,7 @@ struct MobileBrowserOnboardingView: View {
         cloudSync: BrowserCloudSyncController,
         progress: BrowserOnboardingProgressStore,
         coordinator: BrowserOnboardingCoordinator,
+        didOpenGettingStarted: @escaping () -> Void = {},
         draftPersistence: MobileOnboardingDraftPersistence = .live,
         tutorialPersonalSpace: BrowserSpace =
             MobileOnboardingPreviewFixtures.tutorialPersonalSpace,
@@ -35,6 +37,7 @@ struct MobileBrowserOnboardingView: View {
         self.cloudSync = cloudSync
         self.progress = progress
         self.coordinator = coordinator
+        self.didOpenGettingStarted = didOpenGettingStarted
         self.draftPersistence = draftPersistence
         self.tutorialPersonalSpace = tutorialPersonalSpace
         self.tutorialWorkSpace = tutorialWorkSpace
@@ -104,6 +107,7 @@ struct MobileBrowserOnboardingView: View {
             existingSession: browser.session,
             horizontalSizeClass: horizontalSizeClass,
             errorMessage: errorMessage,
+            opensGettingStarted: request.entryPoint == .firstRun && progress.willOpenGettingStarted,
             setupSecondaryTitle: setupSecondaryTitle,
             welcomePrimaryAction: handleWelcomeAction,
             advance: advance,
@@ -162,7 +166,7 @@ struct MobileBrowserOnboardingView: View {
         case .setup:
             advance()
         case .open:
-            progress.markCompleted()
+            completeSetup()
             close()
         }
     }
@@ -176,7 +180,7 @@ struct MobileBrowserOnboardingView: View {
 
     private func handleSetupSecondaryAction() {
         if request.entryPoint == .firstRun {
-            move(to: .featureSync)
+            move(to: .welcome)
         } else {
             close()
         }
@@ -248,12 +252,19 @@ struct MobileBrowserOnboardingView: View {
     private func finishManualSetup() {
         do {
             try browser.commitManualSetup(manualPlan)
-            progress.markCompleted()
+            completeSetup()
             draftPersistence.clear()
             errorMessage = nil
             close()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func completeSetup() {
+        if progress.completeSetup(for: request.entryPoint) {
+            browser.openGettingStarted()
+            didOpenGettingStarted()
         }
     }
 

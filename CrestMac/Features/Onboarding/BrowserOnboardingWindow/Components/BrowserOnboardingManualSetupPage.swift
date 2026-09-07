@@ -3,100 +3,30 @@ import SwiftUI
 struct BrowserOnboardingManualSetupPage: View {
     let flow: BrowserOnboardingFlow
     let browserSession: BrowserSession
+    let opensGettingStarted: Bool
     @Binding var selectedSpaceID: SpaceID?
     let back: () -> Void
+    let openCrest: () -> Void
 
     var body: some View {
-        if flow.manualPlan != nil {
-            VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Shape your Spaces")
-                        .font(
-                            BrowserOnboardingTypography.sans(
-                                14,
-                                weight: .bold
-                            )
-                        )
-                        .foregroundStyle(CrestBrandTheme.textDisplay)
-                    Text("Customize the look, then add only the tabs you want.")
-                        .font(
-                            BrowserOnboardingTypography.sans(
-                                11,
-                                weight: .medium
-                            )
-                        )
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 22)
-                .frame(height: 64)
-                .background(CrestBrandTheme.canvas)
-
-                BrowserManualSetupView(
-                    plan: manualPlanBinding,
-                    selectedSpaceID: $selectedSpaceID,
-                    existingSession: browserSession
-                )
-                .accessibilityIdentifier("manual-setup-editor")
-                .background(CrestBrandTheme.surface)
-
-                HStack {
-                    Button("Back", action: back)
-                        .buttonStyle(
-                            BrowserOnboardingSecondaryButtonStyle()
-                        )
-                        .accessibilityIdentifier("onboarding-back")
-                    Spacer()
-                    if let message = flow.failure?.message {
-                        Label {
-                            BrowserOnboardingFailureMessage(message: message)
-                        } icon: {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                        }
-                        .font(
-                            BrowserOnboardingTypography.sans(
-                                11,
-                                weight: .medium
-                            )
-                        )
-                        .foregroundStyle(.red)
-                        .lineLimit(2)
-                        .accessibilityIdentifier("onboarding-workflow-error")
-                    } else {
-                        Text(
-                            "Existing tabs stay in place. Only the changes shown here are saved."
-                        )
-                        .font(
-                            BrowserOnboardingTypography.sans(
-                                11,
-                                weight: .medium
-                            )
-                        )
-                        .foregroundStyle(.secondary)
-                    }
-                    Button("Save Setup", action: flow.commitManualSetup)
-                        .buttonStyle(BrowserOnboardingPrimaryButtonStyle())
-                        .controlSize(.large)
-                        .disabled(flow.isCommittingImport)
-                        .accessibilityIdentifier(
-                            "onboarding-confirm-manual-setup"
-                        )
-                }
-                .padding(18)
-                .background(CrestBrandTheme.canvas)
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(CrestBrandTheme.line)
-                        .frame(height: 1)
-                }
+        BrowserSpaceSetupWizard(
+            plan: manualPlanBinding,
+            selectedSpaceID: $selectedSpaceID,
+            opensGettingStarted: opensGettingStarted,
+            back: back,
+            finish: {
+                flow.commitManualSetup()
+                if flow.step == .complete { openCrest() }
             }
-        } else {
-            ContentUnavailableView(
-                "No Spaces to Set Up",
-                systemImage: "square.grid.2x2",
-                description: Text("Add a Space to continue setting up Crest.")
-            )
+        )
+        .overlay(alignment: .bottom) {
+            if let message = flow.failure?.message {
+                BrowserOnboardingFailureMessage(message: message)
+                    .foregroundStyle(.red)
+                    .padding(.bottom, 76)
+            }
         }
+        .accessibilityIdentifier("manual-setup-editor")
     }
 
     private var manualPlanBinding: Binding<BrowserManualSetupPlan> {

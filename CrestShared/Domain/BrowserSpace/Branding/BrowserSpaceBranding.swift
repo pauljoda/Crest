@@ -23,6 +23,10 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     var crest: BrowserSpaceCrest
     var folderColorIntensity: Double
     var textColorMode: BrowserSpaceTextColorMode
+    /// Nil belongs to older Spaces and is inferred from their stored appearance.
+    /// Explicit editing keeps returning to customization, even if a later edit
+    /// happens to recreate the original template exactly.
+    var hasCustomAppearance: Bool?
 
     var keepsControlsReadable: Bool {
         get { readabilityFade > 0 }
@@ -51,7 +55,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         iconStyle: BrowserSpaceIconStyle = .simpleSymbol,
         crest: BrowserSpaceCrest = BrowserSpaceCrest(),
         folderColorIntensity: Double = 0,
-        textColorMode: BrowserSpaceTextColorMode = .automatic
+        textColorMode: BrowserSpaceTextColorMode = .automatic,
+        hasCustomAppearance: Bool? = nil
     ) {
         let normalizedColors =
             colors.isEmpty
@@ -71,6 +76,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         self.crest = crest.normalized(forColorCount: normalizedColors.count)
         self.folderColorIntensity = folderColorIntensity.isFinite ? min(max(folderColorIntensity, 0), 1) : 0
         self.textColorMode = textColorMode
+        self.hasCustomAppearance = hasCustomAppearance
     }
 
     static func legacy(accent: SpaceAccent, symbol: String) -> BrowserSpaceBranding {
@@ -96,14 +102,17 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     }
 
     static func initial(accent: SpaceAccent, symbol: String) -> BrowserSpaceBranding {
-        var branding = legacy(accent: accent, symbol: symbol)
-        branding.readabilityFade = initialReadabilityFade
-        return branding
+        let palette: BrowserSpaceHousePalette
+        switch accent {
+        case .indigo: palette = .winter
+        case .orange: palette = .sun
+        case .teal: palette = .meadow
+        case .rose: palette = .lion
+        }
+        return house(palette, symbol: symbol)
     }
 
-    /// Branding for a Space that Crest itself creates, dressed in one of the
-    /// shipped palettes. The palette's colors are copied in, exactly as if the
-    /// reader had picked the swatch.
+    /// Creates new branding from a complete preset. Decoding never applies it.
     static func house(
         _ palette: BrowserSpaceHousePalette,
         symbol: String
@@ -113,8 +122,9 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
             bannerPattern: .diagonal,
             bannerStrength: 1,
             readabilityFade: initialReadabilityFade,
-            iconStyle: .simpleSymbol,
-            crest: BrowserSpaceCrest(symbol: crestSymbol(forLegacySymbol: symbol))
+            iconStyle: .layeredCrest,
+            crest: palette.crest,
+            hasCustomAppearance: false
         )
     }
 
@@ -149,7 +159,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
             iconStyle: iconStyle,
             crest: crest,
             folderColorIntensity: folderColorIntensity,
-            textColorMode: textColorMode
+            textColorMode: textColorMode,
+            hasCustomAppearance: hasCustomAppearance
         )
     }
 
@@ -200,6 +211,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         case renderingVersion
         case folderColorIntensity
         case textColorMode
+        case hasCustomAppearance
     }
 
     init(from decoder: Decoder) throws {
@@ -241,7 +253,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
             iconStyle: container.decodeTolerantly(.iconStyle, default: .simpleSymbol),
             crest: try container.decode(BrowserSpaceCrest.self, forKey: .crest),
             folderColorIntensity: (try? container.decodeIfPresent(Double.self, forKey: .folderColorIntensity)) ?? 0,
-            textColorMode: container.decodeTolerantly(.textColorMode, default: .automatic)
+            textColorMode: container.decodeTolerantly(.textColorMode, default: .automatic),
+            hasCustomAppearance: try container.decodeIfPresent(Bool.self, forKey: .hasCustomAppearance)
         )
     }
 
@@ -260,5 +273,6 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         try container.encode(renderingVersion, forKey: .renderingVersion)
         try container.encode(normalized().folderColorIntensity, forKey: .folderColorIntensity)
         try container.encode(textColorMode, forKey: .textColorMode)
+        try container.encodeIfPresent(hasCustomAppearance, forKey: .hasCustomAppearance)
     }
 }

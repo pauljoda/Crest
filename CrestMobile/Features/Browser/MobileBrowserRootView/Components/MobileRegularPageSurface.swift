@@ -100,8 +100,7 @@ struct MobileRegularPageSurface: View {
                     addressFocusRequest: addressFocusRequest,
                     isCommandPalettePresented: isCommandPalettePresented,
                     isCompact: false,
-                    obscuresSystemSafeAreas:
-                        usesCollapsedSidebarBorderlessFrame,
+                    obscuresSystemSafeAreas: false,
                     showsCompactToolbar: false,
                     compactToolbarIsHidden: compactToolbarIsHidden,
                     handleWebContentInteraction: {

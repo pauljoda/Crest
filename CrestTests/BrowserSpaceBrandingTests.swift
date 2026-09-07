@@ -7,6 +7,77 @@ import XCTest
 
 @MainActor
 final class BrowserSpaceBrandingTests: XCTestCase {
+    func testCustomAppearanceRemembersItsLandingPageThroughPersistence() throws {
+        let custom = BrowserSpaceAppearanceLanding.customStart
+        XCTAssertEqual(custom.iconStyle, .layeredCrest)
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: custom), .customize)
+        let restored = try JSONDecoder().decode(
+            BrowserSpaceBranding.self, from: JSONEncoder().encode(custom.normalized()))
+        XCTAssertEqual(restored.hasCustomAppearance, true)
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: restored), .customize)
+
+        let template = BrowserSpaceBrandingPreset.curated[0]
+        let selected = template.applying(to: restored)
+        XCTAssertEqual(selected.hasCustomAppearance, false)
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: selected), .presets)
+        var edited = selected
+        edited.hasCustomAppearance = true
+        XCTAssertFalse(template.isSelected(in: edited))
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: edited), .customize)
+    }
+
+    func testOlderSpacesInferCustomizationFromTheirStoredAppearance() {
+        var template = BrowserSpaceBranding.house(.river, symbol: "")
+        template.hasCustomAppearance = nil
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: template), .presets)
+        template.bannerStrength = 0.6
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: template), .customize)
+        template.iconStyle = .simpleSymbol
+        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: template), .icon)
+    }
+
+    func testNewSpacesStartWithVisibleCrestsWithoutRestylingExistingBranding() throws {
+        let legacy = BrowserSpaceBranding.legacy(accent: .rose, symbol: "book.fill")
+        let decoded = try JSONDecoder().decode(
+            BrowserSpaceBranding.self, from: JSONEncoder().encode(legacy)
+        )
+        XCTAssertEqual(decoded, legacy)
+        XCTAssertEqual(decoded.iconStyle, .simpleSymbol)
+
+        let fresh = try XCTUnwrap(BrowserSession.freshInstallSeed.selectedSpace)
+        let added = BrowserSession.makeBlankSpace(number: 2)
+        var plan = BrowserManualSetupPlan(existing: .preview)
+        let newID = try plan.addSpace()
+        let draft = try XCTUnwrap(plan.spaces.first { $0.id == newID })
+        for branding in [fresh.branding, added.branding, draft.customization.branding] {
+            XCTAssertEqual(branding.iconStyle, .layeredCrest)
+            XCTAssertNotEqual(branding.crest.backplate, .none)
+            XCTAssertNotEqual(branding.crest.backplateColorIndex, branding.crest.symbolColorIndex)
+        }
+        XCTAssertEqual(plan.spaces.first?.customization.branding, BrowserSession.preview.spaces.first?.branding)
+    }
+
+    func testCompletePresetsApplyDistinctCrestsAndPreserveReadabilityPreferences() throws {
+        var source = BrowserSpaceBranding.legacy(accent: .teal, symbol: "book.fill")
+        source.folderColorIntensity = 0.63
+        source.textColorMode = .dark
+        source.readabilityFade = 0.72
+        let candidates = BrowserSpaceBrandingPreset.curated.map { $0.applying(to: source) }
+        for candidate in candidates {
+            XCTAssertEqual(candidate.iconStyle, .layeredCrest)
+            XCTAssertNotEqual(candidate.crest.backplate, .none)
+            XCTAssertEqual(candidate.folderColorIntensity, source.folderColorIntensity)
+            XCTAssertEqual(candidate.textColorMode, source.textColorMode)
+            XCTAssertEqual(candidate.readabilityFade, source.readabilityFade)
+            XCTAssertEqual(
+                candidate,
+                try JSONDecoder().decode(
+                    BrowserSpaceBranding.self, from: JSONEncoder().encode(candidate)
+                ))
+        }
+        XCTAssertEqual(Set(candidates.map(\.crest.symbol)).count, candidates.count)
+    }
+
     func testGradientControlsSupportKeyboardAndSemanticFineTuningLabels() {
         XCTAssertTrue(BrowserSpaceBrandingControlPolicy.gradientDialAcceptsKeyboardFocus)
         XCTAssertTrue(BrowserSpaceBrandingControlPolicy.gradientDialShowsFocusIndicator)
@@ -541,7 +612,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         )
         let originalCrest = source.crest
 
-        source = try XCTUnwrap(BrowserSpaceBrandingPreset.curated.first).applying(to: source)
+        source = try XCTUnwrap(BrowserSpaceBrandingPreset.curated.first).applyingPalette(to: source)
 
         XCTAssertEqual(source.colors, BrowserSpaceHousePalette.winter.colors)
         XCTAssertEqual(source.themeMode, .gradient)

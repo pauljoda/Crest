@@ -6,6 +6,16 @@ enum MobileBrowserViewportPolicy {
     static let compactToolbarHeight: CGFloat = 56
     static let compactDomainChipHeight = MobileCompactDomainChipLayout.minimumHitTarget
 
+    /// Only the phone's docked, full-screen page uses WebKit's obscured-inset
+    /// contract. Floating sidebars and tablet cards retain their safe area.
+    static func usesEdgeToEdgeWebViewport(
+        isPhone: Bool,
+        presentation: MobileBrowserPresentation,
+        sidebarPresentation: BrowserSidebarPresentation
+    ) -> Bool {
+        isPhone && presentation == .compact && sidebarPresentation == .docked
+    }
+
     /// SwiftUI's directional safe area as the physical one UIKit lays out with.
     static func systemSafeAreaInsets(
         _ insets: EdgeInsets,

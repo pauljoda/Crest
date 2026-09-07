@@ -5,6 +5,8 @@ enum BrowserPagePresentationPolicy {
         switch input.selection {
         case .none:
             return .noSelection
+        case .nativeContent:
+            return .nativeContent
         case .startPage:
             return .startPage
         case .webPage:

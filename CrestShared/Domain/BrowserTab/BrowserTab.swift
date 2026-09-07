@@ -6,7 +6,10 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
 
     let id: TabID
     var title: String
-    var url: URL?
+    private(set) var nativeContent: BrowserNativeTabContent?
+    var url: URL? {
+        didSet { if url != nil { nativeContent = nil } }
+    }
     var savedURL: URL?
     var symbol: String
     var faviconData: Data? {
@@ -50,6 +53,7 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         id: TabID = TabID(),
         title: String,
         url: URL?,
+        nativeContent: BrowserNativeTabContent? = nil,
         savedURL: URL? = nil,
         symbol: String = "globe",
         faviconData: Data? = nil,
@@ -67,8 +71,9 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     ) {
         self.id = id
         self.title = title
-        self.url = url
-        self.savedURL = savedURL ?? (placement == .current ? nil : url)
+        self.nativeContent = nativeContent
+        self.url = nativeContent == nil ? url : nil
+        self.savedURL = nativeContent == nil ? (savedURL ?? (placement == .current ? nil : url)) : nil
         self.symbol = symbol
         self.faviconData = faviconData
         // Property observers do not run inside an initializer.
@@ -102,8 +107,10 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
     }
 
     var isStartPage: Bool {
-        url == nil
+        nativeContent == nil && url == nil
     }
+
+    var isWebPage: Bool { nativeContent == nil && url != nil }
 
     var savedSiteURL: URL? {
         savedURL ?? (placement == .current ? nil : url)
@@ -201,14 +208,13 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         data.map(BrowserFaviconPayloadIdentity.init(hashing:))
     }
 
-    /// Exactly the terms the synthesized `Codable` used, so nothing about the
-    /// stored or synchronized shape of a tab changes. `faviconPayloadIdentity` is
-    /// absent on purpose: it is derived from `faviconData`, and a stored copy could
-    /// only ever go stale.
+    /// Stored fields include the optional native descriptor. The derived
+    /// favicon payload identity is rebuilt when decoding rather than persisted.
     private enum CodingKeys: String, CodingKey {
         case id
         case title
         case url
+        case nativeContent
         case savedURL
         case symbol
         case faviconData
@@ -236,8 +242,9 @@ struct BrowserTab: Codable, Equatable, Identifiable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(TabID.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
-        url = try container.decodeIfPresent(URL.self, forKey: .url)
-        savedURL = try container.decodeIfPresent(URL.self, forKey: .savedURL)
+        nativeContent = try container.decodeIfPresent(BrowserNativeTabContent.self, forKey: .nativeContent)
+        url = nativeContent == nil ? try container.decodeIfPresent(URL.self, forKey: .url) : nil
+        savedURL = nativeContent == nil ? try container.decodeIfPresent(URL.self, forKey: .savedURL) : nil
         symbol = try container.decode(String.self, forKey: .symbol)
         let decodedFavicon = try container.decodeIfPresent(Data.self, forKey: .faviconData)
         faviconData = decodedFavicon

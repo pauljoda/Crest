@@ -673,6 +673,18 @@
     "2026-09-06-sidebar-registry-build-initializer": {
       "category": "internal",
       "message": "Restore iOS builds with an explicit extension sidebar registry initializer"
+    },
+    "2026-09-07-guided-space-appearance": {
+      "category": "improved",
+      "message": "Set up and customize Spaces with crest templates, focused appearance controls and a live preview on Mac, iPhone and iPad"
+    },
+    "2026-09-07-interactive-getting-started": {
+      "category": "new",
+      "message": "Learn tabs, pins and folders in an interactive Getting Started tab, with Split View practice and extension guidance on Mac"
+    },
+    "2026-09-07-mobile-setup-and-editor-presentation": {
+      "category": "fixed",
+      "message": "Open Getting Started after first setup, keep page content clear of mobile controls and open Space appearance reliably on the first tap"
     }
   }
 }

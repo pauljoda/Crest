@@ -31,7 +31,7 @@ struct BrowserWebPageFailureOverlay: View {
                 goBack: {},
                 proceed: {}
             )
-        case .noSelection, .startPage, .livePage, .unloaded, .automaticRestore:
+        case .noSelection, .startPage, .nativeContent, .livePage, .unloaded, .automaticRestore:
             EmptyView()
         }
     }

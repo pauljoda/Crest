@@ -51,5 +51,6 @@ struct MobileBrowserLivePageView: View {
             .container,
             edges: viewport.obscuresSystemSafeAreas ? .vertical : []
         )
+        .safeAreaPadding(.bottom, viewport.obscuresSystemSafeAreas ? 0 : viewport.bottomChromeHeight)
     }
 }

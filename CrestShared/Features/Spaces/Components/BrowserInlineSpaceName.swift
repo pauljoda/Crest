@@ -1,0 +1,156 @@
+import SwiftUI
+
+#if os(macOS)
+    import AppKit
+#endif
+
+/// A title that becomes a plain text editor in place. The binding is live;
+/// finishing editing only dismisses focus and never gates saving the name.
+struct BrowserInlineSpaceName: View {
+    @Binding var name: String
+    var size: CGFloat = 30
+    var titleFont: Font? = nil
+    @State private var draftName = ""
+    @State private var isEditing = false
+    @State private var isHovering = false
+    @FocusState private var isFocused: Bool
+
+    private var usesTouch: Bool {
+        #if os(iOS)
+            true
+        #else
+            false
+        #endif
+    }
+
+    var body: some View {
+        HStack(spacing: size <= 18 ? 6 : 10) {
+            #if os(iOS)
+                if isEditing {
+                    TextField("Space name", text: $draftName)
+                        .textFieldStyle(.plain)
+                        .focused($isFocused)
+                        .onAppear { isFocused = true }
+                        .onChange(of: draftName) { _, value in name = value }
+                        .onSubmit(finish)
+                        .submitLabel(.done)
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .accessibilityIdentifier("space-name-field")
+                } else {
+                    Button(action: edit) {
+                        Text(name.isEmpty ? String(localized: "Name your Space") : name)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Edit Space name: \(name)")
+                }
+            #else
+                if isEditing {
+                    Text(draftName.isEmpty ? " " : draftName)
+                        .lineLimit(1)
+                        .padding(.trailing, 8)
+                        .hidden()
+                        .overlay(alignment: .leading) {
+                            TextField("Space name", text: $draftName)
+                                .textFieldStyle(.plain)
+                                .focused($isFocused)
+                                .onAppear { isFocused = true }
+                                .onChange(of: draftName) { _, value in name = value }
+                                .onSubmit(finish)
+                                .submitLabel(.done)
+                                .accessibilityIdentifier("space-name-field")
+                        }
+                } else {
+                    Button {
+                        edit()
+                    } label: {
+                        Text(name.isEmpty ? String(localized: "Name your Space") : name)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Edit Space name: \(name)")
+                }
+            #endif
+            Button(action: { if isEditing { finish() } else { edit() } }) {
+                Image(systemName: isEditing ? "checkmark.circle.fill" : "pencil")
+                    .font(.system(size: size <= 18 ? 14 : 18, weight: .medium))
+                    .foregroundStyle(isEditing ? Color.green : Color.secondary)
+                    .frame(width: usesTouch ? 44 : size <= 18 ? 24 : 32, height: usesTouch ? 44 : 32)
+                    .opacity(usesTouch || isEditing || isHovering ? 1 : 0)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isEditing ? "Finish editing name" : "Edit Space name")
+        }
+        .font(titleFont ?? CrestTypography.display(size))
+        .frame(minHeight: size <= 18 ? 32 : 44)
+        .padding(.horizontal, size <= 18 ? 4 : 10)
+        .padding(.vertical, 4)
+        .background(
+            Color.primary.opacity(isEditing ? 0.08 : isHovering ? 0.045 : 0),
+            in: .rect(cornerRadius: 10)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 10).strokeBorder(
+                isEditing ? Color.green.opacity(0.38) : Color.primary.opacity(isHovering ? 0.12 : 0))
+        }
+        .onHover { isHovering = $0 }
+        .onChange(of: isFocused) { _, focused in if !focused { isEditing = false } }
+        #if os(macOS)
+            .background { OutsideTitleClick(isEditing: isEditing, finish: finish) }
+        #endif
+        .padding(.leading, size <= 18 ? -4 : -10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func edit() {
+        draftName = name
+        isEditing = true
+        isFocused = true
+    }
+    private func finish() {
+        isFocused = false
+        isEditing = false
+    }
+}
+
+#if os(macOS)
+    /// Observe without consuming the click: clicking another choice both ends
+    /// title editing and performs that choice on its first click.
+    private struct OutsideTitleClick: NSViewRepresentable {
+        let isEditing: Bool
+        let finish: () -> Void
+        func makeNSView(context: Context) -> TitleClickView { TitleClickView() }
+        func updateNSView(_ view: TitleClickView, context: Context) {
+            view.isEditing = isEditing
+            view.finish = finish
+        }
+        static func dismantleNSView(_ view: TitleClickView, coordinator: ()) { view.stop() }
+    }
+
+    private final class TitleClickView: NSView {
+        var isEditing = false
+        var finish: () -> Void = {}
+        private var monitor: Any?
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            stop()
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
+                [weak self] event in
+                guard let self, self.isEditing, event.window === self.window else { return event }
+                if !self.bounds.contains(self.convert(event.locationInWindow, from: nil)) { self.finish() }
+                return event
+            }
+        }
+        func stop() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+        }
+    }
+#endif

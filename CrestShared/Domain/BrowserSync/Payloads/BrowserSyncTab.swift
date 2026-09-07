@@ -4,6 +4,7 @@ struct BrowserSyncTab: Codable, Equatable, Sendable {
     let id: TabID
     let spaceID: SpaceID
     var title: String
+    var nativeContent: BrowserNativeTabContent?
     var url: URL?
     var savedURL: URL?
     var symbol: String
@@ -22,6 +23,7 @@ struct BrowserSyncTab: Codable, Equatable, Sendable {
         spaceID: SpaceID,
         title: String,
         url: URL?,
+        nativeContent: BrowserNativeTabContent? = nil,
         savedURL: URL? = nil,
         symbol: String,
         placement: TabPlacement,
@@ -37,6 +39,7 @@ struct BrowserSyncTab: Codable, Equatable, Sendable {
         self.id = id
         self.spaceID = spaceID
         self.title = title
+        self.nativeContent = nativeContent
         self.url = url
         self.savedURL = savedURL
         self.symbol = symbol
@@ -56,6 +59,7 @@ struct BrowserSyncTab: Codable, Equatable, Sendable {
         case spaceID
         case title
         case url
+        case nativeContent
         case savedURL
         case symbol
         case placement
@@ -74,6 +78,7 @@ struct BrowserSyncTab: Codable, Equatable, Sendable {
         id = try container.decode(TabID.self, forKey: .id)
         spaceID = try container.decode(SpaceID.self, forKey: .spaceID)
         title = try container.decode(String.self, forKey: .title)
+        nativeContent = try container.decodeIfPresent(BrowserNativeTabContent.self, forKey: .nativeContent)
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         savedURL = try container.decodeIfPresent(URL.self, forKey: .savedURL)
         symbol = try container.decode(String.self, forKey: .symbol)

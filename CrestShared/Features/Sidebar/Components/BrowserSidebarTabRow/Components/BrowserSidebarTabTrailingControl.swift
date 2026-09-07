@@ -8,14 +8,13 @@ struct BrowserSidebarTabTrailingControl: View {
 
     @ViewBuilder
     var body: some View {
-        if configuration.tab.placement == .saved,
-            let unload = configuration.unload
-        {
-            BrowserSidebarTabUnloadButton(
-                configuration: configuration,
-                unload: unload,
-                isVisible: configuration.isLoaded && isRevealed
-            )
+        if configuration.tab.placement == .saved {
+            if configuration.unload != nil || configuration.tab.nativeContent != nil {
+                BrowserSidebarTabUnloadButton(
+                    configuration: configuration,
+                    isVisible: configuration.isLoaded && isRevealed
+                )
+            }
         } else {
             BrowserSidebarTabCloseButton(
                 configuration: configuration,
@@ -69,16 +68,19 @@ private struct BrowserSidebarTabCloseButton: View {
 
 private struct BrowserSidebarTabUnloadButton: View {
     let configuration: BrowserSidebarTabRowConfiguration
-    let unload: (TabID) -> Void
     let isVisible: Bool
 
     var body: some View {
         Button {
             guard configuration.isCurrentAndUnlocked else { return }
-            unload(configuration.tab.id)
+            if configuration.tab.nativeContent != nil {
+                configuration.browser.dismissNativeTab(configuration.tab.id, matching: configuration.assignment)
+            } else {
+                configuration.unload?(configuration.tab.id)
+            }
         } label: {
             BrowserSidebarTabTrailingControlLabel(
-                systemName: "xmark",
+                systemName: "minus",
                 metrics: metrics
             )
         }
@@ -87,8 +89,8 @@ private struct BrowserSidebarTabUnloadButton: View {
         .opacity(isVisible ? 1 : 0)
         .disabled(!configuration.isLoaded || !configuration.isCurrentAndUnlocked)
         .allowsHitTesting(isVisible)
-        .accessibilityLabel("Close \(configuration.tab.displayTitle)")
-        .help("Close Tab")
+        .accessibilityLabel("Unload \(configuration.tab.displayTitle)")
+        .help("Unload Tab")
     }
 
     private var metrics: BrowserTabTrailingControlMetrics {

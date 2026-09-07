@@ -17,7 +17,8 @@ struct BrowserSpaceOptionCard<Artwork: View>: View {
                 Text(title)
                     .font(CrestTypography.compactMetadata)
                     .foregroundStyle(CrestColor.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
                     .minimumScaleFactor(BrowserSpaceForgeMetrics.optionLabelMinimumScale)
             }
             .frame(maxWidth: .infinity)

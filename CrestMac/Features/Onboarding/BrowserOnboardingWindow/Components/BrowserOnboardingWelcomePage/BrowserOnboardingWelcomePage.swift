@@ -36,41 +36,18 @@ struct BrowserOnboardingWelcomePage: View {
                 CrestStartPageMark()
                     .frame(width: 54, height: 54)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("WELCOME TO CREST")
-                        .font(
-                            BrowserOnboardingTypography.sans(
-                                11,
-                                weight: .bold
-                            )
-                        )
-                        .tracking(2.2)
-                        .foregroundStyle(BrowserOnboardingPalette.coral)
+                VStack(alignment: .leading, spacing: 18) {
                     Text("Welcome to Crest")
-                        .font(BrowserOnboardingTypography.display(46))
+                        .font(.headline)
+                        .foregroundStyle(BrowserOnboardingPalette.coral)
+                    Text("Set up your Spaces")
+                        .font(BrowserOnboardingTypography.display(52))
                         .foregroundStyle(BrowserOnboardingPalette.ink)
-                    Text(
-                        "Bring your browser with you—without bringing over the clutter."
-                    )
-                    .font(
-                        BrowserOnboardingTypography.sans(17, weight: .medium)
-                    )
-                    .foregroundStyle(BrowserOnboardingPalette.inkSoft)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text("Organize your browsing into Spaces, each with its own tabs and appearance.")
+                        .font(BrowserOnboardingTypography.sans(18, weight: .regular))
+                        .foregroundStyle(BrowserOnboardingPalette.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Label(
-                    "Review every Space and tab before anything changes",
-                    systemImage: "checklist"
-                )
-                .font(BrowserOnboardingTypography.sans(14, weight: .medium))
-                .foregroundStyle(BrowserOnboardingPalette.inkSoft)
-                Label(
-                    "Your setup and browser data sync privately with iCloud",
-                    systemImage: "icloud"
-                )
-                .font(BrowserOnboardingTypography.sans(14, weight: .medium))
-                .foregroundStyle(BrowserOnboardingPalette.inkSoft)
 
                 BrowserOnboardingWelcomeCallToAction(
                     action: action,
@@ -85,9 +62,11 @@ struct BrowserOnboardingWelcomePage: View {
 
             ZStack {
                 BrowserOnboardingPalette.parchment
-                BrowserOnboardingHeroPreview()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(38)
+                BrowserSpaceAppearanceHero(
+                    branding: .house(.winter, symbol: ""), symbol: "", name: String(localized: "Personal")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(38)
             }
         }
     }

@@ -3,6 +3,7 @@ import Foundation
 struct PortableTab: Codable, Equatable, Sendable {
     let id: UUID
     let title: String
+    let nativeContent: BrowserNativeTabContent?
     let url: String?
     let savedURL: String?
     let symbol: String
@@ -13,6 +14,7 @@ struct PortableTab: Codable, Equatable, Sendable {
 
     init(_ tab: BrowserTab) {
         id = tab.id.rawValue
+        nativeContent = tab.nativeContent
         title = tab.title
         url =
             ArchiveValidation.sanitizedURL(tab.url, removesFragment: false)?
@@ -36,6 +38,10 @@ struct PortableTab: Codable, Equatable, Sendable {
         try ArchiveValidation.requireText(title, maximumLength: ArchiveLimits.maximumTabTitleLength)
         try ArchiveValidation.requireText(symbol, maximumLength: ArchiveLimits.maximumSymbolLength)
         try ArchiveValidation.requireDate(lastActivatedAt)
+        if let nativeContent {
+            try ArchiveValidation.requireText(nativeContent.kind, maximumLength: 128)
+            guard url == nil, savedURL == nil else { throw BrowserPortableArchiveError.invalidContents }
+        }
         let materializedURL = try ArchiveValidation.materializeURL(
             url,
             removesFragment: false
@@ -59,10 +65,11 @@ struct PortableTab: Codable, Equatable, Sendable {
         }
 
         return BrowserTab(
-            title: materializedURL == nil ? BrowserTab.startPageTitle : title,
+            title: nativeContent == nil && materializedURL == nil ? BrowserTab.startPageTitle : title,
             url: materializedURL,
+            nativeContent: nativeContent,
             savedURL: placement == .current ? nil : materializedSavedURL ?? materializedURL,
-            symbol: materializedURL == nil ? BrowserTab.startPageSymbol : symbol,
+            symbol: nativeContent == nil && materializedURL == nil ? BrowserTab.startPageSymbol : symbol,
             faviconData: nil,
             placement: placement,
             folderID: materializedFolderID,

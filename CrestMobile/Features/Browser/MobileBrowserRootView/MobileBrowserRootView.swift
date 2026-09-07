@@ -57,6 +57,11 @@ struct MobileBrowserRootView: View {
             togglePrivateBrowsing: togglePrivateBrowsing,
             closePrivateBrowsing: closePrivateBrowsing
         )
+        .environment(
+            \.browserNativeTabActions,
+            BrowserNativeTabActions(
+                browser: model.browser, spaceAccess: model.spaceAccess,
+                didOpenURL: { model.pages.select(session: model.browser.session) }))
     }
 }
 

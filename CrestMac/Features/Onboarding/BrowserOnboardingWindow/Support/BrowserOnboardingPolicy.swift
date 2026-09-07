@@ -37,7 +37,7 @@ enum BrowserMacOnboardingPolicy {
     ) -> BrowserOnboardingStep? {
         switch step {
         case .welcome:
-            .featureSpaces
+            .importBrowser
         case .featureSpaces:
             .featureTabs
         case .featureTabs:
@@ -50,9 +50,9 @@ enum BrowserMacOnboardingPolicy {
     }
 
     static func destinationAfterImport(
-        for _: BrowserOnboardingEntryPoint
+        for entryPoint: BrowserOnboardingEntryPoint
     ) -> BrowserOnboardingStep {
-        .complete
+        entryPoint == .firstRun ? .manualSetup : .complete
     }
 }
 

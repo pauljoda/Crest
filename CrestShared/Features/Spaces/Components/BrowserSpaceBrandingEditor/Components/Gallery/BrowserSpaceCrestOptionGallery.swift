@@ -12,6 +12,8 @@ struct BrowserSpaceCrestOptionGallery<
     var compactMinimumWidth = BrowserSpaceForgeMetrics.compactCrestCardMinimumWidth
     var iconSize = BrowserSpaceForgeMetrics.crestThumbnailSize
 
+    var columns: [GridItem]?
+
     var body: some View {
         BrowserSpaceOptionGallery(
             options: options,
@@ -19,6 +21,7 @@ struct BrowserSpaceCrestOptionGallery<
             isSelected: { option in
                 option == branding.crest[keyPath: keyPath]
             },
+            columns: columns,
             select: { option in
                 $branding.editorUpdateCrest { $0[keyPath: keyPath] = option }
             },

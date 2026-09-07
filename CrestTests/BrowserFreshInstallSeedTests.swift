@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import Crest
 
 final class BrowserFreshInstallSeedTests: XCTestCase {
@@ -27,8 +28,8 @@ final class BrowserFreshInstallSeedTests: XCTestCase {
         )
         XCTAssertEqual(space.branding.bannerPattern, .diagonal)
         XCTAssertEqual(space.branding.bannerStrength, 1)
-        XCTAssertEqual(space.branding.iconStyle, .simpleSymbol)
-        XCTAssertEqual(space.branding.crest.symbol, .mountain)
+        XCTAssertEqual(space.branding.iconStyle, .layeredCrest)
+        XCTAssertEqual(space.branding.crest, BrowserSpaceHousePalette.winter.crest)
         XCTAssertEqual(
             BrowserSpaceForegroundPolicy.tone(for: space.branding),
             .light

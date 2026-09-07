@@ -33,7 +33,9 @@ struct BrowserSpaceFieldStep: View {
                 spacing: BrowserSpaceForgeMetrics.gridSpacing
             ) {
                 ForEach(BrowserSpaceBrandingPreset.curated) { preset in
-                    BrowserSpacePresetCard(preset: preset, branding: $branding)
+                    BrowserSpacePresetCard(preset: preset, isSelected: preset.colors == branding.colors) {
+                        branding = preset.applyingPalette(to: branding)
+                    }
                 }
             }
 

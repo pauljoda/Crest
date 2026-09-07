@@ -97,7 +97,7 @@ final class BrowserPortableArchiveTests: XCTestCase {
         let archivedTabs = try XCTUnwrap(space["archivedTabs"] as? [[String: Any]])
         let history = try XCTUnwrap(space["history"] as? [[String: Any]])
 
-        XCTAssertEqual(root["schemaVersion"] as? Int, 4)
+        XCTAssertEqual(root["schemaVersion"] as? Int, BrowserPortableArchive.currentSchemaVersion)
         XCTAssertEqual(
             Set(root.keys),
             Set(["exportedAt", "format", "schemaVersion", "spaces"])

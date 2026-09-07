@@ -18,7 +18,9 @@ struct BrowserOnboardingWindowContent: View {
             BrowserOnboardingBackdrop()
 
             VStack(spacing: 0) {
-                BrowserOnboardingProgressHeader(step: flow.step)
+                if flow.step != .manualSetup {
+                    BrowserOnboardingProgressHeader(step: flow.step)
+                }
                 if let customizationSpaceID, let plan = flow.plan {
                     BrowserImportSpaceCustomizationView(
                         plan: planBinding(fallback: plan),

@@ -120,7 +120,8 @@ struct CrestMobileApp: App {
             initialValue: BrowserOnboardingProgressStore.launchStore(
                 isIsolated: usesIsolatedLaunch,
                 forceWelcome: forceOnboarding,
-                forceSetup: launchEnvironment.forcesMobileOnboardingSetup
+                forceSetup: launchEnvironment.forcesMobileOnboardingSetup,
+                persistentIsolationID: launchEnvironment.persistentIsolationID
             )
         )
         let onboardingCoordinator = BrowserOnboardingCoordinator()

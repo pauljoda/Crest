@@ -8,6 +8,7 @@ struct BrowserSpaceEditorView: View {
     let section: BrowserSpaceEditorSection
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
+    let spacePicker: BrowserSpaceCustomizationPicker
 
     @State private var downloads = BrowserSpaceDownloadSettingsModel()
 
@@ -24,83 +25,43 @@ struct BrowserSpaceEditorView: View {
     }
 
     private var appearanceEditor: some View {
-        ViewThatFits(in: .horizontal) {
-            wideAppearanceEditor
-            appearanceForm(showsInlinePreview: true)
-        }
-    }
-
-    private var wideAppearanceEditor: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("BRANDING PREVIEW")
-                    .font(.caption2.weight(.semibold))
-                    .tracking(1.3)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, 4)
-
-                brandingPreview
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            }
-            .padding(CrestSpacing.medium)
-            // A flexible preview can consume the editor's minimum width and make
-            // this whole HStack overflow behind the outer Settings sidebar.
-            .frame(width: BrowserSpaceCustomizationVisualPolicy.previewIdealWidth)
-            .frame(maxHeight: .infinity, alignment: .top)
-            .background(Color(nsColor: .controlBackgroundColor))
-
-            Divider()
-
-            appearanceForm(showsInlinePreview: false)
-        }
-        .frame(
-            minWidth: BrowserSpaceCustomizationVisualPolicy.wideEditorMinimumWidth
-        )
-    }
-
-    private func appearanceForm(showsInlinePreview: Bool) -> some View {
-        Form {
-            if showsInlinePreview {
-                Section("Branding Preview") {
-                    brandingPreview
-                        .frame(height: 320)
+        GeometryReader { geometry in
+            let wide = geometry.size.width >= 620
+            let dense = geometry.size.height < 640
+            HStack(spacing: 0) {
+                if wide {
+                    BrowserSpaceAppearanceHero(
+                        branding: branding.wrappedValue, symbol: symbol.wrappedValue,
+                        name: currentSpace.name, space: currentSpace, editableName: name,
+                        spacePicker: spacePicker
+                    )
+                    .frame(width: min(280, geometry.size.width * 0.38))
+                    .padding(14)
                 }
-            }
-
-            Section("Identity") {
-                TextField("Name", text: name)
-                    .accessibilityIdentifier("space-name-field")
-            }
-
-            // The forge carries its own step headings, so it takes a headerless
-            // section rather than sitting under a second "Style" title.
-            Section {
-                BrowserSpaceBrandingEditor(
-                    branding: branding,
-                    symbol: symbol,
-                    showsPreview: false
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, CrestSpacing.small)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: dense ? 12 : 18) {
+                        if !wide {
+                            BrowserInlineSpaceName(name: name, size: dense ? 26 : 30)
+                            spacePicker
+                        }
+                        BrowserSpaceBrandingEditor(
+                            branding: branding, symbol: symbol, previewName: currentSpace.name,
+                            compact: !wide, showsPreview: false, dense: dense,
+                            controlsBackground: Color(nsColor: .windowBackgroundColor)
+                        )
+                        .id(space.id)
+                    }
+                    .padding(dense ? 14 : 20)
+                    .id("space-settings-appearance-top")
+                    .frame(maxWidth: 680, alignment: .leading)
+                    .frame(maxWidth: .infinity)
+                }
+                .contentMargins(.trailing, 12, for: .scrollContent)
+                .defaultScrollAnchor(.top, for: .initialOffset)
             }
         }
-        .crestSettingsForm(maxWidth: .infinity)
-        .frame(
-            minWidth: showsInlinePreview
-                ? nil
-                : BrowserSpaceCustomizationVisualPolicy.editorMinimumWidth,
-            idealWidth: showsInlinePreview
-                ? nil
-                : BrowserSpaceCustomizationVisualPolicy.editorMinimumWidth,
-            maxWidth: .infinity
-        )
+        .scrollsSpaceAppearancePages(anchorID: "space-settings-appearance-top")
         .accessibilityIdentifier("space-customization-controls")
-    }
-
-    private var brandingPreview: some View {
-        BrowserSpaceSidebarPreview(space: currentSpace)
-            .accessibilityIdentifier("space-customization-preview")
     }
 
     private var settingsForm: some View {

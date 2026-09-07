@@ -3,34 +3,35 @@ import SwiftUI
 struct BrowserSpaceEditorIdentityPreview: View {
     let branding: BrowserSpaceBranding
     let symbol: String
+    var size: CGFloat = BrowserSpaceForgeMetrics.previewIdentitySize
 
     var body: some View {
         Group {
             if branding.iconStyle == .layeredCrest {
                 BrowserSpaceCrestIcon(
                     branding: branding,
-                    size: BrowserSpaceForgeMetrics.previewIdentitySize
+                    size: size
                 )
             } else {
                 if let emoji = BrowserIconSymbol.emoji(from: symbol) {
                     Text(emoji)
-                        .font(.title2)
+                        .font(.system(size: size * 0.68))
                         .frame(
-                            width: BrowserSpaceForgeMetrics.previewIdentitySize,
-                            height: BrowserSpaceForgeMetrics.previewIdentitySize
+                            width: size,
+                            height: size
                         )
                 } else {
                     Image(systemName: symbol)
                         .font(
                             .system(
-                                size: BrowserSpaceForgeMetrics.previewSymbolPointSize,
+                                size: size * 0.56,
                                 weight: .semibold
                             )
                         )
                         .foregroundStyle(branding.primaryColor.color)
                         .frame(
-                            width: BrowserSpaceForgeMetrics.previewIdentitySize,
-                            height: BrowserSpaceForgeMetrics.previewIdentitySize
+                            width: size,
+                            height: size
                         )
                 }
             }

@@ -29,17 +29,22 @@ extension BrowserOnboardingProgressStore {
     static func launchStore(
         isIsolated: Bool,
         forceWelcome: Bool,
-        forceSetup: Bool
+        forceSetup: Bool,
+        persistentIsolationID: String? = nil
     ) -> BrowserOnboardingProgressStore {
-        BrowserOnboardingProgressStore(
-            persistence:
-                isIsolated
-                ? InMemoryBrowserOnboardingProgressPersistence(
-                    hasCompletedSetup: true
-                )
-                : UserDefaultsBrowserOnboardingProgressPersistence(),
-            forceWelcome: forceWelcome,
-            forceSetup: forceSetup
-        )
+        let persistence: any BrowserOnboardingProgressPersisting
+        if isIsolated, let persistentIsolationID,
+            let defaults = UserDefaults(
+                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(
+                    isolationID: persistentIsolationID))
+        {
+            persistence = UserDefaultsBrowserOnboardingProgressPersistence(defaults: defaults)
+        } else if isIsolated {
+            persistence = InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: true)
+        } else {
+            persistence = UserDefaultsBrowserOnboardingProgressPersistence()
+        }
+        return BrowserOnboardingProgressStore(
+            persistence: persistence, forceWelcome: forceWelcome, forceSetup: forceSetup)
     }
 }

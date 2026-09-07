@@ -56,6 +56,12 @@ extension BrowserSyncPayload {
                 throw BrowserSyncError.invalidField("folder.parentID")
             }
         case .tab(let tab):
+            if let content = tab.nativeContent {
+                try validateText(content.kind, limit: 128, field: "tab.nativeContent.kind")
+                guard tab.url == nil, tab.savedURL == nil else {
+                    throw BrowserSyncError.invalidField("tab.nativeContent.url")
+                }
+            }
             try validateText(tab.title, limit: 2_048, field: "tab.title")
             if let customTitle = tab.customTitle {
                 try validateText(customTitle, limit: 2_048, field: "tab.customTitle")

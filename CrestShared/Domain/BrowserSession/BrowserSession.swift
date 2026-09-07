@@ -231,11 +231,12 @@ extension BrowserSession {
                         && repairedFolders.contains { $0.id == tab.folderID && $0.location.tabPlacement == placement }
                     ? tab.folderID
                     : nil
-                let isStartPage = tab.url == nil
+                let isStartPage = tab.isStartPage
                 let repairedTab = BrowserTab(
                     id: repairedID,
                     title: isStartPage ? BrowserTab.startPageTitle : tab.title,
                     url: tab.url,
+                    nativeContent: tab.nativeContent,
                     savedURL: placement == .current ? nil : tab.savedSiteURL,
                     symbol: isStartPage ? BrowserTab.startPageSymbol : tab.symbol,
                     faviconData: tab.faviconData,
@@ -281,6 +282,7 @@ extension BrowserSession {
                     id: repairedID,
                     title: archived.tab.title,
                     url: archived.tab.url,
+                    nativeContent: archived.tab.nativeContent,
                     savedURL: nil,
                     symbol: archived.tab.symbol,
                     faviconData: nil,

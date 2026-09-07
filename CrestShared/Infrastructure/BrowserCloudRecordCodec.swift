@@ -3,7 +3,7 @@ import Foundation
 
 struct BrowserCloudRecordCodec: Sendable {
     /// Cloud payload compatibility is independent of the local journal format.
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 3
 
     static let zoneName = "CrestPrivate"
     static let zoneID = CKRecordZone.ID(zoneName: zoneName)
@@ -131,6 +131,10 @@ struct BrowserCloudRecordCodec: Sendable {
     /// schema 1 so those clients can still remove a stale local copy.
     private static func requiredSchemaVersion(for record: BrowserSyncRecord) -> Int {
         switch record.payload {
+        case .tab(let tab) where tab.nativeContent != nil:
+            3
+        case .archive(let archive) where archive.tab.nativeContent != nil:
+            3
         case .folder(let folder) where folder.location == .current:
             2
         case .tab(let tab) where tab.placement == .current && tab.folderID != nil:

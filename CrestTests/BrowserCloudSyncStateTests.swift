@@ -167,7 +167,7 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         XCTAssertTrue(upgraded.requiresAccountConfirmation)
         let encoded = try XCTUnwrap(
             JSONSerialization.jsonObject(with: JSONEncoder().encode(upgraded)) as? [String: Any])
-        XCTAssertEqual(encoded["recordSchemaVersion"] as? Int, 2)
+        XCTAssertEqual(encoded["recordSchemaVersion"] as? Int, BrowserCloudRecordCodec.currentSchemaVersion)
     }
 
     func testCloudTransportUsesItsStableDefaultsKey() throws {

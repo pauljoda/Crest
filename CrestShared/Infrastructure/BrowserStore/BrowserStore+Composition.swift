@@ -117,6 +117,12 @@ extension BrowserStore {
     private static func isolatedFixtureSession(
         for launchEnvironment: BrowserLaunchEnvironment
     ) -> BrowserSession {
+        if launchEnvironment.forcesOnboardingWelcome
+            || launchEnvironment.forcesMacOnboardingSetup
+            || launchEnvironment.forcesMobileOnboardingSetup
+        {
+            return .freshInstallSeed
+        }
         #if CREST_PERFORMANCE_HARNESS
             if let performanceSession = BrowserPerformanceSoakFixture.makeSession(
                 baseURLString: launchEnvironment.performanceBaseURLString,

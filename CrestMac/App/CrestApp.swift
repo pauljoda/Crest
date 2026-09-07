@@ -460,7 +460,8 @@ struct CrestApp: App {
                 // A machine that has already finished setup always answers the
                 // welcome step with "Open Crest", so the steps past it are only
                 // reachable when the launch is told to treat setup as unfinished.
-                forceSetup: launchEnvironment.forcesMacOnboardingSetup
+                forceSetup: launchEnvironment.forcesMacOnboardingSetup,
+                persistentIsolationID: launchEnvironment.persistentIsolationID
             )
         )
         _onboardingCoordinator = State(initialValue: BrowserOnboardingCoordinator())

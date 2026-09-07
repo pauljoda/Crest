@@ -44,6 +44,16 @@ final class BrowserOnboardingProgressStore {
         isChecking = false
     }
 
+    /// Consume the install-local completion before presenting any follow-up UI.
+    /// Forced setup and tutorial replay must not reset this persisted decision.
+    func completeSetup(for entryPoint: BrowserOnboardingEntryPoint) -> Bool {
+        let opensGettingStarted = entryPoint == .firstRun && !persistence.hasCompletedSetup
+        markCompleted()
+        return opensGettingStarted
+    }
+
+    var willOpenGettingStarted: Bool { !persistence.hasCompletedSetup }
+
     func markCompleted() {
         isLaunchGateActive = false
         hasCompletedSetup = true

@@ -15,6 +15,17 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
                     spacing: MobileOnboardingLayout.customizationContentSpacing
                 ) {
                     if let draft {
+                        BrowserSpaceBrandingEditor(
+                            branding: brandingBinding,
+                            symbol: symbolBinding,
+                            compact: true,
+                            showsPreview: false
+                        )
+                        .accessibilityIdentifier(
+                            BrowserMobileAccessibilityID
+                                .customizationControls
+                        )
+
                         BrowserSpaceSidebarPreview(
                             space: MobileOnboardingSpacePreviewFactory.preview(
                                 draft: draft,
@@ -35,21 +46,11 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
                             BrowserMobileAccessibilityID
                                 .customizationPreview
                         )
-
-                        BrowserSpaceBrandingEditor(
-                            branding: brandingBinding,
-                            symbol: symbolBinding,
-                            compact: true,
-                            showsPreview: false
-                        )
-                        .accessibilityIdentifier(
-                            BrowserMobileAccessibilityID
-                                .customizationControls
-                        )
                     }
                 }
                 .padding(MobileOnboardingLayout.customizationContentPadding)
             }
+            .scrollsSpaceAppearancePages()
             .navigationTitle("Customize Space")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

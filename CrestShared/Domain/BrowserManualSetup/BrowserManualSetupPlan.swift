@@ -8,6 +8,9 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
     ]
 
     private(set) var spaces: [BrowserManualSetupSpaceDraft]
+    // Optional so previously saved setup drafts continue to decode. An untouched
+    // draft does not replace an order changed elsewhere while setup was open.
+    private var spaceOrderWasEdited: Bool?
 
     init(existing: BrowserSession) {
         spaces = existing.spaces.map {
@@ -59,6 +62,15 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
         }
         spaces.remove(at: index)
         return true
+    }
+
+    mutating func moveSpace(_ spaceID: SpaceID, to targetID: SpaceID) {
+        guard let source = spaces.firstIndex(where: { $0.id == spaceID }),
+            let target = spaces.firstIndex(where: { $0.id == targetID }), source != target
+        else { return }
+        let moved = spaces.remove(at: source)
+        spaces.insert(moved, at: target)
+        spaceOrderWasEdited = true
     }
 
     mutating func setSpaceIdentity(
@@ -229,6 +241,14 @@ struct BrowserManualSetupPlan: Codable, Equatable, Sendable {
             if !draft.addedTabs.isEmpty {
                 firstAffectedSpaceID = firstAffectedSpaceID ?? destination.id
             }
+        }
+        if spaceOrderWasEdited == true {
+            let orderedIDs = spaces.map(\.id)
+            let byID = Dictionary(uniqueKeysWithValues: result.spaces.map { ($0.id, $0) })
+            let draftIDs = Set(orderedIDs)
+            result.spaces =
+                orderedIDs.compactMap { byID[$0] }
+                + result.spaces.filter { !draftIDs.contains($0.id) }
         }
         if let firstAffectedSpaceID {
             result.selectedSpaceID = firstAffectedSpaceID

@@ -53,9 +53,13 @@ struct MobileBrowserDetailView: View {
                     prepareMember: prepareSplitCardPage,
                     handleInteraction: handleWebContentInteraction
                 )
-                .ignoresSafeArea(.container, edges: .vertical)
+                .ignoresSafeArea(.container, edges: viewport.obscuresSystemSafeAreas ? .vertical : [])
             } else {
                 switch pagePresentation {
+                case .nativeContent:
+                    if let tab = browser.selectedTab, let space = browser.selectedSpace {
+                        BrowserNativeTabHost(tab: tab, space: space, bottomChromeHeight: viewport.bottomChromeHeight)
+                    }
                 case .unloaded:
                     unloadedPageSurface
                 case .noSelection, .startPage:
@@ -417,7 +421,7 @@ struct MobileBrowserDetailView: View {
 
     private var selectionPresentation: BrowserPagePresentationSelection {
         guard let tab = browser.selectedTab else { return .none }
-        return tab.isStartPage ? .startPage : .webPage
+        return tab.pagePresentationSelection
     }
 
     /// The appearance the start page's header reads its text tone from.

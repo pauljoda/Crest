@@ -18,6 +18,15 @@ struct BrowserDetailContent: View {
         switch pagePresentation {
         case .noSelection:
             Color.clear
+        case .nativeContent:
+            if let tab, let space = browser.selectedSpace {
+                BrowserNativeTabHost(tab: tab, space: space)
+                    .environment(
+                        \.browserNativeTabActions,
+                        BrowserNativeTabActions(
+                            browser: browser, spaceAccess: spaceAccess,
+                            didOpenURL: { pages.select(session: browser.session) }))
+            }
         case .startPage:
             BrowserStartPageContent(
                 tab: tab,

@@ -4,13 +4,15 @@ import SwiftUI
 struct BrowserSpaceSwitcherCompactPicker: View {
     let spaces: [BrowserSpace]
     let selectedSpaceID: SpaceID
-    let reorderState: BrowserSidebarReorderState
+    var reorderState: BrowserSidebarReorderState? = nil
     let metrics: BrowserSpacePickerMetrics
     let selectSpace: (SpaceID) -> Void
     let allocation: BrowserSpaceSwitcherCompactAllocation
+    var moveSpace: ((SpaceID, SpaceID) -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var overflow = BrowserSpacePickerOverflow()
+    @State private var viewport = CGRect.zero
 
     var body: some View {
         ScrollViewReader { reader in
@@ -32,7 +34,11 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 revealSelection(reader, animated: false)
             }
             .onChange(of: BrowserSpaceSwitcherLayout.segmentIDs(for: spaces)) {
-                revealSelection(reader, animated: false)
+                // Customization drags have already scrolled to their drop slot.
+                // Keep that viewport; only an explicit selection should recenter it.
+                if moveSpace == nil {
+                    revealSelection(reader, animated: false)
+                }
             }
         }
         .accessibilitySortPriority(BrowserSpaceSwitcherLayout.pickerAccessibilityPriority)
@@ -44,11 +50,17 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 spaces: spaces,
                 selectedSpaceID: selectedSpaceID,
                 selectSpace: selectSpace,
-                accessibilityIdentifier: "space-switcher-picker"
+                accessibilityIdentifier: "space-switcher-picker",
+                moveSpace: moveSpace,
+                reorderViewport: viewport
             ) { space in
-                BrowserSpacePickerSegment(
-                    space: space, reorderState: reorderState, metrics: metrics
-                )
+                if let reorderState {
+                    BrowserSpacePickerSegment(
+                        space: space, reorderState: reorderState, metrics: metrics
+                    )
+                } else {
+                    BrowserSpacePickerIcon(space: space, metrics: metrics)
+                }
             }
             .frame(minWidth: allocation.scrollViewportWidth, alignment: .center)
         }
@@ -58,6 +70,11 @@ struct BrowserSpaceSwitcherCompactPicker: View {
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .frame(width: allocation.scrollViewportWidth, height: BrowserSpaceSwitcherLayout.pickerHeight)
         .clipShape(.rect(cornerRadius: BrowserSpaceSwitcherLayout.cornerRadius))
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: {
+            viewport = $0
+        }
         .onScrollGeometryChange(for: BrowserSpacePickerOverflow.self) { geometry in
             BrowserSpacePickerOverflow(
                 visibleRect: geometry.visibleRect,

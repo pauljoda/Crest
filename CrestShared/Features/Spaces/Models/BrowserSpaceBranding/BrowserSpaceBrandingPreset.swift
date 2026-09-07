@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserSpaceBrandingPreset: Identifiable, Equatable, Sendable {
     let title: String
     let colors: [BrowserSpaceBrandColor]
+    let crest: BrowserSpaceCrest
 
     var id: String { title }
 
@@ -12,16 +13,25 @@ struct BrowserSpaceBrandingPreset: Identifiable, Equatable, Sendable {
     var titleKey: LocalizedStringKey { LocalizedStringKey(title) }
 
     static let curated = BrowserSpaceHousePalette.allCases.map {
-        BrowserSpaceBrandingPreset(title: $0.name, colors: $0.colors)
+        BrowserSpaceBrandingPreset(title: $0.name, colors: $0.colors, crest: $0.crest)
     }
 
     func applying(to branding: BrowserSpaceBranding) -> BrowserSpaceBranding {
+        var updated = applyingPalette(to: branding)
+        updated.iconStyle = .layeredCrest
+        updated.crest = crest
+        updated.hasCustomAppearance = false
+        return updated.normalized()
+    }
+
+    func applyingPalette(to branding: BrowserSpaceBranding) -> BrowserSpaceBranding {
         var updated = branding
         updated.colors = colors
         return updated.normalized()
     }
 
     func isSelected(in branding: BrowserSpaceBranding) -> Bool {
-        branding.colors == colors
+        branding.hasCustomAppearance != true && branding.colors == colors && branding.iconStyle == .layeredCrest
+            && branding.crest == crest
     }
 }

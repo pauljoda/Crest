@@ -9,6 +9,7 @@ final class BrowserPagePresentationTests: XCTestCase {
             [
                 .noSelection,
                 .startPage,
+                .nativeContent,
                 .livePage,
                 .navigationFailure,
                 .processFailure,
@@ -37,6 +38,14 @@ final class BrowserPagePresentationTests: XCTestCase {
             ),
             .startPage
         )
+    }
+
+    func testNativeContentDoesNotDependOnWebKitResidencyOrFailure() {
+        XCTAssertEqual(presentation(selection: .nativeContent), .nativeContent)
+        XCTAssertEqual(
+            presentation(
+                selection: .nativeContent, hasActivePage: true,
+                hasNavigationFailure: true, hasProcessFailure: true), .nativeContent)
     }
 
     func testFailurePrecedenceMatchesTheExistingPageSurfaces() {

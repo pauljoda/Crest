@@ -28,7 +28,11 @@ struct BrowserSpaceSettingsView: View {
                         space: space,
                         section: editorSection,
                         spaceAccess: spaceAccess,
-                        dataDeleter: dataDeleter
+                        dataDeleter: dataDeleter,
+                        spacePicker: BrowserSpaceCustomizationPicker(
+                            spaces: browser.session.spaces, selectedSpaceID: space.id,
+                            selectSpace: { selectedSpaceID = $0 }, moveSpace: moveSpace,
+                            addSpace: addSpace)
                     )
                     .id(space.id)
                 } else {
@@ -184,6 +188,14 @@ struct BrowserSpaceSettingsView: View {
     private func addSpace() {
         browser.addSpace()
         selectedSpaceID = browser.session.selectedSpaceID
+    }
+
+    private func moveSpace(_ sourceID: SpaceID, to targetID: SpaceID) {
+        let spaces = browser.session.spaces
+        guard let source = spaces.firstIndex(where: { $0.id == sourceID }),
+            let target = spaces.firstIndex(where: { $0.id == targetID }), source != target
+        else { return }
+        browser.moveSpaces(from: IndexSet(integer: source), to: target > source ? target + 1 : target)
     }
 
     private var space: BrowserSpace? {

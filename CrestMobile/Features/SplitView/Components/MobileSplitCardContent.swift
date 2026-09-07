@@ -34,6 +34,9 @@ struct MobileSplitCardContent: View {
     var body: some View {
         let page = residentPage
         switch presentation(for: page) {
+        case .nativeContent:
+            BrowserNativeTabHost(tab: member, space: space, bottomChromeHeight: viewport.bottomChromeHeight)
+                .modifier(MobileSplitCardFocusTapModifier(requestFocus: requestFocus))
         case .livePage:
             if let page {
                 liveSurface(page)
@@ -114,7 +117,7 @@ struct MobileSplitCardContent: View {
     ) -> BrowserPagePresentation {
         BrowserPagePresentationPolicy.resolve(
             BrowserPagePresentationInput(
-                selection: member.isStartPage ? .startPage : .webPage,
+                selection: member.pagePresentationSelection,
                 hasActivePage: page != nil,
                 hasNavigationFailure: page?.navigationFailure != nil,
                 hasProcessFailure: page?.showsProcessFailure == true,

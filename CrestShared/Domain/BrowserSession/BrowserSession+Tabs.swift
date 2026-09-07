@@ -7,12 +7,14 @@ extension BrowserSession {
     mutating func openTab(
         title: String,
         url: URL?,
+        nativeContent: BrowserNativeTabContent? = nil,
         symbol: String = "globe",
         at date: Date = .now
     ) -> TabID? {
         openTab(
             title: title,
             url: url,
+            nativeContent: nativeContent,
             symbol: symbol,
             in: selectedSpaceID,
             placement: .current,
@@ -26,6 +28,7 @@ extension BrowserSession {
     mutating func openTab(
         title: String,
         url: URL?,
+        nativeContent: BrowserNativeTabContent? = nil,
         symbol: String = "globe",
         in spaceID: SpaceID,
         placement: TabPlacement = .current,
@@ -44,6 +47,7 @@ extension BrowserSession {
         let tab = BrowserTab(
             title: title,
             url: url,
+            nativeContent: nativeContent,
             symbol: symbol,
             placement: placement,
             lastActivatedAt: date
@@ -268,6 +272,7 @@ extension BrowserSession {
         let duplicate = BrowserTab(
             title: source.title,
             url: source.url,
+            nativeContent: source.nativeContent,
             symbol: source.symbol,
             faviconData: source.faviconData,
             faviconURL: source.faviconURL,
