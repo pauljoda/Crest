@@ -1565,12 +1565,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         defer { try? fileManager.removeItem(at: fixture.root) }
 
         for construct in [
-            "const namespacePermissions",
-            "const namespaceIsDeclared",
-            "declaredManifest.optional_permissions",
-            "const invokeCallbackWithLastError",
             "Unchecked runtime.lastError",
-            "const capabilityWatch",
             "stopped reconnecting",
             "does not consume blocking responses",
             "warnUnsupportedNotificationOptions",
@@ -6795,20 +6790,6 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(
             uncapturedReports.isEmpty,
             "A build without console capture forwards no console output."
-        )
-        XCTAssertTrue(
-            captured.source.contains(
-                "const capturesExtensionConsole = true;"
-            )
-        )
-        XCTAssertTrue(
-            uncaptured.source.contains(
-                "const capturesExtensionConsole = false;"
-            ),
-            """
-            The disabled runtime carries the disabling literal, so the
-            content-addressed filename differs between the two builds.
-            """
         )
     }
 

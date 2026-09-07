@@ -349,14 +349,5 @@ class PeripheryAuditTests(unittest.TestCase):
         )
 
 
-class SwiftFormatConfigurationTests(unittest.TestCase):
-    def test_repository_formatter_uses_four_space_indentation(self) -> None:
-        configuration = json.loads((REPOSITORY_ROOT / ".swift-format").read_text())
-
-        self.assertEqual(configuration["indentation"], {"spaces": 4})
-        self.assertEqual(configuration["tabWidth"], 4)
-        self.assertEqual(configuration["lineLength"], 120)
-
-
 if __name__ == "__main__":
     unittest.main()

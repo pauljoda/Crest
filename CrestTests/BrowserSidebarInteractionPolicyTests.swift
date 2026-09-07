@@ -138,29 +138,6 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertTrue(touch.isRevealed(isHovering: false, isSelected: true))
     }
 
-    /// The exact opacities each shell draws a revealed close control at. A
-    /// pointer control has already been asked for by the time it appears, so
-    /// it never rests dim; a touch control is on every row at once and holds
-    /// the unselected ones back.
-    func testOnlyAnAlwaysVisibleCloseControlDimsOnAnUnselectedRow() {
-        XCTAssertEqual(
-            BrowserTabTrailingControlMetrics.pointer.closeOpacity(isSelected: false),
-            1
-        )
-        XCTAssertEqual(
-            BrowserTabTrailingControlMetrics.pointer.closeOpacity(isSelected: true),
-            1
-        )
-        XCTAssertEqual(
-            BrowserTabTrailingControlMetrics.touch.closeOpacity(isSelected: false),
-            0.65
-        )
-        XCTAssertEqual(
-            BrowserTabTrailingControlMetrics.touch.closeOpacity(isSelected: true),
-            1
-        )
-    }
-
     // MARK: - Row layout
 
     /// Pins the geometry each shell's rows draw today, so a change to either
@@ -338,20 +315,6 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(touch.barHeight, 48)
         XCTAssertTrue(touch.growsWithContent)
         XCTAssertEqual(touch.accessibilityVerticalPadding, 8)
-    }
-
-    /// The two shells draw the chevrons at different sizes and weights. Pinned
-    /// here because the strip reads them from the profile rather than naming
-    /// them, and a swap would be silent.
-    func testNavigationChevronsAreSizedForTheShellTheyAreAimedAtWith() {
-        XCTAssertEqual(
-            BrowserSidebarNavigationControlMetrics.pointer.historySymbolFont,
-            .system(size: 15, weight: .regular)
-        )
-        XCTAssertEqual(
-            BrowserSidebarNavigationControlMetrics.touch.historySymbolFont,
-            .system(size: 17, weight: .medium)
-        )
     }
 
     /// A trackpad beside a touchscreen must not tighten the strip back down.

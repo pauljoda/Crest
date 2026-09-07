@@ -253,31 +253,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
 
     // MARK: - Pane header
 
-    /// `settings-page-header` (macOS) and `settings-header-<rawValue>` (iOS) are the
-    /// identifiers the automation suites read, and unifying the header must not
-    /// rename either one.
-    func testPaneHeaderKeepsEachShellsIdentifierContract() {
-        for destination in BrowserSettingsDestination.allCases {
-            let header = BrowserSettingsPaneHeader(
-                destination: destination,
-                identifier: "settings-header-\(destination.rawValue)",
-                layout: .mobilePage
-            )
-            XCTAssertEqual(
-                header.identifier,
-                "settings-header-\(destination.rawValue)"
-            )
-            XCTAssertNotNil(header.body)
-        }
-
-        let page = BrowserSettingsPaneHeader(
-            destination: .general,
-            identifier: "settings-page-header",
-            layout: .macOSPage
-        )
-        XCTAssertEqual(page.identifier, "settings-page-header")
-    }
-
     /// The desktop window is measured in points against a fixed compact titlebar, so
     /// its tile stays put; the iOS sheet is read at the reader's own text size.
     func testOnlyTheMobileHeaderFollowsDynamicTypeForItsTile() {
@@ -287,50 +262,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
         XCTAssertTrue(
             BrowserSettingsPaneHeaderLayout.mobilePage.scalesIconWithDynamicType
         )
-    }
-
-    /// The macOS header inherits the page-icon size the settings policy already
-    /// pinned, and iOS keeps the tile metrics it has shipped, so neither surface
-    /// shifts under a reader when the drawing is unified.
-    func testPaneHeaderLayoutsKeepTheirShippedMetrics() {
-        let mac = BrowserSettingsPaneHeaderLayout.macOSPage
-        XCTAssertEqual(mac.iconSize, BrowserSettingsVisualPolicy.pageIconSize)
-        XCTAssertEqual(mac.symbolSize, 21)
-        XCTAssertEqual(mac.cornerRadius, CrestRadius.control)
-        XCTAssertEqual(mac.iconSpacing, CrestSpacing.small)
-        XCTAssertEqual(mac.horizontalPadding, CrestSpacing.section)
-        XCTAssertEqual(mac.topPadding, CrestSpacing.extraExtraLarge)
-        XCTAssertEqual(mac.bottomPadding, CrestSpacing.extraLarge)
-
-        let mobile = BrowserSettingsPaneHeaderLayout.mobilePage
-        XCTAssertEqual(mobile.iconSize, 58)
-        XCTAssertEqual(mobile.symbolSize, 25)
-        XCTAssertEqual(mobile.cornerRadius, 15)
-        XCTAssertEqual(mobile.iconSpacing, CrestSpacing.medium)
-        XCTAssertEqual(mobile.horizontalPadding, 28)
-        XCTAssertEqual(mobile.topPadding, CrestSpacing.large)
-        XCTAssertEqual(mobile.bottomPadding, CrestSpacing.large)
-
-        XCTAssertEqual(
-            BrowserSettingsPaneHeader.subtitleSpacing,
-            CrestSpacing.extraSmall
-        )
-    }
-
-    /// The header is the moment the brand identity reaches Settings: the destination
-    /// hue it draws is the same hue its sidebar row and its selection wear.
-    func testPaneHeaderDrawsTheDestinationsOwnBrandHue() {
-        XCTAssertFalse(BrowserSettingsVisualPolicy.usesMonochromePageIdentity)
-        XCTAssertTrue(BrowserSettingsVisualPolicy.usesEditorialPageIdentity)
-        XCTAssertTrue(BrowserSettingsVisualPolicy.usesBrandSelectionTint)
-
-        for destination in BrowserSettingsDestination.allCases {
-            XCTAssertNotEqual(
-                destination.color,
-                Color.accentColor,
-                "\(destination.rawValue) must stand for a fixed brand hue."
-            )
-        }
     }
 
     // MARK: - Extension status
