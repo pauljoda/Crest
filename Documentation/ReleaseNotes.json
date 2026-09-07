@@ -685,6 +685,10 @@
     "2026-09-07-mobile-setup-and-editor-presentation": {
       "category": "fixed",
       "message": "Open Getting Started after first setup, keep page content clear of mobile controls and open Space appearance reliably on the first tap"
+    },
+    "2026-09-07-sidebar-menu-dismissal-hover": {
+      "category": "fixed",
+      "message": "Keep the auto-expanded sidebar open after dismissing a menu while the pointer remains inside it"
     }
   }
 }

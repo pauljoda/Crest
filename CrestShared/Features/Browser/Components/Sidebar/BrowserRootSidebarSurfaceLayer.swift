@@ -5,7 +5,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     let width: CGFloat
     let space: BrowserSpace?
     let reduceTransparency: Bool
-    let hoverChanged: (Bool) -> Void
+    let hoverChanged: @MainActor @Sendable (Bool) -> Void
     let content: Content
 
     @Environment(\.layoutDirection) private var layoutDirection
@@ -15,7 +15,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         width: CGFloat,
         space: BrowserSpace?,
         reduceTransparency: Bool,
-        hoverChanged: @escaping (Bool) -> Void,
+        hoverChanged: @escaping @MainActor @Sendable (Bool) -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.presentation = presentation
@@ -32,7 +32,17 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
             .frame(width: surfaceRegionWidth)
             .frame(maxHeight: .infinity)
             .contentShape(.interaction, .rect)
-            .onHover(perform: hoverChanged)
+            #if os(macOS)
+                .overlay {
+                    BrowserSidebarHoverTracker(
+                        isEnabled: presentation.showsSidebar,
+                        onHoverChange: hoverChanged
+                    )
+                    .accessibilityHidden(true)
+                }
+            #else
+                .onHover(perform: hoverChanged)
+            #endif
             .offset(x: hiddenOffset)
             .opacity(presentation.showsSidebar ? 1 : 0)
             .allowsHitTesting(presentation.showsSidebar)
