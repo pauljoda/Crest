@@ -18,12 +18,22 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
     let placement: TabPlacement
     let folderID: FolderID?
     let reorder: BrowserSidebarReorderContext
+    var isEnabled = true
 
     private var section: BrowserSidebarReorderSection {
         .tabs(placement: placement, folderID: folderID)
     }
 
+    @ViewBuilder
     func body(content: Content) -> some View {
+        if isEnabled {
+            draggableContent(content)
+        } else {
+            content
+        }
+    }
+
+    private func draggableContent(_ content: Content) -> some View {
         content
             .browserSidebarReorderSource(
                 item: .splitGroup(item),

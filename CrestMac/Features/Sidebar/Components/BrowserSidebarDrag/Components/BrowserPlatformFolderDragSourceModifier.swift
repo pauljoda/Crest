@@ -7,6 +7,7 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
     let dragState: BrowserFolderDragState
     var memberTabIDs: [TabID]? = nil
     var reorder: BrowserSidebarReorderContext?
+    var isEnabled = true
 
     private var item: BrowserFolderDragItem {
         BrowserFolderDragItem(
@@ -28,7 +29,8 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
                     item: .folder(item),
                     section: folder.reorderSection,
                     reorder: reorder,
-                    registersContainer: false
+                    registersContainer: false,
+                    isEnabled: isEnabled
                 )
         } else {
             // No reorder context: previews and fixtures render a static row.

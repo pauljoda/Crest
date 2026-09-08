@@ -19,7 +19,7 @@ struct BrowserSplitGroupDragSourceModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if isEnabled, let reorder {
+        if let reorder {
             content
                 .modifier(
                     BrowserPlatformSplitGroupDragSourceModifier(
@@ -27,7 +27,8 @@ struct BrowserSplitGroupDragSourceModifier: ViewModifier {
                         members: members,
                         placement: placement,
                         folderID: folderID,
-                        reorder: reorder
+                        reorder: reorder,
+                        isEnabled: isEnabled
                     )
                 )
         } else {

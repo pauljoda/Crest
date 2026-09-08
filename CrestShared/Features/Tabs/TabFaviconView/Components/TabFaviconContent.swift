@@ -1,12 +1,6 @@
 import SwiftUI
 
-#if os(macOS)
-    import AppKit
-#endif
-
 struct TabFaviconContent: View {
-    @Environment(\.browserApplicationIcon) private var applicationIcon
-
     let tab: BrowserTab
     let size: CGFloat
     let requestIdentity: BrowserFaviconTaskIdentity
@@ -21,12 +15,7 @@ struct TabFaviconContent: View {
                     .font(.system(size: size * TabFaviconMetrics.emojiSizeRatio))
                     .minimumScaleFactor(TabFaviconMetrics.emojiMinimumScaleFactor)
             } else if tab.nativeContent == .gettingStarted {
-                #if os(macOS)
-                    (applicationIcon ?? Image(nsImage: NSApplication.shared.applicationIconImage))
-                        .resizable().interpolation(.high).scaledToFit()
-                #else
-                    CrestStartPageMark()
-                #endif
+                PlatformGettingStartedIcon()
             } else if tab.nativeContent != nil {
                 Image(systemName: tab.symbol).symbolRenderingMode(.hierarchical)
             } else if let image = renderedImage?.image(matching: requestIdentity) {

@@ -14,19 +14,23 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         var readerModeStates: [TabID: BrowserReaderModeState] = [:]
         var windowGeometry = BrowserExtensionWindowGeometry.unavailable
         private(set) var readerModeRequests: [(TabID, Bool)] = []
+        var webViewReads: [TabID] = []
+        var readerModeReads: [TabID] = []
 
         func extensionWebView(
             for tabID: TabID,
             in spaceID: SpaceID
         ) -> WKWebView? {
-            webViews[tabID]
+            webViewReads.append(tabID)
+            return webViews[tabID]
         }
 
         func extensionReaderModeState(
             for tabID: TabID,
             in spaceID: SpaceID
         ) -> BrowserReaderModeState {
-            readerModeStates[tabID] ?? .unavailable
+            readerModeReads.append(tabID)
+            return readerModeStates[tabID] ?? .unavailable
         }
 
         func setExtensionReaderModeActive(
@@ -152,6 +156,54 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
     }
 
     // MARK: - Runtime activity
+
+    func testReadingOneTabKeepsLiveStateWithoutResolvingOtherPages() async throws {
+        let browser = BrowserStore.preview()
+        let pages = PageProviderStub()
+        let pool = BrowserExtensionControllerPool()
+        pool.connect(browser: browser, pageProvider: pages)
+        let space = try XCTUnwrap(browser.session.spaces.first)
+        let tab = try XCTUnwrap(space.tabs.first)
+        let context = try await pool.loadExtension(
+            at: fixtureURL,
+            extensionID: extensionID,
+            in: space
+        )
+        let coordinator = pool.tabWindowCoordinator
+        let snapshot = try XCTUnwrap(coordinator.lastState?.space(space.id)?.tab(tab.id))
+
+        // A metadata read must see changes before the next event reconciliation.
+        browser.session.spaces[0].tabs[0].title = "Updated page"
+        browser.session.spaces[0].tabs[0].url = URL(string: "https://example.com/updated")
+        pages.readerModeStates[tab.id] = .active
+        pages.webViewReads.removeAll()
+        pages.readerModeReads.removeAll()
+
+        let state = try XCTUnwrap(coordinator.state(for: tab.id, in: space.id, context: context))
+
+        XCTAssertEqual(state.title, "Updated page")
+        XCTAssertEqual(state.url, URL(string: "https://example.com/updated"))
+        XCTAssertTrue(state.isReaderModeActive)
+        XCTAssertTrue(state.isLoadingComplete)
+        XCTAssertEqual(state.index, 0)
+        XCTAssertEqual(state.isSelected, tab.id == space.selectedTabID)
+        XCTAssertEqual(pages.webViewReads, [tab.id])
+        XCTAssertEqual(pages.readerModeReads, [tab.id])
+
+        browser.session.spaces[0].tabs.removeFirst()
+        pages.webViewReads.removeAll()
+        pages.readerModeReads.removeAll()
+        XCTAssertNil(coordinator.state(for: tab.id, in: space.id, context: context))
+        XCTAssertTrue(pages.webViewReads.isEmpty)
+        XCTAssertTrue(pages.readerModeReads.isEmpty)
+
+        // A detached coordinator keeps its last announced snapshot, including
+        // its activity, rather than resolving pages against a missing session.
+        coordinator.browser = nil
+        XCTAssertEqual(coordinator.state(for: tab.id, in: space.id, context: context), snapshot)
+        XCTAssertTrue(pages.webViewReads.isEmpty)
+        XCTAssertTrue(pages.readerModeReads.isEmpty)
+    }
 
     func testSessionProjectionCarriesLoadingAndReaderModeActivity() throws {
         let session = BrowserSession.preview

@@ -255,6 +255,33 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         browser.map { projectedState(for: $0.session) } ?? lastState
     }
 
+    /// Reads only the requested tab's live activity. Native metadata getters
+    /// run once per property, so projecting every Space here would repeatedly
+    /// resolve unrelated pages while WebKit enumerates the tabs in one window.
+    private func projectedTabState(
+        for tabID: TabID,
+        in spaceID: SpaceID
+    ) -> BrowserExtensionTabState? {
+        guard let browser else { return lastState?.space(spaceID)?.tab(tabID) }
+        guard let space = browser.session.space(id: spaceID) else { return nil }
+        if let index = space.tabs.firstIndex(where: { $0.id == tabID }) {
+            return BrowserExtensionTabState(
+                tab: space.tabs[index],
+                index: index,
+                isSelected: tabID == space.selectedTabID,
+                runtimeActivity: runtimeActivity(for: tabID, in: spaceID)
+            )
+        }
+        guard let transient = transientTabsBySpace[spaceID],
+            let offset = transient.firstIndex(where: { $0.id == tabID })
+        else { return nil }
+        return transientTabState(
+            transient[offset],
+            in: spaceID,
+            at: space.tabs.count + offset
+        )
+    }
+
     /// Projects a session together with the live page state extensions expect —
     /// load progress and reader mode — which the session value itself does not
     /// carry, plus any transient pages announced on top of it.
@@ -316,22 +343,27 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         startingAt index: Int
     ) -> [BrowserExtensionTabState] {
         transient.enumerated().map { offset, tab in
-            let webView = pageProvider?.extensionWebView(
-                for: tab.id,
-                in: spaceID
-            )
-            let activity = runtimeActivity(for: tab.id, in: spaceID)
-            return BrowserExtensionTabState(
-                id: tab.id,
-                title: webView?.title ?? "",
-                url: webView?.url ?? tab.url,
-                placement: .current,
-                index: index + offset,
-                isSelected: false,
-                isLoadingComplete: activity.isLoadingComplete,
-                isReaderModeActive: activity.isReaderModeActive
-            )
+            transientTabState(tab, in: spaceID, at: index + offset)
         }
+    }
+
+    private func transientTabState(
+        _ tab: BrowserExtensionTransientTab,
+        in spaceID: SpaceID,
+        at index: Int
+    ) -> BrowserExtensionTabState {
+        let webView = pageProvider?.extensionWebView(for: tab.id, in: spaceID)
+        let activity = runtimeActivity(for: tab.id, in: spaceID)
+        return BrowserExtensionTabState(
+            id: tab.id,
+            title: webView?.title ?? "",
+            url: webView?.url ?? tab.url,
+            placement: .current,
+            index: index,
+            isSelected: false,
+            isLoadingComplete: activity.isLoadingComplete,
+            isReaderModeActive: activity.isReaderModeActive
+        )
     }
 
     func window(for spaceID: SpaceID) -> BrowserExtensionWindowAdapter? {
@@ -349,7 +381,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         for tabID: TabID,
         in spaceID: SpaceID
     ) -> BrowserExtensionTabAdapter? {
-        guard currentState?.space(spaceID)?.tab(tabID) != nil else { return nil }
+        guard projectedTabState(for: tabID, in: spaceID) != nil else { return nil }
         return adapter(for: tabID, in: spaceID)
     }
 }
@@ -435,7 +467,7 @@ extension BrowserExtensionTabWindowCoordinator {
         context: WKWebExtensionContext
     ) -> BrowserExtensionTabState? {
         guard owns(context: context, spaceID: spaceID) else { return nil }
-        guard let state = currentState?.space(spaceID)?.tab(tabID) else {
+        guard let state = projectedTabState(for: tabID, in: spaceID) else {
             return nil
         }
         guard auxiliaryWindowByTabID[tabID] != nil else { return state }
@@ -599,7 +631,7 @@ extension BrowserExtensionTabWindowCoordinator {
         if let existing = tabsBySpace[spaceID]?[tabID] {
             return existing
         }
-        guard currentState?.space(spaceID)?.tab(tabID) != nil else { return nil }
+        guard projectedTabState(for: tabID, in: spaceID) != nil else { return nil }
         let adapter = BrowserExtensionTabAdapter(
             tabID: tabID,
             spaceID: spaceID,

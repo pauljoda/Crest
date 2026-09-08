@@ -81,6 +81,10 @@ struct BrowserSavedTabsDropSection: View {
     private var rows: some View {
         let tree = space.folderTree
         let ordering = BrowserSidebarFolderListItem.Projection(tabs: space.tabs, tree: tree, location: .saved)
+        // All unfiled rows share one map; sections without row indicators use their own zone.
+        let followingTabIDs =
+            capabilities.showsRowDropIndicators
+            ? BrowserTabRowInsertionPolicy.followingTabIDs(in: tabSections.unfiledSavedTabs) : [:]
         ForEach(ordering.items()) { entry in
             switch entry {
             case .folder(let node):
@@ -102,13 +106,13 @@ struct BrowserSavedTabsDropSection: View {
                     editingFolderRequest: $editingFolderRequest
                 )
             case .tabs(let item):
-                renderRows([item])
+                renderRows([item], followingTabIDs: followingTabIDs)
             }
         }
     }
 
     @ViewBuilder
-    private func renderRows(_ items: [BrowserSidebarTabListItem]) -> some View {
+    private func renderRows(_ items: [BrowserSidebarTabListItem], followingTabIDs: [TabID: TabID]) -> some View {
         ForEach(items) { item in
             switch item {
             case .tab(let tab):
@@ -169,15 +173,6 @@ struct BrowserSavedTabsDropSection: View {
 
     private var unfiledItems: [BrowserSidebarTabListItem] {
         BrowserSidebarTabListItemPolicy.items(for: tabSections.unfiledSavedTabs)
-    }
-
-    /// The row each unfiled row would insert in front of, which only a shell
-    /// that draws its insertion line on the rows themselves reads.
-    private var followingTabIDs: [TabID: TabID] {
-        guard capabilities.showsRowDropIndicators else { return [:] }
-        return BrowserTabRowInsertionPolicy.followingTabIDs(
-            in: tabSections.unfiledSavedTabs
-        )
     }
 
     private var collectionMotionIDs: [String] {

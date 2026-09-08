@@ -6,12 +6,13 @@ Audited commit: `457ac1d2c9bc78011e595664053f24df50ae2249`, September 7, 2026. W
 
 The requested naming cleanup fits this assessment. `Browser` is redundant across most internal names: 22 of the 30 immediate Shared Infrastructure directories carry it. Consolidate extension infrastructure under `Extensions`, give other capabilities similarly simple homes, and keep small private helpers beside their owner. Useful feature names, framework distinctions, and durable storage/API identifiers still matter.
 
-This is the final audit and implementation direction, not a completed performance fix. Production code and behavior remain unchanged. Source-backed costs, observed baseline results, and proposed acceptance targets are distinguished throughout.
+This audit records the original baseline and implementation direction. Subsequent changes on main, validation, and remaining performance acceptance work are recorded separately in [implementation progress](implementation-progress.md). Source-backed costs, observed baseline results, and proposed acceptance targets are distinguished throughout.
 
 ## Start here
 
 | Document | Purpose |
 | --- | --- |
+| [Implementation progress](implementation-progress.md) | Changes delivered on main, current validation and remaining acceptance work |
 | [Implementation plan](implementation-plan.md) | Ordered work packages, dependencies, behavioral safeguards, and acceptance gates |
 | [Space switching](space-switching.md) | Actual selection/reconciliation chain; shared transition owner; bounded preparation; color wipe |
 | [Mac measurements](measurements.md) | Isolated optimized-build trace, exact extension fixture, results and measurement limits |

@@ -17,8 +17,9 @@ enum BrowserDeveloperCapturePolicy {
         )
         let clipped = proposed.intersection(bounds)
         guard !clipped.isNull,
-              clipped.width >= minimumSelectionLength,
-              clipped.height >= minimumSelectionLength else {
+            clipped.width >= minimumSelectionLength,
+            clipped.height >= minimumSelectionLength
+        else {
             return nil
         }
         return clipped

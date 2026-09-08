@@ -1,9 +1,5 @@
 import SwiftUI
 
-#if os(macOS)
-    import AppKit
-#endif
-
 /// A title that becomes a plain text editor in place. The binding is live;
 /// finishing editing only dismisses focus and never gates saving the name.
 struct BrowserInlineSpaceName: View {
@@ -100,9 +96,7 @@ struct BrowserInlineSpaceName: View {
         }
         .onHover { isHovering = $0 }
         .onChange(of: isFocused) { _, focused in if !focused { isEditing = false } }
-        #if os(macOS)
-            .background { OutsideTitleClick(isEditing: isEditing, finish: finish) }
-        #endif
+        .background { PlatformInlineSpaceNameDismissal(isEditing: isEditing, finish: finish) }
         .padding(.leading, size <= 18 ? -4 : -10)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -117,40 +111,3 @@ struct BrowserInlineSpaceName: View {
         isEditing = false
     }
 }
-
-#if os(macOS)
-    /// Observe without consuming the click: clicking another choice both ends
-    /// title editing and performs that choice on its first click.
-    private struct OutsideTitleClick: NSViewRepresentable {
-        let isEditing: Bool
-        let finish: () -> Void
-        func makeNSView(context: Context) -> TitleClickView { TitleClickView() }
-        func updateNSView(_ view: TitleClickView, context: Context) {
-            view.isEditing = isEditing
-            view.finish = finish
-        }
-        static func dismantleNSView(_ view: TitleClickView, coordinator: ()) { view.stop() }
-    }
-
-    private final class TitleClickView: NSView {
-        var isEditing = false
-        var finish: () -> Void = {}
-        private var monitor: Any?
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            stop()
-            guard window != nil else { return }
-            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
-                [weak self] event in
-                guard let self, self.isEditing, event.window === self.window else { return event }
-                if !self.bounds.contains(self.convert(event.locationInWindow, from: nil)) { self.finish() }
-                return event
-            }
-        }
-        func stop() {
-            if let monitor { NSEvent.removeMonitor(monitor) }
-            monitor = nil
-        }
-    }
-#endif

@@ -98,6 +98,42 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertEqual(store.optionsRevision, revision)
     }
 
+    func testEmptySpaceVisibilityDoesNotPublishOptionsAndStillDefersALaterInstallOpen() {
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        let emptyRevision = store.optionsRevision
+        for isAvailable in [true, false] {
+            store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: isAvailable)
+            XCTAssertEqual(store.optionsRevision, emptyRevision)
+        }
+
+        store.register(
+            client: client, spaceID: space,
+            defaults: .init(flavor: .sidebarAction, path: "panel.html", opensAtInstall: true),
+            displayName: "Firefox", baseURL: baseURL)
+        XCTAssertTrue(store.availablePanels(in: window, spaceID: space, activeTab: tab).isEmpty)
+        var opened = 0
+        store.requestOpenAtInstall(for: client) { opened += 1 }
+        XCTAssertEqual(opened, 0)
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+
+        let registeredRevision = store.optionsRevision
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: TabID(), isAvailable: false)
+        XCTAssertEqual(store.optionsRevision, registeredRevision)
+        XCTAssertEqual(opened, 0)
+
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        XCTAssertNotEqual(store.optionsRevision, registeredRevision)
+        XCTAssertEqual(opened, 1)
+        XCTAssertTrue(store.isOpen(for: client, in: window))
+        let panel = store.panel(in: window, spaceID: space, activeTab: tab)
+        let visibleRevision = store.optionsRevision
+        let nextTab = TabID()
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: nextTab, isAvailable: true)
+        XCTAssertEqual(store.optionsRevision, visibleRevision)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: nextTab), panel)
+        XCTAssertEqual(opened, 1)
+    }
+
     func testChromeOptionsSeedDefaultsOnceAndDoNotInheritATabPath() throws {
         let store = makeStore()
         try store.setChromeOptions(.init(isEnabled: false), tab: nil, from: client)

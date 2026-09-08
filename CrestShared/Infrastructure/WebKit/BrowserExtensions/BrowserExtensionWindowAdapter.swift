@@ -51,9 +51,9 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
     }
 
     #if os(macOS)
-    func screenFrame(for context: WKWebExtensionContext) -> CGRect {
-        geometry(for: context).screenFrame
-    }
+        func screenFrame(for context: WKWebExtensionContext) -> CGRect {
+            geometry(for: context).screenFrame
+        }
     #endif
 
     func focus(

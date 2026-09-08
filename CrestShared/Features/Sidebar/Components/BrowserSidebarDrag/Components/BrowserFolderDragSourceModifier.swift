@@ -13,57 +13,54 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if isEnabled {
-            let item = BrowserFolderDragItem(
-                folderID: folder.id,
-                spaceID: spaceID,
-                profileID: profileID,
-                memberTabIDs: memberTabIDs
+        let item = BrowserFolderDragItem(
+            folderID: folder.id,
+            spaceID: spaceID,
+            profileID: profileID,
+            memberTabIDs: memberTabIDs
+        )
+        let isDragging =
+            isEnabled && reorder == nil
+            && BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
+                isDragging: dragState.isDragging(item),
+                hasReliableTerminalLifecycle:
+                    BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
             )
-            let isDragging =
-                reorder == nil
-                && BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                    isDragging: dragState.isDragging(item),
-                    hasReliableTerminalLifecycle:
-                        BrowserPlatformTabDragVisualPolicy.hasReliableTerminalLifecycle
-                )
 
-            content
-                .scaleEffect(
-                    BrowserTabDragVisualPolicy.sourceScale(isDragging: isDragging)
+        content
+            .scaleEffect(
+                BrowserTabDragVisualPolicy.sourceScale(isDragging: isDragging)
+            )
+            .opacity(
+                BrowserTabDragVisualPolicy.sourceOpacity(isDragging: isDragging)
+            )
+            .shadow(
+                color: .black.opacity(isDragging ? 0.24 : 0),
+                radius: BrowserTabDragVisualPolicy.sourceShadowRadius(
+                    isDragging: isDragging
+                ),
+                y: BrowserTabDragVisualPolicy.sourceShadowYOffset(
+                    isDragging: isDragging
                 )
-                .opacity(
-                    BrowserTabDragVisualPolicy.sourceOpacity(isDragging: isDragging)
+            )
+            .zIndex(isDragging ? 2 : 0)
+            .animation(
+                BrowserVisualAccessibilityPolicy.animation(
+                    CrestMotion.dragSource,
+                    reduceMotion: reduceMotion
+                ),
+                value: isDragging
+            )
+            .modifier(
+                BrowserPlatformFolderDragSourceModifier(
+                    folder: folder,
+                    profileID: profileID,
+                    spaceID: spaceID,
+                    dragState: dragState,
+                    memberTabIDs: memberTabIDs,
+                    reorder: reorder,
+                    isEnabled: isEnabled
                 )
-                .shadow(
-                    color: .black.opacity(isDragging ? 0.24 : 0),
-                    radius: BrowserTabDragVisualPolicy.sourceShadowRadius(
-                        isDragging: isDragging
-                    ),
-                    y: BrowserTabDragVisualPolicy.sourceShadowYOffset(
-                        isDragging: isDragging
-                    )
-                )
-                .zIndex(isDragging ? 2 : 0)
-                .animation(
-                    BrowserVisualAccessibilityPolicy.animation(
-                        CrestMotion.dragSource,
-                        reduceMotion: reduceMotion
-                    ),
-                    value: isDragging
-                )
-                .modifier(
-                    BrowserPlatformFolderDragSourceModifier(
-                        folder: folder,
-                        profileID: profileID,
-                        spaceID: spaceID,
-                        dragState: dragState,
-                        memberTabIDs: memberTabIDs,
-                        reorder: reorder
-                    )
-                )
-        } else {
-            content
-        }
+            )
     }
 }

@@ -1617,6 +1617,38 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
+    func testSpaceMotionCoalescesGesturesAndDirectSelectionSupersedesThem() {
+        let workID = SpaceID()
+        let personalID = SpaceID()
+        var motion = SpacePagerTransition(spaceID: workID)
+        XCTAssertEqual(motion.request(.next), .next)
+        let outgoingGeneration = motion.begin(spaceID: personalID)
+        XCTAssertNil(motion.request(.next))
+        XCTAssertNil(motion.request(.previous))
+        XCTAssertEqual(motion.finish(generation: outgoingGeneration), .previous)
+
+        _ = motion.begin(spaceID: workID)
+        XCTAssertNil(motion.request(.next))
+        let directGeneration = motion.begin(spaceID: personalID)
+        XCTAssertNil(motion.finish(generation: outgoingGeneration))
+        XCTAssertTrue(motion.isAnimating)
+        XCTAssertNil(motion.finish(generation: directGeneration))
+        XCTAssertFalse(motion.isAnimating)
+    }
+
+    func testSpaceMotionCancellationRejectsStaleCompletionAndPendingGesture() {
+        let workID = SpaceID()
+        let personalID = SpaceID()
+        var motion = SpacePagerTransition(spaceID: workID)
+        let generation = motion.begin(spaceID: personalID)
+        XCTAssertNil(motion.request(.next))
+        motion.cancel(spaceID: workID)
+        XCTAssertNil(motion.finish(generation: generation))
+        XCTAssertEqual(motion.spaceID, workID)
+        XCTAssertFalse(motion.isAnimating)
+        XCTAssertEqual(motion.request(.previous), .previous)
+    }
+
     func testSpaceSwipePolicyRequiresADeliberateHorizontalGesture() {
         XCTAssertEqual(
             BrowserSpaceSwipePolicy.direction(for: CGSize(width: -90, height: 12)),

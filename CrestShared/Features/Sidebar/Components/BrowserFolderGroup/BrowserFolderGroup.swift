@@ -47,6 +47,13 @@ struct BrowserFolderGroup: View {
 
     private var folder: BrowserFolder { node.folder }
 
+    private var isLiftedFolder: Bool {
+        guard let lift = browser.sidebarReorderState.lift,
+            case .folder(let item) = lift.item
+        else { return false }
+        return item.folderID == folder.id && item.spaceID == spaceID && item.profileID == profileID
+    }
+
     private var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
             node: node,
@@ -111,7 +118,8 @@ struct BrowserFolderGroup: View {
                 BrowserFolderDragItem(
                     folderID: folder.id, spaceID: spaceID, profileID: profileID, memberTabIDs: subtreeTabIDs)),
             section: folder.reorderSection,
-            reorder: BrowserSidebarReorderContext(browser: browser, spaceAccess: spaceAccess)
+            reorder: BrowserSidebarReorderContext(browser: browser, spaceAccess: spaceAccess),
+            isEnabled: configuration.isCurrentAndUnlocked || isLiftedFolder
         )
         .browserSidebarReorderZone(
             .section(.tabs(placement: folder.location.tabPlacement, folderID: folder.id)),

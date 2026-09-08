@@ -1,6 +1,6 @@
 # Implementation plan
 
-Baseline: `457ac1d2`, September 7, 2026. This plan turns the audit into independently reviewable changes. Space switching is the first product milestone: one horizontal gesture requests one adjacent Space and starts a fixed transition. Remove the free-scrolling horizontal strip; keep vertical tab scrolling. Extension responsiveness and ownership cleanup follow. No optimization below is implemented or claimed to meet its targets. Use [measurements.md](measurements.md) for observed results and limits, and [validation.md](validation.md) for executed checks and known failures.
+Baseline: `457ac1d2`, September 7, 2026. This plan turns the audit into independently reviewable changes. Space switching is the first product milestone: one horizontal gesture requests one adjacent Space and starts a fixed transition. Remove the free-scrolling horizontal strip; keep vertical tab scrolling. Extension responsiveness and ownership cleanup follow. This plan describes the audited baseline; delivered changes and their remaining acceptance work are tracked in [implementation progress](implementation-progress.md). Use [measurements.md](measurements.md) for original observations and limits, and [validation.md](validation.md) for original checks and known failures.
 
 The intended result is smoother native interaction with fewer repeated computations and clearer shared owners. File count, line count, and shared-source percentage are not acceptance metrics. Keep native page hosts and input adapters where their behavior differs; put common decisions and workflows in the relevant shared Domain, Application, or presentation feature.
 
@@ -10,7 +10,7 @@ Each numbered package should produce one small PR, or several explicitly separat
 
 Follow [test-retention.md](test-retention.md) and the local repository `AGENTS.md`. Reuse existing durable browsing, persistence, authorization, extension-compatibility, and platform-adapter coverage. Temporary probes, counters, synthetic fixtures, and experiments can establish cause; remove them before handoff unless they become a deliberately supported performance scenario. Keep a new regression only when it protects an important contract not already covered. Consolidate overlapping cases and fixtures; do not add a permanent test per helper, cache field, filename, or source arrangement.
 
-When removing a test, identify its contract and the stronger retained coverage, or why the contract is obsolete. Distinct AppKit/UIKit integration behavior still deserves distinct coverage. A failing expectation is investigated before removal. Each app-code commit follows the repository's version and release-note requirements; routine development stays on the current `0.4.x` line.
+When removing a test, identify its contract and the stronger retained coverage, or why the contract is obsolete. Distinct AppKit/UIKit integration behavior still deserves distinct coverage. A failing expectation is investigated before removal. Each app-code commit follows the repository's version and release-note requirements; routine development increments the patch on the current release line (main was `0.5.80` when implementation began).
 
 ## 1. Establish comparable interaction measurements
 

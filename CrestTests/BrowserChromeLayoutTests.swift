@@ -1783,18 +1783,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    @MainActor
-    func testSpacePagerDisablesBackingHorizontalScroller() {
-        let scrollView = NSScrollView()
-        scrollView.hasHorizontalScroller = true
-
-        BrowserSpacePagerPolicy.hideHorizontalScroller(in: scrollView)
-
-        XCTAssertFalse(BrowserSpacePagerPolicy.showsScrollIndicators)
-        XCTAssertEqual(BrowserSpacePagerPolicy.scrollIndicatorVisibility, .never)
-        XCTAssertFalse(scrollView.hasHorizontalScroller)
-    }
-
     func testSpacePagerActivatesResidentWebContentWithoutWaitingForMotionToSettle() {
         XCTAssertFalse(
             BrowserSpaceContentSelectionPolicy.defersWebContentUntilPagerSettles
@@ -1805,84 +1793,22 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     func testSpacePagerLocksWhileSidebarContentIsBeingDragged() {
-        XCTAssertTrue(BrowserSpacePagerPolicy.locksDuringContentDrag)
-        XCTAssertTrue(BrowserSpacePagerPolicy.recentersWhenContentDragEnds)
         XCTAssertTrue(
-            BrowserSpacePagerPolicy.isScrollEnabled(
+            BrowserSpacePagerPolicy.canSwitchSpaces(
                 spaceCount: 2,
                 isInteractionLocked: false
             )
         )
         XCTAssertFalse(
-            BrowserSpacePagerPolicy.isScrollEnabled(
+            BrowserSpacePagerPolicy.canSwitchSpaces(
                 spaceCount: 2,
                 isInteractionLocked: true
             )
         )
         XCTAssertFalse(
-            BrowserSpacePagerPolicy.isScrollEnabled(
+            BrowserSpacePagerPolicy.canSwitchSpaces(
                 spaceCount: 1,
                 isInteractionLocked: false
-            )
-        )
-        XCTAssertTrue(
-            BrowserSpacePagerPolicy.shouldRecenter(
-                wasInteractionLocked: false,
-                isInteractionLocked: true
-            )
-        )
-        XCTAssertTrue(
-            BrowserSpacePagerPolicy.shouldRecenter(
-                wasInteractionLocked: true,
-                isInteractionLocked: false
-            )
-        )
-        XCTAssertFalse(
-            BrowserSpacePagerPolicy.shouldRecenter(
-                wasInteractionLocked: false,
-                isInteractionLocked: false
-            )
-        )
-    }
-
-    func testDelayedPagerRecenterCannotOverrideANewerSpaceSelection() {
-        let workID = SpaceID(
-            rawValue: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
-        )
-        let personalID = SpaceID(
-            rawValue: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!
-        )
-        let request = BrowserSpacePagerRecenterRequest(
-            revision: 4,
-            spaceID: workID
-        )
-
-        XCTAssertTrue(
-            request.isCurrent(
-                revision: 4,
-                selectedSpaceID: workID,
-                isInteractionLocked: false
-            )
-        )
-        XCTAssertFalse(
-            request.isCurrent(
-                revision: 5,
-                selectedSpaceID: workID,
-                isInteractionLocked: false
-            )
-        )
-        XCTAssertFalse(
-            request.isCurrent(
-                revision: 4,
-                selectedSpaceID: personalID,
-                isInteractionLocked: false
-            )
-        )
-        XCTAssertFalse(
-            request.isCurrent(
-                revision: 4,
-                selectedSpaceID: workID,
-                isInteractionLocked: true
             )
         )
     }

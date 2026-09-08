@@ -15,8 +15,8 @@ struct SpaceSidebarBrowsingContent: View {
     let spaceAccess: BrowserSpaceAccessController
     let capabilities: BrowserInteractionCapabilities
     let isSelected: Bool
-    @Binding var address: String
-    @Binding var isAddressEditing: Bool
+    let address: Binding<String>
+    let isAddressEditing: Binding<Bool>
     let addressFocusRequest: Int
     let activateAddress: () -> Void
     let submitAddress: () -> Void
@@ -44,8 +44,8 @@ struct SpaceSidebarBrowsingContent: View {
             pages: pages,
             isSelected: isSelected,
             capabilities: capabilities,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
+            address: address,
+            isAddressEditing: isAddressEditing,
             addressFocusRequest: addressFocusRequest,
             activateAddress: activateAddress,
             submitAddress: submitAddress,

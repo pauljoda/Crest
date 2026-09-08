@@ -10,8 +10,8 @@ import SwiftUI
 struct BrowserSidebarLoadedContent: View {
     let context: BrowserSidebarContext
     let pages: BrowserPagePool
-    @Binding var address: String
-    @Binding var isAddressEditing: Bool
+    let address: Binding<String>
+    let isAddressEditing: Binding<Bool>
     let addressFocusRequest: Int
     let activateAddress: () -> Void
     let submitAddress: () -> Void
@@ -32,8 +32,8 @@ struct BrowserSidebarLoadedContent: View {
                     isSelected: isSelected,
                     context: context,
                     pages: pages,
-                    address: $address,
-                    isAddressEditing: $isAddressEditing,
+                    address: address,
+                    isAddressEditing: isAddressEditing,
                     addressFocusRequest: addressFocusRequest,
                     activateAddress: activateAddress,
                     submitAddress: submitAddress,

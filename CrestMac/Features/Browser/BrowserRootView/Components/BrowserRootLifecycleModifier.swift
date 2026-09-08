@@ -6,6 +6,7 @@ struct BrowserRootLifecycleModifier: ViewModifier {
     let persistSidebarWidth: (Double) -> Void
     @Binding var storedSidebarWidth: Double
     @State private var runtimeSessionProjection: BrowserRuntimeSessionProjection
+    @State private var reconciledPageSpaces: [BrowserSpace]?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -84,7 +85,17 @@ struct BrowserRootLifecycleModifier: ViewModifier {
                 of: runtimeSessionProjection.extensionState,
                 initial: true
             ) {
-                model.reconcileExtensions()
+                let spaces = model.browser.session.spaces
+                if reconciledPageSpaces == spaces {
+                    // Space selection still changes extension window focus
+                    // when a locked or unloaded destination presents no page.
+                    model.reconcileExtensionTabActivity()
+                } else {
+                    // Compare the full Space values: the extension projection
+                    // alone does not carry profile or native-content identity.
+                    model.reconcileExtensions()
+                    reconciledPageSpaces = spaces
+                }
             }
             .onChange(
                 of: runtimeSessionProjection.tabIconState,

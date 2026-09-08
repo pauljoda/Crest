@@ -14,13 +14,15 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
     let placement: TabPlacement
     let folderID: FolderID?
     let reorder: BrowserSidebarReorderContext
+    var isEnabled = true
 
     func body(content: Content) -> some View {
         content
             .browserSidebarReorderSource(
                 item: .splitGroup(item),
                 section: .tabs(placement: placement, folderID: folderID),
-                reorder: reorder
+                reorder: reorder,
+                isEnabled: isEnabled
             )
     }
 }

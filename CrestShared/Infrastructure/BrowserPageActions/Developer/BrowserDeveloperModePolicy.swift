@@ -77,7 +77,8 @@ enum BrowserDeveloperModePolicy {
         if address[0] & 0xFE == 0xFC { return true }
         if address[0] == 0xFE, address[1] & 0xC0 == 0x80 { return true }
 
-        let isIPv4Mapped = address.prefix(10).allSatisfy({ $0 == 0 })
+        let isIPv4Mapped =
+            address.prefix(10).allSatisfy({ $0 == 0 })
             && address[10] == 0xFF
             && address[11] == 0xFF
         return isIPv4Mapped && isLocalIPv4(Array(address.suffix(4)))

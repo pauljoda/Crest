@@ -253,7 +253,10 @@ final class BrowserExtensionTransientTabAnnouncementTests: XCTestCase {
         XCTAssertFalse(before.isEmpty)
         XCTAssertTrue(before.allSatisfy { !$0 }, "The inactive page must be announced before starting its navigation.")
         try await BrowserChromeDebuggerDomainFixture.waitFor {
-            (try? await view.evaluateJavaScript("document.body?.dataset.loaded")) as? String == "yes"
+            // WebKit can answer the script before its native title observation
+            // reaches the UI process. Wait for both sides of page readiness.
+            guard view.title == "Background extension work" else { return false }
+            return (try? await view.evaluateJavaScript("document.body?.dataset.loaded")) as? String == "yes"
         }
         XCTAssertEqual(view.title, "Background extension work")
         let initialViewport = try await view.evaluateJavaScript("document.body.dataset.viewport") as? String

@@ -77,7 +77,9 @@ struct BrowserSpaceAppearanceHero: View {
         .background { BrowserSpaceBannerBackground(branding: branding) }
         .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
         .clipShape(.rect(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(.primary.opacity(0.12)))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18).strokeBorder(.primary.opacity(0.12))
+        }
         .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
         .accessibilityElement(children: editableName == nil && spacePicker == nil ? .ignore : .contain)
         .accessibilityLabel("Live sidebar preview for \(preview.name)")

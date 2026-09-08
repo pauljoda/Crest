@@ -5,8 +5,8 @@ struct BrowserSidebarSpacePage: View {
     let isSelected: Bool
     let context: BrowserSidebarContext
     let pages: BrowserPagePool
-    @Binding var address: String
-    @Binding var isAddressEditing: Bool
+    let address: Binding<String>
+    let isAddressEditing: Binding<Bool>
     let addressFocusRequest: Int
     let activateAddress: () -> Void
     let submitAddress: () -> Void
@@ -26,8 +26,8 @@ struct BrowserSidebarSpacePage: View {
             pages: pages,
             spaceAccess: context.spaceAccess,
             capabilities: context.capabilities,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
+            address: address,
+            isAddressEditing: isAddressEditing,
             addressFocusRequest: addressFocusRequest,
             activateAddress: activateAddress,
             submitAddress: submitAddress,

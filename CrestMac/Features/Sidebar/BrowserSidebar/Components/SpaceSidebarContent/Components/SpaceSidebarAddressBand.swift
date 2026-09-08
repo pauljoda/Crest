@@ -11,8 +11,8 @@ struct SpaceSidebarAddressBand: View {
     let pages: BrowserPagePool
     let isSelected: Bool
     let capabilities: BrowserInteractionCapabilities
-    @Binding var address: String
-    @Binding var isAddressEditing: Bool
+    let address: Binding<String>
+    let isAddressEditing: Binding<Bool>
     let addressFocusRequest: Int
     let activateAddress: () -> Void
     let submitAddress: () -> Void
@@ -75,12 +75,12 @@ struct SpaceSidebarAddressBand: View {
 
     private var displayedAddress: Binding<String> {
         isSelected
-            ? $address
+            ? address
             : .constant(selectedTab?.url?.absoluteString ?? "")
     }
 
     private var displayedEditing: Binding<Bool> {
-        isSelected ? $isAddressEditing : .constant(false)
+        isSelected ? isAddressEditing : .constant(false)
     }
 
     private var isSecure: Bool {

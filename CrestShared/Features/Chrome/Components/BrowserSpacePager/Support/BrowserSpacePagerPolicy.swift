@@ -1,12 +1,4 @@
-import SwiftUI
-
 enum BrowserSpacePagerPolicy {
-    static let showsScrollIndicators = false
-    static let locksDuringContentDrag = true
-    static let recentersWhenContentDragEnds = true
-
-    @MainActor
-    static var scrollIndicatorVisibility: ScrollIndicatorVisibility { .never }
 
     /// Whether something in flight owns the horizontal axis.
     ///
@@ -23,18 +15,11 @@ enum BrowserSpacePagerPolicy {
         hasSidebarLift || hasTabDrag || hasFolderDrag
     }
 
-    static func isScrollEnabled(
+    static func canSwitchSpaces(
         spaceCount: Int,
         isInteractionLocked: Bool
     ) -> Bool {
-        spaceCount > 1 && !(locksDuringContentDrag && isInteractionLocked)
+        spaceCount > 1 && !isInteractionLocked
     }
 
-    static func shouldRecenter(
-        wasInteractionLocked: Bool,
-        isInteractionLocked: Bool
-    ) -> Bool {
-        guard wasInteractionLocked != isInteractionLocked else { return false }
-        return isInteractionLocked || recentersWhenContentDragEnds
-    }
 }

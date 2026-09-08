@@ -6,6 +6,7 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
     let item: BrowserSidebarReorderItem
     let section: BrowserSidebarReorderSection
     let reorder: BrowserSidebarReorderContext
+    var isEnabled = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
@@ -20,20 +21,25 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
     private var state: BrowserSidebarReorderState { reorder.state }
 
     private var isLifted: Bool {
-        state.isLifted(item.id)
+        isEnabled && state.isLifted(item.id)
     }
 
     private var displacement: CGSize {
-        state.layout.isActive || section.usesGridOrdering ? .zero : state.displacement(for: item.id)
+        !isEnabled || state.layout.isActive || section.usesGridOrdering ? .zero : state.displacement(for: item.id)
     }
 
     private var indicator: BrowserSidebarReorderIndicator? {
-        state.layout.isActive || section.usesGridOrdering ? nil : state.indicator(for: item.id)
+        !isEnabled || state.layout.isActive || section.usesGridOrdering ? nil : state.indicator(for: item.id)
     }
+
+    private var topSpace: CGFloat { isEnabled ? state.layout.topSpace(for: item.id) : 0 }
+    private var bottomSpace: CGFloat { isEnabled ? state.layout.bottomSpace(for: item.id) : 0 }
+    private var hidesSource: Bool { isEnabled && state.hidesSource(item.id) }
+    private var isRevealing: Bool { isEnabled && state.isRevealing(item.id) }
 
     func body(content: Content) -> some View {
         VStack(spacing: 0) {
-            BrowserSidebarReorderGap(height: state.layout.topSpace(for: item.id))
+            BrowserSidebarReorderGap(height: topSpace)
             content
                 // Keep the gesture's content alive at its lifted dimensions while
                 // its layout slot closes. Removing the view would cancel the drag.
@@ -41,20 +47,24 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                     height: isLifted && state.layout.isActive && !section.usesGridOrdering ? state.layout.height : nil,
                     alignment: .top
                 )
-                .onGeometryChange(for: CGRect.self) { proxy in
-                    proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
-                } action: { frame in
+                .onGeometryChange(for: BrowserSidebarReorderRow?.self) { proxy in
+                    // Availability participates in the measured value so an
+                    // unchanged frame is registered again when its Space returns.
+                    guard isEnabled else { return nil }
+                    return BrowserSidebarReorderRow(
+                        id: item.id, space: item.spaceAssignment, section: section,
+                        frame: proxy.frame(in: BrowserSidebarReorderSpace.globalSpace))
+                } action: { row in
+                    guard let row else {
+                        state.removeRow(item.id, owner: identity)
+                        return
+                    }
                     // While lifted, this row's reported frame follows the pointer.
                     // Registering it would re-sort the section under the drag and
                     // corrupt the slot indices, so keep the frame it lifted from.
                     guard !isLifted else { return }
                     state.register(
-                        row: BrowserSidebarReorderRow(
-                            id: item.id,
-                            space: item.spaceAssignment,
-                            section: section,
-                            frame: frame
-                        ),
+                        row: row,
                         owner: identity,
                         scrollRegionID: scrollRegionID
                     )
@@ -63,11 +73,11 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                     state.removeRow(item.id, owner: identity)
                 }
                 .offset(x: displacement.width, y: displacement.height)
-                .opacity(state.hidesSource(item.id) && !state.isRevealing(item.id) ? 0 : 1)
-                .animation(nil, value: state.hidesSource(item.id))
+                .opacity(hidesSource && !isRevealing ? 0 : 1)
+                .animation(nil, value: hidesSource)
                 .animation(
                     BrowserVisualAccessibilityPolicy.animation(.easeOut(duration: 0.10), reduceMotion: reduceMotion),
-                    value: state.isRevealing(item.id)
+                    value: isRevealing
                 )
                 .frame(
                     height: isLifted && state.layout.isActive && !section.usesGridOrdering ? 0 : nil, alignment: .top
@@ -77,13 +87,13 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                         BrowserSidebarReorderIndicatorLine(indicator: indicator)
                     }
                 }
-            BrowserSidebarReorderGap(height: state.layout.bottomSpace(for: item.id))
+            BrowserSidebarReorderGap(height: bottomSpace)
         }
         // Layout capacity moves with the gap, across section boundaries.
         .animation(
             BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
             value: [
-                state.layout.topSpace(for: item.id), state.layout.bottomSpace(for: item.id),
+                topSpace, bottomSpace,
                 isLifted ? state.layout.height : 0,
             ]
         )
@@ -112,8 +122,11 @@ extension View {
     func browserSidebarReorderContainer(
         item: BrowserSidebarReorderItem,
         section: BrowserSidebarReorderSection,
-        reorder: BrowserSidebarReorderContext
+        reorder: BrowserSidebarReorderContext,
+        isEnabled: Bool = true
     ) -> some View {
-        modifier(BrowserSidebarReorderContainerModifier(item: item, section: section, reorder: reorder))
+        modifier(
+            BrowserSidebarReorderContainerModifier(
+                item: item, section: section, reorder: reorder, isEnabled: isEnabled))
     }
 }

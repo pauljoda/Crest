@@ -8,13 +8,16 @@ struct BrowserPlatformFolderDragSourceModifier: ViewModifier {
     let dragState: BrowserFolderDragState
     var memberTabIDs: [TabID]? = nil
     var reorder: BrowserSidebarReorderContext?
+    var isEnabled = true
 
     @State private var sessionToken: BrowserDragSessionToken?
     @Environment(\.colorScheme) private var colorScheme
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let reorder {
+        if !isEnabled {
+            content
+        } else if let reorder {
             // As with tabs: the lift comes from drag-and-drop so it can coexist
             // with the row's context menu.
             let item = BrowserFolderDragItem(

@@ -19,6 +19,23 @@ final class BrowserRootModel {
 
     var address = ""
     var isAddressEditing = false
+    /// Keep binding construction outside view evaluation: constructing a
+    /// closure-backed binding reads its initial value. Reuse it so containers
+    /// forwarding the binding do not observe the address themselves.
+    @ObservationIgnored private(set) lazy var addressBinding = Binding<String>(
+        get: { @MainActor [weak self] in self?.address ?? "" },
+        set: { @MainActor [weak self] address in
+            guard let self, self.address != address else { return }
+            self.address = address
+        }
+    )
+    @ObservationIgnored private(set) lazy var isAddressEditingBinding = Binding<Bool>(
+        get: { @MainActor [weak self] in self?.isAddressEditing ?? false },
+        set: { @MainActor [weak self] isEditing in
+            guard let self, self.isAddressEditing != isEditing else { return }
+            self.isAddressEditing = isEditing
+        }
+    )
     var hasRestoredExtensions = false
     var isURLCopiedFeedbackVisible = false
     var visiblePageZoomFeedbackLabel: String?
@@ -80,6 +97,8 @@ final class BrowserRootModel {
         sidebarWidthTransaction = BrowserSidebarWidthTransaction(
             persistedWidth: persistedSidebarWidth
         )
+        _ = addressBinding
+        _ = isAddressEditingBinding
     }
 }
 
@@ -158,29 +177,6 @@ extension BrowserRootModel {
 // MARK: - Bindings
 
 extension BrowserRootModel {
-    /// Native text controls may write their current value while reconciling.
-    /// Deduplicating that write keeps Observation from invalidating the entire
-    /// sidebar for a value that did not actually change.
-    var addressBinding: Binding<String> {
-        Binding(
-            get: { self.address },
-            set: { address in
-                guard self.address != address else { return }
-                self.address = address
-            }
-        )
-    }
-
-    var isAddressEditingBinding: Binding<Bool> {
-        Binding(
-            get: { self.isAddressEditing },
-            set: { isEditing in
-                guard self.isAddressEditing != isEditing else { return }
-                self.isAddressEditing = isEditing
-            }
-        )
-    }
-
     var isWindowFocusedBinding: Binding<Bool> {
         Binding(
             get: { self.isWindowFocused },

@@ -689,6 +689,18 @@
     "2026-09-07-sidebar-menu-dismissal-hover": {
       "category": "fixed",
       "message": "Keep the auto-expanded sidebar open after dismissing a menu while the pointer remains inside it"
+    },
+    "2026-09-07-discrete-space-gestures": {
+      "category": "improved",
+      "message": "Swipe naturally between Spaces on Mac, with nearby sidebars kept ready"
+    },
+    "2026-09-07-space-and-extension-hot-paths": {
+      "category": "improved",
+      "message": "Reduce repeated sidebar and extension work when switching Spaces and reading tab details"
+    },
+    "2026-09-07-native-space-control-ownership": {
+      "category": "internal",
+      "message": "Keep native Space controls and Getting Started icons in their platform layers"
     }
   }
 }

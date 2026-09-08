@@ -259,9 +259,16 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
             hostWindowsBySpace[spaceID] = nil
         }
         let next = Visibility(tabID: activeTab, isAvailable: isAvailable)
-        if visibility[window]?[spaceID] != next {
+        let previous = visibility[window]?[spaceID]
+        if previous != next {
             visibility[window, default: [:]][spaceID] = next
-            optionsRevision &+= 1
+            // Open panels keep their document; available options take the active tab explicitly.
+            // Only availability changes in a registered Space alter these observed results.
+            if previous?.isAvailable != next.isAvailable,
+                registrations.values.contains(where: { $0.spaceID == spaceID })
+            {
+                optionsRevision &+= 1
+            }
             refresh(in: window, spaceID: spaceID)
         }
         for client in Array(pendingInstallOpens.keys) where registrations[client]?.spaceID == spaceID {

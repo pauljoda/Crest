@@ -666,18 +666,17 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         private(set) var tileIDs: [BrowserSidebarReorderItemID] = []
         private(set) var currentRowIDs: [BrowserSidebarReorderItemID] = []
 
-        private static let tileSide: CGFloat = 68
-        private static let tilePitch: CGFloat = 74
-        private static let gridOrigin = CGPoint(x: 12, y: 70)
+        private static let gridOrigin = CGPoint(x: 0, y: 60)
+        private static let gridWidth: CGFloat = 320
 
         var pointerBetweenPinnedTiles: CGPoint {
             // Past the first remaining tile's centre and short of the next
             // one's, on the single line the grid lays out — which is the move
             // only a grid can make and a list cannot.
-            CGPoint(
-                x: Self.gridOrigin.x + Self.tilePitch + Self.tileSide * 3 / 4,
-                y: Self.gridOrigin.y + Self.tileSide / 2
-            )
+            let layout = state.pinnedLayout(ids: tileIDs, in: space)
+            let first = layout.frame(for: .tab(tileIDs[1]), in: pinnedZone)!
+            let second = layout.frame(for: .tab(tileIDs[2]), in: pinnedZone)!
+            return CGPoint(x: (first.midX + second.midX) / 2, y: first.midY)
         }
         var pointerOverSavedRun = CGPoint(x: 160, y: 236)
         var pointerOverCurrentRun = CGPoint(x: 160, y: 362)
@@ -690,22 +689,17 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             )
             lift = .tab(liftItem)
 
-            for index in 0..<tileCount {
-                let id: BrowserSidebarReorderItemID =
-                    index == 0 ? lift.id : .tab(TabID())
-                tileIDs.append(id)
+            tileIDs = (0..<tileCount).map { index in
+                index == 0 ? lift.id : .tab(TabID())
+            }
+            let grid = BrowserPinnedTabReorderLayout(ids: tileIDs)
+            for id in tileIDs {
                 state.register(
                     row: BrowserSidebarReorderRow(
                         id: id,
                         space: space,
                         section: pinnedSection,
-                        frame: CGRect(
-                            x: Self.gridOrigin.x
-                                + CGFloat(index) * Self.tilePitch,
-                            y: Self.gridOrigin.y,
-                            width: Self.tileSide,
-                            height: Self.tileSide
-                        )
+                        frame: grid.frame(for: .tab(id), in: pinnedZone)!
                     ),
                     owner: UUID()
                 )
@@ -784,14 +778,23 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             }
         }
 
-        /// Stage then promote, the way the compact shell's `.onDrag` and its
-        /// drop delegate do between them.
+        /// The first native position promotes the lift over its source before
+        /// subsequent movement carries it into another run.
         func stageTileLift() {
             state.stage(item: lift, section: pinnedSection)
+            let frame = BrowserPinnedTabReorderLayout(ids: tileIDs)
+                .frame(for: .tab(lift.id), in: pinnedZone)!
+            state.update(pointer: CGPoint(x: frame.midX, y: frame.midY))
         }
 
         private var pinnedZone: CGRect {
-            CGRect(x: 0, y: 60, width: 320, height: Self.tileSide + 20)
+            CGRect(
+                origin: Self.gridOrigin,
+                size: CGSize(
+                    width: Self.gridWidth,
+                    height: BrowserPinnedTabReorderLayout(ids: tileIDs).height
+                )
+            )
         }
 
         private func register(
@@ -1329,11 +1332,9 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         )
     }
 
-    /// A cross-section move offsets the destination rows, but offset is only a
-    /// presentation transform. The destination list must also grow by the full
-    /// measured height of an incoming split group so the next section cannot
-    /// paint into its two-row preview. The same contract applies in both
-    /// directions across the Saved/Open boundary.
+    /// A cross-section move inserts one real layout gap with the split group's
+    /// full measured height. The same contract applies in both directions
+    /// across the Saved/Open boundary, without a second section reservation.
     func testCrossSectionSplitGroupReservesItsFullHeightInEitherDestination() {
         assertCrossSectionSplitGroupReservation(
             source: .tabs(placement: .current, folderID: nil),
@@ -1366,6 +1367,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             width: 374,
             height: 44
         )
+        let destinationID = BrowserSidebarReorderItemID.tab(TabID())
         let item = BrowserSplitGroupDragItem(
             groupID: groupID,
             spaceID: SpaceID(),
@@ -1384,7 +1386,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         )
         state.register(
             row: BrowserSidebarReorderRow(
-                id: .tab(TabID()),
+                id: destinationID,
                 space: item.spaceAssignment,
                 section: destination,
                 frame: destinationFrame
@@ -1425,9 +1427,18 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
             line: line
         )
         XCTAssertEqual(
-            state.incomingLiftReservationHeight(for: destination),
+            state.layout.topSpace(for: destinationID)
+                + state.layout.bottomSpace(for: destinationID),
             groupFrame.height,
             "The destination must reserve the split preview's complete height.",
+            file: file,
+            line: line
+        )
+        XCTAssertEqual(state.layout.gapFrame?.height, groupFrame.height, file: file, line: line)
+        XCTAssertEqual(
+            state.incomingLiftReservationHeight(for: destination),
+            0,
+            "The anchored layout gap must not also reserve section capacity.",
             file: file,
             line: line
         )
@@ -1440,6 +1451,15 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         )
 
         state.cancel()
+        XCTAssertNil(state.layout.gapFrame, file: file, line: line)
+        XCTAssertEqual(
+            state.layout.topSpace(for: destinationID)
+                + state.layout.bottomSpace(for: destinationID),
+            0,
+            "The anchored gap must disappear with the drag.",
+            file: file,
+            line: line
+        )
         XCTAssertEqual(
             state.incomingLiftReservationHeight(for: destination),
             0,

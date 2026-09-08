@@ -27,16 +27,11 @@ struct BrowserExtensionSessionState: Equatable, Sendable {
                 BrowserExtensionSpaceState(
                     id: space.id,
                     tabs: space.tabs.enumerated().map { index, tab in
-                        let activity = runtimeActivity(space.id, tab.id)
-                        return BrowserExtensionTabState(
-                            id: tab.id,
-                            title: tab.title,
-                            url: tab.url,
-                            placement: tab.placement,
+                        BrowserExtensionTabState(
+                            tab: tab,
                             index: index,
                             isSelected: tab.id == space.selectedTabID,
-                            isLoadingComplete: activity.isLoadingComplete,
-                            isReaderModeActive: activity.isReaderModeActive
+                            runtimeActivity: runtimeActivity(space.id, tab.id)
                         )
                     }
                 )
@@ -94,6 +89,24 @@ struct BrowserExtensionTabState: Equatable, Sendable {
     /// Whether the tab is currently presenting Crest's reader mode. Runtime-only
     /// for the same reason as `isLoadingComplete`.
     let isReaderModeActive: Bool
+
+    init(
+        tab: BrowserTab,
+        index: Int,
+        isSelected: Bool,
+        runtimeActivity: BrowserExtensionTabRuntimeActivity
+    ) {
+        self.init(
+            id: tab.id,
+            title: tab.title,
+            url: tab.url,
+            placement: tab.placement,
+            index: index,
+            isSelected: isSelected,
+            isLoadingComplete: runtimeActivity.isLoadingComplete,
+            isReaderModeActive: runtimeActivity.isReaderModeActive
+        )
+    }
 
     init(
         id: TabID,

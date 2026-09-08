@@ -18,11 +18,12 @@ enum BrowserSidebarReorderLiftPhase {
 /// system arbitrates against a context menu, so iOS lifts from `.onDrag` and
 /// takes its positions from a drop delegate instead.
 struct BrowserSidebarReorderLiftGesture: ViewModifier {
+    var isEnabled = true
     let apply: (BrowserSidebarReorderLiftPhase) -> Void
 
     func body(content: Content) -> some View {
         #if os(macOS)
-            content.simultaneousGesture(pointerDrag)
+            content.simultaneousGesture(pointerDrag, including: isEnabled ? .all : .subviews)
         #else
             content
         #endif

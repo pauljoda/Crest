@@ -15,7 +15,6 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @State private var scrollRegionID = UUID()
-    @State private var scrollRegionFrame = CGRect.zero
 
     var body: some View {
         GeometryReader { geometry in
@@ -35,19 +34,9 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
             .scrollClipDisabled(
                 !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
             )
-            .onGeometryChange(for: CGRect.self) { proxy in
-                proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
-            } action: { frame in
-                scrollRegionFrame = frame
-                browser.sidebarReorderState.register(
-                    scrollRegionFrame: frame,
-                    for: scrollRegionID
-                )
-            }
             .background {
                 BrowserSidebarDragAutoscrollObserver(
                     regionID: scrollRegionID,
-                    viewport: scrollRegionFrame,
                     state: browser.sidebarReorderState
                 )
             }
@@ -66,24 +55,35 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
 }
 
 /// AppKit owns the scroll mechanics while SwiftUI owns the list and drag. This
-/// zero-sized observer bridges only the live scroll offset: it advances the
+/// observer bridges only the live scroll offset: it advances the
 /// enclosing `NSScrollView` at an edge and tells the reorder registry the exact
 /// uniform translation applied to its otherwise-frozen row geometry.
 private struct BrowserSidebarDragAutoscrollObserver: View {
     let regionID: UUID
-    let viewport: CGRect
     let state: BrowserSidebarReorderState
 
+    @State private var viewport = CGRect.zero
+
     var body: some View {
-        // Pointer tracking must not invalidate the ancestor that builds every
-        // tab and folder. Only this small bridge updates for each pointer event.
-        BrowserSidebarDragAutoscrollBridge(
-            regionID: regionID,
-            viewport: viewport,
-            pointer: state.pointer,
-            isDragging: state.isDragging,
-            state: state
-        )
+        // The background receives the ScrollView's full viewport proposal.
+        // Measure that region, independently of the native bridge's ideal size.
+        GeometryReader { _ in
+            BrowserSidebarDragAutoscrollBridge(
+                regionID: regionID,
+                viewport: viewport,
+                pointer: state.pointer,
+                isDragging: state.isDragging,
+                state: state
+            )
+        }
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+        } action: { frame in
+            // Pager offsets and pointer tracking only update this observer,
+            // without rebuilding the ancestor's tab and folder content.
+            viewport = frame
+            state.register(scrollRegionFrame: frame, for: regionID)
+        }
     }
 }
 

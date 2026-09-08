@@ -7,6 +7,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
     let spaceID: SpaceID
     let dragState: BrowserTabDragState
     var reorder: BrowserSidebarReorderContext?
+    var isEnabled = true
 
     @State private var sessionToken: BrowserDragSessionToken?
     @State private var sourceSize = CGSize.zero
@@ -18,7 +19,9 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let reorder {
+        if !isEnabled {
+            content
+        } else if let reorder {
             let shape = reorder.state.liftTargetShape ?? .resting(for: tab.placement)
             // The lift comes from drag-and-drop, not a gesture: a row carries a
             // context menu, and UIKit cancels a competing gesture the moment the

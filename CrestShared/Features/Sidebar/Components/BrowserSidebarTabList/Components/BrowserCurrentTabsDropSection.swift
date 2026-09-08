@@ -85,8 +85,13 @@ struct BrowserCurrentTabsDropSection: View {
 
     @ViewBuilder
     private var rows: some View {
+        let currentTabs = tabs
         let tree = space.folderTree
-        let ordering = BrowserSidebarFolderListItem.Projection(tabs: tabs, tree: tree, location: .current)
+        let ordering = BrowserSidebarFolderListItem.Projection(tabs: currentTabs, tree: tree, location: .current)
+        // All unfiled rows share one map; sections without row indicators use their own zone.
+        let followingTabIDs =
+            capabilities.showsRowDropIndicators
+            ? BrowserTabRowInsertionPolicy.followingTabIDs(in: currentTabs) : [:]
         ForEach(ordering.items()) { item in
             switch item {
             case .folder(let node):
@@ -105,13 +110,13 @@ struct BrowserCurrentTabsDropSection: View {
                         browser.setFolderCollapsed(node.id, matching: assignment, isCollapsed: !expanded)
                     }, editingFolderRequest: $editingFolderRequest)
             case .tabs(let row):
-                renderRows([row])
+                renderRows([row], followingTabIDs: followingTabIDs)
             }
         }
     }
 
     @ViewBuilder
-    private func renderRows(_ rows: [BrowserSidebarTabListItem]) -> some View {
+    private func renderRows(_ rows: [BrowserSidebarTabListItem], followingTabIDs: [TabID: TabID]) -> some View {
         ForEach(rows) { item in
             switch item {
             case .tab(let tab):
@@ -162,15 +167,6 @@ struct BrowserCurrentTabsDropSection: View {
 
     private var items: [BrowserSidebarTabListItem] {
         BrowserSidebarTabListItemPolicy.items(for: tabs)
-    }
-
-    /// The row each row would insert in front of, which only a shell that draws
-    /// its insertion line on the rows themselves reads. Everywhere else the
-    /// section's own zone carries the whole answer, and building the map would
-    /// be work nothing looks at.
-    private var followingTabIDs: [TabID: TabID] {
-        guard capabilities.showsRowDropIndicators else { return [:] }
-        return BrowserTabRowInsertionPolicy.followingTabIDs(in: tabs)
     }
 
     private var metrics: BrowserSidebarTabListMetrics {
