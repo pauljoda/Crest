@@ -258,10 +258,18 @@ final class BrowserPagePool:
     func containsResidentPage(
         matching assignment: BrowserTabRuntimeAssignment
     ) -> Bool {
+        residentPage(matching: assignment) != nil
+    }
+
+    /// Reads an already-resident page for its own Space's chrome without
+    /// selecting or loading it. Web content hosts must use presentedPage.
+    func residentPage(matching assignment: BrowserTabRuntimeAssignment) -> BrowserPage? {
         _ = residencyRevision
-        guard let page = pages[assignment.tabID] else { return false }
-        return page.spaceID == assignment.spaceID
-            && page.profileID == assignment.profileID
+        guard let page = pages[assignment.tabID],
+            page.spaceID == assignment.spaceID,
+            page.profileID == assignment.profileID
+        else { return nil }
+        return page
     }
 
     func siteThemeIconAccent(for tabID: TabID) -> BrowserTabIconAccent? {

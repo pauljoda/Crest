@@ -705,6 +705,10 @@
     "2026-09-07-shared-infrastructure-consolidation": {
       "category": "internal",
       "message": "Consolidate shared infrastructure into cohesive domains with simpler paths"
+    },
+    "2026-09-07-steady-space-chrome": {
+      "category": "improved",
+      "message": "Keep sidebar controls steady while swiping between Spaces"
     }
   }
 }

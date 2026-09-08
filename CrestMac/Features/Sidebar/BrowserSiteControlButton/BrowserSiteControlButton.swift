@@ -24,6 +24,12 @@ struct BrowserSiteControlButton: View {
             guard isPresented else { return }
             presentationBinding.wrappedValue = false
         }
+        .onChange(of: BrowserSpaceRuntimeAssignment(space: configuration.space)) {
+            // The stationary address field survives a Space change; its old
+            // site's popover must still end at that assignment boundary.
+            guard isPresented else { return }
+            presentationBinding.wrappedValue = false
+        }
     }
 
     private var presentationBinding: Binding<Bool> {

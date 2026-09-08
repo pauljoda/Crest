@@ -14,6 +14,8 @@ struct BrowserRootBackdrop: View, BrowserChromeAnimating {
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .opacity(backdropMaterialOpacity)
+            // Preserve coverage while colors change. Replacing this whole
+            // layer for a Space ID briefly exposes the material during a fade.
             BrowserWindowAtmosphere(space: space)
                 .opacity(baseLayerOpacity)
         }
@@ -25,6 +27,10 @@ struct BrowserRootBackdrop: View, BrowserChromeAnimating {
         .animation(
             chromeAnimation(CrestMotion.windowBackdrop),
             value: backdropMaterialOpacity
+        )
+        .animation(
+            chromeAnimation(CrestMotion.windowBackdrop),
+            value: space?.branding
         )
     }
 

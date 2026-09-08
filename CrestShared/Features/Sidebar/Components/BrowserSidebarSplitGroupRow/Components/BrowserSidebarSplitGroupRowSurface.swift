@@ -16,7 +16,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                 containerShape
                     .fill(groupTint)
                     .overlay {
-                        if let tint = configuration.metadata.tint {
+                        if let tint = configuration.displayMetadata.tint {
                             containerShape.fill(
                                 tint.color.opacity(
                                     configuration.isPresented ? 0.16 : 0.10
@@ -41,7 +41,8 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                 placement: configuration.placement,
                 folderID: configuration.folderID,
                 reorder: configuration.reorderContext,
-                isEnabled: configuration.isCurrentAndUnlocked
+                isEnabled: configuration.isAvailableForDisplay,
+                requiresSelectedSpace: true
             )
             .modifier(
                 BrowserSidebarSplitGroupRowDropIndicators(

@@ -1,16 +1,23 @@
 import AppKit
 import SwiftUI
 
-/// Routes only the owning sidebar's horizontal stream into AppKit's fluid
-/// swipe tracker. Ordinary wheels retain the shared one-intent-per-burst policy.
+/// Precise scrolling moves the sidebar in points. Ordinary wheels retain the
+/// shared one-intent-per-burst policy; momentum cannot start a second page.
 @MainActor
 final class SpacePagerGesture<Content: View> {
     private enum Axis { case undecided, horizontal, vertical, outside }
+    private struct Sample {
+        let timestamp: TimeInterval
+        let position: CGFloat
+    }
+
     private weak var viewport: SpacePagerViewport<Content>?
     private var monitor: Any?
-    private var axis = Axis.undecided
+    private var axis = Axis.outside
     private var nativeToken: UInt?
-    private var isRecognizingReplacement = false
+    private var claimedGesture = false
+    private var samples: [Sample] = []
+    private var position: CGFloat = 0
     private let wheel = SpaceScrollGestureEventAdapter()
 
     init(viewport: SpacePagerViewport<Content>) { self.viewport = viewport }
@@ -29,7 +36,9 @@ final class SpacePagerGesture<Content: View> {
     func cancelCurrentGesture() {
         axis = .outside
         nativeToken = nil
-        isRecognizingReplacement = false
+        claimedGesture = false
+        samples.removeAll(keepingCapacity: true)
+        position = 0
         wheel.cancelCurrentGesture()
     }
 
@@ -37,71 +46,78 @@ final class SpacePagerGesture<Content: View> {
         guard let viewport, let window = viewport.window, event.window === window else { return event }
         let inside =
             !viewport.isHiddenOrHasHiddenAncestor && viewport.bounds.width > 0
-            && viewport.bounds.contains(viewport.convert(event.locationInWindow, from: nil))
-        let begins = event.phase.contains(.began)
-        if begins {
+            && viewport.gestureBounds.contains(viewport.convert(event.locationInWindow, from: nil))
+        if event.phase.contains(.began) {
             axis = inside && !viewport.isInteractionLocked ? .undecided : .outside
-            isRecognizingReplacement = axis == .undecided
+            nativeToken = nil
+            claimedGesture = false
+            position = 0
+            samples = [Sample(timestamp: event.timestamp, position: 0)]
         }
         guard !viewport.isInteractionLocked else {
             cancelCurrentGesture()
             return wheel.handle(
-                event, isInside: inside, layoutDirection: viewport.layoutDirection, isEnabled: false,
-                onStep: { _ in })
+                event, isInside: inside, layoutDirection: viewport.layoutDirection,
+                isEnabled: false, onStep: { _ in })
         }
-        if nativeToken != nil && !isRecognizingReplacement {
-            // AppKit owns the remaining samples, including its settling tail.
-            // Consuming them in a second monitor could starve that tracker.
-            return event
+        if !event.momentumPhase.isEmpty { return claimedGesture ? nil : event }
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled), let token = nativeToken {
+            if event.scrollingDeltaX != 0 {
+                _ = move(event, token: token)
+            }
+            _ = viewport.endInteractiveMotion(
+                velocity: velocity(at: event.timestamp), cancelled: event.phase.contains(.cancelled), token: token)
+            nativeToken = nil
+            axis = .outside
+            return nil
         }
-        guard event.momentumPhase.isEmpty else { return event }
-        let canTrack =
-            event.hasPreciseScrollingDeltas && NSEvent.isSwipeTrackingFromScrollEventsEnabled
-            && !viewport.reduceMotion
-        if !canTrack || event.phase.isEmpty {
+        if !event.hasPreciseScrollingDeltas || event.phase.isEmpty || viewport.reduceMotion {
             return wheel.handle(
                 event, isInside: inside, layoutDirection: viewport.layoutDirection,
-                isEnabled: !viewport.isInteractionLocked,
                 onStep: viewport.step)
         }
         if event.phase.contains(.mayBegin) { return event }
         if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
-            let claimed = axis == .horizontal
+            nativeToken = nil
             axis = .outside
-            return claimed ? nil : event
+            return claimedGesture ? nil : event
         }
-        guard begins || event.phase.contains(.changed), axis != .outside, axis != .vertical else { return event }
+        guard event.phase.contains(.began) || event.phase.contains(.changed),
+            axis != .outside, axis != .vertical
+        else { return event }
         if axis == .undecided {
             guard event.scrollingDeltaX != 0 || event.scrollingDeltaY != 0 else { return event }
-            if abs(event.scrollingDeltaY) >= abs(event.scrollingDeltaX) {
+            guard abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) else {
                 axis = .vertical
-                isRecognizingReplacement = false
                 return event
             }
+            guard inside, let token = viewport.beginInteractiveMotion() else {
+                axis = .outside
+                return event
+            }
+            nativeToken = token
+            claimedGesture = true
             axis = .horizontal
         }
-        guard inside, let token = viewport.beginInteractiveMotion() else { return event }
-        isRecognizingReplacement = false
-        nativeToken = token
-        let minimum: CGFloat = viewport.neighbor(forPhysicalDirection: -1) == nil ? 0 : -1
-        let maximum: CGFloat = viewport.neighbor(forPhysicalDirection: 1) == nil ? 0 : 1
-        event.trackSwipeEvent(options: .lockDirection, dampenAmountThresholdMin: minimum, max: maximum) {
-            [weak self, weak viewport] amount, phase, complete, stop in
-            MainActor.assumeIsolated {
-                guard let self, let viewport, self.nativeToken == token,
-                    viewport.updateInteractiveMotion(amount, phase: phase, token: token, complete: complete)
-                else {
-                    stop.pointee = true
-                    return
-                }
-                if complete {
-                    self.nativeToken = nil
-                    // A newer gesture may have begun with zero deltas while
-                    // this tracker was settling. Preserve its axis decision.
-                    if !self.isRecognizingReplacement { self.axis = .outside }
-                }
-            }
+        guard let nativeToken else { return event }
+        guard move(event, token: nativeToken) else {
+            cancelCurrentGesture()
+            return event
         }
         return nil
+    }
+
+    private func move(_ event: NSEvent, token: UInt) -> Bool {
+        position += event.scrollingDeltaX
+        samples.append(Sample(timestamp: event.timestamp, position: position))
+        samples.removeAll { $0.timestamp < event.timestamp - 0.08 }
+        return viewport?.updateInteractiveMotion(deltaX: event.scrollingDeltaX, token: token) ?? false
+    }
+
+    private func velocity(at timestamp: TimeInterval) -> CGFloat {
+        guard let last = samples.last, timestamp - last.timestamp <= 0.08,
+            let first = samples.first, last.timestamp > first.timestamp
+        else { return 0 }
+        return (last.position - first.position) / (last.timestamp - first.timestamp)
     }
 }

@@ -23,8 +23,14 @@ struct BrowserFolderGroupConfiguration {
     let pullNewIcon: ((TabID) -> Void)?
     let restoreSavedLocation: ((TabID) -> Void)?
     let select: (TabID) -> Void
+    var spacePresentation: SidebarSpacePresentation? = nil
 
     var folder: BrowserFolder { node.folder }
+
+    var displayBranding: BrowserSpaceBranding? {
+        guard let spacePresentation else { return browser.session.space(id: spaceID)?.branding }
+        return spacePresentation.assignment == assignment ? spacePresentation.branding : nil
+    }
 
     var assignment: BrowserSpaceRuntimeAssignment {
         BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
@@ -71,6 +77,14 @@ struct BrowserFolderGroupConfiguration {
             spaceID: spaceID,
             profileID: profileID
         )
+    }
+
+    /// Inactive pages retain their normal control appearance while commands
+    /// remain guarded by the live selected Space below.
+    var isAvailableForDisplay: Bool {
+        guard let spacePresentation else { return isCurrentAndUnlocked }
+        return spacePresentation.isAvailable(matching: assignment)
+            && spacePresentation.folderIDs.contains(folder.id)
     }
 
     var isCurrentAndUnlocked: Bool {

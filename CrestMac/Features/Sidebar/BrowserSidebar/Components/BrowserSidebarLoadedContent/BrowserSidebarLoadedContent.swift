@@ -23,20 +23,32 @@ struct BrowserSidebarLoadedContent: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
+    @State private var spacePagerPresentation = SpacePagerPresentation()
 
     var body: some View {
         VStack(spacing: 0) {
+            SidebarChrome(
+                context: context,
+                pages: pages,
+                address: address,
+                isAddressEditing: isAddressEditing,
+                addressFocusRequest: addressFocusRequest,
+                activateAddress: activateAddress,
+                submitAddress: submitAddress,
+                commandSurfaceNamespace: commandSurfaceNamespace
+            )
+            .onGeometryChange(for: CGFloat.self) {
+                $0.size.height
+            } action: {
+                spacePagerPresentation.gestureTopInset = $0
+            }
+
             BrowserSidebarSpacePager(context: context) { space, isSelected in
                 BrowserSidebarSpacePage(
                     space: space,
                     isSelected: isSelected,
                     context: context,
                     pages: pages,
-                    address: address,
-                    isAddressEditing: isAddressEditing,
-                    addressFocusRequest: addressFocusRequest,
-                    activateAddress: activateAddress,
-                    submitAddress: submitAddress,
                     openNewTab: openNewTab,
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     tabPromotionNamespace: tabPromotionNamespace
@@ -76,6 +88,7 @@ struct BrowserSidebarLoadedContent: View {
                 } ?? .dark
             )
         }
+        .environment(\.spacePagerPresentation, spacePagerPresentation)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
             "\(context.browser.selectedSpace?.name ?? "Browser") Space"

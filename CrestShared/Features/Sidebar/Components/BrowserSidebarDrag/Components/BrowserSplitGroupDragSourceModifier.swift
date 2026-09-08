@@ -16,9 +16,14 @@ struct BrowserSplitGroupDragSourceModifier: ViewModifier {
     let folderID: FolderID?
     var reorder: BrowserSidebarReorderContext?
     var isEnabled = true
+    var requiresSelectedSpace = false
+
+    @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
     @ViewBuilder
     func body(content: Content) -> some View {
+        let isEnabled = SidebarSpaceRole.permitsInteraction(
+            isSelected: requiresSelectedSpace ? isSelected : nil, isAvailable: self.isEnabled)
         if let reorder {
             content
                 .modifier(

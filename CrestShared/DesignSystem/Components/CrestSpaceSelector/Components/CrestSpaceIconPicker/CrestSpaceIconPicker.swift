@@ -9,6 +9,7 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
     var accessibilityIdentifier: String?
     var moveSpace: ((SpaceID, SpaceID) -> Void)? = nil
     var reorderViewport = CGRect.zero
+    var selectionPresentation: SpacePagerPresentation? = nil
     var segmentSize = CGSize(
         width: CrestSpaceIconPickerMetrics.segmentWidth,
         height: CrestSpaceIconPickerMetrics.segmentHeight)
@@ -33,6 +34,21 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
             }
         }
         .padding(CrestSpaceIconPickerMetrics.trackPadding)
+        .backgroundPreferenceValue(CrestSpaceIconFramePreference.self) { anchors in
+            #if os(macOS)
+                if let selectionPresentation {
+                    GeometryReader { geometry in
+                        PlatformSpacePickerPresentation(
+                            presentation: selectionPresentation,
+                            spaces: spaces,
+                            selectedSpaceID: selectedSpaceID,
+                            frames: anchors.mapValues { geometry[$0] },
+                            selectionTint: selectionTint
+                        )
+                    }
+                }
+            #endif
+        }
         .background {
             RoundedRectangle(
                 cornerRadius: CrestSpaceIconPickerMetrics.cornerRadius,
@@ -141,7 +157,7 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
                 )
                 .contentShape(.rect)
                 .background {
-                    if isSelected {
+                    if isSelected && selectionPresentation == nil {
                         RoundedRectangle(
                             cornerRadius: CrestSpaceIconPickerMetrics.cornerRadius,
                             style: .continuous
@@ -163,6 +179,9 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .help(space.name)
         .id(space.id)
+        .anchorPreference(key: CrestSpaceIconFramePreference.self, value: .bounds) { anchor in
+            selectionPresentation == nil ? [:] : [space.id: anchor]
+        }
     }
 
     private func accessibilityValue(
@@ -179,5 +198,17 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
         case (false, false):
             "Open Space"
         }
+    }
+}
+
+/// These anchors change with icon layout, not with native scroll or page motion.
+private struct CrestSpaceIconFramePreference: PreferenceKey {
+    static var defaultValue: [SpaceID: Anchor<CGRect>] { [:] }
+
+    static func reduce(
+        value: inout [SpaceID: Anchor<CGRect>],
+        nextValue: () -> [SpaceID: Anchor<CGRect>]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }

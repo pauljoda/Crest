@@ -20,6 +20,7 @@ struct BrowserCurrentTabsDropSection: View {
     let select: (TabID) -> Void
     let openNewTab: () -> Void
 
+    @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var editingFolderRequest: BrowserFolderRuntimeAssignment?
 
     private var tabs: [BrowserTab] { tabSections.sidebarCurrentTabs }
@@ -101,7 +102,13 @@ struct BrowserCurrentTabsDropSection: View {
                     browser: browser, pageAccess: pageAccess, spaceAccess: spaceAccess, capabilities: capabilities,
                     promotionNamespace: promotionNamespace, pullNewIcon: pullNewIcon, select: select,
                     isExpanded: Binding {
-                        !(browser.space(matching: assignment)?.folders.first { $0.id == node.id }?.isCollapsed ?? true)
+                        if let spacePresentation {
+                            return spacePresentation.assignment == assignment
+                                && spacePresentation.folderIDs.contains(node.id) && !node.folder.isCollapsed
+                        }
+                        return
+                            !(browser.space(matching: assignment)?.folders.first { $0.id == node.id }?.isCollapsed
+                            ?? true)
                     } set: { expanded in
                         guard
                             BrowserSidebarAccessPolicy.selectedUnlockedSpace(

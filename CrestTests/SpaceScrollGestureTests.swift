@@ -203,13 +203,14 @@ final class SpaceScrollGestureTests: XCTestCase {
         XCTAssertEqual(guardedSteps, [.next, .next])
     }
 
-    func testNativePagingMovesBeforeCommittingAndIgnoresCompletedCallbacks() throws {
-        let spaces = nativeSpaces()
+    func testNativePagingTracksPointsAndSettlesBeforeCommitting() async throws {
+        var spaces = nativeSpaces()
         var selections: [SpaceID] = []
         var settlements: [SpaceID] = []
         var actualSelection = spaces[0].id
         var acceptsSelection = true
         let (window, viewport) = makeNativeViewport()
+        let presentation = SpacePagerPresentation()
         defer {
             viewport.teardown()
             window.contentView = nil
@@ -220,6 +221,7 @@ final class SpaceScrollGestureTests: XCTestCase {
             viewport.update(
                 spaces: spaces, selectedSpaceID: selected, isInteractionLocked: false,
                 reduceMotion: false, layoutDirection: .leftToRight,
+                presentation: presentation,
                 selectSpace: {
                     selections.append($0)
                     if acceptsSelection { actualSelection = $0 }
@@ -228,46 +230,113 @@ final class SpaceScrollGestureTests: XCTestCase {
                 makeRoot: nativeRoot)
         }
         update(selected: spaces[0].id)
+        viewport.layoutSubtreeIfNeeded()
+        assertPageFrames(viewport, spaces: spaces, selectedIndex: 0)
         let source = try XCTUnwrap(
             viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
                 $0.hostingView.rootView.assignment.spaceID == spaces[0].id
             })
         let token = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertTrue(viewport.updateInteractiveMotion(-0.3, phase: .changed, token: token, complete: false))
-        XCTAssertEqual(try XCTUnwrap(source.layer).affineTransform().tx, -0.3 * viewport.bounds.width, accuracy: 0.001)
+        var distance: CGFloat = 0
+        for delta in [CGFloat(-3), -17, -90, 12] {
+            distance += delta
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: delta, token: token))
+            XCTAssertEqual(source.frame.minX, distance, accuracy: 0.001)
+            XCTAssertEqual(
+                try XCTUnwrap(presentation.snapshot).position, -distance / viewport.bounds.width,
+                accuracy: 0.000_001)
+            XCTAssertEqual(presentation.snapshot?.phase, .tracking)
+        }
         XCTAssertEqual(viewport.selectedSpaceID, spaces[0].id)
         XCTAssertTrue(selections.isEmpty)
         XCTAssertTrue(settlements.isEmpty)
 
-        XCTAssertTrue(viewport.updateInteractiveMotion(-0.6, phase: .ended, token: token, complete: false))
-        XCTAssertTrue(selections.isEmpty, "Physical completion must not interrupt the native settling frames")
-        XCTAssertTrue(viewport.updateInteractiveMotion(-1, phase: [], token: token, complete: true))
+        // A short, fast flick can finish a page without first dragging halfway.
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: -1200, cancelled: false, token: token))
+        XCTAssertTrue(selections.isEmpty, "Finger release must not interrupt the settling frames")
+        XCTAssertEqual(presentation.snapshot?.phase, .settling)
+        XCTAssertEqual(
+            try XCTUnwrap(presentation.snapshot).position, -distance / viewport.bounds.width,
+            accuracy: 0.000_001)
+        try await awaitSettlement(viewport)
         XCTAssertEqual(selections, [spaces[1].id])
         XCTAssertEqual(settlements, [spaces[1].id])
-        update(selected: spaces[1].id)
+        XCTAssertEqual(presentation.snapshot?.phase, .idle)
+        XCTAssertEqual(presentation.snapshot?.position, 1)
         XCTAssertEqual(viewport.presentationSpaceID, spaces[1].id)
-        XCTAssertFalse(viewport.updateInteractiveMotion(-1, phase: [], token: token, complete: true))
+        XCTAssertFalse(viewport.endInteractiveMotion(velocity: -1200, cancelled: false, token: token))
         XCTAssertEqual(selections, [spaces[1].id])
         XCTAssertEqual(settlements, [spaces[1].id])
 
+        // The native selection receipt can precede SwiftUI reconciliation.
+        // Returning immediately must still undo the accepted B selection.
+        let returning = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 224, token: returning))
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: 500, cancelled: false, token: returning))
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(selections, [spaces[1].id, spaces[0].id])
+        XCTAssertEqual(actualSelection, spaces[0].id)
+        update(selected: spaces[0].id)
+        viewport.step(.next)
+        try await awaitSettlement(viewport)
+        update(selected: spaces[1].id)
+        XCTAssertEqual(selections, [spaces[1].id, spaces[0].id, spaces[1].id])
+
+        update(selected: spaces[1].id)
+        window.setContentSize(NSSize(width: 321, height: 501))
+        viewport.layoutSubtreeIfNeeded()
+        CATransaction.flush()
+        try await Task.sleep(for: .milliseconds(20))
+        assertPageFrames(viewport, spaces: spaces, selectedIndex: 1)
+        window.setContentSize(NSSize(width: 320, height: 500))
+        viewport.layoutSubtreeIfNeeded()
+
         let cancelled = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertTrue(viewport.updateInteractiveMotion(0.2, phase: .changed, token: cancelled, complete: false))
-        XCTAssertTrue(viewport.updateInteractiveMotion(0, phase: .cancelled, token: cancelled, complete: true))
-        XCTAssertEqual(selections, [spaces[1].id], "Returning to the origin must not select a different Space")
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 64, token: cancelled))
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: 1000, cancelled: true, token: cancelled))
+        XCTAssertNotNil(viewport.motion, "Cancellation must settle back instead of snapping at finger release")
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(
+            selections, [spaces[1].id, spaces[0].id, spaces[1].id],
+            "Cancellation must not select a different Space")
 
         acceptsSelection = false
         let refused = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertTrue(viewport.updateInteractiveMotion(-1, phase: .ended, token: refused, complete: true))
-        XCTAssertEqual(selections, [spaces[1].id, spaces[2].id])
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -240, token: refused))
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: false, token: refused))
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(selections, [spaces[1].id, spaces[0].id, spaces[1].id, spaces[2].id])
         XCTAssertEqual(viewport.selectedSpaceID, spaces[1].id)
         XCTAssertEqual(viewport.presentationSpaceID, spaces[1].id)
         XCTAssertNotNil(viewport.beginInteractiveMotion(), "A refused selection must not leave the viewport locked")
+
+        // Consecutive commands may admit a new neighbor before SwiftUI delivers
+        // the first selection receipt. It must enter from beside the live page.
+        spaces = nativeSpaces()
+        acceptsSelection = true
+        update(selected: spaces[0].id)
+        viewport.step(.next)
+        try await awaitSettlement(viewport)
+        viewport.step(.next)
+        let incoming = try XCTUnwrap(
+            viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
+                $0.hostingView.rootView.assignment.spaceID == spaces[2].id
+            })
+        CATransaction.flush()
+        try await Task.sleep(for: .milliseconds(20))
+        XCTAssertGreaterThan(
+            try XCTUnwrap(incoming.layer?.presentation()).frame.minX, viewport.bounds.width / 2,
+            "A newly admitted page must animate in from its adjacent position")
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(Array(selections.suffix(2)), [spaces[1].id, spaces[2].id])
     }
 
-    func testNativePagingRebasesInterruptedSuccessAndRejectsInvalidatedGestures() throws {
-        let spaces = nativeSpaces()
+    func testNativePagingPreservesInterruptedPositionAndRejectsInvalidatedGestures() async throws {
+        var spaces = nativeSpaces()
         var selections: [SpaceID] = []
+        var renderedRoots: [SpaceID: (isSelected: Bool, name: String, accessPolicy: BrowserSpaceAccessPolicy)] = [:]
         let (window, viewport) = makeNativeViewport()
+        let presentation = SpacePagerPresentation()
         defer {
             viewport.teardown()
             window.contentView = nil
@@ -277,36 +346,193 @@ final class SpaceScrollGestureTests: XCTestCase {
             viewport.update(
                 spaces: spaces, selectedSpaceID: selected, isInteractionLocked: locked,
                 reduceMotion: false, layoutDirection: .leftToRight,
+                presentation: presentation,
                 selectSpace: {
                     selections.append($0)
                     return $0
-                }, settledSpace: { _ in }, makeRoot: nativeRoot)
+                }, settledSpace: { _ in },
+                makeRoot: { space, isSelected in
+                    renderedRoots[space.id] = (isSelected, space.name, space.accessPolicy)
+                    return self.nativeRoot(space, isSelected)
+                })
         }
         update(selected: spaces[0].id)
+        viewport.layoutSubtreeIfNeeded()
+        let source = try XCTUnwrap(
+            viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
+                $0.hostingView.rootView.assignment.spaceID == spaces[0].id
+            })
         let first = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertTrue(viewport.updateInteractiveMotion(-0.7, phase: .ended, token: first, complete: false))
-        viewport.interruptForNewGesture()
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -224, token: first))
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: -500, cancelled: false, token: first))
+        CATransaction.flush()
+        try await Task.sleep(for: .milliseconds(20))
+        let sourceLayer = try XCTUnwrap(source.layer)
+        let before = (sourceLayer.presentation() ?? sourceLayer).frame.minX
+        let second = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertEqual(source.frame.minX, before, accuracy: 0.5)
         XCTAssertEqual(viewport.presentationSpaceID, spaces[1].id)
         XCTAssertEqual(viewport.selectedSpaceID, spaces[0].id)
         XCTAssertTrue(selections.isEmpty)
+        XCTAssertFalse(viewport.endInteractiveMotion(velocity: -500, cancelled: false, token: first))
 
-        let second = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertFalse(viewport.updateInteractiveMotion(-1, phase: [], token: first, complete: true))
-        XCTAssertTrue(viewport.updateInteractiveMotion(-0.8, phase: .ended, token: second, complete: false))
+        // A new leftward gesture starts from the inherited rightward offset of
+        // the incoming page. Its first point must not clamp that offset to zero.
+        let inherited = source.frame.minX
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -1, token: second))
+        XCTAssertEqual(source.frame.minX, inherited - 1, accuracy: 0.001)
+        viewport.layoutSubtreeIfNeeded()
+        CATransaction.flush()
+        try await Task.sleep(for: .milliseconds(20))
+        XCTAssertEqual(
+            (sourceLayer.presentation() ?? sourceLayer).frame.minX, inherited - 1, accuracy: 0.5,
+            "An interrupted spring must stay stopped after AppKit layout and the next frame")
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -255, token: second))
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: -900, cancelled: false, token: second))
         XCTAssertTrue(selections.isEmpty)
-        XCTAssertTrue(viewport.updateInteractiveMotion(-1, phase: [], token: second, complete: true))
+        try await awaitSettlement(viewport)
         XCTAssertEqual(selections, [spaces[2].id])
         update(selected: spaces[2].id)
 
         let superseded = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertTrue(viewport.updateInteractiveMotion(0.4, phase: .changed, token: superseded, complete: false))
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 128, token: superseded))
         update(selected: spaces[0].id)
         XCTAssertEqual(viewport.selectedSpaceID, spaces[0].id)
-        XCTAssertFalse(viewport.updateInteractiveMotion(1, phase: .ended, token: superseded, complete: true))
+        XCTAssertNil(viewport.motion, "A distant direct selection must not leave a compressed strip to interrupt")
+        XCTAssertFalse(viewport.endInteractiveMotion(velocity: 1000, cancelled: false, token: superseded))
         update(selected: spaces[0].id, locked: true)
         XCTAssertNil(viewport.beginInteractiveMotion())
         XCTAssertEqual(viewport.presentationSpaceID, spaces[0].id)
         XCTAssertEqual(selections, [spaces[2].id])
+
+        update(selected: spaces[0].id)
+        let edge = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 39, token: edge))
+        let beforeLastPoint = source.frame.minX
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 1, token: edge))
+        let visibleReleaseSpeed = (source.frame.minX - beforeLastPoint) * 1000
+        let springStart = source.frame.minX
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: 1000, cancelled: false, token: edge))
+        let edgeSpring = try XCTUnwrap(sourceLayer.animation(forKey: "position") as? CASpringAnimation)
+        let springEnd = source.frame.minX
+        XCTAssertEqual(
+            edgeSpring.initialVelocity * (springEnd - springStart), visibleReleaseSpeed,
+            accuracy: visibleReleaseSpeed * 0.03,
+            "Release must carry the visible edge speed, not suddenly restore undamped input speed")
+        CATransaction.flush()
+        try await Task.sleep(for: .milliseconds(20))
+        let edgePosition = (sourceLayer.presentation() ?? sourceLayer).frame.minX
+        let edgeRestart = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertEqual(source.frame.minX, edgePosition, accuracy: 0.5)
+        let inheritedEdge = source.frame.minX
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 1, token: edgeRestart))
+        XCTAssertGreaterThan(
+            source.frame.minX, inheritedEdge,
+            "Continuing edge travel must not apply resistance twice and jump backward")
+        XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: true, token: edgeRestart))
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(selections, [spaces[2].id])
+
+        viewport.step(.next)
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(selections, [spaces[2].id, spaces[1].id])
+        // An external selection supersedes the pending B receipt, even when
+        // SwiftUI never delivered that intermediate selection to the viewport.
+        update(selected: spaces[2].id)
+        try await awaitSettlement(viewport)
+        let activeHost = try XCTUnwrap(
+            viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
+                $0.hostingView.rootView.assignment.spaceID == spaces[2].id
+            })
+        XCTAssertFalse(activeHost.isAccessibilityHidden())
+
+        // Command slides reuse ready roots; completion receives the latest
+        // content and role even if another update arrives during the spring.
+        update(selected: spaces[0].id)
+        update(selected: spaces[1].id)
+        XCTAssertNotNil(viewport.motion)
+        XCTAssertEqual(renderedRoots[spaces[1].id]?.isSelected, false)
+        spaces[1].name = "Changed while settling"
+        update(selected: spaces[1].id)
+        try await awaitSettlement(viewport)
+        XCTAssertEqual(renderedRoots[spaces[1].id]?.isSelected, true)
+        XCTAssertEqual(renderedRoots[spaces[1].id]?.name, spaces[1].name)
+
+        // Resize and detachment can bypass the animation's completion. They
+        // must still refresh the authoritative page before returning input.
+        update(selected: spaces[2].id)
+        XCTAssertNotNil(viewport.motion)
+        spaces[2].name = "Changed before resize"
+        update(selected: spaces[2].id)
+        window.setContentSize(NSSize(width: 321, height: 501))
+        viewport.layoutSubtreeIfNeeded()
+        XCTAssertNil(viewport.motion)
+        XCTAssertEqual(renderedRoots[spaces[2].id]?.isSelected, true)
+        XCTAssertEqual(renderedRoots[spaces[2].id]?.name, spaces[2].name)
+        update(selected: spaces[1].id)
+        XCTAssertNotNil(viewport.motion)
+        spaces[1].name = "Changed before reattachment"
+        update(selected: spaces[1].id)
+        window.contentView = nil
+        window.contentView = viewport
+        XCTAssertNil(viewport.motion)
+        XCTAssertEqual(renderedRoots[spaces[1].id]?.isSelected, true)
+        XCTAssertEqual(renderedRoots[spaces[1].id]?.name, spaces[1].name)
+
+        // A privacy-policy change supersedes both a simultaneous command and
+        // an existing physical gesture; an old open-policy root cannot linger.
+        spaces[0].accessPolicy = .deviceOwnerAuthentication
+        update(selected: spaces[0].id)
+        XCTAssertNil(viewport.motion)
+        XCTAssertEqual(renderedRoots[spaces[0].id]?.accessPolicy, .deviceOwnerAuthentication)
+        XCTAssertEqual(renderedRoots[spaces[0].id]?.isSelected, true)
+        let protected = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -32, token: protected))
+        spaces[1].accessPolicy = .deviceOwnerAuthentication
+        update(selected: spaces[0].id)
+        XCTAssertNil(viewport.motion)
+        XCTAssertEqual(renderedRoots[spaces[1].id]?.accessPolicy, .deviceOwnerAuthentication)
+        XCTAssertFalse(viewport.endInteractiveMotion(velocity: -500, cancelled: false, token: protected))
+
+        update(selected: spaces[2].id)
+        let detached = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 64, token: detached))
+        window.contentView = nil
+        XCTAssertNil(viewport.motion)
+        XCTAssertEqual(presentation.snapshot?.phase, .idle)
+        XCTAssertEqual(presentation.snapshot?.position, 2)
+        window.contentView = viewport
+        let tornDown = try XCTUnwrap(viewport.beginInteractiveMotion())
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 64, token: tornDown))
+        viewport.teardown()
+        XCTAssertEqual(presentation.snapshot?.phase, .idle)
+        XCTAssertEqual(presentation.snapshot?.position, 2)
+        XCTAssertEqual(selections, [spaces[2].id, spaces[1].id])
+    }
+
+    private func awaitSettlement(_ viewport: SpacePagerViewport<Text>) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while viewport.motion != nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNil(viewport.motion, "The native animation must deliver its completion")
+    }
+
+    private func assertPageFrames(
+        _ viewport: SpacePagerViewport<Text>, spaces: [BrowserSpace], selectedIndex: Int,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        for host in viewport.subviews.compactMap({ $0 as? SpacePageHost<Text> }) {
+            guard let index = spaces.firstIndex(where: { $0.id == host.hostingView.rootView.assignment.spaceID })
+            else { continue }
+            let expectedX = CGFloat(index - selectedIndex) * viewport.bounds.width
+            XCTAssertEqual(host.frame.minX, expectedX, accuracy: 0.001, file: file, line: line)
+            XCTAssertEqual(host.frame.size, viewport.bounds.size, file: file, line: line)
+            XCTAssertEqual(host.layer?.affineTransform(), .identity, file: file, line: line)
+            if let visible = host.layer?.presentation() {
+                XCTAssertEqual(visible.frame.minX, expectedX, accuracy: 0.5, file: file, line: line)
+            }
+        }
     }
 
     private func makeNativeViewport() -> (NSWindow, SpacePagerViewport<Text>) {
@@ -316,6 +542,7 @@ final class SpaceScrollGestureTests: XCTestCase {
         window.isReleasedWhenClosed = false
         let viewport = SpacePagerViewport<Text>(frame: CGRect(x: 0, y: 0, width: 320, height: 500))
         window.contentView = viewport
+        window.orderFront(nil)
         return (window, viewport)
     }
 

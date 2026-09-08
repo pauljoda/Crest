@@ -36,6 +36,7 @@ struct BrowserSidebarTabRow: View {
     /// tab opens; the host decides what appears when it does.
     let select: (TabID) -> Void
 
+    @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var isHovering = false
     @State private var isDropTargeted = false
     @State private var dropTargetHeight = CrestLayout.sidebarRowHeight
@@ -60,11 +61,16 @@ struct BrowserSidebarTabRow: View {
             cancelTitleEditing()
             iconRequest = nil
         }
-        .onChange(of: configuration.isCurrentAndUnlocked) { _, isAvailable in
-            guard !isAvailable else { return }
-            cancelTitleEditing()
-            iconRequest = nil
-        }
+        .modifier(
+            SidebarSpaceRoleCleanupModifier(
+                isAvailable: configuration.isAvailableForDisplay,
+                hasPendingActions: renameRequest != nil || iconRequest != nil,
+                cancel: {
+                    cancelTitleEditing()
+                    iconRequest = nil
+                }
+            )
+        )
     }
 
     private var configuration: BrowserSidebarTabRowConfiguration {
@@ -86,7 +92,8 @@ struct BrowserSidebarTabRow: View {
             isReorderSource: isReorderSource,
             followingTabID: followingTabID,
             hasVisibleFollowingRow: hasVisibleFollowingRow,
-            select: select
+            select: select,
+            spacePresentation: spacePresentation
         )
     }
 
@@ -137,7 +144,7 @@ struct BrowserSidebarTabRow: View {
     private var iconPresentation: Binding<Bool> {
         Binding {
             iconRequest == runtimeAssignment
-                && configuration.isCurrentAndUnlocked
+                && configuration.isAvailableForDisplay
         } set: { isPresented in
             if isPresented {
                 beginChangingIcon()
@@ -205,7 +212,7 @@ struct BrowserSidebarTabRow: View {
 
     private var isRenaming: Bool {
         renameRequest == runtimeAssignment
-            && configuration.isCurrentAndUnlocked
+            && configuration.isAvailableForDisplay
     }
 
     private var runtimeAssignment: BrowserTabRuntimeAssignment {

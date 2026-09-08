@@ -118,7 +118,11 @@ struct BrowserSpaceHeader: View {
                 reduceMotion: reduceMotion
             )
         ) {
-            isSavedTabsExpanded.toggle()
+            if let toggle = actions.toggleSavedTabs {
+                toggle()
+            } else {
+                isSavedTabsExpanded.toggle()
+            }
         }
     }
 }

@@ -74,8 +74,9 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 // frame, so a grouped member neither drags out on its own nor
                 // offers a drop slot between two members of its own run.
                 isEnabled: !interaction.isRenaming
-                    && configuration.isCurrentAndUnlocked
-                    && configuration.isReorderSource
+                    && configuration.isAvailableForDisplay
+                    && configuration.isReorderSource,
+                requiresSelectedSpace: true
             )
             .modifier(
                 BrowserSidebarTabRowDropIndicators(
@@ -90,7 +91,8 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 isActive: configuration.tab.placement == .current
                     && configuration.tab.folderID == nil
                     && configuration.tab.splitGroupID == nil
-                    && configuration.isCurrentAndUnlocked
+                    && configuration.isAvailableForDisplay,
+                requiresSelectedSpace: true
             )
             .overlay {
                 BrowserFolderNestDropHighlight(

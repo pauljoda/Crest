@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// One Space's browsing sidebar on the windowed shell: the address band, the
-/// pinned grid, the Space header, and the scrolling tab list.
+/// One Space's moving sidebar content: the pinned grid, the Space header, and
+/// the scrolling tab list. Address and navigation controls stay outside it.
 ///
 /// Everything here is composition and binding. The sections and the list are the
-/// shared ones; what this shell adds is its own address band, the pinned
-/// extension strip's seam, the scrolling chrome, and the page-facing closures
+/// shared ones; what this shell adds is the pinned extension strip's seam,
+/// the scrolling chrome, and the page-facing closures
 /// only a windowed card pool can answer.
 struct SpaceSidebarBrowsingContent: View {
     let space: BrowserSpace
@@ -14,20 +14,12 @@ struct SpaceSidebarBrowsingContent: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let capabilities: BrowserInteractionCapabilities
-    let isSelected: Bool
-    let address: Binding<String>
-    let isAddressEditing: Binding<Bool>
-    let addressFocusRequest: Int
-    let activateAddress: () -> Void
-    let submitAddress: () -> Void
-    let commandSurfaceNamespace: Namespace.ID
     @Binding var isSavedTabsExpanded: Bool
+    let toggleSavedTabs: () -> Void
     let openNewTab: () -> Void
     let beginCreatingFolder: () -> Void
     let showHistory: () -> Void
     let showExtensions: () -> Void
-    let siteControlPresentationChanged: (Bool) -> Void
-    let siteControlContextMenuPresentationChanged: (Bool) -> Void
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
@@ -39,24 +31,6 @@ struct SpaceSidebarBrowsingContent: View {
     @State private var isHoveringTabList = false
 
     var body: some View {
-        SpaceSidebarAddressBand(
-            space: space,
-            pages: pages,
-            isSelected: isSelected,
-            capabilities: capabilities,
-            address: address,
-            isAddressEditing: isAddressEditing,
-            addressFocusRequest: addressFocusRequest,
-            activateAddress: activateAddress,
-            submitAddress: submitAddress,
-            commandSurfaceNamespace: commandSurfaceNamespace,
-            showExtensions: showExtensions,
-            siteControlPresentationChanged: siteControlPresentationChanged,
-            siteControlContextMenuPresentationChanged:
-                siteControlContextMenuPresentationChanged,
-            hasPinnedExtensionActions: hasPinnedExtensionActions
-        )
-
         BrowserPinnedTabsDropSection(
             space: space,
             tabSections: tabSections,
@@ -82,7 +56,8 @@ struct SpaceSidebarBrowsingContent: View {
                 createFolder: beginCreatingFolder,
                 showHistory: showHistory,
                 showExtensions: showExtensions,
-                cleanup: browser.cleanupCurrentTabs
+                cleanup: browser.cleanupCurrentTabs,
+                toggleSavedTabs: toggleSavedTabs
             )
         )
 

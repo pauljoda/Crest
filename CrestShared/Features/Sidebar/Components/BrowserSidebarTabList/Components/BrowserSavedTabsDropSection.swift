@@ -17,6 +17,7 @@ struct BrowserSavedTabsDropSection: View {
     /// What opening a tab means to the host. The rows decide *whether*; the host
     /// decides what appears.
     let select: (TabID) -> Void
+    @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
 
     private var section: BrowserSidebarReorderSection {
@@ -102,7 +103,7 @@ struct BrowserSavedTabsDropSection: View {
                     pullNewIcon: pullNewIcon,
                     restoreSavedLocation: restoreSavedLocation,
                     select: select,
-                    isExpanded: expansionBinding(for: node.id),
+                    isExpanded: expansionBinding(for: node.folder),
                     editingFolderRequest: $editingFolderRequest
                 )
             case .tabs(let item):
@@ -194,15 +195,20 @@ struct BrowserSavedTabsDropSection: View {
         }
     }
 
-    private func expansionBinding(for folderID: FolderID) -> Binding<Bool> {
+    private func expansionBinding(for folder: BrowserFolder) -> Binding<Bool> {
         Binding {
-            !(browser.session.space(id: space.id)?.folders.first(where: {
-                $0.id == folderID
-            })?.isCollapsed ?? false)
+            if let spacePresentation {
+                return spacePresentation.assignment == assignment
+                    && spacePresentation.folderIDs.contains(folder.id) && !folder.isCollapsed
+            }
+            return
+                !(browser.session.space(id: space.id)?.folders.first(where: {
+                    $0.id == folder.id
+                })?.isCollapsed ?? false)
         } set: { isExpanded in
             guard isCurrentAndUnlocked else { return }
             browser.setFolderCollapsed(
-                folderID,
+                folder.id,
                 matching: assignment,
                 isCollapsed: !isExpanded
             )

@@ -11,28 +11,36 @@ struct SpaceSidebarUtilityContent: View {
     let dismissOnBlankSpace: () -> Void
     let clearHistory: () -> Void
 
-    var body: some View {
-        BrowserUtilitySearchToolbar(
-            surface: surface,
-            searchText: $searchText,
-            filter: $filter,
-            morphNamespace: commandSurfaceNamespace,
-            morphID: "crest-address-command-\(space.id)",
-            clearHistory: clearHistory
-        )
-        .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
-        .padding(.bottom, CrestSpacing.extraSmall)
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
-        BrowserUtilityListContent(
-            surface: surface,
-            space: space,
-            downloads: downloads,
-            searchText: searchText,
-            filter: filter,
-            actions: actions,
-            dismissOnBlankSpace: dismissOnBlankSpace
-        )
-        .transition(.opacity)
+    var body: some View {
+        if isSelected != false {
+            BrowserUtilitySearchToolbar(
+                surface: surface,
+                searchText: $searchText,
+                filter: $filter,
+                morphNamespace: commandSurfaceNamespace,
+                morphID: "crest-address-command-\(space.id)",
+                clearHistory: clearHistory
+            )
+            .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
+            .padding(.bottom, CrestSpacing.extraSmall)
+            .transition(.opacity.combined(with: .move(edge: .trailing)))
+
+            BrowserUtilityListContent(
+                surface: surface,
+                space: space,
+                downloads: downloads,
+                searchText: searchText,
+                filter: filter,
+                actions: actions,
+                dismissOnBlankSpace: dismissOnBlankSpace
+            )
+            .transition(.opacity)
+        } else {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityHidden(true)
+        }
     }
 }

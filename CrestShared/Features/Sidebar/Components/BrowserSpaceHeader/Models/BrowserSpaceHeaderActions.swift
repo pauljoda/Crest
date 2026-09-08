@@ -45,4 +45,7 @@ struct BrowserSpaceHeaderActions {
 
     /// Closes the Space's current tabs, leaving the saved ones alone.
     let cleanup: () -> Void
+
+    /// Toggles live expansion when the header renders a retained page value.
+    var toggleSavedTabs: (() -> Void)?
 }

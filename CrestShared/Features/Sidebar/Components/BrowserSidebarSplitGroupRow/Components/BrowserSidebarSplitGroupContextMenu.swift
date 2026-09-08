@@ -15,17 +15,17 @@ struct BrowserSidebarSplitGroupContextMenu: View {
             Button("Rename Split View…", systemImage: "pencil") {
                 interaction.beginRenaming()
             }
-            .disabled(!configuration.isCurrentAndUnlocked)
+            .disabled(!configuration.isAvailableForDisplay)
 
             Button("Change Icon…", systemImage: "face.smiling") {
                 interaction.beginChangingIcon()
             }
-            .disabled(!configuration.isCurrentAndUnlocked)
+            .disabled(!configuration.isAvailableForDisplay)
 
             Button("Change Color…", systemImage: "paintpalette") {
                 interaction.beginChangingTint()
             }
-            .disabled(!configuration.isCurrentAndUnlocked)
+            .disabled(!configuration.isAvailableForDisplay)
 
             Divider()
 
@@ -38,7 +38,7 @@ struct BrowserSidebarSplitGroupContextMenu: View {
                     matching: configuration.assignment
                 )
             }
-            .disabled(!configuration.isCurrentAndUnlocked)
+            .disabled(!configuration.isAvailableForDisplay)
 
             if configuration.canClose {
                 Divider()
@@ -55,7 +55,7 @@ struct BrowserSidebarSplitGroupContextMenu: View {
                         )
                     }
                 }
-                .disabled(!configuration.isCurrentAndUnlocked)
+                .disabled(!configuration.isAvailableForDisplay)
             }
         }
         .crestMenuActionLabelStyle()

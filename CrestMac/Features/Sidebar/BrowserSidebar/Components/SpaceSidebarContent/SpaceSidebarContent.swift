@@ -2,21 +2,13 @@ import SwiftUI
 
 struct SpaceSidebarContent: View {
     let space: BrowserSpace
-    let isSelected: Bool
     let browser: BrowserStore
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let capabilities: BrowserInteractionCapabilities
-    let address: Binding<String>
-    let isAddressEditing: Binding<Bool>
-    let addressFocusRequest: Int
-    let activateAddress: () -> Void
-    let submitAddress: () -> Void
     let openNewTab: () -> Void
     let showHistory: () -> Void
     let showExtensions: () -> Void
-    let siteControlPresentationChanged: (Bool) -> Void
-    let siteControlContextMenuPresentationChanged: (Bool) -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
@@ -33,33 +25,19 @@ struct SpaceSidebarContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            BrowserSidebarNavigationControls(
-                port: BrowserSidebarNavigationPort(
-                    pages: pages,
-                    browser: browser
-                ),
-                capabilities: capabilities
-            )
-
             Group {
                 if let utilitySurface {
-                    if isSelected {
-                        SpaceSidebarUtilityContent(
-                            surface: utilitySurface,
-                            space: space,
-                            searchText: $utilitySearchText,
-                            filter: $utilityFilter,
-                            commandSurfaceNamespace: commandSurfaceNamespace,
-                            downloads: utilityDownloads,
-                            actions: utilityActions,
-                            dismissOnBlankSpace: dismissUtilityOnBlankSpace,
-                            clearHistory: clearHistory
-                        )
-                    } else {
-                        Color.clear
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .accessibilityHidden(true)
-                    }
+                    SpaceSidebarUtilityContent(
+                        surface: utilitySurface,
+                        space: space,
+                        searchText: $utilitySearchText,
+                        filter: $utilityFilter,
+                        commandSurfaceNamespace: commandSurfaceNamespace,
+                        downloads: utilityDownloads,
+                        actions: utilityActions,
+                        dismissOnBlankSpace: dismissUtilityOnBlankSpace,
+                        clearHistory: clearHistory
+                    )
                 } else {
                     SpaceSidebarBrowsingContent(
                         space: space,
@@ -68,22 +46,12 @@ struct SpaceSidebarContent: View {
                         pages: pages,
                         spaceAccess: spaceAccess,
                         capabilities: capabilities,
-                        isSelected: isSelected,
-                        address: address,
-                        isAddressEditing: isAddressEditing,
-                        addressFocusRequest: addressFocusRequest,
-                        activateAddress: activateAddress,
-                        submitAddress: submitAddress,
-                        commandSurfaceNamespace: commandSurfaceNamespace,
                         isSavedTabsExpanded: savedTabsExpansionBinding,
+                        toggleSavedTabs: toggleSavedTabs,
                         openNewTab: openNewTab,
                         beginCreatingFolder: beginCreatingFolder,
                         showHistory: showHistory,
                         showExtensions: showExtensions,
-                        siteControlPresentationChanged:
-                            siteControlPresentationChanged,
-                        siteControlContextMenuPresentationChanged:
-                            siteControlContextMenuPresentationChanged,
                         editingFolderRequest: $editingFolderRequest,
                         tabPromotionNamespace: tabPromotionNamespace,
                         editSpace: editSpace,
@@ -108,11 +76,19 @@ struct SpaceSidebarContent: View {
 
     private var savedTabsExpansionBinding: Binding<Bool> {
         Binding {
-            browser.space(matching: assignment)?.isSavedTabsExpanded ?? true
+            space.isSavedTabsExpanded
         } set: { isExpanded in
             guard isCurrentAndUnlocked else { return }
             browser.setSavedTabsExpanded(isExpanded, matching: assignment)
         }
+    }
+
+    private func toggleSavedTabs() {
+        guard
+            let liveSpace = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: assignment, in: browser, accessController: spaceAccess)
+        else { return }
+        browser.setSavedTabsExpanded(!liveSpace.isSavedTabsExpanded, matching: assignment)
     }
 
     private var assignment: BrowserSpaceRuntimeAssignment {

@@ -11,6 +11,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     var moveSpace: ((SpaceID, SpaceID) -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.spacePagerPresentation) private var spacePagerPresentation
     @State private var overflow = BrowserSpacePickerOverflow()
     @State private var viewport = CGRect.zero
 
@@ -52,7 +53,8 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 selectSpace: selectSpace,
                 accessibilityIdentifier: "space-switcher-picker",
                 moveSpace: moveSpace,
-                reorderViewport: viewport
+                reorderViewport: viewport,
+                selectionPresentation: moveSpace == nil ? spacePagerPresentation : nil
             ) { space in
                 if let reorderState {
                     BrowserSpacePickerSegment(
@@ -115,6 +117,9 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     }
 
     private func revealSelection(_ reader: ScrollViewProxy, animated: Bool) {
+        // The native leaf follows the pager's actual presentation, including
+        // its spring. A second scrollTo animation would lag that handoff.
+        guard spacePagerPresentation == nil || moveSpace != nil else { return }
         guard
             let target = BrowserSpaceSwitcherLayout.compactScrollTarget(
                 spaceIDs: BrowserSpaceSwitcherLayout.segmentIDs(for: spaces),

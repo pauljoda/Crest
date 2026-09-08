@@ -56,7 +56,7 @@ private struct BrowserSidebarTabCloseButton: View {
                 ? metrics.closeOpacity(isSelected: configuration.isSelected)
                 : 0
         )
-        .disabled(!configuration.canClose || !configuration.isCurrentAndUnlocked)
+        .disabled(!configuration.canClose || !configuration.isAvailableForDisplay)
         .allowsHitTesting(isVisible)
         .accessibilityLabel("Close \(configuration.tab.displayTitle)")
     }
@@ -87,7 +87,7 @@ private struct BrowserSidebarTabUnloadButton: View {
         .modifier(BrowserSidebarTabTrailingControlStyle(metrics: metrics))
         .contentShape(.rect)
         .opacity(isVisible ? 1 : 0)
-        .disabled(!configuration.isLoaded || !configuration.isCurrentAndUnlocked)
+        .disabled(!configuration.isLoaded || !configuration.isAvailableForDisplay)
         .allowsHitTesting(isVisible)
         .accessibilityLabel("Unload \(configuration.tab.displayTitle)")
         .help("Unload Tab")

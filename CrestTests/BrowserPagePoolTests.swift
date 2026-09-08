@@ -775,6 +775,24 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertTrue(pool.containsResidentPage(for: firstTab.id))
         XCTAssertTrue(pool.containsResidentPage(for: secondTab.id))
 
+        let firstAssignment = BrowserTabRuntimeAssignment(
+            tabID: firstTab.id, spaceID: firstSpace.id, profileID: firstSpace.profile.id
+        )
+        XCTAssertTrue(try XCTUnwrap(pool.residentPage(matching: firstAssignment)) === firstPage)
+        XCTAssertNil(
+            pool.residentPage(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: firstTab.id, spaceID: secondSpace.id, profileID: firstSpace.profile.id
+                ))
+        )
+        XCTAssertNil(
+            pool.residentPage(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: firstTab.id, spaceID: firstSpace.id, profileID: UUID()
+                ))
+        )
+        XCTAssertEqual(pool.activeTabID, secondTab.id)
+
         session.selectSpace(firstSpace.id)
         pool.select(session: session)
         XCTAssertTrue(try XCTUnwrap(pool.activePage) === firstPage)

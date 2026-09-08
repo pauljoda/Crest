@@ -330,7 +330,8 @@ final class BrowserWebHostView: NSView {
             if webView.superview != nil {
                 // A newer SwiftUI host has already taken ownership. A stale
                 // update from a disappearing Peek must not steal it back.
-                hostedWebView = nil
+                // Keep the weak identity so repeated updates remain stale;
+                // an unattached view can still return through the path below.
                 self.focusRestoration = nil
                 isPageActive = false
                 return

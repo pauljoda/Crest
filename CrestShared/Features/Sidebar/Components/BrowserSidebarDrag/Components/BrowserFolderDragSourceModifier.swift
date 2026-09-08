@@ -8,11 +8,16 @@ struct BrowserFolderDragSourceModifier: ViewModifier {
     var memberTabIDs: [TabID]? = nil
     var reorder: BrowserSidebarReorderContext?
     let isEnabled: Bool
+    var requiresSelectedSpace = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @Environment(\.sidebarSpaceIsSelected) private var isSelected
+
     @ViewBuilder
     func body(content: Content) -> some View {
+        let isEnabled = SidebarSpaceRole.permitsInteraction(
+            isSelected: requiresSelectedSpace ? isSelected : nil, isAvailable: self.isEnabled)
         let item = BrowserFolderDragItem(
             folderID: folder.id,
             spaceID: spaceID,

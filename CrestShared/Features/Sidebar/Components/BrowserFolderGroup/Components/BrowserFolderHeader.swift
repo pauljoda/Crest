@@ -38,7 +38,8 @@ struct BrowserFolderHeader: View {
             ),
             isEnabled: interaction.editingFolderRequest.wrappedValue
                 != configuration.folderRuntimeAssignment
-                && configuration.isCurrentAndUnlocked
+                && configuration.isAvailableForDisplay,
+            requiresSelectedSpace: true
         )
         // The one thing a section's zone cannot say: that releasing *here* files
         // the lifted folder inside this one rather than beside it. The seam

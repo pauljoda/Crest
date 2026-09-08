@@ -20,8 +20,8 @@ struct BrowserSidebarSplitGroupHeader: View {
                     BrowserIconCustomizationPresentation(
                         isPresented: interaction.isChoosingIcon,
                         title: "Split View Icon",
-                        currentEmoji: configuration.metadata.emojiIcon,
-                        showsReset: configuration.metadata.emojiIcon != nil,
+                        currentEmoji: configuration.displayMetadata.emojiIcon,
+                        showsReset: configuration.displayMetadata.emojiIcon != nil,
                         resetTitle: "Use Stacked Icons",
                         setEmoji: interaction.setEmojiIcon,
                         reset: interaction.resetIcon
@@ -41,7 +41,7 @@ struct BrowserSidebarSplitGroupHeader: View {
                     .accessibilityIdentifier("split-group-rename-field")
             } else {
                 Button(action: interaction.activate) {
-                    Text(configuration.metadata.displayTitle)
+                    Text(configuration.displayMetadata.displayTitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
@@ -49,7 +49,7 @@ struct BrowserSidebarSplitGroupHeader: View {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(configuration.metadata.displayTitle)
+                .accessibilityLabel(configuration.displayMetadata.displayTitle)
                 .accessibilityValue(
                     "Split View with \(configuration.members.count) tabs"
                 )
@@ -78,7 +78,7 @@ struct BrowserSidebarSplitGroupHeader: View {
             .crestMenuActionLabelStyle()
             .tint(.primary)
             .accessibilityLabel("Split View actions")
-            .disabled(!configuration.isCurrentAndUnlocked)
+            .disabled(!configuration.isAvailableForDisplay)
         }
         .frame(height: configuration.metrics.headerHeight)
         .padding(.horizontal, configuration.headerLeadingInset)
@@ -98,7 +98,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
 
     var body: some View {
         Group {
-            if let emoji = configuration.metadata.emojiIcon {
+            if let emoji = configuration.displayMetadata.emojiIcon {
                 Text(emoji)
                     .font(.system(size: configuration.metrics.headerGlyphSize))
             } else {

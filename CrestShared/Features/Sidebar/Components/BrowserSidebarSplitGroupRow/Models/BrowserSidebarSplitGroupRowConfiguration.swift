@@ -35,6 +35,7 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     /// What opening a member means to the host. The group decides *which*
     /// member opens; the host decides what appears when it does.
     let select: (TabID) -> Void
+    var spacePresentation: SidebarSpacePresentation? = nil
 
     var metrics: BrowserSidebarSplitGroupRowMetrics {
         BrowserSidebarInteractionPolicy.splitGroupRowMetrics(capabilities)
@@ -70,6 +71,15 @@ struct BrowserSidebarSplitGroupRowConfiguration {
             spaceID: spaceID,
             profileID: profileID
         )
+    }
+
+    var displayMetadata: BrowserSplitGroupMetadata {
+        guard let spacePresentation else { return metadata }
+        guard spacePresentation.assignment == assignment,
+            spacePresentation.splitGroupIDs.contains(groupID)
+        else { return BrowserSplitGroupMetadata(id: groupID) }
+        return spacePresentation.splitGroups.first { $0.id == groupID }
+            ?? BrowserSplitGroupMetadata(id: groupID)
     }
 
     var metadata: BrowserSplitGroupMetadata {
@@ -150,6 +160,14 @@ struct BrowserSidebarSplitGroupRowConfiguration {
             browser: browser,
             spaceAccess: spaceAccess
         )
+    }
+
+    /// Inactive pages retain their normal control appearance while commands
+    /// remain guarded by the live selected Space below.
+    var isAvailableForDisplay: Bool {
+        guard let spacePresentation else { return isCurrentAndUnlocked }
+        return spacePresentation.isAvailable(matching: assignment)
+            && spacePresentation.splitGroupIDs.contains(groupID)
     }
 
     /// Every mutation this row offers is refused unless the Space is the selected

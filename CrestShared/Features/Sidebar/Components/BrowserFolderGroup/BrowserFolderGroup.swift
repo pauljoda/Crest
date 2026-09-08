@@ -37,6 +37,7 @@ struct BrowserFolderGroup: View {
 
     @Binding var isExpanded: Bool
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
+    @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var draftTitle = ""
     @State private var colorRequest: BrowserFolderRuntimeAssignment?
@@ -46,13 +47,6 @@ struct BrowserFolderGroup: View {
     @FocusState private var isTitleFocused: Bool
 
     private var folder: BrowserFolder { node.folder }
-
-    private var isLiftedFolder: Bool {
-        guard let lift = browser.sidebarReorderState.lift,
-            case .folder(let item) = lift.item
-        else { return false }
-        return item.folderID == folder.id && item.spaceID == spaceID && item.profileID == profileID
-    }
 
     private var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
@@ -69,7 +63,8 @@ struct BrowserFolderGroup: View {
             promotionNamespace: promotionNamespace,
             pullNewIcon: pullNewIcon,
             restoreSavedLocation: restoreSavedLocation,
-            select: select
+            select: select,
+            spacePresentation: spacePresentation
         )
     }
 
@@ -107,20 +102,13 @@ struct BrowserFolderGroup: View {
         .modifier(
             BrowserFolderSectionSurface(
                 color: folder.color,
-                intensity: browser.session.space(id: spaceID)?.branding.folderColorIntensity ?? 0,
-                textColorMode: browser.session.space(id: spaceID)?.branding.textColorMode ?? .automatic,
+                intensity: configuration.displayBranding?.folderColorIntensity ?? 0,
+                textColorMode: configuration.displayBranding?.textColorMode ?? .automatic,
                 leadingInset: CrestSpacing.small + CGFloat(node.depth) * BrowserFolderLayout.nestingIndent,
                 hasVisibleContents: isExpanded || configuration.keptCollapsedItem(for: collapsedTabVisibility) != nil,
                 folderID: folder.id, reorder: browser.sidebarReorderState)
         )
-        .browserSidebarReorderContainer(
-            item: .folder(
-                BrowserFolderDragItem(
-                    folderID: folder.id, spaceID: spaceID, profileID: profileID, memberTabIDs: subtreeTabIDs)),
-            section: folder.reorderSection,
-            reorder: BrowserSidebarReorderContext(browser: browser, spaceAccess: spaceAccess),
-            isEnabled: configuration.isCurrentAndUnlocked || isLiftedFolder
-        )
+        .modifier(BrowserFolderReorderContainer(configuration: configuration))
         .browserSidebarReorderZone(
             .section(.tabs(placement: folder.location.tabPlacement, folderID: folder.id)),
             state: browser.sidebarReorderState
@@ -136,9 +124,13 @@ struct BrowserFolderGroup: View {
         .onChange(of: configuration.folderRuntimeAssignment) { _, _ in
             clearUnavailableDeferredActions()
         }
-        .onChange(of: configuration.isCurrentAndUnlocked) { _, _ in
-            clearUnavailableDeferredActions()
-        }
+        .modifier(
+            SidebarSpaceRoleCleanupModifier(
+                isAvailable: configuration.isAvailableForDisplay,
+                hasPendingActions: editingFolderRequest != nil || colorRequest != nil || deletionRequest != nil,
+                cancel: clearUnavailableDeferredActions
+            )
+        )
         .padding(.vertical, BrowserFolderAppearancePolicy.regionInset)
     }
 
@@ -170,7 +162,12 @@ struct BrowserFolderGroup: View {
                         capabilities: capabilities, promotionNamespace: promotionNamespace,
                         pullNewIcon: pullNewIcon, restoreSavedLocation: restoreSavedLocation, select: select,
                         isExpanded: Binding {
-                            !(browser.session.space(id: spaceID)?.folders.first { $0.id == child.id }?.isCollapsed
+                            if let spacePresentation {
+                                return spacePresentation.assignment == configuration.assignment
+                                    && spacePresentation.folderIDs.contains(child.id) && !child.isCollapsed
+                            }
+                            return
+                                !(browser.session.space(id: spaceID)?.folders.first { $0.id == child.id }?.isCollapsed
                                 ?? true)
                         } set: { expanded in
                             guard configuration.isCurrentAndUnlocked else { return }
@@ -224,7 +221,10 @@ struct BrowserFolderGroup: View {
 
     private func toggleExpansion() {
         guard !browser.sidebarReorderState.suppressesActivation,
-            editingFolderRequest != configuration.folderRuntimeAssignment
+            editingFolderRequest != configuration.folderRuntimeAssignment,
+            let liveSpace = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: configuration.assignment, in: browser, accessController: spaceAccess),
+            let liveFolder = liveSpace.folders.first(where: { $0.id == folder.id })
         else {
             return
         }
@@ -234,7 +234,7 @@ struct BrowserFolderGroup: View {
                 reduceMotion: reduceMotion
             )
         ) {
-            let nextExpansion = !isExpanded
+            let nextExpansion = liveFolder.isCollapsed
             collapsedTabVisibility.expansionDidChange(
                 isExpanded: nextExpansion,
                 selectedTabID: selectedTabID,
@@ -361,6 +361,38 @@ struct BrowserFolderGroup: View {
         {
             deletionRequest = nil
         }
+    }
+}
+
+/// The full folder keeps its registration for an owned lift, while ordinary
+/// input follows the page role entirely within this interaction leaf.
+private struct BrowserFolderReorderContainer: ViewModifier {
+    let configuration: BrowserFolderGroupConfiguration
+
+    @Environment(\.sidebarSpaceIsSelected) private var isSelected
+
+    func body(content: Content) -> some View {
+        content.browserSidebarReorderContainer(
+            item: .folder(
+                BrowserFolderDragItem(
+                    folderID: configuration.folder.id,
+                    spaceID: configuration.spaceID,
+                    profileID: configuration.profileID,
+                    memberTabIDs: configuration.subtreeTabIDs)),
+            section: configuration.folder.reorderSection,
+            reorder: BrowserSidebarReorderContext(
+                browser: configuration.browser, spaceAccess: configuration.spaceAccess),
+            isEnabled: SidebarSpaceRole.permitsInteraction(
+                isSelected: isSelected, isAvailable: configuration.isAvailableForDisplay) || isLiftedFolder
+        )
+    }
+
+    private var isLiftedFolder: Bool {
+        guard let lift = configuration.browser.sidebarReorderState.lift,
+            case .folder(let item) = lift.item
+        else { return false }
+        return item.folderID == configuration.folder.id
+            && item.spaceID == configuration.spaceID && item.profileID == configuration.profileID
     }
 }
 

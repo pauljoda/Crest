@@ -139,6 +139,13 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertTrue(webView.superview === newHost)
         XCTAssertEqual(newHost.subviews, [webView])
         XCTAssertTrue(oldHost.subviews.isEmpty)
+
+        oldHost.attach(webView)
+        XCTAssertTrue(webView.superview === newHost, "Repeated stale updates must preserve the newer host's ownership")
+
+        newHost.detach()
+        oldHost.attach(webView)
+        XCTAssertTrue(webView.superview === oldHost, "A released web view may return to its previous host")
     }
 
     func testHitTestingRoutesIntoTheAttachedWebView() {

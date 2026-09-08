@@ -5,6 +5,56 @@ import XCTest
 
 @MainActor
 final class BrowserSidebarExactAssignmentTests: XCTestCase {
+    func testRetainedRowPresentationNeverAuthorizesAStaleSpace() {
+        let context = makeContext()
+        let access = BrowserSpaceAccessController(authenticator: AcceptingAuthenticator())
+        var row = BrowserSidebarTabRowConfiguration(
+            tab: context.sourceTab, spaceID: context.source.id, profileID: context.source.profile.id,
+            isSelected: true, canClose: true, browser: context.store, spaceAccess: access,
+            capabilities: BrowserInteractionCapabilities(), isLoaded: true,
+            unload: nil, pullNewIcon: nil, restoreSavedLocation: nil, promotionNamespace: nil,
+            isSplitGroupMember: false, isReorderSource: true,
+            followingTabID: nil, hasVisibleFollowingRow: false, select: { _ in })
+        XCTAssertTrue(row.isAvailableForDisplay, "The unprovided presentation keeps the live fallback")
+        XCTAssertTrue(SidebarSpaceRole.permitsInteraction(isSelected: nil, isAvailable: row.isAvailableForDisplay))
+        row.spacePresentation = SidebarSpacePresentation(space: context.source, isUnlocked: true)
+
+        context.store.selectSpace(context.destination.id)
+        XCTAssertTrue(row.isAvailableForDisplay)
+        XCTAssertTrue(
+            SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay),
+            "A retained root can still have its preceding input role")
+        XCTAssertFalse(row.isCurrentAndUnlocked, "An event must reject that stale current-page flag")
+
+        XCTAssertTrue(row.isAvailableForDisplay, "The unchanged display value keeps the inactive page appearance")
+        XCTAssertFalse(
+            SidebarSpaceRole.permitsInteraction(isSelected: false, isAvailable: row.isAvailableForDisplay),
+            "Inactive pages cannot register new drag sources")
+        XCTAssertFalse(row.isCurrentAndUnlocked)
+        row.spacePresentation = nil
+        XCTAssertFalse(row.isAvailableForDisplay, "Mobile and previews retain their live selection gate")
+        XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: nil, isAvailable: row.isAvailableForDisplay))
+
+        context.store.selectSpace(context.source.id)
+        row.spacePresentation = SidebarSpacePresentation(space: context.source, isUnlocked: true)
+        XCTAssertTrue(row.isCurrentAndUnlocked)
+        replaceProfile(of: context.source, in: context.store)
+        XCTAssertFalse(row.isCurrentAndUnlocked, "A cached render value cannot authorize a replaced profile")
+
+        row.spacePresentation = SidebarSpacePresentation(space: context.destination, isUnlocked: true)
+        XCTAssertFalse(row.isAvailableForDisplay, "A supplied foreign assignment must fail closed")
+        XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay))
+        row.spacePresentation = SidebarSpacePresentation(space: context.source, isUnlocked: false)
+        XCTAssertFalse(row.isAvailableForDisplay)
+        XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay))
+
+        var removedMember = context.source
+        removedMember.tabs = []
+        row.spacePresentation = SidebarSpacePresentation(space: removedMember, isUnlocked: true)
+        XCTAssertFalse(row.isAvailableForDisplay, "A removed member cannot remain enabled in a refreshed root")
+        XCTAssertFalse(SidebarSpaceRole.permitsInteraction(isSelected: true, isAvailable: row.isAvailableForDisplay))
+    }
+
     func testCapturedTabCloseRejectsAReplacementBrowsingProfile() throws {
         let context = makeContext()
         let assignment = BrowserSpaceRuntimeAssignment(space: context.source)

@@ -13,6 +13,8 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// An inactive zone unregisters itself, so a folder can offer "drop inside"
     /// only while it is collapsed without changing the view's identity.
     var isActive = true
+    /// Row-local targets follow the input role without invalidating row content.
+    var requiresSelectedSpace = false
     /// Trimmed from the top of the zone. A folder group's nested-folder section
     /// must not claim the group's own header row, or the header stops being a
     /// place to drop *beside* the folder.
@@ -25,13 +27,20 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     @State private var identity = UUID()
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
     @Environment(\.browserSidebarDropViewportID) private var sidebarViewportID
+    @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
     func body(content: Content) -> some View {
-        content
-            .onGeometryChange(for: CGRect.self) { proxy in
-                proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+        let isActive =
+            self.isActive
+            && (!requiresSelectedSpace
+                || SidebarSpaceRole.permitsInteraction(isSelected: isSelected, isAvailable: true))
+        return
+            content
+            .onGeometryChange(for: CGRect?.self) { proxy in
+                guard isActive else { return nil }
+                return proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
             } action: { frame in
-                guard isActive else {
+                guard let frame else {
                     state.removeZone(for: identity)
                     return
                 }
@@ -44,9 +53,6 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
                     sidebarViewportID: sidebarViewportID,
                     scrollRegionID: scrollRegionID
                 )
-            }
-            .onChange(of: isActive) { _, active in
-                if !active { state.removeZone(for: identity) }
             }
             .onDisappear {
                 state.removeZone(for: identity)
@@ -76,6 +82,7 @@ extension View {
         _ target: BrowserSidebarReorderZone.Target,
         state: BrowserSidebarReorderState,
         isActive: Bool = true,
+        requiresSelectedSpace: Bool = false,
         topInset: CGFloat = 0,
         minimumHeight: CGFloat = 0
     ) -> some View {
@@ -84,6 +91,7 @@ extension View {
                 target: target,
                 state: state,
                 isActive: isActive,
+                requiresSelectedSpace: requiresSelectedSpace,
                 topInset: topInset, minimumHeight: minimumHeight
             )
         )

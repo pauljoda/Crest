@@ -3,57 +3,92 @@ import SwiftUI
 struct BrowserSidebarSpacePage: View {
     let space: BrowserSpace
     let isSelected: Bool
-    let context: BrowserSidebarContext
     let pages: BrowserPagePool
-    let address: Binding<String>
-    let isAddressEditing: Binding<Bool>
-    let addressFocusRequest: Int
-    let activateAddress: () -> Void
-    let submitAddress: () -> Void
     let openNewTab: () -> Void
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
 
+    // Cache only this page's inputs, not the root context's complete Space
+    // collection and unrelated sidebar actions. Re-initialization still
+    // supplies fresh owners, bindings and callbacks on every root update.
+    private let browser: BrowserStore
+    private let spaceAccess: BrowserSpaceAccessController
+    private let capabilities: BrowserInteractionCapabilities
+    private let chromeActions: BrowserSidebarChromeActions
+    private let utilityPresentation: BrowserUtilityPresentationState
+    private let utilityActions: BrowserUtilityListActions
+    private let utilitySearchText: Binding<String>
+    private let utilityFilter: Binding<BrowserUtilityListFilter>
+    private let downloadCenter: BrowserDownloadCenter
+    private let dismissUtilityOnBlankSpace: () -> Void
+    private let confirmClearHistory: (BrowserSpace) -> Void
+
+    init(
+        space: BrowserSpace,
+        isSelected: Bool,
+        context: BrowserSidebarContext,
+        pages: BrowserPagePool,
+        openNewTab: @escaping () -> Void,
+        commandSurfaceNamespace: Namespace.ID,
+        tabPromotionNamespace: Namespace.ID
+    ) {
+        self.space = space
+        self.isSelected = isSelected
+        self.pages = pages
+        self.openNewTab = openNewTab
+        self.commandSurfaceNamespace = commandSurfaceNamespace
+        self.tabPromotionNamespace = tabPromotionNamespace
+        browser = context.browser
+        spaceAccess = context.spaceAccess
+        capabilities = context.capabilities
+        chromeActions = context.chromeActions
+        utilityPresentation = context.utilityPresentation
+        utilityActions = context.utilityActions
+        utilitySearchText = context.utilitySearchText
+        utilityFilter = context.utilityFilter
+        downloadCenter = context.pageAccess.downloadCenter
+        dismissUtilityOnBlankSpace = context.dismissUtilityOnBlankSpace
+        confirmClearHistory = context.confirmClearHistory
+    }
+
     private var isLocked: Bool {
-        context.spaceAccess.isLocked(space)
+        spaceAccess.isLocked(space)
     }
 
     var body: some View {
+        // These callbacks use the page and their action owners, independently
+        // of the selected role that changes on the surrounding native host.
+        let pageSpace = space
+        let actions = chromeActions
+        let confirmClear = confirmClearHistory
         SpaceSidebarContent(
             space: space,
-            isSelected: isSelected,
-            browser: context.browser,
+            browser: browser,
             pages: pages,
-            spaceAccess: context.spaceAccess,
-            capabilities: context.capabilities,
-            address: address,
-            isAddressEditing: isAddressEditing,
-            addressFocusRequest: addressFocusRequest,
-            activateAddress: activateAddress,
-            submitAddress: submitAddress,
+            spaceAccess: spaceAccess,
+            capabilities: capabilities,
             openNewTab: openNewTab,
-            showHistory: context.chromeActions.presentHistory,
-            showExtensions: showExtensions,
-            siteControlPresentationChanged: {
-                context.utilityPresentation.setSiteControlPresented($0)
-            },
-            siteControlContextMenuPresentationChanged: {
-                context.utilityPresentation.setSiteControlContextMenuPresented($0)
-            },
+            showHistory: chromeActions.presentHistory,
+            showExtensions: { actions.presentExtensions?(pageSpace) },
             commandSurfaceNamespace: commandSurfaceNamespace,
             tabPromotionNamespace: tabPromotionNamespace,
-            editSpace: { context.chromeActions.presentSpaceSettings(space) },
-            createSpace: createSpace,
-            utilitySurface: context.utilityPresentation.surface,
-            utilitySearchText: context.utilitySearchText,
-            utilityFilter: context.utilityFilter,
-            utilityDownloads: context.pageAccess.downloadCenter.items(
+            editSpace: { actions.presentSpaceSettings(pageSpace) },
+            createSpace: { actions.createSpace?() },
+            utilitySurface: utilityPresentation.surface,
+            utilitySearchText: utilitySearchText,
+            utilityFilter: utilityFilter,
+            utilityDownloads: downloadCenter.items(
                 for: space.profile.id
             ),
-            utilityActions: context.utilityActions,
-            dismissUtilityOnBlankSpace: context.dismissUtilityOnBlankSpace,
-            clearHistory: { context.confirmClearHistory(space) }
+            utilityActions: utilityActions,
+            dismissUtilityOnBlankSpace: dismissUtilityOnBlankSpace,
+            clearHistory: { confirmClear(pageSpace) }
         )
+        .environment(
+            \.sidebarSpacePresentation,
+            SidebarSpacePresentation(space: space, isUnlocked: !isLocked)
+        )
+        .environment(\.sidebarSpaceIsSelected, isSelected)
         .environment(
             \.colorScheme,
             BrowserSpaceForegroundPolicy.colorScheme(for: space.branding)
@@ -70,11 +105,4 @@ struct BrowserSidebarSpacePage: View {
         .accessibilityLabel("\(space.name) Space")
     }
 
-    private func showExtensions() {
-        context.chromeActions.presentExtensions?(space)
-    }
-
-    private func createSpace() {
-        context.chromeActions.createSpace?()
-    }
 }

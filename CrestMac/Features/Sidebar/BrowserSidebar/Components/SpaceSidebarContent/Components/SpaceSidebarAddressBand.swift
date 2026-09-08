@@ -9,7 +9,6 @@ import SwiftUI
 struct SpaceSidebarAddressBand: View {
     let space: BrowserSpace
     let pages: BrowserPagePool
-    let isSelected: Bool
     let capabilities: BrowserInteractionCapabilities
     let address: Binding<String>
     let isAddressEditing: Binding<Bool>
@@ -21,6 +20,8 @@ struct SpaceSidebarAddressBand: View {
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
     let hasPinnedExtensionActions: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         BrowserSidebarAddressField(configuration: addressConfiguration) {
@@ -35,6 +36,11 @@ struct SpaceSidebarAddressBand: View {
                 BrowserSiteControlButton(configuration: siteControl)
             }
         }
+        .contentTransition(.opacity)
+        .animation(
+            BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),
+            value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
+        )
         .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
         .padding(
             .bottom,
@@ -52,13 +58,13 @@ struct SpaceSidebarAddressBand: View {
 
     private var addressConfiguration: BrowserSidebarAddressFieldConfiguration {
         BrowserSidebarAddressFieldConfiguration(
-            text: displayedAddress,
-            isEditing: displayedEditing,
+            text: address,
+            isEditing: isAddressEditing,
             focusRequest: addressFocusRequest,
             isSecure: isSecure,
-            progress: isSelected ? pages.activePage?.estimatedProgress ?? 0 : 0,
-            isLoading: isSelected && pages.activePage?.isLoading == true,
-            hasResidentPage: isSelected && pages.activePage != nil,
+            progress: displayedPage?.estimatedProgress ?? 0,
+            isLoading: displayedPage?.isLoading == true,
+            hasResidentPage: displayedPage != nil,
             hasActiveSite: siteControl != nil,
             capabilities: capabilities,
             activate: activateAddress,
@@ -73,27 +79,22 @@ struct SpaceSidebarAddressBand: View {
         return space.tabs.first { $0.id == selectedTabID }
     }
 
-    private var displayedAddress: Binding<String> {
-        isSelected
-            ? address
-            : .constant(selectedTab?.url?.absoluteString ?? "")
-    }
-
-    private var displayedEditing: Binding<Bool> {
-        isSelected ? isAddressEditing : .constant(false)
+    private var displayedPage: BrowserPage? {
+        guard let selectedTabID = space.selectedTabID else { return nil }
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: selectedTabID, spaceID: space.id, profileID: space.profile.id
+        )
+        return pages.activePage(matching: assignment)
     }
 
     private var isSecure: Bool {
-        isSelected
-            ? pages.activePage?.hasOnlySecureContent == true
-            : selectedTab?.url?.scheme?.lowercased() == "https"
+        if let page = displayedPage { return page.hasOnlySecureContent }
+        return selectedTab?.url?.scheme?.lowercased() == "https"
     }
 
     private var siteControl: BrowserSiteControlConfiguration? {
-        guard isSelected,
-            let page = pages.activePage,
-            page.displayURL != nil,
-            page.spaceID == space.id
+        guard let page = displayedPage,
+            page.displayURL != nil
         else {
             return nil
         }

@@ -7,7 +7,8 @@ extension View {
         spaceID: SpaceID,
         dragState: BrowserTabDragState,
         reorder: BrowserSidebarReorderContext? = nil,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        requiresSelectedSpace: Bool = false
     ) -> some View {
         modifier(
             BrowserTabDragSourceModifier(
@@ -16,7 +17,8 @@ extension View {
                 spaceID: spaceID,
                 dragState: dragState,
                 reorder: reorder,
-                isEnabled: isEnabled
+                isEnabled: isEnabled,
+                requiresSelectedSpace: requiresSelectedSpace
             )
         )
     }
@@ -29,7 +31,8 @@ extension View {
         placement: TabPlacement,
         folderID: FolderID?,
         reorder: BrowserSidebarReorderContext? = nil,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        requiresSelectedSpace: Bool = false
     ) -> some View {
         modifier(
             BrowserSplitGroupDragSourceModifier(
@@ -38,7 +41,8 @@ extension View {
                 placement: placement,
                 folderID: folderID,
                 reorder: reorder,
-                isEnabled: isEnabled
+                isEnabled: isEnabled,
+                requiresSelectedSpace: requiresSelectedSpace
             )
         )
     }
@@ -50,7 +54,8 @@ extension View {
         dragState: BrowserFolderDragState,
         memberTabIDs: [TabID]? = nil,
         reorder: BrowserSidebarReorderContext? = nil,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        requiresSelectedSpace: Bool = false
     ) -> some View {
         modifier(
             BrowserFolderDragSourceModifier(
@@ -60,7 +65,8 @@ extension View {
                 dragState: dragState,
                 memberTabIDs: memberTabIDs,
                 reorder: reorder,
-                isEnabled: isEnabled
+                isEnabled: isEnabled,
+                requiresSelectedSpace: requiresSelectedSpace
             )
         )
     }

@@ -7,11 +7,16 @@ struct BrowserTabDragSourceModifier: ViewModifier {
     let dragState: BrowserTabDragState
     var reorder: BrowserSidebarReorderContext?
     var isEnabled = true
+    var requiresSelectedSpace = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @Environment(\.sidebarSpaceIsSelected) private var isSelected
+
     @ViewBuilder
     func body(content: Content) -> some View {
+        let isEnabled = SidebarSpaceRole.permitsInteraction(
+            isSelected: requiresSelectedSpace ? isSelected : nil, isAvailable: self.isEnabled)
         let item = BrowserTabDragItem(
             tabID: tab.id,
             spaceID: spaceID,

@@ -21,6 +21,7 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
             isInteractionLocked: isInteractionLocked,
             reduceMotion: environment.accessibilityReduceMotion,
             layoutDirection: environment.layoutDirection,
+            presentation: environment.spacePagerPresentation,
             selectSpace: selectSpace, settledSpace: settledSpace
         ) { space, isSelected in
             SpacePageRoot(
@@ -55,6 +56,7 @@ final class SpacePageHost<Content: View>: NSView {
         hostingView = NSHostingView(rootView: root)
         super.init(frame: .zero)
         wantsLayer = true
+        clipsToBounds = true
         hostingView.sizingOptions = []
         hostingView.safeAreaRegions = []
         hostingView.autoresizingMask = [.width, .height]

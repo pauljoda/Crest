@@ -38,6 +38,7 @@ struct BrowserSidebarSplitGroupRow: View {
     /// decides *whether* and *which*, the host decides what appears.
     let select: (TabID) -> Void
 
+    @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @State private var renameRequest: BrowserSplitGroupRuntimeAssignment?
     @State private var iconRequest: BrowserSplitGroupRuntimeAssignment?
     @State private var tintRequest: BrowserSplitGroupRuntimeAssignment?
@@ -59,7 +60,7 @@ struct BrowserSidebarSplitGroupRow: View {
             BrowserFolderColorPicker(
                 color: interaction.tint,
                 title: "Split View Color",
-                showsReset: configuration.metadata.tint != nil,
+                showsReset: configuration.displayMetadata.tint != nil,
                 resetTitle: "Use Default Color",
                 reset: interaction.resetTint
             )
@@ -69,10 +70,13 @@ struct BrowserSidebarSplitGroupRow: View {
             guard renameRequest != assignment else { return }
             clearDeferredActions()
         }
-        .onChange(of: configuration.isCurrentAndUnlocked) { _, available in
-            guard !available else { return }
-            clearDeferredActions()
-        }
+        .modifier(
+            SidebarSpaceRoleCleanupModifier(
+                isAvailable: configuration.isAvailableForDisplay,
+                hasPendingActions: renameRequest != nil || iconRequest != nil || tintRequest != nil,
+                cancel: clearDeferredActions
+            )
+        )
     }
 
     private var configuration: BrowserSidebarSplitGroupRowConfiguration {
@@ -93,7 +97,8 @@ struct BrowserSidebarSplitGroupRow: View {
             promotionNamespace: promotionNamespace,
             followingTabID: followingTabID,
             hasVisibleFollowingRow: hasVisibleFollowingRow,
-            select: select
+            select: select,
+            spacePresentation: spacePresentation
         )
     }
 
@@ -119,7 +124,7 @@ struct BrowserSidebarSplitGroupRow: View {
 
     private var isRenaming: Bool {
         renameRequest == configuration.runtimeAssignment
-            && configuration.isCurrentAndUnlocked
+            && configuration.isAvailableForDisplay
     }
 
     private func activate() {
@@ -180,7 +185,7 @@ struct BrowserSidebarSplitGroupRow: View {
     ) -> Binding<Bool> {
         Binding {
             request.wrappedValue == configuration.runtimeAssignment
-                && configuration.isCurrentAndUnlocked
+                && configuration.isAvailableForDisplay
         } set: { isPresented in
             if isPresented {
                 begin()
@@ -192,7 +197,7 @@ struct BrowserSidebarSplitGroupRow: View {
 
     private var tintBinding: Binding<BrowserSpaceBrandColor> {
         Binding {
-            configuration.metadata.tint ?? .folderDefault
+            configuration.displayMetadata.tint ?? .folderDefault
         } set: { tint in
             guard tintRequest == configuration.runtimeAssignment,
                 configuration.isCurrentAndUnlocked

@@ -34,6 +34,7 @@ struct BrowserSidebarTabRowConfiguration {
     let followingTabID: TabID?
     let hasVisibleFollowingRow: Bool
     let select: (TabID) -> Void
+    var spacePresentation: SidebarSpacePresentation? = nil
 
     var metrics: BrowserSidebarTabRowMetrics {
         BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
@@ -100,6 +101,14 @@ struct BrowserSidebarTabRowConfiguration {
             spaceID: spaceID,
             profileID: profileID
         )
+    }
+
+    /// Inactive pages retain their normal control appearance while commands
+    /// remain guarded by the live selected Space below.
+    var isAvailableForDisplay: Bool {
+        guard let spacePresentation else { return isCurrentAndUnlocked }
+        return spacePresentation.isAvailable(matching: assignment)
+            && spacePresentation.tabIDs.contains(tab.id)
     }
 
     var isCurrentAndUnlocked: Bool {
