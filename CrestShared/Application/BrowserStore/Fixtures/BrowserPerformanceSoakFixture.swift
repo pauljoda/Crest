@@ -59,6 +59,7 @@ enum BrowserPerformanceSoakFixture {
         tabCount: Int,
         runID: String
     ) -> BrowserSession? {
+        let colors: [BrowserSpaceBrandColor] = [.teal, .ember, .indigo, .gold, .rose, .sage]
         let spaces = (1...6).compactMap { spaceIndex -> BrowserSpace? in
             let folders = (1...8).map { folderIndex in
                 BrowserFolder(title: "Collection \(spaceIndex)-\(folderIndex)")
@@ -109,6 +110,11 @@ enum BrowserPerformanceSoakFixture {
                 name: "Performance \(spaceIndex)",
                 symbol: "gauge.with.dots.needle.67percent",
                 accent: .teal,
+                branding: BrowserSpaceBranding(
+                    colors: [colors[spaceIndex - 1]],
+                    bannerPattern: .solid,
+                    readabilityFade: 0.12
+                ),
                 folders: folders,
                 tabs: tabs,
                 history: history,

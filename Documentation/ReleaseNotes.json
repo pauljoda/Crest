@@ -717,6 +717,10 @@
     "2026-09-08-direct-space-swipe-settling": {
       "category": "fixed",
       "message": "Let consecutive Space swipes advance smoothly and settle without bouncing"
+    },
+    "2026-09-08-space-swipe-travel-boundaries": {
+      "category": "fixed",
+      "message": "Stop long Space swipes at their destination without sliding past and returning"
     }
   }
 }

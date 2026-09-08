@@ -101,6 +101,14 @@ A separate native viewport probe released a page 20 points before its endpoint a
 
 The existing interruption test now includes the short successive flick and checks actual presentation frames for monotonic settling in both layout directions. The old spring-velocity assertion was replaced with the requested direct-settling behavior. All 18 focused macOS tests and the optimized Mac build passed. A separate phased `NSEvent` probe, using the production gesture handler and velocity calculation with controlled event samples, also rejects the second destination before the change and accepts it afterward; intervening momentum remains consumed. These probes exercise native views and their rendered presentation positions; they do not establish physical trackpad feel in the full application.
 
+## Long swipe boundaries and demo colors (0.5.86)
+
+The remaining overshoot began during finger tracking. A 480-point drag in a 320-point viewport placed the outgoing page at −365.71 points, then the basic release animation returned it to −320. Removing the spring alone therefore did not remove the complete pass-and-return interaction.
+
+Tracking now stops at the destination and discards input beyond that boundary. A one-point reversal immediately moves the page back by one point, even after further outward input. The old rubber-band resistance, inverse-resistance restart calculation, and resistance-based velocity scaling were removed. Native presentation samples for the same long gesture remain at −320 throughout release. The first and last Spaces likewise stay within their outer boundaries. Existing interruption and frame tests cover bounded long drags and immediate reversal in both layout directions; obsolete edge-resistance assertions were replaced.
+
+The heavy demo fixture now uses six distinct solid backgrounds (teal, ember, indigo, gold, rose, and sage) so neighboring pages are visually distinguishable during a swipe. This uses ordinary Space branding in the isolated fixture. All 18 focused macOS tests, the optimized Mac build, formatting, and architecture checks passed. Physical swipe feel remains subject to user validation.
+
 ## Remaining work
 
 The [implementation plan](implementation-plan.md) remains the ordered direction for full structural revision separation, narrower row observations, extension readiness/recovery and preparation, the remaining name/owner consolidation, and shared page lifecycle behavior. This slice does not claim to solve the Dark Reader cold/idle popup or page-load delays. Physical trackpad/wheel calibration, frame/hitch instrumentation, contrasting-brand motion, larger sessions and phone interaction remain acceptance work for the complete Space performance milestone.

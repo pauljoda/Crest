@@ -408,26 +408,16 @@ final class SpaceScrollGestureTests: XCTestCase {
         update(selected: spaces[0].id)
         let edge = try XCTUnwrap(viewport.beginInteractiveMotion())
         XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 39, token: edge))
-        let beforeLastPoint = source.frame.minX
+        XCTAssertEqual(source.frame.minX, 0, "The first Space must not expose empty space beyond its edge")
         XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 1, token: edge))
-        XCTAssertGreaterThan(source.frame.minX, beforeLastPoint)
-        let releasePosition = source.frame.minX
+        XCTAssertEqual(source.frame.minX, 0)
         XCTAssertTrue(viewport.endInteractiveMotion(velocity: 1000, cancelled: false, token: edge))
-        CATransaction.flush()
-        try await Task.sleep(for: .milliseconds(20))
-        let edgePosition = (sourceLayer.presentation() ?? sourceLayer).frame.minX
-        XCTAssertGreaterThanOrEqual(edgePosition, -0.5)
-        XCTAssertLessThanOrEqual(edgePosition, releasePosition + 0.5, "Release must move directly toward the endpoint")
+        XCTAssertNil(viewport.motion, "An unmoved page has no return animation")
         let edgeRestart = try XCTUnwrap(viewport.beginInteractiveMotion())
-        XCTAssertEqual(source.frame.minX, edgePosition, accuracy: 0.5)
-        let inheritedEdge = source.frame.minX
-        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 1, token: edgeRestart))
-        XCTAssertGreaterThan(
-            source.frame.minX, inheritedEdge,
-            "Continuing edge travel must not apply resistance twice and jump backward")
-        let restartedEdgePosition = source.frame.minX
+        XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 100, token: edgeRestart))
+        XCTAssertEqual(source.frame.minX, 0)
         XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: true, token: edgeRestart))
-        try await assertDirectSettlement(viewport, host: source, start: restartedEdgePosition, endpoint: 0)
+        XCTAssertNil(viewport.motion)
         XCTAssertEqual(selections, [spaces[2].id])
 
         viewport.step(.next)
@@ -619,6 +609,24 @@ final class SpaceScrollGestureTests: XCTestCase {
             try await assertDirectSettlement(
                 viewport, host: outgoingHost, start: forward * 300, endpoint: forward * viewport.bounds.width)
             XCTAssertEqual(viewport.presentationSpaceID, spaces[3].id)
+
+            // Long gestures stop at the next page, and excess input must not
+            // accumulate into a dead zone when the fingers reverse direction.
+            let long = try XCTUnwrap(viewport.beginInteractiveMotion())
+            let longSource = try XCTUnwrap(
+                viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
+                    $0.hostingView.rootView.assignment.spaceID == spaces[3].id
+                })
+            let endpoint = forward * viewport.bounds.width
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 480, token: long))
+            XCTAssertEqual(longSource.frame.minX, endpoint, accuracy: 0.001)
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 80, token: long))
+            XCTAssertEqual(longSource.frame.minX, endpoint, accuracy: 0.001)
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -forward, token: long))
+            XCTAssertEqual(longSource.frame.minX, endpoint - forward, accuracy: 0.001)
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: false, token: long))
+            try await assertDirectSettlement(viewport, host: longSource, start: endpoint - forward, endpoint: endpoint)
+            XCTAssertEqual(viewport.presentationSpaceID, spaces[4].id)
         }
     }
 

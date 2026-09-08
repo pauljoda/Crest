@@ -11,8 +11,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         let origin: BrowserSpaceRuntimeAssignment
         var target: BrowserSpaceRuntimeAssignment?
         var offset: CGFloat = 0
-        var initialRawOffset: CGFloat = 0
-        var resistanceLength: CGFloat = 0
+        var initialOffset: CGFloat = 0
         var translation: CGFloat = 0
         var direction: CGFloat = 0
         var settledDestination: SpaceID?
@@ -220,17 +219,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         // gesture owns its displacement independently of this inherited offset.
         stopHostAnimations()
         presentationSpaceID = origin.spaceID
-        let minimum: CGFloat = neighbor(forPhysicalDirection: -1) == nil ? 0 : -bounds.width
-        let maximum: CGFloat = neighbor(forPhysicalDirection: 1) == nil ? 0 : bounds.width
-        let limit = min(maximum, max(minimum, inheritedOffset))
-        let excess = inheritedOffset - limit
-        let resistanceLength = max(bounds.width * 0.2, abs(excess) * 2)
-        // The captured value has already passed through resistance. Invert it
-        // once so the next sample cannot apply that resistance a second time.
-        let rawOffset = limit + excess / (1 - abs(excess) / resistanceLength)
         motion = Motion(
             generation: generation, origin: origin, offset: inheritedOffset,
-            initialRawOffset: rawOffset, resistanceLength: resistanceLength,
+            initialOffset: inheritedOffset,
             commitsSelection: true, usesNativeTracking: true)
         positionHosts()
         updateAccessibility()
@@ -251,13 +242,15 @@ final class SpacePagerViewport<Content: View>: NSView {
                 prepareHosts(around: current.origin.spaceID, retaining: target.spaceID, refreshContent: false)
             }
         }
-        current.translation += deltaX
-        let travel = current.direction * max(0, current.translation * current.direction)
-        let rawOffset = current.initialRawOffset + travel
         let minimum: CGFloat = neighbor(forPhysicalDirection: -1) == nil ? 0 : -bounds.width
         let maximum: CGFloat = neighbor(forPhysicalDirection: 1) == nil ? 0 : bounds.width
-        current.offset = resistedOffset(
-            rawOffset, minimum: minimum, maximum: maximum, resistanceLength: current.resistanceLength)
+        let availableTravel =
+            current.direction < 0 ? current.initialOffset - minimum : maximum - current.initialOffset
+        // Stop at the destination while tracking. Discard excess input so a
+        // reversal moves immediately instead of first unwinding hidden travel.
+        let travel = min(max(0, availableTravel), max(0, (current.translation + deltaX) * current.direction))
+        current.translation = travel * current.direction
+        current.offset = current.initialOffset + current.translation
         motion = current
         positionHosts()
         publishPresentation()
@@ -271,12 +264,12 @@ final class SpacePagerViewport<Content: View>: NSView {
         let travel = max(0, current.translation * current.direction)
         // A fresh flick must qualify on its own even while the incoming page
         // still has distance to travel. Slow drags also retain visible progress.
-        let visibleVelocity = cancelled ? 0 : visibleVelocity(velocity, during: current)
+        let releaseVelocity = cancelled || travel == 0 ? 0 : velocity
         let progress = max(travel, current.offset * current.direction)
-        let projectedTravel = progress + visibleVelocity * current.direction * 0.15
+        let projectedTravel = progress + releaseVelocity * current.direction * 0.15
         let completes = !cancelled && travel > 0 && projectedTravel >= bounds.width / 2
         let destination = completes ? current.target?.spaceID : nil
-        settleMotion(to: destination ?? current.origin.spaceID, velocity: visibleVelocity)
+        settleMotion(to: destination ?? current.origin.spaceID, velocity: releaseVelocity)
         return true
     }
 
@@ -325,26 +318,6 @@ final class SpacePagerViewport<Content: View>: NSView {
         positionHosts()
         updateAccessibility()
         settleMotion(to: destination, velocity: 0)
-    }
-
-    private func resistedOffset(
-        _ offset: CGFloat, minimum: CGFloat, maximum: CGFloat, resistanceLength: CGFloat
-    ) -> CGFloat {
-        let limit = min(maximum, max(minimum, offset))
-        let excess = offset - limit
-        guard excess != 0 else { return offset }
-        return limit + excess / (1 + abs(excess) / resistanceLength)
-    }
-
-    private func visibleVelocity(_ velocity: CGFloat, during current: Motion) -> CGFloat {
-        guard current.translation * current.direction > 0 else { return 0 }
-        let rawOffset = current.initialRawOffset + current.translation
-        let minimum: CGFloat = neighbor(forPhysicalDirection: -1) == nil ? 0 : -bounds.width
-        let maximum: CGFloat = neighbor(forPhysicalDirection: 1) == nil ? 0 : bounds.width
-        let excess = rawOffset - min(maximum, max(minimum, rawOffset))
-        guard excess != 0 else { return velocity }
-        let scale = 1 + abs(excess) / current.resistanceLength
-        return velocity / (scale * scale)
     }
 
     private func visibleOffset(for key: BrowserSpaceRuntimeAssignment, during current: Motion) -> CGFloat {
