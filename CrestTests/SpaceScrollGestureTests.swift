@@ -510,6 +510,78 @@ final class SpaceScrollGestureTests: XCTestCase {
         XCTAssertEqual(selections, [spaces[2].id, spaces[1].id])
     }
 
+    func testRepeatedSwipeInterruptionsKeepVisiblePagesAndCommitOnlyLatestDestination() async throws {
+        for layoutDirection in [LayoutDirection.leftToRight, .rightToLeft] {
+            let spaces = nativeSpaces(count: 8)
+            let (window, viewport) = makeNativeViewport()
+            defer {
+                viewport.teardown()
+                window.contentView = nil
+                window.close()
+            }
+            var selections: [SpaceID] = []
+            viewport.update(
+                spaces: spaces, selectedSpaceID: spaces[0].id, isInteractionLocked: false,
+                reduceMotion: false, layoutDirection: layoutDirection,
+                selectSpace: {
+                    selections.append($0)
+                    return $0
+                }, settledSpace: { _ in },
+                makeRoot: nativeRoot)
+            viewport.layoutSubtreeIfNeeded()
+            CATransaction.flush()
+            try await Task.sleep(for: .milliseconds(20))
+            let forward: CGFloat = layoutDirection == .leftToRight ? -1 : 1
+
+            // Restart several short flicks before any spring has settled or
+            // presented another frame. Pending destinations must not outrun
+            // the actual pages and leave the viewport empty.
+            for _ in 0..<6 {
+                let token = try XCTUnwrap(viewport.beginInteractiveMotion())
+                XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 16, token: token))
+                let visibleWidth = viewport.subviews.filter { !$0.isHidden }.reduce(CGFloat.zero) {
+                    let intersection = $1.frame.intersection(viewport.bounds)
+                    return $0 + (intersection.isNull ? 0 : intersection.width)
+                }
+                XCTAssertEqual(visibleWidth, viewport.bounds.width, accuracy: 0.5)
+                XCTAssertTrue(viewport.endInteractiveMotion(velocity: forward * 1800, cancelled: false, token: token))
+                XCTAssertTrue(selections.isEmpty)
+            }
+            try await awaitSettlement(viewport)
+            XCTAssertEqual(selections, [spaces[1].id])
+
+            // A later reversal takes over the partially arrived next page;
+            // its superseded completion must never select that next Space.
+            let outgoing = try XCTUnwrap(viewport.beginInteractiveMotion())
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 224, token: outgoing))
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: forward * 500, cancelled: false, token: outgoing))
+            CATransaction.flush()
+            try await Task.sleep(for: .milliseconds(20))
+            let reverse = try XCTUnwrap(viewport.beginInteractiveMotion())
+            XCTAssertEqual(viewport.presentationSpaceID, spaces[2].id)
+            XCTAssertFalse(viewport.endInteractiveMotion(velocity: 0, cancelled: false, token: outgoing))
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -forward * 32, token: reverse))
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: -forward * 1400, cancelled: false, token: reverse))
+            try await awaitSettlement(viewport)
+            XCTAssertEqual(viewport.presentationSpaceID, spaces[1].id)
+            XCTAssertEqual(selections, [spaces[1].id])
+
+            // A slow continuation still counts the distance already visible
+            // before interruption when choosing which page to settle on.
+            let partial = try XCTUnwrap(viewport.beginInteractiveMotion())
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 120, token: partial))
+            CATransaction.flush()
+            try await Task.sleep(for: .milliseconds(20))
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: forward * 1000, cancelled: false, token: partial))
+            let continuation = try XCTUnwrap(viewport.beginInteractiveMotion())
+            XCTAssertEqual(viewport.presentationSpaceID, spaces[1].id)
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 60, token: continuation))
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: false, token: continuation))
+            try await awaitSettlement(viewport)
+            XCTAssertEqual(selections, [spaces[1].id, spaces[2].id])
+        }
+    }
+
     private func awaitSettlement(_ viewport: SpacePagerViewport<Text>) async throws {
         let deadline = ContinuousClock.now.advanced(by: .seconds(3))
         while viewport.motion != nil, ContinuousClock.now < deadline {
@@ -546,8 +618,8 @@ final class SpaceScrollGestureTests: XCTestCase {
         return (window, viewport)
     }
 
-    private func nativeSpaces() -> [BrowserSpace] {
-        (0..<3).map { index in
+    private func nativeSpaces(count: Int = 3) -> [BrowserSpace] {
+        (0..<count).map { index in
             BrowserSpace(
                 id: SpaceID(), profile: BrowsingProfile(), name: "Space \(index)",
                 symbol: "globe", accent: .indigo, folders: [], tabs: [], selectedTabID: nil)

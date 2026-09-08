@@ -199,14 +199,27 @@ final class SpacePagerViewport<Content: View>: NSView {
         guard !isInteractionLocked, bounds.width > 0, spaces.count > 1 else { return nil }
         stopPresentationSampling()
         let previous = motion
-        let originID = previous?.settledDestination ?? presentationSpaceID
-        guard let originID, let origin = assignment(for: originID), hosts[origin] != nil else { return nil }
-        let inheritedOffset = previous.map { visibleOffset(for: origin, during: $0) } ?? 0
+        let originID = previous?.origin.spaceID ?? presentationSpaceID
+        guard let originID, var origin = assignment(for: originID), hosts[origin] != nil else { return nil }
+        var inheritedOffset = previous.map { visibleOffset(for: origin, during: $0) } ?? 0
+        if previous != nil, let index = spaces.firstIndex(where: { $0.id == origin.spaceID }) {
+            // Restart from the nearest visible page, using one presentation
+            // sample for the entire strip. A newly admitted neighbor's layer
+            // can still report geometry from an earlier layout transaction.
+            let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
+            let displacement = Int((-inheritedOffset * direction / bounds.width).rounded())
+            let nearestIndex = min(spaces.count - 1, max(0, index + displacement))
+            let nearest = BrowserSpaceRuntimeAssignment(space: spaces[nearestIndex])
+            if hosts[nearest] != nil {
+                inheritedOffset += CGFloat(nearestIndex - index) * bounds.width * direction
+                origin = nearest
+            }
+        }
         generation &+= 1
         // Capture presentation before removing an interrupted spring. The new
         // gesture owns its displacement independently of this inherited offset.
         stopHostAnimations()
-        presentationSpaceID = originID
+        presentationSpaceID = origin.spaceID
         let minimum: CGFloat = neighbor(forPhysicalDirection: -1) == nil ? 0 : -bounds.width
         let maximum: CGFloat = neighbor(forPhysicalDirection: 1) == nil ? 0 : bounds.width
         let limit = min(maximum, max(minimum, inheritedOffset))
@@ -256,12 +269,12 @@ final class SpacePagerViewport<Content: View>: NSView {
             !isInteractionLocked, !isHiddenOrHasHiddenAncestor, window != nil
         else { return false }
         let travel = max(0, current.translation * current.direction)
-        // Project recent point velocity over a short release interval. This
-        // decides the destination; it does not scale finger-following motion.
-        let projectedTravel = travel + velocity * current.direction * 0.15
+        // Include the inherited visible displacement when restarting a swipe.
+        // Release chooses where the page is heading, without scaling tracking.
+        let visibleVelocity = cancelled ? 0 : visibleVelocity(velocity, during: current)
+        let projectedTravel = (current.offset + visibleVelocity * 0.15) * current.direction
         let completes = !cancelled && travel > 0 && projectedTravel >= bounds.width / 2
         let destination = completes ? current.target?.spaceID : nil
-        let visibleVelocity = cancelled ? 0 : visibleVelocity(velocity, during: current)
         settleMotion(to: destination ?? current.origin.spaceID, velocity: visibleVelocity)
         return true
     }
@@ -349,7 +362,8 @@ final class SpacePagerViewport<Content: View>: NSView {
         current.offset = startOffset
         current.settledDestination = destination
         let targetOffset: CGFloat = destination == current.origin.spaceID ? 0 : current.direction * bounds.width
-        let spring = CASpringAnimation(perceptualDuration: 0.22, bounce: 0)
+        let perceptualDuration: TimeInterval = 0.22
+        let spring = CASpringAnimation(perceptualDuration: perceptualDuration, bounce: 0)
         let distance = targetOffset - startOffset
         // Core Animation velocity is normalized to signed remaining distance.
         spring.initialVelocity = abs(distance) > 0.01 ? velocity / distance : 0
@@ -366,7 +380,14 @@ final class SpacePagerViewport<Content: View>: NSView {
             context.timingFunction = CAMediaTimingFunction(name: .linear)
             for (key, host) in hosts {
                 let end = restingOffset(for: key, during: current) + targetOffset
-                host.animations = ["frameOrigin": spring]
+                let pageSpring = CASpringAnimation(perceptualDuration: perceptualDuration, bounce: 0)
+                pageSpring.duration = spring.duration
+                pageSpring.initialVelocity = spring.initialVelocity
+                // The last tracking frame may not have rendered yet. AppKit's
+                // default start can then be an older, different offset for each
+                // page; give it the coherent native position we just tracked.
+                pageSpring.fromValue = NSValue(point: host.frame.origin)
+                host.animations = ["frameOrigin": pageSpring]
                 host.animator().setFrameOrigin(NSPoint(x: end, y: 0))
             }
         } completionHandler: { [weak self] in

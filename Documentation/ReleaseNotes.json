@@ -709,6 +709,10 @@
     "2026-09-07-steady-space-chrome": {
       "category": "improved",
       "message": "Keep sidebar controls steady while swiping between Spaces"
+    },
+    "2026-09-08-interruptible-space-swipes": {
+      "category": "fixed",
+      "message": "Keep rapid successive Space swipes continuous when interrupting an animation"
     }
   }
 }
