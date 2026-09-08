@@ -713,6 +713,10 @@
     "2026-09-08-interruptible-space-swipes": {
       "category": "fixed",
       "message": "Keep rapid successive Space swipes continuous when interrupting an animation"
+    },
+    "2026-09-08-direct-space-swipe-settling": {
+      "category": "fixed",
+      "message": "Let consecutive Space swipes advance smoothly and settle without bouncing"
     }
   }
 }

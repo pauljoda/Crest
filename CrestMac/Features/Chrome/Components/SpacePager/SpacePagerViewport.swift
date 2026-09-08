@@ -216,7 +216,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             }
         }
         generation &+= 1
-        // Capture presentation before removing an interrupted spring. The new
+        // Capture presentation before removing an interrupted animation. The new
         // gesture owns its displacement independently of this inherited offset.
         stopHostAnimations()
         presentationSpaceID = origin.spaceID
@@ -269,10 +269,11 @@ final class SpacePagerViewport<Content: View>: NSView {
             !isInteractionLocked, !isHiddenOrHasHiddenAncestor, window != nil
         else { return false }
         let travel = max(0, current.translation * current.direction)
-        // Include the inherited visible displacement when restarting a swipe.
-        // Release chooses where the page is heading, without scaling tracking.
+        // A fresh flick must qualify on its own even while the incoming page
+        // still has distance to travel. Slow drags also retain visible progress.
         let visibleVelocity = cancelled ? 0 : visibleVelocity(velocity, during: current)
-        let projectedTravel = (current.offset + visibleVelocity * 0.15) * current.direction
+        let progress = max(travel, current.offset * current.direction)
+        let projectedTravel = progress + visibleVelocity * current.direction * 0.15
         let completes = !cancelled && travel > 0 && projectedTravel >= bounds.width / 2
         let destination = completes ? current.target?.spaceID : nil
         settleMotion(to: destination ?? current.origin.spaceID, velocity: visibleVelocity)
@@ -362,12 +363,10 @@ final class SpacePagerViewport<Content: View>: NSView {
         current.offset = startOffset
         current.settledDestination = destination
         let targetOffset: CGFloat = destination == current.origin.spaceID ? 0 : current.direction * bounds.width
-        let perceptualDuration: TimeInterval = 0.22
-        let spring = CASpringAnimation(perceptualDuration: perceptualDuration, bounce: 0)
         let distance = targetOffset - startOffset
-        // Core Animation velocity is normalized to signed remaining distance.
-        spring.initialVelocity = abs(distance) > 0.01 ? velocity / distance : 0
-        spring.duration = spring.settlingDuration
+        let speedTowardDestination = max(0, velocity * (distance < 0 ? -1 : 1))
+        let duration = min(0.22, max(0.10, abs(distance) / max(1, speedTowardDestination)))
+        let timing = CAMediaTimingFunction(name: .easeOut)
         motion = current
         updateAccessibility()
         publishPresentation()
@@ -376,18 +375,18 @@ final class SpacePagerViewport<Content: View>: NSView {
             return
         }
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = spring.duration
-            context.timingFunction = CAMediaTimingFunction(name: .linear)
+            context.duration = duration
+            context.timingFunction = timing
             for (key, host) in hosts {
                 let end = restingOffset(for: key, during: current) + targetOffset
-                let pageSpring = CASpringAnimation(perceptualDuration: perceptualDuration, bounce: 0)
-                pageSpring.duration = spring.duration
-                pageSpring.initialVelocity = spring.initialVelocity
+                let animation = CABasicAnimation()
+                animation.duration = duration
+                animation.timingFunction = timing
                 // The last tracking frame may not have rendered yet. AppKit's
                 // default start can then be an older, different offset for each
                 // page; give it the coherent native position we just tracked.
-                pageSpring.fromValue = NSValue(point: host.frame.origin)
-                host.animations = ["frameOrigin": pageSpring]
+                animation.fromValue = NSValue(point: host.frame.origin)
+                host.animations = ["frameOrigin": animation]
                 host.animator().setFrameOrigin(NSPoint(x: end, y: 0))
             }
         } completionHandler: { [weak self] in

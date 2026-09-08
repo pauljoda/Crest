@@ -386,7 +386,7 @@ final class SpaceScrollGestureTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(20))
         XCTAssertEqual(
             (sourceLayer.presentation() ?? sourceLayer).frame.minX, inherited - 1, accuracy: 0.5,
-            "An interrupted spring must stay stopped after AppKit layout and the next frame")
+            "An interrupted animation must stay stopped after AppKit layout and the next frame")
         XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: -255, token: second))
         XCTAssertTrue(viewport.endInteractiveMotion(velocity: -900, cancelled: false, token: second))
         XCTAssertTrue(selections.isEmpty)
@@ -410,18 +410,14 @@ final class SpaceScrollGestureTests: XCTestCase {
         XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 39, token: edge))
         let beforeLastPoint = source.frame.minX
         XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: 1, token: edge))
-        let visibleReleaseSpeed = (source.frame.minX - beforeLastPoint) * 1000
-        let springStart = source.frame.minX
+        XCTAssertGreaterThan(source.frame.minX, beforeLastPoint)
+        let releasePosition = source.frame.minX
         XCTAssertTrue(viewport.endInteractiveMotion(velocity: 1000, cancelled: false, token: edge))
-        let edgeSpring = try XCTUnwrap(sourceLayer.animation(forKey: "position") as? CASpringAnimation)
-        let springEnd = source.frame.minX
-        XCTAssertEqual(
-            edgeSpring.initialVelocity * (springEnd - springStart), visibleReleaseSpeed,
-            accuracy: visibleReleaseSpeed * 0.03,
-            "Release must carry the visible edge speed, not suddenly restore undamped input speed")
         CATransaction.flush()
         try await Task.sleep(for: .milliseconds(20))
         let edgePosition = (sourceLayer.presentation() ?? sourceLayer).frame.minX
+        XCTAssertGreaterThanOrEqual(edgePosition, -0.5)
+        XCTAssertLessThanOrEqual(edgePosition, releasePosition + 0.5, "Release must move directly toward the endpoint")
         let edgeRestart = try XCTUnwrap(viewport.beginInteractiveMotion())
         XCTAssertEqual(source.frame.minX, edgePosition, accuracy: 0.5)
         let inheritedEdge = source.frame.minX
@@ -429,8 +425,9 @@ final class SpaceScrollGestureTests: XCTestCase {
         XCTAssertGreaterThan(
             source.frame.minX, inheritedEdge,
             "Continuing edge travel must not apply resistance twice and jump backward")
+        let restartedEdgePosition = source.frame.minX
         XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: true, token: edgeRestart))
-        try await awaitSettlement(viewport)
+        try await assertDirectSettlement(viewport, host: source, start: restartedEdgePosition, endpoint: 0)
         XCTAssertEqual(selections, [spaces[2].id])
 
         viewport.step(.next)
@@ -447,7 +444,7 @@ final class SpaceScrollGestureTests: XCTestCase {
         XCTAssertFalse(activeHost.isAccessibilityHidden())
 
         // Command slides reuse ready roots; completion receives the latest
-        // content and role even if another update arrives during the spring.
+        // content and role even if another update arrives during the animation.
         update(selected: spaces[0].id)
         update(selected: spaces[1].id)
         XCTAssertNotNil(viewport.motion)
@@ -533,7 +530,7 @@ final class SpaceScrollGestureTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(20))
             let forward: CGFloat = layoutDirection == .leftToRight ? -1 : 1
 
-            // Restart several short flicks before any spring has settled or
+            // Restart several short flicks before any transition has settled or
             // presented another frame. Pending destinations must not outrun
             // the actual pages and leave the viewport empty.
             for _ in 0..<6 {
@@ -549,6 +546,37 @@ final class SpaceScrollGestureTests: XCTestCase {
             }
             try await awaitSettlement(viewport)
             XCTAssertEqual(selections, [spaces[1].id])
+
+            // A short fresh flick qualifies independently of the unfinished
+            // incoming offset. It must advance now, without a third gesture.
+            let firstFlick = try XCTUnwrap(viewport.beginInteractiveMotion())
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 224, token: firstFlick))
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: forward * 500, cancelled: false, token: firstFlick))
+            CATransaction.flush()
+            try await Task.sleep(for: .milliseconds(20))
+            let nextFlick = try XCTUnwrap(viewport.beginInteractiveMotion())
+            XCTAssertEqual(viewport.presentationSpaceID, spaces[2].id)
+            let incoming = try XCTUnwrap(
+                viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
+                    $0.hostingView.rootView.assignment.spaceID == spaces[2].id
+                })
+            let inherited = incoming.frame.minX
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 32, token: nextFlick))
+            XCTAssertEqual(incoming.frame.minX, inherited + forward * 32, accuracy: 0.001)
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: forward * 1000, cancelled: false, token: nextFlick))
+            try await assertDirectSettlement(
+                viewport, host: incoming, start: inherited + forward * 32, endpoint: forward * viewport.bounds.width)
+            XCTAssertEqual(selections, [spaces[1].id, spaces[3].id])
+
+            // Return to the previous baseline for reversal and slow-drag cases.
+            viewport.update(
+                spaces: spaces, selectedSpaceID: spaces[1].id, isInteractionLocked: false,
+                reduceMotion: false, layoutDirection: layoutDirection,
+                selectSpace: {
+                    selections.append($0)
+                    return $0
+                }, settledSpace: { _ in }, makeRoot: nativeRoot)
+            selections = [spaces[1].id]
 
             // A later reversal takes over the partially arrived next page;
             // its superseded completion must never select that next Space.
@@ -579,7 +607,40 @@ final class SpaceScrollGestureTests: XCTestCase {
             XCTAssertTrue(viewport.endInteractiveMotion(velocity: 0, cancelled: false, token: continuation))
             try await awaitSettlement(viewport)
             XCTAssertEqual(selections, [spaces[1].id, spaces[2].id])
+
+            // Even a fast release close to the endpoint must never pass it.
+            let fast = try XCTUnwrap(viewport.beginInteractiveMotion())
+            let outgoingHost = try XCTUnwrap(
+                viewport.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
+                    $0.hostingView.rootView.assignment.spaceID == spaces[2].id
+                })
+            XCTAssertTrue(viewport.updateInteractiveMotion(deltaX: forward * 300, token: fast))
+            XCTAssertTrue(viewport.endInteractiveMotion(velocity: forward * 4000, cancelled: false, token: fast))
+            try await assertDirectSettlement(
+                viewport, host: outgoingHost, start: forward * 300, endpoint: forward * viewport.bounds.width)
+            XCTAssertEqual(viewport.presentationSpaceID, spaces[3].id)
         }
+    }
+
+    private func assertDirectSettlement(
+        _ viewport: SpacePagerViewport<Text>, host: NSView, start startPosition: CGFloat, endpoint: CGFloat,
+        file: StaticString = #filePath, line: UInt = #line
+    ) async throws {
+        var remaining = abs(endpoint - startPosition)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while viewport.motion != nil, ContinuousClock.now < deadline {
+            CATransaction.flush()
+            try await Task.sleep(for: .milliseconds(10))
+            let position = host.layer?.presentation()?.frame.minX ?? host.frame.minX
+            XCTAssertGreaterThanOrEqual(position, min(startPosition, endpoint) - 0.5, file: file, line: line)
+            XCTAssertLessThanOrEqual(position, max(startPosition, endpoint) + 0.5, file: file, line: line)
+            let nextRemaining = abs(endpoint - position)
+            XCTAssertLessThanOrEqual(
+                nextRemaining, remaining + 0.5, "Settling must not reverse direction", file: file, line: line)
+            remaining = nextRemaining
+        }
+        XCTAssertNil(viewport.motion, file: file, line: line)
+        XCTAssertEqual(host.frame.minX, endpoint, accuracy: 0.5, file: file, line: line)
     }
 
     private func awaitSettlement(_ viewport: SpacePagerViewport<Text>) async throws {
