@@ -701,6 +701,10 @@
     "2026-09-07-native-space-control-ownership": {
       "category": "internal",
       "message": "Keep native Space controls and Getting Started icons in their platform layers"
+    },
+    "2026-09-07-shared-infrastructure-consolidation": {
+      "category": "internal",
+      "message": "Consolidate shared infrastructure into cohesive domains with simpler paths"
     }
   }
 }

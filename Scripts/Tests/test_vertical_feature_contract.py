@@ -109,6 +109,14 @@ extension Owner {
 private let ownerLogCategory = "Owner"
 """,
         )
+        self.write_source(
+            "CrestShared/Infrastructure/Sync/Owner+Equatable.swift",
+            """extension BrowserOwner: Equatable {}
+extension BrowserOwner {
+    static let defaultValue = BrowserOwner()
+}
+""",
+        )
 
         self.assertEqual(self.violation_keys(), set())
 
@@ -142,6 +150,18 @@ extension Owner: Equatable {}
 extension Other: Equatable {}
 """,
         )
+        self.write_source(
+            "CrestShared/Infrastructure/Sync/Owner+Equatable.swift",
+            "extension Owner: Equatable {}\nextension BrowserOwner: Equatable {}\n",
+        )
+        self.write_source(
+            "CrestShared/Infrastructure/Sync/Unrelated+Equatable.swift",
+            "extension BrowserOther: Equatable {}\n",
+        )
+        self.write_source(
+            "CrestShared/Domain/Simplified+Equatable.swift",
+            "extension BrowserSimplified: Equatable {}\n",
+        )
 
         self.assertEqual(
             self.violation_keys(),
@@ -155,6 +175,21 @@ extension Other: Equatable {}
                     "extension-file-owner-mismatch",
                     "CrestShared/Domain/Owner+Equatable.swift",
                     "Other",
+                ),
+                (
+                    "extension-file-owner-mismatch",
+                    "CrestShared/Infrastructure/Sync/Owner+Equatable.swift",
+                    "BrowserOwner",
+                ),
+                (
+                    "extension-file-owner-mismatch",
+                    "CrestShared/Infrastructure/Sync/Unrelated+Equatable.swift",
+                    "BrowserOther",
+                ),
+                (
+                    "extension-file-owner-mismatch",
+                    "CrestShared/Domain/Simplified+Equatable.swift",
+                    "BrowserSimplified",
                 ),
             },
         )

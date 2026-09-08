@@ -635,6 +635,14 @@ def _source_violations(
         unrelated_targets = sorted(
             target for target in set(extension_targets) if target != owner_name
         )
+        # Infrastructure paths omit the redundant Browser prefix while Swift
+        # symbols retain it. Still require one exact owner across the file.
+        if (
+            relative_path.startswith("CrestShared/Infrastructure/")
+            and not owner_name.startswith("Browser")
+            and set(extension_targets) == {f"Browser{owner_name}"}
+        ):
+            unrelated_targets = []
         if not extension_targets:
             violations.append(
                 Violation(

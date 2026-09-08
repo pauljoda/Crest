@@ -110,7 +110,7 @@ Production actor-isolation warnings from the fresh Debug compilations:
 
 | Platform | Location | Diagnostic |
 | --- | --- | --- |
-| Both | [BrowserExtensionContextObserver.swift:67](../../../CrestShared/Infrastructure/BrowserExtensions/Controller/BrowserExtensionContextObserver.swift#L67) | Main-actor static `contextIdentifierKey` referenced from a Sendable closure |
+| Both | [BrowserExtensionContextObserver.swift:67](https://github.com/pauljoda/Crest/blob/457ac1d2c9bc78011e595664053f24df50ae2249/CrestShared/Infrastructure/BrowserExtensions/Controller/BrowserExtensionContextObserver.swift#L67) | Main-actor static `contextIdentifierKey` referenced from a Sendable closure |
 | macOS | [BrowserSplitCardView.swift:78](../../../CrestMac/Features/SplitView/Components/BrowserSplitCardView.swift#L78) | Main-actor static `coordinateSpace` referenced from a Sendable closure |
 | macOS | [BrowserSplitPageSurface.swift:90](../../../CrestMac/Features/SplitView/Components/BrowserSplitPageSurface.swift#L90) | Same coordinate-space isolation warning |
 | iOS | [BrowserTransientCardArrangement+Device.swift:11](../../../CrestMobile/Features/TransientBrowsing/Support/BrowserTransientCardArrangement+Device.swift#L11) | Two warnings for `UIDevice.current` and `userInterfaceIdiom` read from a nonisolated context |
