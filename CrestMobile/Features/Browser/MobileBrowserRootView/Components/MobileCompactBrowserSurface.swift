@@ -11,6 +11,8 @@ struct MobileCompactBrowserSurface<
     let sidebarPresentation: BrowserSidebarPresentation
     @Binding var preferredSidebarWidth: CGFloat
     let space: BrowserSpace?
+    let spaces: [BrowserSpace]
+    @State private var floatingPagerPresentation = SpacePagerPresentation()
     let reduceTransparency: Bool
     let layoutDirection: LayoutDirection
     let usesBorderlessFloatingPageFrame: Bool
@@ -37,8 +39,10 @@ struct MobileCompactBrowserSurface<
                     page
                 } else {
                     ZStack {
-                        BrowserWindowAtmosphere(space: space)
-                            .ignoresSafeArea()
+                        SpaceBackdropBlend(spaces: spaces, selectedSpace: space) {
+                            BrowserWindowAtmosphere(space: $0)
+                        }
+                        .ignoresSafeArea()
 
                         GeometryReader { proxy in
                             MobileRegularBrowserLayout(
@@ -51,6 +55,7 @@ struct MobileCompactBrowserSurface<
                                 reduceTransparency: reduceTransparency,
                                 layoutDirection: layoutDirection,
                                 space: space,
+                                spaces: spaces,
                                 showSidebar: showSidebar,
                                 commitSidebarWidth: commitSidebarWidth,
                                 sidebar: floatingSidebar,
@@ -58,6 +63,7 @@ struct MobileCompactBrowserSurface<
                             )
                         }
                     }
+                    .environment(\.spacePagerPresentation, floatingPagerPresentation)
                 }
             }
     }

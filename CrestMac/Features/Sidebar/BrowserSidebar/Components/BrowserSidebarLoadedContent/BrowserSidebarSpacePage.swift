@@ -100,6 +100,10 @@ struct BrowserSidebarSpacePage: View {
         )
         .redacted(reason: isLocked ? .placeholder : [])
         .allowsHitTesting(isSelected && !isLocked)
+        // Retained offscreen pages must not participate when AppKit rebuilds
+        // keyboard navigation for a newly focused Start Page command field.
+        // An empty interaction set avoids adding a focus stop for the container.
+        .focusable(isSelected && !isLocked, interactions: [])
         .accessibilityHidden(!isSelected || isLocked)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(space.name) Space")

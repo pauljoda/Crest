@@ -119,7 +119,7 @@ extension BrowserExtensionInstallationController {
         var didLoadNewContext = false
         var pendingLifecycle: PendingContextMenuInstallLifecycle?
         do {
-            let compatibilityPackage = try prepareCompatibilityPackage(
+            let compatibilityPackage = try await prepareCompatibilityPackage(
                 package,
                 extensionID: extensionID,
                 source: source,
@@ -272,7 +272,7 @@ extension BrowserExtensionInstallationController {
         var didLoadNewContext = false
         var pendingLifecycle: PendingContextMenuInstallLifecycle?
         do {
-            let compatibilityPackage = try prepareCompatibilityPackage(
+            let compatibilityPackage = try await prepareCompatibilityPackage(
                 package,
                 extensionID: extensionID,
                 source: source,
@@ -424,7 +424,7 @@ extension BrowserExtensionInstallationController {
         var didLoadNewContext = false
         var pendingLifecycle: PendingContextMenuInstallLifecycle?
         do {
-            let compatibilityPackage = try prepareCompatibilityPackage(
+            let compatibilityPackage = try await prepareCompatibilityPackage(
                 package,
                 extensionID: extensionID,
                 source: source,
@@ -559,8 +559,8 @@ extension BrowserExtensionInstallationController {
         source: BrowserExtensionInstallationSource,
         space: BrowserSpace,
         requestedPermissions: [String]
-    ) throws -> BrowserExtensionStoredResource? {
-        try storedResourcePreparer.prepare(
+    ) async throws -> BrowserExtensionStoredResource? {
+        try await storedResourcePreparer.prepare(
             resourceURL: package.resourceURL,
             request: BrowserExtensionStoredResourcePreparationRequest(
                 extensionID: extensionID,

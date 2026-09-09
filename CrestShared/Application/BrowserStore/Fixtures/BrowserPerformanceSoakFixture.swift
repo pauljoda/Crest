@@ -2,6 +2,7 @@ import Foundation
 
 enum BrowserPerformanceSoakFixture {
     private static let allowedTabCounts = 2...24
+    private static let allowedChromeScaleTabCounts = 2...500
     private static let allowedRunIDCharacters = CharacterSet(
         charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
     )
@@ -17,7 +18,7 @@ enum BrowserPerformanceSoakFixture {
             isSafeLoopback(baseURL),
             let rawTabCount,
             let tabCount = Int(rawTabCount),
-            allowedTabCounts.contains(tabCount),
+            (isHeavy ? allowedChromeScaleTabCounts : allowedTabCounts).contains(tabCount),
             isSafeRunID(runID)
         else { return nil }
         if isHeavy {
@@ -59,8 +60,29 @@ enum BrowserPerformanceSoakFixture {
         tabCount: Int,
         runID: String
     ) -> BrowserSession? {
-        let colors: [BrowserSpaceBrandColor] = [.teal, .ember, .indigo, .gold, .rose, .sage]
-        let spaces = (1...6).compactMap { spaceIndex -> BrowserSpace? in
+        let palettes = BrowserSpaceHousePalette.allCases
+        let patterns = BrowserSpaceBannerPattern.allCases.shuffled()
+        var appearances = palettes.enumerated().map { index, palette in
+            (
+                name: palette.name,
+                branding: BrowserSpaceBranding(
+                    colors: palette.colors,
+                    bannerPattern: patterns[index % patterns.count],
+                    readabilityFade: 0.12,
+                    iconStyle: .layeredCrest,
+                    crest: palette.crest)
+            )
+        }
+        // A bright control beside the original palettes exercises both foreground tones.
+        appearances.insert(
+            (
+                name: "Daylight",
+                branding: BrowserSpaceBranding(
+                    colors: [.sand, .gold, .winterIce], bannerPattern: .chevron,
+                    readabilityFade: 0, textColorMode: .dark)
+            ), at: 0)
+        let spaces = (1...appearances.count).compactMap { spaceIndex -> BrowserSpace? in
+            let appearance = appearances[spaceIndex - 1]
             let folders = (1...8).map { folderIndex in
                 BrowserFolder(title: "Collection \(spaceIndex)-\(folderIndex)")
             }
@@ -107,14 +129,10 @@ enum BrowserPerformanceSoakFixture {
             return BrowserSpace(
                 id: SpaceID(),
                 profile: BrowsingProfile(),
-                name: "Performance \(spaceIndex)",
+                name: appearance.name,
                 symbol: "gauge.with.dots.needle.67percent",
                 accent: .teal,
-                branding: BrowserSpaceBranding(
-                    colors: [colors[spaceIndex - 1]],
-                    bannerPattern: .solid,
-                    readabilityFade: 0.12
-                ),
+                branding: appearance.branding,
                 folders: folders,
                 tabs: tabs,
                 history: history,
@@ -126,7 +144,7 @@ enum BrowserPerformanceSoakFixture {
                 selectedTabID: firstCurrentTab.id
             )
         }
-        guard spaces.count == 6, let firstSpace = spaces.first else { return nil }
+        guard spaces.count == appearances.count, let firstSpace = spaces.first else { return nil }
         return BrowserSession(spaces: spaces, selectedSpaceID: firstSpace.id)
     }
 

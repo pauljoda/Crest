@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserRootBackdrop: View, BrowserChromeAnimating {
     let space: BrowserSpace?
+    let spaces: [BrowserSpace]
     let transparencyIsEnabled: Bool
     let transparencyStrength: Double
     let isWindowFocused: Bool
@@ -16,8 +17,10 @@ struct BrowserRootBackdrop: View, BrowserChromeAnimating {
                 .opacity(backdropMaterialOpacity)
             // Preserve coverage while colors change. Replacing this whole
             // layer for a Space ID briefly exposes the material during a fade.
-            BrowserWindowAtmosphere(space: space)
-                .opacity(baseLayerOpacity)
+            SpaceBackdropBlend(spaces: spaces, selectedSpace: space) {
+                BrowserWindowAtmosphere(space: $0)
+            }
+            .opacity(baseLayerOpacity)
         }
         .ignoresSafeArea()
         .animation(
@@ -27,10 +30,6 @@ struct BrowserRootBackdrop: View, BrowserChromeAnimating {
         .animation(
             chromeAnimation(CrestMotion.windowBackdrop),
             value: backdropMaterialOpacity
-        )
-        .animation(
-            chromeAnimation(CrestMotion.windowBackdrop),
-            value: space?.branding
         )
     }
 

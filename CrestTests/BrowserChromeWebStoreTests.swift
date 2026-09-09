@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Synchronization
 import WebKit
 import XCTest
 
@@ -3940,7 +3941,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(preparedWorker.contains("globalThis.started = true;"))
     }
 
-    func testStoredDarkReaderArchiveRestoresFromItsSignedPackage() throws {
+    func testStoredDarkReaderArchiveRestoresFromItsSignedPackage() async throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
             path: "crest-dark-reader-restoration-test-\(UUID().uuidString)",
@@ -3953,10 +3954,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         )
         let archiveURL = root.appending(path: "dark-reader.zip")
         try Data("stored package".utf8).write(to: archiveURL)
+        let expansions = Mutex(0)
         let compatibilityPreparer =
             BrowserChromeWebStoreCompatibilityPackagePreparer(
                 fileManager: fileManager,
                 expandArchive: { archive, destination in
+                    expansions.withLock { $0 += 1 }
+                    let fileManager = FileManager.default
                     XCTAssertEqual(archive, archiveURL)
                     let workerURL = destination.appending(
                         path: "background.js"
@@ -3994,14 +3998,14 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             crxSHA256Hex: String(repeating: "a", count: 64),
             publisherKeyHashHex: String(repeating: "b", count: 64)
         )
-        let storedInstallation = installation(
+        var storedInstallation = installation(
             id: darkReaderID,
             spaceID: SpaceID(),
             source: .chromeWebStore(source),
             requestedPermissions: ["storage", "alarms", "contextMenus"]
         )
 
-        let prepared = try preparer.prepare(
+        let prepared = try await preparer.prepare(
             resourceURL: archiveURL,
             installation: storedInstallation
         )
@@ -4015,6 +4019,24 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                         .requestedPermissions
                 )
         )
+        let initialInstallation = storedInstallation
+        let firstReuse = Task { @MainActor in
+            try await preparer.prepare(resourceURL: archiveURL, installation: initialInstallation).resourceURL
+        }
+        let secondReuse = Task { @MainActor in
+            try await preparer.prepare(resourceURL: archiveURL, installation: initialInstallation).resourceURL
+        }
+        let reused = try await [firstReuse.value, secondReuse.value]
+        XCTAssertTrue(reused.allSatisfy { $0 == prepared.resourceURL })
+        XCTAssertEqual(expansions.withLock { $0 }, 1, "Unchanged requests must share the published preparation.")
+
+        storedInstallation.requestedPermissions.append("idle")
+        let expandedPermissions = try await preparer.prepare(resourceURL: archiveURL, installation: storedInstallation)
+        XCTAssertEqual(expansions.withLock { $0 }, 2)
+        XCTAssertTrue(expandedPermissions.capabilityBrokerGrantedPermissions.contains("idle"))
+        try Data("changed archive".utf8).write(to: archiveURL)
+        _ = try await preparer.prepare(resourceURL: archiveURL, installation: storedInstallation)
+        XCTAssertEqual(expansions.withLock { $0 }, 3, "Content changes must invalidate the cached preparation.")
     }
 
     func testContextMenuTransportDoesNotHideAnAuthoredNativeMessagingPermission() {
@@ -4044,7 +4066,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
     }
 
     func testStoredICloudPasswordsArchiveRestoresThroughCompatibilityDirectory()
-        throws
+        async throws
     {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -4062,6 +4084,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             BrowserChromeWebStoreCompatibilityPackagePreparer(
                 fileManager: fileManager,
                 expandArchive: { archive, destination in
+                    let fileManager = FileManager.default
                     XCTAssertEqual(archive, archiveURL)
                     let workerURL = destination.appending(
                         path: "background/index.js"
@@ -4108,7 +4131,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             requestedPermissions: ["nativeMessaging", "webNavigation"]
         )
 
-        let prepared = try preparer.prepare(
+        let prepared = try await preparer.prepare(
             resourceURL: archiveURL,
             installation: storedInstallation
         )
@@ -4927,7 +4950,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             ),
             in: space
         )
-        let context = try XCTUnwrap(
+        _ = try XCTUnwrap(
             pool.loadedContext(
                 extensionID: fixture.extensionID.rawValue,
                 in: space.id

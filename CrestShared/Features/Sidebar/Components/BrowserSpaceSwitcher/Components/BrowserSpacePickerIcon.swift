@@ -2,11 +2,8 @@ import SwiftUI
 
 /// One Space's crest as the switcher draws it.
 ///
-/// It goes through `BrowserSpaceSymbolArtwork` rather than rendering the
-/// symbol directly, because both arrangements hand their segments to a native
-/// control — a segmented picker on one side, a button track on the other — and
-/// those flatten a layered crest unless it arrives as a single original-color
-/// image.
+/// The shared artwork preserves the crest's original colors and layered badge
+/// in both the compact desktop track and the expanded touch segments.
 struct BrowserSpacePickerIcon: View {
     let space: BrowserSpace
     let metrics: BrowserSpacePickerMetrics

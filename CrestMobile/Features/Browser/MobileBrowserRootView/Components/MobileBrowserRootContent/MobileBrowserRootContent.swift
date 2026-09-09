@@ -12,6 +12,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) var reduceTransparency
     @Environment(\.layoutDirection) var layoutDirection
+    @State private var spacePagerPresentation = SpacePagerPresentation()
     @State var isAddressEditing = false
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
@@ -67,6 +68,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 sidebarPresentation: navigation.regularSidebarPresentation,
                 preferredSidebarWidth: model.sidebarWidthBinding,
                 space: browser.selectedSpace,
+                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
                 reduceTransparency: reduceTransparency,
                 layoutDirection: layoutDirection,
                 usesBorderlessFloatingPageFrame:
@@ -226,6 +228,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     reduceTransparency: reduceTransparency,
                     layoutDirection: layoutDirection,
                     space: browser.selectedSpace,
+                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
                     showSidebar: showRegularSidebar,
                     commitSidebarWidth: commitRegularSidebarWidth,
                     sidebar: MobileBrowserSidebarSurface(
@@ -328,6 +331,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 )
             }
         )
+        .environment(\.spacePagerPresentation, spacePagerPresentation)
         .focusedSceneValue(
             \.mobileBrowserCommandContext,
             mobileBrowserCommandContext

@@ -13,6 +13,7 @@ This audit records the original baseline and implementation direction. Subsequen
 | Document | Purpose |
 | --- | --- |
 | [Implementation progress](implementation-progress.md) | Changes delivered on main, current validation and remaining acceptance work |
+| [Performance closeout](performance-closeout.md) | Final 0.5.87 performance improvements, measured comparisons, retained coverage, and remaining limits |
 | [Implementation plan](implementation-plan.md) | Ordered work packages, dependencies, behavioral safeguards, and acceptance gates |
 | [Space switching](space-switching.md) | Actual selection/reconciliation chain; shared transition owner; bounded preparation; color wipe |
 | [Mac measurements](measurements.md) | Isolated optimized-build trace, exact extension fixture, results and measurement limits |

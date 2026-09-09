@@ -9,7 +9,6 @@ struct BrowserSpacePager<Content: View>: View {
     /// Returns the actual selection so a refused request cannot leave native
     /// presentation waiting for a state change that will never arrive.
     let selectSpace: (SpaceID) -> SpaceID
-    var settledSpace: (SpaceID) -> Void = { _ in }
     @ViewBuilder let content: (BrowserSpace, Bool) -> Content
 
     var body: some View {
@@ -18,7 +17,6 @@ struct BrowserSpacePager<Content: View>: View {
             selectedSpaceID: selectedSpaceID,
             isInteractionLocked: isInteractionLocked,
             selectSpace: selectSpace,
-            settledSpace: settledSpace,
             content: content
         )
         .accessibilityElement(children: .contain)

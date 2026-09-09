@@ -160,7 +160,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                     extensionID: darkReaderID,
                     activeTabURL: activeTabURL,
                     viaRestoration: viaRestoration,
-                    viaPopover: true
+                    viaPopover: true,
+                    warmsPopupBeforeMeasurement: true
                 )
                 let label =
                     "\(activeTabURL.absoluteString) "
@@ -700,7 +701,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         viaPopover: Bool = false,
         idleSecondsBeforePresenting: Int = 0,
         usesEphemeralWebKitStorage: Bool = true,
-        warmsPopupBeforeMeasurement: Bool = true,
+        warmsPopupBeforeMeasurement: Bool = false,
         permissionProbeURL: URL? = nil
     ) async throws -> PopupOutcome {
         let fileManager = FileManager.default
@@ -854,6 +855,9 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             return outcome
         }
         let presentsPopup = action.presentsPopup
+        var start = ContinuousClock.now
+        var presentationWindow: NSWindow?
+        defer { presentationWindow?.orderOut(nil) }
         if viaPopover {
             let toolbarAction = try XCTUnwrap(
                 pool.toolbarActions(in: space.id, tabID: tab.id).first {
@@ -870,7 +874,7 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                 defer: false
             )
             window.makeKeyAndOrderFront(nil)
-            defer { window.orderOut(nil) }
+            presentationWindow = window
             let anchor = BrowserExtensionPopupAnchor(
                 screenPoint: CGPoint(
                     x: window.frame.midX,
@@ -889,17 +893,12 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                         + .milliseconds(250)
                 )
             }
-            // A warmed-up run left the popover closed on its second call, so
-            // this is the open being measured either way.
+            // Observe native presentation without reading popupPopover: that
+            // getter can preload the document and change the behavior measured.
+            let presented = expectation(forNotification: NSPopover.didShowNotification, object: nil)
+            start = .now
             pool.perform(toolbarAction, popupAnchor: anchor)
-            // Presentation waits on the extension's background content, so it
-            // lands after the call that asked for it returns. Wait it out here
-            // rather than polling `popupPopover`, which would preload the popup
-            // document the wait exists to hold back.
-            try await Task.sleep(
-                for: BrowserExtensionPopupBackgroundWarmUp.defaultDeadline
-                    + .seconds(1)
-            )
+            await fulfillment(of: [presented], timeout: 10)
         }
         guard let popupWebView = action.popupWebView else {
             let actionPage = retainedPages?.activePage?.webView
@@ -933,7 +932,6 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
         }
 
         var readyMilliseconds: Int?
-        let start = Date()
         for _ in 0..<200 {
             let isReady =
                 try? await popupWebView.evaluateJavaScript(
@@ -952,9 +950,8 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
                     """
                 ) as? Bool
             if isReady == true {
-                readyMilliseconds = Int(
-                    Date().timeIntervalSince(start) * 1000
-                )
+                let elapsed = start.duration(to: .now).components
+                readyMilliseconds = Int(elapsed.seconds * 1_000 + elapsed.attoseconds / 1_000_000_000_000_000)
                 break
             }
             try? await Task.sleep(for: .milliseconds(50))
@@ -977,6 +974,9 @@ final class BrowserExtensionActionPopupLiveTests: XCTestCase {
             hostCalls: hostCalls,
             contextErrors: Self.errorDescriptions(context.errors),
             permissionProbeStatus: permissionProbeStatus
+        )
+        print(
+            "Popup content readiness: extension=\(extensionID) restored=\(viaRestoration) idle=\(idleSecondsBeforePresenting)s warmed=\(warmsPopupBeforeMeasurement) milliseconds=\(String(describing: readyMilliseconds))"
         )
         if hostCalls.contains(where: { $0.contains("TIMEOUT") }) {
             print(

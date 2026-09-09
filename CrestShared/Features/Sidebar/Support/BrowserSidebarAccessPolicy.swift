@@ -62,17 +62,4 @@ enum BrowserSidebarAccessPolicy {
         }
     }
 
-    static func canSettlePageSelection(
-        _ assignment: BrowserSpaceRuntimeAssignment,
-        settledSpaceID: SpaceID,
-        in browser: BrowserStore,
-        accessController: BrowserSpaceAccessController
-    ) -> Bool {
-        guard settledSpaceID == assignment.spaceID else { return false }
-        return selectedUnlockedSpace(
-            matching: assignment,
-            in: browser,
-            accessController: accessController
-        ) != nil
-    }
 }

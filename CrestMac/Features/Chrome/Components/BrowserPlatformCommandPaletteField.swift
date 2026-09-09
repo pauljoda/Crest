@@ -35,14 +35,21 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
     }
 
     func updateNSView(_ field: NSTextField, context: Context) {
+        let canFocus = context.environment.isEnabled && context.environment.spaceContentIsInteractive
+        field.isEditable = canFocus
+        field.isSelectable = canFocus
+        if !canFocus, let editor = field.currentEditor(), field.window?.firstResponder === editor {
+            field.window?.makeFirstResponder(nil)
+        }
+        if !focused || !canFocus { context.coordinator.didRequestFocus = false }
         if field.currentEditor() == nil, field.stringValue != model.query {
             field.stringValue = model.query
         }
         context.coordinator.refreshSuffix()
-        if focused, !context.coordinator.didRequestFocus {
+        if focused, canFocus, !context.coordinator.didRequestFocus {
             context.coordinator.didRequestFocus = true
             DispatchQueue.main.async { [weak field] in
-                guard let field, let window = field.window else { return }
+                guard let field, field.isEditable, let window = field.window else { return }
                 window.makeFirstResponder(field)
                 field.currentEditor()?.selectAll(nil)
             }

@@ -9,6 +9,7 @@ struct BrowserStartPageContent: View {
     /// for a card that is not the focused one — an unfocused start page reads
     /// but does not act until a click makes it the focused card.
     let tab: BrowserTab?
+    let space: BrowserSpace?
     let browser: BrowserStore
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
@@ -19,23 +20,25 @@ struct BrowserStartPageContent: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if let tab {
+        if let space {
             BrowserStartPage(
-                space: browser.selectedSpace,
+                space: space,
                 isPrivateBrowsing: browser.isPrivateBrowsing,
-                selectedTabID: tab.id,
+                selectedTabID: tab?.id,
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectStartPageTab,
                 openURL: openStartPageURL,
                 isCommandPaletteObscured: isCommandPalettePresented,
                 layout: .macOSPage,
-                focusRequest: tab.id == browser.selectedTab?.id
+                focusRequest: space.id == browser.session.selectedSpaceID && tab?.id == browser.selectedTab?.id
                     ? focusRequest
                     : nil,
-                promotion: BrowserStartPagePromotion(
-                    namespace: tabPromotionNamespace,
-                    id: BrowserTabPromotionID.value(for: tab.id)
-                )
+                promotion: tab.map { tab in
+                    BrowserStartPagePromotion(
+                        namespace: tabPromotionNamespace,
+                        id: BrowserTabPromotionID.value(for: tab.id)
+                    )
+                }
             )
         } else {
             BrowserUnloadedPageSurface()

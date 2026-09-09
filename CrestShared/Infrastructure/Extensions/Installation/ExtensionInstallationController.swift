@@ -74,7 +74,7 @@ final class BrowserExtensionInstallationController {
                         }.map { ($0, Date.distantFuture) }
                     )
                 )
-            let preparedResource = try storedResourcePreparer.prepare(
+            let preparedResource = try await storedResourcePreparer.prepare(
                 resourceURL: package.resourceURL,
                 request: BrowserExtensionStoredResourcePreparationRequest(
                     extensionID: package.extensionID,

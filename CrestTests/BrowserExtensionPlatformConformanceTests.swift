@@ -197,6 +197,23 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
         XCTAssertTrue(pages.webViewReads.isEmpty)
         XCTAssertTrue(pages.readerModeReads.isEmpty)
 
+        // Enumeration needs identities and selection, not every page's live
+        // loading/reader metadata. Keep unrelated Spaces out of this work.
+        for count in [50, 200, 1_000] {
+            let tabs = (0..<count).map { index in
+                BrowserTab(
+                    title: "Tab \(index)", url: URL(string: "https://example.test/\(index)"), placement: .current)
+            }
+            browser.session.spaces[0].tabs = tabs
+            browser.session.spaces[0].selectedTabID = tabs.last?.id
+            pages.webViewReads.removeAll()
+            pages.readerModeReads.removeAll()
+            XCTAssertEqual(coordinator.tabs(in: space.id, context: context).map(\.tabID), tabs.map(\.id))
+            XCTAssertEqual(coordinator.activeTab(in: space.id, context: context)?.tabID, tabs.last?.id)
+            XCTAssertTrue(pages.webViewReads.isEmpty)
+            XCTAssertTrue(pages.readerModeReads.isEmpty)
+        }
+
         // A detached coordinator keeps its last announced snapshot, including
         // its activity, rather than resolving pages against a missing session.
         coordinator.browser = nil

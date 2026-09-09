@@ -5,6 +5,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     let width: CGFloat
     let space: BrowserSpace?
     let reduceTransparency: Bool
+    let spaces: [BrowserSpace]
     let hoverChanged: @MainActor @Sendable (Bool) -> Void
     let content: Content
 
@@ -15,6 +16,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         width: CGFloat,
         space: BrowserSpace?,
         reduceTransparency: Bool,
+        spaces: [BrowserSpace] = [],
         hoverChanged: @escaping @MainActor @Sendable (Bool) -> Void,
         @ViewBuilder content: () -> Content
     ) {
@@ -22,6 +24,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
         self.width = width
         self.space = space
         self.reduceTransparency = reduceTransparency
+        self.spaces = spaces
         self.hoverChanged = hoverChanged
         self.content = content()
     }
@@ -63,8 +66,11 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
             .frame(width: width)
             .frame(maxHeight: .infinity)
             .background {
-                BrowserFloatingSidebarCardBackground(space: space)
-                    .opacity(usesFloatingCardAppearance ? 1 : 0)
+                if usesFloatingCardAppearance {
+                    SpaceBackdropBlend(spaces: spaces, selectedSpace: space) {
+                        BrowserFloatingSidebarCardBackground(space: $0)
+                    }
+                }
             }
             .compositingGroup()
             .clipShape(shape)

@@ -50,7 +50,9 @@ enum BrowserWebExtensionCompatibilityPackageError: LocalizedError {
     }
 }
 
-final class BrowserWebExtensionPreparedPackage {
+// All fields are immutable. The file manager is used only for delegate-free
+// filesystem cleanup at final release, which Foundation permits on any thread.
+final class BrowserWebExtensionPreparedPackage: @unchecked Sendable {
     let resourceURL: URL
     let internalGrantedPermissions: Set<String>
     let capabilityBrokerGrantedPermissions: Set<String>
@@ -69,6 +71,7 @@ final class BrowserWebExtensionPreparedPackage {
         capabilityBrokerGrantedPermissions: Set<String> = [],
         allowsInternalCapabilityBroker: Bool = false
     ) {
+        precondition(fileManager.delegate == nil, "Prepared resource cleanup requires a delegate-free file manager.")
         self.resourceURL = resourceURL
         self.rootURL = rootURL
         self.fileManager = fileManager

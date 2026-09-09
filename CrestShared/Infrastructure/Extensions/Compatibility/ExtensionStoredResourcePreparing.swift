@@ -1,6 +1,6 @@
 import Foundation
 
-struct BrowserExtensionStoredResourcePreparationRequest {
+struct BrowserExtensionStoredResourcePreparationRequest: Sendable {
     let extensionID: String
     let source: BrowserExtensionInstallationSource?
     let spaceID: SpaceID
@@ -18,15 +18,15 @@ protocol BrowserExtensionStoredResourcePreparing {
     func prepare(
         resourceURL: URL,
         request: BrowserExtensionStoredResourcePreparationRequest
-    ) throws -> BrowserExtensionStoredResource
+    ) async throws -> BrowserExtensionStoredResource
 }
 
 extension BrowserExtensionStoredResourcePreparing {
     func prepare(
         resourceURL: URL,
         installation: BrowserExtensionInstallation
-    ) throws -> BrowserExtensionStoredResource {
-        try prepare(
+    ) async throws -> BrowserExtensionStoredResource {
+        try await prepare(
             resourceURL: resourceURL,
             request: BrowserExtensionStoredResourcePreparationRequest(
                 extensionID: installation.id,

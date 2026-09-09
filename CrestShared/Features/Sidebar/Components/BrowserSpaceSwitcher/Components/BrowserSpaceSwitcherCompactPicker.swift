@@ -9,6 +9,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
     let selectSpace: (SpaceID) -> Void
     let allocation: BrowserSpaceSwitcherCompactAllocation
     var moveSpace: ((SpaceID, SpaceID) -> Void)? = nil
+    var style: CrestSpaceIconPickerStyle = .compact
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.spacePagerPresentation) private var spacePagerPresentation
@@ -34,7 +35,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
             .onChange(of: allocation.pickerViewportWidth) {
                 revealSelection(reader, animated: false)
             }
-            .onChange(of: BrowserSpaceSwitcherLayout.segmentIDs(for: spaces)) {
+            .onChange(of: spaces.map(\.id)) {
                 // Customization drags have already scrolled to their drop slot.
                 // Keep that viewport; only an explicit selection should recenter it.
                 if moveSpace == nil {
@@ -51,10 +52,13 @@ struct BrowserSpaceSwitcherCompactPicker: View {
                 spaces: spaces,
                 selectedSpaceID: selectedSpaceID,
                 selectSpace: selectSpace,
+                style: style,
                 accessibilityIdentifier: "space-switcher-picker",
                 moveSpace: moveSpace,
                 reorderViewport: viewport,
-                selectionPresentation: moveSpace == nil ? spacePagerPresentation : nil
+                selectionPresentation: moveSpace == nil ? spacePagerPresentation : nil,
+                segmentSize: CGSize(
+                    width: segmentWidth, height: style.height - 2 * CrestSpaceIconPickerMetrics.trackPadding)
             ) { space in
                 if let reorderState {
                     BrowserSpacePickerSegment(
@@ -70,8 +74,8 @@ struct BrowserSpaceSwitcherCompactPicker: View {
         // buttons provide scrolling without requiring a horizontal gesture.
         .scrollIndicators(.never)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        .frame(width: allocation.scrollViewportWidth, height: BrowserSpaceSwitcherLayout.pickerHeight)
-        .clipShape(.rect(cornerRadius: BrowserSpaceSwitcherLayout.cornerRadius))
+        .frame(width: allocation.scrollViewportWidth, height: style.height)
+        .clipShape(.rect(cornerRadius: style.cornerRadius))
         .onGeometryChange(for: CGRect.self) {
             $0.frame(in: .global)
         } action: {
@@ -81,7 +85,7 @@ struct BrowserSpaceSwitcherCompactPicker: View {
             BrowserSpacePickerOverflow(
                 visibleRect: geometry.visibleRect,
                 contentWidth: geometry.contentSize.width,
-                spaceCount: spaces.count
+                spaceCount: spaces.count, segmentWidth: segmentWidth, dividerWidth: style.dividerWidth
             )
         } action: { _, value in
             overflow = value
@@ -100,8 +104,8 @@ struct BrowserSpaceSwitcherCompactPicker: View {
             Image(systemName: forward ? "chevron.forward" : "chevron.backward")
                 .font(.caption.weight(.semibold))
                 .frame(
-                    width: BrowserSpaceSwitcherLayout.overflowButtonWidth,
-                    height: BrowserSpaceSwitcherLayout.pickerHeight
+                    width: style.overflowButtonWidth,
+                    height: style.height
                 )
                 .contentShape(.rect)
         }
@@ -112,17 +116,24 @@ struct BrowserSpaceSwitcherCompactPicker: View {
         .accessibilityIdentifier(forward ? "space-picker-next" : "space-picker-previous")
     }
 
+    private var segmentWidth: CGFloat {
+        guard style == .touch, !spaces.isEmpty else { return style.minimumSegmentWidth }
+        return max(
+            style.minimumSegmentWidth,
+            (allocation.scrollViewportWidth - 2 * CrestSpaceIconPickerMetrics.trackPadding) / CGFloat(spaces.count))
+    }
+
     private var scrollAnimation: Animation? {
         BrowserVisualAccessibilityPolicy.animation(CrestMotion.scrollAlignment, reduceMotion: reduceMotion)
     }
 
     private func revealSelection(_ reader: ScrollViewProxy, animated: Bool) {
-        // The native leaf follows the pager's actual presentation, including
-        // its spring. A second scrollTo animation would lag that handoff.
+        // The native leaf follows the pager's tracking and release timeline.
+        // A second scrollTo animation would lag that handoff.
         guard spacePagerPresentation == nil || moveSpace != nil else { return }
         guard
             let target = BrowserSpaceSwitcherLayout.compactScrollTarget(
-                spaceIDs: BrowserSpaceSwitcherLayout.segmentIDs(for: spaces),
+                spaceIDs: spaces.map(\.id),
                 selectedSpaceID: selectedSpaceID
             )
         else { return }

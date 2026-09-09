@@ -354,10 +354,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
     }
 
     func testPaletteActionsRejectStaleProfilesAndSelectExactDestinations() throws {
-        let source = makeSpace(index: 60)
-        let destination = makeSpace(index: 70)
+        var source = makeSpace(index: 60)
+        let targetTab = BrowserTab(title: "Destination", url: URL(string: "about:blank"), placement: .current)
+        source.tabs.append(targetTab)
+        let otherSpace = makeSpace(index: 70)
         let fixture = makeFixture(
-            spaces: [source, destination],
+            spaces: [source, otherSpace],
             selectedSpaceID: source.id,
             startupBehavior: .showStartPage
         )
@@ -367,28 +369,28 @@ final class MobileBrowserRootModelTests: XCTestCase {
             profileID: source.profile.id
         )
         let destinationAssignment = BrowserTabRuntimeAssignment(
-            tabID: try XCTUnwrap(destination.selectedTabID),
-            spaceID: destination.id,
-            profileID: destination.profile.id
+            tabID: targetTab.id,
+            spaceID: source.id,
+            profileID: source.profile.id
+        )
+        let foreignAssignment = BrowserTabRuntimeAssignment(
+            tabID: try XCTUnwrap(otherSpace.selectedTabID),
+            spaceID: otherSpace.id,
+            profileID: otherSpace.profile.id
         )
 
-        XCTAssertTrue(
-            fixture.model.selectPaletteTab(
-                from: sourceAssignment,
-                to: destinationAssignment
-            )
-        )
-        XCTAssertEqual(fixture.browser.selectedSpace?.id, destination.id)
-        XCTAssertEqual(fixture.browser.selectedSpace?.profile.id, destination.profile.id)
-        XCTAssertEqual(fixture.browser.selectedTab?.id, destinationAssignment.tabID)
-        XCTAssertEqual(fixture.pages.activePage?.profileID, destination.profile.id)
+        XCTAssertFalse(fixture.model.selectPaletteTab(from: sourceAssignment, to: foreignAssignment))
+        XCTAssertEqual(fixture.browser.selectedSpace?.id, source.id)
+        XCTAssertTrue(fixture.model.selectPaletteTab(from: sourceAssignment, to: destinationAssignment))
+        XCTAssertEqual(fixture.browser.selectedTab?.id, targetTab.id)
+        XCTAssertEqual(fixture.pages.activePage?.profileID, source.profile.id)
 
         let replacement = replacingProfile(
             of: source,
             with: BrowsingProfile(id: fixedUUID(0xFE))
         )
         fixture.browser.session = BrowserSession(
-            spaces: [replacement, destination],
+            spaces: [replacement, otherSpace],
             selectedSpaceID: replacement.id
         )
         let replacementURL = fixture.browser.selectedTab?.url
@@ -401,12 +403,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
             )
         )
         XCTAssertEqual(fixture.browser.selectedTab?.url, replacementURL)
-        XCTAssertFalse(
-            fixture.model.selectPaletteTab(
-                from: sourceAssignment,
-                to: destinationAssignment
-            )
-        )
+        XCTAssertFalse(fixture.model.selectPaletteTab(from: sourceAssignment, to: destinationAssignment))
         XCTAssertEqual(fixture.browser.selectedSpace?.profile.id, replacement.profile.id)
     }
 

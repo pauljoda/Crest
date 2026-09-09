@@ -1,928 +1,8 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-  "Finish" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "اللمسات الأخيرة"
-        }
-      }
-    }
-  },
-  "Arrangement" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "الترتيب"
-        }
-      }
-    }
-  },
-  "Make yourself at home." : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "خذ راحتك."
-        }
-      }
-    }
-  },
-  "Work, life, a thing you love. What will you make room for?" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "للعمل أو للحياة أو لشيء تحبه. لأي شيء ستخصص مساحة؟"
-        }
-      }
-    }
-  },
-  "Give it a name." : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "اختر لها اسماً."
-        }
-      }
-    }
-  },
-  "03 — Your Spaces" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "03 — مساحاتك"
-        }
-      }
-    }
-  },
-  "02 — Name" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "02 — الاسم"
-        }
-      }
-    }
-  },
-  "01 — Appearance" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "01 — المظهر"
-        }
-      }
-    }
-  },
-  "A fresh start." : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "بداية جديدة."
-        }
-      }
-    }
-  },
-  "Something to read" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "شيء للقراءة"
-        }
-      }
-    }
-  },
-  "A few good ideas" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "بعض الأفكار الجميلة"
-        }
-      }
-    }
-  },
-  "Live preview" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "معاينة مباشرة"
-        }
-      }
-    }
-  },
-  "Your Space" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "مساحتك"
-        }
-      }
-    }
-  },
-  "Built into Crest" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "صفحة مضمّنة في Crest"
-        }
-      }
-    }
-  },
-  "Your first Space" : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "مساحتك الأولى"
-        }
-      }
-    }
-  },
-  "Start with a Space that feels like you. Add more whenever you need them." : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "ابدأ بمساحة تعبّر عنك. وأضف المزيد متى احتجت إليها."
-        }
-      }
-    }
-  },
-  "Make room for your day." : {
-    "localizations" : {
-      "ar" : {
-        "stringUnit" : {
-          "state" : "translated",
-          "value" : "مساحة لكل ما يهمك في يومك."
-        }
-      }
-    }
-  },
-    "A Space keeps one part of your life together. What will this one be for?" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تجمع المساحة جانبًا من حياتك في مكان واحد. لمَ ستستخدم هذه المساحة؟"
-          }
-        }
-      }
-    },
-    "A finishing touch around your emblem." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لمسة أخيرة تحيط برمزك."
-          }
-        }
-      }
-    },
-    "A small symbol with a little personality." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "رمز صغير يعكس شخصيتك."
-          }
-        }
-      }
-    },
-    "Add a band" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف شريطًا"
-          }
-        }
-      }
-    },
-    "Add a stripe or a crossing to the field." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف شريطًا أو تقاطعًا إلى الخلفية."
-          }
-        }
-      }
-    },
-    "Add another Space" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف مساحة أخرى"
-          }
-        }
-      }
-    },
-    "Add sites to this Space, or start with a clean slate." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف مواقع إلى هذه المساحة، أو ابدأ بصفحة فارغة."
-          }
-        }
-      }
-    },
-    "Add starting sites" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف مواقع للبداية"
-          }
-        }
-      }
-    },
-    "Adjust the finish" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اضبط اللمسات الأخيرة"
-          }
-        }
-      }
-    },
-    "All details" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "كل التفاصيل"
-          }
-        }
-      }
-    },
-    "Arrange your emblems" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "رتّب رموزك"
-          }
-        }
-      }
-    },
-    "Bring a few favorites" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف بعض مفضلاتك"
-          }
-        }
-      }
-    },
-    "Choose a shape" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر شكلًا"
-          }
-        }
-      }
-    },
-    "Choose an emblem" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر رمزًا"
-          }
-        }
-      }
-    },
-    "Choose an icon" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر أيقونة"
-          }
-        }
-      }
-    },
-    "Choose one detail to change. See the result as you go." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر تفصيلًا لتغييره وشاهد النتيجة فورًا."
-          }
-        }
-      }
-    },
-    "Choose your crest" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر شعارك"
-          }
-        }
-      }
-    },
-    "Create your first Space" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أنشئ مساحتك الأولى"
-          }
-        }
-      }
-    },
-    "Crest layer colors" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ألوان طبقات الشعار"
-          }
-        }
-      }
-    },
-    "Crest presets" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تصاميم الشعارات الجاهزة"
-          }
-        }
-      }
-    },
-    "Customize this crest" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "خصّص هذا الشعار"
-          }
-        }
-      }
-    },
-    "Divide the field" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "قسّم الخلفية"
-          }
-        }
-      }
-    },
-    "Drag to turn the gradient" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اسحب لتدوير التدرّج"
-          }
-        }
-      }
-    },
-    "Find your colors" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر ألوانك"
-          }
-        }
-      }
-    },
-    "Find your way around with the Getting Started guide." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تعرّف على المتصفح مع دليل بدء الاستخدام."
-          }
-        }
-      }
-    },
-    "Frame your crest" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أضف إطارًا لشعارك"
-          }
-        }
-      }
-    },
-    "Getting Started with Crest" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بدء استخدام Crest"
-          }
-        }
-      }
-    },
-    "Give it a name" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر لها اسمًا"
-          }
-        }
-      }
-    },
-    "Keep the colors comfortable and your tabs easy to read." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اجعل الألوان مريحة والتبويبات سهلة القراءة."
-          }
-        }
-      }
-    },
-    "Make it your own" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اجعله خاصًا بك"
-          }
-        }
-      }
-    },
-    "Make yourself at home" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مساحتك أصبحت جاهزة"
-          }
-        }
-      }
-    },
-    "Mix your own" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "امزج ألوانك الخاصة"
-          }
-        }
-      }
-    },
-    "One emblem, a pair, or a trio." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "رمز واحد أو اثنان أو ثلاثة."
-          }
-        }
-      }
-    },
-    "Or use an emoji" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أو استخدم رمزًا تعبيريًا"
-          }
-        }
-      }
-    },
-    "Pick one that feels like you. Every detail can change later." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر ما يعكس شخصيتك. يمكنك تغيير كل التفاصيل لاحقًا."
-          }
-        }
-      }
-    },
-    "Prefer something simple? Choose a symbol or add an emoji." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تفضّل تصميمًا بسيطًا؟ اختر رمزًا أو أضف رمزًا تعبيريًا."
-          }
-        }
-      }
-    },
-    "Same crest, different colors. Try a palette or mix your own." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الشعار نفسه بألوان مختلفة. جرّب لوحة ألوان أو امزج ألوانك."
-          }
-        }
-      }
-    },
-    "Set the scene" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر الخلفية"
-          }
-        }
-      }
-    },
-    "Space preview" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "معاينة المساحة"
-          }
-        }
-      }
-    },
-    "Split the colors behind your emblem." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "قسّم الألوان خلف رمزك."
-          }
-        }
-      }
-    },
-    "The foundation of your crest. Compare each shape below." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أساس شعارك. قارن الأشكال أدناه."
-          }
-        }
-      }
-    },
-    "This is how your colors fill the sidebar." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "هكذا ستظهر ألوانك في الشريط الجانبي."
-          }
-        }
-      }
-    },
-    "Use an icon instead" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "استخدم أيقونة بدلًا من ذلك"
-          }
-        }
-      }
-    },
-    "Your Space, your way" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مساحتك على طريقتك"
-          }
-        }
-      }
-    },
-    "Your Spaces are ready. You can change them or add more anytime." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مساحاتك جاهزة. يمكنك تغييرها أو إضافة المزيد في أي وقت."
-          }
-        }
-      }
-    },
-    "Exploring" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الاستكشاف"
-          }
-        }
-      }
-    },
-    "Learning" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "التعلّم"
-          }
-        }
-      }
-    },
     "" : {
 
-    },
-    "A crest gives this Space its own identity. Start with a preset or make your own." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يمنح الشعار هذه المساحة هويتها الخاصة. ابدأ بتصميم جاهز أو صمّم شعارك بنفسك."
-          }
-        }
-      }
-    },
-    "Add starting sites (optional)" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إضافة مواقع للبدء (اختياري)"
-          }
-        }
-      }
-    },
-    "Background style" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "نمط الخلفية"
-          }
-        }
-      }
-    },
-    "Band" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الشريط"
-          }
-        }
-      }
-    },
-    "Band color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لون الشريط"
-          }
-        }
-      }
-    },
-    "Border" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الإطار"
-          }
-        }
-      }
-    },
-    "Border color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لون الإطار"
-          }
-        }
-      }
-    },
-    "Change the colors without changing your crest. Select a color below to make your own palette." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "غيّر الألوان دون تغيير شعارك. اختر لونًا أدناه لإنشاء لوحة ألوانك الخاصة."
-          }
-        }
-      }
-    },
-    "Choose a preset…" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر تصميمًا جاهزًا…"
-          }
-        }
-      }
-    },
-    "Choose a starting point" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر نقطة بداية"
-          }
-        }
-      }
-    },
-    "Color palette" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لوحة الألوان"
-          }
-        }
-      }
-    },
-    "Colors & background" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الألوان والخلفية"
-          }
-        }
-      }
-    },
-    "Crest Presets" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تصاميم الشعارات"
-          }
-        }
-      }
-    },
-    "Crest details" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تفاصيل الشعار"
-          }
-        }
-      }
-    },
-    "Each preset pairs a crest with its colors. You can change every detail afterward." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "يجمع كل تصميم جاهز بين شعار وألوانه. يمكنك تغيير كل التفاصيل لاحقًا."
-          }
-        }
-      }
-    },
-    "Emblem" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الرمز"
-          }
-        }
-      }
-    },
-    "Emblem color" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لون الرمز"
-          }
-        }
-      }
-    },
-    "Emblem layout" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ترتيب الرموز"
-          }
-        }
-      }
-    },
-    "Field division" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تقسيم الخلفية"
-          }
-        }
-      }
-    },
-    "Icon style" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "نمط الأيقونة"
-          }
-        }
-      }
-    },
-    "Layer colors" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ألوان الطبقات"
-          }
-        }
-      }
-    },
-    "Make it recognizable" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اجعلها مميزة"
-          }
-        }
-      }
-    },
-    "Palette, pattern, texture and readability" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لوحة الألوان والنمط والملمس ووضوح القراءة"
-          }
-        }
-      }
-    },
-    "Shape" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الشكل"
-          }
-        }
-      }
-    },
-    "Shape, emblem, border and layer colors" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "الشكل والرمز والإطار وألوان الطبقات"
-          }
-        }
-      }
-    },
-    "Space appearance" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مظهر المساحة"
-          }
-        }
-      }
-    },
-    "Symbol or emoji" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "رمز أو إيموجي"
-          }
-        }
-      }
-    },
-    "Use Preset" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "استخدام التصميم"
-          }
-        }
-      }
     },
     "·" : {
       "localizations" : {
@@ -1490,6 +570,9 @@
           }
         }
       }
+    },
+    "%lld / 4" : {
+
     },
     "%lld additional rejected rows are included in the final count." : {
 
@@ -2363,6 +1446,16 @@
         }
       }
     },
+    "01 — Appearance" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "01 — المظهر"
+          }
+        }
+      }
+    },
     "1 identical duplicate will be skipped." : {
 
     },
@@ -2390,6 +1483,31 @@
         }
       }
     },
+    "02 — Name" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "02 — الاسم"
+          }
+        }
+      }
+    },
+    "02 — Your Spaces" : {
+
+    },
+    "03 — Your Spaces" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "03 — مساحاتك"
+          }
+        }
+      }
+    },
     "A calmer browser, shaped around the Spaces that matter to you." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2401,8 +1519,41 @@
         }
       }
     },
+    "A crest gives this Space its own identity. Start with a preset or make your own." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يمنح الشعار هذه المساحة هويتها الخاصة. ابدأ بتصميم جاهز أو صمّم شعارك بنفسك."
+          }
+        }
+      }
+    },
     "A custom search engine already uses this name." : {
 
+    },
+    "A few good ideas" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بعض الأفكار الجميلة"
+          }
+        }
+      }
+    },
+    "A finishing touch around your emblem." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لمسة أخيرة تحيط برمزك."
+          }
+        }
+      }
     },
     "A firewall, filter, or device policy may also be responsible." : {
       "localizations" : {
@@ -2410,6 +1561,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "قد يكون جدار حماية أو عامل تصفية أو سياسة جهاز هو السبب أيضًا."
+          }
+        }
+      }
+    },
+    "A fresh start." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بداية جديدة."
           }
         }
       }
@@ -2448,8 +1610,30 @@
         }
       }
     },
+    "A small symbol with a little personality." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رمز صغير يعكس شخصيتك."
+          }
+        }
+      }
+    },
     "A Space can contain up to 32 custom search engines." : {
 
+    },
+    "A Space keeps one part of your life together. What will this one be for?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تجمع المساحة جانبًا من حياتك في مكان واحد. لمَ ستستخدم هذه المساحة؟"
+          }
+        }
+      }
     },
     "About" : {
 
@@ -2542,6 +1726,16 @@
         }
       }
     },
+    "Add a band" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف شريطًا"
+          }
+        }
+      }
+    },
     "Add a site" : {
       "localizations" : {
         "ar" : {
@@ -2562,6 +1756,16 @@
         }
       }
     },
+    "Add a stripe or a crossing to the field." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف شريطًا أو تقاطعًا إلى الخلفية."
+          }
+        }
+      }
+    },
     "Add an extension below to review its access before use." : {
       "localizations" : {
         "ar" : {
@@ -2574,6 +1778,16 @@
     },
     "Add an HTTPS search URL containing %s or {searchTerms}." : {
 
+    },
+    "Add another Space" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف مساحة أخرى"
+          }
+        }
+      }
     },
     "Add Background Color" : {
       "localizations" : {
@@ -2595,6 +1809,9 @@
           }
         }
       }
+    },
+    "Add folder" : {
+
     },
     "Add New Space" : {
       "localizations" : {
@@ -2650,12 +1867,44 @@
         }
       }
     },
+    "Add sites to this Space, or start with a clean slate." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف مواقع إلى هذه المساحة، أو ابدأ بصفحة فارغة."
+          }
+        }
+      }
+    },
     "Add Space" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "إضافة مساحة"
+          }
+        }
+      }
+    },
+    "Add starting sites" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف مواقع للبداية"
+          }
+        }
+      }
+    },
+    "Add starting sites (optional)" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إضافة مواقع للبدء (اختياري)"
           }
         }
       }
@@ -2779,6 +2028,19 @@
     },
     "Adds or removes this password from the selection." : {
 
+    },
+    "Adjust contrast and color intensity." : {
+
+    },
+    "Adjust the finish" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضبط اللمسات الأخيرة"
+          }
+        }
+      }
     },
     "Ads" : {
       "extractionState" : "stale",
@@ -3086,6 +2348,16 @@
         }
       }
     },
+    "All details" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كل التفاصيل"
+          }
+        }
+      }
+    },
     "All non-regional ad, privacy, annoyance, social, and badware lists." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3186,6 +2458,9 @@
 
     },
     "Animals & Nature" : {
+
+    },
+    "Animate Pages When Switching Spaces" : {
 
     },
     "Annoyances" : {
@@ -3336,6 +2611,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "يؤرشف علامات التبويب الحالية غير النشطة دون إغلاق علامة التبويب المحددة."
+          }
+        }
+      }
+    },
+    "Arrange the emblems and the colors behind them." : {
+
+    },
+    "Arrange your emblems" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رتّب رموزك"
+          }
+        }
+      }
+    },
+    "Arrangement" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الترتيب"
           }
         }
       }
@@ -3620,6 +2918,20 @@
         }
       }
     },
+    "Background style" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نمط الخلفية"
+          }
+        }
+      }
+    },
+    "Background styles" : {
+
+    },
     "Balanced uses a native WebKit rule list to stop known third-party advertising and tracking requests. It never blocks the top-level page, and this choice affects only the selected Space." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3638,6 +2950,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "يستخدم الوضع المتوازن قائمة قواعد أصلية من WebKit لإيقاف طلبات الإعلانات والتتبع المعروفة التابعة لجهات خارجية. ولا تُحظر الصفحات الرئيسية أبدًا، وينطبق هذا الخيار على هذه المساحة فقط."
+          }
+        }
+      }
+    },
+    "Band" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشريط"
+          }
+        }
+      }
+    },
+    "Band color" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لون الشريط"
           }
         }
       }
@@ -3786,6 +3118,26 @@
         }
       }
     },
+    "Border" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الإطار"
+          }
+        }
+      }
+    },
+    "Border color" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لون الإطار"
+          }
+        }
+      }
+    },
     "Borderless" : {
 
     },
@@ -3816,6 +3168,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "معاينة الهوية المرئية لـ %@"
+          }
+        }
+      }
+    },
+    "Bring a few favorites" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف بعض مفضلاتك"
           }
         }
       }
@@ -3921,6 +3284,17 @@
         }
       }
     },
+    "Built into Crest" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صفحة مضمّنة في Crest"
+          }
+        }
+      }
+    },
     "Built-In" : {
 
     },
@@ -3961,6 +3335,20 @@
       }
     },
     "Change Icon…" : {
+
+    },
+    "Change the colors without changing your crest. Select a color below to make your own palette." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "غيّر الألوان دون تغيير شعارك. اختر لونًا أدناه لإنشاء لوحة ألوانك الخاصة."
+          }
+        }
+      }
+    },
+    "Changes appear in the sidebar preview." : {
 
     },
     "Changes folder highlights in this Space, from the original transparency to solid color." : {
@@ -4178,6 +3566,39 @@
         }
       }
     },
+    "Choose a name, crest, and theme. Add more Spaces whenever you need them." : {
+
+    },
+    "Choose a palette or edit individual colors." : {
+
+    },
+    "Choose a preset, then customize its appearance if needed." : {
+
+    },
+    "Choose a preset…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر تصميمًا جاهزًا…"
+          }
+        }
+      }
+    },
+    "Choose a shape" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر شكلًا"
+          }
+        }
+      }
+    },
+    "Choose a shape, emblem, or border to edit." : {
+
+    },
     "Choose a Space to edit its identity and privacy policy." : {
       "localizations" : {
         "ar" : {
@@ -4188,7 +3609,44 @@
         }
       }
     },
+    "Choose a starting point" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر نقطة بداية"
+          }
+        }
+      }
+    },
+    "Choose an appearance" : {
+
+    },
+    "Choose an emblem" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر رمزًا"
+          }
+        }
+      }
+    },
+    "Choose an icon" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر أيقونة"
+          }
+        }
+      }
+    },
     "Choose at least one Space to import." : {
+
+    },
+    "Choose colors" : {
 
     },
     "Choose Crest in Default Apps Settings, then return here and check the status." : {
@@ -4225,6 +3683,17 @@
     "Choose Folder…" : {
 
     },
+    "Choose one detail to change. See the result as you go." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر تفصيلًا لتغييره وشاهد النتيجة فورًا."
+          }
+        }
+      }
+    },
     "Choose one to three colors. The same named slots style banners, gradients, and crests." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4240,6 +3709,15 @@
 
     },
     "Choose Space Icon" : {
+
+    },
+    "Choose the border around your crest." : {
+
+    },
+    "Choose the outline of your crest." : {
+
+    },
+    "Choose the symbol inside your crest." : {
 
     },
     "Choose up to three colors. Every crest layer uses this palette." : {
@@ -4262,6 +3740,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "اختر النسخة التي تريد الاحتفاظ بها"
+          }
+        }
+      }
+    },
+    "Choose your crest" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر شعارك"
           }
         }
       }
@@ -4378,6 +3867,9 @@
           }
         }
       }
+    },
+    "Clear open tabs" : {
+
     },
     "Clear Search" : {
 
@@ -4669,13 +4161,34 @@
         }
       }
     },
-    "Colors" : {
+    "Color palette" : {
       "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
+            "value" : "لوحة الألوان"
+          }
+        }
+      }
+    },
+    "Colors" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "الألوان"
+          }
+        }
+      }
+    },
+    "Colors & background" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الألوان والخلفية"
           }
         }
       }
@@ -4793,6 +4306,12 @@
           }
         }
       }
+    },
+    "Continue" : {
+
+    },
+    "Contrast and intensity" : {
+
     },
     "control" : {
       "localizations" : {
@@ -5022,6 +4541,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "أنشئ مكانًا منفصلًا آخر للتصفح الذي ينتمي إلى بعضه."
+          }
+        }
+      }
+    },
+    "Create your first Space" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أنشئ مساحتك الأولى"
           }
         }
       }
@@ -5416,6 +4945,17 @@
         }
       }
     },
+    "Crest details" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تفاصيل الشعار"
+          }
+        }
+      }
+    },
     "Crest does not save this session or use Crest Passwords. Website data stays in memory only." : {
       "localizations" : {
         "ar" : {
@@ -5512,6 +5052,17 @@
     "Crest Is Up to Date" : {
 
     },
+    "Crest layer colors" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ألوان طبقات الشعار"
+          }
+        }
+      }
+    },
     "Crest only allows verified Chrome Web Store extensions to contact native companion apps." : {
       "localizations" : {
         "ar" : {
@@ -5558,6 +5109,31 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تبقى كلمات مرور Crest في هذه المساحة. ولا تدخل مطلقًا في اقتراحات أو سجلات مساحة أخرى."
+          }
+        }
+      }
+    },
+    "Crest pattern" : {
+
+    },
+    "Crest presets" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تصاميم الشعارات الجاهزة"
+          }
+        }
+      }
+    },
+    "Crest Presets" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تصاميم الشعارات"
           }
         }
       }
@@ -5614,6 +5190,12 @@
           }
         }
       }
+    },
+    "Crest Setup" : {
+
+    },
+    "Crest shape and emblem" : {
+
     },
     "Crest shows descriptor metadata only. Password values stay in the active Space’s Data Protection Keychain and never enter session or CloudKit data." : {
       "localizations" : {
@@ -5845,6 +5427,19 @@
           }
         }
       }
+    },
+    "Customize this crest" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خصّص هذا الشعار"
+          }
+        }
+      }
+    },
+    "Customize your Space" : {
+
     },
     "Daily" : {
       "localizations" : {
@@ -6189,6 +5784,16 @@
     "Dismiss" : {
 
     },
+    "Divide the field" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قسّم الخلفية"
+          }
+        }
+      }
+    },
     "Divider %lld" : {
       "localizations" : {
         "ar" : {
@@ -6341,6 +5946,16 @@
         }
       }
     },
+    "Drag to turn the gradient" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اسحب لتدوير التدرّج"
+          }
+        }
+      }
+    },
     "Dragon" : {
       "localizations" : {
         "ar" : {
@@ -6408,6 +6023,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الإعلانات باللغة الهولندية."
+          }
+        }
+      }
+    },
+    "Each preset pairs a crest with its colors. You can change every detail afterward." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجمع كل تصميم جاهز بين شعار وألوانه. يمكنك تغيير كل التفاصيل لاحقًا."
           }
         }
       }
@@ -6590,6 +6216,12 @@
     "Edit Search Engine" : {
 
     },
+    "Edit Space name" : {
+
+    },
+    "Edit Space name: %@" : {
+
+    },
     "Edit Tab" : {
       "localizations" : {
         "ar" : {
@@ -6627,6 +6259,37 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تسجيل دخول مضمّن من %@"
+          }
+        }
+      }
+    },
+    "Emblem" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الرمز"
+          }
+        }
+      }
+    },
+    "Emblem color" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لون الرمز"
+          }
+        }
+      }
+    },
+    "Emblem layout" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ترتيب الرموز"
           }
         }
       }
@@ -6836,6 +6499,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "يوسّع هذا المجلد"
+          }
+        }
+      }
+    },
+    "Exploring" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاستكشاف"
           }
         }
       }
@@ -7092,6 +6766,17 @@
         }
       }
     },
+    "Field division" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تقسيم الخلفية"
+          }
+        }
+      }
+    },
     "Field Division" : {
       "localizations" : {
         "ar" : {
@@ -7155,6 +6840,28 @@
         }
       }
     },
+    "Find your colors" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر ألوانك"
+          }
+        }
+      }
+    },
+    "Find your way around with the Getting Started guide." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعرّف على المتصفح مع دليل بدء الاستخدام."
+          }
+        }
+      }
+    },
     "Fine Tune" : {
       "localizations" : {
         "ar" : {
@@ -7164,6 +6871,19 @@
           }
         }
       }
+    },
+    "Finish" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اللمسات الأخيرة"
+          }
+        }
+      }
+    },
+    "Finish editing name" : {
+
     },
     "Finish Setup" : {
       "extractionState" : "stale",
@@ -7341,6 +7061,9 @@
     "Folders" : {
 
     },
+    "Folders hold tabs and other folders. Add Weekends, then nest Ideas inside it. Folders also work below the line with open tabs." : {
+
+    },
     "Follow planned and completed public work on GitHub" : {
 
     },
@@ -7393,6 +7116,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الحذف للأمام"
+          }
+        }
+      }
+    },
+    "Frame your crest" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أضف إطارًا لشعارك"
           }
         }
       }
@@ -7466,6 +7199,44 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الإعلانات باللغة الألمانية."
+          }
+        }
+      }
+    },
+    "Getting Started" : {
+
+    },
+    "Getting Started opens next with practice for tabs and folders." : {
+
+    },
+    "Getting Started with Crest" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بدء استخدام Crest"
+          }
+        }
+      }
+    },
+    "Give it a name" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر لها اسمًا"
+          }
+        }
+      }
+    },
+    "Give it a name." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر لها اسماً."
           }
         }
       }
@@ -7838,6 +7609,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الأيقونة"
+          }
+        }
+      }
+    },
+    "Icon style" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نمط الأيقونة"
           }
         }
       }
@@ -8684,6 +8466,9 @@
         }
       }
     },
+    "Individual colors" : {
+
+    },
     "Inserts any emoji through the system text input experience." : {
 
     },
@@ -8776,6 +8561,9 @@
         }
       }
     },
+    "Its content is still saved. Update Crest to open it." : {
+
+    },
     "Its tabs stay in this section, and any nested folders move up one level." : {
 
     },
@@ -8816,6 +8604,20 @@
           }
         }
       }
+    },
+    "Keep the colors comfortable and your tabs easy to read." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اجعل الألوان مريحة والتبويبات سهلة القراءة."
+          }
+        }
+      }
+    },
+    "Keep work, personal browsing, and projects in separate Spaces." : {
+
     },
     "Key" : {
       "localizations" : {
@@ -8940,6 +8742,17 @@
         }
       }
     },
+    "Layer colors" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ألوان الطبقات"
+          }
+        }
+      }
+    },
     "Layered Crest" : {
       "localizations" : {
         "ar" : {
@@ -8959,6 +8772,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الورقة"
+          }
+        }
+      }
+    },
+    "Learning" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التعلّم"
           }
         }
       }
@@ -9089,6 +8913,17 @@
         }
       }
     },
+    "Live preview" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معاينة مباشرة"
+          }
+        }
+      }
+    },
     "Live preview of %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9099,6 +8934,9 @@
           }
         }
       }
+    },
+    "Live sidebar preview for %@" : {
+
     },
     "Live Space sidebar preview" : {
       "localizations" : {
@@ -9236,12 +9074,67 @@
         }
       }
     },
+    "Make it recognizable" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اجعلها مميزة"
+          }
+        }
+      }
+    },
+    "Make it your own" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اجعله خاصًا بك"
+          }
+        }
+      }
+    },
+    "Make room for your day." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحة لكل ما يهمك في يومك."
+          }
+        }
+      }
+    },
     "Make this Space yours" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "اجعل هذه المساحة مناسبة لك"
+          }
+        }
+      }
+    },
+    "Make yourself at home" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحتك أصبحت جاهزة"
+          }
+        }
+      }
+    },
+    "Make yourself at home." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خذ راحتك."
           }
         }
       }
@@ -9333,6 +9226,17 @@
         }
       }
     },
+    "Mix your own" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "امزج ألوانك الخاصة"
+          }
+        }
+      }
+    },
     "More" : {
 
     },
@@ -9376,6 +9280,9 @@
 
     },
     "Move Split Card Right" : {
+
+    },
+    "Move page cards with the sidebar when switching Spaces. Turn this off to show the destination page when it is ready, while keeping sidebar animations." : {
 
     },
     "Move the pointer to the leading edge to preview the sidebar" : {
@@ -9474,6 +9381,12 @@
         }
       }
     },
+    "Name your Space" : {
+
+    },
+    "Name, crest, colors, and background" : {
+
+    },
     "Native companion messaging is unavailable in this build of Crest." : {
       "localizations" : {
         "ar" : {
@@ -9518,6 +9431,9 @@
       }
     },
     "Needs review" : {
+
+    },
+    "Nest a folder" : {
 
     },
     "Never" : {
@@ -9676,6 +9592,9 @@
           }
         }
       }
+    },
+    "Next" : {
+
     },
     "Next Match" : {
       "localizations" : {
@@ -10124,6 +10043,16 @@
         }
       }
     },
+    "One emblem, a pair, or a trio." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رمز واحد أو اثنان أو ثلاثة."
+          }
+        }
+      }
+    },
     "Only account and site metadata is shown here. Password values stay in the selected Space’s Data Protection Keychain and never enter Crest session or CloudKit records." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10497,6 +10426,16 @@
         }
       }
     },
+    "Or use an emoji" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أو استخدم رمزًا تعبيريًا"
+          }
+        }
+      }
+    },
     "Ordinary" : {
       "localizations" : {
         "ar" : {
@@ -10516,6 +10455,9 @@
           }
         }
       }
+    },
+    "Organize with folders" : {
+
     },
     "Other Spaces" : {
       "extractionState" : "stale",
@@ -10617,6 +10559,20 @@
           }
         }
       }
+    },
+    "Palette, pattern, texture and readability" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لوحة الألوان والنمط والملمس ووضوح القراءة"
+          }
+        }
+      }
+    },
+    "Palettes" : {
+
     },
     "Passkey access is off" : {
       "localizations" : {
@@ -10964,6 +10920,23 @@
         }
       }
     },
+    "Pick one that feels like you. Every detail can change later." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر ما يعكس شخصيتك. يمكنك تغيير كل التفاصيل لاحقًا."
+          }
+        }
+      }
+    },
+    "Pin everyday apps" : {
+
+    },
+    "Pin Gmail" : {
+
+    },
     "Pin or Unpin Current Tab" : {
       "localizations" : {
         "ar" : {
@@ -11079,6 +11052,32 @@
         }
       }
     },
+    "Practice" : {
+
+    },
+    "Practice again" : {
+
+    },
+    "Practice pinning, saving, and organizing tabs after setup." : {
+
+    },
+    "Practice Space actions" : {
+
+    },
+    "Practice uses an example Space. Your tabs are unchanged." : {
+
+    },
+    "Prefer something simple? Choose a symbol or add an emoji." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تفضّل تصميمًا بسيطًا؟ اختر رمزًا أو أضف رمزًا تعبيريًا."
+          }
+        }
+      }
+    },
     "Preparing bookmarks…" : {
       "localizations" : {
         "ar" : {
@@ -11147,6 +11146,9 @@
           }
         }
       }
+    },
+    "Previous" : {
+
     },
     "Previous Match" : {
       "localizations" : {
@@ -12125,6 +12127,9 @@
         }
       }
     },
+    "Reset practice" : {
+
+    },
     "Reset to 100%" : {
 
     },
@@ -12242,6 +12247,9 @@
         }
       }
     },
+    "Return to your tabs" : {
+
+    },
     "Returns to the last page" : {
       "localizations" : {
         "ar" : {
@@ -12292,6 +12300,9 @@
       }
     },
     "Review update details" : {
+
+    },
+    "Review your Spaces or add another before opening Crest." : {
 
     },
     "right arrow" : {
@@ -12436,6 +12447,17 @@
         }
       }
     },
+    "Same crest, different colors. Try a palette or mix your own." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشعار نفسه بألوان مختلفة. جرّب لوحة ألوان أو امزج ألوانك."
+          }
+        }
+      }
+    },
     "Sample page" : {
 
     },
@@ -12451,6 +12473,12 @@
           }
         }
       }
+    },
+    "Save a tab" : {
+
+    },
+    "Save A weekend away" : {
+
     },
     "Save in %@" : {
       "localizations" : {
@@ -12625,6 +12653,9 @@
           }
         }
       }
+    },
+    "Saved tabs stay above the line until you delete them. The minus button unloads a saved tab while keeping it in your sidebar." : {
+
     },
     "Saves this permission in the current Space. Retry the action on the site afterward" : {
 
@@ -12851,6 +12882,9 @@
         }
       }
     },
+    "Select a tab in the sidebar, or choose New Tab to start browsing." : {
+
+    },
     "Select All" : {
 
     },
@@ -12896,6 +12930,9 @@
           }
         }
       }
+    },
+    "Select Template" : {
+
     },
     "Select this Space, or drop a tab to move it here" : {
       "localizations" : {
@@ -12966,6 +13003,17 @@
         }
       }
     },
+    "Set the scene" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر الخلفية"
+          }
+        }
+      }
+    },
     "Set Up Crest" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13025,6 +13073,27 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الإعداد"
+          }
+        }
+      }
+    },
+    "Shape" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشكل"
+          }
+        }
+      }
+    },
+    "Shape, emblem, border and layer colors" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشكل والرمز والإطار وألوان الطبقات"
           }
         }
       }
@@ -13161,6 +13230,9 @@
         }
       }
     },
+    "Show more tabs" : {
+
+    },
     "Show Next Spaces" : {
 
     },
@@ -13244,6 +13316,9 @@
 
     },
     "Sidebar" : {
+
+    },
+    "Sidebar background" : {
 
     },
     "Sidebar Widgets" : {
@@ -13399,6 +13474,17 @@
         }
       }
     },
+    "Something to read" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شيء للقراءة"
+          }
+        }
+      }
+    },
     "space" : {
       "localizations" : {
         "ar" : {
@@ -13439,7 +13525,18 @@
         }
       }
     },
+    "Space appearance" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مظهر المساحة"
+          }
+        }
+      }
+    },
     "Space branding builder" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13493,6 +13590,17 @@
         }
       }
     },
+    "Space preview" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "معاينة المساحة"
+          }
+        }
+      }
+    },
     "Space-specific add-ons" : {
       "localizations" : {
         "ar" : {
@@ -13540,6 +13648,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "منقسم"
+          }
+        }
+      }
+    },
+    "Split the colors behind your emblem." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "قسّم الألوان خلف رمزك."
           }
         }
       }
@@ -13765,6 +13883,20 @@
         }
       }
     },
+    "Start with a simple crest" : {
+
+    },
+    "Start with a Space that feels like you. Add more whenever you need them." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ابدأ بمساحة تعبّر عنك. وأضف المزيد متى احتجت إليها."
+          }
+        }
+      }
+    },
     "Startup" : {
       "localizations" : {
         "ar" : {
@@ -13986,6 +14118,9 @@
         }
       }
     },
+    "Swipe up on the URL bar or tap the tabs button on its right to return to your Space and start browsing." : {
+
+    },
     "switch cycle spaces left right arrow" : {
       "localizations" : {
         "ar" : {
@@ -14033,6 +14168,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "الرمز"
+          }
+        }
+      }
+    },
+    "Symbol or emoji" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رمز أو إيموجي"
           }
         }
       }
@@ -14252,6 +14398,12 @@
         }
       }
     },
+    "Tabs & folders" : {
+
+    },
+    "Tabs below the line close automatically on your Space’s cleanup schedule. Open the Space’s ••• menu and choose Clean Up Current Tabs to archive them now. Pinned and saved tabs stay." : {
+
+    },
     "Tabs reorder live across pinned, saved, folder, and current sections." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14262,6 +14414,9 @@
           }
         }
       }
+    },
+    "Tap the name to rename" : {
+
     },
     "Technical Details" : {
       "localizations" : {
@@ -14444,6 +14599,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تغيّر النموذج قبل أن يتمكن Crest من إدخال كلمة المرور."
+          }
+        }
+      }
+    },
+    "The foundation of your crest. Compare each shape below." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أساس شعارك. قارن الأشكال أدناه."
           }
         }
       }
@@ -14772,6 +14938,9 @@
         }
       }
     },
+    "This guide stays in your Saved tabs." : {
+
+    },
     "This history database is larger than Crest’s 512 MB import limit." : {
       "localizations" : {
         "ar" : {
@@ -14794,6 +14963,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "This immediately and permanently deletes %1$@ older than %2$@ in this Space, including synced copies. Downloaded files stay on disk."
+          }
+        }
+      }
+    },
+    "This is how your colors fill the sidebar." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هكذا ستظهر ألوانك في الشريط الجانبي."
           }
         }
       }
@@ -14983,6 +15162,9 @@
         }
       }
     },
+    "This tab needs a newer Crest" : {
+
+    },
     "Three" : {
       "localizations" : {
         "ar" : {
@@ -15045,6 +15227,12 @@
           }
         }
       }
+    },
+    "Touch and hold for options to reorder Spaces" : {
+
+    },
+    "Touch and hold Gmail, then choose Pin Tab. Pinned tabs stay at the top for your everyday apps." : {
+
     },
     "Tower" : {
       "localizations" : {
@@ -15171,6 +15359,9 @@
           }
         }
       }
+    },
+    "Try the browser" : {
+
     },
     "Try this" : {
       "localizations" : {
@@ -15368,7 +15559,6 @@
 
     },
     "Unload %@" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -15784,6 +15974,19 @@
     "Use a public search engine host, not a local or numeric address." : {
 
     },
+    "Use a system symbol or emoji." : {
+
+    },
+    "Use an icon instead" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استخدم أيقونة بدلًا من ذلك"
+          }
+        }
+      }
+    },
     "Use Crest Passwords in this Space" : {
       "localizations" : {
         "ar" : {
@@ -15835,6 +16038,17 @@
     },
     "Use imported password %lld" : {
 
+    },
+    "Use Preset" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استخدام التصميم"
+          }
+        }
+      }
     },
     "Use Stacked Icons" : {
 
@@ -16138,6 +16352,17 @@
         }
       }
     },
+    "Work, life, a thing you love. What will you make room for?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "للعمل أو للحياة أو لشيء تحبه. لأي شيء ستخصص مساحة؟"
+          }
+        }
+      }
+    },
     "You can also swipe inward from the leading edge" : {
 
     },
@@ -16157,6 +16382,55 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "أنت غير متصل بالإنترنت"
+          }
+        }
+      }
+    },
+    "Your example Space" : {
+
+    },
+    "Your first Space" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحتك الأولى"
+          }
+        }
+      }
+    },
+    "Your Space" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحتك"
+          }
+        }
+      }
+    },
+    "Your Space, your way" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحتك على طريقتك"
+          }
+        }
+      }
+    },
+    "Your Spaces are ready" : {
+
+    },
+    "Your Spaces are ready. You can change them or add more anytime." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساحاتك جاهزة. يمكنك تغييرها أو إضافة المزيد في أي وقت."
           }
         }
       }

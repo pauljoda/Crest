@@ -1,23 +1,10 @@
 import CoreGraphics
 
-/// The Space switcher's own measurements, kept apart from the segment geometry
-/// that `BrowserSpacePickerMetrics` resolves.
-///
-/// The compact strip's numbers describe a control that has to sit inside a
-/// windowed sidebar's foot alongside two utilities; the scrolling track's one
-/// number describes the square a Space claims in a list a finger flicks
-/// through.
+/// Shared Space picker sizing and the lane reserved between sidebar utilities.
 enum BrowserSpaceSwitcherLayout {
-    static let usesOneButtonPerSpace = true
-    static let leadingUtility = BrowserSpaceSwitcherUtility.sidebarToggle
-    static let trailingUtility = BrowserSpaceSwitcherUtility.commonLists
-    static let showsSpaceCreation = false
     static let utilityButtonSize: CGFloat = 32
     static let segmentWidth = CrestSpaceIconPickerMetrics.segmentWidth
-    static let segmentHeight = CrestSpaceIconPickerMetrics.segmentHeight
-    static let cornerRadius = CrestSpaceIconPickerMetrics.cornerRadius
-    static let pickerHeight = segmentHeight + 2 * CrestSpaceIconPickerMetrics.trackPadding
-    static let overflowButtonWidth: CGFloat = 28
+    static let overflowButtonWidth = CrestSpaceIconPickerMetrics.overflowButtonWidth
 
     /// The band the compact strip occupies, which is what holds the picker
     /// clear of the sidebar's bottom edge and the utilities either side of it.
@@ -35,15 +22,6 @@ enum BrowserSpaceSwitcherLayout {
     static let leadingUtilityAccessibilityPriority: Double = 3
     static let pickerAccessibilityPriority: Double = 2
     static let trailingUtilityAccessibilityPriority: Double = 1
-
-    /// The square one Space claims in a scrolling track. It is both the
-    /// segment's extent and the distance a flick steps by, so a gesture that
-    /// crosses one segment lands on exactly one Space.
-    static let scrollingSegmentExtent: CGFloat = 52
-
-    /// The distance a drag has to travel before the track treats it as a step
-    /// rather than as a scroll it should leave to the system.
-    static let scrollingStepThreshold: CGFloat = 12
 
     /// The inset that lines the scrolling track up with the sidebar's rows,
     /// and the gap between it and the chrome above.
@@ -76,21 +54,12 @@ enum BrowserSpaceSwitcherLayout {
             0,
             contentWidth - 2 * balancedSideReservation
         )
-        let pickerMinX = (width - pickerViewportWidth) / 2
 
         return BrowserSpaceSwitcherCompactAllocation(
             pickerViewportWidth: pickerViewportWidth,
             pickerContentWidth: compactPickerContentWidth(
                 spaceCount: spaceCount
-            ),
-            pickerMinX: pickerMinX,
-            pickerMaxX: pickerMinX + pickerViewportWidth,
-            leadingUtilityMaxX: leadingWidth > 0
-                ? compactStripHorizontalInset + leadingWidth
-                : nil,
-            trailingUtilityMinX: trailingWidth > 0
-                ? width - compactStripHorizontalInset - trailingWidth
-                : nil
+            )
         )
     }
 
@@ -105,10 +74,6 @@ enum BrowserSpaceSwitcherLayout {
         return spaceIDs.contains(selectedSpaceID)
             ? selectedSpaceID
             : spaceIDs.first
-    }
-
-    static func segmentIDs(for spaces: [BrowserSpace]) -> [SpaceID] {
-        spaces.map(\.id)
     }
 
     private static func utilityReservation(for width: CGFloat) -> CGFloat {
@@ -127,34 +92,14 @@ enum BrowserSpaceSwitcherLayout {
 struct BrowserSpaceSwitcherCompactAllocation: Equatable, Sendable {
     let pickerViewportWidth: CGFloat
     let pickerContentWidth: CGFloat
-    let pickerMinX: CGFloat
-    let pickerMaxX: CGFloat
-    let leadingUtilityMaxX: CGFloat?
-    let trailingUtilityMinX: CGFloat?
+    var overflowButtonWidth: CGFloat = BrowserSpaceSwitcherLayout.overflowButtonWidth
 
     var usesOverflow: Bool {
         pickerContentWidth > pickerViewportWidth
     }
 
     var scrollViewportWidth: CGFloat {
-        max(0, pickerViewportWidth - (usesOverflow ? 2 * BrowserSpaceSwitcherLayout.overflowButtonWidth : 0))
+        max(0, pickerViewportWidth - (usesOverflow ? 2 * overflowButtonWidth : 0))
     }
 
-    /// The scroll track expands to the viewport only while its intrinsic
-    /// content fits, leaving an equal visual inset on both sides.
-    var fittingContentHorizontalInset: CGFloat {
-        max(0, (pickerViewportWidth - pickerContentWidth) / 2)
-    }
-
-    var keepsUtilitiesClear: Bool {
-        let clearsLeading =
-            leadingUtilityMaxX.map {
-                pickerMinX >= $0 + BrowserSpaceSwitcherLayout.compactStripSpacing
-            } ?? true
-        let clearsTrailing =
-            trailingUtilityMinX.map {
-                pickerMaxX <= $0 - BrowserSpaceSwitcherLayout.compactStripSpacing
-            } ?? true
-        return clearsLeading && clearsTrailing
-    }
 }

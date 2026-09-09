@@ -14,6 +14,7 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     let reduceTransparency: Bool
     let layoutDirection: LayoutDirection
     let space: BrowserSpace?
+    var spaces: [BrowserSpace] = []
     let showSidebar: () -> Void
     let commitSidebarWidth: (CGFloat) -> Void
     let sidebar: Sidebar
@@ -36,6 +37,7 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                 width: layout.sidebarWidth,
                 space: space,
                 reduceTransparency: reduceTransparency,
+                spaces: spaces,
                 hoverChanged: { _ in }
             ) {
                 sidebar

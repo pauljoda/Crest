@@ -118,10 +118,10 @@ final class BrowserExtensionDiagnosticsLog {
     /// identifier in `contextIdentifierKey`. `BrowserExtensionContextObserver`
     /// turns it into the same runtime-summary refresh WebKit's own
     /// `errorsDidUpdateNotification` drives.
-    static let didRecordNotification = Notification.Name(
+    nonisolated static let didRecordNotification = Notification.Name(
         "BrowserExtensionDiagnosticsLogDidRecord"
     )
-    static let contextIdentifierKey = "contextIdentifier"
+    nonisolated static let contextIdentifierKey = "contextIdentifier"
 
     private static let capacity = 20
 

@@ -292,9 +292,7 @@ extension BrowserRootModel {
         guard hasRestoredExtensions else { return }
         isAddressEditing = false
         AddressFocusAction.resign()
-        if !BrowserSpaceContentSelectionPolicy.rootObserverDefersSpaceChanges,
-            selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.session)
-        {
+        if selectedSpaceIsLocked || !pages.isPresentingSelection(in: browser.session) {
             if selectedSpaceIsLocked {
                 pages.deactivatePagePresentation()
             } else {

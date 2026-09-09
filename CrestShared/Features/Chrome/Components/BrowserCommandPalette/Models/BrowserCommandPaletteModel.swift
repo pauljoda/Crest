@@ -15,10 +15,12 @@ final class BrowserCommandPaletteModel {
             selectedResultIndex = 0
             completionProposal =
                 isCompletionSourceAvailable
-                ? BrowserURLCompletion.proposal(query: query, space: space) : nil
+                ? completionCandidates.proposal(query: query) : nil
             scheduleResultsRebuild()
         }
     }
+
+    @ObservationIgnored private lazy var completionCandidates = BrowserURLCompletion.Candidates(space: space)
 
     private var completionProposal: BrowserURLCompletion?
     private(set) var completionEditing = BrowserURLCompletionEditingState()

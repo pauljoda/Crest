@@ -15,11 +15,13 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(BrowserExtensionSidebarStore.self) private var extensionSidebar: BrowserExtensionSidebarStore?
     @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
+    @State private var spacePagerPresentation = SpacePagerPresentation()
 
     var body: some View {
         ZStack(alignment: .leading) {
             BrowserRootBackdrop(
                 space: model.browser.selectedSpace,
+                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
                 transparencyIsEnabled: windowTransparencyIsEnabled,
                 transparencyStrength: windowTransparencyStrength,
                 isWindowFocused: model.isWindowFocused
@@ -32,7 +34,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     isApproachingDock: model.isSidebarApproachingDock
                 )
 
-                BrowserRootPageSurface(
+                BrowserSpacePageSurface(
                     model: model,
                     tabPromotionNamespace: tabPromotionNamespace
                 )
@@ -48,6 +50,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 width: model.sidebarWidth,
                 space: model.browser.selectedSpace,
                 reduceTransparency: reduceTransparency,
+                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
                 hoverChanged: {
                     model.sidebarSurfaceHoverChanged(
                         $0,
@@ -129,6 +132,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // so the sidebar reads it from here rather than being handed a value
         // per tab through the tree between them.
         .environment(downloadFeedback)
+        .environment(\.spacePagerPresentation, spacePagerPresentation)
         .environment(
             \.browserWebFocusRestorationGate,
             BrowserWebFocusRestorationGate(

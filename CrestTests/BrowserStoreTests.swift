@@ -1822,21 +1822,20 @@ final class BrowserStoreTests: XCTestCase {
     }
 
     func testHeavyPerformanceFixtureCoversManyValidSpacesTabsFoldersAndHistoryRows() throws {
-        let session = try XCTUnwrap(
+        for tabCount in [24, 50, 200, 500] {
+            let session = try XCTUnwrap(
+                BrowserPerformanceSoakFixture.makeSession(
+                    baseURLString: "http://127.0.0.1:18768/", rawTabCount: String(tabCount),
+                    isHeavy: true, runID: "chrome-scale"))
+            let expectedNames = Set(BrowserSpaceHousePalette.allCases.map(\.name)).union(["Daylight"])
+            XCTAssertEqual(Set(session.spaces.map(\.name)), expectedNames)
+            XCTAssertTrue(session.spaces.allSatisfy { $0.tabs.count == tabCount && $0.folders.count == 8 })
+            XCTAssertTrue(session.spaces.allSatisfy { $0.history.count == 96 && $0.folderTree.isValid })
+            XCTAssertTrue(session.spaces.allSatisfy { $0.selectedTabID != nil })
+        }
+        XCTAssertNil(
             BrowserPerformanceSoakFixture.makeSession(
-                baseURLString: "http://127.0.0.1:18768/",
-                rawTabCount: "24",
-                isHeavy: true,
-                runID: "app-289-heavy"
-            )
-        )
-
-        XCTAssertEqual(session.spaces.count, 6)
-        XCTAssertEqual(session.spaces.flatMap(\.tabs).count, 144)
-        XCTAssertEqual(session.spaces.flatMap(\.folders).count, 48)
-        XCTAssertEqual(session.spaces.flatMap(\.history).count, 576)
-        XCTAssertTrue(session.spaces.allSatisfy { $0.folderTree.isValid })
-        XCTAssertTrue(session.spaces.allSatisfy { $0.selectedTabID != nil })
+                baseURLString: "http://127.0.0.1:18768/", rawTabCount: "501", isHeavy: true, runID: "too-large"))
     }
 
     func testReleaseSoakFixtureRejectsNonLoopbackAndMalformedInputs() {

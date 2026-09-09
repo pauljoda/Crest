@@ -434,25 +434,16 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(touch.iconPadding, 4)
     }
 
-    /// A pointer crest has to fit inside the compact picker's own segment, or
-    /// the strip stops being compact. A touch crest plus its clearance is what
-    /// defines the scrolling track's step instead, so it must not exceed it.
+    /// Both input styles must leave enough room for the crest and its padding.
     func testEachSegmentFitsTheTrackItsArrangementDrawsItIn() {
-        let pointer = BrowserSpacePickerMetrics.pointer
-        XCTAssertLessThanOrEqual(
-            pointer.iconSize + 2 * pointer.iconPadding,
-            BrowserSpaceSwitcherLayout.segmentWidth
-        )
-        XCTAssertLessThanOrEqual(
-            pointer.iconSize + 2 * pointer.iconPadding,
-            BrowserSpaceSwitcherLayout.segmentHeight
-        )
-
-        let touch = BrowserSpacePickerMetrics.touch
-        XCTAssertLessThanOrEqual(
-            touch.iconSize + 2 * touch.iconPadding,
-            BrowserSpaceSwitcherLayout.scrollingSegmentExtent
-        )
+        for (style, metrics) in [
+            (CrestSpaceIconPickerStyle.compact, BrowserSpacePickerMetrics.pointer),
+            (.touch, .touch),
+        ] {
+            let artworkExtent = metrics.iconSize + 2 * metrics.iconPadding
+            XCTAssertLessThanOrEqual(artworkExtent, style.minimumSegmentWidth)
+            XCTAssertLessThanOrEqual(artworkExtent, style.height - 2 * CrestSpaceIconPickerMetrics.trackPadding)
+        }
     }
 
     /// A trackpad beside a touchscreen must not shrink the crest back down.

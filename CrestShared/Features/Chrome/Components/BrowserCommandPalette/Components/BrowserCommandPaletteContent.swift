@@ -8,6 +8,10 @@ struct BrowserCommandPaletteContent: View {
     let overlayContentLeadingInset: CGFloat
 
     @FocusState private var queryIsFocused: Bool
+    @Environment(\.spaceContentIsInteractive) private var spaceContentIsInteractive
+    @Environment(\.isEnabled) private var isEnabled
+
+    private var canFocus: Bool { isEnabled && spaceContentIsInteractive }
 
     var body: some View {
         BrowserCommandPalettePresentationView(
@@ -18,8 +22,13 @@ struct BrowserCommandPaletteContent: View {
             overlayContentLeadingInset: overlayContentLeadingInset,
             queryIsFocused: $queryIsFocused
         )
-        .task {
+        .task(id: canFocus) {
+            guard canFocus else {
+                queryIsFocused = false
+                return
+            }
             await Task.yield()
+            guard !Task.isCancelled, canFocus else { return }
             queryIsFocused = true
         }
         .onKeyPress(.downArrow) {

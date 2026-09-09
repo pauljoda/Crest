@@ -1002,6 +1002,9 @@ final class BrowserPagePoolTests: XCTestCase {
         let pages = BrowserPagePool(contentRuleListProvider: EmptyBrowserContentRuleListProvider())
         let savedCount = persistence.savedScopes.count
 
+        XCTAssertTrue(pages.requiresStartPageOnEntry(to: space))
+        XCTAssertNil(pages.surfacePage(for: tab, in: space, accessController: BrowserSpaceAccessController()))
+        XCTAssertTrue(pages.retainedTabIDs.isEmpty, "Preparing an unloaded card must not create a WebKit runtime")
         pages.selectSpace(in: browser)
 
         XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
@@ -1060,6 +1063,10 @@ final class BrowserPagePoolTests: XCTestCase {
         let pending = resident.pendingNavigationURL
         pages.deactivatePagePresentation()
 
+        XCTAssertFalse(pages.requiresStartPageOnEntry(to: space))
+        XCTAssertTrue(
+            pages.surfacePage(for: tab, in: space, accessController: BrowserSpaceAccessController()) === resident)
+        XCTAssertNil(pages.activePage, "Drawing a retained card must not activate or focus it")
         pages.selectSpace(in: browser)
 
         XCTAssertEqual(browser.selectedTab?.id, tab.id)
@@ -2963,6 +2970,17 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertTrue(pool.presentedTabIDs.isEmpty)
         XCTAssertTrue(pool.containsResidentPage(for: secret.id))
         XCTAssertTrue(pool.containsResidentPage(for: openTab.id))
+
+        let access = BrowserSpaceAccessController()
+        XCTAssertNil(
+            pool.surfacePage(for: secret, in: protectedSpace, accessController: access),
+            "A locked Space may retain its runtime but cannot mount it in the content strip")
+        XCTAssertNotNil(pool.surfacePage(for: openTab, in: openSpace, accessController: access))
+        let replacedProfile = BrowserSpace(
+            id: openSpace.id, profile: BrowsingProfile(), name: openSpace.name,
+            symbol: openSpace.symbol, accent: openSpace.accent, folders: [],
+            tabs: [openTab], selectedTabID: openTab.id)
+        XCTAssertNil(pool.surfacePage(for: openTab, in: replacedProfile, accessController: access))
 
         pool.select(tab: secret, space: protectedSpace)
         XCTAssertTrue(pool.activePage === secretPage)

@@ -4,26 +4,29 @@ struct MobileBrowserSidebarPager: View {
     let configuration: MobileBrowserSidebarContentConfiguration
 
     var body: some View {
-        ZStack {
-            if configuration.showsPageBackdrop {
-                Color(uiColor: .systemBackground)
-                    .ignoresSafeArea()
-            }
-
-            GeometryReader { geometry in
-                BrowserSidebarSpacePager(
-                    context: configuration.context
-                ) { space, isSelected in
+        GeometryReader { _ in
+            VStack(spacing: 0) {
+                MobileBrowserSidebarChrome(configuration: configuration)
+                    .fixedSize(horizontal: false, vertical: true)
+                BrowserSidebarSpacePager(context: configuration.context) { space, isSelected in
                     MobileBrowserSidebarSpaceSurface(
-                        configuration: configuration,
-                        space: space,
-                        isSelected: isSelected,
-                        contentInsets: geometry.safeAreaInsets
-                    )
+                        configuration: configuration, space: space, isSelected: isSelected)
                 }
             }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                MobileBrowserSidebarChrome(configuration: configuration)
+        }
+        .background {
+            if configuration.showsPageBackdrop {
+                SpaceBackdropBlend(
+                    spaces: configuration.context.availableSpaces,
+                    selectedSpace: configuration.context.browser.selectedSpace
+                ) { space in
+                    if let space {
+                        BrowserSpaceBannerBackground(branding: space.branding)
+                    } else {
+                        Color(uiColor: .systemBackground)
+                    }
+                }
+                .ignoresSafeArea()
             }
         }
     }

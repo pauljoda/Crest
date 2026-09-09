@@ -1,11 +1,5 @@
 import SwiftUI
 
-enum MobileRegularBrowserBackdropPolicy {
-    static let rootOwnsAtmosphere = true
-    static let atmosphereSafeAreaEdges: Edge.Set = .all
-    static let extendsBehindTopSafeArea = atmosphereSafeAreaEdges.contains(.top)
-}
-
 enum MobileStartPageAppearancePolicy {
     static func foregroundTone(
         usesCommandPalette _: Bool
@@ -15,8 +9,6 @@ enum MobileStartPageAppearancePolicy {
 }
 
 enum MobileStartPageSearchPolicy {
-    static let usesSharedCommandPalette = true
-    static let focusesWhenNewTabOpens = true
 
     static func destination(
         isStartPage: Bool,

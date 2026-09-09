@@ -744,7 +744,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
     }
 
     func testVerifiedFirefoxPackageUsesTheSharedCompatibilityOverlay()
-        throws
+        async throws
     {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -780,7 +780,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             requestedPermissions: ["nativeMessaging", "privacy"]
         )
 
-        let prepared = try BrowserStoreWebExtensionStoredResourcePreparer(
+        let prepared = try await BrowserStoreWebExtensionStoredResourcePreparer(
             fileManager: fileManager
         ).prepare(
             resourceURL: resourceURL,

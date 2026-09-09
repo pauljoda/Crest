@@ -62,7 +62,7 @@ final class BrowserURLCompletionTests: XCTestCase {
         let other = fixture(urls: ["https://private.example/path"])
         XCTAssertNil(completion("private", current))
         XCTAssertEqual(completion("private", other)?.completedQuery, "private.example/path")
-        XCTAssertNil(BrowserURLCompletion.proposal(query: "current", space: nil))
+        XCTAssertNil(BrowserURLCompletion.Candidates(space: nil).proposal(query: "current"))
     }
 
     func testSelectionCompositionAndDeletionSuppressProposal() {
@@ -106,7 +106,7 @@ final class BrowserURLCompletionTests: XCTestCase {
     }
 
     private func completion(_ query: String, _ space: BrowserSpace) -> BrowserURLCompletion? {
-        BrowserURLCompletion.proposal(query: query, space: space)
+        BrowserURLCompletion.Candidates(space: space).proposal(query: query)
     }
 
     private func fixture(urls: [String]) -> BrowserSpace {

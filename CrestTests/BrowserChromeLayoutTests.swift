@@ -85,16 +85,21 @@ final class BrowserChromeLayoutTests: XCTestCase {
 
     func testOverflowControlsStayInsideTheBalancedPickerBudget() {
         for width in [260.0, 289.0, 380.0] {
-            for count in [1, 4, 5, 7, 20] {
-                let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
-                    availableWidth: width, spaceCount: count,
-                    leadingUtilityWidth: 0, trailingUtilityWidth: 32
-                )
-                XCTAssertTrue(allocation.keepsUtilitiesClear)
-                XCTAssertEqual((allocation.pickerMinX + allocation.pickerMaxX) / 2, width / 2)
-                XCTAssertGreaterThanOrEqual(allocation.scrollViewportWidth, 40)
-                let controls = allocation.usesOverflow ? 56.0 : 0
-                XCTAssertEqual(allocation.scrollViewportWidth + controls, allocation.pickerViewportWidth)
+            for (leading, trailing) in [(0.0, 32.0), (32, 32), (48, 32), (32, 64)] {
+                for count in [0, 1, 4, 7, 20] {
+                    let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
+                        availableWidth: width, spaceCount: count,
+                        leadingUtilityWidth: leading, trailingUtilityWidth: trailing
+                    )
+                    // The UI centers the actual lane width. Even asymmetric
+                    // utilities must fit outside that lane with their gap intact.
+                    let margin = (width - allocation.pickerViewportWidth) / 2
+                    XCTAssertGreaterThanOrEqual(margin, 12 + leading + 2)
+                    XCTAssertGreaterThanOrEqual(margin, 12 + trailing + 2)
+                    XCTAssertGreaterThanOrEqual(allocation.scrollViewportWidth, 40)
+                    let controls = allocation.usesOverflow ? 56.0 : 0
+                    XCTAssertEqual(allocation.scrollViewportWidth + controls, allocation.pickerViewportWidth)
+                }
             }
         }
     }
@@ -1553,126 +1558,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertFalse(BrowserSpaceAccessPresentation.contentOverlay.showsSpaceMenu)
     }
 
-    func testDesktopSpaceSwitcherBuildsExactlyOneSegmentPerSpace() {
-        let spaces = BrowserSession.preview.spaces
-
-        XCTAssertTrue(BrowserSpaceSwitcherLayout.usesOneButtonPerSpace)
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.segmentIDs(for: spaces),
-            spaces.map(\.id)
-        )
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.segmentWidth,
-            CrestSpaceIconPickerMetrics.segmentWidth
-        )
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.segmentHeight,
-            CrestSpaceIconPickerMetrics.segmentHeight
-        )
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.cornerRadius,
-            CrestSpaceIconPickerMetrics.cornerRadius
-        )
-    }
-
-    func testDesktopSpaceSwitcherBalancesSidebarAndCommonListUtilities() {
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.leadingUtility,
-            .sidebarToggle
-        )
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.trailingUtility, .commonLists)
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.utilityButtonSize, 32)
-        XCTAssertFalse(BrowserSpaceSwitcherLayout.showsSpaceCreation)
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.compactStripHeight, 50)
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.compactStripHorizontalInset,
-            12
-        )
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.compactStripSpacing, 2)
-    }
-
-    func testCompactSpaceStripBudgetsThePickerBetweenUtilities() {
-        for width in [
-            BrowserChromeLayout.sidebarMinimumWidth,
-            BrowserChromeLayout.sidebarIdealWidth,
-            BrowserChromeLayout.sidebarMaximumWidth,
-        ] {
-            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
-                availableWidth: width,
-                spaceCount: 20,
-                leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
-                trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
-            )
-
-            XCTAssertTrue(allocation.keepsUtilitiesClear, "width: \(width)")
-            XCTAssertGreaterThanOrEqual(
-                allocation.pickerViewportWidth,
-                BrowserSpaceSwitcherLayout.segmentWidth,
-                "width: \(width)"
-            )
-            XCTAssertEqual(
-                (allocation.pickerMinX + allocation.pickerMaxX) / 2,
-                width / 2,
-                accuracy: 0.001
-            )
-        }
-    }
-
-    func testCompactSpaceStripBalancesAsymmetricUtilityOccupancy() {
-        let cases: [(CGFloat, CGFloat, CGFloat)] = [
-            (BrowserChromeLayout.sidebarMinimumWidth, 0, 32),
-            (BrowserChromeLayout.sidebarIdealWidth, 48, 32),
-            (BrowserChromeLayout.sidebarMaximumWidth, 32, 64),
-        ]
-
-        for (width, leading, trailing) in cases {
-            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
-                availableWidth: width,
-                spaceCount: 7,
-                leadingUtilityWidth: leading,
-                trailingUtilityWidth: trailing
-            )
-
-            XCTAssertTrue(
-                allocation.keepsUtilitiesClear,
-                "width: \(width), leading: \(leading), trailing: \(trailing)"
-            )
-            XCTAssertEqual(
-                (allocation.pickerMinX + allocation.pickerMaxX) / 2,
-                width / 2,
-                accuracy: 0.001
-            )
-        }
-    }
-
-    func testCompactSpaceStripCentersContentThatFitsItsViewport() {
-        for count in [0, 1, 5] {
-            let allocation = BrowserSpaceSwitcherLayout.compactStripAllocation(
-                availableWidth: BrowserChromeLayout.sidebarMaximumWidth,
-                spaceCount: count,
-                leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
-                trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
-            )
-
-            XCTAssertFalse(allocation.usesOverflow, "count: \(count)")
-            XCTAssertEqual(
-                2 * allocation.fittingContentHorizontalInset
-                    + allocation.pickerContentWidth,
-                allocation.pickerViewportWidth,
-                accuracy: 0.001,
-                "count: \(count)"
-            )
-        }
-
-        let overflowing = BrowserSpaceSwitcherLayout.compactStripAllocation(
-            availableWidth: BrowserChromeLayout.sidebarMinimumWidth,
-            spaceCount: 20,
-            leadingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize,
-            trailingUtilityWidth: BrowserSpaceSwitcherLayout.utilityButtonSize
-        )
-        XCTAssertEqual(overflowing.fittingContentHorizontalInset, 0)
-    }
-
     func testCompactSpaceStripAccessibilityOrderMatchesVisualOrder() {
         XCTAssertGreaterThan(
             BrowserSpaceSwitcherLayout.leadingUtilityAccessibilityPriority,
@@ -1752,24 +1637,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         )
     }
 
-    /// The scrolling track's step and its segment are the same number on
-    /// purpose: a flick that crosses one segment has to land on exactly one
-    /// Space, and a threshold below the step is what keeps a nudge from
-    /// counting as a move.
-    func testScrollingSpaceTrackStepsBySegmentsRatherThanByOffset() {
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.scrollingSegmentExtent, 52)
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.scrollingStepThreshold, 12)
-        XCTAssertLessThan(
-            BrowserSpaceSwitcherLayout.scrollingStepThreshold,
-            BrowserSpaceSwitcherLayout.scrollingSegmentExtent
-        )
-        XCTAssertEqual(
-            BrowserSpaceSwitcherLayout.scrollingTrackHorizontalInset,
-            12
-        )
-        XCTAssertEqual(BrowserSpaceSwitcherLayout.scrollingTrackTopInset, 6)
-    }
-
     func testEveryOnboardingStepFollowsTheSystemAppearance() {
         XCTAssertNil(
             BrowserOnboardingAppearancePolicy.colorSchemeOverride(
@@ -1779,36 +1646,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertNil(
             BrowserOnboardingAppearancePolicy.colorSchemeOverride(
                 isManualSetup: false
-            )
-        )
-    }
-
-    func testSpacePagerActivatesResidentWebContentWithoutWaitingForMotionToSettle() {
-        XCTAssertFalse(
-            BrowserSpaceContentSelectionPolicy.defersWebContentUntilPagerSettles
-        )
-        XCTAssertFalse(
-            BrowserSpaceContentSelectionPolicy.rootObserverDefersSpaceChanges
-        )
-    }
-
-    func testSpacePagerLocksWhileSidebarContentIsBeingDragged() {
-        XCTAssertTrue(
-            BrowserSpacePagerPolicy.canSwitchSpaces(
-                spaceCount: 2,
-                isInteractionLocked: false
-            )
-        )
-        XCTAssertFalse(
-            BrowserSpacePagerPolicy.canSwitchSpaces(
-                spaceCount: 2,
-                isInteractionLocked: true
-            )
-        )
-        XCTAssertFalse(
-            BrowserSpacePagerPolicy.canSwitchSpaces(
-                spaceCount: 1,
-                isInteractionLocked: false
             )
         )
     }

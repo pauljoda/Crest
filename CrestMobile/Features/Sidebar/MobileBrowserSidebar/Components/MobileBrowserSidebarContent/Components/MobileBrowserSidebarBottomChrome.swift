@@ -31,6 +31,11 @@ struct MobileBrowserSidebarBottomChrome: View {
                 .frame(height: 60)
             }
         }
+        .modifier(
+            SpaceForegroundBlend(
+                spaces: configuration.context.availableSpaces,
+                selectedSpaceID: configuration.context.browser.selectedSpace?.id)
+        )
         .padding(
             .bottom,
             configuration.sidebarIsDocked

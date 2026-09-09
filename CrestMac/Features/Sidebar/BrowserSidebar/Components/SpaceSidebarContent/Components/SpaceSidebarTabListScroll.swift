@@ -23,6 +23,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                     LazyVStack(spacing: 0) {
                         content()
                     }
+                    .sidebarScrollContent()
 
                     background()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -31,6 +32,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 .frame(minHeight: geometry.size.height, alignment: .top)
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
+            .modifier(SidebarScrollAffordance(isDragging: browser.sidebarReorderState.isDragging))
             .scrollClipDisabled(
                 !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
             )

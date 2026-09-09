@@ -7,10 +7,14 @@ struct BrowserSpacePickerOverflow: Equatable {
 
     init() {}
 
-    init(visibleRect: CGRect, contentWidth: CGFloat, spaceCount: Int) {
+    init(
+        visibleRect: CGRect, contentWidth: CGFloat, spaceCount: Int,
+        segmentWidth: CGFloat = BrowserSpaceSwitcherLayout.segmentWidth,
+        dividerWidth: CGFloat = CrestLayout.hairline
+    ) {
         guard spaceCount > 0 else { return }
         let padding = CrestSpaceIconPickerMetrics.trackPadding
-        let stride = BrowserSpaceSwitcherLayout.segmentWidth + CrestLayout.hairline
+        let stride = segmentWidth + dividerWidth
         if visibleRect.minX > 0.5 {
             previousIndex = min(spaceCount - 1, max(0, Int(floor((visibleRect.minX - padding) / stride))))
         }

@@ -21,14 +21,14 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
 
     var body: some View {
         ZStack {
-            if presentation == .regular,
-                MobileRegularBrowserBackdropPolicy.rootOwnsAtmosphere
-            {
-                BrowserWindowAtmosphere(space: browser.selectedSpace)
-                    .ignoresSafeArea(
-                        .all,
-                        edges: MobileRegularBrowserBackdropPolicy.atmosphereSafeAreaEdges
-                    )
+            if presentation == .regular {
+                SpaceBackdropBlend(
+                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: browser),
+                    selectedSpace: browser.selectedSpace
+                ) {
+                    BrowserWindowAtmosphere(space: $0)
+                }
+                .ignoresSafeArea()
             }
 
             if presentation == .compact {

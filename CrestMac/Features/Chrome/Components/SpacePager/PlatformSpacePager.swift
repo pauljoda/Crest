@@ -7,11 +7,19 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
     let selectedSpaceID: SpaceID
     let isInteractionLocked: Bool
     let selectSpace: (SpaceID) -> SpaceID
-    let settledSpace: (SpaceID) -> Void
     @ViewBuilder let content: (BrowserSpace, Bool) -> Content
 
     func makeNSView(context: Context) -> SpacePagerViewport<Content> {
         SpacePagerViewport(frame: .zero)
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize, nsView: SpacePagerViewport<Content>, context: Context
+    ) -> CGSize? {
+        // The shell determines the viewport; retained pages fill that size.
+        // Avoid native fitting traversing those page subtrees whenever their
+        // scroll geometry changes.
+        proposal.replacingUnspecifiedDimensions(by: .zero)
     }
 
     func updateNSView(_ view: SpacePagerViewport<Content>, context: Context) {
@@ -22,52 +30,15 @@ struct PlatformSpacePager<Content: View>: NSViewRepresentable {
             reduceMotion: environment.accessibilityReduceMotion,
             layoutDirection: environment.layoutDirection,
             presentation: environment.spacePagerPresentation,
-            selectSpace: selectSpace, settledSpace: settledSpace
+            selectSpace: selectSpace
         ) { space, isSelected in
             SpacePageRoot(
-                content: content(space, isSelected), environment: environment,
+                content: content(space, isSelected),
                 assignment: BrowserSpaceRuntimeAssignment(space: space))
         }
     }
 
     static func dismantleNSView(_ view: SpacePagerViewport<Content>, coordinator: ()) {
         view.teardown()
-    }
-}
-
-/// A retained host preserves the supplied namespace, capabilities, and environment.
-struct SpacePageRoot<Content: View>: View {
-    let content: Content
-    let environment: EnvironmentValues
-    let assignment: BrowserSpaceRuntimeAssignment
-
-    var body: some View {
-        content
-            .environment(\.self, environment)
-            .id(assignment)
-    }
-}
-
-@MainActor
-final class SpacePageHost<Content: View>: NSView {
-    let hostingView: NSHostingView<SpacePageRoot<Content>>
-
-    init(root: SpacePageRoot<Content>) {
-        hostingView = NSHostingView(rootView: root)
-        super.init(frame: .zero)
-        wantsLayer = true
-        clipsToBounds = true
-        hostingView.sizingOptions = []
-        hostingView.safeAreaRegions = []
-        hostingView.autoresizingMask = [.width, .height]
-        addSubview(hostingView)
-        setAccessibilityElement(false)
-    }
-
-    required init?(coder: NSCoder) { return nil }
-
-    override func layout() {
-        super.layout()
-        hostingView.frame = bounds
     }
 }

@@ -19,7 +19,14 @@ final class BrowserExtensionBackgroundHealth {
     private var pending: [String: Pending] = [:]
 
     func register(client: BrowserExtensionServiceClientID, id: UUID, publish: @escaping ([String: Any]) -> Void) {
+        if let previous = endpoints[client], previous.id != id {
+            unregister(client: client, id: previous.id)
+        }
         endpoints[client] = Endpoint(id: id, publish: publish)
+    }
+
+    func endpointID(for client: BrowserExtensionServiceClientID) -> UUID? {
+        endpoints[client]?.id
     }
 
     func unregister(client: BrowserExtensionServiceClientID, id: UUID) {

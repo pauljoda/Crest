@@ -1,19 +1,7 @@
 import SwiftUI
 
-/// The sidebar both shells are: the Space selection flow, the utility surfaces'
-/// scratch state, and the one destructive confirmation the sidebar can raise.
-///
-/// What the two shells never actually disagreed about is everything in here.
-/// Selecting a Space walks the same four steps on both — refuse a no-op, move
-/// the session, refuse a locked or vanished Space, then decide whether the page
-/// follows now or once the pager comes to rest. The utility search text and
-/// filter reset on every surface change; finished downloads are acknowledged
-/// the moment the reader can see them. Those were two copies of the same code.
-///
-/// What the shells *do* disagree about is the layout around it — a switcher
-/// under a clipped pager on one, chrome in both safe-area insets on the other —
-/// so the shell builds that from `BrowserSidebarContext` rather than the root
-/// composing chrome it would have to branch on.
+/// Owns shared Space selection, utility state, and clear-history confirmation.
+/// Each platform supplies its layout through `BrowserSidebarContext`.
 struct BrowserSidebar<Content: View>: View {
     let browser: BrowserStore
     let pageAccess: BrowserSidebarPageAccess
@@ -41,8 +29,6 @@ struct BrowserSidebar<Content: View>: View {
 
     @ViewBuilder let content: (BrowserSidebarContext) -> Content
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pendingPageSelection: BrowserSpaceRuntimeAssignment?
     @State private var utilitySearchText = ""
     @State private var utilityFilter = BrowserUtilityListFilter.all
     @State private var clearHistoryConfirmation: BrowserSidebarClearHistoryConfirmation?
@@ -109,7 +95,6 @@ struct BrowserSidebar<Content: View>: View {
             utilityFilter: $utilityFilter,
             chromeActions: chromeActions,
             selectSpace: selectSpace,
-            settleSpaceSelection: settleSpaceSelection,
             confirmClearHistory: confirmClearHistory(for:),
             dismissUtilityOnBlankSpace: dismissUtilityOnBlankSpace,
             toggleUtilitySwitcher: toggleUtilitySwitcher
@@ -157,49 +142,12 @@ struct BrowserSidebar<Content: View>: View {
         }
         browser.selectSpace(spaceID)
         guard let space = selectedUnlockedSpace else {
-            pendingPageSelection = nil
             pageAccess.deactivatePagePresentation()
             spaceSelectionChanged(nil)
             return
         }
         spaceSelectionChanged(space)
-        guard presentsSelectedSpacePage else {
-            pendingPageSelection = nil
-            return
-        }
-        guard
-            BrowserSpaceContentSelectionPolicy.defersWebContentUntilPagerSettles,
-            !reduceMotion
-        else {
-            pageAccess.selectPages()
-            return
-        }
-        pendingPageSelection = BrowserSpaceRuntimeAssignment(space: space)
-    }
-
-    /// Releases a deferred page selection once the pager has come to rest on
-    /// the Space that asked for it, and drops the request outright when the
-    /// reader landed somewhere else or the Space stopped being reachable.
-    private func settleSpaceSelection(_ settledSpaceID: SpaceID) {
-        guard let assignment = pendingPageSelection else { return }
-        guard
-            BrowserSidebarAccessPolicy.canSettlePageSelection(
-                assignment,
-                settledSpaceID: settledSpaceID,
-                in: browser,
-                accessController: spaceAccess
-            )
-        else {
-            if settledSpaceID == assignment.spaceID
-                || browser.session.selectedSpaceID != assignment.spaceID
-            {
-                pendingPageSelection = nil
-                pageAccess.deactivatePagePresentation()
-            }
-            return
-        }
-        pendingPageSelection = nil
-        pageAccess.selectPages()
+        if presentsSelectedSpacePage { pageAccess.selectPages() }
     }
 
     private var selectedUnlockedSpace: BrowserSpace? {

@@ -1,10 +1,47 @@
 import AppKit
+import SwiftUI
 import XCTest
 
 @testable import Crest
 
 @MainActor
 final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
+    func testRetainedStartPageCannotTakeFocusUntilEnabled() async throws {
+        let fixture = makeEditor()
+        let palette = BrowserCommandPalette(
+            space: nil, selectedTabID: nil, isSourceAvailable: { _ in false },
+            selectTab: { _, _ in false }, openURL: { _, _ in false }, dismiss: {}, presentation: .embedded)
+        let host = NSHostingView(rootView: palette.environment(\.spaceContentIsInteractive, false))
+        host.frame = CGRect(x: 420, y: 0, width: 400, height: 300)
+        fixture.window.contentView?.addSubview(host)
+        defer {
+            host.removeFromSuperview()
+            fixture.window.close()
+        }
+        fixture.window.contentView?.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNotNil(
+            fixture.field.currentEditor(), "Preparing a neighboring Start Page must preserve the current editor")
+        let fields = descendants(of: host).compactMap { $0 as? NSTextField }
+        let retained = try XCTUnwrap(
+            fields.first { $0.accessibilityIdentifier() == "start-page-command-palette-field" })
+        XCTAssertFalse(retained.isEditable)
+        XCTAssertNil(retained.currentEditor())
+        host.rootView = palette.environment(\.spaceContentIsInteractive, true)
+        fixture.window.contentView?.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertTrue(retained.isEditable)
+        XCTAssertNotNil(retained.currentEditor(), "The incoming Start Page gains its normal focus when activated")
+        host.rootView = palette.environment(\.spaceContentIsInteractive, false)
+        fixture.window.contentView?.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertNil(retained.currentEditor(), "A departed card must relinquish its editor")
+    }
+
+    private func descendants(of view: NSView) -> [NSView] {
+        view.subviews.flatMap { [$0] + descendants(of: $0) }
+    }
+
     func testNativeAcceptanceIsUndoableAndAccessibilityKeepsTypedValueSeparate() throws {
         let fixture = makeEditor()
         defer { fixture.window.close() }

@@ -6,6 +6,7 @@ struct BrowserDetailContent: View {
     /// selected tab; a Split View card passes its own member, which is what
     /// keeps an unfocused start-page card bound to itself.
     let tab: BrowserTab?
+    let space: BrowserSpace?
     let pagePresentation: BrowserPagePresentation
     let browser: BrowserStore
     let pages: BrowserPagePool
@@ -19,7 +20,7 @@ struct BrowserDetailContent: View {
         case .noSelection:
             Color.clear
         case .nativeContent:
-            if let tab, let space = browser.selectedSpace {
+            if let tab, let space {
                 BrowserNativeTabHost(tab: tab, space: space)
                     .environment(
                         \.browserNativeTabActions,
@@ -30,6 +31,7 @@ struct BrowserDetailContent: View {
         case .startPage:
             BrowserStartPageContent(
                 tab: tab,
+                space: space,
                 browser: browser,
                 pages: pages,
                 spaceAccess: spaceAccess,

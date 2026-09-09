@@ -16,10 +16,11 @@ extension BrowserExtensionTabWindowCoordinator:
         let key = ObjectIdentifier(context)
         guard pendingToolbarActionContexts.insert(key).inserted else { return }
         actionDidUpdate?()
-        prepareActionPopupBackground(for: context) { [weak self, weak context] _ in
+        prepareActionPopupBackground(for: context) { [weak self, weak context] outcome in
             guard let self else { return }
             self.pendingToolbarActionContexts.remove(key)
             self.actionDidUpdate?()
+            if case .failed(let error) = outcome, error is CancellationError { return }
             guard let context, let controller = context.webExtensionController,
                 self.verifiedEntry(controller: controller, context: context) != nil
             else { return }
@@ -169,6 +170,16 @@ extension BrowserExtensionTabWindowCoordinator:
             || pendingToolbarActionContexts.contains(ObjectIdentifier(context))
     }
 
+    func prepareBackgroundForInitialContentScriptTraffic(
+        _ context: WKWebExtensionContext
+    ) async -> BrowserExtensionBackgroundWarmUp.Outcome {
+        await withCheckedContinuation { continuation in
+            prepareActionPopupBackground(for: context, allowsRecovery: false) { outcome in
+                continuation.resume(returning: outcome)
+            }
+        }
+    }
+
     private func prepareActionPopupBackground(
         for context: WKWebExtensionContext,
         allowsRecovery: Bool = true,
@@ -177,25 +188,39 @@ extension BrowserExtensionTabWindowCoordinator:
         let key = ObjectIdentifier(context)
         if allowsRecovery { popupBackgroundRecoveryRequests.insert(key) }
         let now = popupBackgroundClock.now
-        let recentlyPrepared = popupBackgroundReadyUntil[key].map { now < $0 } == true
-        if !recentlyPrepared { popupBackgroundReadyUntil.removeValue(forKey: key) }
-        if popupBackgroundWarmUpObservers[key] != nil {
-            popupBackgroundWarmUpObservers[key]?.append(completion)
+        let endpoint = verifiedNativeMessagingAuthorizations[key]?.clientID.flatMap {
+            BrowserExtensionBackgroundHealth.shared.endpointID(for: $0)
+        }
+        let usesHealth = backgroundHealthContexts.contains(key) && nativeMessagingHandler != nil
+        // A live endpoint that already completed bootstrap stays prepared as
+        // long as that exact background generation survives. Every action still
+        // challenges it; a replacement must complete the normal warm-up again.
+        let recentlyPrepared =
+            usesHealth
+            ? endpoint != nil && popupBackgroundReadyEndpoints[key] == endpoint
+            : popupBackgroundReadyUntil[key].map { now < $0 } == true
+        if popupBackgroundPreparations[key] != nil {
+            popupBackgroundPreparations[key]?.observers.append(completion)
             return
         }
-        popupBackgroundWarmUpObservers[key] = [completion]
+        let preparation = BrowserExtensionPopupBackgroundPreparation(observers: [completion])
+        popupBackgroundPreparations[key] = preparation
+        let generation = preparation.generation
         let finish: BrowserExtensionPopupBackgroundWarmUpObserver = { [weak self] outcome in
             guard let self else {
                 completion(outcome)
                 return
             }
             Task { @MainActor in
-                let verifiedOutcome = await self.verifyActionBackground(context, outcome: outcome)
+                guard self.popupBackgroundPreparations[key]?.generation == generation else { return }
+                let verifiedOutcome = await self.verifyActionBackground(
+                    context, outcome: outcome, generation: generation)
+                guard self.popupBackgroundPreparations[key]?.generation == generation else { return }
                 if case .loaded = verifiedOutcome {
                     self.popupBackgroundReadyUntil[key] =
                         self.popupBackgroundClock.now.advanced(by: self.popupBackgroundWarmCacheDuration)
                 }
-                let observers = self.popupBackgroundWarmUpObservers.removeValue(forKey: key) ?? []
+                let observers = self.popupBackgroundPreparations.removeValue(forKey: key)?.observers ?? []
                 self.popupBackgroundRecoveryRequests.remove(key)
                 for observer in observers { observer(verifiedOutcome) }
             }
@@ -209,15 +234,31 @@ extension BrowserExtensionTabWindowCoordinator:
     }
 
     private func verifyActionBackground(
-        _ context: WKWebExtensionContext, outcome: BrowserExtensionBackgroundWarmUp.Outcome
+        _ context: WKWebExtensionContext, outcome: BrowserExtensionBackgroundWarmUp.Outcome, generation: UUID
     ) async -> BrowserExtensionBackgroundWarmUp.Outcome {
         let key = ObjectIdentifier(context)
-        guard case .loaded = outcome, backgroundHealthContexts.contains(key), nativeMessagingHandler != nil,
-            let client = verifiedNativeMessagingAuthorizations[key]?.clientID,
-            let controller = context.webExtensionController,
+        guard case .loaded = outcome else { return outcome }
+        guard let controller = context.webExtensionController,
             verifiedEntry(controller: controller, context: context) != nil
+        else { return .failed(CancellationError()) }
+        guard backgroundHealthContexts.contains(key), nativeMessagingHandler != nil,
+            let client = verifiedNativeMessagingAuthorizations[key]?.clientID
         else { return outcome }
-        if await BrowserExtensionBackgroundHealth.shared.responds(client: client) { return .loaded }
+        func isCurrentPreparation() -> Bool {
+            popupBackgroundPreparations[key]?.generation == generation
+                && context.webExtensionController === controller
+                && verifiedEntry(controller: controller, context: context) != nil
+                && verifiedNativeMessagingAuthorizations[key]?.clientID == client
+        }
+        let health = BrowserExtensionBackgroundHealth.shared
+        let endpoint = health.endpointID(for: client)
+        let responds = await health.responds(client: client)
+        guard isCurrentPreparation() else { return .failed(CancellationError()) }
+        if responds, let endpoint, health.endpointID(for: client) == endpoint {
+            popupBackgroundReadyEndpoints[key] = endpoint
+            return .loaded
+        }
+        popupBackgroundReadyEndpoints[key] = nil
         // Hover can prepare a background, but only an actual action may reload
         // it. A click joining a pending hover request upgrades that request.
         guard popupBackgroundRecoveryRequests.contains(key), backgroundHealthContexts.contains(key),
@@ -235,12 +276,19 @@ extension BrowserExtensionTabWindowCoordinator:
             try controller.load(context)
         } catch { return .failed(error) }
         let recovered = await BrowserExtensionBackgroundWarmUp(context: context).prepare()
+        guard isCurrentPreparation() else { return .failed(CancellationError()) }
         guard case .loaded = recovered else { return recovered }
-        guard await BrowserExtensionBackgroundHealth.shared.responds(client: client) else {
+        let recoveredEndpoint = health.endpointID(for: client)
+        let recoveredResponds = await health.responds(client: client)
+        guard isCurrentPreparation() else { return .failed(CancellationError()) }
+        guard recoveredResponds, let recoveredEndpoint,
+            health.endpointID(for: client) == recoveredEndpoint
+        else {
             browserExtensionPopupLog.error(
                 "background did not answer after recovery for \(context.uniqueIdentifier, privacy: .public)")
             return .timedOut
         }
+        popupBackgroundReadyEndpoints[key] = recoveredEndpoint
         browserExtensionPopupLog.notice(
             "background recovered for \(context.uniqueIdentifier, privacy: .public)")
         return .loaded
@@ -282,7 +330,6 @@ extension BrowserExtensionTabWindowCoordinator:
         if let context = action.webExtensionContext {
             let key = ObjectIdentifier(context)
             popupToggle.observe(popover, action: action, key: key, anchor: anchor) { [weak self] in
-                self?.popupBackgroundReadyUntil[key] = nil
                 self?.actionDidUpdate?()
             }
         }

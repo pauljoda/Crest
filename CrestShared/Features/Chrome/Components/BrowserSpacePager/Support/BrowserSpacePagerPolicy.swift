@@ -15,11 +15,4 @@ enum BrowserSpacePagerPolicy {
         hasSidebarLift || hasTabDrag || hasFolderDrag
     }
 
-    static func canSwitchSpaces(
-        spaceCount: Int,
-        isInteractionLocked: Bool
-    ) -> Bool {
-        spaceCount > 1 && !isInteractionLocked
-    }
-
 }

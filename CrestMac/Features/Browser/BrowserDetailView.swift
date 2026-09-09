@@ -8,6 +8,7 @@ struct BrowserDetailView: View {
     let tabPromotionNamespace: Namespace.ID
     let startPageFocusRequest: Int
     let isCommandPalettePresented: Bool
+    var previewsStartPage = false
 
     var body: some View {
         let tab = presentation.singleTab
@@ -15,7 +16,8 @@ struct BrowserDetailView: View {
         BrowserDetailContent(
             page: page,
             tab: tab,
-            pagePresentation: pagePresentation(for: page, tab: tab),
+            space: presentation.presentingSpace,
+            pagePresentation: previewsStartPage ? .startPage : pagePresentation(for: page, tab: tab),
             browser: browser,
             pages: pages,
             spaceAccess: spaceAccess,
@@ -45,12 +47,6 @@ struct BrowserDetailView: View {
         guard let tab,
             let space = presentation.presentingSpace
         else { return nil }
-        return pages.activePage(
-            matching: BrowserTabRuntimeAssignment(
-                tabID: tab.id,
-                spaceID: space.id,
-                profileID: space.profile.id
-            )
-        )
+        return pages.surfacePage(for: tab, in: space, accessController: spaceAccess)
     }
 }

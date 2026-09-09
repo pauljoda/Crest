@@ -25,7 +25,6 @@ struct BrowserSidebarSpacePager<Page: View>: View {
                     context.selectSpace(spaceID)
                     return context.browser.session.selectedSpaceID
                 },
-                settledSpace: context.settleSpaceSelection,
                 content: { space, isSelected in
                     page(space, isSelected)
                         .environment(\.browserSidebarDropViewportID, dropViewportID)

@@ -13,7 +13,7 @@ extension BrowserExtensionTabWindowCoordinator {
             let controller = context.webExtensionController,
             let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: context),
             service.hostWindow(for: spaceID) != nil,
-            let options = try? service.resolvedOptions(for: currentState?.space(spaceID)?.selectedTabID, client: client)
+            let options = try? service.resolvedOptions(for: selectedTabID(in: spaceID), client: client)
         else { return false }
         return options.presentsPanel
     }
@@ -39,7 +39,7 @@ extension BrowserExtensionTabWindowCoordinator {
                 opensOnAction: (try? service.behavior(for: client).openPanelOnActionClick) == true,
                 hasPanel: sidebarIsAvailable(for: context))
         else { return false }
-        let selectedTab = currentState?.space(spaceID)?.selectedTabID
+        let selectedTab = selectedTabID(in: spaceID)
         noteUserGesture(for: client)
         if let selectedTab, let adapter = tab(for: selectedTab, in: spaceID) {
             context.userGesturePerformed(in: adapter)

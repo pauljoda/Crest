@@ -72,7 +72,7 @@ struct BrowserWebContentView: View {
 
     private var chromeWebStoreInstallPresentation: Binding<Bool> {
         Binding(
-            get: { page.isChromeWebStoreInstallPresented },
+            get: { isSelectedSpace && page.isChromeWebStoreInstallPresented },
             set: { isPresented in
                 if !isPresented {
                     page.dismissChromeWebStoreInstall()
@@ -83,13 +83,17 @@ struct BrowserWebContentView: View {
 
     private var mozillaAddonsInstallPresentation: Binding<Bool> {
         Binding(
-            get: { page.mozillaAddonsInstall.isPresented },
+            get: { isSelectedSpace && page.mozillaAddonsInstall.isPresented },
             set: { isPresented in
                 if !isPresented {
                     page.mozillaAddonsInstall.dismiss()
                 }
             }
         )
+    }
+
+    private var isSelectedSpace: Bool {
+        browser.selectedSpace?.id == page.spaceID && browser.selectedSpace?.profile.id == page.profileID
     }
 
     private func dismissDeveloperFeedback(after revision: Int) {

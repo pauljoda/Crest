@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// The compact Space picker shared by the live macOS sidebar and setup surfaces.
+/// Shared icon buttons, selection, and reordering for desktop and touch Space pickers.
 struct CrestSpaceIconPicker<SegmentContent: View>: View {
     let spaces: [BrowserSpace]
     let selectedSpaceID: SpaceID?
     let selectSpace: (SpaceID) -> Void
+    var style: CrestSpaceIconPickerStyle = .compact
     var selectionTint: Color? = nil
     var accessibilityIdentifier: String?
     var moveSpace: ((SpaceID, SpaceID) -> Void)? = nil
@@ -25,7 +26,7 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
                 HStack(spacing: 0) {
                     reorderableButton(space)
 
-                    if space.id != spaces.last?.id {
+                    if style == .compact && space.id != spaces.last?.id {
                         Divider()
                             .frame(height: CrestSpaceIconPickerMetrics.dividerHeight)
                     }
@@ -35,34 +36,32 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
         }
         .padding(CrestSpaceIconPickerMetrics.trackPadding)
         .backgroundPreferenceValue(CrestSpaceIconFramePreference.self) { anchors in
-            #if os(macOS)
-                if let selectionPresentation {
-                    GeometryReader { geometry in
-                        PlatformSpacePickerPresentation(
-                            presentation: selectionPresentation,
-                            spaces: spaces,
-                            selectedSpaceID: selectedSpaceID,
-                            frames: anchors.mapValues { geometry[$0] },
-                            selectionTint: selectionTint
-                        )
-                    }
+            if let selectionPresentation {
+                GeometryReader { geometry in
+                    PlatformSpacePickerPresentation(
+                        presentation: selectionPresentation,
+                        spaces: spaces,
+                        selectedSpaceID: selectedSpaceID,
+                        frames: anchors.mapValues { geometry[$0] },
+                        selectionTint: selectionTint
+                    )
                 }
-            #endif
+            }
         }
         .background {
             RoundedRectangle(
-                cornerRadius: CrestSpaceIconPickerMetrics.cornerRadius,
+                cornerRadius: style.cornerRadius,
                 style: .continuous
             )
-            .fill(Color.primary.opacity(CrestSpaceIconPickerMetrics.trackFillOpacity))
+            .fill(.primary.opacity(style == .touch ? 0.08 : CrestSpaceIconPickerMetrics.trackFillOpacity))
         }
         .overlay {
             RoundedRectangle(
-                cornerRadius: CrestSpaceIconPickerMetrics.cornerRadius,
+                cornerRadius: style.cornerRadius,
                 style: .continuous
             )
             .strokeBorder(
-                Color.primary.opacity(CrestSpaceIconPickerMetrics.trackBorderOpacity),
+                .primary.opacity(style == .touch ? 0 : CrestSpaceIconPickerMetrics.trackBorderOpacity),
                 lineWidth: CrestLayout.hairline / 2
             )
         }
@@ -159,16 +158,20 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
                 .background {
                     if isSelected && selectionPresentation == nil {
                         RoundedRectangle(
-                            cornerRadius: CrestSpaceIconPickerMetrics.cornerRadius,
+                            cornerRadius: style.cornerRadius,
                             style: .continuous
                         )
-                        .fill(tint.opacity(CrestSpaceIconPickerMetrics.selectionFillOpacity))
+                        .fill(
+                            style == .touch
+                                ? Color.primary.opacity(0.22)
+                                : tint.opacity(CrestSpaceIconPickerMetrics.selectionFillOpacity)
+                        )
                         .overlay {
                             RoundedRectangle(
-                                cornerRadius: CrestSpaceIconPickerMetrics.cornerRadius,
+                                cornerRadius: style.cornerRadius,
                                 style: .continuous
                             )
-                            .strokeBorder(tint, lineWidth: CrestLayout.hairline)
+                            .strokeBorder(style == .touch ? .clear : tint, lineWidth: CrestLayout.hairline)
                         }
                     }
                 }

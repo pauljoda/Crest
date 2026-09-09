@@ -36,7 +36,6 @@ struct BrowserSidebarContext {
 
     /// Tells the root that the pager came to rest on a Space, which is what
     /// releases a deferred page selection.
-    let settleSpaceSelection: (SpaceID) -> Void
 
     /// Asks for the clear-history confirmation for one Space. The root refuses
     /// unless that Space is still the selected, unlocked one.

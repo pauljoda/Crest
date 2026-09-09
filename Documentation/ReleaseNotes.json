@@ -721,6 +721,78 @@
     "2026-09-08-space-swipe-travel-boundaries": {
       "category": "fixed",
       "message": "Stop long Space swipes at their destination without sliding past and returning"
+    },
+    "2026-09-08-space-background-progress": {
+      "category": "improved",
+      "message": "Blend Space backgrounds with the swipe as tabs slide into place"
+    },
+    "2026-09-08-space-swipe-speed": {
+      "category": "improved",
+      "message": "Keep fast Space swipes at a controlled speed with responsive reversals"
+    },
+    "2026-09-08-space-foreground-progress": {
+      "category": "improved",
+      "message": "Blend sidebar control colors as you swipe between Spaces"
+    },
+    "2026-09-08-space-retained-layouts": {
+      "category": "improved",
+      "message": "Keep nearby Space sidebars ready throughout page switches"
+    },
+    "2026-09-08-space-neighbor-preparation": {
+      "category": "improved",
+      "message": "Prepare the next Space while the current swipe settles"
+    },
+    "2026-09-08-space-animation-synchronization": {
+      "category": "improved",
+      "message": "Keep Space icons, backgrounds, and sidebar motion in sync"
+    },
+    "2026-09-08-space-page-card-transitions": {
+      "category": "improved",
+      "message": "Slide page cards with Spaces and keep locked previews blurred"
+    },
+    "2026-09-08-sidebar-scroll-affordance": {
+      "category": "improved",
+      "message": "Show a quiet scroll indicator while scrolling and a glass arrow when more tabs are below"
+    },
+    "2026-09-08-native-touch-space-progress": {
+      "category": "improved",
+      "message": "Follow your finger when swiping between Spaces on iPhone and iPad, with synchronized backgrounds and Space selection"
+    },
+    "2026-09-08-mobile-space-picker-overflow": {
+      "category": "improved",
+      "message": "Browse many Spaces with clear overflow arrows and rounded selection highlights on iPhone and iPad"
+    },
+    "2026-09-08-mobile-locked-space-restoration": {
+      "category": "fixed",
+      "message": "Keep the floating sidebar responsive when switching to a locked Space"
+    },
+    "2026-09-08-mobile-sidebar-keyboard-layout": {
+      "category": "fixed",
+      "message": "Keep essentials clear of the Space picker when the keyboard appears"
+    },
+    "2026-09-08-mobile-sidebar-scroll-extent": {
+      "category": "fixed",
+      "message": "Extend Space backgrounds behind mobile controls and show the scroll hint only when more tabs remain below"
+    },
+    "2026-09-08-optional-space-page-animation": {
+      "category": "new",
+      "message": "Choose whether page cards animate when switching Spaces on Mac, with page motion enabled by default"
+    },
+    "2026-09-08-space-presentation-structure-cleanup": {
+      "category": "internal",
+      "message": "Remove abandoned Space presentation experiments and consolidate shared motion, hosting, and picker layout ownership"
+    },
+    "2026-09-08-sidebar-vertical-scroll-sizing": {
+      "category": "improved",
+      "message": "Reduce processor usage while scrolling tabs in the desktop sidebar"
+    },
+    "2026-09-08-faster-local-address-completion": {
+      "category": "improved",
+      "message": "Keep address completion responsive with large tab and history collections"
+    },
+    "2026-09-08-faster-extension-preparation": {
+      "category": "improved",
+      "message": "Reduce extension preparation delays and reopen ready extensions without repeating startup waits"
     }
   }
 }

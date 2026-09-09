@@ -65,7 +65,8 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         let popupToggle = BrowserExtensionPopupToggle()
         var backgroundHealthContexts: Set<ObjectIdentifier> = []
         var popupBackgroundRecoveryRequests: Set<ObjectIdentifier> = []
-        var popupBackgroundWarmUpObservers: [ObjectIdentifier: [BrowserExtensionPopupBackgroundWarmUpObserver]] = [:]
+        var popupBackgroundPreparations: [ObjectIdentifier: BrowserExtensionPopupBackgroundPreparation] = [:]
+        var popupBackgroundReadyEndpoints: [ObjectIdentifier: UUID] = [:]
         var popupBackgroundReadyUntil: [ObjectIdentifier: ContinuousClock.Instant] = [:]
         let popupBackgroundClock = ContinuousClock()
         var popupBackgroundWarmCacheDuration = Duration.seconds(15)
@@ -217,7 +218,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     }
 
     private func reconcileWindowFocus(selectedSpaceID: SpaceID? = nil) {
-        let selectedSpaceID = selectedSpaceID ?? currentState?.selectedSpaceID
+        let selectedSpaceID = selectedSpaceID ?? browser?.session.selectedSpaceID ?? lastState?.selectedSpaceID
         let desiredFocusedWindow: BrowserExtensionWindowAdapter?
         if isHostWindowFocused,
             let selectedSpaceID,
@@ -402,19 +403,26 @@ extension BrowserExtensionTabWindowCoordinator {
         context: WKWebExtensionContext
     ) -> [BrowserExtensionTabAdapter] {
         let spaceID = window.spaceID
-        guard owns(context: context, spaceID: spaceID),
-            let state = currentState?.space(spaceID)
-        else {
-            return []
-        }
-        ensureAdapters(for: state)
-        return state.tabs.compactMap { tab in
-            let assignedWindow =
-                auxiliaryWindowByTabID[tab.id]
-                ?? controllers[spaceID]?.window
+        guard owns(context: context, spaceID: spaceID), let ids = tabIDs(in: spaceID) else { return [] }
+        return ids.compactMap { tabID in
+            let assignedWindow = auxiliaryWindowByTabID[tabID] ?? controllers[spaceID]?.window
             guard assignedWindow === window else { return nil }
-            return tabsBySpace[spaceID]?[tab.id]
+            return registeredAdapter(for: tabID, in: spaceID)
         }
+    }
+
+    private func tabIDs(in spaceID: SpaceID) -> [TabID]? {
+        guard let browser else { return lastState?.space(spaceID)?.tabs.map(\.id) }
+        guard let space = browser.session.space(id: spaceID) else { return nil }
+        return space.tabs.map(\.id) + (transientTabsBySpace[spaceID]?.map(\.id) ?? [])
+    }
+
+    func selectedTabID(in spaceID: SpaceID) -> TabID? {
+        guard let browser else { return lastState?.space(spaceID)?.selectedTabID }
+        guard let space = browser.session.space(id: spaceID), let id = space.selectedTabID,
+            space.tabs.contains(where: { $0.id == id })
+        else { return nil }
+        return id
     }
 
     func tabs(
@@ -436,7 +444,7 @@ extension BrowserExtensionTabWindowCoordinator {
         }
         if window.isPrimary {
             guard
-                let selectedID = currentState?.space(spaceID)?.selectedTabID,
+                let selectedID = selectedTabID(in: spaceID),
                 auxiliaryWindowByTabID[selectedID] == nil
             else {
                 return nil
@@ -614,29 +622,20 @@ extension BrowserExtensionTabWindowCoordinator {
     }
 
     func ensureAdapters(for state: BrowserExtensionSpaceState) {
-        for tab in state.tabs where tabsBySpace[state.id]?[tab.id] == nil {
-            tabsBySpace[state.id, default: [:]][tab.id] =
-                BrowserExtensionTabAdapter(
-                    tabID: tab.id,
-                    spaceID: state.id,
-                    coordinator: self
-                )
-        }
+        for tab in state.tabs { _ = registeredAdapter(for: tab.id, in: state.id) }
     }
 
-    func adapter(
-        for tabID: TabID,
-        in spaceID: SpaceID
-    ) -> BrowserExtensionTabAdapter? {
-        if let existing = tabsBySpace[spaceID]?[tabID] {
-            return existing
-        }
+    func adapter(for tabID: TabID, in spaceID: SpaceID) -> BrowserExtensionTabAdapter? {
+        if let existing = tabsBySpace[spaceID]?[tabID] { return existing }
         guard projectedTabState(for: tabID, in: spaceID) != nil else { return nil }
-        let adapter = BrowserExtensionTabAdapter(
-            tabID: tabID,
-            spaceID: spaceID,
-            coordinator: self
-        )
+        return registeredAdapter(for: tabID, in: spaceID)
+    }
+
+    /// Callers establish live or detached-snapshot membership before registering.
+    /// Enumerating identities must not read loading/reader state for every page.
+    private func registeredAdapter(for tabID: TabID, in spaceID: SpaceID) -> BrowserExtensionTabAdapter {
+        if let existing = tabsBySpace[spaceID]?[tabID] { return existing }
+        let adapter = BrowserExtensionTabAdapter(tabID: tabID, spaceID: spaceID, coordinator: self)
         tabsBySpace[spaceID, default: [:]][tabID] = adapter
         return adapter
     }

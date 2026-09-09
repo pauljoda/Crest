@@ -45,11 +45,16 @@ struct BrowserSplitCardView: View {
     /// This card's request to become the focused one.
     let onFocusRequest: @MainActor @Sendable () -> Void
 
+    private var isSelectedSpace: Bool {
+        browser.session.selectedSpaceID == space.id && !spaceAccess.isLocked(space)
+    }
+
     var body: some View {
         let page = presentedPage
         BrowserDetailContent(
             page: page,
             tab: tab,
+            space: space,
             pagePresentation: pagePresentation(for: page),
             browser: browser,
             pages: pages,
@@ -63,14 +68,14 @@ struct BrowserSplitCardView: View {
             BrowserSplitCardLifecycleModifier(
                 tab: tab,
                 space: space,
-                page: page,
+                page: isSelectedSpace ? page : nil,
                 browser: browser,
                 pages: pages
             )
         )
         .overlay {
             BrowserSplitCardHoverTracker { isHovering in
-                guard isHovering, focusesOnHover() else { return }
+                guard isSelectedSpace, isHovering, focusesOnHover() else { return }
                 onFocusRequest()
             }
         }
@@ -83,20 +88,14 @@ struct BrowserSplitCardView: View {
             cardFrames.removeFrame(for: tab.id)
         }
         .browserSplitDropCardFrame(
-            tabID: tab.id,
-            assignment: BrowserSpaceRuntimeAssignment(space: space),
+            tabID: isSelectedSpace ? tab.id : nil,
+            assignment: isSelectedSpace ? BrowserSpaceRuntimeAssignment(space: space) : nil,
             state: browser.sidebarReorderState
         )
     }
 
     private var presentedPage: BrowserPage? {
-        pages.presentedPage(
-            matching: BrowserTabRuntimeAssignment(
-                tabID: tab.id,
-                spaceID: space.id,
-                profileID: space.profile.id
-            )
-        )
+        pages.surfacePage(for: tab, in: space, accessController: spaceAccess)
     }
 
     private func pagePresentation(

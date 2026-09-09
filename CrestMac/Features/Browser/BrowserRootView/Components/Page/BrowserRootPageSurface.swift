@@ -9,41 +9,54 @@ import SwiftUI
 /// pointer may do to it.
 struct BrowserRootPageSurface: View {
     let model: BrowserRootModel
+    let space: BrowserSpace
+    let isSelectedSpace: Bool
     let tabPromotionNamespace: Namespace.ID
 
-    private var hasActivePage: Bool {
-        model.browser.selectedTab.map {
-            model.pages.activeTabID == $0.id && model.pages.activePage != nil
-        } ?? false
+    private var selectedTab: BrowserTab? {
+        space.tabs.first { $0.id == space.selectedTabID }
     }
 
-    private var completedNavigationCount: Int {
-        guard hasActivePage else { return 0 }
-        return model.pages.activePage?.completedNavigationCount ?? 0
+    private var surfacePage: BrowserPage? {
+        selectedTab.flatMap { model.pages.surfacePage(for: $0, in: space, accessController: model.spaceAccess) }
+    }
+
+    private var previewsStartPage: Bool {
+        !isSelectedSpace && model.pages.requiresStartPageOnEntry(to: space)
     }
 
     private var pageSurfacePresentation: BrowserPageSurfacePresentation {
-        let selectedSpace = model.browser.selectedSpace
+        if previewsStartPage, !model.spaceAccess.isLocked(space) {
+            let draft = space.currentTabs.first { $0.isStartPage && space.splitGroup(containing: $0.id) == nil }
+            return .single(space: space, cardTabID: draft?.id)
+        }
         return BrowserPageSurfaceBranchPolicy.resolve(
-            selectedSpace: selectedSpace,
-            isSelectedSpaceLocked: selectedSpace.map {
-                model.spaceAccess.isLocked($0)
-            } ?? false,
-            selectedTabID: model.browser.selectedTab?.id,
+            selectedSpace: space,
+            isSelectedSpaceLocked: model.spaceAccess.isLocked(space),
+            selectedTabID: space.selectedTabID,
             hasEnteredSplitContent:
-                model.browser.sidebarReorderState.hasEnteredSplitContent,
-            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget,
-            presentsTrailingPanel: model.extensionSidebar?.panel != nil
+                isSelectedSpace && model.browser.sidebarReorderState.hasEnteredSplitContent,
+            resolvedTarget: isSelectedSpace ? model.browser.sidebarReorderState.resolvedTarget : nil,
+            presentsTrailingPanel: isSelectedSpace && model.extensionSidebar?.panel != nil
         )
     }
 
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
+            .environment(\.spaceContentIsInteractive, isSelectedSpace)
+            .allowsHitTesting(isSelectedSpace)
+            .accessibilityHidden(!isSelectedSpace)
             .browserSplitContentDropZone(
-                assignment: presentation.dropAssignment,
+                assignment: isSelectedSpace ? presentation.dropAssignment : nil,
                 state: model.browser.sidebarReorderState
             )
+            .environment(
+                \.browserWebFocusRestorationGate,
+                BrowserWebFocusRestorationGate(
+                    browserChromeOwnsFocus: !isSelectedSpace || !model.isWindowFocused
+                        || model.isAddressEditing || model.chrome.isCommandPalettePresented,
+                    pageChromeOwnsFocus: false))
     }
 
     @ViewBuilder
@@ -65,18 +78,16 @@ struct BrowserRootPageSurface: View {
                 adjoinsLeadingSidebar:
                     model.sidebarPresentation.reservesSidebarWidth,
                 usesBorderlessFrame: false,
-                isStartPage: model.browser.selectedTab?.isStartPage == true,
-                hasActivePage: hasActivePage,
-                completedNavigationCount: completedNavigationCount,
-                hasSelectedSpace: model.browser.selectedSpace != nil,
+                isStartPage: previewsStartPage || selectedTab?.isStartPage == true,
+                hasActivePage: surfacePage != nil,
+                completedNavigationCount: surfacePage?.completedNavigationCount ?? 0,
+                hasSelectedSpace: true,
                 handleWebContentInteraction: {
                     model.chrome.utilityPresentation
                         .handleInteraction(.webContent)
                 },
                 content: Group {
-                    if let space = model.browser.selectedSpace,
-                        model.spaceAccess.isLocked(space)
-                    {
+                    if model.spaceAccess.isLocked(space) {
                         BrowserSpaceAccessView(
                             space: space,
                             spaces: model.browser.session.spaces,
@@ -91,6 +102,7 @@ struct BrowserRootPageSurface: View {
                             },
                             presentation: .contentOverlay
                         )
+                        .background { LockedSpacePagePreview(space: space, pages: model.pages) }
                     } else {
                         BrowserDetailView(
                             presentation: presentation,
@@ -101,7 +113,8 @@ struct BrowserRootPageSurface: View {
                             startPageFocusRequest:
                                 model.chrome.startPageFocusRequest,
                             isCommandPalettePresented:
-                                model.chrome.isCommandPalettePresented
+                                model.chrome.isCommandPalettePresented,
+                            previewsStartPage: previewsStartPage
                         )
                     }
                 }
@@ -110,8 +123,8 @@ struct BrowserRootPageSurface: View {
             // is what a dropped tab would join, and the side of it the pointer
             // is on is which side of it the new card lands.
             .browserSplitDropCardFrame(
-                tabID: presentation.singleCardTabID,
-                assignment: presentation.dropAssignment,
+                tabID: isSelectedSpace ? presentation.singleCardTabID : nil,
+                assignment: isSelectedSpace ? presentation.dropAssignment : nil,
                 state: model.browser.sidebarReorderState
             )
         }

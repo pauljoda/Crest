@@ -38,7 +38,8 @@ struct SpaceSidebarAddressBand: View {
         }
         .contentTransition(.opacity)
         .animation(
-            BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),
+            BrowserVisualAccessibilityPolicy.animation(
+                SpacePagerSettlement.standardAnimation, reduceMotion: reduceMotion),
             value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
         )
         .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)

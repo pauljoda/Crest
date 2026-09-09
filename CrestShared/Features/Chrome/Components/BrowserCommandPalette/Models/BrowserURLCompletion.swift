@@ -17,82 +17,151 @@ struct BrowserURLCompletion: Equatable, Sendable {
             : NSRange(location: 0, length: query.utf16.count)
     }
 
-    static func proposal(query: String, space: BrowserSpace?) -> Self? {
-        guard let space, query.count >= 2, query.count <= 2_048,
-            !query.contains(where: { $0.isWhitespace || $0.isNewline }),
-            !query.contains("?"), !query.contains("#"), !query.contains("@")
-        else { return nil }
+    /// Normalized once for the palette's immutable Space snapshot. URL parsing
+    /// and candidate allocation do not repeat as the user edits the address.
+    struct Candidates: Sendable {
+        private let values: [Candidate]
 
-        var candidates: [Candidate] = []
-        for tab in space.tabs where !tab.isStartPage {
-            if let url = tab.url {
-                candidates.append(
-                    Candidate(url: url, source: tab.placement == .current ? 3 : 2, date: tab.lastActivatedAt, visits: 0)
-                )
+        init(space: BrowserSpace?) {
+            guard let space else {
+                values = []
+                return
             }
-            if tab.placement != .current, let url = tab.savedSiteURL {
-                candidates.append(Candidate(url: url, source: 2, date: tab.lastActivatedAt, visits: 0))
+            var candidates: [Candidate] = []
+            for tab in space.tabs where !tab.isStartPage {
+                if let url = tab.url,
+                    let candidate = Candidate(
+                        url: url, source: tab.placement == .current ? 3 : 2, date: tab.lastActivatedAt, visits: 0)
+                {
+                    candidates.append(candidate)
+                }
+                if tab.placement != .current, let url = tab.savedSiteURL,
+                    let candidate = Candidate(url: url, source: 2, date: tab.lastActivatedAt, visits: 0)
+                {
+                    candidates.append(candidate)
+                }
             }
+            for entry in space.history.prefix(BrowserCommandPaletteResultLimits.historyScan) {
+                if let candidate = Candidate(
+                    url: entry.url, source: 1, date: entry.lastVisitedAt, visits: min(20, entry.visitCount))
+                {
+                    candidates.append(candidate)
+                }
+            }
+            values = candidates
         }
-        for entry in space.history.prefix(BrowserCommandPaletteResultLimits.historyScan) {
-            candidates.append(
-                Candidate(url: entry.url, source: 1, date: entry.lastVisitedAt, visits: min(20, entry.visitCount)))
+
+        func proposal(query: String) -> BrowserURLCompletion? {
+            guard let input = Query(query) else { return nil }
+            var best: Match?
+            for candidate in values {
+                guard let match = candidate.match(input) else { continue }
+                // An exact local address wins even if a longer candidate ranks higher.
+                if match.text.lowercased() == input.lowercased { return nil }
+                if best.map({ match.outranks($0) }) ?? true { best = match }
+            }
+            guard let best, best.text.count > input.count else { return nil }
+            return BrowserURLCompletion(
+                query: query, suffix: String(best.text.dropFirst(input.count)), scheme: best.candidate.scheme)
         }
-        var matches: [(candidate: Candidate, text: String, quality: Int)] = []
-        for candidate in candidates {
-            guard let match = candidate.match(query: query) else { continue }
-            // An address already present locally has no missing suffix to suggest.
-            if match.text == query || match.text.lowercased() == query.lowercased() { return nil }
-            matches.append((candidate, match.text, match.quality))
-        }
-        let best = matches.sorted {
-            if $0.quality != $1.quality { return $0.quality > $1.quality }
-            if $0.candidate.source != $1.candidate.source { return $0.candidate.source > $1.candidate.source }
-            if $0.candidate.date != $1.candidate.date { return $0.candidate.date > $1.candidate.date }
-            if $0.candidate.visits != $1.candidate.visits { return $0.candidate.visits > $1.candidate.visits }
-            if $0.text != $1.text { return $0.text < $1.text }
-            return $0.candidate.url.absoluteString < $1.candidate.url.absoluteString
-        }.first
-        guard let best, best.text.count > query.count, let scheme = best.candidate.url.scheme else { return nil }
-        return Self(
-            query: query, suffix: String(best.text.dropFirst(query.count)),
-            scheme: scheme.lowercased())
     }
 
-    private struct Candidate {
-        let url: URL
+    private struct Query {
+        let count: Int
+        let lowercased: String
+        let schemePrefix: String
+        let hasColon: Bool
+        let authority: String
+        let path: String?
+
+        init?(_ text: String) {
+            count = text.count
+            guard count >= 2, count <= 2_048,
+                !text.contains(where: { $0.isWhitespace || $0.isNewline }),
+                !text.contains("?"), !text.contains("#"), !text.contains("@")
+            else { return nil }
+            lowercased = text.lowercased()
+            hasColon = text.contains(":")
+            if text.contains("://") {
+                if lowercased.hasPrefix("https://") {
+                    schemePrefix = "https://"
+                } else if lowercased.hasPrefix("http://") {
+                    schemePrefix = "http://"
+                } else {
+                    return nil
+                }
+            } else {
+                schemePrefix = ""
+            }
+            let typed = text.dropFirst(schemePrefix.count)
+            guard typed.count >= 2 else { return nil }
+            let typedAuthority = typed.prefix { $0 != "/" }
+            authority = typedAuthority.lowercased()
+            path = typed.contains("/") ? String(typed.dropFirst(typedAuthority.count)) : nil
+        }
+    }
+
+    private struct Candidate: Sendable {
+        let url: String
         let source: Int
         let date: Date
         let visits: Int
+        let scheme: String
+        let authority: String
+        let foldedAuthority: String
+        let hasPort: Bool
+        let path: String
+        let suffix: String
 
-        func match(query: String) -> (text: String, quality: Int)? {
+        init?(url: URL, source: Int, date: Date, visits: Int) {
             guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                 let scheme = components.scheme?.lowercased(), ["http", "https"].contains(scheme),
                 let host = components.host, !host.isEmpty,
                 components.user == nil, components.password == nil
             else { return nil }
-            let explicitScheme = query.contains("://")
-            if query.contains(":"), !explicitScheme, components.port == nil { return nil }
-            let prefix = explicitScheme ? "\(scheme)://" : ""
-            guard !explicitScheme || query.lowercased().hasPrefix(prefix) else { return nil }
-            let typed = explicitScheme ? String(query.dropFirst(prefix.count)) : query
-            guard typed.count >= 2 else { return nil }
-            let authority = host + (components.port.map { ":\($0)" } ?? "")
-            let path = components.percentEncodedPath
-            let querySuffix = components.percentEncodedQuery.map { "?" + $0 } ?? ""
-            let fragmentSuffix = components.percentEncodedFragment.map { "#" + $0 } ?? ""
-            let displayPath =
-                path == "/" && !typed.contains("/") && querySuffix.isEmpty && fragmentSuffix.isEmpty ? "" : path
-            let text = prefix + authority + displayPath + querySuffix + fragmentSuffix
-            let typedAuthority = String(typed.prefix { $0 != "/" })
-            guard authority.lowercased().hasPrefix(typedAuthority.lowercased()) else { return nil }
-            if typed.contains("/") {
-                guard typedAuthority.lowercased() == authority.lowercased(),
-                    (authority + path).dropFirst(authority.count).hasPrefix(typed.dropFirst(typedAuthority.count))
-                else { return nil }
+            self.url = url.absoluteString
+            self.source = source
+            self.date = date
+            self.visits = visits
+            self.scheme = scheme
+            authority = host + (components.port.map { ":\($0)" } ?? "")
+            foldedAuthority = authority.lowercased()
+            hasPort = components.port != nil
+            path = components.percentEncodedPath
+            suffix =
+                (components.percentEncodedQuery.map { "?" + $0 } ?? "")
+                + (components.percentEncodedFragment.map { "#" + $0 } ?? "")
+        }
+
+        func match(_ query: Query) -> Match? {
+            guard query.schemePrefix.isEmpty || query.schemePrefix == "\(scheme)://",
+                !query.hasColon || !query.schemePrefix.isEmpty || hasPort,
+                foldedAuthority.hasPrefix(query.authority)
+            else { return nil }
+            if let typedPath = query.path {
+                guard query.authority == foldedAuthority, path.hasPrefix(typedPath) else { return nil }
             }
+            let displayPath = path == "/" && query.path == nil && suffix.isEmpty ? "" : path
+            let text = query.schemePrefix + authority + displayPath + suffix
             guard text.count >= query.count else { return nil }
-            return (text, typed.contains("/") ? 3 : (typedAuthority.lowercased() == authority.lowercased() ? 2 : 1))
+            return Match(
+                candidate: self, text: text,
+                quality: query.path != nil ? 3 : (query.authority == foldedAuthority ? 2 : 1))
+        }
+    }
+
+    private struct Match {
+        let candidate: Candidate
+        let text: String
+        let quality: Int
+
+        func outranks(_ other: Self) -> Bool {
+            if quality != other.quality { return quality > other.quality }
+            if candidate.source != other.candidate.source { return candidate.source > other.candidate.source }
+            if candidate.date != other.candidate.date { return candidate.date > other.candidate.date }
+            if candidate.visits != other.candidate.visits { return candidate.visits > other.candidate.visits }
+            if text != other.text { return text < other.text }
+            return candidate.url < other.candidate.url
         }
     }
 }

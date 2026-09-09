@@ -14,5 +14,9 @@ struct MobileBrowserSidebarChrome: View {
                 selectSpace: configuration.context.selectSpace
             )
         }
+        .modifier(
+            SpaceForegroundBlend(
+                spaces: configuration.context.availableSpaces,
+                selectedSpaceID: configuration.context.browser.selectedSpace?.id))
     }
 }

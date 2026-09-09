@@ -35,11 +35,13 @@ struct MobileBrowserDetailView: View {
             browser: browser,
             pages: pages
         )
-        let page = pageActions?.activePage
+        let page = selectedSpaceIsLocked ? nil : pageActions?.activePage
         let pagePresentation = pagePresentation(for: page)
         let viewport = pageViewport
         Group {
-            if let splitCardSpace,
+            if selectedSpaceIsLocked {
+                unloadedPageSurface
+            } else if let splitCardSpace,
                 let splitCardMembers,
                 let focusedTabID = browser.selectedTab?.id
             {
@@ -451,7 +453,16 @@ struct MobileBrowserDetailView: View {
             : MobileBrowserViewportPolicy.compactToolbarHeight
     }
 
+    private var selectedSpaceIsLocked: Bool {
+        browser.selectedSpace.map(spaceAccess.isLocked) ?? false
+    }
+
     private func restoreSelectedTab() {
+        // The floating detail remains mounted behind the sidebar's lock view.
+        // Relocking deactivates its page; that must never trigger auto-restore.
+        guard let space = browser.selectedSpace,
+            !spaceAccess.isLocked(space)
+        else { return }
         pages.select(session: browser.session)
     }
 

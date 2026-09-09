@@ -41,6 +41,10 @@ struct MobileBrowserSpacePage: View {
                 restoreSavedLocation: restoreSavedLocation,
                 select: selectTab
             )
+            // The bounded pinned grid keeps its intrinsic height. Compressing
+            // its wrapper when the keyboard appears lets fixed-height tiles
+            // overflow upward into the Space picker.
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
 

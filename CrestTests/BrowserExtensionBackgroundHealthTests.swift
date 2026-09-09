@@ -46,11 +46,18 @@ final class BrowserExtensionBackgroundHealthTests: XCTestCase {
         let client = try XCTUnwrap(BrowserExtensionServiceClientID("health-test"))
         let old = UUID()
         let replacement = UUID()
-        health.register(client: client, id: old) { _ in }
+        var challengedNonce: String?
+        health.register(client: client, id: old) { challengedNonce = $0["nonce"] as? String }
+        let oldReply = Task { await health.responds(client: client) }
+        while challengedNonce == nil { await Task.yield() }
         health.register(client: client, id: replacement) { message in
             health.acknowledge(nonce: message["nonce"] as! String, endpoint: replacement)
         }
+        health.acknowledge(nonce: try XCTUnwrap(challengedNonce), endpoint: old)
+        let oldAnswered = await oldReply.value
+        XCTAssertFalse(oldAnswered, "A replaced endpoint must not satisfy the outstanding challenge.")
         health.unregister(client: client, id: old)
+        XCTAssertEqual(health.endpointID(for: client), replacement)
         let answered = await health.responds(client: client)
         XCTAssertTrue(answered)
     }

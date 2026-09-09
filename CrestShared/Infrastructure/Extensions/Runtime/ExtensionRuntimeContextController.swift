@@ -305,7 +305,7 @@ final class BrowserExtensionRuntimeContextController {
     func prepareBackgroundForInitialContentScriptTraffic(
         _ context: WKWebExtensionContext
     ) async -> BrowserExtensionBackgroundWarmUp.Outcome {
-        await BrowserExtensionBackgroundWarmUp(context: context).prepare()
+        await tabWindowCoordinator.prepareBackgroundForInitialContentScriptTraffic(context)
     }
 
     func extensionPageConfiguration(
@@ -836,7 +836,7 @@ final class BrowserExtensionRuntimeContextController {
             packageName: installation.packageName,
             in: space.id
         )
-        let preparedResource = try storedResourcePreparer.prepare(
+        let preparedResource = try await storedResourcePreparer.prepare(
             resourceURL: storedResourceURL,
             request: BrowserExtensionStoredResourcePreparationRequest(
                 extensionID: installation.id,

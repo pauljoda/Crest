@@ -7,6 +7,12 @@ typealias BrowserExtensionPopupBackgroundWarmUp =
 typealias BrowserExtensionPopupBackgroundWarmUpObserver =
     @MainActor (BrowserExtensionPopupBackgroundWarmUp.Outcome) -> Void
 
+/// One preparation generation owns all startup, hover and action waiters.
+struct BrowserExtensionPopupBackgroundPreparation {
+    let generation = UUID()
+    var observers: [BrowserExtensionPopupBackgroundWarmUpObserver]
+}
+
 /// Warms an extension background before asking WebKit to perform the action.
 ///
 /// WebKit owns popup document loading. `performAction(for:)` is the operation
@@ -19,7 +25,7 @@ typealias BrowserExtensionPopupBackgroundWarmUpObserver =
 final class BrowserExtensionPopupActionRequest {
     typealias PrepareBackground =
         @MainActor (@escaping BrowserExtensionPopupBackgroundWarmUpObserver) ->
-            Void
+        Void
 
     private let prepareBackground: PrepareBackground
     private let performAction: @MainActor () -> Void

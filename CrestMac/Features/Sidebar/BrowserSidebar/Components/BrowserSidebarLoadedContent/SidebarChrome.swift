@@ -25,7 +25,8 @@ struct SidebarChrome: View {
                 )
                 .contentTransition(.opacity)
                 .animation(
-                    BrowserVisualAccessibilityPolicy.animation(CrestMotion.surface, reduceMotion: reduceMotion),
+                    BrowserVisualAccessibilityPolicy.animation(
+                        SpacePagerSettlement.standardAnimation, reduceMotion: reduceMotion),
                     value: [pages.canGoBack, pages.canGoForward, pages.activePage?.isLoading == true]
                 )
 
@@ -54,6 +55,7 @@ struct SidebarChrome: View {
                 }
             }
             .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: space.branding))
+            .modifier(SpaceForegroundBlend(spaces: context.availableSpaces, selectedSpaceID: space.id))
             .blur(radius: isLocked ? BrowserSidebarMetrics.lockedSpaceBlurRadius : 0)
             .redacted(reason: isLocked ? .placeholder : [])
             .allowsHitTesting(!isLocked)

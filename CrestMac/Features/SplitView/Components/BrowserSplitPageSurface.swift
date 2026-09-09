@@ -47,20 +47,34 @@ struct BrowserSplitPageSurface: View {
     @State private var surfaceOrigin = CGPoint.zero
     @State private var panelFrame: CGRect?
 
+    private var isSelectedSpace: Bool {
+        model.browser.session.selectedSpaceID == space.id && !model.spaceAccess.isLocked(space)
+    }
+
+    private var widthTransaction: Binding<BrowserSplitWidthTransaction> {
+        guard !isSelectedSpace else { return model.splitWidthTransactionBinding }
+        let persisted = space.selectedTabID.flatMap { space.splitGroup(containing: $0) }
+            .flatMap { model.windowState?.splitColumnFractions(for: $0) }
+        return .constant(
+            BrowserSplitWidthTransaction(
+                persistedFractions:
+                    BrowserSplitLayoutSeedPolicy.fractions(persisted: persisted, memberCount: members.count)))
+    }
+
     var body: some View {
         BrowserSplitColumnsView(
             members: displayMembers,
-            focusedTabID: model.pages.activeTabID,
+            focusedTabID: isSelectedSpace ? model.pages.activeTabID : space.selectedTabID,
             frameInsets: BrowserChromeLayout.pageFrameInsets(
                 adjoinsLeadingSidebar:
                     model.sidebarPresentation.reservesSidebarWidth
             ),
             accent: space.branding.primaryColor.color,
             placeholderIndex: placeholderIndex,
-            liftedTabID: model.splitCardLift.carriedTabID,
-            widthTransaction: model.splitWidthTransactionBinding,
-            onResizeCommit: model.commitSplitColumnFractions,
-            onFocus: model.focusSplitCard,
+            liftedTabID: isSelectedSpace ? model.splitCardLift.carriedTabID : nil,
+            widthTransaction: widthTransaction,
+            onResizeCommit: { if isSelectedSpace { model.commitSplitColumnFractions($0) } },
+            onFocus: { if isSelectedSpace { model.focusSplitCard($0) } },
             usesTransparentInnerSurface: usesTransparentInnerSurface,
             content: { member, _ in
                 BrowserSplitCardView(
@@ -74,17 +88,17 @@ struct BrowserSplitPageSurface: View {
                         model.chrome.startPageFocusRequest,
                     isCommandPalettePresented:
                         model.chrome.isCommandPalettePresented,
-                    fitsBesideExtensionSidebar: model.extensionSidebar?.panel != nil,
+                    fitsBesideExtensionSidebar: isSelectedSpace && model.extensionSidebar?.panel != nil,
                     cardFrames: cardFrames,
                     focusesOnHover: { focusesOnHover(member.id) },
-                    onFocusRequest: { model.focusSplitCard(member.id) }
+                    onFocusRequest: { if isSelectedSpace { model.focusSplitCard(member.id) } }
                 )
             },
-            panel: model.extensionSidebar?.panel == nil
+            panel: !isSelectedSpace || model.extensionSidebar?.panel == nil
                 ? nil : .init(requestedWidth: model.extensionSidebar?.width ?? 360),
             onPanelResizeCommit: { model.extensionSidebar?.commitWidth($0) },
             panelContent: {
-                if let host = model.extensionSidebar, let panel = host.panel {
+                if isSelectedSpace, let host = model.extensionSidebar, let panel = host.panel {
                     BrowserExtensionSidebarCard(host: host, panel: panel)
                         .onGeometryChange(for: CGRect.self) { proxy in
                             proxy.frame(in: BrowserSplitCardFrameRegistry.coordinateSpace)
@@ -96,11 +110,13 @@ struct BrowserSplitPageSurface: View {
             }
         )
         .background {
-            BrowserSplitCardPointerMonitor(
-                cardFrames: cardFrames,
-                handleMouseDown: handleMouseDown,
-                lift: liftGesture
-            )
+            if isSelectedSpace {
+                BrowserSplitCardPointerMonitor(
+                    cardFrames: cardFrames,
+                    handleMouseDown: handleMouseDown,
+                    lift: liftGesture
+                )
+            }
         }
         // Declared here, on the same view the monitor spans, so a registered card
         // frame and a converted event location share an origin by construction.
@@ -116,6 +132,7 @@ struct BrowserSplitPageSurface: View {
             }
         )
         .onChange(of: members.map(\.id), initial: true) { _, identifiers in
+            guard isSelectedSpace else { return }
             model.seedSplitColumnFractions()
             // A card that left the row — a sync, another window, a closed tab —
             // is a card with nothing to drop onto and no slot to be put back in.
@@ -124,6 +141,9 @@ struct BrowserSplitPageSurface: View {
             {
                 model.splitCardLift.abandon()
             }
+        }
+        .onChange(of: isSelectedSpace) { _, selected in
+            if selected { model.seedSplitColumnFractions() }
         }
     }
 
@@ -135,7 +155,7 @@ struct BrowserSplitPageSurface: View {
     /// whole reorder. Once the release settles, the session's own order is the
     /// order already on screen.
     private var displayMembers: [BrowserTab] {
-        guard let lift = model.splitCardLift.lift, !lift.isSettling else {
+        guard isSelectedSpace, let lift = model.splitCardLift.lift, !lift.isSettling else {
             return members
         }
         return BrowserSplitCardLiftPolicy.displayMembers(
@@ -188,6 +208,7 @@ struct BrowserSplitPageSurface: View {
         at point: CGPoint,
         modifiers: BrowserKeyboardModifierFlags
     ) -> Bool {
+        guard isSelectedSpace else { return false }
         let frames = memberCardFrames
         let card = BrowserSplitCardLiftPolicy.card(
             at: point,
@@ -318,18 +339,20 @@ struct BrowserSplitPageSurface: View {
     }
 
     private func focusesOnHover(_ tabID: TabID) -> Bool {
-        BrowserSplitFocusPolicy.focusesOnHover(
-            followsMouse: splitFocus?.followsMouse == true,
-            isCardFocused: model.pages.activeTabID == tabID,
-            isAddressEditing: model.isAddressEditing,
-            isDraggingSidebarItem: model.browser.sidebarReorderState.isDragging,
-            isCarryingCard: model.splitCardLift.isCarrying,
-            isCommandPalettePresented: model.chrome.isCommandPalettePresented
-        )
+        isSelectedSpace
+            && BrowserSplitFocusPolicy.focusesOnHover(
+                followsMouse: splitFocus?.followsMouse == true,
+                isCardFocused: model.pages.activeTabID == tabID,
+                isAddressEditing: model.isAddressEditing,
+                isDraggingSidebarItem: model.browser.sidebarReorderState.isDragging,
+                isCarryingCard: model.splitCardLift.isCarrying,
+                isCommandPalettePresented: model.chrome.isCommandPalettePresented
+            )
     }
 
     private func handleMouseDown(_ tabID: TabID) {
         guard
+            isSelectedSpace,
             BrowserSplitFocusPolicy.focusesOnClick(
                 isCardFocused: model.pages.activeTabID == tabID,
                 isDraggingSidebarItem:
@@ -345,13 +368,7 @@ struct BrowserSplitPageSurface: View {
     /// the window: a start-page or not-yet-committed card shows the Space's
     /// atmosphere through it while loaded neighbours keep their page background.
     private func usesTransparentInnerSurface(_ member: BrowserTab) -> Bool {
-        let page = model.pages.presentedPage(
-            matching: BrowserTabRuntimeAssignment(
-                tabID: member.id,
-                spaceID: space.id,
-                profileID: space.profile.id
-            )
-        )
+        let page = model.pages.surfacePage(for: member, in: space, accessController: model.spaceAccess)
         return BrowserPageSurfacePolicy.usesTransparentInnerSurface(
             isStartPage: member.isStartPage,
             hasActivePage: page != nil,

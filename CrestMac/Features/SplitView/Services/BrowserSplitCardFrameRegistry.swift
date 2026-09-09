@@ -28,9 +28,9 @@ import SwiftUI
 @MainActor
 final class BrowserSplitCardFrameRegistry {
     /// The coordinate space cards register in and the click monitor reads.
-    static let coordinateSpaceName = "crest.split-view.card-frames"
+    nonisolated static let coordinateSpaceName = "crest.split-view.card-frames"
 
-    static var coordinateSpace: NamedCoordinateSpace {
+    nonisolated static var coordinateSpace: NamedCoordinateSpace {
         .named(coordinateSpaceName)
     }
 

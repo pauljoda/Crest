@@ -432,6 +432,53 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
+    func testLockedCompactDetailNeverAutomaticallyRestoresItsPage() throws {
+        var locked = makeSpace(index: 195)
+        let tab = BrowserTab(title: "Protected", url: URL(string: "about:blank"), placement: .current)
+        locked.tabs = [tab]
+        locked.selectedTabID = tab.id
+        locked.accessPolicy = .deviceOwnerAuthentication
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [locked], selectedSpaceID: locked.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        let access = BrowserSpaceAccessController()
+        let detail = MobileBrowserDetailView(
+            browser: browser, pages: pages, spaceAccess: access,
+            address: .constant(""), isAddressEditing: .constant(false),
+            addressFocusRequest: 0, isCommandPalettePresented: false,
+            isCompact: true, obscuresSystemSafeAreas: false,
+            showsCompactToolbar: false, compactToolbarIsHidden: false,
+            handleWebContentInteraction: {}, submitAddress: {}, beginNewTab: {},
+            showTabViewer: {}, hideCompactToolbar: {}, showCompactToolbar: {},
+            handleToolbarSwipe: { _ in }, selectSplitCard: { _ in },
+            compactTransitionEnded: { _ in }
+        )
+        let window = mountBrowserSurface(safeAreaInsets: .zero, content: detail)
+        defer {
+            window.isHidden = true
+            window.rootViewController = nil
+        }
+
+        XCTAssertNil(pages.activePage)
+        XCTAssertFalse(pages.containsResidentPage(for: tab.id))
+
+        // The same mounted detail must still restore an authorized tab.
+        browser.updateSpaceAccessPolicy(.open, in: locked.id)
+        window.layoutIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        XCTAssertEqual(pages.activePage?.tabID, tab.id)
+
+        browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: locked.id)
+        pages.relockProtectedSpace(try XCTUnwrap(browser.selectedSpace))
+        window.layoutIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        XCTAssertNil(pages.activePage)
+        XCTAssertTrue(pages.containsResidentPage(for: tab.id))
+        XCTAssertNil(firstWebHostView(in: window))
+    }
+
     func testCompactPageChromeFloatsOverThePagesThemeBackdrop() {
         XCTAssertTrue(MobileCompactPageChromePolicy.usesPageThemeBackdrop)
         XCTAssertFalse(MobileCompactPageChromePolicy.drawsToolbarBackground)
@@ -445,9 +492,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
-    func testCompactNewTabUsesAndFocusesTheSharedCommandPalette() {
-        XCTAssertTrue(MobileStartPageSearchPolicy.usesSharedCommandPalette)
-        XCTAssertTrue(MobileStartPageSearchPolicy.focusesWhenNewTabOpens)
+    func testStartPageSearchUsesTheCorrectPresentationDestination() {
         XCTAssertEqual(
             MobileStartPageSearchPolicy.destination(
                 isStartPage: true,
@@ -461,25 +506,6 @@ final class MobileBrowserNavigationTests: XCTestCase {
                 presentation: .regular
             ),
             .overlay
-        )
-    }
-
-    func testRegularBrowserUsesOneRootAtmosphereAcrossSidebarAndContent() {
-        XCTAssertTrue(MobileRegularBrowserBackdropPolicy.rootOwnsAtmosphere)
-        XCTAssertTrue(MobileRegularBrowserBackdropPolicy.extendsBehindTopSafeArea)
-        XCTAssertFalse(
-            MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                showsPageBackdrop: false,
-                isPaging: false,
-                isSelected: true
-            )
-        )
-        XCTAssertTrue(
-            MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                showsPageBackdrop: true,
-                isPaging: false,
-                isSelected: true
-            )
         )
     }
 
@@ -512,61 +538,6 @@ final class MobileBrowserNavigationTests: XCTestCase {
                 sidebarPresentation: .docked
             ),
             .selectedPage
-        )
-    }
-
-    func testMobileSidebarKeepsFullBleedSpaceBackgroundsDuringPaging() throws {
-        let session = BrowserSession.preview
-        let work = try XCTUnwrap(session.spaces.first)
-        let personal = try XCTUnwrap(session.spaces.dropFirst().first)
-        let settled = MobileBrowserSidebarBackdropPolicy.style(isPaging: false)
-        let paging = MobileBrowserSidebarBackdropPolicy.style(isPaging: true)
-
-        XCTAssertTrue(MobileBrowserSidebarBackdropPolicy.isFullBleed(isPaging: false))
-        XCTAssertFalse(settled.usesSharedSelectedSpaceBackdrop)
-        XCTAssertTrue(MobileBrowserSidebarBackdropPolicy.pagerOwnsFullSurface)
-        XCTAssertTrue(MobileBrowserSidebarBackdropPolicy.pageBackdropIgnoresSafeArea)
-        XCTAssertTrue(MobileBrowserSidebarBackdropPolicy.usesSingleBackdropLayer)
-        XCTAssertFalse(MobileBrowserSidebarBackdropPolicy.requiresPagingStateUpdates)
-        XCTAssertEqual(settled.horizontalInset, 0)
-        XCTAssertEqual(settled.verticalInset, 0)
-        XCTAssertEqual(settled.cornerRadius, 0)
-        XCTAssertTrue(
-            MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                showsPageBackdrop: true,
-                isPaging: false,
-                isSelected: true
-            )
-        )
-        XCTAssertTrue(
-            MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                showsPageBackdrop: true,
-                isPaging: false,
-                isSelected: false
-            )
-        )
-
-        XCTAssertTrue(MobileBrowserSidebarBackdropPolicy.isFullBleed(isPaging: true))
-        XCTAssertFalse(paging.usesSharedSelectedSpaceBackdrop)
-        XCTAssertEqual(paging.horizontalInset, 0)
-        XCTAssertEqual(paging.verticalInset, 0)
-        XCTAssertEqual(paging.cornerRadius, 0)
-        XCTAssertTrue(
-            MobileBrowserSidebarBackdropPolicy.showsPageBackdrop(
-                showsPageBackdrop: true,
-                isPaging: true,
-                isSelected: true
-            )
-        )
-        XCTAssertFalse(MobileBrowserSidebarBackdropPolicy.usesMatchedGeometryMorph)
-        XCTAssertFalse(MobileBrowserSidebarBackdropPolicy.usesOpacityCrossfade)
-        XCTAssertEqual(
-            MobileBrowserSidebarBackdropPolicy.branding(for: work),
-            work.branding
-        )
-        XCTAssertEqual(
-            MobileBrowserSidebarBackdropPolicy.branding(for: personal),
-            personal.branding
         )
     }
 
@@ -1615,38 +1586,6 @@ final class MobileBrowserNavigationTests: XCTestCase {
             (1...12).map(PinnedTabGridLayout.columnCount(for:)),
             expected
         )
-    }
-
-    func testSpaceMotionCoalescesGesturesAndDirectSelectionSupersedesThem() {
-        let workID = SpaceID()
-        let personalID = SpaceID()
-        var motion = SpacePagerTransition(spaceID: workID)
-        XCTAssertEqual(motion.request(.next), .next)
-        let outgoingGeneration = motion.begin(spaceID: personalID)
-        XCTAssertNil(motion.request(.next))
-        XCTAssertNil(motion.request(.previous))
-        XCTAssertEqual(motion.finish(generation: outgoingGeneration), .previous)
-
-        _ = motion.begin(spaceID: workID)
-        XCTAssertNil(motion.request(.next))
-        let directGeneration = motion.begin(spaceID: personalID)
-        XCTAssertNil(motion.finish(generation: outgoingGeneration))
-        XCTAssertTrue(motion.isAnimating)
-        XCTAssertNil(motion.finish(generation: directGeneration))
-        XCTAssertFalse(motion.isAnimating)
-    }
-
-    func testSpaceMotionCancellationRejectsStaleCompletionAndPendingGesture() {
-        let workID = SpaceID()
-        let personalID = SpaceID()
-        var motion = SpacePagerTransition(spaceID: workID)
-        let generation = motion.begin(spaceID: personalID)
-        XCTAssertNil(motion.request(.next))
-        motion.cancel(spaceID: workID)
-        XCTAssertNil(motion.finish(generation: generation))
-        XCTAssertEqual(motion.spaceID, workID)
-        XCTAssertFalse(motion.isAnimating)
-        XCTAssertEqual(motion.request(.previous), .previous)
     }
 
     func testSpaceSwipePolicyRequiresADeliberateHorizontalGesture() {

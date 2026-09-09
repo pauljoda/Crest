@@ -28,15 +28,6 @@ struct PlatformSpacePickerPresentation: NSViewRepresentable {
 
 @MainActor
 final class SpacePickerPresentationView: NSView {
-    private struct ScrollSegment {
-        let generation: UInt
-        let phase: SpacePagerPresentation.Phase
-        let destinationID: SpaceID
-        let startPosition: CGFloat
-        let destinationPosition: CGFloat
-        let startOffset: CGFloat
-        let destinationOffset: CGFloat
-    }
 
     private let highlight = CAShapeLayer()
     private var presentation: SpacePagerPresentation?
@@ -45,7 +36,8 @@ final class SpacePickerPresentationView: NSView {
     private var frames: [SpaceID: CGRect] = [:]
     private var colors: [SpaceID: NSColor] = [:]
     private var lastSnapshot: SpacePagerPresentation.Snapshot?
-    private var scrollSegment: ScrollSegment?
+    private var scrollSegment: SpacePickerScrollProgress?
+    private var activeTransition: SpacePagerSettlement?
     private var isObserving = false
     private var connectionScheduled = false
     private var lastViewportWidth: CGFloat = 0
@@ -133,8 +125,18 @@ final class SpacePickerPresentationView: NSView {
 
     private func receive(_ snapshot: SpacePagerPresentation.Snapshot) {
         guard snapshot.spaceIDs == spaceIDs, snapshot.position.isFinite else { return }
+        // Core Animation owns the complete release. Reinstalling from sampled
+        // positions would turn a delayed callback into the visible catch-up jump.
+        if let transition = snapshot.transition, activeTransition == transition { return }
         let previous = lastSnapshot
         lastSnapshot = snapshot
+        let visibleScrollOffset =
+            activeTransition == nil
+            ? clipView?.bounds.minX : clipView?.layer?.presentation()?.bounds.minX ?? clipView?.bounds.minX
+        highlight.removeAllAnimations()
+        clipView?.layer?.removeAnimation(forKey: "spaceTransition.bounds.origin")
+        activeTransition = nil
+        if let visibleScrollOffset, snapshot.phase != .idle { scroll(to: visibleScrollOffset) }
         drawHighlight(at: snapshot.position)
 
         if snapshot.phase == .idle {
@@ -165,20 +167,45 @@ final class SpacePickerPresentationView: NSView {
         {
             // Capture the real lane offset on interruption, release or reversal.
             // Manual overflow scrolling therefore cannot jump at gesture start.
-            scrollSegment = ScrollSegment(
+            scrollSegment = SpacePickerScrollProgress(
                 generation: snapshot.generation, phase: snapshot.phase, destinationID: destinationID,
-                startPosition: previous?.position ?? snapshot.position,
+                startPosition: previous.flatMap { $0.generation == snapshot.generation ? $0.position : nil }
+                    ?? snapshot.position,
                 destinationPosition: CGFloat(destinationIndex),
                 startOffset: clipView.bounds.minX, destinationOffset: destinationOffset)
         }
-        if let scrollSegment { advanceScroll(scrollSegment, position: snapshot.position) }
+        if let transition = snapshot.transition {
+            if animateHighlight(transition) { activeTransition = transition }
+            if let scrollSegment, let layer = clipView.layer {
+                let start = NSValue(point: CGPoint(x: scrollSegment.startOffset, y: clipView.bounds.minY))
+                let end = NSValue(point: CGPoint(x: scrollSegment.destinationOffset, y: clipView.bounds.minY))
+                scroll(to: scrollSegment.destinationOffset)
+                transition.animate(
+                    layer, keyPath: "bounds.origin", values: [start, end], followsSpaceBoundaries: false)
+            }
+        } else if let scrollSegment {
+            advanceScroll(scrollSegment, position: snapshot.position)
+        }
     }
 
-    private func advanceScroll(_ segment: ScrollSegment, position: CGFloat) {
-        let distance = segment.destinationPosition - segment.startPosition
-        guard abs(distance) > 0.000_001 else { return }
-        let fraction = min(1, max(0, (position - segment.startPosition) / distance))
-        scroll(to: segment.startOffset + (segment.destinationOffset - segment.startOffset) * fraction)
+    private func animateHighlight(_ transition: SpacePagerSettlement) -> Bool {
+        let frames = transition.positions.compactMap { interpolatedFrame(at: $0) }
+        let colors = transition.positions.compactMap { interpolatedColor(at: $0) }
+        guard frames.count == transition.positions.count, colors.count == frames.count else { return false }
+        transition.animate(
+            highlight, keyPath: "position", values: frames.map { NSValue(point: CGPoint(x: $0.midX, y: $0.midY)) })
+        transition.animate(highlight, keyPath: "bounds.size", values: frames.map { NSValue(size: $0.size) })
+        transition.animate(
+            highlight, keyPath: "fillColor",
+            values: colors.map {
+                $0.withAlphaComponent($0.alphaComponent * CrestSpaceIconPickerMetrics.selectionFillOpacity).cgColor
+            })
+        transition.animate(highlight, keyPath: "strokeColor", values: colors.map(\.cgColor))
+        return true
+    }
+
+    private func advanceScroll(_ segment: SpacePickerScrollProgress, position: CGFloat) {
+        scroll(to: segment.offset(at: position))
     }
 
     private func centeredOffset(at position: CGFloat) -> CGFloat? {
@@ -221,23 +248,16 @@ final class SpacePickerPresentationView: NSView {
     }
 
     private func interpolation(at position: CGFloat) -> (SpaceID, SpaceID, CGFloat)? {
-        guard !spaceIDs.isEmpty else { return nil }
-        let position = min(CGFloat(spaceIDs.count - 1), max(0, position))
-        let lower = Int(position.rounded(.down))
-        let upper = min(spaceIDs.count - 1, lower + 1)
-        return (spaceIDs[lower], spaceIDs[upper], position - CGFloat(lower))
+        guard let sample = SpacePagerInterpolation(position: position, count: spaceIDs.count) else { return nil }
+        return (spaceIDs[sample.lower], spaceIDs[sample.upper], sample.fraction)
     }
 
     private func interpolatedFrame(at position: CGFloat) -> CGRect? {
-        guard let (lower, upper, fraction) = interpolation(at: position),
-            let start = frames[lower], let end = frames[upper],
+        guard let sample = SpacePagerInterpolation(position: position, count: spaceIDs.count),
+            let start = frames[spaceIDs[sample.lower]], let end = frames[spaceIDs[sample.upper]],
             start.width > 0, start.height > 0, end.width > 0, end.height > 0
         else { return nil }
-        return CGRect(
-            x: start.minX + (end.minX - start.minX) * fraction,
-            y: start.minY + (end.minY - start.minY) * fraction,
-            width: start.width + (end.width - start.width) * fraction,
-            height: start.height + (end.height - start.height) * fraction)
+        return sample.frame(from: start, to: end)
     }
 
     private func interpolatedColor(at position: CGFloat) -> NSColor? {
@@ -255,8 +275,11 @@ final class SpacePickerPresentationView: NSView {
     func disconnect() {
         presentation?.removeObserver(owner: self)
         isObserving = false
+        clipView?.layer?.removeAnimation(forKey: "spaceTransition.bounds.origin")
         clipView = nil
         scrollSegment = nil
+        activeTransition = nil
+        highlight.removeAllAnimations()
         lastViewportWidth = 0
         needsInitialPosition = true
     }

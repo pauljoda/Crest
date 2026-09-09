@@ -42,6 +42,10 @@ extension BrowserExtensionTabWindowCoordinator {
             pendingActionPopupRequests[key] = nil
             pendingToolbarActionContexts.remove(key)
             popupBackgroundReadyUntil[key] = nil
+            popupBackgroundReadyEndpoints[key] = nil
+            popupBackgroundRecoveryRequests.remove(key)
+            let observers = popupBackgroundPreparations.removeValue(forKey: key)?.observers ?? []
+            for observer in observers { observer(.failed(CancellationError())) }
             popupToggle.forget(key)
         #endif
         if let client = sidebarClientsByContext.removeValue(forKey: key) {
@@ -636,7 +640,7 @@ extension BrowserExtensionTabWindowCoordinator {
             targetTabID = invocation.tabID
         } else {
             guard
-                let selectedTabID = currentState?.space(spaceID)?.selectedTabID
+                let selectedTabID = selectedTabID(in: spaceID)
             else {
                 replyHandler(
                     nil,

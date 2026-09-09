@@ -77,17 +77,30 @@ enum BrowserWebExtensionManifestCompatibilityPolicy {
     }
 }
 
-struct BrowserWebExtensionCompatibilityPackagePreparer {
+// Configuration is immutable and publication is serialized by preparationLock.
+// FileManager's delegate-free filesystem methods are thread-safe; its SDK type
+// lacks Sendable. Injected managers must remain delegate-free during use.
+struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
     static let internalContextMenuTransportPermission = "nativeMessaging"
     private static let preparationLock = NSLock()
     private static let preparedDigestFilename = ".crest-prepared-digest"
+    private static let preparedInputFilename = ".crest-prepared-input"
+    private static let preparationBuildIdentity: String = {
+        let bundle = Bundle.main
+        let values = try? bundle.executableURL?.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        return [
+            "1", bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "",
+            bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "",
+            String(values?.contentModificationDate?.timeIntervalSince1970 ?? 0), String(values?.fileSize ?? 0),
+        ].joined(separator: ":")
+    }()
     private static let scopedCompatibilityAPIName =
         "__crestWebExtensionScopedAPI"
     private static let legacyBackgroundPreludePattern =
         #"(?s)\A// Crest's WKWebExtension host currently has no notifications API\.\s*.*?Object\.defineProperty\(globalThis, \"chrome\", \{\s*value: crestChromeCompatibility,\s*configurable: true\s*\}\);\s*\}\s*"#
 
     private let fileManager: FileManager
-    private let expandArchive: (URL, URL) throws -> Void
+    private let expandArchive: @Sendable (URL, URL) throws -> Void
     /// Whether the generated runtime forwards the extension's own
     /// `console.warn`/`error`/`info` output to Crest's diagnostics channel.
     ///
@@ -101,9 +114,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
 
     init(
         fileManager: FileManager = .default,
-        expandArchive: @escaping (URL, URL) throws -> Void = Self.expand,
+        expandArchive: @escaping @Sendable (URL, URL) throws -> Void = Self.expand,
         enablesConsoleCapture: Bool = false
     ) {
+        precondition(fileManager.delegate == nil, "Extension preparation requires a delegate-free file manager.")
         self.fileManager = fileManager
         self.expandArchive = expandArchive
         self.enablesConsoleCapture = enablesConsoleCapture
@@ -149,6 +163,17 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
         Self.preparationLock.lock()
         defer { Self.preparationLock.unlock() }
         do {
+            let inputDigest = try preparationInputDigest(
+                at: storedResourceURL, requestedPermissions: requestedPermissions)
+            let existingInputDigest = try? String(
+                contentsOf: rootURL.appending(path: Self.preparedInputFilename), encoding: .utf8)
+            if existingInputDigest == inputDigest,
+                let manifest = try? Self.packageManifest(in: resourceURL)
+            {
+                return preparedPackage(
+                    resourceURL: resourceURL, rootURL: rootURL,
+                    requestedPermissions: requestedPermissions, manifest: manifest)
+            }
             try fileManager.createDirectory(
                 at: stagingRootURL,
                 withIntermediateDirectories: true
@@ -186,10 +211,6 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
             let preparedManifest = try Self.packageManifest(
                 in: stagingResourceURL
             )
-            let manifestPermissions = preparedManifest["permissions"] as? [String] ?? []
-            let effectiveRequestedPermissions = Array(
-                Set(requestedPermissions).union(manifestPermissions)
-            )
             let preparedDigest = try preparedContentDigest(
                 at: stagingResourceURL
             )
@@ -220,26 +241,50 @@ struct BrowserWebExtensionCompatibilityPackagePreparer {
                     at: rootURL
                 )
             }
-            return BrowserWebExtensionPreparedPackage(
-                resourceURL: resourceURL,
-                rootURL: rootURL,
-                fileManager: fileManager,
-                removesRootOnDeinit: false,
-                internalGrantedPermissions: Self.internalGrantedPermissions(
-                    requestedPermissions: effectiveRequestedPermissions
-                ),
-                capabilityBrokerGrantedPermissions:
-                    Self.capabilityBrokerGrantedPermissions(
-                        requestedPermissions: effectiveRequestedPermissions
-                    ).union(
-                        BrowserExtensionAPICompatibilityMatrix.capabilityBrokerGrantedCapabilities(
-                            manifest: preparedManifest)),
-                allowsInternalCapabilityBroker: true
-            )
+            // Publish the input receipt only after the resources are complete.
+            // A crash before this write simply causes another preparation.
+            try inputDigest.write(
+                to: rootURL.appending(path: Self.preparedInputFilename), atomically: true, encoding: .utf8)
+            return preparedPackage(
+                resourceURL: resourceURL, rootURL: rootURL,
+                requestedPermissions: requestedPermissions, manifest: preparedManifest)
         } catch {
             try? fileManager.removeItem(at: stagingRootURL)
             throw error
         }
+    }
+
+    private func preparedPackage(
+        resourceURL: URL, rootURL: URL, requestedPermissions: [String], manifest: [String: Any]
+    ) -> BrowserWebExtensionPreparedPackage {
+        let permissions = Array(Set(requestedPermissions).union(manifest["permissions"] as? [String] ?? []))
+        return BrowserWebExtensionPreparedPackage(
+            resourceURL: resourceURL, rootURL: rootURL, fileManager: fileManager, removesRootOnDeinit: false,
+            internalGrantedPermissions: Self.internalGrantedPermissions(requestedPermissions: permissions),
+            capabilityBrokerGrantedPermissions: Self.capabilityBrokerGrantedPermissions(
+                requestedPermissions: permissions
+            )
+            .union(BrowserExtensionAPICompatibilityMatrix.capabilityBrokerGrantedCapabilities(manifest: manifest)),
+            allowsInternalCapabilityBroker: true)
+    }
+
+    private func preparationInputDigest(at source: URL, requestedPermissions: [String]) throws -> String {
+        let isDirectory = try source.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+        // Unpacked folders can change without a new installation record. Hash
+        // their actual contents; archive inputs need only their original bytes.
+        let sourceDigest =
+            try isDirectory
+            ? preparedContentDigest(at: source)
+            : SHA256.hash(data: Data(contentsOf: source)).map { String(format: "%02x", $0) }.joined()
+        // The root already scopes source path and complete runtime identity.
+        // Include both app build identity and injected configuration so a new
+        // compatibility runtime never reuses the previous build's resources.
+        let inputs: [String: Any] = [
+            "source": sourceDigest, "build": Self.preparationBuildIdentity,
+            "permissions": Array(Set(requestedPermissions)).sorted(), "console": enablesConsoleCapture,
+        ]
+        return SHA256.hash(data: try JSONSerialization.data(withJSONObject: inputs, options: [.sortedKeys]))
+            .map { String(format: "%02x", $0) }.joined()
     }
 
     private func retainPublishedCompatibilityResources(

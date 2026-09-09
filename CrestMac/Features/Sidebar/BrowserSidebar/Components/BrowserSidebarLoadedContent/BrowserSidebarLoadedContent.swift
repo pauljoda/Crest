@@ -23,7 +23,12 @@ struct BrowserSidebarLoadedContent: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
-    @State private var spacePagerPresentation = SpacePagerPresentation()
+    @Environment(\.spacePagerPresentation) private var inheritedPagerPresentation
+    @State private var standalonePagerPresentation = SpacePagerPresentation()
+
+    private var spacePagerPresentation: SpacePagerPresentation {
+        inheritedPagerPresentation ?? standalonePagerPresentation
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,6 +92,9 @@ struct BrowserSidebarLoadedContent: View {
                     BrowserSpaceForegroundPolicy.colorScheme(for: $0.branding)
                 } ?? .dark
             )
+            .modifier(
+                SpaceForegroundBlend(
+                    spaces: context.availableSpaces, selectedSpaceID: context.browser.session.selectedSpaceID))
         }
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .accessibilityElement(children: .contain)

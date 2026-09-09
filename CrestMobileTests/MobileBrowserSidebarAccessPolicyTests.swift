@@ -116,41 +116,6 @@ final class BrowserSidebarAccessPolicyTests: XCTestCase {
         )
     }
 
-    func testPagerSettlementRequiresTheExactSelectedSpaceAndProfile() {
-        let context = makeContext()
-        let assignment = BrowserSpaceRuntimeAssignment(space: context.source)
-
-        XCTAssertTrue(
-            BrowserSidebarAccessPolicy.canSettlePageSelection(
-                assignment,
-                settledSpaceID: context.source.id,
-                in: context.browser,
-                accessController: context.access
-            )
-        )
-        XCTAssertFalse(
-            BrowserSidebarAccessPolicy.canSettlePageSelection(
-                assignment,
-                settledSpaceID: context.destination.id,
-                in: context.browser,
-                accessController: context.access
-            )
-        )
-
-        context.browser.session.spaces[0] = replacingProfile(
-            in: context.source,
-            with: Self.uuid(9)
-        )
-        XCTAssertFalse(
-            BrowserSidebarAccessPolicy.canSettlePageSelection(
-                assignment,
-                settledSpaceID: context.source.id,
-                in: context.browser,
-                accessController: context.access
-            )
-        )
-    }
-
     private func makeContext(
         sourceIsProtected: Bool = false,
         destinationIsProtected: Bool = false

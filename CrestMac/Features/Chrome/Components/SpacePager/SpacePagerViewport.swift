@@ -15,8 +15,9 @@ final class SpacePagerViewport<Content: View>: NSView {
         var translation: CGFloat = 0
         var direction: CGFloat = 0
         var settledDestination: SpaceID?
+        var transition: SpacePagerSettlement?
+        var hasPreparedNeighbors = false
         let commitsSelection: Bool
-        let usesNativeTracking: Bool
     }
 
     private(set) var spaces: [BrowserSpace] = []
@@ -31,14 +32,16 @@ final class SpacePagerViewport<Content: View>: NSView {
     private var hosts: [BrowserSpaceRuntimeAssignment: SpacePageHost<Content>] = [:]
     private var makeRoot: ((BrowserSpace, Bool) -> SpacePageRoot<Content>)?
     private var selectSpace: (SpaceID) -> SpaceID = { $0 }
-    private var settledSpace: (SpaceID) -> Void = { _ in }
     private var lastSize = CGSize.zero
     private var presentation: SpacePagerPresentation?
     private var motionDisplayLink: CADisplayLink?
-    private lazy var frameObserver = SpacePagerFrameObserver { [weak self] in
-        self?.publishPresentation(sampleAnimated: true)
+    private var maximumTrackingSpeed: CGFloat { bounds.width * SpacePagerSettlement.trackingPagesPerSecond }
+    private lazy var frameObserver = SpacePagerFrameObserver { [weak self] interval in
+        self?.advanceFrame(interval: interval)
     }
-    private lazy var gesture = SpacePagerGesture(viewport: self)
+    private lazy var gesture: SpacePagerGesture<Content> = {
+        @MainActor in SpacePagerGesture(viewport: self)
+    }()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -63,7 +66,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         spaces: [BrowserSpace], selectedSpaceID: SpaceID,
         isInteractionLocked: Bool, reduceMotion: Bool, layoutDirection: LayoutDirection,
         presentation: SpacePagerPresentation? = nil,
-        selectSpace: @escaping (SpaceID) -> SpaceID, settledSpace: @escaping (SpaceID) -> Void,
+        selectSpace: @escaping (SpaceID) -> SpaceID,
         makeRoot: @escaping (BrowserSpace, Bool) -> SpacePageRoot<Content>
     ) {
         let assignmentsChanged =
@@ -81,7 +84,6 @@ final class SpacePagerViewport<Content: View>: NSView {
         self.reduceMotion = reduceMotion
         self.layoutDirection = layoutDirection
         self.selectSpace = selectSpace
-        self.settledSpace = settledSpace
         self.makeRoot = makeRoot
 
         if invalidatesMotion {
@@ -222,7 +224,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         motion = Motion(
             generation: generation, origin: origin, offset: inheritedOffset,
             initialOffset: inheritedOffset,
-            commitsSelection: true, usesNativeTracking: true)
+            commitsSelection: true)
         positionHosts()
         updateAccessibility()
         publishPresentation()
@@ -246,15 +248,47 @@ final class SpacePagerViewport<Content: View>: NSView {
         let maximum: CGFloat = neighbor(forPhysicalDirection: 1) == nil ? 0 : bounds.width
         let availableTravel =
             current.direction < 0 ? current.initialOffset - minimum : maximum - current.initialOffset
+        let pending = current.initialOffset + current.translation - current.offset
+        if deltaX * pending < 0 {
+            // Reverse from what is visible, discarding unpresented travel. A
+            // fast outward burst must not create a queue to unwind first.
+            current.translation = current.offset - current.initialOffset
+        }
         // Stop at the destination while tracking. Discard excess input so a
         // reversal moves immediately instead of first unwinding hidden travel.
         let travel = min(max(0, availableTravel), max(0, (current.translation + deltaX) * current.direction))
         current.translation = travel * current.direction
-        current.offset = current.initialOffset + current.translation
+        motion = current
+        startPresentationSampling()
+        return true
+    }
+
+    func advanceFrame(interval: TimeInterval) {
+        guard var current = motion else { return }
+        if let destination = current.settledDestination {
+            publishPresentation(sampleAnimated: true)
+            // After the native slide has started, ready the page beyond its
+            // destination. Rapid consecutive swipes can interrupt before the
+            // selection receipt would normally admit that neighbor. Keep the
+            // visible roots untouched and retain the same bounded cache.
+            if !current.hasPreparedNeighbors, motion?.generation == current.generation {
+                motion?.hasPreparedNeighbors = true
+                prepareHosts(around: destination, retaining: current.origin.spaceID, refreshContent: false)
+            }
+            return
+        }
+        let pending = current.initialOffset + current.translation - current.offset
+        guard pending != 0 else { return }
+        // Slow input tracks point-for-point at display cadence. Fast input is
+        // bounded to four page widths per second. After a missed frame, take
+        // one frame's step rather than jumping through all the elapsed travel.
+        let budget = maximumTrackingSpeed * min(1.0 / 60, max(0, interval))
+        let delta = min(abs(pending), budget) * (pending < 0 ? -1 : 1)
+        guard delta != 0 else { return }
+        current.offset += delta
         motion = current
         positionHosts()
         publishPresentation()
-        return true
     }
 
     func endInteractiveMotion(velocity: CGFloat, cancelled: Bool, token: UInt) -> Bool {
@@ -269,7 +303,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         let projectedTravel = progress + releaseVelocity * current.direction * 0.15
         let completes = !cancelled && travel > 0 && projectedTravel >= bounds.width / 2
         let destination = completes ? current.target?.spaceID : nil
-        settleMotion(to: destination ?? current.origin.spaceID, velocity: releaseVelocity)
+        settleMotion(to: destination ?? current.origin.spaceID)
         return true
     }
 
@@ -281,7 +315,7 @@ final class SpacePagerViewport<Content: View>: NSView {
                 direction: direction == .next ? .next : .previous)
         else {
             if let current = motion, current.settledDestination == nil {
-                settleMotion(to: current.origin.spaceID, velocity: 0)
+                settleMotion(to: current.origin.spaceID)
             }
             return
         }
@@ -292,7 +326,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         if let target = motion?.target, hosts[target] == nil {
             prepareHosts(around: current.origin.spaceID, retaining: next, refreshContent: false)
         }
-        settleMotion(to: next, velocity: 0)
+        settleMotion(to: next)
     }
 
     func cancelMotion() {
@@ -314,10 +348,10 @@ final class SpacePagerViewport<Content: View>: NSView {
         let direction: CGFloat = (targetIndex > originIndex ? -1 : 1) * (layoutDirection == .leftToRight ? 1 : -1)
         motion = Motion(
             generation: generation, origin: origin, target: target, direction: direction,
-            commitsSelection: commitsSelection, usesNativeTracking: false)
+            commitsSelection: commitsSelection)
         positionHosts()
         updateAccessibility()
-        settleMotion(to: destination, velocity: 0)
+        settleMotion(to: destination)
     }
 
     private func visibleOffset(for key: BrowserSpaceRuntimeAssignment, during current: Motion) -> CGFloat {
@@ -329,32 +363,39 @@ final class SpacePagerViewport<Content: View>: NSView {
         return host.frame.minX
     }
 
-    private func settleMotion(to destination: SpaceID, velocity: CGFloat) {
+    private func settleMotion(to destination: SpaceID) {
         guard var current = motion, assignment(for: destination) != nil else { return }
         let token = current.generation
         let startOffset = visibleOffset(for: current.origin, during: current)
         current.offset = startOffset
         current.settledDestination = destination
         let targetOffset: CGFloat = destination == current.origin.spaceID ? 0 : current.direction * bounds.width
-        let distance = targetOffset - startOffset
-        let speedTowardDestination = max(0, velocity * (distance < 0 ? -1 : 1))
-        let duration = min(0.22, max(0.10, abs(distance) / max(1, speedTowardDestination)))
-        let timing = CAMediaTimingFunction(name: .easeOut)
         motion = current
         updateAccessibility()
-        publishPresentation()
         guard !reduceMotion, abs(targetOffset - startOffset) > 0.01 else {
             finishMotion(token: token, destination: destination)
             return
         }
+        let originIndex = spaces.firstIndex { $0.id == current.origin.spaceID } ?? 0
+        let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
+        let transition = SpacePagerSettlement(
+            startPosition: CGFloat(originIndex) - startOffset / bounds.width * direction,
+            endPosition: CGFloat(originIndex) - targetOffset / bounds.width * direction,
+            generation: token)
+        current.transition = transition
+        motion = current
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
-            context.timingFunction = timing
+            context.duration = transition.duration
+            context.timingFunction = transition.timingFunction
+            // All native leaves install their animations in this transaction,
+            // with the same clock and curve. Sampling must not drive settling.
+            publishPresentation()
             for (key, host) in hosts {
                 let end = restingOffset(for: key, during: current) + targetOffset
+                let endFrame = CGRect(x: end, y: 0, width: bounds.width, height: bounds.height)
+                guard needsMotion(for: key, host: host, destination: endFrame) else { continue }
                 let animation = CABasicAnimation()
-                animation.duration = duration
-                animation.timingFunction = timing
+                transition.configure(animation)
                 // The last tracking frame may not have rendered yet. AppKit's
                 // default start can then be an older, different offset for each
                 // page; give it the coherent native position we just tracked.
@@ -392,11 +433,9 @@ final class SpacePagerViewport<Content: View>: NSView {
                 positionHosts()
                 updateAccessibility()
                 publishPresentation()
-                settledSpace(actual)
                 return
             }
         }
-        settledSpace(destination)
         // Model updates refresh content after visual completion, never once
         // per progress sample. Cancellation may finish without a model update.
         if expectedSelection == nil {
@@ -424,11 +463,12 @@ final class SpacePagerViewport<Content: View>: NSView {
             .init(
                 generation: generation, spaceIDs: spaces.map(\.id), position: position,
                 phase: motion == nil ? .idle : motion?.settledDestination == nil ? .tracking : .settling,
-                destinationID: motion?.settledDestination ?? motion?.target?.spaceID ?? originID))
+                destinationID: motion?.settledDestination ?? motion?.target?.spaceID ?? originID,
+                transition: motion?.transition))
     }
 
     private func startPresentationSampling() {
-        guard presentation != nil, motionDisplayLink == nil, window != nil else { return }
+        guard motionDisplayLink == nil, window != nil else { return }
         let link = displayLink(target: frameObserver, selector: #selector(SpacePagerFrameObserver.sample(_:)))
         link.add(to: .main, forMode: .common)
         motionDisplayLink = link
@@ -487,8 +527,20 @@ final class SpacePagerViewport<Content: View>: NSView {
         for (key, host) in hosts {
             let offset = restingOffset(for: key, during: motion) + (motion?.offset ?? 0)
             let origin = NSPoint(x: offset, y: 0)
+            let frame = CGRect(origin: origin, size: bounds.size)
+            guard motion == nil || needsMotion(for: key, host: host, destination: frame) else { continue }
             if host.frame.origin != origin { host.setFrameOrigin(origin) }
         }
+    }
+
+    private func needsMotion(
+        for key: BrowserSpaceRuntimeAssignment, host: NSView, destination: CGRect
+    ) -> Bool {
+        // Retaining a layout does not require moving it on every input sample.
+        // Native frame changes invalidate the hosting tree's global geometry,
+        // even when the whole page remains outside the viewport.
+        key == motion?.origin || key == motion?.target
+            || host.frame.intersects(bounds) || destination.intersects(bounds)
     }
 
     private func stopHostAnimations() {
@@ -501,16 +553,11 @@ final class SpacePagerViewport<Content: View>: NSView {
     private func updateAccessibility() {
         let hasPresentation = presentationSpaceID.flatMap { assignment(for: $0) } != nil
         for (key, host) in hosts {
-            // Programmatic slides display their origin and destination only.
-            // Tracking keeps adjacent pages ready in either physical direction.
-            let participates =
-                motion.map {
-                    if $0.usesNativeTracking {
-                        return abs(restingOffset(for: key, during: $0)) <= bounds.width
-                    }
-                    return key == $0.origin || key == $0.target
-                } ?? true
-            host.isHidden = !hasPresentation || !participates
+            // The cache is bounded in prepareHosts. Keep those layouts alive
+            // throughout a slide; hiding and restoring distant cached hosts
+            // adds layout work exactly when the page surface changes. Their
+            // stationary frames remain outside the clipped viewport.
+            host.isHidden = !hasPresentation
             host.setAccessibilityHidden(key.spaceID != selectedSpaceID || motion != nil || expectedSelection != nil)
         }
     }
@@ -519,9 +566,9 @@ final class SpacePagerViewport<Content: View>: NSView {
 /// Keeps the Objective-C display-link target independent of the generic page root.
 @MainActor
 private final class SpacePagerFrameObserver: NSObject {
-    let update: () -> Void
+    let update: @MainActor (TimeInterval) -> Void
 
-    init(update: @escaping () -> Void) { self.update = update }
+    init(update: @escaping @MainActor (TimeInterval) -> Void) { self.update = update }
 
-    @objc func sample(_ link: CADisplayLink) { update() }
+    @objc func sample(_ link: CADisplayLink) { update(link.targetTimestamp - link.timestamp) }
 }

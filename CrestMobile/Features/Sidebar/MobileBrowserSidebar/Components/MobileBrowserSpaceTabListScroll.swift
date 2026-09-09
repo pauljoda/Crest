@@ -23,6 +23,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                         VStack(spacing: 0) {
                             content()
                         }
+                        .sidebarScrollContent()
                         .padding(.bottom, 8)
 
                         Color.clear
@@ -38,6 +39,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: geometry.size.height, alignment: .top)
                 }
+                .modifier(SidebarScrollAffordance(isDragging: browser.sidebarReorderState.isDragging))
                 .scrollClipDisabled(
                     !BrowserSidebarReorderVisuals.clipsScrollableRegion(
                         clipsWhenIdle: BrowserSidebarScrollLayoutPolicy
