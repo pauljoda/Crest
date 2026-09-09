@@ -6,48 +6,52 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.77</title>
-            <pubDate>Sun, 06 Sep 2026 18:59:25 +0000</pubDate>
+            <title>0.5.87</title>
+            <pubDate>Wed, 09 Sep 2026 08:03:13 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1075</sparkle:version>
-            <sparkle:shortVersionString>0.5.77</sparkle:shortVersionString>
+            <sparkle:version>1078</sparkle:version>
+            <sparkle:shortVersionString>0.5.87</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 27 user-facing changes.
+
 ### New
 
-- Complete addresses from the current Space with a subtle preview, then press Tab or Right Arrow to accept
-- Choose persistent folder highlights, tab counts and borders, with evenly inset tabs and nested folders
-- Adjust folder color intensity and choose automatic, light or dark text for each Space
+- Choose whether page cards animate when switching Spaces on Mac, with page motion enabled by default
 
 ### Improved
 
-- Apply your link-opening focus preference across supported links and new windows, with background tabs loading immediately on Mac and iPad
-- Return pinned and saved tabs to their saved URL with a double-click or an optional reset when closing
-- See downloads begin at your cursor and fly into Archive, with clear bottom-left feedback when the sidebar is hidden
-- Preview folder appearance, text color, page zoom, transparency and page borders directly in Settings
+- Keep Space icons, backgrounds, and sidebar motion in sync
+- Slide page cards with Spaces and keep locked previews blurred
+- Show a quiet scroll indicator while scrolling and a glass arrow when more tabs are below
+- Follow your finger when swiping between Spaces on iPhone and iPad, with synchronized backgrounds and Space selection
+- Browse many Spaces with clear overflow arrows and rounded selection highlights on iPhone and iPad
+- Reduce processor usage while scrolling tabs in the desktop sidebar
+- Keep address completion responsive with large tab and history collections
+- Reduce extension preparation delays and reopen ready extensions without repeating startup waits
 
 ### Fixed
 
-- Load pages immediately when selected from Start Page, including after launch or switching to a Space with unloaded tabs
-- Remove excess bottom space from expanded browser layouts while keeping sidebar controls comfortably inset
-- Keep Site Controls readable over bright pages
+- Keep the floating sidebar responsive when switching to a locked Space
+- Keep essentials clear of the Space picker when the keyboard appears
+- Extend Space backgrounds behind mobile controls and show the scroll hint only when more tabs remain below
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/9bb643ecc1d223430569a2fce4febff0d2fbfdde...d4f1b886d726b5859d0268a88d5ec729e5ea1d76) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.77-2026-09-06-1075-r75.1/Installer-Crest-0.5.77-development-2026-09-06-d4f1b88-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/d4f1b886d726b5859d0268a88d5ec729e5ea1d76...e61c08484ab6932303d6ee07a1370a3b873384a0) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.87-2026-09-09-1078-r78.1/Installer-Crest-0.5.87-development-2026-09-09-e61c084-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.77-2026-09-06-1075-r75.1/Installer-Crest-0.5.77-development-2026-09-06-d4f1b88-arm64.dmg" length="10138912" type="application/octet-stream" sparkle:edSignature="h0i0uBtnKzDqQvKfQ3sQifFMFvwXp1SrH0A7a1qYeH7skPYpQK3ZU/m2QSoBcHRFgYUSpmzhEvGVJ62W+YURDA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.87-2026-09-09-1078-r78.1/Installer-Crest-0.5.87-development-2026-09-09-e61c084-arm64.dmg" length="10740000" type="application/octet-stream" sparkle:edSignature="1WG/qC1yJz8LCiO1yKgLBnYsESZQ9tD6LTZfkDprAq5mdt+h3hMBsfr6+NsAokMztZjV3In9qg2eCPZAlwNlBg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: fTq70GgBR6XbhjJof5y8w9xPwz0RPXrDAC0GE1FMpx3P2h3noQENuIpauZkYwJI7I+jisRof8/xXWHUZrAj5Ag==
-length: 3025
+edSignature: lx4mTpEPAsEREgFDHM0q87QloGwNwgJgYJUPLfRwpX1+dYEG2OPozyV5idzuVfFD9QpNHh373cdumEsOxCcDBA==
+length: 3079
 -->
