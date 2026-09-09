@@ -14,18 +14,10 @@ enum BrowserPinnedExtensionStripLayoutPolicy {
         actionCount > 0 ? sectionHeight : 0
     }
 
-    static func pinnedTabsTopInset(
-        hasPinnedExtensions: Bool
-    ) -> CGFloat {
-        hasPinnedExtensions ? 0 : CrestSpacing.small
-    }
-
-    static func addressBottomInset(
-        hasPinnedExtensions: Bool
-    ) -> CGFloat {
-        hasPinnedExtensions
-            ? adjacentSpacing
-            : BrowserSidebarMetrics.addressBottomInset
+    /// The entire address-to-content seam has one native layout owner.
+    static func contentTopInset(hasPinnedExtensions: Bool, hasPinnedTabs: Bool) -> CGFloat {
+        if hasPinnedExtensions { return adjacentSpacing + sectionHeight + adjacentSpacing }
+        return BrowserSidebarMetrics.addressBottomInset + (hasPinnedTabs ? CrestSpacing.small : 0)
     }
 
     static func popupAnchor(below interactionPoint: CGPoint) -> CGPoint {

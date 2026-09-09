@@ -31,6 +31,22 @@ struct BrowserSidebarLoadedContent: View {
     }
 
     var body: some View {
+        let toolbarSpaces = Set(
+            context.availableSpaces.filter { space in
+                context.utilityPresentation.surface == nil
+                    && pages.extensionControllerPool.hasPinnedToolbarActions(in: space.id, tabID: space.selectedTabID)
+            }.map(\.id))
+        let topInsets = Dictionary(
+            uniqueKeysWithValues: context.availableSpaces.map { space in
+                (
+                    space.id,
+                    context.utilityPresentation.surface == nil
+                        ? BrowserPinnedExtensionStripLayoutPolicy.contentTopInset(
+                            hasPinnedExtensions: toolbarSpaces.contains(space.id),
+                            hasPinnedTabs: !space.tabSections.pinnedTabs.isEmpty)
+                        : 0
+                )
+            })
         VStack(spacing: 0) {
             SidebarChrome(
                 context: context,
@@ -59,8 +75,20 @@ struct BrowserSidebarLoadedContent: View {
                     tabPromotionNamespace: tabPromotionNamespace
                 )
             }
+            .environment(\.spacePagerContentTopInsets, topInsets)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
+            .overlay(alignment: .top) {
+                SpaceSidebarToolbar(
+                    spaces: context.availableSpaces, selectedSpaceID: context.browser.session.selectedSpaceID,
+                    toolbarSpaces: toolbarSpaces, contentTopInsets: topInsets,
+                    extensionControllerPool: pages.extensionControllerPool,
+                    spaceAccess: context.spaceAccess
+                )
+                .frame(
+                    height: BrowserPinnedExtensionStripLayoutPolicy.contentTopInset(
+                        hasPinnedExtensions: true, hasPinnedTabs: true))
+            }
 
             // The widget deck is a top layer over every Space of every profile.
             // It mounts unconditionally beside the pager — never keyed to the

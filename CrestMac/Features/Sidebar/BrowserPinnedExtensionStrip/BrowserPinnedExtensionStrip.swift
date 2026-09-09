@@ -5,6 +5,7 @@ struct BrowserPinnedExtensionStrip: View {
     let spaceID: SpaceID
     let selectedTabID: TabID?
     let extensionControllerPool: BrowserExtensionControllerPool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let actionPresentationOverride: [BrowserExtensionActionPresentation]?
 
     init(
@@ -21,14 +22,19 @@ struct BrowserPinnedExtensionStrip: View {
 
     @ViewBuilder
     var body: some View {
-        if !presentedActions.isEmpty {
-            BrowserPinnedExtensionStripContent(
-                actions: presentedActions,
-                perform: perform,
-                prepare: prepare,
-                presentMenu: presentMenu
-            )
+        let actions = presentedActions
+        Group {
+            if !actions.isEmpty {
+                BrowserPinnedExtensionStripContent(
+                    actions: actions,
+                    perform: perform,
+                    prepare: prepare,
+                    presentMenu: presentMenu
+                )
+                .transition(.opacity)
+            }
         }
+        .animation(reduceMotion ? nil : SpacePagerSettlement.standardAnimation, value: actions.map(\.id))
     }
 
     private var toolbarActions: [BrowserExtensionToolbarAction] {
@@ -41,7 +47,7 @@ struct BrowserPinnedExtensionStrip: View {
 
     private var presentedActions: [BrowserExtensionActionPresentation] {
         if let actionPresentationOverride { return actionPresentationOverride }
-        return toolbarActions.map(BrowserExtensionActionPresentation.init(action:))
+        return extensionControllerPool.pinnedActionPresentations(in: spaceID, tabID: selectedTabID)
     }
 
     private func presentMenu(

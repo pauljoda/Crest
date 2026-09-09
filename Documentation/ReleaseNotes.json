@@ -793,6 +793,14 @@
     "2026-09-08-faster-extension-preparation": {
       "category": "improved",
       "message": "Reduce extension preparation delays and reopen ready extensions without repeating startup waits"
+    },
+    "2026-09-09-synchronized-extension-toolbar": {
+      "category": "improved",
+      "message": "Smoothly blend extension toolbars and tab spacing when switching Spaces"
+    },
+    "2026-09-09-background-extension-staging": {
+      "category": "improved",
+      "message": "Keep extension package preparation from blocking browser interactions"
     }
   }
 }

@@ -34,6 +34,8 @@ final class SpacePagerViewport<Content: View>: NSView {
     private var selectSpace: (SpaceID) -> SpaceID = { $0 }
     private var lastSize = CGSize.zero
     private var presentation: SpacePagerPresentation?
+    private var contentTopInsets: [SpaceID: CGFloat] = [:]
+    private var pendingContentTopInsets: [SpaceID: CGFloat] = [:]
     private var motionDisplayLink: CADisplayLink?
     private var maximumTrackingSpeed: CGFloat { bounds.width * SpacePagerSettlement.trackingPagesPerSecond }
     private lazy var frameObserver = SpacePagerFrameObserver { [weak self] interval in
@@ -66,6 +68,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         spaces: [BrowserSpace], selectedSpaceID: SpaceID,
         isInteractionLocked: Bool, reduceMotion: Bool, layoutDirection: LayoutDirection,
         presentation: SpacePagerPresentation? = nil,
+        contentTopInsets: [SpaceID: CGFloat] = [:],
         selectSpace: @escaping (SpaceID) -> SpaceID,
         makeRoot: @escaping (BrowserSpace, Bool) -> SpacePageRoot<Content>
     ) {
@@ -78,6 +81,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             assignmentsChanged || accessPoliciesChanged || isInteractionLocked
             || self.reduceMotion != reduceMotion || self.layoutDirection != layoutDirection
         self.presentation = presentation
+        pendingContentTopInsets = contentTopInsets
         self.spaces = spaces
         self.selectedSpaceID = selectedSpaceID
         self.isInteractionLocked = isInteractionLocked
@@ -123,6 +127,7 @@ final class SpacePagerViewport<Content: View>: NSView {
             return
         }
         if presentationSpaceID == nil { presentationSpaceID = selectedSpaceID }
+        applyContentTopInsets(animated: !invalidatesMotion && !selectionChanged)
         prepareHosts(around: presentationSpaceID ?? selectedSpaceID)
         positionHosts()
         updateAccessibility()
@@ -158,7 +163,9 @@ final class SpacePagerViewport<Content: View>: NSView {
                 }
             }
         }
-        for host in hosts.values where host.frame.size != bounds.size { host.setFrameSize(bounds.size) }
+        for (key, host) in hosts where host.frame.size != pageSize(for: key) {
+            host.setFrameSize(pageSize(for: key))
+        }
         if motion == nil {
             positionHosts()
             publishPresentation()
@@ -392,16 +399,28 @@ final class SpacePagerViewport<Content: View>: NSView {
             publishPresentation()
             for (key, host) in hosts {
                 let end = restingOffset(for: key, during: current) + targetOffset
-                let endFrame = CGRect(x: end, y: 0, width: bounds.width, height: bounds.height)
+                let endFrame = CGRect(
+                    x: end, y: topInset(at: transition.endPosition),
+                    width: bounds.width, height: pageSize(for: key).height)
                 guard needsMotion(for: key, host: host, destination: endFrame) else { continue }
-                let animation = CABasicAnimation()
+                let animation = CAKeyframeAnimation()
                 transition.configure(animation)
-                // The last tracking frame may not have rendered yet. AppKit's
-                // default start can then be an older, different offset for each
-                // page; give it the coherent native position we just tracked.
-                animation.fromValue = NSValue(point: host.frame.origin)
+                // Both axes share the same fractional Space coordinate. Crossed
+                // boundaries preserve toolbar height during an interrupted reversal.
+                let pageIndex = spaces.firstIndex { $0.id == key.spaceID } ?? 0
+                animation.values = transition.positions.map { position in
+                    NSValue(
+                        point: NSPoint(
+                            x: (CGFloat(pageIndex) - position) * bounds.width * direction,
+                            y: topInset(at: position)))
+                }
+                animation.keyTimes = transition.positions.map {
+                    NSNumber(
+                        value: Double(
+                            ($0 - transition.startPosition) / (transition.endPosition - transition.startPosition)))
+                }
                 host.animations = ["frameOrigin": animation]
-                host.animator().setFrameOrigin(NSPoint(x: end, y: 0))
+                host.animator().setFrameOrigin(endFrame.origin)
             }
         } completionHandler: { [weak self] in
             Task { @MainActor in self?.finishMotion(token: token, destination: destination) }
@@ -420,6 +439,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         presentationSpaceID = destination
         if current.commitsSelection, destination != committedSelection { expectedSelection = destination }
         stopHostAnimations()
+        applyContentTopInsets(animated: true)
         positionHosts()
         updateAccessibility()
         publishPresentation()
@@ -505,8 +525,9 @@ final class SpacePagerViewport<Content: View>: NSView {
             } else {
                 let host = SpacePageHost(root: makeRoot(space, space.id == selectedSpaceID))
                 host.frame = CGRect(
-                    x: restingOffset(for: key, during: motion) + (motion?.offset ?? 0), y: 0,
-                    width: bounds.width, height: bounds.height)
+                    x: restingOffset(for: key, during: motion) + (motion?.offset ?? 0),
+                    y: topInset(at: displayedPosition),
+                    width: bounds.width, height: pageSize(for: key).height)
                 host.hostingView.frame = host.bounds
                 hosts[key] = host
                 addSubview(host)
@@ -526,11 +547,52 @@ final class SpacePagerViewport<Content: View>: NSView {
     private func positionHosts() {
         for (key, host) in hosts {
             let offset = restingOffset(for: key, during: motion) + (motion?.offset ?? 0)
-            let origin = NSPoint(x: offset, y: 0)
-            let frame = CGRect(origin: origin, size: bounds.size)
+            let origin = NSPoint(x: offset, y: topInset(at: displayedPosition))
+            let frame = CGRect(origin: origin, size: pageSize(for: key))
             guard motion == nil || needsMotion(for: key, host: host, destination: frame) else { continue }
             if host.frame.origin != origin { host.setFrameOrigin(origin) }
+            if motion == nil, host.frame.size != frame.size { host.setFrameSize(frame.size) }
         }
+    }
+
+    private var displayedPosition: CGFloat {
+        let origin = motion?.origin.spaceID ?? presentationSpaceID
+        let index = spaces.firstIndex { $0.id == origin } ?? 0
+        let direction: CGFloat = layoutDirection == .leftToRight ? 1 : -1
+        return CGFloat(index) - (bounds.width > 0 ? (motion?.offset ?? 0) / bounds.width * direction : 0)
+    }
+
+    /// Startup and pin changes can arrive during a swipe. Keep that swipe's
+    /// geometry stable, then animate the new inset once selection has settled.
+    /// An additive correction survives a new horizontal gesture without retiming it.
+    private func applyContentTopInsets(animated: Bool) {
+        guard contentTopInsets != pendingContentTopInsets else { return }
+        let visible = presentationSpaceID.flatMap { assignment(for: $0) }.flatMap { hosts[$0] }
+        let previousY = visible?.layer?.presentation()?.frame.minY ?? topInset(at: displayedPosition)
+        contentTopInsets = pendingContentTopInsets
+        positionHosts()
+        let delta = previousY - topInset(at: displayedPosition)
+        for host in hosts.values {
+            host.layer?.removeAnimation(forKey: "sidebarInsetChange")
+            guard animated, !reduceMotion, window != nil, abs(delta) > 0.01 else { continue }
+            let animation = CABasicAnimation(keyPath: "position.y")
+            SpacePagerSettlement(startPosition: 0, endPosition: 1, generation: generation).configure(animation)
+            animation.isAdditive = true
+            animation.fromValue = delta
+            animation.toValue = 0
+            host.layer?.add(animation, forKey: "sidebarInsetChange")
+        }
+    }
+
+    private func topInset(at position: CGFloat) -> CGFloat {
+        guard let blend = SpacePagerInterpolation(position: position, count: spaces.count) else { return 0 }
+        let lower = contentTopInsets[spaces[blend.lower].id] ?? 0
+        let upper = contentTopInsets[spaces[blend.upper].id] ?? 0
+        return min(bounds.height, max(0, lower + (upper - lower) * blend.fraction))
+    }
+
+    private func pageSize(for key: BrowserSpaceRuntimeAssignment) -> CGSize {
+        CGSize(width: bounds.width, height: max(0, bounds.height - max(0, contentTopInsets[key.spaceID] ?? 0)))
     }
 
     private func needsMotion(
@@ -547,7 +609,11 @@ final class SpacePagerViewport<Content: View>: NSView {
         // Only the pager animates these wrapper layers. Removing their motion
         // leaves descendant SwiftUI animations alone. Position is always set
         // through NSView immediately afterward, including interruption rebasing.
-        for host in hosts.values { host.layer?.removeAllAnimations() }
+        for host in hosts.values {
+            for key in host.layer?.animationKeys() ?? [] where key != "sidebarInsetChange" {
+                host.layer?.removeAnimation(forKey: key)
+            }
+        }
     }
 
     private func updateAccessibility() {

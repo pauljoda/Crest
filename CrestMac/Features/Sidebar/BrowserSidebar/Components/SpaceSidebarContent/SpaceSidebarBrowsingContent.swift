@@ -4,9 +4,8 @@ import SwiftUI
 /// the scrolling tab list. Address and navigation controls stay outside it.
 ///
 /// Everything here is composition and binding. The sections and the list are the
-/// shared ones; what this shell adds is the pinned extension strip's seam,
-/// the scrolling chrome, and the page-facing closures
-/// only a windowed card pool can answer.
+/// shared ones; this shell supplies scrolling chrome and the page-facing
+/// closures that need the windowed card pool.
 struct SpaceSidebarBrowsingContent: View {
     let space: BrowserSpace
     let tabSections: BrowserTabSections
@@ -43,7 +42,6 @@ struct SpaceSidebarBrowsingContent: View {
             select: activate
         )
         .padding(.horizontal, CrestSpacing.small)
-        .padding(.top, pinnedTabsTopInset)
         .padding(.bottom, pinnedTabsBottomInset)
 
         BrowserSpaceHeader(
@@ -127,21 +125,6 @@ struct SpaceSidebarBrowsingContent: View {
                 spaceID: space.id,
                 profileID: space.profile.id
             )
-        )
-    }
-
-    private var hasPinnedExtensionActions: Bool {
-        pages.extensionControllerPool.toolbarActions(
-            in: space.id,
-            tabID: space.selectedTabID
-        )
-        .contains(where: \.isPinned)
-    }
-
-    private var pinnedTabsTopInset: CGFloat {
-        guard !tabSections.pinnedTabs.isEmpty else { return 0 }
-        return BrowserPinnedExtensionStripLayoutPolicy.pinnedTabsTopInset(
-            hasPinnedExtensions: hasPinnedExtensionActions
         )
     }
 

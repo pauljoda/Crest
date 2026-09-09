@@ -781,9 +781,15 @@ final class SpaceScrollGestureTests: XCTestCase {
         let spaces = nativeSpaces(count: 6)
         let (window, viewport) = makeNativeViewport()
         let presentation = SpacePagerPresentation()
+        let insets = Dictionary(
+            uniqueKeysWithValues: spaces.enumerated().map { ($0.element.id, $0.offset == 3 ? CGFloat(48) : 9) })
+        let toolbar = SpaceSidebarToolbarView(frame: CGRect(x: 0, y: 100, width: 320, height: 48))
+        let pool = BrowserExtensionControllerPool(
+            registry: BrowserExtensionRegistry(persistence: InMemoryBrowserExtensionRegistryPersistence()))
         let container = NSView(frame: CGRect(x: 0, y: 0, width: 320, height: 600))
         window.contentView = container
         container.addSubview(viewport)
+        container.addSubview(toolbar)
         viewport.frame.origin.y = 100
         let scroll = NSScrollView(frame: CGRect(x: 0, y: 0, width: 120, height: 32))
         let picker = SpacePickerPresentationView(frame: CGRect(x: 0, y: 0, width: 246, height: 32))
@@ -794,6 +800,7 @@ final class SpaceScrollGestureTests: XCTestCase {
         let cards = SpaceContentPagerView<Text>(frame: CGRect(x: 0, y: 40, width: 960, height: 50))
         container.addSubview(cards)
         defer {
+            toolbar.disconnect()
             picker.disconnect()
             backdrop.disconnect()
             cards.disconnect()
@@ -803,8 +810,16 @@ final class SpaceScrollGestureTests: XCTestCase {
         }
         viewport.update(
             spaces: spaces, selectedSpaceID: spaces[2].id, isInteractionLocked: false,
-            reduceMotion: false, layoutDirection: .leftToRight, presentation: presentation,
+            reduceMotion: false, layoutDirection: .leftToRight, presentation: presentation, contentTopInsets: insets,
             selectSpace: { $0 }, makeRoot: nativeRoot)
+        toolbar.update(
+            spaces: spaces, selectedSpaceID: spaces[2].id, toolbarSpaces: [spaces[3].id], contentTopInsets: insets,
+            presentation: presentation
+        ) { space in
+            SpaceSidebarToolbarRoot(
+                space: space, pool: pool, isLocked: false,
+                actions: space.id == spaces[3].id ? [.init(id: "probe", displayName: "Extension", isPinned: true)] : [])
+        }
         picker.update(
             presentation: presentation, spaces: spaces, selectedSpaceID: spaces[2].id,
             frames: Dictionary(
@@ -834,6 +849,19 @@ final class SpaceScrollGestureTests: XCTestCase {
         usleep(90_000)
         let position = 2 - (try XCTUnwrap(source.layer?.presentation()).frame.minX / viewport.bounds.width)
         XCTAssertGreaterThan(position, 2.5)
+        let incomingToolbar = try XCTUnwrap(
+            toolbar.subviews.compactMap { $0 as? SpacePageHost<SpaceSidebarToolbarRoot> }
+                .first { $0.hostingView.rootView.content.space.id == spaces[3].id })
+        XCTAssertEqual(
+            try XCTUnwrap(source.layer?.presentation()).frame.minY, 9 + 39 * (position - 2), accuracy: 1.3,
+            "The tab list's vertical shift must share horizontal presentation progress")
+        XCTAssertEqual(
+            try XCTUnwrap(incomingToolbar.layer?.presentation()).frame.maxY,
+            try XCTUnwrap(source.layer?.presentation()).frame.minY, accuracy: 1.3,
+            "Extension controls must stay above the pinned tiles throughout the swipe")
+        XCTAssertEqual(
+            CGFloat(try XCTUnwrap(incomingToolbar.layer?.presentation()).opacity), position - 2, accuracy: 0.03,
+            "Toolbar icons must keep fading while the main thread is busy")
         let sourceCard = try XCTUnwrap(
             cards.subviews.compactMap { $0 as? SpacePageHost<Text> }.first {
                 $0.hostingView.rootView.assignment.spaceID == spaces[2].id
@@ -867,6 +895,12 @@ final class SpaceScrollGestureTests: XCTestCase {
         let continuedPosition = 2 - (try XCTUnwrap(source.layer?.presentation()).frame.minX / viewport.bounds.width)
         XCTAssertGreaterThan(continuedPosition, 3)
         XCTAssertEqual(
+            try XCTUnwrap(source.layer?.presentation()).frame.minY, 48 - 39 * (continuedPosition - 3), accuracy: 1.3)
+        XCTAssertEqual(
+            CGFloat(try XCTUnwrap(incomingToolbar.layer?.presentation()).opacity), 4 - continuedPosition, accuracy: 0.03
+        )
+        XCTAssertLessThanOrEqual(toolbar.subviews.count, 4)
+        XCTAssertEqual(
             2 - (try XCTUnwrap(sourceCard.layer?.presentation()).frame.minX / cards.bounds.width), continuedPosition,
             accuracy: 0.03, "A continuation must replace the card timeline along with the sidebar timeline")
         XCTAssertEqual(
@@ -878,7 +912,19 @@ final class SpaceScrollGestureTests: XCTestCase {
         XCTAssertEqual(
             CGFloat(try XCTUnwrap(finalBackground.layer?.presentation()).opacity), continuedPosition - 3,
             accuracy: 0.03)
+        var loadedInsets = insets
+        loadedInsets[spaces[4].id] = 48
+        viewport.update(
+            spaces: spaces, selectedSpaceID: spaces[2].id, isInteractionLocked: false,
+            reduceMotion: false, layoutDirection: .leftToRight, presentation: presentation,
+            contentTopInsets: loadedInsets, selectSpace: { $0 }, makeRoot: nativeRoot)
+        XCTAssertEqual(
+            source.frame.minY, 9, accuracy: 0.01,
+            "An extension finishing startup must not change the swipe's destination geometry")
         try await awaitSettlement(viewport)
+        XCTAssertEqual(
+            source.frame.minY, 48, accuracy: 0.01,
+            "The deferred toolbar inset must be applied after the swipe settles")
         XCTAssertEqual(presentation.snapshot?.position, 4)
         XCTAssertNil(presentation.snapshot?.transition)
         XCTAssertTrue(highlight.animationKeys()?.isEmpty ?? true)

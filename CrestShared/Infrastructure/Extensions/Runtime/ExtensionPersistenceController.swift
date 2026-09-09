@@ -289,37 +289,37 @@ final class BrowserExtensionPersistenceController {
     func stage(
         _ sourceURL: URL,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage {
-        try packageStore.stage(sourceURL, in: spaceID)
+    ) async throws -> BrowserExtensionPackage {
+        try await packageStore.stage(sourceURL, in: spaceID)
     }
 
     func stage(
         _ package: BrowserVerifiedCRX3Package,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage {
-        try packageStore.stage(package, in: spaceID)
+    ) async throws -> BrowserExtensionPackage {
+        try await packageStore.stage(package, in: spaceID)
     }
 
     func stage(
         _ package: BrowserVerifiedXPIPackage,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage {
-        try packageStore.stage(package, in: spaceID)
+    ) async throws -> BrowserExtensionPackage {
+        try await packageStore.stage(package, in: spaceID)
     }
 
     func stage(
         _ package: BrowserLocalExtensionPackage,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage {
-        try packageStore.stage(package, in: spaceID)
+    ) async throws -> BrowserExtensionPackage {
+        try await packageStore.stage(package, in: spaceID)
     }
 
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage {
-        try packageStore.stageVerifiedChromeResource(
+    ) async throws -> BrowserExtensionPackage {
+        try await packageStore.stageVerifiedChromeResource(
             sourceURL,
             extensionID: extensionID,
             in: spaceID

@@ -7,19 +7,7 @@ extension BrowserExtensionToolbarController {
         in spaceID: SpaceID,
         tabID: TabID?
     ) -> [BrowserExtensionToolbarAction] {
-        let tab = tabID.flatMap {
-            tabWindowCoordinator.tab(for: $0, in: spaceID)
-        }
-        return summaries.compactMap { summary in
-            guard summary.isEnabled,
-                let context = runtime.loadedContext(
-                    extensionID: summary.id,
-                    in: spaceID
-                ),
-                let action = context.action(for: tab)
-            else {
-                return nil
-            }
+        mapActions(summaries: summaries, in: spaceID, tabID: tabID) { summary, context, action, tab in
             let commands = context.commands.map {
                 BrowserExtensionToolbarCommand(
                     id: "\(summary.id).\($0.id)",
@@ -70,6 +58,34 @@ extension BrowserExtensionToolbarController {
                 commands: commands,
                 menuItems: menuItems
             )
+        }
+    }
+
+    /// Rendering a pinned strip does not need commands or native context menus.
+    /// WebKit action access stays on its owning actor; only visible artwork is requested.
+    func pinnedActionPresentations(
+        summaries: [BrowserExtensionSummary], in spaceID: SpaceID, tabID: TabID?
+    ) -> [BrowserExtensionActionPresentation] {
+        mapActions(summaries: summaries.filter(\.isPinned), in: spaceID, tabID: tabID) { summary, context, action, _ in
+            BrowserExtensionActionPresentation(
+                id: summary.id, displayName: summary.displayName, badgeText: action.badgeText,
+                icon: action.icon(for: CGSize(width: 20, height: 20)), isEnabled: action.isEnabled,
+                isPinned: true, isLoading: tabWindowCoordinator.isActionPopupLoading(for: context))
+        }
+    }
+
+    private func mapActions<Result>(
+        summaries: [BrowserExtensionSummary], in spaceID: SpaceID, tabID: TabID?,
+        transform: (BrowserExtensionSummary, WKWebExtensionContext, WKWebExtension.Action, BrowserExtensionTabAdapter?)
+            -> Result
+    ) -> [Result] {
+        let tab = tabID.flatMap { tabWindowCoordinator.tab(for: $0, in: spaceID) }
+        return summaries.compactMap { summary in
+            guard summary.isEnabled,
+                let context = runtime.loadedContext(extensionID: summary.id, in: spaceID),
+                let action = context.action(for: tab)
+            else { return nil }
+            return transform(summary, context, action, tab)
         }
     }
 

@@ -14,6 +14,22 @@ extension BrowserExtensionControllerPool {
         )
     }
 
+    func pinnedActionPresentations(in spaceID: SpaceID, tabID: TabID?) -> [BrowserExtensionActionPresentation] {
+        _ = actionRevision
+        return toolbarController.pinnedActionPresentations(
+            summaries: extensions(in: spaceID), in: spaceID, tabID: tabID)
+    }
+
+    /// Layout needs presence, without loading artwork or constructing menus.
+    func hasPinnedToolbarActions(in spaceID: SpaceID, tabID: TabID?) -> Bool {
+        _ = actionRevision
+        let tab = tabID.flatMap { tabWindowCoordinator.tab(for: $0, in: spaceID) }
+        return extensions(in: spaceID).contains { summary in
+            summary.isEnabled && summary.isPinned
+                && runtimeContextController.loadedContext(extensionID: summary.id, in: spaceID)?.action(for: tab) != nil
+        }
+    }
+
     func perform(
         _ toolbarAction: BrowserExtensionToolbarAction,
         popupAnchor: BrowserExtensionPopupAnchor? = nil

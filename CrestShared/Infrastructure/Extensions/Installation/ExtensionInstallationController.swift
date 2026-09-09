@@ -48,7 +48,7 @@ final class BrowserExtensionInstallationController {
         from sourceURL: URL,
         in space: BrowserSpace
     ) async throws -> BrowserExtensionSummary {
-        let package = try persistence.stage(sourceURL, in: space.id)
+        let package = try await persistence.stage(sourceURL, in: space.id)
         let previous = persistence.installation(
             extensionID: package.extensionID,
             in: space.id

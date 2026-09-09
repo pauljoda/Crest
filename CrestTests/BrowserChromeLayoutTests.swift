@@ -741,29 +741,14 @@ final class BrowserChromeLayoutTests: XCTestCase {
             CrestSpacing.small
         )
         XCTAssertEqual(
-            BrowserPinnedExtensionStripLayoutPolicy.addressBottomInset(
-                hasPinnedExtensions: true
-            ),
-            CrestSpacing.small
-        )
+            BrowserPinnedExtensionStripLayoutPolicy.contentTopInset(hasPinnedExtensions: true, hasPinnedTabs: true),
+            2 * CrestSpacing.small + BrowserPinnedExtensionStripLayoutPolicy.sectionHeight)
         XCTAssertEqual(
-            BrowserPinnedExtensionStripLayoutPolicy.addressBottomInset(
-                hasPinnedExtensions: false
-            ),
-            BrowserSidebarMetrics.addressBottomInset
-        )
+            BrowserPinnedExtensionStripLayoutPolicy.contentTopInset(hasPinnedExtensions: false, hasPinnedTabs: true),
+            BrowserSidebarMetrics.addressBottomInset + CrestSpacing.small)
         XCTAssertEqual(
-            BrowserPinnedExtensionStripLayoutPolicy.pinnedTabsTopInset(
-                hasPinnedExtensions: true
-            ),
-            0
-        )
-        XCTAssertEqual(
-            BrowserPinnedExtensionStripLayoutPolicy.pinnedTabsTopInset(
-                hasPinnedExtensions: false
-            ),
-            CrestSpacing.small
-        )
+            BrowserPinnedExtensionStripLayoutPolicy.contentTopInset(hasPinnedExtensions: false, hasPinnedTabs: false),
+            BrowserSidebarMetrics.addressBottomInset)
         XCTAssertEqual(
             BrowserPinnedExtensionStripLayoutPolicy.height(for: 0),
             0

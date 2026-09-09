@@ -1,11 +1,7 @@
 import SwiftUI
 
-/// The windowed sidebar's address band: the field, the two site controls that
-/// flank it, and the pinned extension strip that sits directly under it.
-///
-/// The strip is part of the band rather than a sibling of it because the two
-/// share one seam — the field gives up its bottom inset when the strip has
-/// anything to show.
+/// Fixed address controls. The pager owns the changing extension-strip seam
+/// so semantic selection cannot resize the viewport during a Space transition.
 struct SpaceSidebarAddressBand: View {
     let space: BrowserSpace
     let pages: BrowserPagePool
@@ -19,7 +15,6 @@ struct SpaceSidebarAddressBand: View {
     let showExtensions: () -> Void
     let siteControlPresentationChanged: (Bool) -> Void
     let siteControlContextMenuPresentationChanged: (Bool) -> Void
-    let hasPinnedExtensionActions: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -43,18 +38,7 @@ struct SpaceSidebarAddressBand: View {
             value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
         )
         .padding(.horizontal, BrowserChromeLayout.sidebarHorizontalInset)
-        .padding(
-            .bottom,
-            BrowserPinnedExtensionStripLayoutPolicy.addressBottomInset(
-                hasPinnedExtensions: hasPinnedExtensionActions
-            )
-        )
 
-        BrowserPinnedExtensionStrip(
-            spaceID: space.id,
-            selectedTabID: space.selectedTabID,
-            extensionControllerPool: pages.extensionControllerPool
-        )
     }
 
     private var addressConfiguration: BrowserSidebarAddressFieldConfiguration {

@@ -100,6 +100,37 @@ final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
         try? fileManager.removeItem(at: rootURL)
     }
 
+    /// Only immutable filesystem configuration crosses executors. Each staging
+    /// operation owns a unique destination; registry and WebKit publication stay
+    /// with the caller after the disk work completes.
+    @MainActor func stageOnWorker(
+        _ operation: @escaping @Sendable (BrowserExtensionPackageStore) throws -> BrowserExtensionPackage
+    ) async throws -> BrowserExtensionPackage {
+        let work = Task.detached(priority: .userInitiated) { [rootURL] in
+            try Task.checkCancellation()
+            let worker = BrowserExtensionPackageStore(
+                fileManager: FileManager(), rootURL: rootURL, removesRootOnDeinit: false)
+            let package = try operation(worker)
+            do {
+                try Task.checkCancellation()
+                return package
+            } catch {
+                worker.discard(package)
+                throw error
+            }
+        }
+        return try await withTaskCancellationHandler {
+            let package = try await work.value
+            if Task.isCancelled {
+                discard(package)
+                throw CancellationError()
+            }
+            return package
+        } onCancel: {
+            work.cancel()
+        }
+    }
+
     func stage(
         _ sourceURL: URL,
         in spaceID: SpaceID

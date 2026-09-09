@@ -1,31 +1,31 @@
 import Foundation
 
 protocol BrowserExtensionPackageStoring {
-    func stage(
+    @MainActor func stage(
         _ sourceURL: URL,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage
+    ) async throws -> BrowserExtensionPackage
 
-    func stage(
+    @MainActor func stage(
         _ package: BrowserVerifiedCRX3Package,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage
+    ) async throws -> BrowserExtensionPackage
 
-    func stage(
+    @MainActor func stage(
         _ package: BrowserVerifiedXPIPackage,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage
+    ) async throws -> BrowserExtensionPackage
 
-    func stage(
+    @MainActor func stage(
         _ package: BrowserLocalExtensionPackage,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage
+    ) async throws -> BrowserExtensionPackage
 
-    func stageVerifiedChromeResource(
+    @MainActor func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,
         in spaceID: SpaceID
-    ) throws -> BrowserExtensionPackage
+    ) async throws -> BrowserExtensionPackage
 
     func resourceURL(
         packageName: String,

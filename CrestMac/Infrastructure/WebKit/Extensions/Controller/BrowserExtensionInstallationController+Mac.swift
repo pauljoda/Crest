@@ -109,7 +109,7 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
-        let package = try persistence.stage(
+        let package = try await persistence.stage(
             candidate.verifiedPackage,
             in: space.id
         )
@@ -262,7 +262,7 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
-        let package = try persistence.stage(
+        let package = try await persistence.stage(
             candidate.verifiedPackage,
             in: space.id
         )
@@ -414,7 +414,7 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space.id
         )
-        let package = try persistence.stage(
+        let package = try await persistence.stage(
             candidate.package,
             in: space.id
         )

@@ -20,7 +20,8 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         )
     }
 
-    func testStagingCopiesAnExtensionIntoAnOwnedSpaceDirectory() throws {
+    @MainActor
+    func testStagingCopiesAnExtensionIntoAnOwnedSpaceDirectory() async throws {
         let fileManager = FileManager.default
         let testRoot = fileManager.temporaryDirectory
             .appending(path: "crest-extension-store-test-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -35,7 +36,7 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
         try Data("{}".utf8).write(to: source.appending(path: "manifest.json"))
         let store = BrowserExtensionPackageStore(fileManager: fileManager, rootURL: staging)
 
-        let package = try store.stage(source, in: SpaceID())
+        let package = try await store.stage(source, in: SpaceID())
 
         XCTAssertTrue(package.extensionID.hasPrefix("local."))
         XCTAssertTrue(fileManager.fileExists(atPath: package.resourceURL.path))
@@ -45,6 +46,19 @@ final class BrowserExtensionPackageStoreTests: XCTestCase {
             )
         )
         XCTAssertTrue(package.resourceURL.path.hasPrefix(staging.path))
+        let cancelledSpace = SpaceID()
+        let cancelled = Task { try await store.stage(source, in: cancelledSpace) }
+        cancelled.cancel()
+        do {
+            _ = try await cancelled.value
+            XCTFail("Cancelled staging must not publish a package")
+        } catch is CancellationError {
+            let directory = staging.appending(path: cancelledSpace.rawValue.uuidString.lowercased())
+            if fileManager.fileExists(atPath: directory.path) {
+                XCTAssertTrue(try fileManager.contentsOfDirectory(atPath: directory.path).isEmpty)
+            }
+        }
+
     }
 
     func testStagingASafariCustomSnapshotCreatesAnOwnedDirectory() throws {

@@ -47,10 +47,7 @@ struct SidebarChrome: View {
                         },
                         siteControlContextMenuPresentationChanged: {
                             context.utilityPresentation.setSiteControlContextMenuPresented($0)
-                        },
-                        hasPinnedExtensionActions: pages.extensionControllerPool.toolbarActions(
-                            in: space.id, tabID: space.selectedTabID
-                        ).contains(where: \.isPinned)
+                        }
                     )
                 }
             }
