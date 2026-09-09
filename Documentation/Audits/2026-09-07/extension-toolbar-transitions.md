@@ -47,4 +47,23 @@ The package round-trip test now exercises the asynchronous staging entry point a
 
 Version: **0.5.88**. The retained tests replace the obsolete split address/pinned inset assertions; no temporary capture fixtures or diagnostic test methods remain in the repository.
 
+## Prepared-package recovery follow-up — 0.5.89
+
+Real-profile validation exposed incomplete prepared packages despite successful WebKit context restoration. The stored archives were intact. The prepared uBlock Origin copy had none of its 32 CSS files; ChatGPT had none of its 59 CSS files and lacked its compiled panel assets. The remaining manifest and generated scripts let the contexts load, so checking the number of restored contexts did not establish that their interfaces worked. The process that removed the files was not captured.
+
+Both reuse paths trusted receipts without checking the published assets: unchanged inputs needed only a readable manifest, and identical generated output needed only the resources directory. A dedicated prepared-resource inventory now records regular-file sizes when publishing. Reuse requires every recorded file to exist as a regular file at its expected size. Missing, truncated, or legacy output without an inventory is rebuilt from the stored package at the same resource URL. Original archives, extension identity, WebKit storage, and compatibility behavior are preserved.
+
+Validation remains inside the existing preparation worker. A Release-optimized probe of the actual restored packages measured inventory decoding plus file checks over 30 warm runs:
+
+| Package | Median | Maximum |
+| --- | ---: | ---: |
+| uBlock Origin 1.73.0 | 1.96 ms | 2.75 ms |
+| ChatGPT 1.26.901.11451 | 5.78 ms | 7.03 ms |
+
+These are filesystem validation timings, not total extension startup or frame-rate measurements. The initial full Foundation attribute lookup measured 38.35 ms and 99.69 ms respectively; the final implementation uses one metadata-only `lstat` per expected file.
+
+The existing stored-package restoration contract was extended to remove nested CSS and JavaScript, then truncate CSS while changing the archive input. It failed before the fix and passed afterward, alongside concurrent healthy reuse, permission/content invalidation, stable resource URLs, preserved worker generations, and clipboard capability retention. The final Chrome/Mozilla suite ran 105 tests with four opt-in integration skips and no failures. The signed Release build succeeded. Installed Crest Validation 0.5.89 restored all missing stylesheets and ChatGPT's 1,583 panel assets; the user confirmed the extensions worked again.
+
+Evidence: `/private/tmp/crest-extension-regression-20260909` contains the failing/passing results, final suite/build logs, resource timing measurements, and real-profile captures. Temporary probes are excluded from the repository and removed after validation.
+
 The optimized demo is running from `/private/tmp/crest-toolbar-progress-20260909/HandoffProducts/Crest Performance Soak.app` with the isolated 24-tab-per-Space fixture. Binary UUID: `C1B7942A-F9A1-3E5F-8E48-53A947E757DA`; SHA-256: `66b64b1fa89c54002c0af94a8776b001d6d1bc081e40e5892aed2d0b294ce20e`. The recorded toolbar fixture is separate from this regular demo.

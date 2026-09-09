@@ -85,6 +85,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
     private static let preparationLock = NSLock()
     private static let preparedDigestFilename = ".crest-prepared-digest"
     private static let preparedInputFilename = ".crest-prepared-input"
+    private static let preparedResourcesFilename = ".crest-prepared-resources"
     private static let preparationBuildIdentity: String = {
         let bundle = Bundle.main
         let values = try? bundle.executableURL?.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
@@ -167,7 +168,9 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                 at: storedResourceURL, requestedPermissions: requestedPermissions)
             let existingInputDigest = try? String(
                 contentsOf: rootURL.appending(path: Self.preparedInputFilename), encoding: .utf8)
+            let resourcesAreComplete = preparedResourcesAreComplete(at: rootURL)
             if existingInputDigest == inputDigest,
+                resourcesAreComplete,
                 let manifest = try? Self.packageManifest(in: resourceURL)
             {
                 return preparedPackage(
@@ -221,7 +224,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                 encoding: .utf8
             )
             if existingDigest == preparedDigest,
-                fileManager.fileExists(atPath: resourceURL.path)
+                resourcesAreComplete
             {
                 try? fileManager.removeItem(at: stagingRootURL)
             } else {
@@ -229,6 +232,10 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                     from: resourceURL,
                     in: stagingResourceURL
                 )
+                let inventory = try PreparedExtensionResourceInventory(
+                    resourceURL: stagingResourceURL, fileManager: fileManager)
+                try JSONEncoder().encode(inventory).write(
+                    to: stagingRootURL.appending(path: Self.preparedResourcesFilename), options: [.atomic])
                 try preparedDigest.write(
                     to: stagingRootURL.appending(
                         path: Self.preparedDigestFilename
@@ -266,6 +273,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
             )
             .union(BrowserExtensionAPICompatibilityMatrix.capabilityBrokerGrantedCapabilities(manifest: manifest)),
             allowsInternalCapabilityBroker: true)
+    }
+
+    private func preparedResourcesAreComplete(at rootURL: URL) -> Bool {
+        guard let receipt = try? Data(contentsOf: rootURL.appending(path: Self.preparedResourcesFilename)),
+            let inventory = try? JSONDecoder().decode(PreparedExtensionResourceInventory.self, from: receipt)
+        else { return false }
+        return inventory.matches(resourceURL: rootURL.appending(path: "resources"))
     }
 
     private func preparationInputDigest(at source: URL, requestedPermissions: [String]) throws -> String {

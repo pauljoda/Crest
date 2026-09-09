@@ -3972,6 +3972,10 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                     try Data("globalThis.started = true;".utf8).write(
                         to: workerURL
                     )
+                    let assets = destination.appending(path: "assets")
+                    try fileManager.createDirectory(at: assets, withIntermediateDirectories: true)
+                    try Data("body { color: green; }".utf8).write(to: assets.appending(path: "popup.css"))
+                    try Data("globalThis.panelReady = true;".utf8).write(to: assets.appending(path: "panel.js"))
                     let manifest: [String: Any] = [
                         "manifest_version": 3,
                         "background": [
@@ -4012,6 +4016,7 @@ final class BrowserChromeWebStoreTests: XCTestCase {
 
         XCTAssertNotEqual(prepared.resourceURL, archiveURL)
         XCTAssertNotNil(prepared.retainedAccess)
+        defer { try? fileManager.removeItem(at: prepared.resourceURL.deletingLastPathComponent()) }
         XCTAssertTrue(
             BrowserChromeWebStoreCompatibilityPackagePreparer
                 .requiresCompatibilityLayer(
@@ -4030,13 +4035,32 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         XCTAssertTrue(reused.allSatisfy { $0 == prepared.resourceURL })
         XCTAssertEqual(expansions.withLock { $0 }, 1, "Unchanged requests must share the published preparation.")
 
+        // A temporary-directory cleanup can leave the manifest and generated
+        // scripts behind while removing the extension's older authored assets.
+        let stylesheet = prepared.resourceURL.appending(path: "assets/popup.css")
+        let panelScript = prepared.resourceURL.appending(path: "assets/panel.js")
+        let expectedStylesheet = try Data(contentsOf: stylesheet)
+        let expectedPanelScript = try Data(contentsOf: panelScript)
+        try fileManager.removeItem(at: stylesheet)
+        try fileManager.removeItem(at: panelScript)
+        let repaired = try await preparer.prepare(resourceURL: archiveURL, installation: storedInstallation)
+        XCTAssertEqual(repaired.resourceURL, prepared.resourceURL, "Recovery must preserve WebKit's resource identity.")
+        XCTAssertEqual(
+            expansions.withLock { $0 }, 2, "An unchanged archive must rebuild incomplete prepared resources.")
+        XCTAssertEqual(try Data(contentsOf: stylesheet), expectedStylesheet)
+        XCTAssertEqual(try Data(contentsOf: panelScript), expectedPanelScript)
+
         storedInstallation.requestedPermissions.append("idle")
         let expandedPermissions = try await preparer.prepare(resourceURL: archiveURL, installation: storedInstallation)
-        XCTAssertEqual(expansions.withLock { $0 }, 2)
+        XCTAssertEqual(expansions.withLock { $0 }, 3)
         XCTAssertTrue(expandedPermissions.capabilityBrokerGrantedPermissions.contains("idle"))
+        // An input change can produce identical prepared bytes. That reuse
+        // path must also reject missing or truncated output.
+        try Data().write(to: stylesheet)
         try Data("changed archive".utf8).write(to: archiveURL)
         _ = try await preparer.prepare(resourceURL: archiveURL, installation: storedInstallation)
-        XCTAssertEqual(expansions.withLock { $0 }, 3, "Content changes must invalidate the cached preparation.")
+        XCTAssertEqual(expansions.withLock { $0 }, 4, "Content changes must invalidate the cached preparation.")
+        XCTAssertEqual(try Data(contentsOf: stylesheet), expectedStylesheet)
     }
 
     func testContextMenuTransportDoesNotHideAnAuthoredNativeMessagingPermission() {

@@ -801,6 +801,10 @@
     "2026-09-09-background-extension-staging": {
       "category": "improved",
       "message": "Keep extension package preparation from blocking browser interactions"
+    },
+    "2026-09-09-extension-prepared-resource-recovery": {
+      "category": "fixed",
+      "message": "Restore extension popup styling and side panels when cached package files are missing"
     }
   }
 }
