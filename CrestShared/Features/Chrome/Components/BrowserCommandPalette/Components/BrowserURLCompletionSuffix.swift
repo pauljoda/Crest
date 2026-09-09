@@ -36,8 +36,13 @@ struct BrowserURLCompletionSuffix: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        // Each proposal owns a fresh shimmer. Never animate the previous text or
+        // its layout into the next keystroke's preview.
+        .id(text)
+        .transition(.identity)
+        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .clipped()
+        .transaction { $0.animation = nil }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

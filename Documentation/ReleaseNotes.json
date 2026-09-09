@@ -821,6 +821,10 @@
     "2026-09-09-mobile-folder-color-space-swiping": {
       "category": "fixed",
       "message": "Keep swiping between Spaces working after changing a folder color on iPhone and iPad"
+    },
+    "2026-09-09-immediate-url-completion-preview": {
+      "category": "fixed",
+      "message": "Keep URL completions aligned with the cursor and replace them immediately as you type"
     }
   }
 }
