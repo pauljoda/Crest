@@ -27,6 +27,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     var externalLinkDestination: BrowserExternalLinkDestination
     var externalLinkSpaceID: SpaceID?
     var focusesNewTabsOpenedFromLinks: Bool
+    var followsTabsMovedToAnotherSpace: Bool
     var automaticallyOpensPeek: Bool
     var peekClickModifier: BrowserLinkClickModifier
     var quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy
@@ -50,6 +51,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         case externalLinkDestination
         case externalLinkSpaceID
         case focusesNewTabsOpenedFromLinks
+        case followsTabsMovedToAnotherSpace
         case automaticallyOpensPeek
         case peekClickModifier
         case quickWindowArchivePolicy
@@ -67,11 +69,13 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy,
         remembersQuickWindowSpaceBySite: Bool,
         routes: [BrowserLinkRoute],
-        rememberedQuickWindowSpacesBySite: [String: SpaceID]
+        rememberedQuickWindowSpacesBySite: [String: SpaceID],
+        followsTabsMovedToAnotherSpace: Bool = true
     ) {
         self.externalLinkDestination = externalLinkDestination
         self.externalLinkSpaceID = externalLinkSpaceID
         self.focusesNewTabsOpenedFromLinks = focusesNewTabsOpenedFromLinks
+        self.followsTabsMovedToAnotherSpace = followsTabsMovedToAnotherSpace
         self.automaticallyOpensPeek = automaticallyOpensPeek
         self.peekClickModifier = peekClickModifier
         self.quickWindowArchivePolicy = quickWindowArchivePolicy
@@ -96,6 +100,8 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
                 Bool.self,
                 forKey: .focusesNewTabsOpenedFromLinks
             ) ?? false
+        followsTabsMovedToAnotherSpace =
+            try container.decodeIfPresent(Bool.self, forKey: .followsTabsMovedToAnotherSpace) ?? true
         automaticallyOpensPeek =
             try container.decodeIfPresent(
                 Bool.self,

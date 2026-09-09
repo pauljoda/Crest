@@ -332,6 +332,7 @@ extension MobileBrowserRootModel {
     }
 
     func synchronizeSelection() {
+        browser.consumeMovedTabActivation()
         guard !selectedSpaceIsLocked else {
             pages.deactivatePagePresentation()
             address = ""

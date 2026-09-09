@@ -818,37 +818,85 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertNil(pool.activePage)
     }
 
-    func testMovingATabAcrossSpacesRebuildsItWithTheDestinationProfile() throws {
-        let tab = BrowserTab(title: "Movable", url: nil, placement: .current)
-        let source = makeSpace(tabs: [tab], selectedTabID: tab.id)
-        let destinationStartPage = BrowserTab.startPage()
-        let destination = makeSpace(
-            tabs: [destinationStartPage],
-            selectedTabID: destinationStartPage.id
-        )
-        var session = BrowserSession(spaces: [source, destination], selectedSpaceID: source.id)
-        let pool = BrowserPagePool()
-
-        pool.select(session: session)
+    func testMovingATabPreservesResidentSelectionsUntilExplicitDestinationActivation() throws {
+        let tab = BrowserTab(title: "Movable", url: URL(string: "about:blank#moving"), placement: .current)
+        let previous = BrowserTab(title: "Previous", url: URL(string: "about:blank#previous"), placement: .pinned)
+        let destinationTab = BrowserTab(
+            title: "Destination", url: URL(string: "about:blank#destination"), placement: .current)
+        let source = makeSpace(tabs: [previous, tab], selectedTabID: previous.id)
+        let destination = makeSpace(tabs: [destinationTab], selectedTabID: destinationTab.id)
+        let preferences = BrowserLinkPreferenceStore(persistence: InMemoryBrowserLinkPreferencesPersistence())
+        preferences.followsTabsMovedToAnotherSpace = false
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [source, destination], selectedSpaceID: source.id),
+            persistence: InMemoryBrowserSessionPersistence(), linkPreferences: preferences)
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        let chrome = BrowserChromeState()
+        let model = BrowserRootModel(
+            browser: browser, pages: pool, chrome: chrome,
+            spaceAccess: BrowserSpaceAccessController(), windowState: nil,
+            startupBehavior: .lastActiveTab, persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
+        model.hasRestoredExtensions = true
+        defer { pool.reconcile(validTabIDs: []) }
+        pool.select(session: browser.session)
+        let previousPage = try XCTUnwrap(pool.activePage)
+        browser.selectSpace(destination.id)
+        pool.select(session: browser.session)
+        let destinationPage = try XCTUnwrap(pool.activePage)
+        browser.selectSpace(source.id)
+        browser.selectTab(tab.id)
+        pool.select(session: browser.session)
         let sourcePage = try XCTUnwrap(pool.activePage)
-        XCTAssertEqual(sourcePage.spaceID, source.id)
         sourcePage.focusRestoration.remember(sourcePage.webView)
         sourcePage.focusRestoration.requestRestoration()
-        XCTAssertTrue(sourcePage.focusRestoration.hasPendingRestoration)
 
-        XCTAssertTrue(
-            session.moveTab(tab.id, from: source.id, into: destination.id)
-        )
-        pool.reconcile(session: session)
+        XCTAssertTrue(browser.moveTab(tab.id, from: source.id, into: destination.id))
+        pool.reconcile(session: browser.session)
+        model.synchronizeAfterSelectionChange()
+        XCTAssertTrue(pool.activePage === previousPage)
         XCTAssertFalse(pool.retainedTabIDs.contains(tab.id))
         XCTAssertFalse(sourcePage.focusRestoration.hasPendingRestoration)
+        XCTAssertFalse(chrome.isCommandPalettePresented)
 
-        pool.select(session: session)
-        let destinationPage = try XCTUnwrap(pool.activePage)
-        XCTAssertFalse(sourcePage === destinationPage)
-        XCTAssertEqual(destinationPage.spaceID, destination.id)
-        XCTAssertEqual(destinationPage.profileID, destination.profile.id)
-        XCTAssertFalse(destinationPage.focusRestoration.hasPendingRestoration)
+        for _ in 0..<3 {
+            browser.selectSpace(destination.id)
+            model.synchronizeAfterSpaceChange()
+            XCTAssertTrue(pool.activePage === destinationPage)
+            XCTAssertEqual(browser.selectedTab?.id, destinationTab.id)
+            XCTAssertFalse(pool.containsResidentPage(for: tab.id))
+            browser.selectSpace(source.id)
+            model.synchronizeAfterSpaceChange()
+            XCTAssertTrue(pool.activePage === previousPage)
+        }
+
+        browser.selectSpace(destination.id)
+        browser.selectTab(tab.id)
+        model.synchronizeAfterSelectionChange()
+        let movedPage = try XCTUnwrap(pool.activePage)
+        XCTAssertFalse(sourcePage === movedPage)
+        XCTAssertEqual(movedPage.spaceID, destination.id)
+        XCTAssertEqual(movedPage.profileID, destination.profile.id)
+        XCTAssertFalse(movedPage.focusRestoration.hasPendingRestoration)
+        model.openNewTab()
+        XCTAssertTrue(chrome.isCommandPalettePresented)
+        chrome.dismissCommandPalette()
+        XCTAssertTrue(pool.activePage === movedPage)
+        preferences.followsTabsMovedToAnotherSpace = true
+        XCTAssertTrue(browser.moveTab(tab.id, from: destination.id, into: source.id))
+        pool.reconcile(session: browser.session)
+        model.synchronizeAfterSpaceChange()
+        let followedPage = try XCTUnwrap(pool.activePage)
+        XCTAssertEqual(pool.activeTabID, tab.id)
+        XCTAssertEqual(followedPage.spaceID, source.id)
+        XCTAssertEqual(browser.selectedTab?.id, tab.id)
+        XCTAssertFalse(chrome.isCommandPalettePresented)
+        XCTAssertFalse(browser.consumeMovedTabActivation())
+        browser.selectSpace(destination.id)
+        model.synchronizeAfterSpaceChange()
+        XCTAssertTrue(pool.activePage === destinationPage)
+        browser.selectSpace(source.id)
+        model.synchronizeAfterSpaceChange()
+        XCTAssertTrue(pool.activePage === followedPage)
     }
 
     func testEveryActivatedPageStaysResidentWithoutACountBasedLimit() {

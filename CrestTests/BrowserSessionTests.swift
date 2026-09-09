@@ -909,12 +909,11 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(session.selectedTab?.placement, .current)
     }
 
-    func testCrossSpaceMovePreservesTabIdentityButReownsItAndSelectsTheDestination() throws {
+    func testCrossSpaceMovePreservesTabIdentityAndDestinationSelection() throws {
         var session = BrowserSession.preview
         let sourceSpace = try XCTUnwrap(session.spaces.first)
         let destinationSpace = try XCTUnwrap(session.spaces.last)
         let movedTab = try XCTUnwrap(sourceSpace.savedTabs.first)
-        let sourceFallbackID = sourceSpace.currentTabs.first?.id
         session.selectTab(movedTab.id, at: Date(timeIntervalSince1970: 900))
 
         XCTAssertTrue(
@@ -933,10 +932,10 @@ final class BrowserSessionTests: XCTestCase {
         XCTAssertEqual(reownedTab.savedURL, movedTab.savedURL)
         XCTAssertEqual(reownedTab.placement, .saved)
         XCTAssertNil(reownedTab.folderID)
-        XCTAssertEqual(reownedTab.lastActivatedAt, Date(timeIntervalSince1970: 1_000))
-        XCTAssertEqual(session.selectedSpaceID, destinationSpace.id)
-        XCTAssertEqual(destination.selectedTabID, movedTab.id)
-        XCTAssertEqual(session.space(id: sourceSpace.id)?.selectedTabID, sourceFallbackID)
+        XCTAssertEqual(reownedTab.lastActivatedAt, Date(timeIntervalSince1970: 900))
+        XCTAssertEqual(session.selectedSpaceID, sourceSpace.id)
+        XCTAssertEqual(destination.selectedTabID, destinationSpace.selectedTabID)
+        XCTAssertNil(session.space(id: sourceSpace.id)?.selectedTabID)
 
         let assignment = try XCTUnwrap(
             session.tabRuntimeAssignments.first(where: { $0.tabID == movedTab.id })

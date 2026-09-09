@@ -110,6 +110,8 @@ final class MobileTransientBrowsingTests: XCTestCase {
             session.moveTab(tab.id, from: source.id, into: destination.id)
         )
         pages.reconcile(session: session)
+        session.selectSpace(destination.id)
+        session.selectTab(tab.id)
         pages.select(session: session)
 
         let destinationPage = try XCTUnwrap(pages.activePage)

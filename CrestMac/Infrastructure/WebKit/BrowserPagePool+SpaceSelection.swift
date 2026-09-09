@@ -6,7 +6,9 @@ extension BrowserPagePool {
             deactivatePagePresentation()
             return
         }
-        if requiresStartPageOnEntry(to: space) {
+        if browser.consumeMovedTabActivation() {
+            select(session: browser.session)
+        } else if requiresStartPageOnEntry(to: space) {
             browser.presentStartPageForSpaceEntry()
             deactivatePagePresentation()
         } else if tab.isStartPage && space.splitGroup(containing: tab.id) == nil {

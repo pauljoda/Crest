@@ -459,6 +459,7 @@ extension BrowserSession {
         to requestedPlacement: TabPlacement? = nil,
         folderID requestedFolderID: FolderID? = nil,
         before destinationTabID: TabID? = nil,
+        sourceFallbackTabID: TabID? = nil,
         at date: Date = .now
     ) -> Bool {
         guard sourceSpaceID != destinationSpaceID,
@@ -493,7 +494,6 @@ extension BrowserSession {
         // Split groups never span Spaces, so a tab leaving one leaves its group
         // behind rather than dragging the membership into the destination.
         movedTab.splitGroupID = nil
-        movedTab.lastActivatedAt = date
         movedTab.markPositionModified(at: date)
         spaces[destinationSpaceIndex].tabs.insert(movedTab, at: plan.insertionIndex)
         spaces[sourceSpaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(
@@ -503,11 +503,12 @@ extension BrowserSession {
             spaces[destinationSpaceIndex].tabs
         )
         if sourceWasSelected {
-            spaces[sourceSpaceIndex].selectedTabID = nil
-            ensureSelection(in: sourceSpaceID)
+            spaces[sourceSpaceIndex].selectedTabID = sourceFallbackTabID.flatMap {
+                spaces[sourceSpaceIndex].contains($0) ? $0 : nil
+            }
         }
-        spaces[destinationSpaceIndex].selectedTabID = movedTab.id
-        selectedSpaceID = destinationSpaceID
+        // Organization does not activate the tab in its new profile or replace
+        // the destination's remembered page. Drag navigation owns Space changes.
         return true
     }
 }

@@ -276,6 +276,16 @@ struct BrowserNewTabSettingsSection: View {
             CrestFormFootnote(
                 "Selects tabs opened with Command-click or middle-click when the webpage supports it. Add Shift to reverse this choice. Background tabs load immediately."
             )
+
+            Toggle(
+                "Follow tabs moved to another Space",
+                isOn: $preferences.followsTabsMovedToAnotherSpace
+            )
+            .accessibilityIdentifier("follow-tabs-moved-to-another-space-toggle")
+
+            CrestFormFootnote(
+                "Switch to the destination Space and open the moved tab. Turn off to keep browsing without following the tab."
+            )
         }
     }
 }

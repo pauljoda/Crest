@@ -41,13 +41,6 @@ struct BrowserSidebarReorderCommit {
             else { return false }
             return browser.createTabFolder([targetID, item.tabID], in: item.spaceAssignment.spaceID) != nil
         case .space(let destination):
-            guard
-                action.selectDestination(
-                    destination,
-                    for: item,
-                    using: { browser.selectSpace($0) }
-                )
-            else { return false }
             return action.move(item, into: destination)
 
         case .intoFolder(let folderID):

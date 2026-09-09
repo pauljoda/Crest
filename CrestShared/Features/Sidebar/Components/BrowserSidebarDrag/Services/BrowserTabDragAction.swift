@@ -30,21 +30,6 @@ struct BrowserTabDragAction {
     }
 
     @discardableResult
-    func selectDestination(
-        _ destination: BrowserSpaceRuntimeAssignment,
-        for item: BrowserTabDragItem,
-        using select: (SpaceID) -> Void
-    ) -> Bool {
-        guard canMove(item, into: destination) else { return false }
-        select(destination.spaceID)
-        return BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-            matching: destination,
-            in: browser,
-            accessController: spaceAccess
-        ) != nil
-    }
-
-    @discardableResult
     func move(
         _ item: BrowserTabDragItem,
         into destination: BrowserSpaceRuntimeAssignment

@@ -6,6 +6,13 @@ import Observation
 final class BrowserStore {
     var session: BrowserSession {
         didSet {
+            if let activation = pendingMovedTabActivation,
+                session.selectedSpaceID != activation.spaceID
+                    || session.selectedTab?.id != activation.tabID
+                    || session.selectedSpace?.profile.id != activation.profileID
+            {
+                pendingMovedTabActivation = nil
+            }
             sessionRevision &+= 1
             tabSelectionHistory.reconcile(session: session)
         }
@@ -26,6 +33,8 @@ final class BrowserStore {
     @ObservationIgnored var syncStageTask: Task<Void, Never>?
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored var tabSelectionHistory: BrowserTabSelectionHistory
+    @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
+    @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
     @ObservationIgnored private var preservesEmptyWindowSelection = false
 
@@ -53,7 +62,8 @@ final class BrowserStore {
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
         syncCoordinator: BrowserSyncCoordinator? = nil,
         syncCoalescingDelay: Duration = .milliseconds(150),
-        browsingMode: BrowserBrowsingMode = .standard
+        browsingMode: BrowserBrowsingMode = .standard,
+        linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
         self.init(
             session: session,
@@ -62,7 +72,8 @@ final class BrowserStore {
             syncCoordinator: syncCoordinator,
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
-            family: BrowserStoreFamily(session: session)
+            family: BrowserStoreFamily(session: session),
+            linkPreferences: linkPreferences
         )
     }
 
@@ -74,9 +85,11 @@ final class BrowserStore {
         syncCoalescingDelay: Duration,
         browsingMode: BrowserBrowsingMode,
         family: BrowserStoreFamily,
-        cloudSyncChangeHandler: (@Sendable () -> Void)? = nil
+        cloudSyncChangeHandler: (@Sendable () -> Void)? = nil,
+        linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
         self.session = session
+        self.linkPreferences = linkPreferences
         tabSelectionHistory = BrowserTabSelectionHistory(session: session)
         self.persistence = persistence
         self.credentialVault = credentialVault
@@ -140,7 +153,8 @@ extension BrowserStore {
             syncCoalescingDelay: syncCoalescingDelay,
             browsingMode: browsingMode,
             family: family,
-            cloudSyncChangeHandler: cloudSyncChangeHandler
+            cloudSyncChangeHandler: cloudSyncChangeHandler,
+            linkPreferences: linkPreferences
         )
         store.localSyncErrorDescription = localSyncErrorDescription
         store.preservesEmptyWindowSelection = !restoresTabSelection

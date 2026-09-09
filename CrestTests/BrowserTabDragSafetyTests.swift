@@ -30,13 +30,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
 
         XCTAssertTrue(action.canMove(context.item, into: context.destinationAssignment))
-        XCTAssertTrue(
-            action.selectDestination(
-                context.destinationAssignment,
-                for: context.item,
-                using: context.browser.selectSpace
-            )
-        )
+        context.browser.selectSpace(context.destinationAssignment.spaceID)
         XCTAssertTrue(
             action.move(
                 context.item,

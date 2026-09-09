@@ -27,7 +27,8 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
                     destinationSpaceID: destinationSpaceID
                 )
             ],
-            rememberedQuickWindowSpacesBySite: ["example.com": destinationSpaceID]
+            rememberedQuickWindowSpacesBySite: ["example.com": destinationSpaceID],
+            followsTabsMovedToAnotherSpace: false
         )
         let persistence = UserDefaultsBrowserLinkPreferencesPersistence(
             defaults: context.defaults
@@ -47,6 +48,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
                 "externalLinkDestination",
                 "externalLinkSpaceID",
                 "focusesNewTabsOpenedFromLinks",
+                "followsTabsMovedToAnotherSpace",
                 "automaticallyOpensPeek",
                 "peekClickModifier",
                 "quickWindowArchivePolicy",
@@ -80,6 +82,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
 
         XCTAssertEqual(restored.externalLinkDestination, .mostRecentSpace)
         XCTAssertFalse(restored.focusesNewTabsOpenedFromLinks)
+        XCTAssertTrue(restored.followsTabsMovedToAnotherSpace)
         XCTAssertFalse(restored.automaticallyOpensPeek)
         XCTAssertEqual(restored.peekClickModifier, .option)
         XCTAssertEqual(restored.quickWindowArchivePolicy, .after6Hours)

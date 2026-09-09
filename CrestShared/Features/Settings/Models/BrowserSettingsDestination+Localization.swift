@@ -51,7 +51,7 @@ extension BrowserSettingsDestination {
     var searchTerms: LocalizedStringResource {
         switch self {
         case .general:
-            "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview"
+            "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview"
         case .links:
             "external apps Quick Window Peek pinned saved routing open"
         case .shortcuts:

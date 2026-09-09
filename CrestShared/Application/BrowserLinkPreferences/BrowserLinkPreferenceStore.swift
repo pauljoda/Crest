@@ -18,6 +18,11 @@ final class BrowserLinkPreferenceStore {
         set { update { $0.focusesNewTabsOpenedFromLinks = newValue } }
     }
 
+    var followsTabsMovedToAnotherSpace: Bool {
+        get { preferences.followsTabsMovedToAnotherSpace }
+        set { update { $0.followsTabsMovedToAnotherSpace = newValue } }
+    }
+
     func update(_ update: (inout BrowserLinkPreferences) -> Void) {
         var revised = preferences
         update(&revised)

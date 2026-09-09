@@ -5,6 +5,69 @@ import XCTest
 
 @MainActor
 final class BrowserStoreTests: XCTestCase {
+    func testCrossSpaceMovesPreserveSelectionsAndReturnToThePreviouslyActiveSourceTab() throws {
+        for route in 0..<3 {
+            for movesSelectedTab in [false, true] {
+                let session = BrowserSession.preview
+                let source = try XCTUnwrap(session.spaces.first)
+                let destination = try XCTUnwrap(session.spaces.last)
+                let previous = try XCTUnwrap(source.pinnedTabs.last)
+                let moved = try XCTUnwrap(source.savedTabs.first)
+                let preferences = BrowserLinkPreferenceStore(persistence: InMemoryBrowserLinkPreferencesPersistence())
+                preferences.followsTabsMovedToAnotherSpace = false
+                let store = BrowserStore(
+                    session: session, persistence: InMemoryBrowserSessionPersistence(), linkPreferences: preferences)
+                store.selectTab(previous.id)
+                if movesSelectedTab { store.selectTab(moved.id) }
+                let item = BrowserTabDragItem(
+                    tabID: moved.id, spaceID: source.id, profileID: source.profile.id)
+                if route != 0 { store.selectSpace(destination.id) }
+
+                switch route {
+                case 0:
+                    XCTAssertTrue(store.moveTab(moved.id, from: source.id, into: destination.id))
+                case 1:
+                    XCTAssertTrue(store.moveTab(item, to: .saved))
+                default:
+                    XCTAssertTrue(store.moveTab(moved.id, from: source.id, to: .saved))
+                }
+
+                XCTAssertEqual(store.session.selectedSpaceID, route == 0 ? source.id : destination.id)
+                XCTAssertEqual(store.session.space(id: source.id)?.selectedTabID, previous.id)
+                XCTAssertEqual(store.session.space(id: destination.id)?.selectedTabID, destination.selectedTabID)
+                XCTAssertEqual(
+                    store.session.space(id: destination.id)?.tabs.first { $0.id == moved.id }?.url, moved.url)
+            }
+        }
+    }
+
+    func testMovingTheOnlyTabRespectsFollowPreferenceWithoutSelectingAnEmptyDestination() throws {
+        for follows in [true, false] {
+            var session = BrowserSession.preview
+            let moved = try XCTUnwrap(session.spaces[0].currentTabs.first)
+            session.spaces[0].tabs = [moved]
+            session.spaces[0].selectedTabID = moved.id
+            session.spaces[1].tabs = []
+            session.spaces[1].selectedTabID = nil
+            let sourceID = session.spaces[0].id
+            let destinationID = session.spaces[1].id
+            let preferences = BrowserLinkPreferenceStore(persistence: InMemoryBrowserLinkPreferencesPersistence())
+            XCTAssertTrue(preferences.followsTabsMovedToAnotherSpace)
+            preferences.followsTabsMovedToAnotherSpace = follows
+            let store = BrowserStore(
+                session: session, persistence: InMemoryBrowserSessionPersistence(), linkPreferences: preferences)
+
+            XCTAssertTrue(store.moveTab(moved.id, from: sourceID, into: destinationID))
+
+            XCTAssertTrue(try XCTUnwrap(store.session.space(id: sourceID)).tabs.isEmpty)
+            XCTAssertNil(store.session.space(id: sourceID)?.selectedTabID)
+            XCTAssertEqual(store.session.selectedSpaceID, follows ? destinationID : sourceID)
+            XCTAssertEqual(store.session.space(id: destinationID)?.selectedTabID, follows ? moved.id : nil)
+            XCTAssertEqual(store.consumeMovedTabActivation(), follows)
+            XCTAssertFalse(store.consumeMovedTabActivation())
+        }
+    }
+
     func testClosingANewSearchReturnsToTheTabThatWasActuallyOpen() throws {
         let mediaLibrary = BrowserTab(
             title: "Media Library",

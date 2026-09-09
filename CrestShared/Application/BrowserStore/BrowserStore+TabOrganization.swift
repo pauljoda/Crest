@@ -55,7 +55,7 @@ extension BrowserStore {
                 before: destinationTabID
             )
         } else {
-            moved = session.moveTab(
+            moved = moveTabBetweenSpaces(
                 id,
                 from: actualSourceSpaceID,
                 into: session.selectedSpaceID,
@@ -151,7 +151,7 @@ extension BrowserStore {
                 before: destinationTabID
             )
         } else {
-            moved = session.moveTab(
+            moved = moveTabBetweenSpaces(
                 item.tabID,
                 from: sourceAssignment.spaceID,
                 into: destinationAssignment.spaceID,
@@ -206,7 +206,7 @@ extension BrowserStore {
         guard !deletingSpaceIDs.contains(sourceSpaceID),
             !deletingSpaceIDs.contains(destinationSpaceID),
             session.space(id: sourceSpaceID)?.contains(id) == true,
-            session.moveTab(
+            moveTabBetweenSpaces(
                 id,
                 from: sourceSpaceID,
                 into: destinationSpaceID
@@ -221,6 +221,54 @@ extension BrowserStore {
             to: BrowserSpaceRuntimeAssignment(space: destinationSpace)
         )
         persist(syncUrgency: .coalesced, scope: .core)
+        return true
+    }
+
+    /// A followed move explicitly opens one tab in its new profile. Ordinary
+    /// Space entry must still leave remembered unloaded tabs alone.
+    @discardableResult
+    func consumeMovedTabActivation() -> Bool {
+        guard let activation = pendingMovedTabActivation else { return false }
+        pendingMovedTabActivation = nil
+        return selectedSpace?.id == activation.spaceID
+            && selectedSpace?.profile.id == activation.profileID
+            && selectedTab?.id == activation.tabID
+    }
+
+    private func moveTabBetweenSpaces(
+        _ id: TabID,
+        from sourceSpaceID: SpaceID,
+        into destinationSpaceID: SpaceID,
+        to placement: TabPlacement? = nil,
+        folderID: FolderID? = nil,
+        before destinationTabID: TabID? = nil
+    ) -> Bool {
+        guard let source = session.space(id: sourceSpaceID) else { return false }
+        var history = tabSelectionHistory
+        let fallbackID =
+            source.selectedTabID == id
+            ? history.fallbackTabID(
+                afterDismissing: id, in: sourceSpaceID,
+                availableTabIDs: Set(source.tabs.map(\.id)))
+            : nil
+        var draft = session
+        guard
+            draft.moveTab(
+                id, from: sourceSpaceID, into: destinationSpaceID,
+                to: placement, folderID: folderID, before: destinationTabID,
+                sourceFallbackTabID: fallbackID
+            )
+        else { return false }
+        if linkPreferences.followsTabsMovedToAnotherSpace,
+            let destination = draft.space(id: destinationSpaceID)
+        {
+            draft.selectSpace(destinationSpaceID)
+            draft.selectTab(id)
+            pendingMovedTabActivation = BrowserTabRuntimeAssignment(
+                tabID: id, spaceID: destination.id, profileID: destination.profile.id)
+        }
+        tabSelectionHistory = history
+        session = draft
         return true
     }
 
