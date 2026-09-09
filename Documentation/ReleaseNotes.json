@@ -817,6 +817,10 @@
     "2026-09-09-mobile-start-page-spacebar": {
       "category": "fixed",
       "message": "Keep the spacebar available when searching from Start Page on iPhone and iPad"
+    },
+    "2026-09-09-mobile-folder-color-space-swiping": {
+      "category": "fixed",
+      "message": "Keep swiping between Spaces working after changing a folder color on iPhone and iPad"
     }
   }
 }

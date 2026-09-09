@@ -114,6 +114,18 @@ final class BrowserMobileDragRouter: NSObject, UIDragInteractionDelegate {
         true
     }
 
+    func dragInteraction(
+        _ interaction: UIDragInteraction, willAnimateLiftWith animator: any UIDragAnimating,
+        session: any UIDragSession
+    ) {
+        // A context menu can win during the lift, before a drag session starts.
+        // That cancellation must release the staged reorder lock too.
+        animator.addCompletion { [weak self] position in
+            guard position == .start else { return }
+            self?.finish(session)
+        }
+    }
+
     func dragInteraction(_ interaction: UIDragInteraction, prefersFullSizePreviewsFor session: any UIDragSession)
         -> Bool
     {
@@ -123,6 +135,10 @@ final class BrowserMobileDragRouter: NSObject, UIDragInteractionDelegate {
     func dragInteraction(
         _ interaction: UIDragInteraction, session: any UIDragSession, didEndWith operation: UIDropOperation
     ) {
+        finish(session)
+    }
+
+    private func finish(_ session: any UIDragSession) {
         let active = sessions.object(forKey: session)
         sessions.removeObject(forKey: session)
         active?.finish()
