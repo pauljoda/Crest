@@ -6269,6 +6269,85 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         return javaScriptLiteral(value)
     }
 
+    func testRequestFrameNormalizationSurvivesNativeWrapperCollection() async throws {
+        let fixture = try privilegedFixtureCompatibilityRuntime(
+            named: "crest-request-wrapper-lifetime", permissions: ["webRequest"])
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        BrowserWebInspectorAccess.enableDeveloperExtras(in: configuration.preferences)
+        let page = WKWebView(frame: CGRect(x: 0, y: 0, width: 640, height: 480), configuration: configuration)
+        page.isInspectable = true
+        let navigation = ChromeWebStoreNavigationWaiter(webView: page)
+        try await navigation.load(URLRequest(url: URL(string: "about:blank")!))
+        let connection = BrowserWebInspectorProtocolConnection(webView: page)
+        _ = try await page.callAsyncJavaScript(
+            """
+            globalThis.requestListeners = new Set();
+            // WebKit owns the native event independently of its collectable
+            // JavaScript wrapper. Recreating the wrapper loses JS expandos.
+            const requests = {};
+            let weakEvent;
+            Object.defineProperty(requests, "onBeforeRequest", {
+                configurable: true, enumerable: true,
+                get() {
+                    let event = weakEvent?.deref();
+                    if (!event) {
+                        event = {
+                            addListener(fn) { requestListeners.add(fn); },
+                            removeListener(fn) { requestListeners.delete(fn); },
+                            hasListener(fn) { return requestListeners.has(fn); },
+                            hasListeners() { return requestListeners.size > 0; }
+                        };
+                        weakEvent = new WeakRef(event);
+                    }
+                    return event;
+                }
+            });
+            globalThis.chrome = {
+                runtime: {
+                    getManifest() { return {manifest_version: 3}; },
+                    getURL() { return "about:blank"; },
+                    sendNativeMessage() { return Promise.reject(new Error("no broker")); }
+                },
+                webRequest: requests
+            };
+            \(fixture.source)
+            return true;
+            """, arguments: [:], contentWorld: .page)
+        try await connection.connect()
+        defer { connection.disconnect() }
+        _ = try await connection.sendCommand("Heap.gc")
+        let json = try await page.callAsyncJavaScript(
+            """
+            const seen = [];
+            const listener = details => seen.push(details);
+            const event = chrome.webRequest.onBeforeRequest;
+            event.addListener(listener, {urls: ["<all_urls>"]});
+            event.addListener(listener, {urls: ["<all_urls>"]});
+            const registered = event.hasListener(listener);
+            const child = {type:"main_frame",frameId:42,parentFrameId:7,tabId:3,url:"https://tracker.example/"};
+            const root = {...child,frameId:0,parentFrameId:-1,url:"https://page.example/"};
+            for (const details of [child, root]) {
+                for (const fn of requestListeners) fn(details);
+            }
+            event.removeListener(listener);
+            return JSON.stringify({seen, registered, removed:!event.hasListeners(), rawType:child.type});
+            """, arguments: [:], contentWorld: .page)
+        let result = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(try XCTUnwrap(json as? String).utf8)) as? [String: Any])
+        let seen = try XCTUnwrap(result["seen"] as? [[String: Any]])
+        XCTAssertEqual(seen.count, 2, "Repeated registration must keep listener identity.")
+        XCTAssertEqual(seen.first?["type"] as? String, "sub_frame")
+        XCTAssertEqual(seen.first?["frameId"] as? Int, 42)
+        XCTAssertEqual(seen.first?["parentFrameId"] as? Int, 7)
+        XCTAssertEqual(seen.last?["type"] as? String, "main_frame")
+        XCTAssertEqual(result["rawType"] as? String, "main_frame")
+        XCTAssertEqual(result["registered"] as? Bool, true)
+        XCTAssertEqual(result["removed"] as? Bool, true)
+    }
+
     /// The runtime's webRequest event list is derived from the matrix.
     ///
     /// It used to be a literal beside the table that hides

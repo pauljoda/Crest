@@ -2878,7 +2878,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                     return facade;
                 };
 
-                const normalizedWebRequestEvents = new WeakMap();
+                // WebKit weakly caches the JS wrappers for native events.
+                // Collecting a wrapper also discards its patched methods,
+                // even while the underlying native event remains alive.
+                // Keep this bounded set of event wrappers with the context's
+                // installation marker below, including before registration.
+                const normalizedWebRequestEvents = new Map();
                 const warnedBlockingWebRequestEvents = new Set();
                 const normalizeWebRequestDetails = (details) => {
                     if (
@@ -7529,7 +7534,13 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                         }
                     );
                 } catch {}
-                Object.defineProperty(globalThis, compatibilityInstallation, {value: true});
+                Object.defineProperty(globalThis, compatibilityInstallation, {
+                    value: Object.freeze({
+                        webRequestEvents: Object.freeze([
+                            ...normalizedWebRequestEvents.keys()
+                        ])
+                    })
+                });
             })();
             """
     }

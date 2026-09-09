@@ -805,6 +805,10 @@
     "2026-09-09-extension-prepared-resource-recovery": {
       "category": "fixed",
       "message": "Restore extension popup styling and side panels when cached package files are missing"
+    },
+    "2026-09-09-embedded-tracker-navigation": {
+      "category": "fixed",
+      "message": "Keep embedded tracker frames from replacing the page with an extension blocking screen"
     }
   }
 }
