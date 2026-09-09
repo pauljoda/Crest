@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-09-08-faster-extension-preparation",
+    "development": "2026-09-09-extension-prepared-resource-recovery",
     "nightly": "2026-09-06-sidebar-registry-build-initializer"
   }
 }
