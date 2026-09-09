@@ -40,7 +40,7 @@ the live status for each issue.
 - [x] [Keep native window controls reachable in full screen](https://github.com/pauljoda/Crest/issues/31) — [`ee2de901`](https://github.com/pauljoda/Crest/commit/ee2de901fd38eee9115838fbd029ce4920ff5ba6)
 - [x] [Improve download progress and access](https://github.com/pauljoda/Crest/issues/34) — [`72a2e774`](https://github.com/pauljoda/Crest/commit/72a2e774d1a1e1614b842da1130a53420bb27fe4)
 - [x] [Keep split-view groups visible in collapsed folders](https://github.com/pauljoda/Crest/issues/35) — [`de12c20d`](https://github.com/pauljoda/Crest/commit/de12c20d14c5b2b0c5af0f310ac2a426bd8c40ad)
-- [x] [Preserve navigation when content blocking redirects](https://github.com/pauljoda/Crest/issues/36) — [`4da50c78`](https://github.com/pauljoda/Crest/commit/4da50c78459aac632bf99b8b716aaa7026296229)
+- [x] [Preserve navigation when content blocking redirects](https://github.com/pauljoda/Crest/issues/36) — [`4da50c78`](https://github.com/pauljoda/Crest/commit/4da50c78459aac632bf99b8b716aaa7026296229), [`c012cfb6`](https://github.com/pauljoda/Crest/commit/c012cfb6a1f8fa970dbd0c216cd89859536e9ba4)
 - [x] [Expose native WebKit feature flags in macOS Settings](https://github.com/pauljoda/Crest/issues/37) — [`6a672260`](https://github.com/pauljoda/Crest/commit/6a6722600a378942afb381adaab6d7f9f6d1ac9f)
 - [x] [Keep new-window navigation inside Peek](https://github.com/pauljoda/Crest/issues/44) — [`618f39c7`](https://github.com/pauljoda/Crest/commit/618f39c78a3c0f4634004bcb19d50cfa61f7c174)
 - [x] [Restore webpage editor focus after switching tabs](https://github.com/pauljoda/Crest/issues/45) — [`4a89d112`](https://github.com/pauljoda/Crest/commit/4a89d112d72fe33acb43b6c81fd27dd882b66548)
@@ -66,6 +66,7 @@ the live status for each issue.
 - [ ] [Keep the spacebar available in mobile Start Page search](https://github.com/pauljoda/Crest/issues/102)
 - [ ] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103)
 - [ ] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104)
+- [ ] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
 
 #### Completed
 
