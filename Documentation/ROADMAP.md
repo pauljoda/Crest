@@ -65,6 +65,7 @@ the live status for each issue.
 - [ ] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103)
 - [ ] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104)
 - [ ] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
+- [ ] [Keep tab-close layout animations smooth](https://github.com/pauljoda/Crest/issues/106)
 
 #### Completed
 
