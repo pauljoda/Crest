@@ -813,6 +813,10 @@
     "2026-09-09-follow-tabs-between-spaces": {
       "category": "improved",
       "message": "Open tabs when following them into another Space, with a setting to keep browsing in the current Space instead"
+    },
+    "2026-09-09-mobile-start-page-spacebar": {
+      "category": "fixed",
+      "message": "Keep the spacebar available when searching from Start Page on iPhone and iPad"
     }
   }
 }

@@ -3,6 +3,7 @@ import UIKit
 
 struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
     let model: BrowserCommandPaletteModel
+    let presentation: BrowserCommandPalettePresentation
     let identifier: String
     let focused: Bool
 
@@ -16,8 +17,8 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         field.font = .preferredFont(forTextStyle: .title2)
         field.adjustsFontForContentSizeCategory = true
         field.placeholder = String(localized: "Search or Enter URL…")
-        field.keyboardType = .URL
-        field.textContentType = .URL
+        field.keyboardType = presentation == .embedded ? .default : .URL
+        field.textContentType = presentation == .embedded ? nil : .URL
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.spellCheckingType = .no

@@ -139,7 +139,8 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
         let model = BrowserCommandPaletteModel(
             space: space, selectedTabID: tab.id, initialQuery: "", commands: nil, isSourceAvailable: { _ in true },
             selectTab: { _, _ in false }, openURL: { _, _ in false }, dismiss: {})
-        let view = BrowserPlatformCommandPaletteField(model: model, identifier: "command-palette-field", focused: false)
+        let view = BrowserPlatformCommandPaletteField(
+            model: model, presentation: .overlay, identifier: "command-palette-field", focused: false)
         let coordinator = view.makeCoordinator()
         let field = view.makeField(coordinator: coordinator)
         let window = NSWindow(

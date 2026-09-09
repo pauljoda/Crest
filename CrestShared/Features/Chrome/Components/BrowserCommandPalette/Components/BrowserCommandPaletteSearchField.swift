@@ -16,6 +16,7 @@ struct BrowserCommandPaletteSearchField: View {
 
             BrowserPlatformCommandPaletteField(
                 model: model,
+                presentation: presentation,
                 identifier: presentation == .overlay
                     ? "command-palette-field" : "start-page-command-palette-field",
                 focused: queryIsFocused.wrappedValue

@@ -5,6 +5,7 @@ import SwiftUI
 /// its field editor, never an attributed replacement for the entered text.
 struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
     let model: BrowserCommandPaletteModel
+    let presentation: BrowserCommandPalettePresentation
     let identifier: String
     let focused: Bool
 
