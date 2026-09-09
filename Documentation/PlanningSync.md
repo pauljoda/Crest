@@ -71,6 +71,22 @@ roadmap displays those links beside completed work.
 roadmap from open GitHub milestones and `roadmap` issues. Manually maintained
 release gates and platform notes remain outside the generated markers.
 
+## Commit each roadmap update
+
+The coordinator must commit every completed roadmap update in its own scoped
+commit on local `main`, after running the renderer tests, freshness check, and
+whitespace check. Include only the roadmap and any directly related planning
+instructions. Do not leave planning changes for an app implementation task to
+bundle into its commit. A no-change sync needs no empty commit.
+
+Preserve unrelated worktree and staged changes. Coordinate the commit boundary
+with any active task using the same checkout; do not race its commit or stage
+its files. Planning-only commits do not bump the app version or add app release
+notes. This standing authorization covers local commits only, not pushes,
+tags, releases, or milestone closure.
+
+## Release-note handoff
+
 The same milestone and completion metadata form the release-note handoff. When
 a release is approved, release automation can query the closed issues in that
 milestone, include their public titles and verified commit links, and combine
