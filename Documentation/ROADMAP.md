@@ -63,7 +63,6 @@ the live status for each issue.
 - [ ] [Preview device viewport sizes from the developer toolbar](https://github.com/pauljoda/Crest/issues/98)
 - [ ] [feature: Right click tab > copy link](https://github.com/pauljoda/Crest/issues/101)
 - [ ] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104)
-- [ ] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
 - [ ] [Keep tab-close layout animations smooth](https://github.com/pauljoda/Crest/issues/106)
 
 #### Completed
@@ -104,6 +103,7 @@ the live status for each issue.
 - [x] [bug: Moving a Tab to another Space triggers Command Bar](https://github.com/pauljoda/Crest/issues/100)
 - [x] [Keep the spacebar available in mobile Start Page search](https://github.com/pauljoda/Crest/issues/102)
 - [x] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103)
+- [x] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
 
 #### Not planned
 
