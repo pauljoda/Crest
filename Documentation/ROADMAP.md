@@ -61,7 +61,6 @@ the live status for each issue.
 - [ ] [Investigate compatible browser extensions on iPhone and iPad](https://github.com/pauljoda/Crest/issues/53)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
 - [ ] [Preview device viewport sizes from the developer toolbar](https://github.com/pauljoda/Crest/issues/98)
-- [ ] [feature: Right click tab > copy link](https://github.com/pauljoda/Crest/issues/101)
 
 #### Completed
 
@@ -99,6 +98,7 @@ the live status for each issue.
 - [x] [Avoid invalid-key feedback for webpage controls](https://github.com/pauljoda/Crest/issues/97) — [`10d124d7`](https://github.com/pauljoda/Crest/commit/10d124d781689b1abf579fa0e5cf0bd4f863a6de)
 - [x] [bug: Sidebar auto-collapses after closing context menu even when cursor is hovering](https://github.com/pauljoda/Crest/issues/99) — [`b6bf9595`](https://github.com/pauljoda/Crest/commit/b6bf95956815bf6eebfc0141809eb813db12856b)
 - [x] [bug: Moving a Tab to another Space triggers Command Bar](https://github.com/pauljoda/Crest/issues/100)
+- [x] [feature: Right click tab > copy link](https://github.com/pauljoda/Crest/issues/101)
 - [x] [Keep the spacebar available in mobile Start Page search](https://github.com/pauljoda/Crest/issues/102)
 - [x] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103)
 - [x] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104) — [`c9a88d54`](https://github.com/pauljoda/Crest/commit/c9a88d5429564925c0045df97b992f434ab22cc8)
