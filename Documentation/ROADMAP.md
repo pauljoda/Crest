@@ -59,7 +59,6 @@ the live status for each issue.
 - [ ] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43)
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
-- [ ] [Investigate Azure DevOps sign-in failures](https://github.com/pauljoda/Crest/issues/108)
 
 #### Completed
 
@@ -104,6 +103,7 @@ the live status for each issue.
 - [x] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104) — [`c9a88d54`](https://github.com/pauljoda/Crest/commit/c9a88d5429564925c0045df97b992f434ab22cc8)
 - [x] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
 - [x] [Prevent upward tab jumps when closing Mac sidebar tabs](https://github.com/pauljoda/Crest/issues/106)
+- [x] [Investigate Azure DevOps sign-in failures](https://github.com/pauljoda/Crest/issues/108)
 
 #### Not planned
 
