@@ -53,15 +53,20 @@ enum BrowserMediaSessionContentBridge {
           const messageHandler = globalThis.webkit?.messageHandlers?.crestMediaSession;
           if (!session || !messageHandler) return;
 
-          const documentIdentifier = globalThis.crypto?.randomUUID?.()
+          let documentIdentifier = globalThis.crypto?.randomUUID?.()
             || `${Date.now()}-${Math.random()}`;
           const actionHandlers = new Map();
-          const playingElements = new Set();
           const knownElements = new Set();
-          let fallbackPlaybackState = "none";
           let sequence = 0;
           let didObservePlayback = false;
-          let didQualifyPlayback = false;
+          const qualifiedElements = new Map();
+          const interacted = new WeakSet();
+          const observedElements = new WeakSet();
+          const observedRoots = new WeakSet();
+          let pageActive = true;
+          let scheduled = false;
+          let explicitPlaybackQualified = false;
+          \#(BrowserMediaPlayerPolicyScript.source)
           let artworkGeneration = 0;
           let artworkSource = null;
           let artworkDataURL = null;
@@ -210,43 +215,64 @@ enum BrowserMediaSessionContentBridge {
             }).catch(() => {});
           };
 
-          const effectivePlaybackState = () => {
-            const standard = session.playbackState;
-            return standard === "playing" || standard === "paused"
-              ? standard : fallbackPlaybackState;
+          const hasTransportHandlers = () => actionHandlers.has("play") && actionHandlers.has("pause");
+          const hasExplicitAudioSession = () => hasTransportHandlers() && !!cleanText(session.metadata?.title);
+          const mediaSource = element => element.currentSrc || element.src || "";
+          const eligiblePlayer = element => {
+            if (!element.isConnected || element.ended) return false;
+            if (element instanceof HTMLVideoElement) {
+              return element.readyState >= 2 && element.videoWidth > 0 && element.videoHeight > 0
+                && !isDecorative(element) && hasPlayerControls(element, interacted.has(element));
+            }
+            return (!isDecorative(element) && hasPlayerControls(element, interacted.has(element)))
+              || hasExplicitAudioSession();
           };
-
-          const isAudible = () => {
-            for (const element of playingElements) {
-              if (!element.paused && !element.ended && !element.muted && element.volume > 0) {
-                return true;
+          const currentPlayers = () => {
+            for (const element of knownElements) {
+              if (!element.isConnected) {
+                knownElements.delete(element);
+                qualifiedElements.delete(element);
+                continue;
+              }
+              const source = mediaSource(element);
+              const prior = qualifiedElements.get(element);
+              if (prior && (prior.source !== source || prior.stream !== element.srcObject)) {
+                qualifiedElements.delete(element);
+              }
+              if (!eligiblePlayer(element)) {
+                qualifiedElements.delete(element);
+                continue;
+              }
+              // Video control eligibility is the same as PiP. Muted intentional
+              // video remains valid; audio still needs audible playback to start.
+              if (!element.paused && (element instanceof HTMLVideoElement || (!element.muted && element.volume > 0))) {
+                qualifiedElements.set(element, { source, stream: element.srcObject });
               }
             }
-            return false;
+            return Array.from(qualifiedElements.keys());
           };
-
-          const isMutedFlag = () => {
-            if (knownElements.size === 0) return false;
-            for (const element of knownElements) {
-              if (!element.muted) return false;
+          const hasExplicitNonElementPlayback = () => {
+            if (didObservePlayback || knownElements.size > 0 || !hasExplicitAudioSession()) {
+              explicitPlaybackQualified = false;
+              return false;
             }
-            return true;
+            if (session.playbackState === "playing") explicitPlaybackQualified = true;
+            if (session.playbackState === "none") explicitPlaybackQualified = false;
+            return explicitPlaybackQualified;
           };
-
-          const hasExplicitNonElementPlayback = () =>
-            knownElements.size === 0 && session.playbackState === "playing";
+          const isAudible = players => players.some(element =>
+            !element.paused && !element.ended && !element.muted && element.volume > 0);
 
           const post = extra => {
             const metadata = session.metadata;
-            const playbackState = effectivePlaybackState();
-            // Browsers do not surface every page that merely prepares Media
-            // Session metadata. YouTube does that for muted hover previews and
-            // promoted previews, neither of which is meaningful Now Playing.
-            // Once real element playback has been audible, retain the session
-            // while it pauses or mutes. A standards-driven Web Audio session
-            // with no HTML media element can qualify through an explicit
-            // MediaSession playbackState instead.
-            const active = didQualifyPlayback || hasExplicitNonElementPlayback();
+            const players = currentPlayers();
+            const explicit = hasExplicitNonElementPlayback();
+            const active = pageActive && (players.length > 0 || explicit);
+            const playbackState = players.length
+              ? (players.some(element => !element.paused) ? "playing" : "paused")
+              : (explicit ? session.playbackState : "none");
+            const actions = new Set(actionHandlers.keys());
+            if (players.length) { actions.add("play"); actions.add("pause"); }
             try {
               messageHandler.postMessage({
                 version: 1,
@@ -260,9 +286,9 @@ enum BrowserMediaSessionContentBridge {
                 album: cleanText(metadata?.album),
                 artworkDataURL,
                 playbackState,
-                audible: isAudible(),
-                muted: isMutedFlag(),
-                actions: Array.from(actionHandlers.keys()),
+                audible: isAudible(players),
+                muted: players.length > 0 && players.every(element => element.muted),
+                actions: Array.from(actions),
                 ...extra
               });
             } catch (_) {}
@@ -317,46 +343,102 @@ enum BrowserMediaSessionContentBridge {
           wrapProperty("metadata");
           wrapProperty("playbackState");
 
+          const schedule = () => {
+            if (scheduled) return;
+            scheduled = true;
+            setTimeout(() => { scheduled = false; post({}); }, 100);
+          };
+          const mediaEvents = ["play", "playing", "pause", "ended", "emptied", "volumechange", "loadedmetadata"];
           const observeMedia = event => {
             const media = event.target;
             if (!(media instanceof HTMLMediaElement)) return;
-            didObservePlayback = true;
-            if (event.type === "emptied") {
-              knownElements.delete(media);
-            } else if (knownElements.size < 32 || knownElements.has(media)) {
-              knownElements.add(media);
-            }
-            switch (event.type) {
-            case "play":
-            case "playing":
-              if (playingElements.size < 32 || playingElements.has(media)) {
-                playingElements.add(media);
-              }
-              fallbackPlaybackState = "playing";
-              break;
-            case "pause":
-            case "ended":
-            case "emptied":
-              playingElements.delete(media);
-              fallbackPlaybackState = playingElements.size ? "playing" : "paused";
-              break;
-            default:
-              break;
-            }
-            if (isAudible()) didQualifyPlayback = true;
+            if (["play", "playing"].includes(event.type)) didObservePlayback = true;
+            if (event.type === "emptied" || event.type === "ended") qualifiedElements.delete(media);
+            if (knownElements.size < 32 || knownElements.has(media)) knownElements.add(media);
             post({});
           };
-          for (const type of ["play", "playing", "pause", "ended", "emptied", "volumechange"]) {
-            document.addEventListener(type, observeMedia, { capture: true, passive: true });
+          const observerOptions = { childList:true, subtree:true, attributes:true,
+            attributeFilter:["controls", "src", "hidden", "inert", "aria-hidden", "role", "class", "style"] };
+          const discover = root => {
+            if (!root.querySelectorAll) return;
+            currentPlayers();
+            const inspect = element => {
+              if (element instanceof HTMLMediaElement && knownElements.size < 32) {
+                knownElements.add(element);
+                if (!observedElements.has(element)) {
+                  observedElements.add(element);
+                  for (const type of mediaEvents) element.addEventListener(type, observeMedia);
+                }
+              }
+              if (element.shadowRoot && !observedRoots.has(element.shadowRoot)) {
+                observedRoots.add(element.shadowRoot);
+                observer.observe(element.shadowRoot, observerOptions);
+                discover(element.shadowRoot);
+              }
+            };
+            inspect(root);
+            let visited = 0;
+            for (const element of root.querySelectorAll('*')) {
+              if (++visited > 10000) break;
+              inspect(element);
+            }
+          };
+          const observer = new MutationObserver(records => {
+            const hadMedia = knownElements.size > 0 || qualifiedElements.size > 0;
+            for (const record of records) for (const node of record.addedNodes) discover(node);
+            if (hadMedia || knownElements.size || qualifiedElements.size) schedule();
+          });
+          observer.observe(document, observerOptions);
+          discover(document);
+          for (const type of mediaEvents) document.addEventListener(type, observeMedia, { capture:true, passive:true });
+          const observeInteraction = event => {
+            if (!event.isTrusted || (event.type === 'keydown' && ![' ', 'Enter', 'k', 'K'].includes(event.key))) return;
+            for (const media of knownElements) {
+              let container = media;
+              for (let depth = 0; container && depth < 4; depth++, container = parentOf(container)) {
+                if (container === document.body || container === document.documentElement) break;
+                if (event.composedPath().includes(container)) { interacted.add(media); break; }
+              }
+            }
+            schedule();
+          };
+          document.addEventListener('pointerdown', observeInteraction, true);
+          document.addEventListener('keydown', observeInteraction, true);
+          for (const name of ['pushState', 'replaceState']) {
+            const original = history[name];
+            history[name] = function(...args) {
+              const result = Reflect.apply(original, this, args);
+              schedule();
+              return result;
+            };
           }
+          addEventListener('popstate', schedule);
+          addEventListener('hashchange', schedule);
+          addEventListener('resize', schedule);
+          document.addEventListener('visibilitychange', schedule);
 
           const bridge = Object.freeze({
+            activate(identifier) {
+              if (documentIdentifier !== identifier) {
+                documentIdentifier = identifier;
+                sequence = 0;
+              }
+              pageActive = true;
+              post({});
+            },
             emit() { post({}); },
             perform(action, expectedDocumentIdentifier) {
               if (expectedDocumentIdentifier !== documentIdentifier) return false;
+              const players = currentPlayers();
+              if (!pageActive || (!players.length && !hasExplicitNonElementPlayback())) return false;
               const handler = actionHandlers.get(action);
-              if (typeof handler !== "function") return false;
-              handler({ action });
+              if (typeof handler === "function") handler({ action });
+              else if (action === "play" || action === "pause") {
+                for (const element of players) {
+                  if (action === "play") element.play()?.catch(() => {});
+                  else element.pause();
+                }
+              } else return false;
               queueMicrotask(() => post({}));
               return true;
             },
@@ -364,7 +446,8 @@ enum BrowserMediaSessionContentBridge {
               if (expectedDocumentIdentifier !== documentIdentifier) return false;
               const next = muted === true;
               let touched = false;
-              for (const element of knownElements) {
+              if (!pageActive) return false;
+              for (const element of currentPlayers()) {
                 try {
                   element.muted = next;
                   touched = true;
@@ -381,13 +464,67 @@ enum BrowserMediaSessionContentBridge {
             writable: false
           });
           addEventListener("pagehide", () => {
+            pageActive = false;
+            artworkGeneration += 1;
             artworkAbortController?.abort();
             post({ invalidated: true, active: false });
-          }, { once: true });
+          });
+          addEventListener("pageshow", () => { pageActive = true; schedule(); });
           queueMicrotask(() => {
             refreshArtwork();
             post({});
           });
         })();
+        """#
+}
+
+/// Shared DOM policy for recognizing an intentional player. PiP adds its own
+/// presentation capability and viewport requirements; Now Playing also retains
+/// paused and background playback while the same player still exists.
+enum BrowserMediaPlayerPolicyScript {
+    static let source = #"""
+          const parentOf = element => element.parentElement || element.getRootNode()?.host;
+          const isDecorative = video => {
+            for (let element = video; element; element = parentOf(element)) {
+              const style = getComputedStyle(element);
+              if (element.hidden || element.inert || element.getAttribute('aria-hidden') === 'true'
+                  || ['presentation', 'none'].includes(element.getAttribute('role'))
+                  || style.display === 'none' || style.visibility !== 'visible'
+                  || Number(style.opacity) === 0 || style.pointerEvents === 'none') return true;
+            }
+            return false;
+          };
+          const hasPlayerControls = (video, wasInteracted = false) => {
+            if (video.controls) return true;
+            const videoArea = video.getBoundingClientRect().width * video.getBoundingClientRect().height;
+            let container = parentOf(video);
+            for (let depth = 0; container && depth < 6; depth++, container = parentOf(container)) {
+              if (container === document.body || container === document.documentElement) break;
+              const bounds = container.getBoundingClientRect();
+              if (bounds.width * bounds.height > Math.max(videoArea * 6, 4000000)) break;
+              // A lone "pause background animation" control is deliberately not a
+              // player. Seek/volume sliders plus transport buttons identify a real
+              // control surface without depending on the language of its labels.
+              const exposed = control => {
+                for (let element = control; element && element !== container; element = parentOf(element)) {
+                  if (element.hidden || getComputedStyle(element).display === 'none') return false;
+                }
+                return true;
+              };
+              const buttons = Array.from(container.querySelectorAll('button, [role="button"]')).filter(exposed);
+              const timeline = Array.from(container.querySelectorAll('input[type="range"], [role="slider"], progress')).some(exposed);
+              if (buttons.length >= 2 && timeline) return true;
+              // Players without a seek bar (live streams) can qualify after a real
+              // click/key interaction and with multiple actual playback controls.
+              if (wasInteracted && buttons.length >= 2) {
+                const controls = Array.from(buttons).filter(button =>
+                  /play|pause|mute|volume|fullscreen/i.test(
+                    [button.getAttribute('aria-label'), button.title, button.textContent].join(' ')
+                  ));
+                if (controls.length >= 2) return true;
+              }
+            }
+            return false;
+          };
         """#
 }

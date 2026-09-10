@@ -829,6 +829,10 @@
     "2026-09-09-sidebar-close-upward-jump": {
       "category": "fixed",
       "message": "Prevent remaining tabs from briefly jumping upward when closing tabs in the Mac sidebar"
+    },
+    "2026-09-10-now-playing-player-lifetime": {
+      "category": "fixed",
+      "message": "Keep incidental previews and notification sounds out of Now Playing, and clear playback controls when their media is gone"
     }
   }
 }

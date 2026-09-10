@@ -14,7 +14,7 @@ final class BrowserMediaSessionPageCoordinator {
     private let store: BrowserMediaSessionStore
     private let owner: @MainActor () -> BrowserTabRuntimeAssignment?
     private let fallbackTitle: @MainActor () -> String?
-    private var acceptsEvents = false
+    private var documentIdentifier: String?
 
     init(
         webView: WKWebView,
@@ -32,11 +32,12 @@ final class BrowserMediaSessionPageCoordinator {
 
     func prepareForNavigation() {
         invalidate()
-        acceptsEvents = false
+        documentIdentifier = nil
     }
 
     func didCommitNavigation() {
-        acceptsEvents = true
+        documentIdentifier = UUID().uuidString
+        emitCurrentState()
     }
 
     func didFinishNavigation() {
@@ -51,11 +52,12 @@ final class BrowserMediaSessionPageCoordinator {
     }
 
     private func emitCurrentState() {
-        guard acceptsEvents, let webView else { return }
-        Task { @MainActor [weak webView] in
+        guard let documentIdentifier, let webView else { return }
+        Task { @MainActor [weak self, weak webView] in
+            guard self?.documentIdentifier == documentIdentifier else { return }
             _ = try? await webView?.callAsyncJavaScript(
-                "return globalThis.__crestMediaSessionBridge?.emit();",
-                arguments: [:],
+                "return globalThis.__crestMediaSessionBridge?.activate(documentIdentifier);",
+                arguments: ["documentIdentifier": documentIdentifier],
                 in: nil,
                 contentWorld: BrowserMediaSessionContentBridge.contentWorld
             )
@@ -64,24 +66,25 @@ final class BrowserMediaSessionPageCoordinator {
 
     func webContentProcessDidTerminate() {
         invalidate()
-        acceptsEvents = false
+        documentIdentifier = nil
     }
 
     func prepareForRemoval() {
         invalidate()
-        acceptsEvents = false
+        documentIdentifier = nil
         webView = nil
         endpoint = nil
     }
 
     func receive(_ message: WKScriptMessage) {
-        guard acceptsEvents,
+        guard let documentIdentifier,
             message.frameInfo.isMainFrame,
             let webView,
             message.webView === webView,
             let endpoint,
             let owner = owner(),
             let event = BrowserMediaSessionPageEventDecoder.decode(message.body),
+            event.documentIdentifier == documentIdentifier,
             event.location == webView.url?.absoluteString
         else { return }
         store.receive(
@@ -96,7 +99,7 @@ final class BrowserMediaSessionPageCoordinator {
         _ action: BrowserMediaSessionAction,
         documentIdentifier: String
     ) {
-        guard acceptsEvents,
+        guard self.documentIdentifier == documentIdentifier,
             let webView,
             documentIdentifier.count
                 <= BrowserMediaSessionPageEventDecoder.maximumDocumentIdentifierLength
@@ -126,7 +129,7 @@ final class BrowserMediaSessionPageCoordinator {
         _ muted: Bool,
         documentIdentifier: String
     ) {
-        guard acceptsEvents,
+        guard self.documentIdentifier == documentIdentifier,
             let webView,
             documentIdentifier.count
                 <= BrowserMediaSessionPageEventDecoder.maximumDocumentIdentifierLength
