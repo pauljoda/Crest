@@ -162,6 +162,7 @@ extension BrowserShortcutCommand {
         case .showArchive: "Show Archive"
         case .showDownloads: "Show Downloads"
         case .showWebInspector: "Show Web Inspector"
+        case .toggleDeveloperToolbar: "Show or Hide Developer Toolbar"
         case .splitWithNextTab: "Split With Next Tab"
         case .focusNextSplitCard: "Focus Next Split Card"
         case .focusPreviousSplitCard: "Focus Previous Split Card"
@@ -228,6 +229,8 @@ extension BrowserShortcutCommand {
         case .actualSize: "reset zoom zero"
         case .showWebInspector:
             "developer tools inspect element webkit safari"
+        case .toggleDeveloperToolbar:
+            "developer toolbar viewport preview responsive custom size"
         case .splitWithNextTab: "split view cards side by side columns"
         case .focusNextSplitCard, .focusPreviousSplitCard:
             "split view cards focus cycle left right arrow"

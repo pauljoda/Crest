@@ -111,7 +111,11 @@ final class BrowserShortcutTests: XCTestCase {
         )
         XCTAssertEqual(
             store.commands(matching: "developer"),
-            [.showWebInspector]
+            [.showWebInspector, .toggleDeveloperToolbar]
+        )
+        XCTAssertEqual(
+            store.shortcut(for: .toggleDeveloperToolbar),
+            shortcut("i", [.command, .shift])
         )
     }
 
@@ -221,6 +225,7 @@ final class BrowserShortcutTests: XCTestCase {
                 "moveSplitCardLeft=special:leftArrow:9",
                 "moveSplitCardRight=special:rightArrow:9",
                 "toggleExtensionSidePanel=unassigned",
+                "toggleDeveloperToolbar=character:i:9",
             ]
         )
     }

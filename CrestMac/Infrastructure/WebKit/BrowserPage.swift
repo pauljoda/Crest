@@ -181,8 +181,22 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    // Session-only presentation state belongs to the live page, including in splits.
+    private var developerToolbarVisibilityOverride: Bool?
+    var developerViewport: BrowserDeveloperViewport? {
+        didSet { webView.pageZoom = renderedPageZoom }
+    }
+
+    var renderedPageZoom: CGFloat { developerViewport == nil ? pageZoom : 1 }
+
     var isDeveloperModeEnabled: Bool {
-        BrowserDeveloperModePolicy.isAutomatic(for: displayURL)
+        developerToolbarVisibilityOverride
+            ?? (developerViewport != nil || BrowserDeveloperModePolicy.isAutomatic(for: displayURL))
+    }
+
+    func setDeveloperToolbarVisible(_ visible: Bool) {
+        developerToolbarVisibilityOverride = visible
+        if !visible { developerViewport = nil }
     }
 
     var canReturnFromNavigationFailure: Bool {
@@ -1076,16 +1090,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @discardableResult
     func zoomIn() -> Bool {
-        setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
+        guard developerViewport == nil else { return false }
+        return setTemporaryPageZoom(BrowserPageZoomPolicy.increased(from: pageZoom))
     }
 
     @discardableResult
     func zoomOut() -> Bool {
-        setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
+        guard developerViewport == nil else { return false }
+        return setTemporaryPageZoom(BrowserPageZoomPolicy.decreased(from: pageZoom))
     }
 
     @discardableResult
     func resetZoom() -> Bool {
+        guard developerViewport == nil else { return false }
         hasTemporaryPageZoomOverride = false
         return setPageZoom(defaultPageZoom)
     }
@@ -1529,7 +1546,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             return false
         }
         pageZoom = zoom
-        webView.pageZoom = zoom
+        webView.pageZoom = renderedPageZoom
         return true
     }
 

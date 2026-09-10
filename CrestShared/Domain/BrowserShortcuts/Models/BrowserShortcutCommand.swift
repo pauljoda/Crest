@@ -73,6 +73,7 @@ enum BrowserShortcutCommand:
     case moveSplitCardLeft
     case moveSplitCardRight
     case toggleExtensionSidePanel
+    case toggleDeveloperToolbar
 
     var id: Self { self }
 

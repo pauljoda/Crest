@@ -15,6 +15,8 @@ struct BrowserDeveloperToolbar: View {
 
     var body: some View {
         HStack(spacing: BrowserDeveloperToolbarMetrics.itemSpacing) {
+            BrowserDeveloperViewportMenu(page: page)
+            BrowserDeveloperToolbarDivider()
             BrowserDeveloperSiteSettingsControl(
                 page: page,
                 permissionCenter: permissionCenter,

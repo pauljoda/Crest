@@ -287,21 +287,21 @@ struct BrowserCommands: Commands {
                 action: actions.zoomIn
             )
             .keyboardShortcut(shortcut(.zoomIn))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!commandPages.hasActivePage || commandPages.activePage?.developerViewport != nil)
             Button(
                 "Zoom Out",
                 systemImage: BrowserShortcutCommand.zoomOut.paletteSymbol,
                 action: actions.zoomOut
             )
             .keyboardShortcut(shortcut(.zoomOut))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!commandPages.hasActivePage || commandPages.activePage?.developerViewport != nil)
             Button(
                 "Actual Size",
                 systemImage: BrowserShortcutCommand.actualSize.paletteSymbol,
                 action: actions.resetZoom
             )
             .keyboardShortcut(shortcut(.actualSize))
-            .disabled(!commandPages.hasActivePage)
+            .disabled(!commandPages.hasActivePage || commandPages.activePage?.developerViewport != nil)
             Divider()
             Button(
                 "Copy Page Link",
@@ -341,6 +341,9 @@ struct BrowserCommands: Commands {
         }
 
         CommandMenu("Develop") {
+            developerToolbarToggle
+                .keyboardShortcut(shortcut(.toggleDeveloperToolbar))
+            Divider()
             Button(
                 "Show Web Inspector",
                 systemImage: BrowserShortcutCommand.showWebInspector.paletteSymbol,
@@ -361,6 +364,7 @@ struct BrowserCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
+            developerToolbarToggle
             Button(
                 "Toggle Sidebar",
                 systemImage: BrowserShortcutCommand.toggleSidebar.paletteSymbol,
@@ -402,6 +406,17 @@ struct BrowserCommands: Commands {
             )
             .keyboardShortcut(shortcut(.showDownloads))
         }
+    }
+
+    private var developerToolbarToggle: some View {
+        Toggle(
+            "Show Developer Toolbar",
+            isOn: Binding(
+                get: { commandPages.activePage?.isDeveloperModeEnabled == true },
+                set: { commandPages.activePage?.setDeveloperToolbarVisible($0) }
+            )
+        )
+        .disabled(!commandPages.hasActivePage)
     }
 
     private var actions: BrowserCommandActions {

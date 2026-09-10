@@ -9,6 +9,8 @@ struct BrowserDeveloperAddressField: View {
             .textFieldStyle(.plain)
             .font(.system(.callout, design: .monospaced).weight(.medium))
             .lineLimit(1)
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .layoutPriority(-1)
             .onSubmit(navigate)
             .accessibilityLabel("Developer URL")
             .accessibilityIdentifier("developer-url-field")

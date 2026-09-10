@@ -21,13 +21,23 @@ struct BrowserWebContentView: View {
 
             BrowserWebPageDebuggerBanner(page: page, pages: pages)
 
-            BrowserWebPageSurface(
-                page: page,
-                browser: browser,
-                pagePresentation: pagePresentation,
-                isPageActive: pages.activePage === page,
-                focusRestorationGate: focusRestorationGate
-            )
+            GeometryReader { geometry in
+                let layout = BrowserDeveloperViewportLayout(
+                    viewport: page.developerViewport,
+                    available: geometry.size
+                )
+                BrowserWebPageSurface(
+                    page: page,
+                    browser: browser,
+                    pagePresentation: pagePresentation,
+                    isPageActive: pages.activePage === page,
+                    focusRestorationGate: focusRestorationGate
+                )
+                .frame(width: layout.contentSize.width, height: layout.contentSize.height)
+                .scaleEffect(layout.scale)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipped()
+            }
         }
         .onChange(of: page.developerCaptureFeedbackRevision) { _, revision in
             dismissDeveloperFeedback(after: revision)

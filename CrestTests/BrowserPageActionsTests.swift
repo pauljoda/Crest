@@ -3,6 +3,17 @@ import XCTest
 @testable import Crest
 
 final class BrowserPageZoomPolicyTests: XCTestCase {
+    func testCustomViewportAcceptsWholeCSSDimensionsWithinTheRenderingLimit() {
+        XCTAssertEqual(
+            BrowserDeveloperViewport.customSize(width: " 1024 ", height: "768"),
+            .custom(width: 1024, height: 768)
+        )
+        for invalid in ["", "0", "-1", "390.5", "8193", "999999999999999999999"] {
+            XCTAssertNil(BrowserDeveloperViewport.customSize(width: invalid, height: "844"))
+            XCTAssertNil(BrowserDeveloperViewport.customSize(width: "390", height: invalid))
+        }
+    }
+
     func testDeveloperModeAutomaticallyRecognizesLocalPagesAndHostnames() {
         let localURLs = [
             "http://localhost:3000/dashboard",
@@ -276,6 +287,37 @@ final class BrowserDefaultPageZoomStoreTests: XCTestCase {
 
 @MainActor
 final class BrowserPageActionsTests: XCTestCase {
+    func testDeveloperPreviewBelongsToTheLivePageAndHidingToolbarRestoresNormalMode() throws {
+        let first = BrowserTab(title: "Preview", url: nil, placement: .current)
+        let second = BrowserTab(title: "Other", url: nil, placement: .current)
+        let space = makeSpace(tabs: [first, second], selectedTabID: first.id)
+        let pool = BrowserPagePool()
+        pool.select(tab: first, space: space)
+        let page = try XCTUnwrap(pool.activePage)
+        let webView = page.webView
+        page.zoomIn()
+        let normalZoom = page.pageZoom
+        page.setDeveloperToolbarVisible(true)
+        page.developerViewport = .phone
+        XCTAssertEqual(webView.pageZoom, 1)
+        XCTAssertFalse(page.zoomIn())
+        XCTAssertFalse(page.zoomOut())
+        XCTAssertFalse(page.resetZoom())
+        page.prepareForNavigation(to: URL(string: "https://example.com"))
+        pool.select(tab: second, space: space)
+        XCTAssertNil(pool.activePage?.developerViewport)
+        pool.select(tab: first, space: space)
+        XCTAssertTrue(pool.activePage === page)
+        XCTAssertTrue(page.webView === webView)
+        XCTAssertEqual(page.developerViewport, .phone)
+        XCTAssertTrue(page.isDeveloperModeEnabled)
+        page.setDeveloperToolbarVisible(false)
+        XCTAssertNil(page.developerViewport)
+        XCTAssertFalse(page.isDeveloperModeEnabled)
+        XCTAssertEqual(page.pageZoom, normalZoom)
+        XCTAssertEqual(webView.pageZoom, normalZoom)
+    }
+
     func testPagePoolRoutesZoomOnlyToTheActivePage() {
         let first = BrowserTab(title: "First", url: URL(string: "https://first.example"), placement: .current)
         let second = BrowserTab(title: "Second", url: URL(string: "https://second.example"), placement: .current)

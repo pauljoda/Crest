@@ -74,6 +74,7 @@ struct BrowserCommandActions {
         .showArchive,
         .showDownloads,
         .showWebInspector,
+        .toggleDeveloperToolbar,
     ]
 
     func paletteRegistry(
@@ -135,6 +136,10 @@ struct BrowserCommandActions {
         case .showArchive: presentArchive()
         case .showDownloads: presentDownloads()
         case .showWebInspector: pages.showWebInspector()
+        case .toggleDeveloperToolbar:
+            if let page = pages.activePage {
+                page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)
+            }
         case .selectTab1, .selectTab2, .selectTab3, .selectTab4, .selectTab5,
             .selectTab6, .selectTab7, .selectTab8, .selectTab9:
             selectTab(at: numberedIndex(of: command, in: BrowserShortcutCommand.tabSelection))

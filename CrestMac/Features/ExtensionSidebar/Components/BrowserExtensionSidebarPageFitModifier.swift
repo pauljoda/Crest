@@ -26,7 +26,8 @@ struct BrowserExtensionSidebarPageFitModifier: ViewModifier {
             }
             .task(
                 id: Request(
-                    page: page.map(ObjectIdentifier.init), enabled: isEnabled, width: width,
+                    page: page.map(ObjectIdentifier.init),
+                    enabled: isEnabled && page?.developerViewport == nil, width: width,
                     zoom: page?.pageZoom ?? 1, navigation: page?.completedNavigationCount ?? 0)
             ) {
                 if fittedPage !== page {
@@ -34,7 +35,7 @@ struct BrowserExtensionSidebarPageFitModifier: ViewModifier {
                     fittedPage = page
                 }
                 guard let page else { return }
-                if isEnabled {
+                if isEnabled && page.developerViewport == nil {
                     await page.fitViewport(width: width, owner: owner)
                 } else {
                     page.releaseViewportFit(owner: owner)
