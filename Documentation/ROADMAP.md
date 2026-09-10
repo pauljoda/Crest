@@ -62,7 +62,7 @@ the live status for each issue.
 #### Completed
 
 - [x] [Restore pinned and saved tabs to their root URL predictably](https://github.com/pauljoda/Crest/issues/41) — [`ce2661bd`](https://github.com/pauljoda/Crest/commit/ce2661bd41bbef282d7a4644c6cf07e83ee70530)
-- [x] [Select and act on multiple tabs and folders](https://github.com/pauljoda/Crest/issues/42)
+- [x] [Select and act on multiple tabs and folders](https://github.com/pauljoda/Crest/issues/42) — [`6d3df743`](https://github.com/pauljoda/Crest/commit/6d3df743f0472266b0dde11d0b297b124c7bce4c)
 - [x] [Make new-link focus preferences consistent](https://github.com/pauljoda/Crest/issues/48) — [`143a9f0e`](https://github.com/pauljoda/Crest/commit/143a9f0ef4dfc35f2e4f774ba756f0952f799d87)
 - [x] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62) — [`5e6f4ca0`](https://github.com/pauljoda/Crest/commit/5e6f4ca04c373444d31ec886ecf98f8583f521f9)
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
@@ -94,10 +94,10 @@ the live status for each issue.
 - [x] [Support Space-scoped extension sidebars and shared tab folders](https://github.com/pauljoda/Crest/issues/95) — [`ec590e43`](https://github.com/pauljoda/Crest/commit/ec590e436ae072ff733730e9b0403eadbd626939)
 - [x] [Restore webpage editor focus after returning to a Space](https://github.com/pauljoda/Crest/issues/96) — [`7de193d6`](https://github.com/pauljoda/Crest/commit/7de193d62711775b661ba9d937f28c0c1f9c1312)
 - [x] [Avoid invalid-key feedback for webpage controls](https://github.com/pauljoda/Crest/issues/97) — [`10d124d7`](https://github.com/pauljoda/Crest/commit/10d124d781689b1abf579fa0e5cf0bd4f863a6de)
-- [x] [Preview device viewport sizes from the developer toolbar](https://github.com/pauljoda/Crest/issues/98)
+- [x] [Preview device viewport sizes from the developer toolbar](https://github.com/pauljoda/Crest/issues/98) — [`2080462c`](https://github.com/pauljoda/Crest/commit/2080462cf030f96d1e59f8adb6bd6d9295752575)
 - [x] [bug: Sidebar auto-collapses after closing context menu even when cursor is hovering](https://github.com/pauljoda/Crest/issues/99) — [`b6bf9595`](https://github.com/pauljoda/Crest/commit/b6bf95956815bf6eebfc0141809eb813db12856b)
 - [x] [bug: Moving a Tab to another Space triggers Command Bar](https://github.com/pauljoda/Crest/issues/100)
-- [x] [feature: Right click tab > copy link](https://github.com/pauljoda/Crest/issues/101)
+- [x] [feature: Right click tab > copy link](https://github.com/pauljoda/Crest/issues/101) — [`9d598d5a`](https://github.com/pauljoda/Crest/commit/9d598d5adf8b0f2afee18df3fb49479d11a61260)
 - [x] [Keep the spacebar available in mobile Start Page search](https://github.com/pauljoda/Crest/issues/102)
 - [x] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103)
 - [x] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104) — [`c9a88d54`](https://github.com/pauljoda/Crest/commit/c9a88d5429564925c0045df97b992f434ab22cc8)
