@@ -19,11 +19,12 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
     var isEnabled = true
 
     @State private var liftSessionToken: BrowserDragSessionToken?
+    @State private var rejectedGesture = false
 
     private var state: BrowserSidebarReorderState { reorder.state }
     private var ownsLift: Bool {
         guard let liftSessionToken else { return false }
-        return state.sessionToken == liftSessionToken && state.isLifted(item.id)
+        return state.sessionToken == liftSessionToken
     }
 
     func body(content: Content) -> some View {
@@ -45,6 +46,13 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
     /// only the gesture that arms the lift differs.
     private var applyLift: (BrowserSidebarReorderLiftPhase) -> Void {
         { phase in
+            if rejectedGesture {
+                if case .released = phase {
+                    rejectedGesture = false
+                    state.suppressActivation()
+                }
+                return
+            }
             // A retained source can receive a callback before SwiftUI has
             // rendered a Space/profile/lock change. Recheck live authorization.
             let continuingLift = ownsLift
@@ -60,7 +68,47 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 if continuingLift {
                     state.update(pointer: location)
                 } else if !state.hasLiftInFlight {
-                    state.begin(item: item, section: section, at: startLocation)
+                    let firstID: BrowserSelectionItemID? =
+                        switch item {
+                        case .tab(let tab): .tab(tab.tabID)
+                        case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
+                        case .folder(let folder): .folder(folder.folderID)
+                        }
+                    var request = firstID.flatMap { BrowserSidebarSelection.request(for: $0, browser: reorder.browser) }
+                    if let captured = request, let space = reorder.browser.selectedSpace {
+                        request = reorder.browser.tabMultiSelection.prepareForDrag(captured, in: space)
+                        if let id = firstID?.tabID, request?.ids.contains(id) != true {
+                            rejectedGesture = true
+                            return
+                        }
+                    }
+                    var lifted = item.selecting(request)
+                    var liftedSection = section
+                    if let request, !lifted.selectionRowIDs.contains(item.id),
+                        let space = reorder.browser.selectedSpace,
+                        let root = request.rootItems.compactMap(\.folderID).first(where: { root in
+                            let subtree = space.folderTree.descendants(of: root).union([root])
+                            if let folder = firstID?.folderID { return subtree.contains(folder) }
+                            return space.tabs.contains {
+                                $0.id == firstID?.tabID && $0.folderID.map(subtree.contains) == true
+                            }
+                        }), let folder = space.folders.first(where: { $0.id == root })
+                    {
+                        lifted = .folder(
+                            BrowserFolderDragItem(
+                                folderID: root, spaceID: space.id,
+                                profileID: space.profile.id, selection: request))
+                        liftedSection = folder.reorderSection
+                    }
+                    state.batchValidation = {
+                        [weak browser = reorder.browser, weak access = reorder.spaceAccess] target, request in
+                        guard let browser, let access else {
+                            return String(localized: "The Space is no longer available.")
+                        }
+                        return BrowserSidebarReorderCommit(browser: browser, spaceAccess: access).batchReason(
+                            target, request: request)
+                    }
+                    state.begin(item: lifted, section: liftedSection, at: startLocation)
                     liftSessionToken = state.sessionToken
                     state.update(pointer: location)
                 }

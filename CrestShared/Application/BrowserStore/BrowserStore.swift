@@ -6,6 +6,12 @@ import Observation
 final class BrowserStore {
     var session: BrowserSession {
         didSet {
+            if oldValue.selectedSpaceID != session.selectedSpaceID
+                || oldValue.selectedSpace?.profile.id != session.selectedSpace?.profile.id
+                || oldValue.selectedSpace?.accessPolicy != session.selectedSpace?.accessPolicy
+            {
+                tabMultiSelection.clear()
+            }
             if let activation = pendingMovedTabActivation,
                 session.selectedSpaceID != activation.spaceID
                     || session.selectedTab?.id != activation.tabID
@@ -23,6 +29,7 @@ final class BrowserStore {
     let tabDragState = BrowserTabDragState()
     let folderDragState = BrowserFolderDragState()
     let sidebarReorderState = BrowserSidebarReorderState()
+    let tabMultiSelection = BrowserTabMultiSelection()
     let family: BrowserStoreFamily
     @ObservationIgnored let persistence: any BrowserSessionPersisting
     @ObservationIgnored let credentialVault: any CredentialVault

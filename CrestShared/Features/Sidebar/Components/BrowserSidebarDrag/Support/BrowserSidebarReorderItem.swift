@@ -16,6 +16,55 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
         }
     }
 
+    var selection: BrowserTabBatchRequest? {
+        switch self {
+        case .tab(let item): item.selection
+        case .splitGroup(let item): item.selection
+        case .folder(let item): item.selection
+        }
+    }
+
+    func selecting(_ request: BrowserTabBatchRequest?) -> Self {
+        switch self {
+        case .tab(var item):
+            item.selection = request
+            return .tab(item)
+        case .splitGroup(var item):
+            item.selection = request
+            return .splitGroup(item)
+        case .folder(var item):
+            item.selection = request
+            return .folder(item)
+        }
+    }
+
+    var selectionRowIDs: Set<BrowserSidebarReorderItemID> {
+        guard let selection else { return [id] }
+        let members = Dictionary(uniqueKeysWithValues: selection.members.map { ($0.id, $0) })
+        return Set(
+            selection.rootItems.map {
+                switch $0 {
+                case .folder(let id): return .folder(id)
+                case .tab(let id):
+                    if let member = members[id], let group = member.splitGroupID, member.placement != .pinned {
+                        return .splitGroup(group)
+                    }
+                    return .tab(id)
+                }
+            })
+    }
+
+    var selectionHiddenRowIDs: Set<BrowserSidebarReorderItemID> {
+        guard let selection else { return [id] }
+        return selectionRowIDs.union(selection.folderIDs.map(Self.folderRowID))
+            .union(
+                selection.members.map { member in
+                    member.splitGroupID.map(BrowserSidebarReorderItemID.splitGroup) ?? .tab(member.id)
+                })
+    }
+
+    private static func folderRowID(_ id: FolderID) -> BrowserSidebarReorderItemID { .folder(id) }
+
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         switch self {
         case .tab(let item): item.spaceAssignment

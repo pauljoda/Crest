@@ -13,10 +13,11 @@ struct BrowserPinnedTabReorderLayout: Equatable {
 
     let ids: [BrowserSidebarReorderItemID]
     var liftedID: BrowserSidebarReorderItemID?
+    var liftedIDs: Set<BrowserSidebarReorderItemID> = []
     var insertionIndex: Int?
 
     var slots: [Slot] {
-        var result = ids.filter { $0 != liftedID }.map(Slot.tab)
+        var result = ids.filter { $0 != liftedID && !liftedIDs.contains($0) }.map(Slot.tab)
         if let insertionIndex {
             result.insert(.gap, at: min(max(0, insertionIndex), result.count))
         }

@@ -143,6 +143,11 @@ enum BrowserSidebarReorderPolicy {
         item: BrowserSidebarReorderItem,
         in zone: BrowserSidebarReorderZone
     ) -> Bool {
+        if let selection = item.selection {
+            if case .section(let section) = zone.target { return accepts(item: item, in: section) }
+            if case .currentTab(let id) = zone.target { return !selection.ids.contains(id) }
+            return true
+        }
         switch zone.target {
         case .section(let section):
             return accepts(item: item, in: section)
@@ -241,7 +246,11 @@ enum BrowserSidebarReorderPolicy {
         item: BrowserSidebarReorderItem,
         in section: BrowserSidebarReorderSection
     ) -> Bool {
-        switch (item, section) {
+        if let selection = item.selection {
+            if case .tabs = section { return true }
+            return selection.hasFolders
+        }
+        return switch (item, section) {
         case (.tab, .tabs): true
         case (.splitGroup, .tabs(let placement, _)):
             BrowserSplitGroupPolicy.allowsMembership(placement: placement)

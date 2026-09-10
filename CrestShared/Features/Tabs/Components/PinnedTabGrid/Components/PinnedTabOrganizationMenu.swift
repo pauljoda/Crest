@@ -31,7 +31,9 @@ struct PinnedTabOrganizationMenu: View {
 
     private var unloadAction: ((TabID) -> Void)? {
         guard let unload else { return nil }
-        return { _ in unload(assignment) }
+        return { id in
+            unload(BrowserTabRuntimeAssignment(tabID: id, spaceID: assignment.spaceID, profileID: assignment.profileID))
+        }
     }
 
     private var pullNewIconAction: (() -> Void)? {

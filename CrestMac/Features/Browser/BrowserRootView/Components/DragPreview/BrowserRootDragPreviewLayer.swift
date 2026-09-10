@@ -81,6 +81,15 @@ struct BrowserRootDragPreviewLayer: View {
         for item: BrowserSidebarReorderItem,
         in space: BrowserSpace
     ) -> BrowserSidebarLiftPreviewSubject? {
+        if item.selection != nil, let lift = model.browser.sidebarReorderState.floatingLift {
+            let rows = BrowserSidebarSelectionPreviewRow.resolve(lift.previewRows, in: space) { folderID in
+                model.browser.sidebarReorderState.folderPreviewRows(
+                    for: .folder(
+                        BrowserFolderDragItem(
+                            folderID: folderID, spaceID: space.id, profileID: space.profile.id)))
+            }
+            return rows.isEmpty ? nil : .selection(rows)
+        }
         switch item {
         case .tab(let tab):
             return space.tabs.first { $0.id == tab.tabID }

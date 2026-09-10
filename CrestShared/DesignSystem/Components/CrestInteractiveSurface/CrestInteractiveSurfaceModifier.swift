@@ -10,6 +10,7 @@ enum CrestInteractiveSurfaceMetrics {
 
 struct CrestInteractiveSurfaceModifier: ViewModifier {
     let isSelected: Bool
+    var selectionEmphasis = false
     let isHovering: Bool
     let cornerRadius: CGFloat
     let isPressed: Bool
@@ -29,7 +30,10 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
         let isEmphasized = isSelected || isPressed
 
         content
-            .background(fill, in: shape)
+            .background {
+                shape.fill(fill)
+                    .overlay { if selectionEmphasis { shape.fill(CrestColor.hover) } }
+            }
             .overlay {
                 shape
                     .strokeBorder(
@@ -48,6 +52,7 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
                     : 0
             )
             .animation(accessibleSurfaceAnimation, value: isHovering)
+            .animation(accessibleSurfaceAnimation, value: selectionEmphasis)
             .animation(accessibleSurfaceAnimation, value: isEmphasized)
     }
 
@@ -118,6 +123,7 @@ extension View {
         isSelected: Bool,
         isHovering: Bool,
         cornerRadius: CGFloat = CrestRadius.compact,
+        selectionEmphasis: Bool = false,
         isPressed: Bool = false,
         showsRestingSurface: Bool = false,
         selectedBorderColor: Color = CrestColor.selectedBorder,
@@ -127,6 +133,7 @@ extension View {
         modifier(
             CrestInteractiveSurfaceModifier(
                 isSelected: isSelected,
+                selectionEmphasis: selectionEmphasis,
                 isHovering: isHovering,
                 cornerRadius: cornerRadius,
                 isPressed: isPressed,

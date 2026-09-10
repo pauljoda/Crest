@@ -5,6 +5,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
     let siteTheme: BrowserTabIconAccent?
     let isSelected: Bool
     let isHovering: Bool
+    var isMultiSelected = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var palette: BrowserFaviconPalette?
@@ -15,6 +16,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
                 isSelected: isSelected,
                 isHovering: isHovering,
                 cornerRadius: CrestRadius.compact,
+                selectionEmphasis: isMultiSelected,
                 showsRestingSurface: true,
                 selectedBorderColor: accent.color,
                 selectedBorderWidth: CrestLayout.pinnedAccentBorderWidth

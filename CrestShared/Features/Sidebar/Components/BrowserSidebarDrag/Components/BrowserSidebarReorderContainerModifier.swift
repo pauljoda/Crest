@@ -44,7 +44,8 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                 // Keep the gesture's content alive at its lifted dimensions while
                 // its layout slot closes. Removing the view would cancel the drag.
                 .frame(
-                    height: isLifted && state.layout.isActive && !section.usesGridOrdering ? state.layout.height : nil,
+                    height: isLifted && state.layout.isActive && !section.usesGridOrdering
+                        ? state.frame(ofRow: item.id)?.height : nil,
                     alignment: .top
                 )
                 .onGeometryChange(for: BrowserSidebarReorderRow?.self) { proxy in

@@ -38,6 +38,7 @@ struct BrowserSidebarFloatingLift: Equatable, Sendable {
     var pinnedTileSize = BrowserTabDragPreviewLayout.pinnedSize
     var sidebarBounds: CGRect?
     var landing: BrowserSidebarReorderLanding?
+    var constraintMessage: String?
 
     /// The Space profile the preview resolves favicons against.
     var profileID: UUID {

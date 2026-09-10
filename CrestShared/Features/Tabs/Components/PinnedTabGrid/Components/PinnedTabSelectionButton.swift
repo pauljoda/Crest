@@ -8,6 +8,7 @@ struct PinnedTabSelectionButton: View {
     let isLoaded: Bool
     let siteTheme: BrowserTabIconAccent?
     let select: () -> Void
+    var isMultiSelected = false
 
     @State private var isHovering = false
 
@@ -24,7 +25,8 @@ struct PinnedTabSelectionButton: View {
                         faviconData: tab.displayFaviconData,
                         siteTheme: siteTheme,
                         isSelected: isSelected,
-                        isHovering: isHovering
+                        isHovering: isHovering || isMultiSelected,
+                        isMultiSelected: isMultiSelected
                     )
                 )
         }

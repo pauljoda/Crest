@@ -77,7 +77,8 @@ struct PinnedTabGridContent: View {
                             return
                         }
                         select(runtimeAssignment)
-                    }
+                    },
+                    isMultiSelected: browser?.tabMultiSelection.contains(tab.id) == true
                 )
                 .browserPinnedTabPromotionDestination(
                     id: BrowserTabPromotionID.value(for: tab.id),
@@ -92,6 +93,26 @@ struct PinnedTabGridContent: View {
                 .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: loaded))
                 .accessibilityAddTraits(tab.id == selectedTabID ? .isSelected : [])
                 .help(tab.displayTitle)
+                .modifier(
+                    BrowserTabSelectionAccessibility(
+                        tabID: tab.id, browser: browser,
+                        isActive: tab.id == selectedTabID, isLoaded: loaded)
+                )
+                .modifier(
+                    BrowserTabSelectionTarget(
+                        tabID: tab.id, browser: browser, assignment: assignment,
+                        isEnabled: isCurrentAndUnlocked(runtimeAssignment))
+                )
+                .phaseAnimator(
+                    [0.0, -4.0, 4.0, -3.0, 3.0, 0.0],
+                    trigger: browser?.tabMultiSelection.pinnedRejectionGeneration ?? 0
+                ) { content, offset in
+                    content.offset(
+                        x: !reduceMotion && browser?.tabMultiSelection.rejectedPinnedIDs.contains(tab.id) == true
+                            ? offset : 0)
+                } animation: { _ in
+                    .linear(duration: 0.055)
+                }
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         guard

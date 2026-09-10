@@ -106,6 +106,8 @@ struct BrowserFolderGroup: View {
                 textColorMode: configuration.displayBranding?.textColorMode ?? .automatic,
                 leadingInset: CrestSpacing.small + CGFloat(node.depth) * BrowserFolderLayout.nestingIndent,
                 hasVisibleContents: isExpanded || configuration.keptCollapsedItem(for: collapsedTabVisibility) != nil,
+                isSelected: browser.tabMultiSelection.contains(.folder(folder.id))
+                    && !BrowserSidebarSelection.isCoveredBySelectedFolder(.folder(folder.id), in: browser),
                 folderID: folder.id, reorder: browser.sidebarReorderState)
         )
         .modifier(BrowserFolderReorderContainer(configuration: configuration))

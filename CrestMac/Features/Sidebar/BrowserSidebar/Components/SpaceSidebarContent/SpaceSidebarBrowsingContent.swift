@@ -89,6 +89,32 @@ struct SpaceSidebarBrowsingContent: View {
             )
         }
         .onHover { isHoveringTabList = $0 }
+        .task(id: browser.sidebarReorderState.selectionRowsRevision) {
+            // Let replacement rows finish registering before pruning a collapsed
+            // subtree or a removed tab from the window's selection.
+            do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+            guard browser.session.selectedSpaceID == space.id,
+                !browser.sidebarReorderState.hasLiftInFlight
+            else { return }
+            browser.tabMultiSelection.reconcile(units: BrowserSidebarSelection.itemUnits(in: browser))
+        }
+        .background {
+            BrowserTabSelectionMonitor(
+                browser: browser, spaceAccess: spaceAccess,
+                assignment: BrowserSpaceRuntimeAssignment(space: space), activate: activate,
+                ownsFocus: browser.tabMultiSelection.isEngaged && browser.tabMultiSelection.ownsKeyboardFocus)
+        }
+        .alert(
+            "Tab Selection",
+            isPresented: Binding(
+                get: { browser.tabMultiSelection.message != nil },
+                set: { if !$0 { browser.tabMultiSelection.message = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { browser.tabMultiSelection.message = nil }
+        } message: {
+            Text(browser.tabMultiSelection.message ?? "")
+        }
     }
 
     private var pageAccess: BrowserSidebarPageAccess {
@@ -107,6 +133,7 @@ struct SpaceSidebarBrowsingContent: View {
     /// Selection and presentation in the one order that works: the page a
     /// shell brings on screen is whichever one the session now points at.
     private func activate(_ tabID: TabID) {
+        browser.tabMultiSelection.click(tabID, units: BrowserSidebarSelection.itemUnits(in: browser))
         BrowserTabActivationPolicy.activate(
             tabID,
             selectTab: browser.selectTab,

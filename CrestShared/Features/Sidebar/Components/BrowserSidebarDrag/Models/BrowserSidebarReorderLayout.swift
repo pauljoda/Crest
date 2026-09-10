@@ -25,8 +25,10 @@ struct BrowserSidebarReorderLayout: Equatable {
     var sourceIsGrid = false
     var gridFrame: CGRect?
     var gridHeightDelta: CGFloat = 0
+    var removedFrames: [CGRect] = []
+    var batchHeight: CGFloat?
 
-    var gapHeight: CGFloat { sourceIsGrid ? CrestLayout.sidebarRowHeight : height }
+    var gapHeight: CGFloat { batchHeight ?? (sourceIsGrid ? CrestLayout.sidebarRowHeight : height) }
 
     var isActive: Bool { sourceID != nil }
     var height: CGFloat { sourceFrame.height }
@@ -86,7 +88,8 @@ struct BrowserSidebarReorderLayout: Equatable {
     }
 
     private func removingSource(at y: CGFloat) -> CGFloat {
-        let sourceRemoval = sourceIsGrid ? 0 : min(height, max(0, y - sourceFrame.minY))
+        let intervals = removedFrames.isEmpty ? (sourceIsGrid ? [] : [sourceFrame]) : removedFrames
+        let sourceRemoval = intervals.reduce(CGFloat.zero) { $0 + min($1.height, max(0, y - $1.minY)) }
         let gridShift = gridFrame.map { y >= $0.maxY - 0.5 ? gridHeightDelta : 0 } ?? 0
         return y - sourceRemoval + gridShift
     }

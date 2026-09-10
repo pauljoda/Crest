@@ -36,7 +36,11 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             .contentShape(.rect)
             .crestInteractiveSurface(
                 isSelected: configuration.isSelected,
-                isHovering: interaction.isHovering.wrappedValue,
+                isHovering: interaction.isHovering.wrappedValue
+                    || (configuration.tab.splitGroupID == nil
+                        && configuration.browser.tabMultiSelection.contains(configuration.tab.id)
+                        && !BrowserSidebarSelection.isCoveredBySelectedFolder(
+                            .tab(configuration.tab.id), in: configuration.browser)),
                 cornerRadius: CrestLayout.sidebarControlCornerRadius
             )
             .browserTabPromotionDestination(
@@ -54,6 +58,13 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 )
             )
             .padding(.horizontal, configuration.surfaceHorizontalInset)
+            .modifier(
+                BrowserTabSelectionTarget(
+                    tabID: configuration.tab.id, browser: configuration.browser,
+                    assignment: BrowserSpaceRuntimeAssignment(
+                        spaceID: configuration.spaceID, profileID: configuration.profileID),
+                    isEnabled: configuration.isAvailableForDisplay && !interaction.isRenaming)
+            )
             .contentShape(.rect)
             .onHover { interaction.isHovering.wrappedValue = $0 }
             .modifier(

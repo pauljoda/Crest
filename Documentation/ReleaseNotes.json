@@ -841,6 +841,10 @@
     "2026-09-10-developer-viewport-preview": {
       "category": "new",
       "message": "Preview any website at phone, desktop, or custom sizes from the Mac developer toolbar, available with Command-Shift-I"
+    },
+    "2026-09-10-sidebar-multiple-selection": {
+      "category": "new",
+      "message": "Select tabs, split views, and folders together on Mac to move and organize them in one step"
     }
   }
 }

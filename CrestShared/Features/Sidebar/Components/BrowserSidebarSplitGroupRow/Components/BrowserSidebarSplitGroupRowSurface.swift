@@ -15,6 +15,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
             .background {
                 containerShape
                     .fill(groupTint)
+                    .overlay { if isMultiSelected { containerShape.fill(CrestColor.hover) } }
                     .overlay {
                         if let tint = configuration.displayMetadata.tint {
                             containerShape.fill(
@@ -26,9 +27,16 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                     }
             }
             .animation(surfaceAnimation, value: configuration.isPresented)
+            .animation(surfaceAnimation, value: isMultiSelected)
             .padding(.horizontal, configuration.rowHorizontalInset)
             .padding(.vertical, configuration.metrics.rowVerticalInset)
             .contentShape(.rect)
+            .modifier(
+                BrowserTabSelectionTarget(
+                    tabID: configuration.members.first?.id, browser: configuration.browser,
+                    assignment: configuration.assignment,
+                    isEnabled: configuration.isAvailableForDisplay && !interaction.isRenaming)
+            )
             // Registers the whole group as one reorder row and arms its lift.
             // The registration is also what makes a tab dragged past the group
             // step over the run as a single slot instead of landing between two
@@ -83,6 +91,13 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
     /// hover tint while the split is presented. Resting, hovered, selected —
     /// 0.055, 0.08, 0.13 — reads as one ordered hierarchy rather than two
     /// competing ones.
+    private var isMultiSelected: Bool {
+        configuration.members.contains {
+            configuration.browser.tabMultiSelection.contains($0.id)
+                && !BrowserSidebarSelection.isCoveredBySelectedFolder(.tab($0.id), in: configuration.browser)
+        }
+    }
+
     private var groupTint: Color {
         configuration.isPresented ? CrestColor.hover : CrestColor.chromeSurface
     }

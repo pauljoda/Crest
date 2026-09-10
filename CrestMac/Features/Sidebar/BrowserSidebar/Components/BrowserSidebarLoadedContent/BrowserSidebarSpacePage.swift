@@ -89,6 +89,9 @@ struct BrowserSidebarSpacePage: View {
             SidebarSpacePresentation(space: space, isUnlocked: !isLocked)
         )
         .environment(\.sidebarSpaceIsSelected, isSelected)
+        .onChange(of: isLocked) { _, locked in
+            if locked, isSelected { browser.tabMultiSelection.clear() }
+        }
         .environment(
             \.colorScheme,
             BrowserSpaceForegroundPolicy.colorScheme(for: space.branding)

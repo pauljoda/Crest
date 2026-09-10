@@ -13,6 +13,7 @@ struct BrowserFolderHighlightSurface: ViewModifier {
     var showsFill = true
     var showsBorders = true
     var leadingInset: CGFloat = CrestSpacing.small
+    var isSelected = false
     var emphasisOpacity: Double = 0
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -59,6 +60,14 @@ struct BrowserFolderHighlightSurface: ViewModifier {
                                     cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous
                                 )
                                 .fill(.primary.opacity(emphasisOpacity))
+                            }
+                        }
+                        .overlay {
+                            if isSelected {
+                                RoundedRectangle(
+                                    cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous
+                                )
+                                .fill(CrestColor.hover)
                             }
                         }
                         .padding(.leading, leadingInset)

@@ -31,6 +31,7 @@ struct BrowserFolderDragItem: Codable, Equatable, Transferable, Sendable {
     let profileID: UUID
     /// Snapshot of the whole subtree; detects membership changes during a lift.
     var memberTabIDs: [TabID]? = nil
+    var selection: BrowserTabBatchRequest? = nil
 
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         BrowserSpaceRuntimeAssignment(
@@ -58,6 +59,7 @@ struct BrowserSplitGroupDragItem: Codable, Equatable, Transferable, Sendable {
     let spaceID: SpaceID
     let profileID: UUID
     let memberTabIDs: [TabID]
+    var selection: BrowserTabBatchRequest? = nil
 
     var spaceAssignment: BrowserSpaceRuntimeAssignment {
         BrowserSpaceRuntimeAssignment(
@@ -77,6 +79,7 @@ struct BrowserTabDragItem: Codable, Equatable, Transferable, Sendable {
     let tabID: TabID
     let spaceID: SpaceID
     let profileID: UUID
+    var selection: BrowserTabBatchRequest? = nil
 
     var runtimeAssignment: BrowserTabRuntimeAssignment {
         BrowserTabRuntimeAssignment(

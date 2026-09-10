@@ -30,6 +30,7 @@ struct BrowserSidebarLiftFloatingPreview: View {
     var loadedTabIDs: Set<TabID> = []
     @State private var landedFrame: CGRect?
     @State private var previewOpacity = 1.0
+    @State private var stackHasGathered = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -46,6 +47,14 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 )
                 .offset(x: displayPointer.x, y: displayPointer.y)
                 .opacity(previewOpacity)
+            if let message = lift.constraintMessage {
+                Label(message, systemImage: "nosign")
+                    .font(.caption)
+                    .padding(8)
+                    .frame(maxWidth: 280, alignment: .leading)
+                    .background(.regularMaterial, in: .rect(cornerRadius: 8))
+                    .offset(x: displayPointer.x + 12, y: displayPointer.y + lift.sourceSize.height + 12)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // Only the shape settles. Animating the position as well would make the
@@ -54,6 +63,13 @@ struct BrowserSidebarLiftFloatingPreview: View {
         // certain nothing in the preview claims a hit test of its own.
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+        .onAppear {
+            withAnimation(
+                BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion)
+            ) {
+                stackHasGathered = true
+            }
+        }
         .onChange(of: lift.landing, initial: true) { _, landing in
             guard let landing else {
                 landedFrame = nil
@@ -95,10 +111,12 @@ struct BrowserSidebarLiftFloatingPreview: View {
     private var rowWidth: CGFloat { landedFrame?.width ?? lift.rowWidth }
     private var pinnedSize: CGSize { landedFrame?.size ?? lift.pinnedTileSize }
     private var displayAnchor: CGSize {
-        CGSize(width: lift.anchorFraction.x * artSize.width, height: lift.anchorFraction.y * artSize.height)
+        if case .selection = subject { return lift.grabOffset }
+        return CGSize(width: lift.anchorFraction.x * artSize.width, height: lift.anchorFraction.y * artSize.height)
     }
 
     private var scale: CGSize {
+        if case .selection = subject { return CGSize(width: 1, height: 1) }
         if let landedFrame {
             return CGSize(
                 width: landedFrame.width / max(artSize.width, 1), height: landedFrame.height / max(artSize.height, 1))
@@ -110,6 +128,12 @@ struct BrowserSidebarLiftFloatingPreview: View {
 
     private var displayPointer: CGPoint {
         guard let landedFrame else { return lift.presentationPointer }
+        if case .selection(let rows) = subject {
+            let leadOffset = compactOffset(for: lift.item.id, in: rows)
+            return CGPoint(
+                x: landedFrame.minX + lift.grabOffset.width,
+                y: landedFrame.minY + leadOffset + lift.grabOffset.height)
+        }
         return CGPoint(
             x: landedFrame.minX + lift.anchorFraction.x * landedFrame.width,
             y: landedFrame.minY + lift.anchorFraction.y * landedFrame.height)
@@ -134,6 +158,8 @@ struct BrowserSidebarLiftFloatingPreview: View {
                 folder: folder, rowWidth: rowWidth,
                 sourceHeight: lift.sourceSize.height, rows: rows, profileID: lift.profileID,
                 loadedTabIDs: loadedTabIDs)
+        case .selection(let rows):
+            selectionStack(rows)
         case .splitGroup(let members):
             BrowserSplitGroupDragPreview(
                 members: members,
@@ -142,4 +168,52 @@ struct BrowserSidebarLiftFloatingPreview: View {
             )
         }
     }
+
+    private func stackHeight(_ row: BrowserSidebarSelectionPreviewRow) -> CGFloat {
+        if row.isSplit || row.folder != nil { return row.frame.height }
+        return lift.shape == .pinnedTile ? pinnedSize.height : BrowserTabDragPreviewLayout.rowSize.height
+    }
+
+    private func compactOffset(for id: BrowserSidebarReorderItemID, in rows: [BrowserSidebarSelectionPreviewRow])
+        -> CGFloat
+    {
+        rows.prefix { $0.id != id }.reduce(0) { $0 + stackHeight($1) }
+    }
+
+    private func selectionStack(_ rows: [BrowserSidebarSelectionPreviewRow]) -> some View {
+        let lead = rows.first { $0.id == lift.item.id } ?? rows[0]
+        let leadOffset = compactOffset(for: lead.id, in: rows)
+        return ZStack(alignment: .topLeading) {
+            ForEach(rows) { row in
+                selectionRow(row)
+                    .offset(
+                        x: stackHasGathered || reduceMotion ? 0 : row.frame.minX - lead.frame.minX,
+                        y: stackHasGathered || reduceMotion
+                            ? compactOffset(for: row.id, in: rows) - leadOffset
+                            : row.frame.minY - lead.frame.minY)
+            }
+        }
+        .frame(width: rowWidth, height: lead.frame.height, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func selectionRow(_ row: BrowserSidebarSelectionPreviewRow) -> some View {
+        if let folder = row.folder {
+            BrowserFolderDragPreview(
+                folder: folder, rowWidth: rowWidth, sourceHeight: row.frame.height,
+                rows: row.folderRows, profileID: lift.profileID, loadedTabIDs: loadedTabIDs)
+        } else if row.isSplit {
+            BrowserSplitGroupDragPreview(
+                members: row.tabs, profileID: lift.profileID, rowWidth: rowWidth,
+                sourceHeight: row.frame.height, loadedTabIDs: loadedTabIDs)
+        } else if let tab = row.tabs.first {
+            BrowserTabDragPreview(
+                tab: tab, profileID: lift.profileID,
+                targetShape: lift.shape == .pinnedTile ? .pinnedTile : .row,
+                progress: lift.shape == .pinnedTile ? 1 : 0,
+                rowWidth: rowWidth, pinnedSize: pinnedSize,
+                isSelected: tab.id == selectedTabID, isLoaded: loadedTabIDs.contains(tab.id))
+        }
+    }
+
 }

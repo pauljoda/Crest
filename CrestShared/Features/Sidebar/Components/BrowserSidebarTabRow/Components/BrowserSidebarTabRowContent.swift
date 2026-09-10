@@ -54,6 +54,10 @@ struct BrowserSidebarTabRowContent: View {
                 ),
                 select: interaction.activate
             )
+            .modifier(
+                BrowserTabSelectionAccessibility(
+                    tabID: configuration.tab.id, browser: configuration.browser,
+                    isActive: configuration.isSelected, isLoaded: configuration.isLoaded))
         }
     }
 }

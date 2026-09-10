@@ -46,7 +46,12 @@ struct BrowserFolderHeaderControl: View {
                 }
                 .browserSavedFolderHeaderLayout(configuration: configuration)
             } else {
-                Button(action: interaction.toggleExpansion) {
+                Button {
+                    guard !configuration.browser.sidebarReorderState.suppressesActivation else { return }
+                    configuration.browser.tabMultiSelection.click(
+                        .folder(folder.id), units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
+                    interaction.toggleExpansion()
+                } label: {
                     HStack(spacing: 7) {
                         BrowserFolderIcon(
                             folder: folder,

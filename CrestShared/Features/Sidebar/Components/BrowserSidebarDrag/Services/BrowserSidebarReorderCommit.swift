@@ -11,6 +11,14 @@ struct BrowserSidebarReorderCommit {
         _ target: BrowserSidebarReorderTarget,
         for item: BrowserSidebarReorderItem
     ) -> Bool {
+        if let request = item.selection {
+            if let reason = batchDragRestriction(target, request: request) {
+                browser.tabMultiSelection.message = reason
+                return false
+            }
+            guard let action = batchAction(target, request: request) else { return false }
+            return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).perform(request, action: action)
+        }
         switch item {
         case .tab(let tabItem):
             return applyTab(target, for: tabItem)
@@ -18,6 +26,62 @@ struct BrowserSidebarReorderCommit {
             return applyFolder(target, for: folderItem)
         case .splitGroup(let groupItem):
             return applySplitGroup(target, for: groupItem)
+        }
+    }
+
+    func batchReason(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest) -> String? {
+        if let reason = batchDragRestriction(target, request: request) { return reason }
+        guard let action = batchAction(target, request: request) else {
+            return String(localized: "These tabs cannot be placed here.")
+        }
+        return BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess).reason(request, action: action)
+    }
+
+    private func batchDragRestriction(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest) -> String?
+    {
+        let pinsOnly =
+            !request.hasFolders && !request.members.isEmpty && request.members.allSatisfy { $0.placement == .pinned }
+        if !pinsOnly, request.members.contains(where: { $0.placement == .pinned }) {
+            return String(localized: "Pinned tabs cannot join a drag with saved or current tabs. Start the drag again.")
+        }
+        switch target.kind {
+        case .insert(.tabs(.pinned, _), _, _) where !pinsOnly:
+            return String(localized: "Drag one tab at a time to pin it.")
+        case .space where pinsOnly, .splitInsert where pinsOnly:
+            return String(
+                localized: "Move selected pinned tabs within their pinned area or into saved or current tabs.")
+        default: return nil
+        }
+    }
+
+    private func batchAction(_ target: BrowserSidebarReorderTarget, request: BrowserTabBatchRequest)
+        -> BrowserTabBatchAction?
+    {
+        switch target.kind {
+        case .space(let destination): return .moveToSpace(destination)
+        case .intoFolder(let id):
+            guard let folder = browser.space(matching: request.assignment)?.folders.first(where: { $0.id == id }) else {
+                return nil
+            }
+            return .file(folder.location.tabPlacement, folder: id)
+        case .insert(let section, let before, _):
+            if case .folders(let parent) = section {
+                let location =
+                    parent.flatMap { id in
+                        browser.space(matching: request.assignment)?.folders.first { $0.id == id }?.location
+                    } ?? .saved
+                return .file(location.tabPlacement, folder: parent, beforeFolder: before?.folderID)
+            }
+            guard case .tabs(let placement, let folder) = section else { return nil }
+            return .file(
+                placement, folder: folder, before: anchorTabID(before, in: request.assignment),
+                beforeFolder: before?.folderID)
+        case .splitInsert(let assignment, let index):
+            guard assignment == request.assignment,
+                let selected = browser.space(matching: assignment)?.selectedTabID
+            else { return nil }
+            return .split(joining: selected, at: index)
+        case .createCurrentFolder(let tabID): return .newFolderAround(tabID)
         }
     }
 

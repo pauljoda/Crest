@@ -11,7 +11,18 @@ struct BrowserFolderOrganizationMenu: View {
     let deleteFolder: () -> Void
 
     var body: some View {
-        BrowserFolderOrganizationMenuContent(menu: self)
-            .crestMenuActionLabelStyle()
+        Group {
+            if let request = BrowserSidebarSelection.request(for: .folder(folder.id), browser: browser) {
+                BrowserTabBatchMenu(request: request, browser: browser, spaceAccess: spaceAccess)
+            } else {
+                BrowserFolderOrganizationMenuContent(menu: self)
+                Divider()
+                Button("Add to Selection") {
+                    browser.tabMultiSelection.click(
+                        .folder(folder.id), units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
+                }
+            }
+        }
+        .crestMenuActionLabelStyle()
     }
 }

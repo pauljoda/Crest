@@ -25,7 +25,16 @@ struct BrowserFolderHeader: View {
                 ? "Collapses this folder"
                 : "Expands this folder"
         )
+        .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         .padding(.horizontal, CrestSpacing.small)
+        .modifier(
+            BrowserTabSelectionTarget(
+                tabID: nil, browser: configuration.browser,
+                assignment: configuration.folderRuntimeAssignment.spaceAssignment,
+                isEnabled: configuration.isAvailableForDisplay
+                    && interaction.editingFolderRequest.wrappedValue != configuration.folderRuntimeAssignment,
+                folderID: folder.id)
+        )
         .browserFolderDraggable(
             folder: folder,
             profileID: configuration.profileID,

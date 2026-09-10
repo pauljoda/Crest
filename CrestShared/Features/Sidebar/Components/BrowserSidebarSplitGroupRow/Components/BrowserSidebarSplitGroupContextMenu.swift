@@ -12,50 +12,58 @@ struct BrowserSidebarSplitGroupContextMenu: View {
 
     var body: some View {
         Group {
-            Button("Rename Split View…", systemImage: "pencil") {
-                interaction.beginRenaming()
-            }
-            .disabled(!configuration.isAvailableForDisplay)
-
-            Button("Change Icon…", systemImage: "face.smiling") {
-                interaction.beginChangingIcon()
-            }
-            .disabled(!configuration.isAvailableForDisplay)
-
-            Button("Change Color…", systemImage: "paintpalette") {
-                interaction.beginChangingTint()
-            }
-            .disabled(!configuration.isAvailableForDisplay)
-
-            Divider()
-
-            Button("Separate All Tabs", systemImage: "rectangle.split.2x1.slash") {
-                guard configuration.isCurrentAndUnlocked,
-                    let first = configuration.members.first
-                else { return }
-                configuration.browser.dissolveSplit(
-                    containing: first.id,
-                    matching: configuration.assignment
-                )
-            }
-            .disabled(!configuration.isAvailableForDisplay)
-
-            if configuration.canClose {
-                Divider()
-
-                Button("Close Split", systemImage: "xmark", role: .destructive) {
-                    guard configuration.isCurrentAndUnlocked else { return }
-                    // Closing the second-to-last member dissolves the group through
-                    // the domain's survivor rule, which is exactly what should happen
-                    // — the final close then takes an ordinary tab.
-                    for member in configuration.members {
-                        configuration.browser.closeTab(
-                            member.id,
-                            matching: configuration.assignment
-                        )
-                    }
+            if let first = configuration.members.first,
+                let request = BrowserSidebarSelection.request(for: first.id, browser: configuration.browser)
+            {
+                BrowserTabBatchMenu(
+                    request: request, browser: configuration.browser,
+                    spaceAccess: configuration.spaceAccess, unload: configuration.unload)
+            } else {
+                Button("Rename Split View…", systemImage: "pencil") {
+                    interaction.beginRenaming()
                 }
                 .disabled(!configuration.isAvailableForDisplay)
+
+                Button("Change Icon…", systemImage: "face.smiling") {
+                    interaction.beginChangingIcon()
+                }
+                .disabled(!configuration.isAvailableForDisplay)
+
+                Button("Change Color…", systemImage: "paintpalette") {
+                    interaction.beginChangingTint()
+                }
+                .disabled(!configuration.isAvailableForDisplay)
+
+                Divider()
+
+                Button("Separate All Tabs", systemImage: "rectangle.split.2x1.slash") {
+                    guard configuration.isCurrentAndUnlocked,
+                        let first = configuration.members.first
+                    else { return }
+                    configuration.browser.dissolveSplit(
+                        containing: first.id,
+                        matching: configuration.assignment
+                    )
+                }
+                .disabled(!configuration.isAvailableForDisplay)
+
+                if configuration.canClose {
+                    Divider()
+
+                    Button("Close Split", systemImage: "xmark", role: .destructive) {
+                        guard configuration.isCurrentAndUnlocked else { return }
+                        // Closing the second-to-last member dissolves the group through
+                        // the domain's survivor rule, which is exactly what should happen
+                        // — the final close then takes an ordinary tab.
+                        for member in configuration.members {
+                            configuration.browser.closeTab(
+                                member.id,
+                                matching: configuration.assignment
+                            )
+                        }
+                    }
+                    .disabled(!configuration.isAvailableForDisplay)
+                }
             }
         }
         .crestMenuActionLabelStyle()

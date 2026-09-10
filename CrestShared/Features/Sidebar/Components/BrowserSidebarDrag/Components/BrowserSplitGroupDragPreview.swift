@@ -12,6 +12,8 @@ struct BrowserSplitGroupDragPreview: View {
     let members: [BrowserTab]
     let profileID: UUID
     var rowWidth = BrowserTabDragPreviewLayout.rowSize.width
+    var sourceHeight: CGFloat?
+    var loadedTabIDs: Set<TabID>?
 
     private static let containerPadding: CGFloat = CrestSpacing.extraSmall
     private static let lineSpacing: CGFloat = CrestSpacing.extraExtraSmall
@@ -67,7 +69,15 @@ struct BrowserSplitGroupDragPreview: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, CrestSpacing.small)
-        .frame(height: Self.memberLineHeight)
+        .frame(
+            height: sourceHeight.map {
+                max(
+                    Self.memberLineHeight,
+                    ($0 - Self.containerPadding * 2 - Self.headerHeight - Self.lineSpacing * CGFloat(members.count))
+                        / CGFloat(max(members.count, 1)))
+            } ?? Self.memberLineHeight
+        )
+        .browserTabResidency(isLoaded: loadedTabIDs?.contains(member.id) ?? true)
         .allowsHitTesting(false)
     }
 }

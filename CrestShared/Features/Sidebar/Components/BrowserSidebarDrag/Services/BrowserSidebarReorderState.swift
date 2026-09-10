@@ -28,6 +28,9 @@ final class BrowserSidebarReorderState {
     private(set) var lift: Lift?
     private(set) var pointer: CGPoint = .zero
     private(set) var resolvedTarget: BrowserSidebarReorderTarget?
+    private(set) var batchConstraintMessage: String?
+    private(set) var selectionRowsRevision = 0
+    @ObservationIgnored var batchValidation: ((BrowserSidebarReorderTarget, BrowserTabBatchRequest) -> String?)?
     private(set) var layout = BrowserSidebarReorderLayout()
     private var lastPreviewShape: BrowserTabDragPreviewShape?
     private(set) var landingPreview: BrowserSidebarFloatingLift?
@@ -37,7 +40,7 @@ final class BrowserSidebarReorderState {
     @ObservationIgnored private var landingSection: BrowserSidebarReorderSection?
 
     func isRevealing(_ id: BrowserSidebarReorderItemID) -> Bool {
-        landingPreview?.item.id == id && landingPreview?.landing?.isRevealing == true
+        landingPreview?.item.selectionRowIDs.contains(id) == true && landingPreview?.landing?.isRevealing == true
     }
 
     func revealLanding(_ id: UUID) {
@@ -46,7 +49,7 @@ final class BrowserSidebarReorderState {
     }
 
     func hidesSource(_ id: BrowserSidebarReorderItemID) -> Bool {
-        isLifted(id) || landingPreview?.item.id == id
+        isLifted(id) || landingPreview?.item.selectionRowIDs.contains(id) == true
     }
 
     func finishLanding(_ id: UUID) {
@@ -227,7 +230,7 @@ final class BrowserSidebarReorderState {
     }
 
     func isLifted(_ id: BrowserSidebarReorderItemID) -> Bool {
-        lift?.item.id == id
+        lift?.item.selectionRowIDs.contains(id) == true
     }
 
     // MARK: - Geometry registration
@@ -244,6 +247,7 @@ final class BrowserSidebarReorderState {
         // A lazy row first revealed by scrolling during the lift has no resting
         // registration to freeze, though, so accept that first measurement.
         guard !isDragging || rows[row.id] == nil else { return }
+        if rows[row.id] == nil { selectionRowsRevision &+= 1 }
         rows[row.id] = RegisteredRow(
             owner: owner,
             row: row,
@@ -261,6 +265,7 @@ final class BrowserSidebarReorderState {
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
         guard rows[id]?.owner == owner else { return }
         rows[id] = nil
+        selectionRowsRevision &+= 1
     }
 
     /// Every row currently on show in one Space's sidebar, in no particular
@@ -278,6 +283,16 @@ final class BrowserSidebarReorderState {
         in space: BrowserSpaceRuntimeAssignment
     ) -> [BrowserSidebarReorderRow] {
         rows.values.map(\.row).filter { $0.space == space }
+    }
+
+    /// Includes offscreen rows in expanded lists for range selection. Hit tests
+    /// separately clip to the scroll viewport; folders themselves are not tabs.
+    func selectionRows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderRow] {
+        registeredRows(in: space).sorted {
+            if $0.usesGridOrdering != $1.usesGridOrdering { return $0.usesGridOrdering }
+            if abs($0.frame.minY - $1.frame.minY) > 2 { return $0.frame.minY < $1.frame.minY }
+            return $0.frame.minX < $1.frame.minX
+        }
     }
 
     /// Zones are keyed by the registering view, not by target: the mobile space
@@ -398,7 +413,10 @@ final class BrowserSidebarReorderState {
             return BrowserPinnedTabReorderLayout(ids: ids)
         }
         var result = BrowserPinnedTabReorderLayout(ids: ids, liftedID: lift.item.id)
-        if case .insert(let section, _, let index) = resolvedTarget?.kind, section.usesGridOrdering {
+        result.liftedIDs = lift.item.selectionRowIDs
+        if case .insert(let section, _, let index) = resolvedTarget?.kind, section.usesGridOrdering,
+            batchConstraintMessage == nil
+        {
             result.insertionIndex = index
         }
         return result
@@ -496,7 +514,9 @@ final class BrowserSidebarReorderState {
                 width: pointer.x - (frame?.minX ?? pointer.x),
                 height: pointer.y - (frame?.minY ?? pointer.y)
             ),
-            previewRows: folderPreviewRows(for: item)
+            previewRows: item.selection == nil
+                ? folderPreviewRows(for: item)
+                : selectionRows(in: item.spaceAssignment).filter { item.selectionRowIDs.contains($0.id) }
         )
         stagedLift = nil
         cancelStagedLiftExpiration()
@@ -509,7 +529,15 @@ final class BrowserSidebarReorderState {
         if let frame {
             layout = BrowserSidebarReorderLayout(
                 sourceID: item.id, sourceFrame: frame,
-                hiddenIDs: Set((lift?.previewRows.map(\.id) ?? []) + [item.id]), sourceIsGrid: section.usesGridOrdering)
+                hiddenIDs: Set(lift?.previewRows.map(\.id) ?? []).union(item.selectionHiddenRowIDs),
+                sourceIsGrid: section.usesGridOrdering)
+            if item.selection != nil {
+                let selectedRows = lift?.previewRows ?? []
+                layout.removedFrames = selectedRows.filter { !$0.usesGridOrdering }.map(\.frame)
+                layout.batchHeight = selectedRows.reduce(CGFloat.zero) {
+                    $0 + ($1.usesGridOrdering ? BrowserTabDragPreviewLayout.rowSize.height : $1.frame.height)
+                }
+            }
             let ordered = BrowserSidebarReorderPolicy.rows(in: section, from: registeredRows(in: item.spaceAssignment))
             let candidates = ordered.filter { !layout.hiddenIDs.contains($0.id) }
             let index = ordered.prefix { $0.id != item.id }.filter { !layout.hiddenIDs.contains($0.id) }.count
@@ -521,6 +549,7 @@ final class BrowserSidebarReorderState {
         } else {
             resolveTarget()
         }
+        validateBatchTarget()
     }
 
     /// The row registry already describes precisely what an expanded folder
@@ -559,7 +588,7 @@ final class BrowserSidebarReorderState {
         item: BrowserSidebarReorderItem,
         target: BrowserSidebarReorderTarget
     )? {
-        if retainingPreview, var preview = liftPreview, let frame = landingFrame {
+        if retainingPreview, batchConstraintMessage == nil, var preview = liftPreview, let frame = landingFrame {
             preview.landing = BrowserSidebarReorderLanding(frame: frame)
             landingPreview = preview
             landingSessionToken = sessionToken
@@ -586,8 +615,10 @@ final class BrowserSidebarReorderState {
             layout = BrowserSidebarReorderLayout()
             lastPreviewShape = nil
             hasEnteredSplitContent = false
+            batchConstraintMessage = nil
+            batchValidation = nil
         }
-        guard let lift, let target = resolvedTarget else { return nil }
+        guard batchConstraintMessage == nil, let lift, let target = resolvedTarget else { return nil }
         return (lift.item, target)
     }
 
@@ -607,6 +638,8 @@ final class BrowserSidebarReorderState {
         layout = BrowserSidebarReorderLayout()
         lastPreviewShape = nil
         hasEnteredSplitContent = false
+        batchConstraintMessage = nil
+        batchValidation = nil
     }
 
     /// Gives up a lift because something else took the touch that was carrying
@@ -622,7 +655,7 @@ final class BrowserSidebarReorderState {
         cancel()
     }
 
-    private func suppressActivation() {
+    func suppressActivation() {
         isSuppressingActivation = true
         activationSuppressionTask?.cancel()
         activationSuppressionTask = Task { @MainActor [weak self] in
@@ -748,6 +781,9 @@ final class BrowserSidebarReorderState {
     /// back to a row.
     var liftTargetShape: BrowserTabDragPreviewShape? {
         guard let lift else { return nil }
+        if lift.item.selection != nil, batchConstraintMessage != nil {
+            return lift.section.usesGridOrdering ? .pinnedTile : .row
+        }
         switch lift.item {
         case .tab:
             break
@@ -818,7 +854,8 @@ final class BrowserSidebarReorderState {
             sourceSize: lift.rowSize,
             previewRows: lift.previewRows,
             pinnedTileSize: pinnedSize,
-            sidebarBounds: pinned?.frame
+            sidebarBounds: pinned?.frame,
+            constraintMessage: batchConstraintMessage
         )
     }
 
@@ -893,6 +930,7 @@ final class BrowserSidebarReorderState {
     private func resolveTarget() {
         let previousTarget = resolvedTarget
         defer {
+            validateBatchTarget()
             if resolvedTarget != previousTarget { refreshLayout() }
             if resolvedTarget != nil { lastPreviewShape = liftTargetShape }
         }
@@ -958,26 +996,27 @@ final class BrowserSidebarReorderState {
             )
             // This Space's own rows, so a capped run is judged by what is in
             // it rather than by what every sidebar on screen adds up to.
-            let existingCount = ordered.filter { $0.id != lift.item.id }.count
+            let existingCount = ordered.filter { !lift.item.selectionRowIDs.contains($0.id) }.count
             guard
-                BrowserSidebarReorderPolicy.hasRoom(
-                    for: lift.item,
-                    in: section,
-                    existingCount: existingCount,
-                    isAlreadyInSection: lift.section == section
-                )
+                lift.item.selection != nil
+                    || BrowserSidebarReorderPolicy.hasRoom(
+                        for: lift.item,
+                        in: section,
+                        existingCount: existingCount,
+                        isAlreadyInSection: lift.section == section
+                    )
             else {
                 resolvedTarget = nil
                 return
             }
             let index = BrowserSidebarReorderPolicy.insertionIndex(
                 at: point,
-                orderedRows: ordered,
+                orderedRows: ordered.filter { !lift.item.selectionRowIDs.contains($0.id) },
                 excluding: lift.item.id
             )
             let anchor = BrowserSidebarReorderPolicy.insertionAnchor(
                 index: index,
-                orderedRows: ordered,
+                orderedRows: ordered.filter { !lift.item.selectionRowIDs.contains($0.id) },
                 excluding: lift.item.id
             )
             resolvedTarget = BrowserSidebarReorderTarget(
@@ -988,6 +1027,14 @@ final class BrowserSidebarReorderState {
             resolvedTarget = splitInsertTarget(assignment, for: lift)
             if resolvedTarget != nil { hasEnteredSplitContent = true }
         }
+    }
+
+    private func validateBatchTarget() {
+        guard let request = lift?.item.selection, let target = resolvedTarget else {
+            batchConstraintMessage = nil
+            return
+        }
+        batchConstraintMessage = batchValidation?(target, request)
     }
 
     /// Tall blocks cross a neighbour with their moving edge. Requiring a
@@ -1034,6 +1081,10 @@ final class BrowserSidebarReorderState {
                 ? max(pinned.emptyHeight, pinned.layout.height) - pinned.frame.height : 0
         }
         next.gap = nil
+        if batchConstraintMessage != nil {
+            if next != layout { layout = next }
+            return
+        }
         if case .insert(let section, let beforeID, _) = resolvedTarget?.kind,
             !section.usesGridOrdering
         {
@@ -1108,6 +1159,16 @@ final class BrowserSidebarReorderState {
         _ assignment: BrowserSpaceRuntimeAssignment,
         for lift: Lift
     ) -> BrowserSidebarReorderTarget? {
+        if lift.item.selection != nil {
+            let cards = splitCards.values.filter { $0.space == assignment && !$0.frame.isEmpty }
+            guard !cards.isEmpty else { return nil }
+            return BrowserSidebarReorderTarget(
+                kind: .splitInsert(
+                    assignment: assignment,
+                    index: BrowserSplitDropPolicy.insertionIndex(
+                        at: pointer,
+                        orderedCardFrames: BrowserSplitDropPolicy.ordered(cards.map(\.frame)))))
+        }
         guard case .tab(let item) = lift.item else { return nil }
         let cards = splitCards.filter {
             $0.value.space == assignment && !$0.value.frame.isEmpty

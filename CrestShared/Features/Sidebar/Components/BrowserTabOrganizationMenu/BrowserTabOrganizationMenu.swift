@@ -13,7 +13,23 @@ struct BrowserTabOrganizationMenu: View {
     var changeIcon: (() -> Void)? = nil
 
     var body: some View {
-        BrowserTabOrganizationMenuContent(menu: self)
-            .crestMenuActionLabelStyle()
+        Group {
+            if let request = BrowserSidebarSelection.request(for: tab.id, browser: browser) {
+                BrowserTabBatchMenu(request: request, browser: browser, spaceAccess: spaceAccess, unload: unload)
+            } else {
+                BrowserTabOrganizationMenuContent(menu: self)
+                #if os(macOS)
+                    Divider()
+                    Button("Add to Selection") {
+                        browser.tabMultiSelection.click(
+                            tab.id, units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
+                    }
+                    Button("Select All Tabs") {
+                        browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser))
+                    }
+                #endif
+            }
+        }
+        .crestMenuActionLabelStyle()
     }
 }
