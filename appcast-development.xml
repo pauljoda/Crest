@@ -6,38 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.89</title>
-            <pubDate>Wed, 09 Sep 2026 12:56:46 +0000</pubDate>
+            <title>0.5.96</title>
+            <pubDate>Thu, 10 Sep 2026 07:18:42 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1079</sparkle:version>
-            <sparkle:shortVersionString>0.5.89</sparkle:shortVersionString>
+            <sparkle:version>1081</sparkle:version>
+            <sparkle:shortVersionString>0.5.96</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Improved
 
-- Smoothly blend extension toolbars and tab spacing when switching Spaces
-- Keep extension package preparation from blocking browser interactions
+- Open tabs when following them into another Space, with a setting to keep browsing in the current Space instead
 
 ### Fixed
 
-- Restore extension popup styling and side panels when cached package files are missing
+- Keep embedded tracker frames from replacing the page with an extension blocking screen
+- Keep the spacebar available when searching from Start Page on iPhone and iPad
+- Keep swiping between Spaces working after changing a folder color on iPhone and iPad
+- Keep URL completions aligned with the cursor and replace them immediately as you type
+- Prevent remaining tabs from briefly jumping upward when closing tabs in the Mac sidebar
+- Keep incidental previews and notification sounds out of Now Playing, and clear playback controls when their media is gone
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/e61c08484ab6932303d6ee07a1370a3b873384a0...093ba706efdad74a87ffe9d178a322aab7ed5e89) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.89-2026-09-09-1079-r79.1/Installer-Crest-0.5.89-development-2026-09-09-093ba70-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/093ba706efdad74a87ffe9d178a322aab7ed5e89...c9a88d5429564925c0045df97b992f434ab22cc8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.96-2026-09-10-1081-r81.1/Installer-Crest-0.5.96-development-2026-09-10-c9a88d5-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.89-2026-09-09-1079-r79.1/Installer-Crest-0.5.89-development-2026-09-09-093ba70-arm64.dmg" length="10769184" type="application/octet-stream" sparkle:edSignature="UX/pa5HdrLOLnqB0285Q9O83KwsYrcRjY1PC5L09N3d3bF8UNrelcUyAS9iyP8ALn5/vHuCJ4tXvK1T2sDZ4DA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.96-2026-09-10-1081-r81.1/Installer-Crest-0.5.96-development-2026-09-10-c9a88d5-arm64.dmg" length="10795295" type="application/octet-stream" sparkle:edSignature="+MCb47QqFroQLOg1W2qbneuKropV4Kofb6JiDuCd4BxFS21wn50/iPkUh7OvjQv8qelcm8vSGmMNi570FJgeCw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: HUVV1MMwMRFWeioDnJOfBm7pZed+KDn7OXLoc8uxV2GN4W5AfBj9RiNdHDB7Q+81P6vqVGKc2faDbgLfRoxRAQ==
-length: 2206
+edSignature: 40PolEjB3bAxrjg9Bwy9SjgxQVoQUudfLagQsXy8soaFX1bU6ZMkfD2dNbfsUmRBEJWxwoHofIrzlJk2NRzzAg==
+length: 2643
 -->
