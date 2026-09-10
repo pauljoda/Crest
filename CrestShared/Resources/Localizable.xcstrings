@@ -3247,7 +3247,7 @@
         }
       }
     },
-    "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview" : {
+    "browser startup default Space transparency sidebar interface page zoom percentage typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview" : {
 
     },
     "Browsing" : {
@@ -7067,6 +7067,9 @@
     "Follow planned and completed public work on GitHub" : {
 
     },
+    "Follow tabs moved to another Space" : {
+
+    },
     "Food & Drink" : {
 
     },
@@ -9273,6 +9276,9 @@
     "Move Left" : {
 
     },
+    "Move page cards with the sidebar when switching Spaces. Turn this off to show the destination page when it is ready, while keeping sidebar animations." : {
+
+    },
     "Move Right" : {
 
     },
@@ -9280,9 +9286,6 @@
 
     },
     "Move Split Card Right" : {
-
-    },
-    "Move page cards with the sidebar when switching Spaces. Turn this off to show the destination page when it is ready, while keeping sidebar animations." : {
 
     },
     "Move the pointer to the leading edge to preview the sidebar" : {
@@ -14160,6 +14163,9 @@
           }
         }
       }
+    },
+    "Switch to the destination Space and open the moved tab. Turn off to keep browsing without following the tab." : {
+
     },
     "Symbol" : {
       "extractionState" : "stale",

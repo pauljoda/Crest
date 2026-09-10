@@ -825,6 +825,10 @@
     "2026-09-09-immediate-url-completion-preview": {
       "category": "fixed",
       "message": "Keep URL completions aligned with the cursor and replace them immediately as you type"
+    },
+    "2026-09-09-sidebar-close-upward-jump": {
+      "category": "fixed",
+      "message": "Prevent remaining tabs from briefly jumping upward when closing tabs in the Mac sidebar"
     }
   }
 }

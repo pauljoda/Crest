@@ -145,6 +145,11 @@ struct BrowserCurrentTabsDropSection: View {
                     hasVisibleFollowingRow: followingTabID != nil,
                     select: select
                 )
+                #if os(macOS)
+                // Resolve collection movement once for the whole row, including
+                // native controls and SwiftUI drawing layers.
+                .geometryGroup()
+                #endif
                 .id(tab.id)
             case .splitGroup(let groupID, let members):
                 let followingTabID = members.last.flatMap {
@@ -168,6 +173,9 @@ struct BrowserCurrentTabsDropSection: View {
                     hasVisibleFollowingRow: followingTabID != nil,
                     select: select
                 )
+                #if os(macOS)
+                .geometryGroup()
+                #endif
             }
         }
     }
