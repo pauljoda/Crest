@@ -55,14 +55,15 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43)
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
+- [ ] [Investigate scrolling, back-navigation and browser performance](https://github.com/pauljoda/Crest/issues/110)
 
 #### Completed
 
 - [x] [Restore pinned and saved tabs to their root URL predictably](https://github.com/pauljoda/Crest/issues/41) — [`ce2661bd`](https://github.com/pauljoda/Crest/commit/ce2661bd41bbef282d7a4644c6cf07e83ee70530)
 - [x] [Select and act on multiple tabs and folders](https://github.com/pauljoda/Crest/issues/42) — [`6d3df743`](https://github.com/pauljoda/Crest/commit/6d3df743f0472266b0dde11d0b297b124c7bce4c)
+- [x] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43) — [`299ea325`](https://github.com/pauljoda/Crest/commit/299ea3256ce115cec2f56ca51f775912ba18172c)
 - [x] [Make new-link focus preferences consistent](https://github.com/pauljoda/Crest/issues/48) — [`143a9f0e`](https://github.com/pauljoda/Crest/commit/143a9f0ef4dfc35f2e4f774ba756f0952f799d87)
 - [x] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62) — [`5e6f4ca0`](https://github.com/pauljoda/Crest/commit/5e6f4ca04c373444d31ec886ecf98f8583f521f9)
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
