@@ -10,15 +10,6 @@ struct BrowserWebContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if page.isDeveloperModeEnabled {
-                BrowserDeveloperToolbar(
-                    page: page,
-                    browser: browser,
-                    pages: pages,
-                    permissionCenter: pages.permissionCenter
-                )
-            }
-
             BrowserWebPageDebuggerBanner(page: page, pages: pages)
 
             GeometryReader { geometry in
@@ -39,6 +30,29 @@ struct BrowserWebContentView: View {
                 .clipped()
             }
         }
+        .modifier(
+            BrowserPageToolbarHost {
+                if pages.activePage === page, isSelectedSpace,
+                    !page.readerModeState.isActive, page.translation.showsToolbar
+                {
+                    BrowserTranslationToolbar(translation: page.translation)
+                }
+                if page.isDeveloperModeEnabled {
+                    BrowserDeveloperToolbar(
+                        page: page, browser: browser, pages: pages,
+                        permissionCenter: pages.permissionCenter
+                    )
+                }
+            }
+        )
+        .modifier(
+            BrowserTranslationHost(
+                translation: page.translation, webView: page.webView,
+                isActive: pages.activePage === page && isSelectedSpace,
+                isLoading: page.isLoading,
+                isReaderActive: page.readerModeState.isActive
+            )
+        )
         .onChange(of: page.developerCaptureFeedbackRevision) { _, revision in
             dismissDeveloperFeedback(after: revision)
         }

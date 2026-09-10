@@ -54,6 +54,7 @@ enum BrowserShortcutDefaultPolicy {
         case .showDownloads: character("j", [.command, .shift])
         case .showWebInspector: character("i", [.command, .option])
         case .toggleDeveloperToolbar: character("i", [.command, .shift])
+        case .toggleTranslationToolbar: character("l", [.command, .shift])
         // Zen ships ⌥⌘U for unsplit-all, and ⌃⌘←/→ is the one arrow pair the
         // catalog leaves free: ⌥⌘←/→ already switches Spaces and ⌥⌘↑/↓ tabs.
         // Splitting and un-splitting a single card stay menu-and-palette only —

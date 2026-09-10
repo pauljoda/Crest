@@ -46,7 +46,9 @@ final class BrowserPagePool:
     /// The focused card: the one tab the URL bar, navigation controls, find,
     /// zoom, sharing, and every lifecycle observer speak for. Split View adds
     /// cards beside it without adding a second focus.
-    private(set) var activeTabID: TabID?
+    private(set) var activeTabID: TabID? {
+        willSet { if activeTabID != newValue { activePage?.translation.suspend() } }
+    }
 
     /// Every card the content area is presenting, in session member order.
     ///

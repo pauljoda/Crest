@@ -90,6 +90,7 @@ struct MobileBrowserDetailView: View {
                         MobileBrowserLivePageView(
                             page: page,
                             viewport: viewport,
+                            isActive: pages.activePage === page,
                             handleInteraction: handleWebContentInteraction
                         )
                     } else {

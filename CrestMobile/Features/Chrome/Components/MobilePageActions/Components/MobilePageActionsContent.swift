@@ -99,6 +99,18 @@ struct MobilePageActionsContent: View {
             Task { await contentBlockingAction.perform() }
         }
 
+        if let page = pages.activePage {
+            Menu("Translate Page", systemImage: "translate") {
+                BrowserTranslationActions(translation: page.translation)
+                    .crestMenuActionLabelStyle()
+                Button("Show Translation Controls", systemImage: "rectangle.topthird.inset.filled") {
+                    page.translation.present()
+                }
+            }
+            .disabled(page.readerModeState.isActive)
+            .task { await page.translation.refreshInstalledLanguages() }
+        }
+
         Button("Find in Page", systemImage: "text.magnifyingglass") {
             pages.presentFind()
         }

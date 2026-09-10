@@ -86,6 +86,7 @@ final class BrowserShortcutTests: XCTestCase {
         XCTAssertTrue(BrowserShortcutCommand.copyPageLink.matches(search: "command shift c"))
         XCTAssertTrue(BrowserShortcutCommand.previousSpace.matches(search: "option left arrow"))
         XCTAssertFalse(BrowserShortcutCommand.newWindow.matches(search: "markdown"))
+        XCTAssertTrue(BrowserShortcutCommand.toggleTranslationToolbar.matches(search: "translation toolbar"))
     }
 
     @MainActor
@@ -226,6 +227,7 @@ final class BrowserShortcutTests: XCTestCase {
                 "moveSplitCardRight=special:rightArrow:9",
                 "toggleExtensionSidePanel=unassigned",
                 "toggleDeveloperToolbar=character:i:9",
+                "toggleTranslationToolbar=character:l:9",
             ]
         )
     }

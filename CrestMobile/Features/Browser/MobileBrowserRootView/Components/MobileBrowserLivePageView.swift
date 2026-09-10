@@ -18,6 +18,7 @@ import SwiftUI
 struct MobileBrowserLivePageView: View {
     let page: MobileBrowserPage
     let viewport: MobileBrowserPageViewport
+    let isActive: Bool
     var handleInteraction: (() -> Void)?
     /// An unfocused card's request to become the focused one. `nil` wherever
     /// the page on screen is already the focused one.
@@ -30,12 +31,8 @@ struct MobileBrowserLivePageView: View {
             handleInteraction: handleInteraction,
             requestFocus: requestFocus
         )
-        .id(page.tabID)
-        .opacity(
-            BrowserPageSurfacePolicy.revealsWebContent(
-                committedNavigationCount: page.committedNavigationCount
-            ) ? 1 : 0
-        )
+        // Keep the document color behind WebKit; docked bars own their native
+        // background independently of the page's theme.
         .background(
             Color(
                 uiColor: BrowserPageSurfacePolicy.revealsWebContent(
@@ -46,6 +43,28 @@ struct MobileBrowserLivePageView: View {
                         ?? .systemBackground
                     : .clear
             )
+        )
+        .modifier(
+            BrowserPageToolbarHost {
+                if !viewport.obscuresSystemSafeAreas, isActive,
+                    !page.readerModeState.isActive, page.translation.showsToolbar
+                {
+                    BrowserTranslationToolbar(translation: page.translation)
+                }
+            }
+        )
+        .modifier(
+            BrowserTranslationHost(
+                translation: page.translation, webView: page.webView,
+                isActive: isActive, isLoading: page.isLoading,
+                isReaderActive: page.readerModeState.isActive
+            )
+        )
+        .id(page.tabID)
+        .opacity(
+            BrowserPageSurfacePolicy.revealsWebContent(
+                committedNavigationCount: page.committedNavigationCount
+            ) ? 1 : 0
         )
         .ignoresSafeArea(
             .container,

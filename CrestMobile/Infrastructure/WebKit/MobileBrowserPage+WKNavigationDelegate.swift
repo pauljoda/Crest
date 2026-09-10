@@ -32,6 +32,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
+        translation.reset()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
         // app-level load path. Retire the old document's session as soon as
@@ -291,6 +292,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        translation.reset()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
         httpAuthenticationSession.authenticationFailed()
         recordWebContentTermination()

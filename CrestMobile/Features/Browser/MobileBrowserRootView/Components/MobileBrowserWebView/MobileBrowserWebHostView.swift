@@ -17,7 +17,10 @@ final class MobileBrowserWebHostView: UIView {
     }
 
     func attach(_ webView: WKWebView) {
-        guard hostedWebView !== webView || webView.superview !== self else {
+        // During an animated replacement SwiftUI can update the outgoing host
+        // after the new host has claimed this same model-owned web view. That
+        // update must not steal it back and detach it when the old host dies.
+        guard hostedWebView !== webView else {
             return
         }
 
@@ -71,7 +74,7 @@ final class MobileBrowserWebHostView: UIView {
     /// `ScrollView` never receives. `MobileBrowserPageViewport` carries the
     /// reasoning.
     private func applyViewportInsets() {
-        guard let hostedWebView else { return }
+        guard let hostedWebView, hostedWebView.superview === self else { return }
         let obscuresSystemSafeAreas = viewport.obscuresSystemSafeAreas
         let safeAreaInsets = viewport.systemSafeAreaInsets
         let bottomChromeHeight = viewport.bottomChromeHeight

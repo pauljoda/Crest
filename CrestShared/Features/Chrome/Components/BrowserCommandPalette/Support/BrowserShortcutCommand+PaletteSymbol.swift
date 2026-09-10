@@ -35,6 +35,7 @@ extension BrowserShortcutCommand {
         case .showDownloads: "arrow.down.circle"
         case .showWebInspector: "hammer"
         case .toggleDeveloperToolbar: "macbook.and.iphone"
+        case .toggleTranslationToolbar: "translate"
         case .splitWithNextTab: "rectangle.split.2x1"
         case .focusNextSplitCard: "rectangle.righthalf.filled"
         case .focusPreviousSplitCard: "rectangle.lefthalf.filled"

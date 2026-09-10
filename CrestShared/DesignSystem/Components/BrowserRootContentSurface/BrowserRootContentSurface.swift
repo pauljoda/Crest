@@ -44,6 +44,9 @@ struct BrowserRootContentSurface<Content: View>: View {
                     Rectangle().fill(.background)
                 }
             }
+            // Clip the assembled surface once. Independently clipped backing
+            // layers otherwise leave a pale fringe along the upper corners.
+            .compositingGroup()
             .clipShape(
                 .rect(
                     cornerRadius: max(0, cornerRadius - seamWidth),

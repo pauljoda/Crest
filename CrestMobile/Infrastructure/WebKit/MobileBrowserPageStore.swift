@@ -44,7 +44,9 @@ final class MobileBrowserPageStore:
     /// The focused card: the one page the toolbar, find bar, navigation
     /// controls, and every lifecycle observer speak for. Split View adds cards
     /// beside it without adding a second focus.
-    private(set) var activePage: MobileBrowserPage?
+    private(set) var activePage: MobileBrowserPage? {
+        willSet { if activePage !== newValue { activePage?.translation.suspend() } }
+    }
 
     /// Every card the content area is presenting, in session member order.
     ///

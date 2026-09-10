@@ -14,6 +14,16 @@ struct BrowserDeveloperToolbar: View {
         BrowserSitePermissionDisclosurePolicy.defaultIsExpanded
 
     var body: some View {
+        BrowserPageToolbarSurface(label: "Developer Toolbar", identifier: "developer-toolbar") {
+            controls
+        } background: {
+            BrowserDeveloperToolbarBackground(isOpaque: reduceTransparency)
+        }
+        .onAppear(perform: synchronizeAddress)
+        .onChange(of: page.displayURL) { _, _ in synchronizeAddress() }
+    }
+
+    private var controls: some View {
         HStack(spacing: BrowserDeveloperToolbarMetrics.itemSpacing) {
             BrowserDeveloperViewportMenu(page: page)
             BrowserDeveloperToolbarDivider()
@@ -40,24 +50,6 @@ struct BrowserDeveloperToolbar: View {
             BrowserDeveloperToolbarDivider()
             BrowserDeveloperInspectorControls(page: page)
         }
-        .padding(.horizontal, BrowserDeveloperToolbarMetrics.horizontalPadding)
-        .frame(height: BrowserDeveloperToolbarMetrics.height)
-        .background {
-            BrowserDeveloperToolbarBackground(isOpaque: reduceTransparency)
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.separator)
-                .frame(height: BrowserDeveloperToolbarMetrics.separatorHeight)
-                .accessibilityHidden(true)
-        }
-        .onAppear(perform: synchronizeAddress)
-        .onChange(of: page.displayURL) { _, _ in
-            synchronizeAddress()
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Developer Toolbar")
-        .accessibilityIdentifier("developer-toolbar")
     }
 
     private func synchronizeAddress() {

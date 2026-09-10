@@ -1995,7 +1995,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
             safeAreaInsets: safeAreaInsets,
             content: MobileBrowserLivePageView(
                 page: singlePage,
-                viewport: viewport
+                viewport: viewport,
+                isActive: true
             )
         )
         let carouselWindow = mountBrowserSurface(
@@ -2004,7 +2005,8 @@ final class MobileBrowserNavigationTests: XCTestCase {
                 LazyHStack(spacing: 0) {
                     MobileBrowserLivePageView(
                         page: cardPage,
-                        viewport: viewport
+                        viewport: viewport,
+                        isActive: true
                     )
                     .containerRelativeFrame(.horizontal)
                 }
@@ -2082,7 +2084,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         )
     }
 
-    func testAStaleMobileHostCannotStopNavigationAfterTheWebViewMoves() {
+    func testAStaleMobileHostCannotReclaimOrMutateTheReplacementHostsWebView() {
         let oldHost = MobileBrowserWebHostView()
         let newHost = MobileBrowserWebHostView()
         let webView = StopRecordingMobileWebView()
@@ -2096,6 +2098,17 @@ final class MobileBrowserNavigationTests: XCTestCase {
             )
         )
         newHost.attach(webView)
+        // SwiftUI may still issue updateUIView to the outgoing host while its
+        // removal transition runs. Exercise that update before dismantling it.
+        oldHost.configureViewport(
+            MobileBrowserPageViewport(
+                obscuresSystemSafeAreas: true,
+                systemSafeAreaInsets: UIEdgeInsets(top: 59, left: 0, bottom: 34, right: 0),
+                bottomChromeHeight: 100
+            )
+        )
+        oldHost.attach(webView)
+        XCTAssertTrue(webView.superview === newHost)
         oldHost.detach(stopsLoading: true)
 
         XCTAssertTrue(webView.superview === newHost)

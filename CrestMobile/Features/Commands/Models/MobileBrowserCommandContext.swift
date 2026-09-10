@@ -20,6 +20,8 @@ struct MobileBrowserCommandContext {
     let layoutDirection: LayoutDirection
     let readerModeActionTitle: LocalizedStringResource
     let canToggleReaderMode: Bool
+    let canToggleTranslationToolbar: Bool
+    let isTranslationToolbarVisible: Bool
     let contentBlockingActionTitle: LocalizedStringResource
 
     let openNewTab: () -> Void
@@ -51,6 +53,7 @@ struct MobileBrowserCommandContext {
     let selectNextSpace: () -> Void
     let selectSpace: (Int) -> Void
     let toggleReaderMode: () -> Void
+    let setTranslationToolbarVisible: (Bool) -> Void
     let toggleContentBlocking: () async -> Void
     let presentFind: () -> Void
     let zoomIn: () -> Void

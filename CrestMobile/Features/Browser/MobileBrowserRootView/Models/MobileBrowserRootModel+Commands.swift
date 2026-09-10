@@ -8,6 +8,7 @@ extension MobileBrowserRootModel {
     func commandContext(
         transientBrowsing: BrowserTransientBrowsingCoordinator,
         layoutDirection: LayoutDirection,
+        usesPageToolbars: Bool,
         togglePrivateBrowsing: @escaping () -> Void,
         openNewTab: @escaping () -> Void,
         openLocation: @escaping () -> Void,
@@ -44,6 +45,9 @@ extension MobileBrowserRootModel {
             layoutDirection: layoutDirection,
             readerModeActionTitle: pageActions?.readerModeActionTitle ?? "Show Reader",
             canToggleReaderMode: pageActions?.readerModeState.canToggle == true,
+            canToggleTranslationToolbar: usesPageToolbars && pageActions?.isAvailable == true
+                && pageActions?.readerModeState.isActive != true,
+            isTranslationToolbarVisible: pageActions?.activePage?.translation.showsToolbar == true,
             contentBlockingActionTitle: MobileContentBlockingActionTitle.resolve(
                 policy: browser.selectedSpace?.browsingPreferences
                     .contentBlockingPolicy
@@ -157,6 +161,10 @@ extension MobileBrowserRootModel {
                 )
             },
             toggleReaderMode: { pageActions?.toggleReaderMode() },
+            setTranslationToolbarVisible: { visible in
+                guard usesPageToolbars, pageActions?.readerModeState.isActive != true else { return }
+                pageActions?.activePage?.translation.setToolbarVisible(visible)
+            },
             toggleContentBlocking: {
                 guard let contentBlockingAction else { return }
                 _ = await contentBlockingAction.perform()

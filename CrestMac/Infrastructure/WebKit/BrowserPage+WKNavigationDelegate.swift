@@ -8,6 +8,7 @@ import os
 
 extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
+        translation.reset()
         linkHover.beginNavigation()
         focusRestoration.invalidate()
         activeNavigation = navigation
@@ -302,6 +303,7 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        translation.reset()
         linkHover.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()

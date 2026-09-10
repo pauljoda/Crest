@@ -50,6 +50,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
+    let translation = BrowserPageTranslation()
     var readerModeState = BrowserReaderModeState.unavailable
     private(set) var isContentBlockingActive = false
     private(set) var isRequestingDesktopSite = false
@@ -491,6 +492,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        translation.reset()
         mediaSessionCoordinator?.prepareForRemoval()
         linkPeekPressCoordinator.cancel()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
@@ -821,6 +823,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         readerModeGeneration &+= 1
         let generation = readerModeGeneration
         let navigationURL = webView.url
+        try await translation.prepareForReaderMode()
+        guard generation == readerModeGeneration, navigationURL == webView.url else {
+            throw BrowserReaderModeError.presentationFailed
+        }
         guard navigationURL != nil else {
             readerModeState = .unavailable
             throw BrowserReaderModeError.articleUnavailable
@@ -1055,6 +1061,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             webView.observe(\.url, options: [.initial, .new]) { [weak self] webView, _ in
                 Task { @MainActor in
                     if let url = webView.url {
+                        self?.translation.documentURLDidChange(from: self?.url, to: url)
                         self?.url = url
                     }
                     self?.credentialState.didChangeTopLevelURL(to: webView.url ?? self?.url)
@@ -1218,6 +1225,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        translation.reset()
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)

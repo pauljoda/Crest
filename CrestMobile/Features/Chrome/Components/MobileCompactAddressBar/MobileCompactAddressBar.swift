@@ -17,18 +17,33 @@ struct MobileCompactAddressBar: View {
     let submit: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         HStack(spacing: 8) {
             if let pageActions, pageActions.isAvailable, !isEditing {
-                MobilePageActionsMenu(
-                    browser: browser,
-                    pages: pageActions,
-                    systemImage: "ellipsis.circle",
-                    downloadsAccess: downloadsAccess,
-                    hideToolbar: hideToolbar,
-                    controlSize: MobileCompactAddressBarLayout.pageActionsControlSize
-                )
+                HStack(spacing: 0) {
+                    MobilePageActionsMenu(
+                        browser: browser,
+                        pages: pageActions,
+                        systemImage: "ellipsis.circle",
+                        downloadsAccess: downloadsAccess,
+                        hideToolbar: hideToolbar,
+                        controlSize: MobileCompactAddressBarLayout.pageActionsControlSize
+                    )
+                    if let page = pageActions.activePage {
+                        BrowserTranslationMenu(translation: page.translation)
+                            .frame(width: 44)
+                            .scaleEffect(offersTranslation || reduceMotion ? 1 : 0.4)
+                            .offset(x: translationOffset, y: offersTranslation || reduceMotion ? 0 : 3)
+                            .opacity(offersTranslation ? 1 : 0)
+                            .padding(.leading, 8)
+                            .frame(width: offersTranslation ? 52 : 0, alignment: .leading)
+                            .allowsHitTesting(offersTranslation)
+                            .accessibilityHidden(!offersTranslation)
+                            .zIndex(1)
+                    }
+                }
             } else {
                 Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
                     .font(.system(size: 13, weight: .semibold))
@@ -67,6 +82,12 @@ struct MobileCompactAddressBar: View {
                 .buttonStyle(.plain)
             }
         }
+        .animation(
+            reduceMotion
+                ? .easeOut(duration: 0.18)
+                : offersTranslation ? .spring(duration: 0.42, bounce: 0.08) : .easeOut(duration: 0.16),
+            value: offersTranslation
+        )
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, minHeight: 48)
         .contentShape(.capsule)
@@ -90,6 +111,18 @@ struct MobileCompactAddressBar: View {
                 transitionEnded: transitionEnded
             )
         )
+    }
+
+    private var offersTranslation: Bool {
+        pageActions?.activePage.map { $0.translation.isOffered && !$0.readerModeState.isActive } ?? false
+    }
+
+    private var translationOffset: CGFloat {
+        guard !offersTranslation, !reduceMotion else { return 0 }
+        // Keep the native menu alive before detection, so its construction does
+        // not interrupt the animation from the neighboring Page Actions button.
+        let distance = MobileCompactAddressBarLayout.pageActionsControlSize.width / 2 + 8 + 22
+        return layoutDirection == .leftToRight ? -distance : distance
     }
 
     private var loadingProgress: CGFloat {

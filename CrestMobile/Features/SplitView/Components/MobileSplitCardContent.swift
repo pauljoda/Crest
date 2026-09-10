@@ -88,6 +88,7 @@ struct MobileSplitCardContent: View {
         MobileBrowserLivePageView(
             page: page,
             viewport: viewport,
+            isActive: pages.activePage === page,
             handleInteraction: handleInteraction,
             requestFocus: requestFocus
         )

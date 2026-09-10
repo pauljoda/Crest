@@ -416,6 +416,19 @@ struct MobileBrowserCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
+            Toggle(
+                isOn: Binding(
+                    get: { context?.isTranslationToolbarVisible == true },
+                    set: { context?.setTranslationToolbarVisible($0) }
+                )
+            ) {
+                Label(
+                    "Show Translation Toolbar",
+                    systemImage: BrowserShortcutCommand.toggleTranslationToolbar.paletteSymbol)
+            }
+            .keyboardShortcut(shortcut(.toggleTranslationToolbar))
+            .disabled(context?.canToggleTranslationToolbar != true)
+
             Button(
                 "Toggle Sidebar",
                 systemImage: BrowserShortcutCommand.toggleSidebar.paletteSymbol

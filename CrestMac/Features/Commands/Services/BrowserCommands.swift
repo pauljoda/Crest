@@ -258,6 +258,10 @@ struct BrowserCommands: Commands {
         }
 
         CommandMenu("Page") {
+            Button("Translate Page", systemImage: "translate") {
+                commandPages.activePage?.translation.present()
+            }
+            .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
             Button(
                 commandPages.readerModeActionTitle,
                 systemImage: BrowserShortcutCommand.toggleReaderMode.paletteSymbol,
@@ -364,6 +368,18 @@ struct BrowserCommands: Commands {
         }
 
         CommandGroup(after: .sidebar) {
+            Toggle(
+                isOn: Binding(
+                    get: { commandPages.activePage?.translation.showsToolbar == true },
+                    set: { commandPages.activePage?.translation.setToolbarVisible($0) }
+                )
+            ) {
+                Label(
+                    "Show Translation Toolbar",
+                    systemImage: BrowserShortcutCommand.toggleTranslationToolbar.paletteSymbol)
+            }
+            .keyboardShortcut(shortcut(.toggleTranslationToolbar))
+            .disabled(!commandPages.hasActivePage || commandPages.readerModeState.isActive)
             developerToolbarToggle
             Button(
                 "Toggle Sidebar",

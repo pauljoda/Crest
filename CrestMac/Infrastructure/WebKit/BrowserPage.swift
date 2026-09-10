@@ -45,6 +45,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
+    let translation = BrowserPageTranslation()
     var readerModeState = BrowserReaderModeState.unavailable
     private(set) var isContentBlockingActive = false
     private(set) var developerPanel: BrowserDeveloperPanel?
@@ -758,6 +759,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        translation.reset()
         linkHover.detach()
         (webView as? BrowserDesktopWebView)?.linkHover = nil
         focusRestoration.invalidate()
@@ -1153,6 +1155,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         readerModeGeneration &+= 1
         let generation = readerModeGeneration
         let navigationURL = webView.url
+        try await translation.prepareForReaderMode()
+        guard generation == readerModeGeneration, navigationURL == webView.url else {
+            throw BrowserReaderModeError.presentationFailed
+        }
         guard navigationURL != nil else {
             readerModeState = .unavailable
             throw BrowserReaderModeError.articleUnavailable
@@ -1551,6 +1557,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        translation.reset()
         pictureInPicture.invalidate()
         linkHover.beginNavigation()
         focusRestoration.invalidate()
@@ -1725,6 +1732,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     private func observeWebViewState() {
         webView.publisher(for: \.url, options: [.initial, .new]).sink { [weak self] value in
             MainActor.assumeIsolated {
+                self?.translation.documentURLDidChange(from: self?.url, to: value)
                 self?.url = value
                 self?.credentialState.didChangeTopLevelURL(to: value)
             }

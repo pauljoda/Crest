@@ -26,7 +26,7 @@ enum BrowserShortcutSectionPolicy {
             .saveWebArchive, .printPage:
             .page
         case .toggleSidebar, .toggleExtensionSidePanel, .showHistory, .showArchive, .showDownloads,
-            .showWebInspector, .toggleDeveloperToolbar:
+            .showWebInspector, .toggleDeveloperToolbar, .toggleTranslationToolbar:
             .view
         }
     }

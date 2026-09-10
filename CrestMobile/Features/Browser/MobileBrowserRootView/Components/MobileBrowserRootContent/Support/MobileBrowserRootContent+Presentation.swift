@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 extension MobileBrowserRootContent {
     var browser: BrowserStore { model.browser }
@@ -94,6 +95,11 @@ extension MobileBrowserRootContent {
         model.commandContext(
             transientBrowsing: transientBrowsing,
             layoutDirection: layoutDirection,
+            usesPageToolbars: !MobileBrowserViewportPolicy.usesEdgeToEdgeWebViewport(
+                isPhone: UIDevice.current.userInterfaceIdiom == .phone,
+                presentation: presentation,
+                sidebarPresentation: navigation.regularSidebarPresentation
+            ),
             togglePrivateBrowsing: togglePrivateBrowsing,
             openNewTab: beginNewTab,
             openLocation: openLocation,

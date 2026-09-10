@@ -845,6 +845,14 @@
     "2026-09-10-sidebar-multiple-selection": {
       "category": "new",
       "message": "Select tabs, split views, and folders together on Mac to move and organize them in one step"
+    },
+    "2026-09-10-native-page-translation": {
+      "category": "new",
+      "message": "Translate webpages on device, with automatic language detection, optional automatic translation, and a translation toolbar available with Command-Shift-L"
+    },
+    "2026-09-10-mobile-first-page-rendering": {
+      "category": "fixed",
+      "message": "Show pages reliably after a cold start or sidebar layout change on iPhone and iPad"
     }
   }
 }

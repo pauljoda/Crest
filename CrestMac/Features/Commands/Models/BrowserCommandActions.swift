@@ -75,6 +75,7 @@ struct BrowserCommandActions {
         .showDownloads,
         .showWebInspector,
         .toggleDeveloperToolbar,
+        .toggleTranslationToolbar,
     ]
 
     func paletteRegistry(
@@ -136,6 +137,9 @@ struct BrowserCommandActions {
         case .showArchive: presentArchive()
         case .showDownloads: presentDownloads()
         case .showWebInspector: pages.showWebInspector()
+        case .toggleTranslationToolbar:
+            guard let page = pages.activePage, !page.readerModeState.isActive else { return }
+            page.translation.toggleToolbarVisibility()
         case .toggleDeveloperToolbar:
             if let page = pages.activePage {
                 page.setDeveloperToolbarVisible(!page.isDeveloperModeEnabled)

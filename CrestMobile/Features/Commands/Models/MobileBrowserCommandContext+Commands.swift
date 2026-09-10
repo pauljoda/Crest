@@ -41,6 +41,7 @@ extension MobileBrowserCommandContext {
         .copyPageLinkAsMarkdown,
         .printPage,
         .toggleSidebar,
+        .toggleTranslationToolbar,
         .showHistory,
         .showArchive,
         .showDownloads,
@@ -67,7 +68,9 @@ extension MobileBrowserCommandContext {
     @MainActor
     var paletteRegistry: BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
-            commands: Self.paletteCommands,
+            commands: Self.paletteCommands.filter {
+                $0 != .toggleTranslationToolbar || canToggleTranslationToolbar
+            },
             perform: performFromPalette
         )
     }
@@ -109,6 +112,9 @@ extension MobileBrowserCommandContext {
         case .copyPageLinkAsMarkdown: copyPageLinkAsMarkdown()
         case .printPage: printPage()
         case .toggleSidebar: toggleSidebar()
+        case .toggleTranslationToolbar:
+            guard canToggleTranslationToolbar else { return }
+            setTranslationToolbarVisible(!isTranslationToolbarVisible)
         case .showHistory: presentHistory()
         case .showArchive: presentArchive()
         case .showDownloads: presentDownloads()
