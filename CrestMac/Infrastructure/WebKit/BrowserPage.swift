@@ -1253,11 +1253,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @discardableResult
     func copyPageLink() -> Bool {
-        guard let url else { return false }
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(url.absoluteString, forType: .string)
-        return true
+        BrowserPageLinkClipboard.copy(url)
     }
 
     func copyDeveloperPageLink() {

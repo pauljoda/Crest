@@ -132,6 +132,8 @@ final class MobileBrowserWindowSceneModel {
             }
         )
 
+        browser.tabLinkProvider = pages
+        privateBrowser.tabLinkProvider = privatePages
         browser.tabCopying = pages
         privateBrowser.tabCopying = privatePages
         self.browser = browser

@@ -6,6 +6,38 @@ import XCTest
 @MainActor
 final class MobileBrowserPageStoreTests: XCTestCase {
 
+    func testTabLinkReadsResidentBackgroundAddressAndNeverLoadsKnownUnloadedTabs() async throws {
+        let root = try XCTUnwrap(URL(string: "https://copy.crest.test/root"))
+        let current = try XCTUnwrap(URL(string: "https://copy.crest.test/child?q=a%20b#section"))
+        let target = BrowserTab(title: "Saved", url: root, placement: .saved)
+        let selected = BrowserTab.startPage()
+        let unloaded = BrowserTab(title: "Pinned", url: root, placement: .pinned)
+        var space = makeSpace(index: 321, savesCredentials: false)
+        space.tabs = [target, selected, unloaded]
+        space.selectedTabID = target.id
+        let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        let page = try XCTUnwrap(pages.activePage)
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: current), responseHTML: "<html><title>Copy fixture</title></html>")
+        try await waitUntil { page.url == current && !page.webView.isLoading }
+        space.selectedTabID = selected.id
+        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        let before = pages.residentPageCount
+        let activePage = pages.activePage
+        let history = page.webView.backForwardList.backList.map(\.url)
+
+        XCTAssertEqual(pages.linkURL(for: target, in: space), current)
+        XCTAssertEqual(pages.linkURL(for: unloaded, in: space), root)
+        XCTAssertNil(pages.linkURL(for: selected, in: space))
+        XCTAssertEqual(pages.residentPageCount, before)
+        XCTAssertFalse(pages.containsResidentPage(for: unloaded.id))
+        XCTAssertEqual(page.webView.backForwardList.backList.map(\.url), history)
+        XCTAssertEqual(target.savedURL, root)
+        XCTAssertTrue(pages.activePage === activePage)
+    }
+
     func testSplitCopiesDurablePagesWithIndependentNativeHistory() async throws {
         let root = try XCTUnwrap(URL(string: "https://state.crest.test/root"))
         let child = try XCTUnwrap(URL(string: "https://state.crest.test/child"))

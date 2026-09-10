@@ -2601,3 +2601,14 @@ extension BrowserPagePool: BrowserTabCopying {
         pendingTabCopyStates[assignment] = BrowserTabStateEnvelope(interactionState: state, url: copy.url)
     }
 }
+
+extension BrowserPagePool: BrowserTabLinkProviding {
+    func linkURL(for tab: BrowserTab, in space: BrowserSpace) -> URL? {
+        guard tab.isWebPage else { return nil }
+        guard let page = pages[tab.id],
+            page.spaceID == space.id,
+            page.profileID == space.profile.id
+        else { return tab.url }
+        return page.url
+    }
+}

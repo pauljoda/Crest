@@ -28,6 +28,15 @@ struct BrowserTabOrganizationMenuContent: View {
     }
 
     var body: some View {
+        if tab.isWebPage {
+            Button("Copy Link URL", systemImage: "link") {
+                organizationAction.copyLinkURL(for: assignment)
+            }
+            .disabled(organizationAction.linkURL(for: assignment) == nil)
+
+            Divider()
+        }
+
         if let renameTab {
             Button("Rename Tab…", systemImage: "pencil") {
                 performIfCurrent { _ in renameTab() }

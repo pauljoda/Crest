@@ -429,6 +429,8 @@ struct CrestApp: App {
             splitLinkHost: privateBrowser.splitLinkHost,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess)
         )
+        browser.tabLinkProvider = pages
+        privateBrowser.tabLinkProvider = privatePages
         browser.tabCopying = pages
         privateBrowser.tabCopying = privatePages
         extensionControllerPool.connect(browser: browser, pageProvider: pages)

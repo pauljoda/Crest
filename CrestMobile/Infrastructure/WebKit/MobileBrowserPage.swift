@@ -877,9 +877,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @discardableResult
     func copyPageLink() -> Bool {
-        guard let url else { return false }
-        UIPasteboard.general.url = url
-        return true
+        BrowserPageLinkClipboard.copy(url)
     }
 
     @discardableResult

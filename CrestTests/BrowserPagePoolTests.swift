@@ -6,6 +6,37 @@ import XCTest
 
 @MainActor
 final class BrowserPagePoolTests: XCTestCase {
+
+    func testTabLinkReadsResidentBackgroundAddressAndNeverLoadsKnownUnloadedTabs() async throws {
+        let root = try XCTUnwrap(URL(string: "https://copy.crest.test/root"))
+        let current = try XCTUnwrap(URL(string: "https://copy.crest.test/child?q=a%20b#section"))
+        let target = BrowserTab(title: "Saved", url: root, placement: .saved)
+        let selected = BrowserTab.startPage()
+        let unloaded = BrowserTab(title: "Pinned", url: root, placement: .pinned)
+        var space = makeSpace(tabs: [target, selected, unloaded], selectedTabID: target.id)
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        let page = try XCTUnwrap(pages.activePage)
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: current), responseHTML: "<html><title>Copy fixture</title></html>")
+        try await waitForLoad(current, in: page.webView)
+        space.selectedTabID = selected.id
+        pages.select(session: BrowserSession(spaces: [space], selectedSpaceID: space.id))
+        let before = pages.retainedTabIDs
+        let activePage = pages.activePage
+        let history = page.webView.backForwardList.backList.map(\.url)
+
+        XCTAssertEqual(pages.linkURL(for: target, in: space), current)
+        XCTAssertEqual(pages.linkURL(for: unloaded, in: space), root)
+        XCTAssertNil(pages.linkURL(for: selected, in: space))
+        XCTAssertEqual(pages.retainedTabIDs, before)
+        XCTAssertFalse(pages.retainedTabIDs.contains(unloaded.id))
+        XCTAssertEqual(page.webView.backForwardList.backList.map(\.url), history)
+        XCTAssertEqual(target.savedURL, root)
+        XCTAssertTrue(pages.activePage === activePage)
+    }
+
     func testColdStartPageURLActionLoadsWithoutAnotherTabSelection() async throws {
         let draft = BrowserTab.startPage()
         let space = makeSpace(tabs: [draft], selectedTabID: draft.id)

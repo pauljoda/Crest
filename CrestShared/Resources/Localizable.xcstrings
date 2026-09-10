@@ -4408,6 +4408,9 @@
         }
       }
     },
+    "Copy Link URL" : {
+      "comment" : "Tab context menu action that copies the address of that tab."
+    },
     "Copy Page Link" : {
       "localizations" : {
         "ar" : {

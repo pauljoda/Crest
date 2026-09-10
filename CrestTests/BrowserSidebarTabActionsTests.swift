@@ -8,6 +8,39 @@ import XCTest
 /// `MobileBrowserSidebarTabActionsTests`.
 @MainActor
 final class BrowserSidebarTabActionsTests: XCTestCase {
+    func testTabLinkUsesLiveTargetURLWithoutChangingSelectionOrSavedRoot() throws {
+        let context = makeContext()
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
+        let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
+        let currentURL = try XCTUnwrap(URL(string: "https://sidebar.crest.test/current?q=a%20b#section"))
+        context.browser.session.spaces[0].tabs[0].url = currentURL
+        let before = context.browser.session
+
+        XCTAssertEqual(action.linkURL(for: assignment), currentURL)
+        XCTAssertEqual(context.browser.session, before)
+        XCTAssertEqual(context.browser.session.spaces[0].tabs[0].savedURL, context.tab.savedURL)
+    }
+
+    func testTabLinkRejectsStaleSpaceProfileMissingAndLockedTargets() {
+        let context = makeContext()
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
+        let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
+        XCTAssertNotNil(action.linkURL(for: assignment))
+        context.browser.selectSpace(context.otherSpace.id)
+        XCTAssertNil(action.linkURL(for: assignment))
+        context.browser.selectSpace(context.space.id)
+        context.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: context.space.id)
+        XCTAssertNil(action.linkURL(for: assignment))
+        context.browser.updateSpaceAccessPolicy(.open, in: context.space.id)
+        context.browser.session.spaces[0] = replacingProfile(in: context.space)
+        XCTAssertNil(action.linkURL(for: assignment))
+        context.browser.session.spaces[0] = context.space
+        context.browser.session.spaces[0].tabs.removeAll()
+        XCTAssertNil(action.linkURL(for: assignment))
+    }
+
     func testLinkDestinationOpensANewTabInTheChosenSpaceWithoutMovingTheSource() throws {
         let context = makeContext()
         let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)

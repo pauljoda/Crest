@@ -35,6 +35,7 @@ final class BrowserStore {
     @ObservationIgnored var tabSelectionHistory: BrowserTabSelectionHistory
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
+    @ObservationIgnored weak var tabLinkProvider: (any BrowserTabLinkProviding)?
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
     @ObservationIgnored private var preservesEmptyWindowSelection = false
 
