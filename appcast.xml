@@ -6,48 +6,38 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.89</title>
-            <pubDate>Wed, 09 Sep 2026 13:05:11 +0000</pubDate>
+            <title>0.5.96</title>
+            <pubDate>Thu, 10 Sep 2026 13:02:25 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1080</sparkle:version>
-            <sparkle:shortVersionString>0.5.89</sparkle:shortVersionString>
+            <sparkle:version>1082</sparkle:version>
+            <sparkle:shortVersionString>0.5.96</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 30 user-facing changes.
-
-### New
-
-- Choose whether page cards animate when switching Spaces on Mac, with page motion enabled by default
-
 ### Improved
 
-- Follow your finger when swiping between Spaces on iPhone and iPad, with synchronized backgrounds and Space selection
-- Browse many Spaces with clear overflow arrows and rounded selection highlights on iPhone and iPad
-- Reduce processor usage while scrolling tabs in the desktop sidebar
-- Keep address completion responsive with large tab and history collections
-- Reduce extension preparation delays and reopen ready extensions without repeating startup waits
-- Smoothly blend extension toolbars and tab spacing when switching Spaces
-- Keep extension package preparation from blocking browser interactions
+- Open tabs when following them into another Space, with a setting to keep browsing in the current Space instead
 
 ### Fixed
 
-- Keep the floating sidebar responsive when switching to a locked Space
-- Keep essentials clear of the Space picker when the keyboard appears
-- Extend Space backgrounds behind mobile controls and show the scroll hint only when more tabs remain below
-- Restore extension popup styling and side panels when cached package files are missing
+- Keep embedded tracker frames from replacing the page with an extension blocking screen
+- Keep the spacebar available when searching from Start Page on iPhone and iPad
+- Keep swiping between Spaces working after changing a folder color on iPhone and iPad
+- Keep URL completions aligned with the cursor and replace them immediately as you type
+- Prevent remaining tabs from briefly jumping upward when closing tabs in the Mac sidebar
+- Keep incidental previews and notification sounds out of Now Playing, and clear playback controls when their media is gone
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/457ac1d2c9bc78011e595664053f24df50ae2249...093ba706efdad74a87ffe9d178a322aab7ed5e89) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.89-2026-09-09-1080-r80.1/Installer-Crest-0.5.89-nightly-2026-09-09-093ba70-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/093ba706efdad74a87ffe9d178a322aab7ed5e89...c9a88d5429564925c0045df97b992f434ab22cc8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.96-2026-09-10-1082-r82.1/Installer-Crest-0.5.96-nightly-2026-09-10-c9a88d5-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.89-2026-09-09-1080-r80.1/Installer-Crest-0.5.89-nightly-2026-09-09-093ba70-arm64.dmg" length="10789143" type="application/octet-stream" sparkle:edSignature="b+AgTtP2VSs4WJFF+n0nEE5ShWnNJpJXaoyD3H/rwxdQk/fK4nN3MbEbLiSnaZVJIbqMdVVR4LKZ+nIV2P7VAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.96-2026-09-10-1082-r82.1/Installer-Crest-0.5.96-nightly-2026-09-10-c9a88d5-arm64.dmg" length="10800407" type="application/octet-stream" sparkle:edSignature="NpmOF/kblmK1MjsUY/1EQfA8MhkEHPkmeTxG6oZ698dkEX03vR8kGNIoZxnqeQbtSAc2NtC7Y6ffTh8mt40cBQ=="/>
         </item>
         <item>
             <title>0.5.7</title>
@@ -93,6 +83,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: oZ/xrCHmApdQHf2TeWsgtpdIcu0tsDsmFAaouinFI+6bQ9x/kWmvLYbjYOOVysfCI89cFTmK+CaiYkW0J9l2Bg==
-length: 5380
+edSignature: hABPKwbn546iDVWzVNntjFawzxM7Muezz4h8SnDhS43saIacoeu5QlaCrCaKM5hl+13Xivx38Y7/ZfAkC3lyAA==
+length: 4925
 -->
