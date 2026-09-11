@@ -95,7 +95,7 @@ private struct BrowserWebKitPerformanceSettings: View {
                     performanceToggle(
                         "Allow 120 FPS",
                         description:
-                            "Let pages use the full refresh rate on ProMotion and other high-refresh-rate displays.",
+                            "Let page animations use higher refresh rates on supported displays. May reduce scrolling smoothness.",
                         isOn: $store.allows120FPS,
                         identifier: "webkit-performance-allow-120-fps"
                     )

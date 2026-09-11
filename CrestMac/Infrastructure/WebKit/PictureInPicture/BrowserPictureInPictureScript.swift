@@ -149,8 +149,13 @@ enum BrowserPictureInPictureScript {
           const observerOptions = { childList: true, subtree: true, attributes: true,
             attributeFilter: ['controls', 'autoplay', 'loop', 'muted', 'hidden', 'aria-hidden',
                              'disablepictureinpicture', 'role', 'class', 'style'] };
-          const discover = root => {
+          const discover = (root, scannedRoots = new WeakSet()) => {
             if (!root.querySelectorAll) return;
+            // A batch can report both an inserted ancestor and its descendants.
+            // Their current subtrees already include every change in the batch.
+            for (let ancestor = root; ancestor; ancestor = ancestor.parentNode) {
+              if (scannedRoots.has(ancestor)) return;
+            }
             connected(knownVideos);
             connected(knownFrames);
             const inspect = element => {
@@ -159,18 +164,22 @@ enum BrowserPictureInPictureScript {
               if (element.shadowRoot && !observedRoots.has(element.shadowRoot)) {
                 observedRoots.add(element.shadowRoot);
                 mutationObserver.observe(element.shadowRoot, observerOptions);
-                discover(element.shadowRoot);
+                discover(element.shadowRoot, scannedRoots);
               }
             };
             inspect(root);
             let visited = 0;
-            for (const element of root.querySelectorAll('*')) {
+            const elements = root.querySelectorAll('*');
+            for (const element of elements) {
               if (++visited > 10000) break;
               inspect(element);
             }
+            // A truncated scan must not suppress later records beyond its limit.
+            if (elements.length <= 10000) scannedRoots.add(root);
           };
           const mutationObserver = new MutationObserver(records => {
-            for (const record of records) for (const node of record.addedNodes) discover(node);
+            const scannedRoots = new WeakSet();
+            for (const record of records) for (const node of record.addedNodes) discover(node, scannedRoots);
             if (knownVideos.size || knownFrames.size) schedule();
           });
           mutationObserver.observe(document, observerOptions);

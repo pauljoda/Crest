@@ -9,6 +9,9 @@ final class UserDefaultsBrowserWebKitFeatureFlagPersistence:
     BrowserWebKitFeatureFlagPersisting
 {
     static let currentKey = "crest.webkit-feature-flag-overrides.v1"
+    // This preference has its own storage revision so a default-policy change
+    // can invalidate its saved choice without resetting unrelated WebKit flags.
+    static let pageRenderingStorageKey = "PreferPageRenderingUpdatesNear60FPSEnabled.v2"
 
     private let defaults: UserDefaults
     private let key: String
@@ -26,10 +29,14 @@ final class UserDefaultsBrowserWebKitFeatureFlagPersistence:
             return [:]
         }
         return storedValues.reduce(into: [:]) { result, entry in
+            let pageRenderingKey = BrowserWebKitFeatureFlagStore.preferPageRenderingUpdatesNear60FPSKey
+            // The rendering preference is read only from its versioned slot.
+            guard entry.key != pageRenderingKey else { return }
             guard let rawValue = entry.value as? String,
                 let override = BrowserWebKitFeatureFlagOverride(rawValue: rawValue)
             else { return }
-            result[entry.key] = override
+            let featureKey = entry.key == Self.pageRenderingStorageKey ? pageRenderingKey : entry.key
+            result[featureKey] = override
         }
     }
 
@@ -38,10 +45,13 @@ final class UserDefaultsBrowserWebKitFeatureFlagPersistence:
             defaults.removeObject(forKey: key)
             return
         }
-        defaults.set(
-            overrides.mapValues(\.rawValue),
-            forKey: key
-        )
+        let storedValues = overrides.reduce(into: [String: String]()) { result, entry in
+            let storageKey =
+                entry.key == BrowserWebKitFeatureFlagStore.preferPageRenderingUpdatesNear60FPSKey
+                ? Self.pageRenderingStorageKey : entry.key
+            result[storageKey] = entry.value.rawValue
+        }
+        defaults.set(storedValues, forKey: key)
     }
 }
 

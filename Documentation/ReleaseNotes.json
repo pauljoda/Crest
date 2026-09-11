@@ -853,6 +853,14 @@
     "2026-09-10-mobile-first-page-rendering": {
       "category": "fixed",
       "message": "Show pages reliably after a cold start or sidebar layout change on iPhone and iPad"
+    },
+    "2026-09-10-page-rendering-scroll-default": {
+      "category": "improved",
+      "message": "Allow 120 FPS now starts off for smoother scrolling; turn it back on in Settings if you prefer higher frame rate page animations"
+    },
+    "2026-09-10-picture-in-picture-discovery-work": {
+      "category": "improved",
+      "message": "Reduce background work when detecting videos for Picture in Picture"
     }
   }
 }

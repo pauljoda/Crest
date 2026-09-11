@@ -8,9 +8,9 @@ final class BrowserWebKitFeatureFlagStore {
         "PreferPageRenderingUpdatesNear60FPSEnabled"
 
     private static let performanceDefaults: [String: BrowserWebKitFeatureFlagOverride] = [
-        // This WebKit feature is phrased as a 60 FPS preference, so disabling
-        // it lets page rendering follow a higher-refresh-rate display.
-        preferPageRenderingUpdatesNear60FPSKey: .disabled
+        // Prefer WebKit's usual page-rendering cadence. Native scrolling can
+        // still use a higher refresh rate independently of page animation work.
+        preferPageRenderingUpdatesNear60FPSKey: .enabled
     ]
 
     static private(set) var active = BrowserWebKitFeatureFlagStore(

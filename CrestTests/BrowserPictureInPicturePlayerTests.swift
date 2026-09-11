@@ -127,6 +127,62 @@ final class BrowserPictureInPicturePlayerTests: XCTestCase {
         controller.invalidate()
     }
 
+    func testInsertedShadowPlayerAndAncestorVisibilityRemainObserved() async throws {
+        for precedingElements in [0, 10_005] {
+            let webView = makeWebView()
+            let controller = BrowserPictureInPicturePageController(webView: webView)
+            defer { controller.invalidate() }
+            webView.loadHTMLString(
+                "<body></body>",
+                baseURL: URL(string: "https://pip.crest.test"))
+            try await waitForBridge(webView)
+            _ = try await evaluate(
+                """
+                (() => {
+                  const host = document.createElement('div');
+                  host.id = 'host';
+                  host.attachShadow({mode:'open'});
+                  document.body.append(host);
+                  return true;
+                })()
+                """, in: webView)
+            _ = try await evaluate(
+                """
+                const root = document.querySelector('#host').shadowRoot;
+                const wrapper = document.createElement('div');
+                root.append(wrapper);
+                for (let index = 0; index < \(precedingElements); index++) {
+                  wrapper.append(document.createElement('span'));
+                }
+                const video = document.createElement('video');
+                video.controls = true;
+                video.style.cssText = 'width:640px;height:360px';
+                wrapper.append(video);
+                for (const [key, value] of Object.entries({ paused: false, ended: false,
+                    readyState: 4, videoWidth: 640, videoHeight: 360 })) {
+                  Object.defineProperty(video, key, { configurable: true, value });
+                }
+                video.webkitSupportsPresentationMode = () => true;
+                true;
+                """, in: webView)
+            try await waitForEligibility(true, controller: controller)
+            _ = try await evaluate("document.querySelector('#host').style.opacity = '0'; true", in: webView)
+            try await waitForEligibility(false, controller: controller)
+            _ = try await evaluate("document.querySelector('#host').style.opacity = '1'; true", in: webView)
+            try await waitForEligibility(true, controller: controller)
+        }
+    }
+
+    private func waitForEligibility(
+        _ expected: Bool, controller: BrowserPictureInPicturePageController
+    ) async throws {
+        let deadline = Date().addingTimeInterval(5)
+        while controller.canAutomaticallyEnterPictureInPicture != expected && Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertEqual(controller.canAutomaticallyEnterPictureInPicture, expected)
+    }
+
     private func makeWebView() -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
