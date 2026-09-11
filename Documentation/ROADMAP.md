@@ -57,7 +57,6 @@ the live status for each issue.
 
 - [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
-- [ ] [Investigate scrolling, back-navigation and browser performance](https://github.com/pauljoda/Crest/issues/110)
 
 #### Completed
 
@@ -105,6 +104,7 @@ the live status for each issue.
 - [x] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
 - [x] [Prevent upward tab jumps when closing Mac sidebar tabs](https://github.com/pauljoda/Crest/issues/106)
 - [x] [Investigate Azure DevOps sign-in failures](https://github.com/pauljoda/Crest/issues/108)
+- [x] [Investigate scrolling, back-navigation and browser performance](https://github.com/pauljoda/Crest/issues/110) — [`88703808`](https://github.com/pauljoda/Crest/commit/8870380890e44f85290e7299b25f46111daae1ac)
 
 #### Not planned
 
