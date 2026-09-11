@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "2026-09-10-now-playing-player-lifetime",
+    "development": "2026-09-10-picture-in-picture-discovery-work",
     "nightly": "2026-09-10-now-playing-player-lifetime"
   }
 }

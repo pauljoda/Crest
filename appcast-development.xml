@@ -6,42 +6,45 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.96</title>
-            <pubDate>Thu, 10 Sep 2026 07:18:42 +0000</pubDate>
+            <title>0.5.101</title>
+            <pubDate>Fri, 11 Sep 2026 01:06:32 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1081</sparkle:version>
-            <sparkle:shortVersionString>0.5.96</sparkle:shortVersionString>
+            <sparkle:version>1083</sparkle:version>
+            <sparkle:shortVersionString>0.5.101</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Copy a tab's current link from its context menu without opening the tab
+- Preview any website at phone, desktop, or custom sizes from the Mac developer toolbar, available with Command-Shift-I
+- Select tabs, split views, and folders together on Mac to move and organize them in one step
+- Translate webpages on device, with automatic language detection, optional automatic translation, and a translation toolbar available with Command-Shift-L
+
 ### Improved
 
-- Open tabs when following them into another Space, with a setting to keep browsing in the current Space instead
+- Allow 120 FPS now starts off for smoother scrolling; turn it back on in Settings if you prefer higher frame rate page animations
+- Reduce background work when detecting videos for Picture in Picture
 
 ### Fixed
 
-- Keep embedded tracker frames from replacing the page with an extension blocking screen
-- Keep the spacebar available when searching from Start Page on iPhone and iPad
-- Keep swiping between Spaces working after changing a folder color on iPhone and iPad
-- Keep URL completions aligned with the cursor and replace them immediately as you type
-- Prevent remaining tabs from briefly jumping upward when closing tabs in the Mac sidebar
-- Keep incidental previews and notification sounds out of Now Playing, and clear playback controls when their media is gone
+- Show pages reliably after a cold start or sidebar layout change on iPhone and iPad
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/093ba706efdad74a87ffe9d178a322aab7ed5e89...c9a88d5429564925c0045df97b992f434ab22cc8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.96-2026-09-10-1081-r81.1/Installer-Crest-0.5.96-development-2026-09-10-c9a88d5-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/c9a88d5429564925c0045df97b992f434ab22cc8...8870380890e44f85290e7299b25f46111daae1ac) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.101-2026-09-11-1083-r83.1/Installer-Crest-0.5.101-development-2026-09-11-8870380-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.96-2026-09-10-1081-r81.1/Installer-Crest-0.5.96-development-2026-09-10-c9a88d5-arm64.dmg" length="10795295" type="application/octet-stream" sparkle:edSignature="+MCb47QqFroQLOg1W2qbneuKropV4Kofb6JiDuCd4BxFS21wn50/iPkUh7OvjQv8qelcm8vSGmMNi570FJgeCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.101-2026-09-11-1083-r83.1/Installer-Crest-0.5.101-development-2026-09-11-8870380-arm64.dmg" length="11103519" type="application/octet-stream" sparkle:edSignature="NTK7HyuHxKXfFkm+c7jX/do8sHqTjkef5Phpu8hNvYP5KAJW4k3HQx5tRTCaUpqLmRVEVFsvgLJFkaLkW23GCA=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 40PolEjB3bAxrjg9Bwy9SjgxQVoQUudfLagQsXy8soaFX1bU6ZMkfD2dNbfsUmRBEJWxwoHofIrzlJk2NRzzAg==
-length: 2643
+edSignature: 29sMWlLefrzcLaJKfbOiFtzAkF41QT8MBgQlTWbc5jw/0+tUdtvZeBItmuQkc4Sq5lpTTmf3U2N3dYLlJcaSAw==
+length: 2718
 -->
