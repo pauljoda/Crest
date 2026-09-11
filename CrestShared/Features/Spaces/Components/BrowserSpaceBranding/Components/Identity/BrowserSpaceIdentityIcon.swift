@@ -20,7 +20,7 @@ struct BrowserSpaceIdentityIcon: View {
                 } else {
                     Image(systemName: systemImage)
                         .font(.system(size: size * 0.56, weight: .semibold))
-                        .foregroundStyle(space.branding.primaryColor.color)
+                        .foregroundStyle(space.branding.resolvedSymbolColor.color)
                         .frame(width: size, height: size)
                 }
             }

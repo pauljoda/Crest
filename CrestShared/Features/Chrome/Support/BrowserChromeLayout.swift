@@ -27,7 +27,7 @@ enum BrowserChromeLayout {
     static let addressHeight: CGFloat = 36
     static let addressCornerRadius = CrestRadius.compact
     static let sidebarHorizontalInset = CrestSpacing.small
-    static let sidebarMinimumWidth: CGFloat = 260
+    static let sidebarMinimumWidth: CGFloat = 200
     static let sidebarIdealWidth: CGFloat = 289
     static let sidebarMaximumWidth: CGFloat = 380
     static let pageFrameInset = CrestSpacing.small

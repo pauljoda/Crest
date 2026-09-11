@@ -77,7 +77,8 @@ struct BrowserSpaceCrest: Codable, Equatable, Sendable {
     var requiredRenderingVersion: Int {
         max(
             BrowserSpaceBranding.baselineRenderingVersion,
-            symbol.introducedInRenderingVersion
+            symbol.introducedInRenderingVersion,
+            backplate.introducedInRenderingVersion
         )
     }
 

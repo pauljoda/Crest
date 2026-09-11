@@ -13,6 +13,8 @@ import SwiftUI
 /// A borderless frame is the compact shell's placement, where the page runs to
 /// the device edges and there is no frame left to draw.
 struct BrowserRootDetailSurface<Content: View>: View {
+    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.layoutDirection) private var layoutDirection
     let adjoinsLeadingSidebar: Bool
     let usesBorderlessFrame: Bool
     let isStartPage: Bool
@@ -30,12 +32,12 @@ struct BrowserRootDetailSurface<Content: View>: View {
                 : BrowserChromeLayout.pageCornerRadius,
             seamWidth: usesBorderlessFrame
                 ? 0
-                : BrowserChromeLayout.pageBrandSeamWidth,
+                : appearance.seamWidth,
             frameInsets: usesBorderlessFrame
                 ? EdgeInsets()
                 : frameInsets
-                    ?? BrowserChromeLayout.pageFrameInsets(
-                        adjoinsLeadingSidebar: adjoinsLeadingSidebar
+                    ?? appearance.pageInsets(
+                        docked: adjoinsLeadingSidebar, direction: layoutDirection
                     ),
             usesTransparentInnerSurface:
                 BrowserPageSurfacePolicy.usesTransparentInnerSurface(

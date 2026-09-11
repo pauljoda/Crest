@@ -6,6 +6,33 @@ import XCTest
 @MainActor
 final class BrowserSettingsPaneTests: XCTestCase {
 
+    func testEveryOfferedMacAppIconLoadsFromTheBuiltCatalog() throws {
+        for palette in BrowserSpaceHousePalette.allCases {
+            let name = "Crest" + palette.rawValue.capitalized
+            let image = try XCTUnwrap(
+                BrowserMacAppIconAssets.image(named: name, in: .main))
+            XCTAssertGreaterThan(image.size.width, 0)
+            XCTAssertNotNil(image.tiffRepresentation)
+            // Validate both resources even when the test device uses Clear or Tinted.
+            for resource in [name + "DockLight", name + "DockDark"] {
+                let artwork = try XCTUnwrap(Bundle.main.image(forResource: resource))
+                XCTAssertNotNil(artwork.tiffRepresentation)
+                XCTAssertEqual(artwork.size, NSSize(width: 512, height: 512))
+                XCTAssertTrue(artwork.representations.contains { $0.pixelsWide == 1024 && $0.pixelsHigh == 1024 })
+            }
+        }
+        XCTAssertNil(BrowserMacAppIconAssets.image(named: "../../Crest", in: .main))
+        XCTAssertNil(BrowserMacAppIconAssets.image(named: "CrestMissing", in: .main))
+    }
+
+    func testBundledDockPluginCanLoadItsDeclaredPrincipalClass() throws {
+        let name = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: "NSDockTilePlugIn") as? String)
+        let directory = try XCTUnwrap(Bundle.main.builtInPlugInsURL)
+        let plugin = try XCTUnwrap(Bundle(url: directory.appendingPathComponent(name)))
+        try plugin.loadAndReturnError()
+        XCTAssertNotNil(plugin.principalClass as? any NSDockTilePlugIn.Type)
+    }
+
     func testMacSearchEnginePresentationAndProviderLabelsStayCompact() {
         XCTAssertEqual(
             BrowserSearchEngineEditorPresentationStyle.platformDefault,
@@ -165,7 +192,7 @@ final class BrowserSettingsPaneTests: XCTestCase {
         )
     }
 
-    func testGeneralSettingsPresentsTheSharedDefaultZoomControl() {
+    func testLookAndFeelPresentsTheSharedDefaultZoomControl() {
         let preferences = BrowserDefaultPageZoomStore(
             persistence: InMemoryBrowserDefaultPageZoomPersistence()
         )
@@ -186,7 +213,7 @@ final class BrowserSettingsPaneTests: XCTestCase {
         )
         XCTAssertNotNil(section.body)
         XCTAssertTrue(
-            BrowserSettingsDestination.general.matchesSearchQuery(
+            BrowserSettingsDestination.lookAndFeel.matchesSearchQuery(
                 "zoom",
                 locale: Locale(identifier: "en_US")
             )

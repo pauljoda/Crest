@@ -8,6 +8,16 @@ enum BrowserPageZoomPolicy {
     ]
     static let defaultLevel: CGFloat = 1
 
+    /// The slider position of ``defaultLevel``.
+    static let defaultLevelIndex = Double(levels.firstIndex(of: defaultLevel) ?? 0)
+
+    /// The level a slider position stands for, clamped to the table.
+    static func level(atIndex index: Double) -> CGFloat {
+        guard index.isFinite else { return defaultLevel }
+        let clamped = min(max(Int(index.rounded()), levels.startIndex), levels.index(before: levels.endIndex))
+        return levels[clamped]
+    }
+
     static func increased(from current: CGFloat) -> CGFloat {
         levels.first(where: { $0 > current + tolerance }) ?? levels[levels.count - 1]
     }

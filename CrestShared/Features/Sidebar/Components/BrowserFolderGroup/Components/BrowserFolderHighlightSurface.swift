@@ -1,6 +1,7 @@
 import SwiftUI
 
 extension EnvironmentValues {
+    @Entry var folderPreviewShowsHighlight = false
     @Entry var folderUsesContrastingForeground = false
     @Entry var folderBackgroundColor: BrowserSpaceBrandColor? = nil
 }
@@ -40,43 +41,48 @@ struct BrowserFolderHighlightSurface: ViewModifier {
         content
             .background {
                 if showsFill {
-                    RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
-                        .fill(
-                            color.color.opacity(
-                                BrowserFolderAppearancePolicy.fillOpacity(
-                                    intensity: intensity, reduceTransparency: reduceTransparency))
-                        )
-                        .overlay {
-                            if showsBorders {
-                                RoundedRectangle(
-                                    cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous
-                                )
-                                .strokeBorder(color.color.opacity(0.28), lineWidth: 0.5)
-                            }
+                    RoundedRectangle(
+                        cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(), style: .continuous
+                    )
+                    .fill(
+                        color.color.opacity(
+                            BrowserFolderAppearancePolicy.fillOpacity(
+                                intensity: intensity, reduceTransparency: reduceTransparency))
+                    )
+                    .overlay {
+                        if emphasisOpacity > 0 {
+                            RoundedRectangle(
+                                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
+                                style: .continuous
+                            )
+                            .fill(.primary.opacity(emphasisOpacity))
                         }
-                        .overlay {
-                            if emphasisOpacity > 0 {
-                                RoundedRectangle(
-                                    cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous
-                                )
-                                .fill(.primary.opacity(emphasisOpacity))
-                            }
+                    }
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(
+                                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
+                                style: .continuous
+                            )
+                            .fill(CrestColor.hover)
                         }
-                        .overlay {
-                            if isSelected {
-                                RoundedRectangle(
-                                    cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous
-                                )
-                                .fill(CrestColor.hover)
-                            }
+                    }
+                    .overlay {
+                        if showsBorders {
+                            RoundedRectangle(
+                                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
+                                style: .continuous
+                            )
+                            .strokeBorder(color.color.opacity(0.5), lineWidth: 1)
                         }
-                        .padding(.leading, leadingInset)
-                        .padding(.trailing, CrestSpacing.small)
-                        .allowsHitTesting(false)
+                    }
+                    .padding(.leading, leadingInset)
+                    .padding(.trailing, CrestSpacing.small)
+                    .allowsHitTesting(false)
                 }
             }
             .environment(\.colorScheme, foregroundScheme)
-            .environment(\.folderUsesContrastingForeground, textColorMode != .automatic || (showsFill && intensity > 0))
+            .environment(\.folderUsesContrastingForeground, textColorMode != .automatic || showsFill)
             .environment(\.folderBackgroundColor, showsFill ? compositedColor : parentBackgroundColor)
     }
 }

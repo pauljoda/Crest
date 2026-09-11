@@ -69,6 +69,7 @@ struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
     let onPanelResizeCommit: (CGFloat) -> Void
     @ViewBuilder let panelContent: Panel
 
+    @Environment(\.browserChromeAppearance) private var appearance
     @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -176,7 +177,7 @@ struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
         let isGap = slot.member.map { $0.id == liftedTabID } ?? false
         return BrowserRootContentSurface(
             cornerRadius: borderless ? 0 : BrowserChromeLayout.pageCornerRadius,
-            seamWidth: borderless ? 0 : BrowserChromeLayout.pageBrandSeamWidth,
+            seamWidth: borderless ? 0 : appearance.seamWidth,
             frameInsets: EdgeInsets(),
             usesTransparentInnerSurface: isGap
                 // An empty column is not a page that draws its own atmosphere,

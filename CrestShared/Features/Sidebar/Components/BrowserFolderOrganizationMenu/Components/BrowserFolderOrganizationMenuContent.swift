@@ -8,6 +8,7 @@ struct BrowserFolderOrganizationMenuContent: View {
     let createNestedFolder: () -> Void
     let renameFolder: () -> Void
     let changeColor: () -> Void
+    let changeIcon: () -> Void
     let deleteFolder: () -> Void
 
     init(menu: BrowserFolderOrganizationMenu) {
@@ -18,6 +19,7 @@ struct BrowserFolderOrganizationMenuContent: View {
         createNestedFolder = menu.createNestedFolder
         renameFolder = menu.renameFolder
         changeColor = menu.changeColor
+        changeIcon = menu.changeIcon
         deleteFolder = menu.deleteFolder
     }
 
@@ -28,6 +30,9 @@ struct BrowserFolderOrganizationMenuContent: View {
         .disabled(!canCreateNestedFolder)
         Button("Rename Folder", systemImage: "pencil") {
             performIfCurrent(renameFolder)
+        }
+        Button("Folder Icon…", systemImage: "face.smiling") {
+            performIfCurrent(changeIcon)
         }
         Button("Folder Color…", systemImage: "paintpalette") {
             performIfCurrent(changeColor)
@@ -63,16 +68,20 @@ struct BrowserFolderOrganizationMenuContent: View {
                 if !moveDestinations.isEmpty {
                     Divider()
                     ForEach(moveDestinations) { destination in
-                        Button(
-                            destination.path,
-                            systemImage: destination.node.folder.symbol
-                        ) {
+                        Button {
                             performIfCurrent {
                                 browser.moveFolder(
                                     folder.id,
                                     matching: assignment.spaceAssignment,
                                     into: destination.node.id
                                 )
+                            }
+                        } label: {
+                            Label {
+                                Text(destination.path)
+                            } icon: {
+                                BrowserFolderArtwork(
+                                    symbol: destination.node.folder.symbol, color: destination.node.folder.color)
                             }
                         }
                         .disabled(folder.parentID == destination.node.id)

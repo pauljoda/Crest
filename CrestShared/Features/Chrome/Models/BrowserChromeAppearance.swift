@@ -3,7 +3,27 @@ import SwiftUI
 /// App-wide chrome choices. Presentation never changes browsing ownership.
 struct BrowserChromeAppearance: Equatable {
     var sidebarOnRight = false
-    var borderless = false
+    var borderWidth: Double = defaultBorderWidth
+
+    static let defaultBorderWidth: Double = 8
+    static let borderWidthRange: ClosedRange<Double> = 0...10
+
+    init(sidebarOnRight: Bool = false, borderWidth: Double = defaultBorderWidth) {
+        self.sidebarOnRight = sidebarOnRight
+        self.borderWidth = borderWidth
+    }
+
+    init(sidebarOnRight: Bool = false, borderless: Bool) {
+        self.init(sidebarOnRight: sidebarOnRight, borderWidth: borderless ? 0 : Self.defaultBorderWidth)
+    }
+
+    var frameWidth: CGFloat {
+        CGFloat(
+            borderWidth.isFinite ? min(max(borderWidth, 0), Self.borderWidthRange.upperBound) : Self.defaultBorderWidth)
+    }
+    var borderless: Bool { frameWidth == 0 }
+    var seamWidth: CGFloat { BrowserChromeLayout.pageBrandSeamWidth * frameWidth / Self.defaultBorderWidth }
+    var pageCornerRadius: CGFloat { borderless ? 0 : BrowserChromeLayout.pageCornerRadius }
 
     func sidebarEdge(in direction: LayoutDirection) -> HorizontalEdge {
         sidebarOnRight == (direction == .leftToRight) ? .trailing : .leading
@@ -24,10 +44,10 @@ struct BrowserChromeAppearance: Equatable {
         guard !borderless else { return EdgeInsets() }
         let edge = sidebarEdge(in: direction)
         return EdgeInsets(
-            top: BrowserChromeLayout.pageFrameInset,
-            leading: docked && edge == .leading ? 0 : BrowserChromeLayout.pageFrameInset,
-            bottom: BrowserChromeLayout.pageFrameInset,
-            trailing: docked && edge == .trailing ? 0 : BrowserChromeLayout.pageFrameInset
+            top: frameWidth,
+            leading: docked && edge == .leading ? 0 : frameWidth,
+            bottom: frameWidth,
+            trailing: docked && edge == .trailing ? 0 : frameWidth
         )
     }
 }
@@ -35,6 +55,7 @@ struct BrowserChromeAppearance: Equatable {
 @MainActor
 enum BrowserChromeAppearancePreference {
     static let sidebarOnRightKey = "crest.appearance.sidebar-on-right"
+    static let borderWidthKey = "crest.appearance.window-border-width"
     static let borderlessKey = "crest.appearance.borderless"
     static let defaults = defaults(for: .current)
 
@@ -47,11 +68,20 @@ enum BrowserChromeAppearancePreference {
             defaults = .standard
         }
         migrateLegacyMobilePreference(in: defaults)
+        migrateBorderWidth(in: defaults)
         return defaults
     }
 }
 
 extension BrowserChromeAppearancePreference {
+    static func migrateBorderWidth(in defaults: UserDefaults) {
+        guard defaults.object(forKey: borderWidthKey) == nil else { return }
+        defaults.set(
+            defaults.bool(forKey: borderlessKey) ? 0 : BrowserChromeAppearance.defaultBorderWidth,
+            forKey: borderWidthKey
+        )
+    }
+
     static func migrateLegacyMobilePreference(in defaults: UserDefaults) {
         let legacyKey = "crest.sidebar.collapsed.fullscreen.mobile"
         guard defaults.object(forKey: legacyKey) != nil else { return }

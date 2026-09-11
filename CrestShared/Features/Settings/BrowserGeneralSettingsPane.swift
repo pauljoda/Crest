@@ -15,7 +15,6 @@ import SwiftUI
 struct BrowserGeneralSettingsPane: View {
     let browser: BrowserStore
 
-    @Bindable private var pageZoomPreferences: BrowserDefaultPageZoomStore
     @Bindable private var linkPreferences: BrowserLinkPreferenceStore
     @State private var defaultBrowser = BrowserDefaultBrowserController()
     @State private var isCheckingDefaultBrowser = true
@@ -26,11 +25,9 @@ struct BrowserGeneralSettingsPane: View {
 
     init(
         browser: BrowserStore,
-        pageZoomPreferences: BrowserDefaultPageZoomStore = .shared,
         linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
         self.browser = browser
-        _pageZoomPreferences = Bindable(wrappedValue: pageZoomPreferences)
         _linkPreferences = Bindable(wrappedValue: linkPreferences)
     }
 
@@ -61,13 +58,9 @@ struct BrowserGeneralSettingsPane: View {
 
             BrowserDurableTabSettingsSection(preferences: .shared)
 
-            BrowserFolderAppearanceSettingsSection()
-
-            BrowserPlatformAppearanceSettingsSection()
-
-            BrowserDefaultPageZoomSettingsSection(
-                preferences: pageZoomPreferences
-            )
+            #if os(macOS)
+                BrowserSplitFocusSettingsSection()
+            #endif
 
             Section("Page Translation") {
                 Toggle("Automatically Translate", isOn: $automaticallyTranslates)
@@ -305,65 +298,3 @@ struct BrowserNewTabSettingsSection: View {
         }
     }
 #endif
-
-/// The single adaptive presentation of Crest's global page-zoom baseline.
-/// Both platform settings shells route through `BrowserGeneralSettingsPane`, so
-/// this native slider and its reset action cannot drift into duplicate controls.
-struct BrowserDefaultPageZoomSettingsSection: View {
-    static let controlIdentifier = "default-page-zoom-slider"
-
-    @Bindable var preferences: BrowserDefaultPageZoomStore
-
-    var body: some View {
-        Section("Page zoom") {
-            LabeledContent("Default page zoom") {
-                HStack(spacing: CrestFormRowMetrics.contentSpacing) {
-                    Slider(
-                        value: $preferences.defaultZoomLevelIndex,
-                        in:
-                            0...Double(
-                                BrowserPageZoomPolicy.levels.count - 1
-                            ),
-                        step: 1
-                    )
-                    .labelsHidden()
-                    .accessibilityLabel("Default page zoom")
-                    .accessibilityValue(
-                        BrowserPageZoomPolicy.percentageLabel(
-                            for: preferences.defaultZoom
-                        )
-                    )
-                    .accessibilityIdentifier(Self.controlIdentifier)
-
-                    Text(
-                        BrowserPageZoomPolicy.percentageLabel(
-                            for: preferences.defaultZoom
-                        )
-                    )
-                    .monospacedDigit()
-                    .frame(minWidth: 44, alignment: .trailing)
-                }
-            }
-
-            Button("Reset to 100%") {
-                preferences.defaultZoom = BrowserPageZoomPolicy.defaultLevel
-            }
-            .disabled(
-                BrowserPageZoomPolicy.levelsMatch(
-                    preferences.defaultZoom,
-                    BrowserPageZoomPolicy.defaultLevel
-                )
-            )
-
-            CrestFormFootnote(
-                "Pages using the default update immediately. Page Zoom commands temporarily override it while you navigate; Actual Size returns to this value, and recreated pages start here."
-            )
-            BrowserSettingsPagePreview(zoom: preferences.defaultZoom)
-                .clipShape(.rect(cornerRadius: 10))
-                .frame(maxWidth: 340)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .accessibilityIdentifier("default-page-zoom-preview")
-        }
-    }
-}

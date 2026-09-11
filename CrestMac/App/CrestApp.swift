@@ -612,7 +612,10 @@ struct CrestApp: App {
                         )
                     }
                 }
-                .task { await cloudSync.start() }
+                .task {
+                    BrowserMacAppIconPreference.restore()
+                    await cloudSync.start()
+                }
             } else {
                 EmptyView()
             }

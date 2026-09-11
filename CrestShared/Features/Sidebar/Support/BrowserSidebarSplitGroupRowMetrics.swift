@@ -25,11 +25,6 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
     /// The inset between the container's edge and the rows inside it.
     let containerPadding: CGFloat
 
-    /// Concentric with the rows inside: this radius less `containerPadding` is
-    /// exactly `CrestLayout.sidebarControlCornerRadius`, so a focused member's
-    /// corners stay parallel to the group's own.
-    let containerCornerRadius: CGFloat
-
     /// The gap between the header and the first member, and between members.
     ///
     /// A pointer shell stacks them flush: the rows are a fixed band each, and
@@ -52,7 +47,6 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
     static let pointer = BrowserSidebarSplitGroupRowMetrics(
         rowVerticalInset: CrestSpacing.extraExtraSmall,
         containerPadding: CrestSpacing.extraSmall,
-        containerCornerRadius: CrestRadius.control,
         memberSpacing: 0,
         headerHeight: 30,
         headerGlyphSize: 16,
@@ -65,7 +59,6 @@ struct BrowserSidebarSplitGroupRowMetrics: Equatable, Sendable {
     static let touch = BrowserSidebarSplitGroupRowMetrics(
         rowVerticalInset: CrestSpacing.extraExtraSmall,
         containerPadding: CrestSpacing.extraSmall,
-        containerCornerRadius: CrestRadius.control,
         memberSpacing: CrestSpacing.extraExtraSmall,
         headerHeight: 44,
         headerGlyphSize: 20,

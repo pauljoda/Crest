@@ -208,18 +208,22 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
 
     func testIncomingFifthPinnedTabReflowsIntoTwoRowsWithoutLosingTheGap() throws {
         let ids = (0..<4).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
-        let grid = BrowserPinnedTabReorderLayout(ids: ids, insertionIndex: 0)
-        let bounds = CGRect(x: 8, y: 20, width: 240, height: grid.height)
+        let grid = BrowserPinnedTabReorderLayout(ids: ids, insertionIndex: 0, availableWidth: 176)
+        let bounds = CGRect(x: 8, y: 20, width: grid.availableWidth, height: grid.height)
         XCTAssertEqual(grid.columns, 3)
         XCTAssertEqual(grid.height, 102)
         XCTAssertEqual(grid.slots, [.gap] + ids.map(BrowserPinnedTabReorderLayout.Slot.tab))
-        for slot in grid.slots { XCTAssertTrue(bounds.contains(try XCTUnwrap(grid.frame(for: slot, in: bounds)))) }
+        // Thirds of a point can round just past the outer edge; keep the check below a pixel.
+        for slot in grid.slots {
+            XCTAssertTrue(
+                bounds.insetBy(dx: -0.001, dy: -0.001).contains(try XCTUnwrap(grid.frame(for: slot, in: bounds))))
+        }
         XCTAssertEqual(try XCTUnwrap(grid.frame(for: .tab(ids[2]), in: bounds)).minY, 75)
     }
 
     func testPinnedSourceLeavingClosesItsSlotAndShrinksTheGrid() {
         let ids = (0..<5).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
-        var grid = BrowserPinnedTabReorderLayout(ids: ids, liftedID: ids[2])
+        var grid = BrowserPinnedTabReorderLayout(ids: ids, liftedID: ids[2], availableWidth: 176)
         XCTAssertEqual(grid.columns, 4)
         XCTAssertEqual(grid.height, 47)
         XCTAssertEqual(grid.slots, [ids[0], ids[1], ids[3], ids[4]].map(BrowserPinnedTabReorderLayout.Slot.tab))
@@ -235,8 +239,8 @@ final class BrowserSidebarReorderLayoutTests: XCTestCase {
         let state = BrowserSidebarReorderState()
         let ids = (0..<5).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
         let pinned = BrowserSidebarReorderSection.tabs(placement: .pinned, folderID: nil)
-        let grid = BrowserPinnedTabReorderLayout(ids: ids)
-        let bounds = CGRect(x: 8, y: 20, width: 240, height: grid.height)
+        let grid = BrowserPinnedTabReorderLayout(ids: ids, availableWidth: 176)
+        let bounds = CGRect(x: 8, y: 20, width: grid.availableWidth, height: grid.height)
         for id in ids {
             state.register(
                 row: .init(

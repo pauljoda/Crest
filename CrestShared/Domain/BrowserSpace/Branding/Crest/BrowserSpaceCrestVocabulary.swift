@@ -13,6 +13,15 @@ enum BrowserSpaceCrestBackplate: String, Codable, CaseIterable, Equatable, Senda
     case diamond
     case seal
     case hexagon
+    case octagon
+    case roundedSquare
+
+    var introducedInRenderingVersion: Int {
+        switch self {
+        case .octagon, .roundedSquare: BrowserSpaceBranding.customizationRenderingVersion
+        default: BrowserSpaceBranding.baselineRenderingVersion
+        }
+    }
 }
 
 enum BrowserSpaceCrestFieldDivision: String, Codable, CaseIterable, Equatable, Sendable {

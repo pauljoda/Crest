@@ -23,6 +23,10 @@ struct PinnedTabGridContent: View {
     @State private var isTrailingDropTargeted = false
     @State private var renamingAssignment: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
+        var tabScale = 1.0
+    @AppStorage(BrowserSidebarDensityPreference.pinColumnsKey, store: BrowserSidebarDensityPreference.defaults) private
+        var pinColumns = 0
 
     init(grid: PinnedTabGrid) {
         tabs = grid.tabs
@@ -45,6 +49,7 @@ struct PinnedTabGridContent: View {
     private var reorderContext: BrowserSidebarReorderContext? {
         guard
             BrowserSidebarReorderAvailability.isEnabled,
+            capabilities.supportsOrganization,
             let browser,
             let spaceAccess
         else { return nil }
@@ -78,7 +83,8 @@ struct PinnedTabGridContent: View {
                         }
                         select(runtimeAssignment)
                     },
-                    isMultiSelected: browser?.tabMultiSelection.contains(tab.id) == true
+                    isMultiSelected: browser?.tabMultiSelection.contains(tab.id) == true,
+                    branding: browser?.space(matching: assignment)?.branding
                 )
                 .browserPinnedTabPromotionDestination(
                     id: BrowserTabPromotionID.value(for: tab.id),
@@ -136,7 +142,7 @@ struct PinnedTabGridContent: View {
                     )
                 )
                 .contextMenu {
-                    if let browser, let spaceAccess {
+                    if capabilities.supportsOrganization, let browser, let spaceAccess {
                         PinnedTabOrganizationMenu(
                             tab: tab,
                             assignment: runtimeAssignment,
@@ -160,11 +166,13 @@ struct PinnedTabGridContent: View {
                 )
                 .crestCollectionItemTransition()
             }
-            RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius, style: .continuous)
                 .fill(.primary.opacity(0.035))
                 .overlay {
-                    RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
-                        .strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
+                    RoundedRectangle(
+                        cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius, style: .continuous
+                    )
+                    .strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
                 }
                 .opacity(projection.insertionIndex == nil ? 0 : 1)
                 .allowsHitTesting(false)
@@ -172,7 +180,7 @@ struct PinnedTabGridContent: View {
         }
         .animation(
             BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
-            value: projection
+            value: projection.slots
         )
         .crestCollectionMotion(ids: tabs.map(\.id))
         .overlay(alignment: .trailing) {
@@ -236,7 +244,14 @@ struct PinnedTabGridContent: View {
 
     private var projection: BrowserPinnedTabReorderLayout {
         let ids = tabs.map { BrowserSidebarReorderItemID.tab($0.id) }
-        return reorderContext?.state.pinnedLayout(ids: ids, in: assignment) ?? BrowserPinnedTabReorderLayout(ids: ids)
+        var value =
+            (reorderContext?.state.pinnedLayout(ids: ids, in: assignment) ?? BrowserPinnedTabReorderLayout(ids: ids))
+            .applyingPreferences(width: BrowserChromeLayout.sidebarIdealWidth)
+        value.preferredColumns = min(max(pinColumns, 0), 6)
+        value.tabScale = tabScale
+        value.tileHeight = BrowserSidebarDensityPolicy.pinHeight(scale: tabScale)
+        value.tileSpacing = BrowserSidebarDensityPolicy.pinSpacing(scale: tabScale)
+        return value
     }
 
     private func dismissFromMiddleClick(

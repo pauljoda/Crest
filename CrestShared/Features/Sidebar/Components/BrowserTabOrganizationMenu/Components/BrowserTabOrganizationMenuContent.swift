@@ -140,10 +140,7 @@ struct BrowserTabOrganizationMenuContent: View {
                     Divider()
                     let tree = BrowserFolderTree(folders: space.folders.filter { $0.location == .saved })
                     ForEach(tree.flattenedNodes(collapsedFolderIDs: [])) { node in
-                        Button(
-                            tree.pathTitle(for: node.id) ?? node.folder.title,
-                            systemImage: node.folder.symbol
-                        ) {
+                        Button {
                             performIfCurrent { liveTab in
                                 browser.moveTab(
                                     liveTab.id,
@@ -151,6 +148,12 @@ struct BrowserTabOrganizationMenuContent: View {
                                     to: .saved,
                                     folderID: node.id
                                 )
+                            }
+                        } label: {
+                            Label {
+                                Text(tree.pathTitle(for: node.id) ?? node.folder.title)
+                            } icon: {
+                                BrowserFolderArtwork(symbol: node.folder.symbol, color: node.folder.color)
                             }
                         }
                         .disabled(

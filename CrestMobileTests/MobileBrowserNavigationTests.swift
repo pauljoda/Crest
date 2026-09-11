@@ -1645,7 +1645,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
         let expected = [1, 2, 3, 4, 3, 3, 4, 4, 3, 4, 4, 4]
 
         XCTAssertEqual(
-            (1...12).map(PinnedTabGridLayout.columnCount(for:)),
+            (1...12).map { PinnedTabGridLayout.columnCount(for: $0) },
             expected
         )
     }

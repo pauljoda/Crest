@@ -271,6 +271,35 @@ extension BrowserStore {
     }
 
     @discardableResult
+    func setFolderSymbol(
+        _ folderID: FolderID,
+        in spaceID: SpaceID,
+        symbol: String
+    ) -> Bool {
+        guard session.setFolderSymbol(folderID, in: spaceID, symbol: symbol) else {
+            return false
+        }
+        persist(syncUrgency: .coalesced, scope: .core)
+        return true
+    }
+
+    @discardableResult
+    func setFolderSymbol(
+        _ folderID: FolderID,
+        matching assignment: BrowserSpaceRuntimeAssignment,
+        symbol: String
+    ) -> Bool {
+        guard let space = space(matching: assignment),
+            space.folders.contains(where: { $0.id == folderID })
+        else { return false }
+        return setFolderSymbol(
+            folderID,
+            in: assignment.spaceID,
+            symbol: symbol
+        )
+    }
+
+    @discardableResult
     func setFolderCollapsed(
         _ folderID: FolderID,
         in spaceID: SpaceID,

@@ -105,7 +105,7 @@ final class MobileBrowserSettingsPaneTests: XCTestCase {
         )
     }
 
-    func testMobileGeneralSettingsUsesTheSharedDefaultZoomSection() {
+    func testMobileLookAndFeelUsesTheSharedDefaultZoomSection() {
         let preferences = BrowserDefaultPageZoomStore(
             persistence: InMemoryBrowserDefaultPageZoomPersistence()
         )

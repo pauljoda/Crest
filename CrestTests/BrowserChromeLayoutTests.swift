@@ -306,14 +306,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(
             BrowserFolderRowPresentationPolicy.usesEntireRowForDisclosure
         )
-        XCTAssertEqual(
-            BrowserFolderRowPresentationPolicy.systemImage(isExpanded: false),
-            "folder"
-        )
-        XCTAssertEqual(
-            BrowserFolderRowPresentationPolicy.systemImage(isExpanded: true),
-            "folder.fill"
-        )
     }
 
     func testSidebarPinsIdentityChromeAboveClippedTabContentAcrossPlatforms() {
@@ -2914,6 +2906,42 @@ extension BrowserChromeLayoutTests {
         XCTAssertTrue(restored.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey))
         XCTAssertTrue(restored.bool(forKey: BrowserChromeAppearancePreference.borderlessKey))
         XCTAssertFalse(restored === UserDefaults.standard)
+    }
+
+    @MainActor
+    func testWindowBorderMigratesAndKeepsDeviceLocalWidth() {
+        let suite = "window-border-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for (legacyBorderless, expectedWidth) in [(true, 0.0), (false, 8.0)] {
+            defaults.removeObject(forKey: BrowserChromeAppearancePreference.borderWidthKey)
+            defaults.set(legacyBorderless, forKey: BrowserChromeAppearancePreference.borderlessKey)
+            BrowserChromeAppearancePreference.migrateBorderWidth(in: defaults)
+            XCTAssertEqual(defaults.double(forKey: BrowserChromeAppearancePreference.borderWidthKey), expectedWidth)
+        }
+        defaults.set(3.5, forKey: BrowserChromeAppearancePreference.borderWidthKey)
+        defaults.set(true, forKey: BrowserChromeAppearancePreference.borderlessKey)
+        BrowserChromeAppearancePreference.migrateBorderWidth(in: defaults)
+        XCTAssertEqual(
+            UserDefaults(suiteName: suite)!.double(forKey: BrowserChromeAppearancePreference.borderWidthKey), 3.5)
+
+        for width in [0.0, 3.5, 8.0, 10.0] {
+            for direction in [LayoutDirection.leftToRight, .rightToLeft] {
+                for sidebarOnRight in [false, true] {
+                    let appearance = BrowserChromeAppearance(sidebarOnRight: sidebarOnRight, borderWidth: width)
+                    let insets = appearance.pageInsets(docked: true, direction: direction)
+                    XCTAssertEqual(insets.top, width)
+                    XCTAssertEqual(insets.bottom, width)
+                    XCTAssertEqual(insets.leading, appearance.sidebarEdge(in: direction) == .leading ? 0 : width)
+                    XCTAssertEqual(insets.trailing, appearance.sidebarEdge(in: direction) == .trailing ? 0 : width)
+                    XCTAssertEqual(appearance.borderless, width == 0)
+                    XCTAssertEqual(appearance.seamWidth, 1.5 * width / 8)
+                }
+            }
+        }
+        XCTAssertEqual(BrowserChromeAppearance(borderWidth: -2).frameWidth, 0)
+        XCTAssertEqual(BrowserChromeAppearance(borderWidth: 30).frameWidth, 10)
+        XCTAssertEqual(BrowserChromeAppearance(borderWidth: .nan).frameWidth, 8)
     }
 
     func testMeasuredContentBoundsCenterPaletteOnEitherSidebarSideAndReadingDirection() {

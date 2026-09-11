@@ -12,6 +12,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
     let reorder: BrowserSidebarReorderState
     private var isTargeted: Bool { reorder.isTargetedFolder(folderID) }
 
+    @Environment(\.folderPreviewShowsHighlight) private var previewShowsHighlight
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
@@ -28,7 +29,8 @@ struct BrowserFolderSectionSurface: ViewModifier {
                     color: color, intensity: intensity,
                     textColorMode: textColorMode,
                     showsFill: BrowserFolderAppearancePolicy.showsFill(
-                        alwaysVisible: alwaysVisible, isHovered: isHovered || isSelected, isTargeted: isTargeted),
+                        alwaysVisible: alwaysVisible || previewShowsHighlight, isHovered: isHovered || isSelected,
+                        isTargeted: isTargeted),
                     showsBorders: showsBorders, leadingInset: leadingInset,
                     isSelected: isSelected,
                     emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)

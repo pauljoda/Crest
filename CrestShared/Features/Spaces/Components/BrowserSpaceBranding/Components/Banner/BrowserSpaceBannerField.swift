@@ -40,6 +40,44 @@ struct BrowserSpaceBannerField: View {
                 BrowserSpaceChevronLowerBannerShape(size: size)
                     .fill(third)
             }
+        case .stripes, .checkered, .lozenges:
+            Canvas { context, canvasSize in
+                context.fill(Path(CGRect(origin: .zero, size: canvasSize)), with: .color(colors[0]))
+                let cell = max(16, canvasSize.width / 5)
+                let rows = min(200, Int(ceil(canvasSize.height / cell)) + 1)
+                let columns = min(200, Int(ceil(canvasSize.width / cell)) + 1)
+                for row in 0..<rows {
+                    for column in 0..<columns {
+                        let x = CGFloat(column) * cell
+                        let y = CGFloat(row) * cell
+                        switch pattern {
+                        case .stripes:
+                            if column.isMultiple(of: 2) {
+                                context.fill(
+                                    Path(CGRect(x: x, y: y, width: cell, height: cell)),
+                                    with: .color(second.opacity(0.35)))
+                            }
+                        case .checkered:
+                            if (row + column).isMultiple(of: 2) {
+                                context.fill(
+                                    Path(CGRect(x: x, y: y, width: cell, height: cell)),
+                                    with: .color(second.opacity(0.35)))
+                            }
+                        case .lozenges:
+                            var diamond = Path()
+                            diamond.move(to: CGPoint(x: x + cell / 2, y: y))
+                            diamond.addLine(to: CGPoint(x: x + cell, y: y + cell / 2))
+                            diamond.addLine(to: CGPoint(x: x + cell / 2, y: y + cell))
+                            diamond.addLine(to: CGPoint(x: x, y: y + cell / 2))
+                            diamond.closeSubpath()
+                            context.fill(
+                                diamond, with: .color(((row + column).isMultiple(of: 2) ? second : third).opacity(0.35))
+                            )
+                        default: break
+                        }
+                    }
+                }
+            }
         case .quartered:
             VStack(spacing: 0) {
                 HStack(spacing: 0) {

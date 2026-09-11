@@ -28,20 +28,31 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     let interaction: BrowserSidebarTabRowInteractionContext
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
+    private var tabScale = 1.0
 
     func body(content: Content) -> some View {
         content
             .frame(maxWidth: .infinity)
             .frame(minHeight: minHeight)
             .contentShape(.rect)
-            .crestInteractiveSurface(
-                isSelected: configuration.isSelected,
-                isHovering: interaction.isHovering.wrappedValue
-                    || (configuration.tab.splitGroupID == nil
-                        && configuration.browser.tabMultiSelection.contains(configuration.tab.id)
-                        && !BrowserSidebarSelection.isCoveredBySelectedFolder(
-                            .tab(configuration.tab.id), in: configuration.browser)),
-                cornerRadius: CrestLayout.sidebarControlCornerRadius
+            .modifier(
+                BrowserTabAppearanceSurface(
+                    appearance: BrowserDeviceAppearanceStore.shared.tabs,
+                    accent: (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? .indigo).color,
+                    isPinned: false,
+                    isSelected: configuration.isSelected,
+                    isHovering: interaction.isHovering.wrappedValue
+                        || (configuration.tab.splitGroupID == nil
+                            && configuration.browser.tabMultiSelection.contains(configuration.tab.id)
+                            && !BrowserSidebarSelection.isCoveredBySelectedFolder(
+                                .tab(configuration.tab.id), in: configuration.browser))
+                )
+            )
+            .padding(
+                .vertical,
+                BrowserSidebarDensityPolicy.rowSeparation(
+                    scale: tabScale, hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
             )
             .browserTabPromotionDestination(
                 id: configuration.promotionID,
@@ -86,7 +97,8 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 // offers a drop slot between two members of its own run.
                 isEnabled: !interaction.isRenaming
                     && configuration.isAvailableForDisplay
-                    && configuration.isReorderSource,
+                    && configuration.isReorderSource
+                    && configuration.capabilities.supportsOrganization,
                 requiresSelectedSpace: true
             )
             .modifier(
@@ -114,7 +126,9 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             }
             .crestCollectionItemTransition()
             .accessibilityElement(children: .contain)
-            .contextMenu { organizationMenu }
+            .contextMenu {
+                if configuration.capabilities.supportsOrganization { organizationMenu }
+            }
             .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
                 if !focused, interaction.isRenaming {
                     interaction.commitTitle()
@@ -158,10 +172,18 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     }
 
     private var minHeight: CGFloat {
-        BrowserSidebarInteractionPolicy.rowMinHeight(
+        let base = BrowserSidebarInteractionPolicy.rowMinHeight(
             configuration.capabilities,
             dynamicTypeSize: dynamicTypeSize
         )
+        return BrowserSidebarDensityPolicy.rowHeight(
+            base: base, scale: dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale,
+            touch: configuration.capabilities.supportsTouch)
+    }
+
+    private var branding: BrowserSpaceBranding? {
+        configuration.spacePresentation?.branding
+            ?? configuration.browser.session.space(id: configuration.spaceID)?.branding
     }
 
     private var usesMatchedGeometryPromotion: Bool {

@@ -24,11 +24,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var keyboardEndFrame = CGRect.null
     @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
     var sidebarOnRight = false
-    @AppStorage(BrowserChromeAppearancePreference.borderlessKey, store: BrowserChromeAppearancePreference.defaults)
-    var borderless = false
+    @AppStorage(BrowserChromeAppearancePreference.borderWidthKey, store: BrowserChromeAppearancePreference.defaults)
+    var borderWidth = BrowserChromeAppearance.defaultBorderWidth
 
     var chromeAppearance: BrowserChromeAppearance {
-        .init(sidebarOnRight: sidebarOnRight, borderless: borderless)
+        .init(sidebarOnRight: sidebarOnRight, borderWidth: borderWidth)
     }
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace

@@ -30,7 +30,7 @@ struct BrowserSpaceSymbolArtwork: View {
                     Image(systemName: space.symbol)
                         .resizable()
                         .scaledToFit()
-                        .foregroundStyle(space.branding.primaryColor.color)
+                        .foregroundStyle(space.branding.resolvedSymbolColor.color)
                         .padding(size * 0.2)
                 }
             }

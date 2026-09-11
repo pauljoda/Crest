@@ -693,11 +693,7 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
 
     // MARK: - Split group container layout
 
-    /// Pins the container geometry each shell's grouped rows draw today, which
-    /// is what two forks of this row used to disagree about. The corner radius
-    /// is asserted against the member rows' own radius plus the container
-    /// padding, because the two have to stay concentric: a focused member's
-    /// corners are drawn one padding inside the container's.
+    /// Keeps layout and touch targets independent from the shared appearance preference.
     func testSplitGroupContainerGeometryFollowsTheShell() {
         let pointer = BrowserSidebarInteractionPolicy.splitGroupRowMetrics(
             capabilities(hover: true, touch: false)
@@ -705,7 +701,6 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(pointer, .pointer)
         XCTAssertEqual(pointer.rowVerticalInset, 2)
         XCTAssertEqual(pointer.containerPadding, 4)
-        XCTAssertEqual(pointer.containerCornerRadius, 12)
         XCTAssertEqual(pointer.memberSpacing, 0)
         XCTAssertEqual(pointer.headerHeight, 30)
         XCTAssertEqual(pointer.headerGlyphSize, 16)
@@ -717,7 +712,6 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
         XCTAssertEqual(touch, .touch)
         XCTAssertEqual(touch.rowVerticalInset, 2)
         XCTAssertEqual(touch.containerPadding, 4)
-        XCTAssertEqual(touch.containerCornerRadius, 12)
         XCTAssertEqual(touch.memberSpacing, 2)
         XCTAssertEqual(touch.headerHeight, 44)
         XCTAssertEqual(touch.headerGlyphSize, 20)
@@ -727,20 +721,6 @@ final class BrowserSidebarInteractionPolicyTests: XCTestCase {
             44,
             "The group action header remains a native touch target."
         )
-    }
-
-    /// The container and the rows inside it are concentric on both shells, so
-    /// a focused member's corners stay parallel to the group's own.
-    func testSplitGroupContainerStaysConcentricWithItsMemberRows() {
-        for metrics in [
-            BrowserSidebarSplitGroupRowMetrics.pointer,
-            BrowserSidebarSplitGroupRowMetrics.touch,
-        ] {
-            XCTAssertEqual(
-                metrics.containerCornerRadius - metrics.containerPadding,
-                CrestLayout.sidebarControlCornerRadius
-            )
-        }
     }
 
     /// The two insets the container borrows rather than chooses. A group has

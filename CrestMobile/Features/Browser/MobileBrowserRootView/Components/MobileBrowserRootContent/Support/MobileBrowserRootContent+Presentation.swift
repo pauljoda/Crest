@@ -23,7 +23,7 @@ extension MobileBrowserRootContent {
 
     var usesBorderlessPageFrame: Bool {
         MobileSidebarPageFramePolicy.usesBorderlessFrame(
-            preferenceIsEnabled: borderless,
+            preferenceIsEnabled: chromeAppearance.borderless,
             sidebarPresentation: navigation.regularSidebarPresentation,
             presentsSplitView: presentsSplitView,
             browserPresentation: presentation

@@ -4,6 +4,7 @@ extension BrowserSettingsDestination {
     var title: LocalizedStringResource {
         switch self {
         case .general: "General"
+        case .lookAndFeel: "Look and Feel"
         case .links: "Links"
         case .shortcuts: "Shortcuts"
         case .spaces: "Spaces"
@@ -30,7 +31,8 @@ extension BrowserSettingsDestination {
 
     var subtitle: LocalizedStringResource {
         switch self {
-        case .general: "Browsing and interface"
+        case .general: "Browsing and startup"
+        case .lookAndFeel: "Appearance, zoom, and motion"
         case .links: "Quick Window and Peek"
         case .shortcuts: "Keyboard commands"
         case .spaces: "Profiles and appearance"
@@ -51,7 +53,9 @@ extension BrowserSettingsDestination {
     var searchTerms: LocalizedStringResource {
         switch self {
         case .general:
-            "browser startup default Space transparency sidebar left right borderless window fullscreen layout interface page zoom percentage typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL folder highlights counts borders preview"
+            "browser startup default Space typing spelling spell check text editing focus new tabs follow move between Spaces Command-click middle-click pinned saved close resume restore root URL mouse"
+        case .lookAndFeel:
+            "appearance theme transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons"
         case .links:
             "external apps Quick Window Peek pinned saved routing open"
         case .shortcuts:

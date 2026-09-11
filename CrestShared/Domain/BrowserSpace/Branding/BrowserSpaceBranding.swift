@@ -10,7 +10,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     /// The vocabulary that adds the expanded heraldic charges.
     static let expandedChargeRenderingVersion = 3
     /// The newest vocabulary this build can produce.
-    static let currentRenderingVersion = expandedChargeRenderingVersion
+    static let customizationRenderingVersion = 4
+    static let currentRenderingVersion = customizationRenderingVersion
 
     var colors: [BrowserSpaceBrandColor]
     var bannerPattern: BrowserSpaceBannerPattern
@@ -20,6 +21,8 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     var gradientAngle: Double
     var showsTexture: Bool
     var iconStyle: BrowserSpaceIconStyle
+    /// Nil follows the Space palette as it changes.
+    var symbolColor: BrowserSpaceBrandColor?
     var crest: BrowserSpaceCrest
     var folderColorIntensity: Double
     var textColorMode: BrowserSpaceTextColorMode
@@ -40,7 +43,10 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     /// readers have never seen. Only branding that actually wears a newer charge
     /// moves the number.
     var renderingVersion: Int {
-        max(Self.baselineRenderingVersion, crest.requiredRenderingVersion)
+        max(
+            bannerPattern.introducedInRenderingVersion, crest.requiredRenderingVersion,
+            symbolColor != nil
+                ? Self.customizationRenderingVersion : Self.baselineRenderingVersion)
     }
 
     init(
@@ -53,6 +59,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         gradientAngle: Double = 0,
         showsTexture: Bool = false,
         iconStyle: BrowserSpaceIconStyle = .simpleSymbol,
+        symbolColor: BrowserSpaceBrandColor? = nil,
         crest: BrowserSpaceCrest = BrowserSpaceCrest(),
         folderColorIntensity: Double = 0,
         textColorMode: BrowserSpaceTextColorMode = .automatic,
@@ -73,6 +80,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         self.gradientAngle = Self.normalizedGradientAngle(gradientAngle)
         self.showsTexture = showsTexture
         self.iconStyle = iconStyle
+        self.symbolColor = symbolColor
         self.crest = crest.normalized(forColorCount: normalizedColors.count)
         self.folderColorIntensity = folderColorIntensity.isFinite ? min(max(folderColorIntensity, 0), 1) : 0
         self.textColorMode = textColorMode
@@ -157,6 +165,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
             gradientAngle: gradientAngle,
             showsTexture: showsTexture,
             iconStyle: iconStyle,
+            symbolColor: symbolColor,
             crest: crest,
             folderColorIntensity: folderColorIntensity,
             textColorMode: textColorMode,
@@ -175,6 +184,10 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
 
     var primaryColor: BrowserSpaceBrandColor {
         color(for: .primary) ?? backgroundColor
+    }
+
+    var resolvedSymbolColor: BrowserSpaceBrandColor {
+        symbolColor ?? primaryColor
     }
 
     var secondaryColor: BrowserSpaceBrandColor {
@@ -207,6 +220,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         case gradientAngle
         case showsTexture
         case iconStyle
+        case symbolColor
         case crest
         case renderingVersion
         case folderColorIntensity
@@ -251,6 +265,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
                 forKey: .showsTexture
             ) ?? false,
             iconStyle: container.decodeTolerantly(.iconStyle, default: .simpleSymbol),
+            symbolColor: try container.decodeIfPresent(BrowserSpaceBrandColor.self, forKey: .symbolColor),
             crest: try container.decode(BrowserSpaceCrest.self, forKey: .crest),
             folderColorIntensity: (try? container.decodeIfPresent(Double.self, forKey: .folderColorIntensity)) ?? 0,
             textColorMode: container.decodeTolerantly(.textColorMode, default: .automatic),
@@ -269,6 +284,7 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
         try container.encode(gradientAngle, forKey: .gradientAngle)
         try container.encode(showsTexture, forKey: .showsTexture)
         try container.encode(iconStyle, forKey: .iconStyle)
+        try container.encodeIfPresent(symbolColor, forKey: .symbolColor)
         try container.encode(crest, forKey: .crest)
         try container.encode(renderingVersion, forKey: .renderingVersion)
         try container.encode(normalized().folderColorIntensity, forKey: .folderColorIntensity)

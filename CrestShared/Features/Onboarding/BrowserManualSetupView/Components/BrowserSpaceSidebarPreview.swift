@@ -26,14 +26,7 @@ struct BrowserSpaceSidebarPreview: View {
                 .frame(
                     height: BrowserManualSetupSidebarPreviewMetrics.addressHeight
                 )
-                .background(
-                    .regularMaterial,
-                    in: .rect(
-                        cornerRadius: BrowserManualSetupSidebarPreviewMetrics
-                            .addressCornerRadius,
-                        style: .continuous
-                    )
-                )
+                .browserAddressFieldSurface(progress: 0, isLoading: false, isEditing: false, branding: space.branding)
                 .padding(
                     BrowserManualSetupSidebarPreviewMetrics.addressOuterPadding
                 )
@@ -106,6 +99,7 @@ struct BrowserSpaceSidebarPreview: View {
             BrowserSpaceForegroundPolicy.colorScheme(for: space.branding)
         )
         .allowsHitTesting(false)
+        .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: space, isUnlocked: true))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Branding preview of \(space.name)")
         .accessibilityValue(accessibilitySummary)

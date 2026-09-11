@@ -428,7 +428,10 @@ final class BrowserSidebarReorderState {
         guard let zone = restingZone(for: section, inColumn: source) else { return nil }
         let ordered = BrowserSidebarReorderPolicy.rows(in: section, from: registeredRows(in: lift.item.spaceAssignment))
         let emptyHeight = max(zone.minimumHeight, ordered.isEmpty ? zone.frame.height : 0)
-        return (pinnedLayout(ids: ordered.map(\.id), in: lift.item.spaceAssignment), zone.frame, emptyHeight)
+        return (
+            pinnedLayout(ids: ordered.map(\.id), in: lift.item.spaceAssignment).applyingPreferences(
+                width: zone.frame.width), zone.frame, emptyHeight
+        )
     }
 
     /// Records where one presented card is, and which Space is presenting it. The

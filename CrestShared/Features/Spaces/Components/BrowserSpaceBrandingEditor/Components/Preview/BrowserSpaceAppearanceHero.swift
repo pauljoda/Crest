@@ -31,8 +31,8 @@ struct BrowserSpaceAppearanceHero: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                BrowserSpaceIdentityIcon(space: preview, size: 34)
-                    .frame(width: 34, height: 34)
+                BrowserSpaceIdentityIcon(space: preview, size: 26)
+                    .frame(width: 26, height: 26)
                 if let editableName {
                     BrowserInlineSpaceName(
                         name: editableName, size: 16,
@@ -42,7 +42,8 @@ struct BrowserSpaceAppearanceHero: View {
                     Spacer()
                 }
             }
-            .padding(18)
+            .padding(.horizontal, 14)
+            .frame(height: BrowserSpaceSwitcherLayout.compactStripHeight)
             if showsNameHint {
                 Text(nameHint)
                     .font(CrestTypography.sans(11))
@@ -76,6 +77,7 @@ struct BrowserSpaceAppearanceHero: View {
         }
         .background { BrowserSpaceBannerBackground(branding: branding) }
         .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: branding))
+        .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: preview, isUnlocked: true))
         .clipShape(.rect(cornerRadius: 18))
         .overlay {
             RoundedRectangle(cornerRadius: 18).strokeBorder(.primary.opacity(0.12))

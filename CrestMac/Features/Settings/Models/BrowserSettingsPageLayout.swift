@@ -11,9 +11,21 @@ struct BrowserSettingsPageLayout: Equatable {
         BrowserSettingsVisualPolicy.maximumReadableContentWidth
     var contentHorizontalPadding = CrestSpacing.section
     var showsPageIdentity = true
+    /// Whether the identity is one bar-height row rather than the centred icon,
+    /// title, and subtitle. A pane that pins a live preview beside its form
+    /// wants that height for the preview.
+    var usesCompactPageIdentity = false
 
     static let readable = BrowserSettingsPageLayout()
     static let selfScrolling = BrowserSettingsPageLayout(scrollsContent: false)
+    /// A pane that scrolls its own form and keeps a live preview pinned beside
+    /// it, so the page must not scroll or narrow it first.
+    static let previewSplit = BrowserSettingsPageLayout(
+        scrollsContent: false,
+        maximumContentWidth: .infinity,
+        contentHorizontalPadding: 0,
+        usesCompactPageIdentity: true
+    )
     static let fullBleed = BrowserSettingsPageLayout(
         scrollsContent: false,
         maximumContentWidth: .infinity,
@@ -26,6 +38,7 @@ struct BrowserSettingsPageLayout: Equatable {
     ) -> BrowserSettingsPageLayout {
         switch destination {
         case .spaces: .fullBleed
+        case .lookAndFeel: .previewSplit
         case .shortcuts, .featureFlags: .selfScrolling
         case .general, .links, .sync, .privacy, .passwords, .extensions,
             .advanced, .about:

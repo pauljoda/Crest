@@ -44,4 +44,10 @@ struct BrowserInteractionCapabilities: Equatable, Sendable {
     /// very view the system drag interaction lifts, and one with no partner can
     /// only cost.
     var pairsRowWithPromotedSurface = true
+
+    /// Whether rows can be rearranged and acted on — dragged, dropped, and
+    /// opened in a context menu. Off for a sidebar that exists to be looked at,
+    /// like the Look and Feel preview, where a row still selects and hovers so
+    /// the appearance choices show, but nothing can be moved or organized.
+    var supportsOrganization = true
 }

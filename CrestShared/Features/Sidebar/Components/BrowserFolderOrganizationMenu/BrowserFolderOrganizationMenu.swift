@@ -8,6 +8,7 @@ struct BrowserFolderOrganizationMenu: View {
     let createNestedFolder: () -> Void
     let renameFolder: () -> Void
     let changeColor: () -> Void
+    let changeIcon: () -> Void
     let deleteFolder: () -> Void
 
     var body: some View {

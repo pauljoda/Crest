@@ -13,14 +13,10 @@ enum BrowserPinnedTabInteraction {
 enum PinnedTabGridLayout {
     static let maximumColumns = 4
 
-    static func columnCount(for itemCount: Int) -> Int {
-        switch max(1, itemCount) {
-        case 1...4:
-            return max(1, itemCount)
-        case 5...6, 9:
-            return 3
-        default:
-            return maximumColumns
-        }
+    static func columnCount(for itemCount: Int, maximumColumns: Int = maximumColumns) -> Int {
+        let count = max(1, itemCount)
+        let capacity = max(1, maximumColumns)
+        let rows = (count + capacity - 1) / capacity
+        return (count + rows - 1) / rows
     }
 }

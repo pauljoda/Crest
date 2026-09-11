@@ -34,6 +34,7 @@ struct BrowserSidebarAddressFieldConfiguration {
     var addressAccessibilityIdentifier = "address-field"
     var addressDisplayAccessibilityIdentifier = "address-display"
     var prompt: LocalizedStringKey = "Search or enter website"
+    var branding: BrowserSpaceBranding? = nil
 
     var metrics: BrowserSidebarAddressFieldMetrics {
         BrowserSidebarInteractionPolicy.addressFieldMetrics(capabilities)

@@ -6,20 +6,22 @@ struct PinnedTabInteractionSurface: ViewModifier {
     let isSelected: Bool
     let isHovering: Bool
     var isMultiSelected = false
+    var branding: BrowserSpaceBranding? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var palette: BrowserFaviconPalette?
+    @Environment(\.sidebarSpacePresentation) private var presentation
 
     func body(content: Content) -> some View {
         content
-            .crestInteractiveSurface(
-                isSelected: isSelected,
-                isHovering: isHovering,
-                cornerRadius: CrestRadius.compact,
-                selectionEmphasis: isMultiSelected,
-                showsRestingSurface: true,
-                selectedBorderColor: accent.color,
-                selectedBorderWidth: CrestLayout.pinnedAccentBorderWidth
+            .modifier(
+                BrowserTabAppearanceSurface(
+                    appearance: appearance,
+                    accent: appearance.usesWebsitePinColor
+                        ? accent.color
+                        : (appearance.color ?? (presentation?.branding ?? branding)?.primaryColor ?? .indigo).color,
+                    isPinned: true, isSelected: isSelected, isHovering: isHovering,
+                    selectionEmphasis: isMultiSelected)
             )
             .animation(
                 BrowserVisualAccessibilityPolicy.animation(
@@ -45,4 +47,6 @@ struct PinnedTabInteractionSurface: ViewModifier {
             extracted: palette?.primary.iconAccent
         )
     }
+
+    private var appearance: BrowserTabAppearance { BrowserDeviceAppearanceStore.shared.tabs }
 }

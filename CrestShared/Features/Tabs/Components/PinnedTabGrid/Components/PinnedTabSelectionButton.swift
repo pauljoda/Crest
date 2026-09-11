@@ -9,16 +9,19 @@ struct PinnedTabSelectionButton: View {
     let siteTheme: BrowserTabIconAccent?
     let select: () -> Void
     var isMultiSelected = false
+    var branding: BrowserSpaceBranding? = nil
 
     @State private var isHovering = false
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
+        var iconScale = 1.0
 
     var body: some View {
         Button(action: select) {
-            TabFaviconView(tab: tab, profileID: profileID, size: 19)
-                .font(.system(size: 17, weight: .medium))
+            TabFaviconView(tab: tab, profileID: profileID, size: 19 * BrowserSidebarDensityPolicy.scale(iconScale))
+                .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
                 .frame(maxWidth: .infinity)
-                .frame(height: BrowserPinnedTabReorderLayout.cellHeight)
+                .frame(height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale))
                 .contentShape(.rect)
                 .modifier(
                     PinnedTabInteractionSurface(
@@ -26,7 +29,8 @@ struct PinnedTabSelectionButton: View {
                         siteTheme: siteTheme,
                         isSelected: isSelected,
                         isHovering: isHovering || isMultiSelected,
-                        isMultiSelected: isMultiSelected
+                        isMultiSelected: isMultiSelected,
+                        branding: branding
                     )
                 )
         }

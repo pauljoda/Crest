@@ -97,7 +97,8 @@ struct MobileBrowserSidebarTopChrome: View {
             activate: configuration.activateAddress,
             submit: configuration.submitAddress,
             morphNamespace: configuration.compactChromeNamespace,
-            morphID: morphID
+            morphID: morphID,
+            branding: configuration.context.browser.selectedSpace?.branding
         )
     }
 

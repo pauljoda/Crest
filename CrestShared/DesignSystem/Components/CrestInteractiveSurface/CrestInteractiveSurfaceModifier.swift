@@ -17,6 +17,10 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     let showsRestingSurface: Bool
     let selectedBorderColor: Color
     let selectedBorderWidth: CGFloat
+    var customSelectedFill: Color? = nil
+    var customHoverFill: Color? = nil
+    var customRestingFill: Color? = nil
+    var restingBorderColor: Color = .clear
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -37,7 +41,7 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
             .overlay {
                 shape
                     .strokeBorder(
-                        isEmphasized ? selectedBorderColor : .clear,
+                        isEmphasized ? selectedBorderColor : restingBorderColor,
                         lineWidth: borderWidth
                     )
                     .allowsHitTesting(false)
@@ -59,11 +63,11 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
     private var fill: Color {
         switch (isSelected || isPressed, isHovering, showsRestingSurface) {
         case (true, _, _):
-            CrestColor.selectedSurface
+            customSelectedFill ?? CrestColor.selectedSurface
         case (false, true, _):
-            CrestColor.hover
+            customHoverFill ?? CrestColor.hover
         case (false, false, true):
-            CrestColor.chromeSurface
+            customRestingFill ?? CrestColor.chromeSurface
         case (false, false, false):
             .clear
         }

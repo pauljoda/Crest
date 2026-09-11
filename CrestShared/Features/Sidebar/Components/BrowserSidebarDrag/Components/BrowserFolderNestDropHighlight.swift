@@ -12,13 +12,13 @@ struct BrowserFolderNestDropHighlight: View {
     var body: some View {
         if isTargeted {
             RoundedRectangle(
-                cornerRadius: CrestLayout.sidebarControlCornerRadius,
+                cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
                 style: .continuous
             )
             .fill(CrestColor.dropIndicator.opacity(0.14))
             .overlay {
                 RoundedRectangle(
-                    cornerRadius: CrestLayout.sidebarControlCornerRadius,
+                    cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(),
                     style: .continuous
                 )
                 .strokeBorder(CrestColor.dropIndicator, lineWidth: 1.5)

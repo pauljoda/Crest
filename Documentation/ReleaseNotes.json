@@ -873,6 +873,26 @@
     "2026-09-10-mobile-window-appearance-parity": {
       "category": "new",
       "message": "Choose borderless pages and a right-side sidebar on iPhone and iPad, with a live Settings preview and swipe-in access from the chosen edge"
+    },
+    "2026-09-11-look-and-feel-live-designer": {
+      "category": "new",
+      "message": "Look and Feel settings show one live preview of your sidebar and page beside compact, aligned controls, and every changed setting can be reset on its own"
+    },
+    "2026-09-11-tab-and-address-appearance": {
+      "category": "new",
+      "message": "Tune tab corner shape, tab scale, pin layout, color borders, fills, hover tint, and the address field's colors, with presets for the common choices"
+    },
+    "2026-09-11-app-icon-palettes": {
+      "category": "new",
+      "message": "Choose a color palette for Crest's app icon on Mac, iPhone, and iPad"
+    },
+    "2026-09-11-default-page-zoom-in-look-and-feel": {
+      "category": "improved",
+      "message": "Default page zoom moved into Look and Feel and shows in the live preview"
+    },
+    "2026-09-11-space-folder-appearance-in-editor": {
+      "category": "improved",
+      "message": "Folder color intensity and text color moved into each Space's appearance editor"
     }
   }
 }

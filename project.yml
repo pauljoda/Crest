@@ -52,6 +52,12 @@ targets:
           - Resources/CrestIcon/Validation
       - path: CrestMac
     dependencies:
+      - target: CrestDockTilePlugin
+        embed: true
+        link: false
+        codeSign: true
+        copy:
+          destination: plugins
       - package: Sparkle
         product: Sparkle
       - sdk: AuthenticationServices.framework
@@ -68,6 +74,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CrestMac/Configuration/Crest-Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: Crest
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
         PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest
         PRODUCT_MODULE_NAME: Crest
         PRODUCT_NAME: Crest
@@ -75,6 +82,21 @@ targets:
     scheme:
       testTargets:
         - CrestTests
+  CrestDockTilePlugin:
+    type: bundle
+    platform: macOS
+    sources:
+      - path: CrestDockTilePlugin
+      - path: CrestMac/Features/AppIcon/BrowserMacAppIconAssets.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.docktileplugin
+        PRODUCT_NAME: CrestDockTilePlugin
+        PRODUCT_MODULE_NAME: CrestDockTilePlugin
+        WRAPPER_EXTENSION: docktileplugin
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSPrincipalClass: CrestDockTilePlugin.CrestDockTilePlugin
+        SKIP_INSTALL: YES
   CrestTests:
     type: bundle.unit-test
     platform: macOS
@@ -126,6 +148,7 @@ targets:
         PRODUCT_NAME: Crest
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: Crest
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "CrestWinter CrestLion CrestStorm CrestDragon CrestMeadow CrestIron CrestRiver CrestSun CrestVigil"
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     scheme:
       testTargets:

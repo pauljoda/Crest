@@ -1,6 +1,21 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Stripes" : {
+      "extractionState" : "manual"
+    },
+    "Checkered" : {
+      "extractionState" : "manual"
+    },
+    "Lozenges" : {
+      "extractionState" : "manual"
+    },
+    "Octagon" : {
+      "extractionState" : "manual"
+    },
+    "Rounded Square" : {
+      "extractionState" : "manual"
+    },
     "" : {
 
     },

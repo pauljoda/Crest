@@ -55,7 +55,8 @@ struct SpaceSidebarAddressBand: View {
             activate: activateAddress,
             submit: submitAddress,
             morphNamespace: commandSurfaceNamespace,
-            morphID: "crest-address-command-\(space.id)"
+            morphID: "crest-address-command-\(space.id)",
+            branding: space.branding
         )
     }
 

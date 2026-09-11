@@ -15,6 +15,7 @@ import SwiftUI
 /// `BrowserSettingsDestinationTests` pins them.
 enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     case general
+    case lookAndFeel
     case links
     case shortcuts
     case spaces
@@ -51,6 +52,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .general: "gearshape"
+        case .lookAndFeel: "paintpalette"
         case .links: "link"
         case .shortcuts: "keyboard"
         case .spaces: "square.grid.2x2"
@@ -71,6 +73,7 @@ enum BrowserSettingsDestination: String, CaseIterable, Identifiable, Hashable {
     var color: Color {
         switch self {
         case .general: CrestBrandPalette.inkSoft
+        case .lookAndFeel: CrestBrandPalette.coral
         case .links: CrestBrandPalette.sky
         case .shortcuts: CrestBrandPalette.butter
         case .spaces: CrestBrandPalette.coral

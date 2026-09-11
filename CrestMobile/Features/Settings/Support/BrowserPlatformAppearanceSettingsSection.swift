@@ -1,9 +1,12 @@
 import SwiftUI
 
+/// The shared Window group. Touch has no window transparency or page motion of
+/// its own to add to it.
 struct BrowserPlatformAppearanceSettingsSection: View {
+    var space: BrowserSpace?
+    var showsPreview = false
+
     var body: some View {
-        Section("Appearance") {
-            BrowserChromeAppearanceSettingsControls()
-        }
+        BrowserWindowAppearanceGroup(space: space, showsPreview: showsPreview) { EmptyView() }
     }
 }

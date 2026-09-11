@@ -32,38 +32,43 @@ struct BrowserFolderGroupSurface: View {
             }
         }
         .contextMenu {
-            BrowserFolderOrganizationMenu(
-                folder: folder,
-                assignment: configuration.folderRuntimeAssignment,
-                browser: configuration.browser,
-                spaceAccess: configuration.spaceAccess,
-                createNestedFolder: interaction.beginCreatingChild,
-                renameFolder: interaction.beginRenaming,
-                changeColor: {
-                    interaction.isChoosingColor.wrappedValue = true
-                },
-                deleteFolder: {
-                    interaction.isConfirmingDeletion.wrappedValue = true
+            if configuration.capabilities.supportsOrganization {
+                BrowserFolderOrganizationMenu(
+                    folder: folder,
+                    assignment: configuration.folderRuntimeAssignment,
+                    browser: configuration.browser,
+                    spaceAccess: configuration.spaceAccess,
+                    createNestedFolder: interaction.beginCreatingChild,
+                    renameFolder: interaction.beginRenaming,
+                    changeColor: {
+                        interaction.isChoosingColor.wrappedValue = true
+                    },
+                    changeIcon: {
+                        interaction.isChoosingIcon.wrappedValue = true
+                    },
+                    deleteFolder: {
+                        interaction.isConfirmingDeletion.wrappedValue = true
+                    }
+                )
+                .tint(.primary)
+                // A long press opens this menu out of the same gesture that would
+                // otherwise lift the folder. Telling the drag state the menu has
+                // the press is what keeps the two from both claiming it.
+                .onAppear {
+                    configuration.browser.folderDragState.contextMenuDidOpen(
+                        for: dragItem
+                    )
+                    // And the reorder state, which is where a touch lift lives and
+                    // which no drag session will report back to once the menu has
+                    // the press. See `yieldToCompetingInteraction`.
+                    configuration.browser.sidebarReorderState
+                        .yieldToCompetingInteraction()
                 }
-            )
-            .tint(.primary)
-            // A long press opens this menu out of the same gesture that would
-            // otherwise lift the folder. Telling the drag state the menu has
-            // the press is what keeps the two from both claiming it.
-            .onAppear {
-                configuration.browser.folderDragState.contextMenuDidOpen(
-                    for: dragItem
-                )
-                // And the reorder state, which is where a touch lift lives and
-                // which no drag session will report back to once the menu has
-                // the press. See `yieldToCompetingInteraction`.
-                configuration.browser.sidebarReorderState
-                    .yieldToCompetingInteraction()
-            }
-            .onDisappear {
-                configuration.browser.folderDragState.contextMenuDidClose(
-                    for: dragItem
-                )
+                .onDisappear {
+                    configuration.browser.folderDragState.contextMenuDidClose(
+                        for: dragItem
+                    )
+                }
             }
         }
         .popover(
@@ -73,6 +78,22 @@ struct BrowserFolderGroupSurface: View {
             BrowserFolderColorPicker(color: interaction.folderColor)
                 .presentationCompactAdaptation(.popover)
         }
+        .browserIconCustomizationPopover(
+            BrowserIconCustomizationPresentation(
+                isPresented: interaction.isChoosingIcon,
+                title: "Folder Icon",
+                currentEmoji: BrowserIconSymbol.emoji(from: folder.symbol),
+                currentSystemSymbol: BrowserIconSymbol.emoji(from: folder.symbol) == nil ? folder.symbol : nil,
+                systemSymbols: BrowserSpaceSimpleSymbol.allCases.map {
+                    BrowserIconSystemChoice(symbol: $0.rawValue, title: $0.titleKey)
+                },
+                showsReset: folder.symbol != "folder" && folder.symbol != "folder.fill",
+                resetTitle: "Use Folder Icon",
+                setEmoji: { interaction.folderSymbol.wrappedValue = BrowserIconSymbol.symbol(forEmoji: $0) },
+                setSystemSymbol: { interaction.folderSymbol.wrappedValue = $0 },
+                reset: { interaction.folderSymbol.wrappedValue = "folder" }
+            )
+        )
         .confirmationDialog(
             "Delete \(folder.title)?",
             isPresented: interaction.isConfirmingDeletion,

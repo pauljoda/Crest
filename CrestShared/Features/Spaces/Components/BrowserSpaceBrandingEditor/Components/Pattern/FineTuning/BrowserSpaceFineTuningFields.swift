@@ -28,6 +28,38 @@ struct BrowserSpaceFineTuningFields: View {
                 identifier: "space-branding-readability-fade",
                 help: "Adds contrast behind tabs and controls."
             )
+
+            textColor
+            folderColor
         }
+    }
+
+    private var textColor: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+            Picker("Text color", selection: $branding.textColorMode) {
+                Label("Automatic", systemImage: "sparkles")
+                    .tag(BrowserSpaceTextColorMode.automatic)
+                Label("Light", systemImage: "sun.max.fill")
+                    .tag(BrowserSpaceTextColorMode.light)
+                Label("Dark", systemImage: "moon.fill")
+                    .tag(BrowserSpaceTextColorMode.dark)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("space-text-color-mode")
+            Text("Automatic chooses text contrast from this Space’s colors. Light and Dark override it.")
+                .font(CrestTypography.metadata)
+                .foregroundStyle(CrestColor.textSecondary)
+        }
+    }
+
+    private var folderColor: some View {
+        CrestSettingSlider(
+            "Folder color intensity",
+            value: CrestSettingValue(
+                $branding.folderColorIntensity,
+                default: BrowserSpaceBrandingDefaults.folderColorIntensity),
+            readout: .percent(zero: "Subtle", full: "Opaque"),
+            identifier: "space-folder-color-intensity"
+        )
     }
 }

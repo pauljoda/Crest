@@ -54,7 +54,8 @@ struct BrowserSidebarAddressField<
             metrics: configuration.metrics,
             progress: configuration.progress,
             isLoading: configuration.isLoading,
-            isEditing: configuration.isEditing.wrappedValue
+            isEditing: configuration.isEditing.wrappedValue,
+            branding: configuration.branding
         )
         .matchedGeometryEffect(
             id: configuration.morphID,

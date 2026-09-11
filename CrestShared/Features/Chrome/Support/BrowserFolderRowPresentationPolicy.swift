@@ -2,10 +2,6 @@ enum BrowserFolderRowPresentationPolicy {
     static let showsSeparateChevron = false
     static let usesEntireRowForDisclosure = true
 
-    static func systemImage(isExpanded: Bool) -> String {
-        isExpanded ? "folder.fill" : "folder"
-    }
-
     /// Whether a collapsed folder's header lights up the way a row does, given
     /// the lift that would land inside it on release.
     ///

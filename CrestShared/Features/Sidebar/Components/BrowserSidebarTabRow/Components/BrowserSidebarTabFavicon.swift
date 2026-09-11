@@ -9,12 +9,17 @@ struct BrowserSidebarTabFavicon: View {
     /// that earns full-strength ink.
     var isProminent = false
     var isLoaded = true
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
+        var iconScale = 1.0
 
     var body: some View {
-        TabFaviconView(tab: tab, profileID: profileID)
-            .browserTabResidency(isLoaded: isLoaded)
-            .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))
-            .foregroundStyle(isProminent ? .primary : .secondary)
+        TabFaviconView(
+            tab: tab, profileID: profileID,
+            size: TabFaviconMetrics.defaultSize * BrowserSidebarDensityPolicy.scale(iconScale)
+        )
+        .browserTabResidency(isLoaded: isLoaded)
+        .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))
+        .foregroundStyle(isProminent ? .primary : .secondary)
     }
 }
 

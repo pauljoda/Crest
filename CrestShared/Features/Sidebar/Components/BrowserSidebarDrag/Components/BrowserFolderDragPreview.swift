@@ -9,7 +9,8 @@ struct BrowserFolderDragPreview: View {
     var loadedTabIDs: Set<TabID>?
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: CrestLayout.sidebarControlCornerRadius, style: .continuous)
+        let shape = RoundedRectangle(
+            cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(), style: .continuous)
         let width = BrowserFolderDragPreviewLayout.width(for: rowWidth)
 
         ZStack(alignment: .topLeading) {
@@ -36,7 +37,7 @@ struct BrowserFolderDragPreview: View {
 
     private func folderHeader(_ folder: BrowserFolder, depth: Int = 0) -> some View {
         HStack(spacing: CrestSpacing.small) {
-            Image(systemName: folder.symbol)
+            BrowserFolderArtwork(symbol: folder.symbol, color: folder.color, isExpanded: !folder.isCollapsed)
                 .foregroundStyle(folder.color.color.opacity(0.86))
                 .frame(width: 20)
             Text(folder.title).lineLimit(1)

@@ -12,14 +12,19 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     let progress: Double
     let isLoading: Bool
     let isEditing: Bool
+    var branding: BrowserSpaceBranding? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
         band(content.padding(.horizontal, metrics.horizontalPadding))
             .background {
                 ZStack(alignment: .leading) {
                     fieldShape.fill(CrestColor.chromeSurface)
+                    if !reduceTransparency {
+                        fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
+                    }
                     fieldShape
                         .fill(.tint.opacity(isLoading ? 0.2 : 0))
                         .scaleEffect(x: loadingProgress, anchor: .leading)
@@ -36,8 +41,11 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
             .overlay {
                 fieldShape
                     .strokeBorder(
-                        metrics.editingRingColor.opacity(isEditing ? 1 : 0),
-                        lineWidth: metrics.editingRingWidth,
+                        isEditing
+                            ? (appearance.usesAccentWhenEditing ? accent : metrics.editingRingColor)
+                            : accent.opacity(BrowserTabAppearance.intensity(appearance.border)),
+                        lineWidth: appearance.border > 0 || appearance.usesAccentWhenEditing
+                            ? max(1, metrics.editingRingWidth) : metrics.editingRingWidth,
                         antialiased: true
                     )
             }
@@ -59,9 +67,12 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
         )
     }
 
+    private var appearance: BrowserAddressAppearance { BrowserDeviceAppearanceStore.shared.address }
+    private var accent: Color { (appearance.color ?? branding?.primaryColor ?? .indigo).color }
+
     private var fieldShape: RoundedRectangle {
         RoundedRectangle(
-            cornerRadius: metrics.cornerRadius,
+            cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
             style: .continuous
         )
     }
@@ -72,14 +83,16 @@ extension View {
         metrics: BrowserSidebarAddressFieldMetrics = .pointer,
         progress: Double,
         isLoading: Bool,
-        isEditing: Bool
+        isEditing: Bool,
+        branding: BrowserSpaceBranding? = nil
     ) -> some View {
         modifier(
             BrowserSidebarAddressFieldSurface(
                 metrics: metrics,
                 progress: progress,
                 isLoading: isLoading,
-                isEditing: isEditing
+                isEditing: isEditing,
+                branding: branding
             )
         )
     }

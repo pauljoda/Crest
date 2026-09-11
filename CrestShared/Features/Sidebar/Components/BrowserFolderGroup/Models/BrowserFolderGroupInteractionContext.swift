@@ -8,6 +8,8 @@ struct BrowserFolderGroupInteractionContext {
     let editingFolderRequest: Binding<BrowserFolderRuntimeAssignment?>
     let draftTitle: Binding<String>
     let isChoosingColor: Binding<Bool>
+    let isChoosingIcon: Binding<Bool>
+    let folderSymbol: Binding<String>
     let isConfirmingDeletion: Binding<Bool>
     let collapsedTabVisibility: Binding<BrowserCollapsedFolderTabVisibilityState>
     let isTitleFocused: FocusState<Bool>.Binding

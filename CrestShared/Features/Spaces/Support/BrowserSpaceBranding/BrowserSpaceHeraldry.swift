@@ -33,6 +33,9 @@ extension BrowserSpaceBannerPattern: BrowserSpaceHeraldicTerm {
         case .diagonal: "Diagonal"
         case .chevron: "Chevron"
         case .quartered: "Quartered"
+        case .stripes: "Stripes"
+        case .checkered: "Checkered"
+        case .lozenges: "Lozenges"
         }
     }
 }
@@ -46,6 +49,8 @@ extension BrowserSpaceCrestBackplate: BrowserSpaceHeraldicTerm {
         case .diamond: "Lozenge"
         case .seal: "Seal"
         case .hexagon: "Hexagon"
+        case .octagon: "Octagon"
+        case .roundedSquare: "Rounded Square"
         }
     }
 
@@ -57,6 +62,8 @@ extension BrowserSpaceCrestBackplate: BrowserSpaceHeraldicTerm {
         case .diamond: "diamond.fill"
         case .seal: "seal.fill"
         case .hexagon: "hexagon.fill"
+        case .octagon: "octagon.fill"
+        case .roundedSquare: "square.fill"
         }
     }
 
@@ -68,6 +75,8 @@ extension BrowserSpaceCrestBackplate: BrowserSpaceHeraldicTerm {
         case .diamond: "diamond"
         case .seal: "seal"
         case .hexagon: "hexagon"
+        case .octagon: "octagon"
+        case .roundedSquare: "square"
         }
     }
 }

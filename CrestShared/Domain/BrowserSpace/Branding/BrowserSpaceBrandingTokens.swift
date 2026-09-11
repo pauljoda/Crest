@@ -51,4 +51,14 @@ enum BrowserSpaceBannerPattern: String, Codable, CaseIterable, Equatable, Sendab
     case diagonal
     case chevron
     case quartered
+    case stripes
+    case checkered
+    case lozenges
+
+    var introducedInRenderingVersion: Int {
+        switch self {
+        case .stripes, .checkered, .lozenges: BrowserSpaceBranding.customizationRenderingVersion
+        default: BrowserSpaceBranding.baselineRenderingVersion
+        }
+    }
 }

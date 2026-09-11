@@ -13,6 +13,7 @@ struct BrowserSidebarResizeHandle: View {
         Color.clear
             .frame(width: BrowserSidebarResizeHandleMetrics.hitWidth)
             .contentShape(.rect)
+            .modifier(BrowserPlatformColumnResizePointerModifier())
             .overlay {
                 Capsule()
                     .fill(
@@ -29,7 +30,8 @@ struct BrowserSidebarResizeHandle: View {
                     .accessibilityHidden(true)
             }
             .gesture(
-                DragGesture(minimumDistance: 0)
+                // The handle moves as width changes; measure in stationary coordinates.
+                DragGesture(minimumDistance: 0, coordinateSpace: .global)
                     .onChanged(resize)
                     .onEnded(endResize)
             )
@@ -39,19 +41,24 @@ struct BrowserSidebarResizeHandle: View {
     }
 
     private func resize(_ value: DragGesture.Value) {
-        let start = dragStartWidth ?? width
-        dragStartWidth = start
-        isActive = true
-        width = BrowserChromeLayout.clampedSidebarWidth(
-            start
-                + BrowserChromeDirectionPolicy.sidebarResizeDelta(
-                    value.translation.width,
-                    layoutDirection: layoutDirection
-                ) * (edge == .leading ? 1 : -1)
-        )
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            let start = dragStartWidth ?? width
+            dragStartWidth = start
+            isActive = true
+            width = BrowserChromeLayout.clampedSidebarWidth(
+                start
+                    + BrowserChromeDirectionPolicy.sidebarResizeDelta(
+                        value.translation.width,
+                        layoutDirection: layoutDirection
+                    ) * (edge == .leading ? 1 : -1)
+            )
+        }
     }
 
-    private func endResize(_: DragGesture.Value) {
+    private func endResize(_ value: DragGesture.Value) {
+        resize(value)
         dragStartWidth = nil
         isActive = false
         onResizeEnded(width)

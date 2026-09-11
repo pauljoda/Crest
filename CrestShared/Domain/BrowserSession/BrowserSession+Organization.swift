@@ -101,6 +101,25 @@ extension BrowserSession {
     }
 
     @discardableResult
+    mutating func setFolderSymbol(
+        _ folderID: FolderID,
+        in spaceID: SpaceID,
+        symbol: String
+    ) -> Bool {
+        guard !symbol.isEmpty, symbol.utf8.count <= 128 else { return false }
+        guard let spaceIndex = spaces.firstIndex(where: { $0.id == spaceID }),
+            let folderIndex = spaces[spaceIndex].folders.firstIndex(where: {
+                $0.id == folderID
+            }),
+            spaces[spaceIndex].folders[folderIndex].symbol != symbol
+        else {
+            return false
+        }
+        spaces[spaceIndex].folders[folderIndex].symbol = symbol
+        return true
+    }
+
+    @discardableResult
     mutating func setFolderCollapsed(
         _ folderID: FolderID,
         in spaceID: SpaceID,

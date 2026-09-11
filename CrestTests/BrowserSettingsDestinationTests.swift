@@ -10,6 +10,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
             BrowserSettingsDestination.allCases.map(\.rawValue),
             [
                 "general",
+                "lookAndFeel",
                 "links",
                 "shortcuts",
                 "spaces",
@@ -43,6 +44,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
             BrowserSettingsDestination.allCases,
             [
                 .general,
+                .lookAndFeel,
                 .links,
                 .shortcuts,
                 .spaces,
@@ -82,7 +84,7 @@ final class BrowserSettingsDestinationTests: XCTestCase {
             BrowserSettingsDestination.platformCases,
             BrowserSettingsDestination.allCases
         )
-        XCTAssertEqual(BrowserSettingsDestination.platformCases.count, 11)
+        XCTAssertEqual(BrowserSettingsDestination.platformCases.count, 12)
     }
 
 }

@@ -7,6 +7,75 @@ import XCTest
 
 @MainActor
 final class BrowserSpaceBrandingTests: XCTestCase {
+    func testDeviceAppearanceIsExcludedFromSpacePersistence() throws {
+        let original = BrowserSpaceBranding(colors: [.indigo, .gold])
+        var payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        XCTAssertNil(payload["tabAppearance"])
+        XCTAssertNil(payload["addressAppearance"])
+        // Ignore the unreleased per-Space prototype's fields when reading a review profile.
+        payload["tabAppearance"] = ["pinFill": 0.7]
+        payload["addressAppearance"] = ["border": 0.6]
+        let restored = try JSONDecoder().decode(
+            BrowserSpaceBranding.self, from: JSONSerialization.data(withJSONObject: payload))
+        XCTAssertEqual(restored, original)
+    }
+
+    func testDeviceAppearancePersistsLocallyAndToleratesUnknownFields() throws {
+        let firstName = "crest-test-appearance-" + UUID().uuidString
+        let secondName = "crest-test-appearance-" + UUID().uuidString
+        let first = try XCTUnwrap(UserDefaults(suiteName: firstName))
+        let second = try XCTUnwrap(UserDefaults(suiteName: secondName))
+        defer {
+            first.removePersistentDomain(forName: firstName)
+            second.removePersistentDomain(forName: secondName)
+        }
+        first.set(
+            try JSONSerialization.data(withJSONObject: [
+                "borders": "future", "pinFill": 0.7, "hoverFill": 4, "cornerRadius": 0,
+            ]),
+            forKey: BrowserDeviceAppearanceStore.tabsKey)
+        let local = BrowserDeviceAppearanceStore(defaults: first)
+        XCTAssertEqual(local.tabs.borders, .selected)
+        XCTAssertEqual(local.tabs.pinFill, 0.7)
+        XCTAssertEqual(local.tabs.hoverFill, 1)
+        XCTAssertEqual(local.cornerRadius, 0)
+        XCTAssertEqual(local.containerCornerRadius(padding: 4), 0)
+        local.cornerRadius = 4
+        XCTAssertEqual(local.containerCornerRadius(padding: 4), 8)
+        local.cornerRadius = 40
+        XCTAssertEqual(local.sidebarCornerRadius, 40)
+        XCTAssertEqual(local.containerCornerRadius(), 10)
+        XCTAssertEqual(local.containerCornerRadius(padding: 4), 14)
+        local.cornerRadius = 24
+        local.address.border = 0.6
+        let restored = BrowserDeviceAppearanceStore(defaults: first)
+        XCTAssertEqual(restored.tabs, local.tabs)
+        XCTAssertEqual(restored.cornerRadius, 24)
+        XCTAssertEqual(restored.address, local.address)
+        let otherDevice = BrowserDeviceAppearanceStore(defaults: second)
+        XCTAssertEqual(otherDevice.tabs, .init())
+        XCTAssertEqual(otherDevice.cornerRadius, 10)
+        XCTAssertEqual(otherDevice.address, .init())
+    }
+
+    func testSymbolColorFollowsPaletteUnlessExplicitlyCustomized() throws {
+        var branding = BrowserSpaceBranding(colors: [.ink, .ocean, .gold])
+        XCTAssertEqual(branding.resolvedSymbolColor, .ocean)
+        branding.colors[1] = .teal
+        XCTAssertEqual(branding.resolvedSymbolColor, .teal)
+        branding.symbolColor = .rose
+        let restored = try JSONDecoder().decode(
+            BrowserSpaceBranding.self, from: JSONEncoder().encode(branding.normalized()))
+        XCTAssertEqual(restored.symbolColor, .rose)
+        XCTAssertEqual(restored.resolvedSymbolColor, .rose)
+        branding.symbolColor = nil
+        let automatic = try JSONDecoder().decode(
+            BrowserSpaceBranding.self, from: JSONEncoder().encode(branding))
+        XCTAssertNil(automatic.symbolColor)
+        XCTAssertEqual(automatic.resolvedSymbolColor, .teal)
+    }
+
     func testCustomAppearanceRemembersItsLandingPageThroughPersistence() throws {
         let custom = BrowserSpaceAppearanceLanding.customStart
         XCTAssertEqual(custom.iconStyle, .layeredCrest)
@@ -379,6 +448,19 @@ final class BrowserSpaceBrandingTests: XCTestCase {
 
     // MARK: - Rendering version
 
+    func testNewPatternsAndBackplatesRoundTripWithTheirRenderingVersion() throws {
+        for pattern in [BrowserSpaceBannerPattern.stripes, .checkered, .lozenges] {
+            var branding = BrowserSpaceBranding(colors: [.ink, .gold], bannerPattern: pattern)
+            branding.crest.backplate = .octagon
+            let restored = try JSONDecoder().decode(BrowserSpaceBranding.self, from: JSONEncoder().encode(branding))
+            XCTAssertEqual(restored, branding)
+            XCTAssertEqual(restored.renderingVersion, BrowserSpaceBranding.customizationRenderingVersion)
+        }
+        var branding = BrowserSpaceBranding(colors: [.indigo])
+        branding.crest.backplate = .roundedSquare
+        XCTAssertEqual(branding.renderingVersion, BrowserSpaceBranding.customizationRenderingVersion)
+    }
+
     func testClassicVocabularyStillEncodesTheShippedRenderingVersion() throws {
         let classic = BrowserSpaceBranding(
             colors: [.ink, .ocean, .gold],
@@ -409,9 +491,8 @@ final class BrowserSpaceBrandingTests: XCTestCase {
 
         XCTAssertEqual(
             expanded.renderingVersion,
-            BrowserSpaceBranding.currentRenderingVersion
+            BrowserSpaceBranding.expandedChargeRenderingVersion
         )
-        XCTAssertEqual(BrowserSpaceBranding.currentRenderingVersion, 3)
         let object = try XCTUnwrap(
             JSONSerialization.jsonObject(with: JSONEncoder().encode(expanded))
                 as? [String: Any]

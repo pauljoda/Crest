@@ -40,6 +40,7 @@ struct BrowserFolderGroup: View {
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var draftTitle = ""
+    @State private var iconRequest: BrowserFolderRuntimeAssignment?
     @State private var colorRequest: BrowserFolderRuntimeAssignment?
     @State private var deletionRequest: BrowserFolderRuntimeAssignment?
     @State private var collapsedTabVisibility =
@@ -74,6 +75,8 @@ struct BrowserFolderGroup: View {
             editingFolderRequest: $editingFolderRequest,
             draftTitle: $draftTitle,
             isChoosingColor: colorPresentation,
+            isChoosingIcon: iconPresentation,
+            folderSymbol: folderSymbolBinding,
             isConfirmingDeletion: deletionPresentation,
             collapsedTabVisibility: $collapsedTabVisibility,
             isTitleFocused: $isTitleFocused,
@@ -129,7 +132,8 @@ struct BrowserFolderGroup: View {
         .modifier(
             SidebarSpaceRoleCleanupModifier(
                 isAvailable: configuration.isAvailableForDisplay,
-                hasPendingActions: editingFolderRequest != nil || colorRequest != nil || deletionRequest != nil,
+                hasPendingActions: editingFolderRequest != nil || colorRequest != nil || iconRequest != nil
+                    || deletionRequest != nil,
                 cancel: clearUnavailableDeferredActions
             )
         )
@@ -323,6 +327,42 @@ struct BrowserFolderGroup: View {
         }
     }
 
+    private var folderSymbolBinding: Binding<String> {
+        Binding(
+            get: {
+                guard let request = iconRequest,
+                    isDeferredAssignmentAvailable(request)
+                else { return folder.symbol }
+                return browser.space(matching: request.spaceAssignment)?
+                    .folders.first(where: { $0.id == request.folderID })?
+                    .symbol ?? folder.symbol
+            },
+            set: { symbol in
+                guard let request = iconRequest,
+                    isDeferredAssignmentAvailable(request)
+                else { return }
+                browser.setFolderSymbol(
+                    request.folderID,
+                    matching: request.spaceAssignment,
+                    symbol: symbol
+                )
+            }
+        )
+    }
+
+    private var iconPresentation: Binding<Bool> {
+        Binding {
+            guard let request = iconRequest else { return false }
+            return isDeferredAssignmentAvailable(request)
+        } set: { isPresented in
+            if isPresented, configuration.isCurrentAndUnlocked {
+                iconRequest = configuration.folderRuntimeAssignment
+            } else if !isPresented {
+                iconRequest = nil
+            }
+        }
+    }
+
     private var deletionPresentation: Binding<Bool> {
         Binding {
             guard let request = deletionRequest else { return false }
@@ -352,6 +392,11 @@ struct BrowserFolderGroup: View {
         {
             editingFolderRequest = nil
             isTitleFocused = false
+        }
+        if let request = iconRequest,
+            !isDeferredAssignmentAvailable(request)
+        {
+            iconRequest = nil
         }
         if let request = colorRequest,
             !isDeferredAssignmentAvailable(request)
@@ -384,8 +429,9 @@ private struct BrowserFolderReorderContainer: ViewModifier {
             section: configuration.folder.reorderSection,
             reorder: BrowserSidebarReorderContext(
                 browser: configuration.browser, spaceAccess: configuration.spaceAccess),
-            isEnabled: SidebarSpaceRole.permitsInteraction(
-                isSelected: isSelected, isAvailable: configuration.isAvailableForDisplay) || isLiftedFolder
+            isEnabled: (SidebarSpaceRole.permitsInteraction(
+                isSelected: isSelected, isAvailable: configuration.isAvailableForDisplay) || isLiftedFolder)
+                && configuration.capabilities.supportsOrganization
         )
     }
 

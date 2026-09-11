@@ -49,7 +49,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                 placement: configuration.placement,
                 folderID: configuration.folderID,
                 reorder: configuration.reorderContext,
-                isEnabled: configuration.isAvailableForDisplay,
+                isEnabled: configuration.isAvailableForDisplay && configuration.capabilities.supportsOrganization,
                 requiresSelectedSpace: true
             )
             .modifier(
@@ -63,17 +63,19 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                 "Split View with \(configuration.members.count) tabs"
             )
             .contextMenu {
-                BrowserSidebarSplitGroupContextMenu(
-                    configuration: configuration,
-                    interaction: interaction
-                )
-                .tint(.primary)
-                // A group lifts as one block through the same touch path its
-                // rows do, and the menu that wins the press leaves no session
-                // to report the lift ended. See `yieldToCompetingInteraction`.
-                .onAppear {
-                    configuration.browser.sidebarReorderState
-                        .yieldToCompetingInteraction()
+                if configuration.capabilities.supportsOrganization {
+                    BrowserSidebarSplitGroupContextMenu(
+                        configuration: configuration,
+                        interaction: interaction
+                    )
+                    .tint(.primary)
+                    // A group lifts as one block through the same touch path its
+                    // rows do, and the menu that wins the press leaves no session
+                    // to report the lift ended. See `yieldToCompetingInteraction`.
+                    .onAppear {
+                        configuration.browser.sidebarReorderState
+                            .yieldToCompetingInteraction()
+                    }
                 }
             }
     }
@@ -104,7 +106,8 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
 
     private var containerShape: RoundedRectangle {
         RoundedRectangle(
-            cornerRadius: configuration.metrics.containerCornerRadius,
+            cornerRadius: BrowserDeviceAppearanceStore.shared.containerCornerRadius(
+                padding: configuration.metrics.containerPadding),
             style: .continuous
         )
     }

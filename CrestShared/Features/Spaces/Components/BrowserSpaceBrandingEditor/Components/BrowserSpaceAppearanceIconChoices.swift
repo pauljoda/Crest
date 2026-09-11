@@ -19,26 +19,35 @@ struct BrowserSpaceAppearanceIconChoices: View {
                     ) {
                         Image(systemName: choice.rawValue)
                             .font(.system(size: 32, weight: .medium))
+                            .foregroundStyle(branding.resolvedSymbolColor.color)
                             .frame(height: 64)
                     }
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text("Or use an emoji").font(.headline)
-                TextField(
-                    "Emoji",
-                    text: Binding(
-                        get: { BrowserIconSymbol.emoji(from: symbol) ?? "" },
-                        set: { value in
-                            guard let emoji = value.first else { return }
-                            symbol = BrowserIconSymbol.symbol(forEmoji: String(emoji))
+                BrowserSpaceSimpleSymbolPicker(
+                    symbol: Binding(
+                        get: { symbol },
+                        set: {
+                            symbol = $0
                             branding.iconStyle = .simpleSymbol
-                        }
-                    )
-                )
-                .textFieldStyle(.roundedBorder)
-                .font(.title)
-                .frame(maxWidth: 120)
+                        }))
+            }
+            if BrowserIconSymbol.emoji(from: symbol) == nil {
+                Toggle(
+                    "Use theme color",
+                    isOn: Binding(
+                        get: { branding.symbolColor == nil },
+                        set: { branding.symbolColor = $0 ? nil : branding.primaryColor }))
+                if branding.symbolColor != nil {
+                    ColorPicker(
+                        "Symbol color",
+                        selection: Binding(
+                            get: { branding.resolvedSymbolColor.color },
+                            set: { branding.symbolColor = BrowserSpaceBrandColor(color: $0) }
+                        ), supportsOpacity: false)
+                }
             }
         }
     }

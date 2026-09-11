@@ -8,6 +8,8 @@ struct BrowserFolderHeader: View {
     let interaction: BrowserFolderGroupInteractionContext
 
     private var folder: BrowserFolder { configuration.folder }
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
+    private var tabScale = 1.0
 
     var body: some View {
         BrowserFolderHeaderControl(
@@ -27,6 +29,7 @@ struct BrowserFolderHeader: View {
         )
         .modifier(BrowserFolderSelectionAccessibility(folderID: folder.id, browser: configuration.browser))
         .padding(.horizontal, CrestSpacing.small)
+        .padding(.vertical, BrowserSidebarDensityPolicy.rowSeparation(scale: tabScale) / 2)
         .modifier(
             BrowserTabSelectionTarget(
                 tabID: nil, browser: configuration.browser,

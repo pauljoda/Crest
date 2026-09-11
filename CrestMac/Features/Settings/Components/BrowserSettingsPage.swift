@@ -21,11 +21,15 @@ struct BrowserSettingsPage<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             if layout.showsPageIdentity {
-                BrowserSettingsPaneHeader(
-                    destination: destination,
-                    identifier: "settings-page-header",
-                    layout: .macOSPage
-                )
+                if layout.usesCompactPageIdentity {
+                    BrowserSettingsCompactPageIdentity(destination: destination)
+                } else {
+                    BrowserSettingsPaneHeader(
+                        destination: destination,
+                        identifier: "settings-page-header",
+                        layout: .macOSPage
+                    )
+                }
             }
 
             if layout.scrollsContent {
