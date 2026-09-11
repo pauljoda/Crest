@@ -3,6 +3,6 @@
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
     "development": "2026-09-10-split-divider-and-compact-toolbar",
-    "nightly": "2026-09-10-now-playing-player-lifetime"
+    "nightly": "2026-09-10-split-divider-and-compact-toolbar"
   }
 }
