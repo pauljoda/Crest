@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserSettingsView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.spaceContentIsInteractive) private var isActiveSpace
     let browser: BrowserStore
     let pages: BrowserPagePool
     let cloudSync: BrowserCloudSyncController
@@ -35,41 +36,52 @@ struct BrowserSettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        HStack(spacing: 0) {
             BrowserSettingsSidebar(navigation: $navigation)
-                .navigationSplitViewColumnWidth(
-                    min: BrowserSettingsVisualPolicy.sidebarMinimumWidth,
-                    ideal: BrowserSettingsVisualPolicy.sidebarIdealWidth,
-                    max: BrowserSettingsVisualPolicy.sidebarMaximumWidth
-                )
-        } detail: {
-            BrowserSettingsDestinationPage(
-                destination: navigation.selection,
-                browser: browser,
-                pages: pages,
-                cloudSync: cloudSync,
-                spaceAccess: spaceAccess,
-                dataDeleter: dataDeleter,
-                shortcuts: shortcuts,
-                onboardingCoordinator: onboardingCoordinator,
-                spaceSettingsPresentation: spaceSettingsPresentation,
-                searchText: $navigation.searchText
-            )
-            .id(navigation.selection)
+                .frame(width: 224)
+            Divider()
+
+            Group {
+                // Inactive Spaces keep their Settings navigation, but don't lay
+                // out an offscreen form for every live appearance update.
+                if isActiveSpace {
+                    BrowserSettingsDestinationPage(
+                        destination: navigation.selection,
+                        browser: browser,
+                        pages: pages,
+                        cloudSync: cloudSync,
+                        spaceAccess: spaceAccess,
+                        dataDeleter: dataDeleter,
+                        shortcuts: shortcuts,
+                        onboardingCoordinator: onboardingCoordinator,
+                        spaceSettingsPresentation: spaceSettingsPresentation,
+                        searchText: $navigation.searchText
+                    )
+                    .id(navigation.selection)
+                }
+            }
             .frame(
-                minWidth: BrowserSettingsChromePolicy.detailMinimumWidth,
+                minWidth: 320,
                 maxWidth: .infinity,
                 maxHeight: .infinity
             )
         }
-        .navigationSplitViewStyle(.balanced)
-        .frame(
-            minWidth: BrowserSettingsChromePolicy.minimumContentSize.width,
-            idealWidth: BrowserSettingsChromePolicy.defaultContentSize.width,
-            minHeight: BrowserSettingsChromePolicy.minimumContentSize.height,
-            idealHeight: BrowserSettingsChromePolicy.defaultContentSize.height
+        .ignoresSafeArea(.container, edges: .top)
+        .background(BrowserSettingsCanvas.background)
+        .tint(CrestBrandTheme.accent)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .environment(\.browserSettingsIsTab, true)
+        .environment(\.browserSettingsUsesLiveSidebar, true)
+        .environment(
+            \.browserSettingsSelectLiveSpace,
+            BrowserSettingsLiveSpaceSelection { id in
+                guard let space = browser.session.spaces.first(where: { $0.id == id }) else { return }
+                spaceSettingsPresentation.present(assignment: BrowserSpaceRuntimeAssignment(space: space))
+                browser.selectSpace(id)
+                browser.openSettings()
+                pages.select(session: browser.session)
+            }
         )
-        .background(BrowserSettingsWindowSizingBridge())
         .onChange(of: scenePhase) { previousPhase, phase in
             lockPrivateSettings(previousPhase, phase)
         }

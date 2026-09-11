@@ -128,7 +128,6 @@ enum BrowserShortcutSettingsAccessibilityID {
 }
 
 enum BrowserShortcutSettingsMetrics {
-    static let maximumContentWidth: CGFloat = 760
     static let contentSpacing: CGFloat = 12
     static let controlSpacing: CGFloat = 10
     static let rowSpacing: CGFloat = 12

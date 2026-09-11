@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct BrowserSpaceEditorView: View {
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
 
     let browser: BrowserStore
     let space: BrowserSpace
@@ -16,7 +17,12 @@ struct BrowserSpaceEditorView: View {
         Group {
             switch section {
             case .appearance:
-                appearanceEditor
+                if usesLiveSidebar {
+                    BrowserCrestStudioWorkspace(branding: branding, symbol: symbol, name: name)
+                        .accessibilityIdentifier("space-customization-controls")
+                } else {
+                    appearanceEditor
+                }
             case .settings:
                 settingsForm
             }
@@ -28,26 +34,28 @@ struct BrowserSpaceEditorView: View {
         GeometryReader { geometry in
             let wide = geometry.size.width >= 620
             let dense = geometry.size.height < 640
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
                 if wide {
-                    BrowserSpaceAppearanceHero(
-                        branding: branding.wrappedValue, symbol: symbol.wrappedValue,
-                        name: currentSpace.name, space: currentSpace, editableName: name,
-                        spacePicker: spacePicker
-                    )
-                    .frame(width: min(280, geometry.size.width * 0.38))
+                    VStack(spacing: 16) {
+                        spacePicker
+                        BrowserCrestStudioPreview(
+                            branding: branding.wrappedValue, symbol: symbol.wrappedValue,
+                            name: currentSpace.name, space: currentSpace,
+                            heroSize: geometry.size.height < 480 ? 96 : 140,
+                            sidebarHeight: max(100, min(230, geometry.size.height - 344)))
+                        Spacer(minLength: 0)
+                    }
+                    .frame(width: min(280, geometry.size.width * 0.32))
                     .padding(14)
                 }
                 ScrollView {
                     VStack(alignment: .leading, spacing: dense ? 12 : 18) {
                         if !wide {
-                            BrowserInlineSpaceName(name: name, size: dense ? 26 : 30)
                             spacePicker
                         }
                         BrowserSpaceBrandingEditor(
                             branding: branding, symbol: symbol, previewName: currentSpace.name,
-                            compact: !wide, showsPreview: false, dense: dense,
-                            controlsBackground: Color(nsColor: .windowBackgroundColor)
+                            compact: !wide, showsPreview: !wide, editableName: name
                         )
                         .id(space.id)
                     }
@@ -60,7 +68,6 @@ struct BrowserSpaceEditorView: View {
                 .defaultScrollAnchor(.top, for: .initialOffset)
             }
         }
-        .scrollsSpaceAppearancePages(anchorID: "space-settings-appearance-top")
         .accessibilityIdentifier("space-customization-controls")
     }
 

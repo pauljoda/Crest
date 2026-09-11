@@ -22,14 +22,28 @@ extension BrowserStore {
         return openNativeTab(.gettingStarted, title: String(localized: "Getting Started"), symbol: "book.closed.fill")
     }
 
+    /// Settings is one ordinary, closable native tab per Space. Repeated menu
+    /// commands focus that tab without creating duplicates or opening WebKit.
+    @discardableResult
+    func openSettings() -> TabID? {
+        if let existing = selectedSpace?.tabs.first(where: { $0.nativeContent == .settings }) {
+            selectTab(existing.id)
+            return existing.id
+        }
+        return openNativeTab(
+            .settings, title: String(localized: "Settings"), symbol: "gearshape.fill", placement: .current)
+    }
+
     /// Native documents enter the same session mutation and persistence path as
     /// websites. No page pool or second selection model is owned by the document.
     @discardableResult
-    func openNativeTab(_ content: BrowserNativeTabContent, title: String, symbol: String) -> TabID? {
+    func openNativeTab(
+        _ content: BrowserNativeTabContent, title: String, symbol: String, placement: TabPlacement = .saved
+    ) -> TabID? {
         guard let space = selectedSpace else { return nil }
         let id = session.openTab(
             title: title, url: nil, nativeContent: content, symbol: symbol,
-            in: space.id, placement: .saved)
+            in: space.id, placement: placement)
         persist(scope: .core)
         return id
     }

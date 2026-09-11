@@ -60,6 +60,7 @@ struct MobileBrowserSidebarSurface: View {
     let utilityPresentation: BrowserUtilityPresentationState
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
     @State private var showsPasswords = false
     @State private var showsSettings = false
     @State private var presentedSpaceSheet: MobileBrowserSidebarSpaceSheet?
@@ -121,7 +122,7 @@ struct MobileBrowserSidebarSurface: View {
 
     private var chromeActions: BrowserSidebarChromeActions {
         BrowserSidebarChromeActions(
-            presentSpaceSettings: { _ in showsSettings = true },
+            presentSpaceSettings: { _ in presentSettings() },
             presentHistory: presentHistory,
             presentPasswords: { showsPasswords = true },
             presentArchive: { presentSpaceSheet(.archive) },
@@ -180,7 +181,7 @@ struct MobileBrowserSidebarSurface: View {
         _ context: BrowserSidebarContext
     ) -> MobileSpaceActionsConfiguration {
         MobileSpaceActionsConfiguration(
-            showSettings: { showsSettings = true },
+            showSettings: presentSettings,
             showArchive: { context.chromeActions.presentArchive?() },
             showDownloads: { context.chromeActions.presentDownloads?() },
             commonListsAreExpanded: utilityPresentation.isSwitcherExpanded,
@@ -189,6 +190,15 @@ struct MobileBrowserSidebarSurface: View {
                 utilityPresentation.recordTriggerFrame,
             togglePrivateBrowsing: togglePrivateBrowsing
         )
+    }
+
+    private func presentSettings() {
+        if usesLiveSidebar {
+            if let id = browser.openSettings() { selectTab(id) }
+            pages.select(session: browser.session)
+        } else {
+            showsSettings = true
+        }
     }
 
     private var selectedSidebarColorScheme: ColorScheme {

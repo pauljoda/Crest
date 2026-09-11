@@ -1,30 +1,23 @@
 import SwiftUI
 
+/// The band laid over the field, clipped to the plate. A bordure is the plate's
+/// own outline drawn inward.
 struct BrowserSpaceCrestOrdinaryView: View {
     let ordinary: BrowserSpaceCrestOrdinary
-    let backplateSymbol: String
-    let outlineSystemImage: String?
+    var width: Double = 1
+    let plate: BrowserSpaceCrestPlateShape
     let color: Color
     let size: CGFloat
 
-    @ViewBuilder
     var body: some View {
-        if ordinary == .bordure, let outlineSystemImage {
-            Image(systemName: outlineSystemImage)
-                .font(.system(size: size * 0.72, weight: .black))
-                .foregroundStyle(color)
-        } else if ordinary != .none {
-            BrowserSpaceCrestOrdinaryShape(
-                ordinary: ordinary,
-                color: color,
-                size: size
-            )
-            .mask {
-                BrowserSpaceCrestBackplateMask(
-                    systemImage: backplateSymbol,
-                    size: size
-                )
+        ZStack {
+            if ordinary == .bordure {
+                plate.stroke(color, lineWidth: BrowserSpaceCrestOrdinaryPath.bordureWidth(size: size, width: width) * 2)
+            } else {
+                BrowserSpaceCrestOrdinaryPath(ordinary: ordinary, width: width).fill(color)
             }
         }
+        .frame(width: size, height: size)
+        .clipShape(plate)
     }
 }

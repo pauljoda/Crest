@@ -12,23 +12,36 @@ struct BrowserWebKitFeatureFlagControls: View {
         VStack(spacing: CrestSpacing.small) {
             searchField
 
-            HStack(spacing: CrestSpacing.small) {
-                categoryPicker
-                statusPicker
-                Toggle("Changed Only", isOn: $filter.showsOnlyChanged)
-                    .fixedSize()
-
-                Spacer(minLength: CrestSpacing.small)
-
-                Button(
-                    "Reset All",
-                    systemImage: "arrow.counterclockwise",
-                    action: requestReset
-                )
-                .disabled(!canReset)
-                .accessibilityIdentifier("webkit-feature-reset-all")
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                    filters
+                    Spacer(minLength: 8)
+                    actions
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    filters
+                    actions
+                }
             }
         }
+    }
+
+    private var filters: some View {
+        HStack(spacing: 12) {
+            categoryPicker
+            statusPicker
+        }
+    }
+
+    private var actions: some View {
+        HStack(spacing: 16) {
+            Toggle("Changed Only", isOn: $filter.showsOnlyChanged).toggleStyle(.switch).fixedSize()
+            Button("Reset All", systemImage: "arrow.counterclockwise", action: requestReset)
+                .buttonStyle(.bordered)
+                .disabled(!canReset)
+                .accessibilityIdentifier("webkit-feature-reset-all")
+        }
+        .fixedSize()
     }
 
     private var searchField: some View {
@@ -48,7 +61,7 @@ struct BrowserWebKitFeatureFlagControls: View {
             }
         }
         .padding(.horizontal, CrestSpacing.small)
-        .frame(height: 30)
+        .frame(height: 36)
         .background(.quaternary, in: .rect(cornerRadius: CrestRadius.control))
         .accessibilityIdentifier("webkit-feature-search")
     }
@@ -60,6 +73,8 @@ struct BrowserWebKitFeatureFlagControls: View {
                 Text(verbatim: category.title).tag(Optional(category))
             }
         }
+        .labelsHidden()
+        .accessibilityLabel("Category")
         .frame(width: 160)
     }
 
@@ -70,6 +85,8 @@ struct BrowserWebKitFeatureFlagControls: View {
                 Text(verbatim: status.title).tag(Optional(status))
             }
         }
+        .labelsHidden()
+        .accessibilityLabel("Status")
         .frame(width: 150)
     }
 }

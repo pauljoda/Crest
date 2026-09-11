@@ -6,6 +6,8 @@ struct MobileBrowserSettingsView: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
 
+    var tabSelection: Binding<BrowserSettingsDestination>?
+    var liveSpaceSelection: BrowserSettingsLiveSpaceSelection?
     @State private var selection = BrowserSettingsDestination.general
     @State private var searchText = ""
 
@@ -13,8 +15,12 @@ struct MobileBrowserSettingsView: View {
         browser: BrowserStore,
         pages: MobileBrowserPageStore,
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController(),
-        dataDeleter: (any BrowserSpaceDataDeleting)? = nil
+        dataDeleter: (any BrowserSpaceDataDeleting)? = nil,
+        tabSelection: Binding<BrowserSettingsDestination>? = nil,
+        liveSpaceSelection: BrowserSettingsLiveSpaceSelection? = nil
     ) {
+        self.tabSelection = tabSelection
+        self.liveSpaceSelection = liveSpaceSelection
         self.browser = browser
         self.pages = pages
         self.spaceAccess = spaceAccess
@@ -27,9 +33,11 @@ struct MobileBrowserSettingsView: View {
             pages: pages,
             spaceAccess: spaceAccess,
             dataDeleter: dataDeleter,
-            selection: $selection,
+            selection: tabSelection ?? $selection,
             searchText: $searchText
         )
+        .environment(\.browserSettingsIsTab, tabSelection != nil)
+        .environment(\.browserSettingsSelectLiveSpace, liveSpaceSelection)
     }
 }
 

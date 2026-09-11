@@ -45,6 +45,7 @@ struct BrowserLinkSettingsContent: View {
                     )
                 }
             }
+            .containerValue(\.settingsFullWidth, true)
             .accessibilityIdentifier("settings-private-link-routes")
         }
     }

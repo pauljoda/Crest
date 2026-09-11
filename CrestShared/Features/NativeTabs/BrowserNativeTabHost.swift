@@ -7,6 +7,7 @@ struct BrowserNativeTabHost: View {
     let space: BrowserSpace
     /// The shell's floating controls remain outside native scrolling content.
     var bottomChromeHeight: CGFloat = 0
+    @Environment(\.browserSettingsTabContent) private var settingsContent
     @Environment(\.browserNativeTabActions) private var actions
 
     var body: some View {
@@ -21,6 +22,12 @@ struct BrowserNativeTabHost: View {
                     #else
                         BrowserMobileGettingStartedView(showsCompactNavigation: bottomChromeHeight > 0)
                     #endif
+                case BrowserNativeTabContent.settings.kind:
+                    if let settingsContent {
+                        settingsContent.makeView(assignment)
+                    } else {
+                        ContentUnavailableView("Settings unavailable", systemImage: "gearshape")
+                    }
                 default:
                     ContentUnavailableView(
                         "This tab needs a newer Crest", systemImage: "square.stack.3d.up",

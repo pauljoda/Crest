@@ -10,43 +10,49 @@ struct BrowserShortcutSettingsControls: View {
     let requestReset: () -> Void
 
     var body: some View {
-        HStack(spacing: BrowserShortcutSettingsMetrics.controlSpacing) {
-            BrowserShortcutSearchField(
-                text: $searchText,
-                placeholder: BrowserShortcutSettingsPresentation.searchPrompt,
-                identifier: BrowserShortcutSettingsAccessibilityID.search
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: BrowserShortcutSettingsMetrics.searchFieldHeight)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) {
+                search.frame(minWidth: 200)
+                actions
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                search
+                actions
+            }
+        }
+    }
 
+    private var search: some View {
+        BrowserShortcutSearchField(
+            text: $searchText,
+            placeholder: BrowserShortcutSettingsPresentation.searchPrompt,
+            identifier: BrowserShortcutSettingsAccessibilityID.search
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: 36)
+    }
+
+    private var actions: some View {
+        HStack(spacing: 12) {
             if spaces.count > 1 {
-                Picker(
-                    BrowserShortcutSettingsPresentation.extensionSpace,
-                    selection: $selectedExtensionSpaceID
-                ) {
-                    ForEach(spaces) { space in
-                        Text(space.name).tag(Optional(space.id))
-                    }
+                Picker(BrowserShortcutSettingsPresentation.extensionSpace, selection: $selectedExtensionSpaceID) {
+                    ForEach(spaces) { Text($0.name).tag(Optional($0.id)) }
                 }
                 .labelsHidden()
                 .frame(width: BrowserShortcutSettingsMetrics.spacePickerWidth)
-                .accessibilityLabel(
-                    Text(BrowserShortcutSettingsPresentation.extensionSpace)
-                )
+                .accessibilityLabel(Text(BrowserShortcutSettingsPresentation.extensionSpace))
             }
-
             Button(
                 BrowserShortcutSettingsPresentation.resetCrest,
-                systemImage: "arrow.counterclockwise",
-                action: requestReset
+                systemImage: "arrow.counterclockwise", action: requestReset
             )
             .buttonStyle(.bordered)
             .disabled(!canReset)
-            .accessibilityIdentifier(
-                BrowserShortcutSettingsAccessibilityID.resetAll
-            )
+            .accessibilityIdentifier(BrowserShortcutSettingsAccessibilityID.resetAll)
         }
+        .fixedSize()
     }
+
 }
 
 private struct BrowserShortcutSearchField: NSViewRepresentable {
@@ -63,6 +69,7 @@ private struct BrowserShortcutSearchField: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSSearchField {
         let field = NSSearchField()
+        field.controlSize = .large
         field.placeholderString = BrowserShortcutLocalization.string(
             placeholder,
             locale: locale

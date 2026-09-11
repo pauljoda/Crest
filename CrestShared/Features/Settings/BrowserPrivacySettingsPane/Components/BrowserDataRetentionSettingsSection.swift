@@ -10,12 +10,15 @@ struct BrowserDataRetentionSettingsSection: View {
     var body: some View {
         Section("Data retention") {
             ForEach(BrowserDataRetentionCategory.allCases) { category in
-                Picker(category.title, selection: binding(for: category)) {
-                    ForEach(BrowserDataRetentionDuration.allCases) { duration in
-                        Text(duration.title).tag(duration)
+                LabeledContent(category.title) {
+                    Picker(category.title, selection: binding(for: category)) {
+                        ForEach(BrowserDataRetentionDuration.allCases) { duration in
+                            Text(duration.title).tag(duration)
+                        }
                     }
+                    .labelsHidden()
+                    .accessibilityIdentifier(category.accessibilityIdentifier)
                 }
-                .accessibilityIdentifier(category.accessibilityIdentifier)
             }
 
             Text(

@@ -893,6 +893,22 @@
     "2026-09-11-space-folder-appearance-in-editor": {
       "category": "improved",
       "message": "Folder color intensity and text color moved into each Space's appearance editor"
+    },
+    "2026-09-11-native-settings-tabs": {
+      "category": "improved",
+      "message": "Open Settings in a browser tab on Mac and iPad, with more room for controls and live sidebar customization"
+    },
+    "2026-09-11-crest-studio-customization": {
+      "category": "new",
+      "message": "Design Space crests with more heraldic artwork, shapes, patterns, independent colors, emoji, monograms, and a searchable SF Symbols picker"
+    },
+    "2026-09-11-responsive-crest-editing": {
+      "category": "improved",
+      "message": "Keep crest previews visible while editing, with faster updates and color choices beside each part of the design"
+    },
+    "2026-09-11-settings-layout-refinements": {
+      "category": "improved",
+      "message": "Use clearer route cards, full-width settings lists, matching icon pickers, and labeled data-retention choices"
     }
   }
 }

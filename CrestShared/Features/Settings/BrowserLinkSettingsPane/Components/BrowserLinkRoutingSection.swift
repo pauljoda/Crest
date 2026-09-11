@@ -10,9 +10,9 @@ struct BrowserLinkRoutingSection: View {
     let add: (SpaceID) -> Void
 
     var body: some View {
-        Section("Routing") {
+        Section {
             if routes.isEmpty {
-                Text("No custom routes. Routes are evaluated from top to bottom before the default above.")
+                Text("No routes yet. Add a URL rule to open matching links in a specific Space.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(routes.enumerated()), id: \.element.id) { index, route in
@@ -32,7 +32,12 @@ struct BrowserLinkRoutingSection: View {
             Button("New Route", systemImage: "plus") {
                 add(selectedSpaceID)
             }
-            .buttonStyle(.crestTertiary)
+            .buttonStyle(.bordered)
+        } header: {
+            Text("Routing")
+        } footer: {
+            Text("The first matching route wins. Other links use your default destination.")
         }
+        .containerValue(\.settingsFullWidth, true)
     }
 }

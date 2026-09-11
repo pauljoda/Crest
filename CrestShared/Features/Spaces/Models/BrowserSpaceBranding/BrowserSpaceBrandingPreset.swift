@@ -20,6 +20,7 @@ struct BrowserSpaceBrandingPreset: Identifiable, Equatable, Sendable {
         var updated = applyingPalette(to: branding)
         updated.iconStyle = .layeredCrest
         updated.crest = crest
+        updated.crest.startingPresetID = id
         updated.hasCustomAppearance = false
         return updated.normalized()
     }
@@ -30,8 +31,14 @@ struct BrowserSpaceBrandingPreset: Identifiable, Equatable, Sendable {
         return updated.normalized()
     }
 
+    private func compositionMatches(_ value: BrowserSpaceCrest) -> Bool {
+        var value = value
+        value.startingPresetID = nil
+        return value == crest
+    }
+
     func isSelected(in branding: BrowserSpaceBranding) -> Bool {
         branding.hasCustomAppearance != true && branding.colors == colors && branding.iconStyle == .layeredCrest
-            && branding.crest == crest
+            && compositionMatches(branding.crest)
     }
 }

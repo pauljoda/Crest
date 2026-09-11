@@ -572,6 +572,16 @@ struct CrestApp: App {
         return .showcase(profileID: profileID)
     }
 
+    private func settingsTabContent(browser: BrowserStore, pages: BrowserPagePool) -> BrowserSettingsTabContent {
+        BrowserSettingsTabContent { _ in
+            BrowserSettingsView(
+                browser: browser, pages: pages, cloudSync: cloudSync,
+                spaceAccess: spaceAccess, dataDeleter: pagePoolRegistry, shortcuts: shortcuts,
+                onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: spaceSettingsPresentation
+            )
+        }
+    }
+
     var body: some Scene {
         Window(
             ProductIdentity.name,
@@ -602,8 +612,10 @@ struct CrestApp: App {
                             sidebarWidgets: sidebarWidgets,
                             softwareUpdates: softwareUpdates
                         )
+                        .environment(\.browserSettingsTabContent, settingsTabContent(browser: browser, pages: pages))
                         .environment(windowTransparency)
                         .environment(splitFocus)
+                        .environment(softwareUpdates)
                         .environment(extensionSidebar)
                         .environment(extensionDebugger)
                         .environment(
@@ -695,12 +707,16 @@ struct CrestApp: App {
                 )
                 .environment(windowTransparency)
                 .environment(splitFocus)
+                .environment(softwareUpdates)
                 .environment(
                     \.browserSidebarWidgetRuntime,
                     sidebarWidgets
                 )
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(.dark)
+                .environment(
+                    \.browserSettingsTabContent, settingsTabContent(browser: privateBrowser, pages: privatePages)
+                )
                 .onDisappear(perform: closePrivateBrowsingWindow)
             } else {
                 EmptyView()
@@ -711,41 +727,6 @@ struct CrestApp: App {
         .windowToolbarStyle(.unified(showsTitle: false))
         // Private browsing that reopened itself on the next launch would be a
         // promise broken: the mode exists so that closing the window ends it.
-        .restorationBehavior(.disabled)
-
-        Window("Crest Settings", id: BrowserSceneID.settings.rawValue) {
-            if presentsInstalledApplicationUI {
-                BrowserSettingsView(
-                    browser: browser,
-                    pages: pages,
-                    cloudSync: cloudSync,
-                    spaceAccess: spaceAccess,
-                    dataDeleter: pagePoolRegistry,
-                    shortcuts: shortcuts,
-                    onboardingCoordinator: onboardingCoordinator,
-                    spaceSettingsPresentation: spaceSettingsPresentation
-                )
-                .environment(windowTransparency)
-                .environment(splitFocus)
-                .environment(softwareUpdates)
-                // Scoped to this window rather than to the app: a browser window's
-                // controls belong to whichever Space owns them and must keep that
-                // Space's accent, while Settings is Crest speaking for itself and
-                // has no business rendering system blue.
-                .tint(CrestBrandTheme.accent)
-                .task { await cloudSync.start() }
-            } else {
-                EmptyView()
-            }
-        }
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
-        .defaultSize(
-            width: BrowserSettingsChromePolicy.defaultContentSize.width,
-            height: BrowserSettingsChromePolicy.defaultContentSize.height
-        )
-        .windowResizability(.contentMinSize)
-        // Settings is opened on purpose, so it opens when it is asked for and
-        // not because it happened to be on screen when Crest last quit.
         .restorationBehavior(.disabled)
 
         Window(

@@ -15,9 +15,7 @@ struct BrowserSpaceSymbolArtwork: View {
 
     var body: some View {
         Group {
-            if let renderedArtwork,
-                renderedArtwork.identity == identity
-            {
+            if let renderedArtwork {
                 renderedArtwork.image
                     .renderingMode(.original)
                     .resizable()
@@ -38,6 +36,7 @@ struct BrowserSpaceSymbolArtwork: View {
         .frame(width: size, height: size)
         .accessibilityHidden(true)
         .task(id: identity) {
+            guard !Task.isCancelled else { return }
             let currentIdentity = identity
             let content = BrowserSpaceSymbolArtworkContent(
                 space: space,
@@ -45,12 +44,14 @@ struct BrowserSpaceSymbolArtwork: View {
                 lockSize: lockSize
             )
             .environment(\.colorScheme, colorScheme)
-            let image = BrowserPlatformSpaceSymbolArtworkRenderer.image(
-                for: content,
-                size: size,
-                scale: displayScale,
-                fallbackSystemImage: space.symbol
-            )
+            let image = BrowserSpaceSymbolArtworkCache.shared.image(for: currentIdentity) {
+                BrowserPlatformSpaceSymbolArtworkRenderer.image(
+                    for: content,
+                    size: size,
+                    scale: displayScale,
+                    fallbackSystemImage: space.symbol
+                )
+            }
             guard !Task.isCancelled, currentIdentity == identity else { return }
             renderedArtwork = BrowserSpaceRenderedSymbolArtwork(
                 identity: currentIdentity,
@@ -69,5 +70,30 @@ struct BrowserSpaceSymbolArtwork: View {
             colorScheme: colorScheme,
             displayScale: displayScale
         )
+    }
+}
+
+/// Native picker and menu labels often request the same crest at the same size.
+/// Share those renders, with a fixed limit as sliders generate new appearances.
+@MainActor
+final class BrowserSpaceSymbolArtworkCache {
+    static let shared = BrowserSpaceSymbolArtworkCache()
+    private let capacity: Int
+    private var entries: [BrowserSpaceRenderedSymbolArtwork] = []
+
+    init(capacity: Int = 64) {
+        self.capacity = max(1, capacity)
+    }
+
+    func image(for identity: BrowserSpaceSymbolArtworkIdentity, render: () -> Image) -> Image {
+        if let index = entries.firstIndex(where: { $0.identity == identity }) {
+            let entry = entries.remove(at: index)
+            entries.append(entry)
+            return entry.image
+        }
+        let image = render()
+        if entries.count == capacity { entries.removeFirst() }
+        entries.append(BrowserSpaceRenderedSymbolArtwork(identity: identity, image: image))
+        return image
     }
 }

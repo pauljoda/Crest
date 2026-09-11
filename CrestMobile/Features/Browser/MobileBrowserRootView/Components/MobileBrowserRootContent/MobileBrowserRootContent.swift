@@ -272,6 +272,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         utilityPresentation:
                             navigation.utilityPresentation
                     )
+                    .environment(
+                        \.browserSettingsUsesLiveSidebar,
+                        navigation.regularSidebarIsDocked && layout.reservesSidebarWidth
+                    )
                     .simultaneousGesture(
                         TapGesture().onEnded {
                             navigation.handleRegularSidebarInteraction()
@@ -293,6 +297,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.regularSidebarIsDocked
                             && layout.reservesSidebarWidth
                     )
+                    .environment(
+                        \.browserSettingsUsesLiveSidebar,
+                        navigation.regularSidebarIsDocked && layout.reservesSidebarWidth)
                 )
                 .overlay {
                     MobileRegularUtilityFanLayer(

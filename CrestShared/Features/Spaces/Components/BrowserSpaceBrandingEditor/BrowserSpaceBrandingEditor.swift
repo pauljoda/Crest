@@ -1,147 +1,195 @@
 import SwiftUI
 
-/// One decision at a time, with the same live bindings in setup and Settings.
+/// The same live designer edits in-memory setup drafts and persisted Space bindings.
 struct BrowserSpaceBrandingEditor: View {
     @Binding var branding: BrowserSpaceBranding
     @Binding var symbol: String
     var previewName = ""
     var compact = false
     var showsPreview = true
-    var dense = false
-    var controlsBackground = BrowserOnboardingPalette.parchment
+    var editableName: Binding<String>? = nil
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
+    @State private var initialAppearance: BrowserSpaceBranding?
+    @State private var beforeShuffle: BrowserSpaceBranding?
+    @State private var gesturePreview: BrowserSpaceBranding?
+    @State private var choosesIdentityEmoji = false
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var destination: BrowserSpaceAppearancePage?
-    @State private var selectedDetail: BrowserSpaceAppearancePage?
-
-    private var page: BrowserSpaceAppearancePage {
-        destination ?? BrowserSpaceAppearanceLanding.page(for: branding)
-    }
-
-    private var editedBranding: Binding<BrowserSpaceBranding> {
-        Binding(
-            get: { branding },
-            set: { value in
-                var updated = value
-                if page != .presets { updated.hasCustomAppearance = true }
-                branding = updated
-            })
-    }
-
-    private var detailPages: [BrowserSpaceAppearancePage] {
-        switch page {
-        case .crest: [.shape, .emblem, .border]
-        case .pattern: [.layout, .division, .band]
-        default: []
+    private var defaults: BrowserSpaceBranding {
+        if let preset = BrowserSpaceBrandingPreset.curated.first(where: { $0.id == branding.crest.startingPresetID }) {
+            return preset.applying(to: BrowserSpaceBranding.house(.winter, symbol: symbol))
         }
+        return initialAppearance ?? branding
     }
 
-    private var contentPage: BrowserSpaceAppearancePage {
-        if let selectedDetail, detailPages.contains(selectedDetail) { return selectedDetail }
-        return detailPages.first ?? page
-    }
-
-    private var pinnedControls: PinnedScrollableViews {
-        #if os(macOS)
-            detailPages.isEmpty ? [] : [.sectionHeaders]
-        #else
-            []
-        #endif
+    private var context: BrowserCrestStudioContext {
+        BrowserCrestStudioContext(
+            branding: $branding, defaults: defaults, compact: compact, previewBranding: gesturePreview)
     }
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: dense ? 12 : 18, pinnedViews: pinnedControls) {
-            if showsPreview {
-                BrowserSpaceAppearanceHero(branding: branding, symbol: symbol, name: previewName, compact: true)
-                    .frame(height: 112)
-            }
-            Section {
-                BrowserSpaceAppearanceChoices(
-                    branding: editedBranding, symbol: $symbol, page: contentPage,
-                    compact: compact, dense: dense, navigate: move
-                )
-                .id(contentPage)
-                .transition(.opacity)
-            } header: {
-                controls
-                    .padding(.bottom, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(controlsBackground)
-            }
-        }
-        .id("crest-space-appearance-top")
-        .preference(key: BrowserSpaceAppearanceNavigationPreference.self, value: page)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: page)
-        .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85), value: branding)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Space appearance")
-    }
-
-    private var controls: some View {
-        VStack(alignment: .leading, spacing: dense ? 12 : 18) {
-            VStack(alignment: .leading, spacing: 10) {
-                if page != .presets {
-                    Button {
-                        move(to: page == .customize || page == .icon ? .presets : .customize)
-                    } label: {
-                        Label(
-                            page == .customize || page == .icon ? "Select Template" : "All details",
-                            systemImage: "chevron.backward")
+        LazyVStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 20) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Crest Studio").font(CrestTypography.display(28))
+                    HStack {
+                        Button("Shuffle", systemImage: "shuffle", action: shuffle).buttonStyle(.borderless)
+                        if beforeShuffle != nil {
+                            Button("Undo shuffle", systemImage: "arrow.uturn.backward") {
+                                if let beforeShuffle { branding = beforeShuffle }
+                                beforeShuffle = nil
+                            }.labelStyle(.iconOnly).buttonStyle(.borderless)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 4)
                 }
-                Text(page.title).font(CrestTypography.display(compact || dense ? 26 : 30))
-                if page != .presets {
-                    Text(page.detail)
-                        .font(CrestTypography.sans(dense ? 12 : 14))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if usesLiveSidebar && showsPreview {
+                    BrowserCrestStudioMark(branding: branding, symbol: symbol, size: 140)
                 }
             }
-            if !detailPages.isEmpty {
-                BrowserSpaceAppearanceLayerColors(branding: editedBranding, page: contentPage)
-                    .frame(minHeight: page == .pattern ? 88 : 44, alignment: .top)
-                BrowserSpaceAppearancePicker(
-                    pages: detailPages, selection: contentPage, select: { selectedDetail = $0 })
-                Text(contentPage.detail)
-                    .font(CrestTypography.sans(13)).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            if showsPreview && !usesLiveSidebar {
+                BrowserCrestStudioPreview(branding: branding, symbol: symbol, name: previewName, compact: true)
+            }
+            presets
+            identity
+            if branding.iconStyle == .layeredCrest {
+                BrowserCrestStudioColors(context: context, symbol: symbol)
+                BrowserCrestStudioComposition(context: context, symbol: symbol)
+                BrowserCrestStudioEmblem(context: context, symbol: symbol)
+                BrowserCrestStudioOrnaments(context: context, symbol: symbol)
+            }
+            BrowserCrestStudioBackground(context: context, symbol: symbol)
+            Text("Tab, address bar, and sidebar sizing are in Look and Feel. These choices belong to this Space.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("Reset appearance to starting point") {
+                    branding = defaults
+                    beforeShuffle = nil
+                }
+                .buttonStyle(.borderless).disabled(branding == defaults)
+                Spacer()
+            }
+            DisclosureGroup("Artwork credits") {
+                Text(BrowserCrestStudioAppearance.credits).font(.caption).foregroundStyle(.secondary).textSelection(
+                    .enabled)
+            }.font(.caption)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { if initialAppearance == nil { initialAppearance = branding } }
+        .environment(
+            \.crestStudioEditingChanged,
+            BrowserCrestStudioEditingAction { editing in
+                // The actual crest and browser stay live. Choice thumbnails don't
+                // need to rebuild their entire compositions for every drag sample.
+                gesturePreview = editing ? branding : nil
+            }
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Crest Studio")
+    }
+
+    private var presets: some View {
+        BrowserCrestStudioGroup(title: "Start from") {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 10) {
+                ForEach(BrowserSpaceBrandingPreset.curated) { preset in
+                    BrowserCrestStudioChoice(title: preset.titleKey, selected: preset.isSelected(in: branding)) {
+                        branding = preset.applying(to: branding)
+                        beforeShuffle = nil
+                    } artwork: {
+                        BrowserSpaceCrestIcon(
+                            branding: preset.applying(to: gesturePreview ?? branding), size: 52, rasterizesLayers: false
+                        )
+                        .equatable()
+                    }
+                }
+            }
+            Text("Choose a starting point, then make it yours. Reset controls return to this preset.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var identity: some View {
+        BrowserCrestStudioGroup(title: "Identity", preview: compact ? branding : nil, symbol: symbol) {
+            if let editableName {
+                BrowserCrestStudioTextField(
+                    title: "Space name", symbol: "rectangle.and.pencil.and.ellipsis", text: editableName)
+            }
+            Picker("Identity style", selection: context.setting(\.iconStyle).binding) {
+                Text("Crest").tag(BrowserSpaceIconStyle.layeredCrest)
+                Text("Icon").tag(BrowserSpaceIconStyle.simpleSymbol)
+            }.pickerStyle(.segmented)
+            if branding.iconStyle == .simpleSymbol {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        identitySymbolPicker.frame(minWidth: 220)
+                        identityEmojiPicker.frame(minWidth: 220)
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        identitySymbolPicker
+                        identityEmojiPicker
+                    }
+                }
+                Toggle(
+                    "Follow Space color",
+                    isOn: Binding(
+                        get: { branding.symbolColor == nil },
+                        set: {
+                            context.setting(\.symbolColor).binding.wrappedValue = $0 ? nil : branding.primaryColor
+                        })
+                ).toggleStyle(.switch)
+                if branding.symbolColor != nil {
+                    ColorPicker(
+                        "Icon color",
+                        selection: Binding(
+                            get: { branding.resolvedSymbolColor.color },
+                            set: {
+                                context.setting(\.symbolColor).binding.wrappedValue = BrowserSpaceBrandColor(color: $0)
+                            }), supportsOpacity: false)
+                }
             }
         }
     }
 
-    private func move(to page: BrowserSpaceAppearancePage) {
-        selectedDetail = nil
-        destination = page
+    private var identitySymbolPicker: some View {
+        BrowserSystemSymbolPicker(
+            selection: Binding(
+                get: { BrowserIconSymbol.emoji(from: symbol) == nil ? symbol : "" },
+                set: { symbol = $0 }
+            ))
     }
+
+    private var identityEmojiPicker: some View {
+        BrowserArtworkPickerButton(
+            title: "Emoji",
+            detail: BrowserIconSymbol.emoji(from: symbol) == nil ? Text("Choose an emoji") : Text("Change emoji")
+        ) {
+            choosesIdentityEmoji = true
+        } artwork: {
+            if let emoji = BrowserIconSymbol.emoji(from: symbol) {
+                Text(emoji)
+            } else {
+                Image(systemName: "face.smiling")
+            }
+        }
+        .accessibilityLabel("Choose Emoji")
+        .accessibilityValue(BrowserIconSymbol.emoji(from: symbol) ?? "")
+        .browserIconCustomizationPopover(
+            .init(
+                isPresented: $choosesIdentityEmoji, title: "Space Icon",
+                currentEmoji: BrowserIconSymbol.emoji(from: symbol),
+                setEmoji: { symbol = BrowserIconSymbol.symbol(forEmoji: $0) }
+            ))
+    }
+
+    private func shuffle() {
+        beforeShuffle = branding
+        branding = BrowserCrestStudioAppearance.shuffle(branding)
+    }
+
 }
 
-#Preview("Visual Space Editor") {
+#Preview("Crest Studio") {
     @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
     @Previewable @State var symbol = BrowserSpaceSimpleSymbol.work.rawValue
-    ScrollView {
-        BrowserSpaceBrandingEditor(branding: $branding, symbol: $symbol).padding(28)
-    }
-    .frame(width: 560, height: 720)
-}
-
-/// Hosts place this around their existing scroll container, keeping one scroll owner.
-private struct BrowserSpaceAppearanceNavigationPreference: PreferenceKey {
-    static let defaultValue = BrowserSpaceAppearancePage.presets
-    static func reduce(value: inout BrowserSpaceAppearancePage, nextValue: () -> BrowserSpaceAppearancePage) {
-        value = nextValue()
-    }
-}
-
-extension View {
-    func scrollsSpaceAppearancePages(anchorID: String = "crest-space-appearance-top") -> some View {
-        ScrollViewReader { proxy in
-            self.onPreferenceChange(BrowserSpaceAppearanceNavigationPreference.self) { _ in
-                proxy.scrollTo(anchorID, anchor: .top)
-            }
-        }
-    }
+    ScrollView { BrowserSpaceBrandingEditor(branding: $branding, symbol: $symbol).padding(20) }
+        .frame(width: 560, height: 720)
 }

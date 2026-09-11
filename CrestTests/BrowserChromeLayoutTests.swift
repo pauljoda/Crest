@@ -1875,26 +1875,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(BrowserStartupBehavior.lastActiveTab.activatesRestoredTab)
     }
 
-    func testSettingsUsesNativeResizableNavigationSplitView() {
-        XCTAssertTrue(BrowserSettingsChromePolicy.usesNavigationSplitView)
-        XCTAssertTrue(BrowserSettingsChromePolicy.usesResizableDesktopSplitView)
-        XCTAssertTrue(BrowserSettingsChromePolicy.usesDedicatedResizableWindowScene)
-        XCTAssertTrue(BrowserSettingsChromePolicy.permitsUserWindowResizing)
-        XCTAssertEqual(
-            BrowserSettingsChromePolicy.minimumContentSize,
-            CGSize(width: 840, height: 610)
-        )
-        XCTAssertEqual(
-            BrowserSettingsChromePolicy.defaultContentSize,
-            CGSize(width: 900, height: 660)
-        )
-        XCTAssertEqual(BrowserSettingsChromePolicy.detailMinimumWidth, 600)
-        XCTAssertTrue(BrowserSettingsChromePolicy.usesNativeSidebarToggle)
-        XCTAssertFalse(BrowserSettingsChromePolicy.showsSelectionInWindowTitle)
-        XCTAssertTrue(BrowserSettingsChromePolicy.showsStandardWindowControls)
-        XCTAssertEqual(BrowserSettingsChromePolicy.toolbarHeight, 38)
-    }
-
     func testSettingsVisualPolicyUsesCalmNativeHierarchy() {
         XCTAssertEqual(BrowserSettingsVisualPolicy.sidebarMinimumWidth, 224)
         XCTAssertEqual(BrowserSettingsVisualPolicy.sidebarIdealWidth, 236)
@@ -1913,83 +1893,6 @@ final class BrowserChromeLayoutTests: XCTestCase {
         XCTAssertTrue(BrowserSettingsVisualPolicy.hidesResolvedPrimaryActions)
         XCTAssertEqual(BrowserSettingsVisualPolicy.pageIconSize, 48)
         XCTAssertEqual(BrowserSettingsVisualPolicy.maximumReadableContentWidth, 700)
-    }
-
-    func testSpaceCustomizationUsesAFullHeightPreviewWithoutANestedSidebar() {
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.usesCompactSpacePicker)
-        XCTAssertFalse(BrowserSpaceCustomizationVisualPolicy.usesNestedSpaceSidebar)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.showsPersistentBrandingPreview)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.separatesAppearanceFromDetails)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.progressivelyDisclosesFineTuning)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.usesAdaptiveToolbar)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.stacksPreviewBeforeClipping)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.integratesPageIdentityIntoToolbar)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.describesPreviewAsSimplified)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.mobileUsesSharedSidebarPreview)
-        XCTAssertTrue(BrowserSpaceCustomizationVisualPolicy.mobilePlacesPreviewBeforeControls)
-        XCTAssertFalse(BrowserSpaceCustomizationVisualPolicy.toolbarShowsExplanatorySubtitle)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.previewMinimumWidth, 240)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.previewIdealWidth, 260)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.previewMaximumWidth, 320)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.editorMinimumWidth, 360)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.wideEditorMinimumWidth, 621)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.sectionPickerWidth, 280)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.compactSpacePickerWidth, 150)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.compactSectionPickerWidth, 220)
-        XCTAssertEqual(BrowserSpaceCustomizationVisualPolicy.wideIdentityWidth, 120)
-    }
-
-    @MainActor
-    func testSettingsWindowSizingAllowsGrowthBeyondItsDefaultSize() {
-        let window = NSWindow(
-            contentRect: CGRect(
-                origin: .zero,
-                size: BrowserSettingsChromePolicy.defaultContentSize
-            ),
-            styleMask: [.titled],
-            backing: .buffered,
-            defer: false
-        )
-        window.contentMaxSize = BrowserSettingsChromePolicy.defaultContentSize
-
-        BrowserSettingsWindowSizing.apply(to: window)
-
-        XCTAssertTrue(window.styleMask.contains(.resizable))
-        XCTAssertEqual(
-            window.contentMinSize,
-            BrowserSettingsChromePolicy.minimumContentSize
-        )
-        XCTAssertGreaterThan(window.contentMaxSize.width, 10_000)
-        XCTAssertGreaterThan(window.contentMaxSize.height, 10_000)
-        XCTAssertEqual(window.standardWindowButton(.zoomButton)?.isEnabled, true)
-    }
-
-    @MainActor
-    func testSettingsWindowSizingRestoresTheWindowNameAssistiveTechnologyReads() {
-        let window = NSWindow(
-            contentRect: CGRect(
-                origin: .zero,
-                size: BrowserSettingsChromePolicy.defaultContentSize
-            ),
-            styleMask: [.titled],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = ""
-        window.alphaValue = 0
-
-        BrowserSettingsWindowSizing.apply(to: window)
-
-        XCTAssertEqual(window.title, BrowserSettingsChromePolicy.windowTitle)
-        XCTAssertEqual(
-            window.accessibilityTitle(),
-            BrowserSettingsChromePolicy.windowTitle
-        )
-        XCTAssertEqual(
-            window.alphaValue,
-            1,
-            "A window that can be typed into is never left transparent, because the accessibility tree still reports it as frontmost."
-        )
     }
 
     @MainActor

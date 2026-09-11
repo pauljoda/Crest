@@ -71,7 +71,8 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: 780, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(24)
     }
 
     private var groups: [BrowserWebKitFeatureFlagGroup] {
@@ -102,6 +103,7 @@ private struct BrowserWebKitPerformanceSettings: View {
                 }
             }
             .padding(CrestSpacing.extraSmall)
+            .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
             Label("Performance", systemImage: "gauge.with.dots.needle.67percent")
         }

@@ -10,16 +10,24 @@ struct BrowserPlatformLinkRouteEditor: View {
     let moveUp: () -> Void
     let moveDown: () -> Void
 
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
+
     var body: some View {
-        BrowserPlatformLinkRouteEditorContent(
-            route: route,
-            spaces: spaces,
-            canMoveUp: canMoveUp,
-            canMoveDown: canMoveDown,
-            update: update,
-            delete: delete,
-            moveUp: moveUp,
-            moveDown: moveDown
-        )
+        if usesLiveSidebar {
+            BrowserLinkRouteCard(
+                route: route, spaces: spaces, canMoveUp: canMoveUp, canMoveDown: canMoveDown,
+                update: update, delete: delete, moveUp: moveUp, moveDown: moveDown)
+        } else {
+            BrowserPlatformLinkRouteEditorContent(
+                route: route,
+                spaces: spaces,
+                canMoveUp: canMoveUp,
+                canMoveDown: canMoveDown,
+                update: update,
+                delete: delete,
+                moveUp: moveUp,
+                moveDown: moveDown
+            )
+        }
     }
 }

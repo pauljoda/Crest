@@ -9,12 +9,6 @@ extension Binding where Value == BrowserSpaceBranding {
         wrappedValue = updated.normalized()
     }
 
-    func editorUpdateCrest(
-        _ mutation: (inout BrowserSpaceCrest) -> Void
-    ) {
-        editorUpdate { mutation(&$0.crest) }
-    }
-
     func editorPreview(
         _ mutation: (inout BrowserSpaceBranding) -> Void
     ) -> BrowserSpaceBranding {

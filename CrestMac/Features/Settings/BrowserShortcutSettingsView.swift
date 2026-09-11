@@ -87,10 +87,11 @@ private struct BrowserShortcutSettingsContent: View {
                 .foregroundStyle(.secondary)
         }
         .frame(
-            maxWidth: BrowserShortcutSettingsMetrics.maximumContentWidth,
+            maxWidth: .infinity,
             maxHeight: .infinity,
             alignment: .topLeading
         )
+        .padding(24)
         .alert(
             BrowserShortcutSettingsPresentation.shortcutAlreadyInUse,
             isPresented: $model.isPresentingConflict

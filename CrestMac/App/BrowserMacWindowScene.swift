@@ -118,7 +118,9 @@ struct BrowserMacWindowScene: View {
             )
         }
         .onChange(of: spaceSettingsPresentation.revision) {
-            openWindow(id: BrowserSceneID.settings.rawValue)
+            guard scenePhase == .active else { return }
+            browser.openSettings()
+            pages.select(session: browser.session)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active {

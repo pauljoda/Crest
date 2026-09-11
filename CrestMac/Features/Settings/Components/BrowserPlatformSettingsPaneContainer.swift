@@ -14,10 +14,12 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     }
 
     var body: some View {
-        Form {
-            content
+        ScrollView {
+            BrowserSettingsSectionGrid(allowsColumns: ![.passwords, .about, .extensions].contains(destination)) {
+                content
+            }
+            .padding(24)
         }
-        .crestSettingsForm()
         .accessibilityIdentifier("settings-form-\(destination.rawValue)")
     }
 }

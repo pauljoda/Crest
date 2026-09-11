@@ -8,6 +8,7 @@ struct MobileBrowserSettingsContent: View {
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
 
+    @Environment(\.browserSettingsIsTab) private var isInTab
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -33,8 +34,10 @@ struct MobileBrowserSettingsContent: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done", action: dismiss.callAsFunction)
+            if !isInTab {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done", action: dismiss.callAsFunction)
+                }
             }
         }
         .presentationSizing(.fitted)

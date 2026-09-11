@@ -25,10 +25,13 @@ struct BrowserSavedSitePermissionSection: View {
                 }
             }
 
-            Button("Reset All", role: .destructive, action: resetAll)
-                .buttonStyle(.crestDestructive)
-                .disabled(records.isEmpty)
-                .accessibilityHint("Restores each site's default permission behavior")
+            if !records.isEmpty {
+                Button("Reset All", role: .destructive, action: resetAll)
+                    .buttonStyle(.crestDestructive)
+                    .disabled(records.isEmpty)
+                    .accessibilityHint("Restores each site's default permission behavior")
+            }
         }
+        .containerValue(\.settingsFullWidth, true)
     }
 }

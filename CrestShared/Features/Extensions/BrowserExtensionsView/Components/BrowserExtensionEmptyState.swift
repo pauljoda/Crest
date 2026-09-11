@@ -6,7 +6,7 @@ struct BrowserExtensionEmptyState: View {
             VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
                 Text("No Extensions Installed")
                     .font(.body.weight(.medium))
-                Text("Add an extension below to review its access before use.")
+                Text("Add an extension to review its access before use.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

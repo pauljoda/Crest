@@ -22,7 +22,9 @@ struct BrowserCommands: Commands {
 
         CommandGroup(replacing: .appSettings) {
             Button("Settings…", systemImage: "gearshape") {
-                openWindow(id: BrowserSceneID.settings.rawValue)
+                commandBrowser.openSettings()
+                commandPages.select(session: commandBrowser.session)
+                if focusedContext == nil { openWindow(id: BrowserSceneID.browser.rawValue) }
             }
             .keyboardShortcut(",", modifiers: .command)
         }

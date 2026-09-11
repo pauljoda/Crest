@@ -2,19 +2,49 @@ import SwiftUI
 import UIKit
 
 struct MobileSpaceSettingsView: View {
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
+    @Environment(\.browserSettingsSelectLiveSpace) private var liveSpaceSelection
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
 
     @State private var selectedSpaceID: SpaceID?
+    @State private var editorSection = BrowserSpaceEditorSection.appearance
     @State private var managedSearchEngineSpace: BrowserSpace?
     @State private var editingAppearanceSpace: BrowserSpace?
 
     var body: some View {
+        Group {
+            if usesLiveSidebar {
+                liveWorkspace
+            } else {
+                compactSettings
+            }
+        }
+        .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        .fullScreenCover(item: $editingAppearanceSpace) { requested in
+            NavigationStack {
+                appearanceWorkspace(for: requested)
+                    .navigationTitle("Space appearance")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { editingAppearanceSpace = nil }
+                        }
+                    }
+            }
+        }
+        .sheet(item: $managedSearchEngineSpace) { space in
+            BrowserSearchEngineManager(
+                browser: browser, space: space, dismissKeyboard: dismissKeyboard)
+        }
+    }
+
+    private var compactSettings: some View {
         BrowserSettingsPane(.spaces) {
             MobileSpaceSelectionSection(
                 browser: browser,
-                selectedSpaceID: $selectedSpaceID
+                selectedSpaceID: Binding(get: { editedSpaceID }, set: selectEditedSpace)
             )
 
             if let space, canReveal(space) {
@@ -24,20 +54,7 @@ struct MobileSpaceSettingsView: View {
                     editAppearance: { editingAppearanceSpace = space }
                 )
 
-                // Touch takes the shared superset without downloads — the
-                // system owns where a download lands here — and without the
-                // Crest Passwords toggles, which this shell offers in its own
-                // Passwords pane.
-                BrowserSpaceSettingsSections(
-                    browser: browser,
-                    space: space,
-                    spaceAccess: spaceAccess,
-                    dataDeleter: dataDeleter,
-                    manageSearchEngines: {
-                        managedSearchEngineSpace = space
-                    },
-                    dismissKeyboard: dismissKeyboard
-                )
+                detailSections(for: space)
             } else if let space {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: browser.liveSpace(space),
@@ -46,43 +63,83 @@ struct MobileSpaceSettingsView: View {
                 )
             }
         }
-        .scrollsSpaceAppearancePages()
-        .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
-        // Present from the stable pane, outside the Form's section hosting
-        // controllers. A section presenter can dismiss during its first update.
-        .fullScreenCover(item: $editingAppearanceSpace) { space in
-            NavigationStack {
-                Group {
-                    if let currentSpace = browser.session.space(id: space.id), canReveal(currentSpace) {
-                        BrowserMobileSpaceAppearanceWorkspace(
-                            branding: browser.spaceBrandingBinding(in: currentSpace),
-                            symbol: browser.spaceIdentityBinding(\.symbol, in: currentSpace),
-                            name: browser.spaceIdentityBinding(\.name, in: currentSpace),
-                            space: currentSpace
-                        )
+    }
+
+    private var liveWorkspace: some View {
+        VStack(spacing: 0) {
+            MobileSpaceSettingsWorkspaceToolbar(
+                browser: browser,
+                selectedSpaceID: Binding(get: { editedSpaceID }, set: selectEditedSpace),
+                section: $editorSection)
+            Divider()
+            if let space {
+                if canReveal(space) {
+                    Group {
+                        switch editorSection {
+                        case .appearance:
+                            BrowserCrestStudioWorkspace(
+                                branding: browser.spaceBrandingBinding(in: space),
+                                symbol: browser.spaceIdentityBinding(\.symbol, in: space),
+                                name: browser.spaceIdentityBinding(\.name, in: space))
+                        case .settings:
+                            ScrollView {
+                                BrowserSettingsSectionGrid {
+                                    detailSections(for: space)
+                                }
+                                .padding(24)
+                            }
+                        }
+                    }
+                    .id(space.id)
+                } else {
+                    BrowserSettingsPane(.spaces) {
+                        BrowserSettingsPrivateSpaceAccessSection(
+                            space: browser.liveSpace(space), accessController: spaceAccess,
+                            detail: "Unlock this Space before viewing its tab preview or changing its settings.")
                     }
                 }
-                .navigationTitle("Space appearance")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { editingAppearanceSpace = nil }
-                    }
-                }
+            } else {
+                ContentUnavailableView("Select a Space", systemImage: "square.grid.2x2")
             }
         }
-        .sheet(item: $managedSearchEngineSpace) { space in
-            BrowserSearchEngineManager(
-                browser: browser,
-                space: space,
-                dismissKeyboard: dismissKeyboard
-            )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(BrowserSettingsCanvas.background)
+    }
+
+    private func detailSections(for space: BrowserSpace) -> some View {
+        BrowserSpaceSettingsSections(
+            browser: browser,
+            space: space,
+            spaceAccess: spaceAccess,
+            dataDeleter: dataDeleter,
+            manageSearchEngines: { managedSearchEngineSpace = space },
+            dismissKeyboard: dismissKeyboard)
+    }
+
+    private func selectEditedSpace(_ id: SpaceID?) {
+        selectedSpaceID = id
+        if usesLiveSidebar, let id, id != browser.selectedSpace?.id { liveSpaceSelection?.select(id) }
+    }
+
+    @ViewBuilder
+    private func appearanceWorkspace(for requested: BrowserSpace) -> some View {
+        if let currentSpace = browser.session.space(id: requested.id),
+            canReveal(currentSpace)
+        {
+            BrowserMobileSpaceAppearanceWorkspace(
+                branding: browser.spaceBrandingBinding(in: currentSpace),
+                symbol: browser.spaceIdentityBinding(\.symbol, in: currentSpace),
+                name: browser.spaceIdentityBinding(\.name, in: currentSpace), space: currentSpace)
         }
     }
 
+    private var editedSpaceID: SpaceID? {
+        usesLiveSidebar ? browser.session.selectedSpaceID : selectedSpaceID
+    }
+
     private var space: BrowserSpace? {
-        guard let selectedSpaceID else { return nil }
-        return browser.session.space(id: selectedSpaceID)
+        guard let editedSpaceID else { return nil }
+        return browser.session.space(id: editedSpaceID)
     }
 
     private func canReveal(_ space: BrowserSpace) -> Bool {

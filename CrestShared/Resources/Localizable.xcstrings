@@ -1,6 +1,15 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Settings unavailable" : {
+      "extractionState" : "manual"
+    },
+    "Changes appear live in your sidebar." : {
+      "extractionState" : "manual"
+    },
+    "Crest preview" : {
+      "extractionState" : "manual"
+    },
     "Stripes" : {
       "extractionState" : "manual"
     },
@@ -14,6 +23,81 @@
       "extractionState" : "manual"
     },
     "Rounded Square" : {
+      "extractionState" : "manual"
+    },
+    "Four" : {
+      "extractionState" : "manual"
+    },
+    "Ring" : {
+      "extractionState" : "manual"
+    },
+    "French Shield" : {
+      "extractionState" : "manual"
+    },
+    "Oval" : {
+      "extractionState" : "manual"
+    },
+    "Badge" : {
+      "extractionState" : "manual"
+    },
+    "Crossed" : {
+      "extractionState" : "manual"
+    },
+    "Wedges" : {
+      "extractionState" : "manual"
+    },
+    "Bars" : {
+      "extractionState" : "manual"
+    },
+    "Checks" : {
+      "extractionState" : "manual"
+    },
+    "Pall" : {
+      "extractionState" : "manual"
+    },
+    "Pile" : {
+      "extractionState" : "manual"
+    },
+    "Canton" : {
+      "extractionState" : "manual"
+    },
+    "Roundel" : {
+      "extractionState" : "manual"
+    },
+    "Line" : {
+      "extractionState" : "manual"
+    },
+    "Double Line" : {
+      "extractionState" : "manual"
+    },
+    "Beaded" : {
+      "extractionState" : "manual"
+    },
+    "Flat" : {
+      "extractionState" : "manual"
+    },
+    "Sheen" : {
+      "extractionState" : "manual"
+    },
+    "Embossed" : {
+      "extractionState" : "manual"
+    },
+    "Soft" : {
+      "extractionState" : "manual"
+    },
+    "Lifted" : {
+      "extractionState" : "manual"
+    },
+    "Regular" : {
+      "extractionState" : "manual"
+    },
+    "Bold" : {
+      "extractionState" : "manual"
+    },
+    "Serif" : {
+      "extractionState" : "manual"
+    },
+    "Sans" : {
       "extractionState" : "manual"
     },
     "" : {
@@ -16485,6 +16569,369 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "تصغير"
+          }
+        }
+      }
+    },
+    "Direwolf" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direwolf"
+          }
+        }
+      }
+    },
+    "Stag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stag"
+          }
+        }
+      }
+    },
+    "Raven" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raven"
+          }
+        }
+      }
+    },
+    "Griffin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Griffin"
+          }
+        }
+      }
+    },
+    "Eagle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eagle"
+          }
+        }
+      }
+    },
+    "Bear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bear"
+          }
+        }
+      }
+    },
+    "Boar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boar"
+          }
+        }
+      }
+    },
+    "Fox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fox"
+          }
+        }
+      }
+    },
+    "Horse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horse"
+          }
+        }
+      }
+    },
+    "Unicorn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unicorn"
+          }
+        }
+      }
+    },
+    "Wyvern" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyvern"
+          }
+        }
+      }
+    },
+    "Hydra" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hydra"
+          }
+        }
+      }
+    },
+    "Serpent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serpent"
+          }
+        }
+      }
+    },
+    "Kraken" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kraken"
+          }
+        }
+      }
+    },
+    "Seahorse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seahorse"
+          }
+        }
+      }
+    },
+    "Scorpion" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scorpion"
+          }
+        }
+      }
+    },
+    "Bat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bat"
+          }
+        }
+      }
+    },
+    "Falcon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Falcon"
+          }
+        }
+      }
+    },
+    "Rose" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rose"
+          }
+        }
+      }
+    },
+    "Fleur-de-lis" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleur-de-lis"
+          }
+        }
+      }
+    },
+    "Pine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pine"
+          }
+        }
+      }
+    },
+    "Willow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Willow"
+          }
+        }
+      }
+    },
+    "Crossed Swords" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crossed Swords"
+          }
+        }
+      }
+    },
+    "Crossed Axes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crossed Axes"
+          }
+        }
+      }
+    },
+    "Sword" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sword"
+          }
+        }
+      }
+    },
+    "Trident" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trident"
+          }
+        }
+      }
+    },
+    "Anchor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anchor"
+          }
+        }
+      }
+    },
+    "Castle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Castle"
+          }
+        }
+      }
+    },
+    "Scales" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scales"
+          }
+        }
+      }
+    },
+    "Dragon Head" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dragon Head"
+          }
+        }
+      }
+    },
+    "Heraldry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heraldry"
+          }
+        }
+      }
+    },
+    "SF Symbol" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SF Symbol"
+          }
+        }
+      }
+    },
+    "Monogram" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monogram"
           }
         }
       }

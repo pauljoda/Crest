@@ -41,6 +41,7 @@ struct BrowserPrivacySettingsPane: View {
                 Section {
                     BrowserPlatformPrivacyScopeFootnote()
                 }
+                .containerValue(\.settingsFullWidth, true)
             } else if let selectedSpace {
                 BrowserSettingsPrivateSpaceAccessSection(
                     space: selectedSpace,

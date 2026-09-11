@@ -32,7 +32,7 @@ struct BrowserSpaceSetupWizard: View {
                             BrowserMobileSpaceAppearanceWorkspace(
                                 branding: branding, symbol: symbol,
                                 name: model.nameBinding(for: draft.id, plan: $plan),
-                                spacePicker: spacePicker(for: draft.id), showsNameHint: true
+                                spacePicker: spacePicker(for: draft.id)
                             )
                             .id(draft.id)
                         } else {
@@ -101,7 +101,6 @@ struct BrowserSpaceSetupWizard: View {
                 }
             }
         }
-        .scrollsSpaceAppearancePages(anchorID: "space-setup-page-top")
         .onAppear {
             if plan.spaces.isEmpty { addSpace() }
             model.repairSelection(plan: plan, selectedSpaceID: $selectedSpaceID)

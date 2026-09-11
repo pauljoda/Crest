@@ -35,6 +35,25 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertEqual(browser.selectedTab?.id, first)
     }
 
+    func testSettingsTabIsReusedPersistsAndNeverAllocatesWebKit() throws {
+        let browser = BrowserStore.preview()
+        let id = try XCTUnwrap(browser.openSettings())
+        XCTAssertEqual(browser.openSettings(), id)
+        XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.nativeContent == .settings }.count, 1)
+        XCTAssertEqual(browser.selectedTab?.placement, .current)
+        XCTAssertNil(browser.selectedTab?.url)
+        let restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
+        XCTAssertEqual(restored.selectedTab?.nativeContent, .settings)
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        pages.select(session: browser.session)
+        XCTAssertEqual(pages.activeTabID, id)
+        XCTAssertNil(pages.activePage)
+        XCTAssertFalse(pages.retainedTabIDs.contains(id))
+        browser.closeTab(id)
+        XCTAssertFalse(browser.selectedSpace?.tabs.contains { $0.id == id } ?? true)
+    }
+
     func testNativeDescriptorSurvivesRepairDuplicationAndUnknownKind() throws {
         let browser = BrowserStore.preview()
         let unknown = BrowserNativeTabContent(kind: "future-notes", resourceID: UUID())

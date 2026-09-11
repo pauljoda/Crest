@@ -27,7 +27,7 @@ struct BrowserSettingsCompactPageIdentity: View {
         }
         .padding(.horizontal, CrestSpacing.medium)
         .frame(minHeight: 54, alignment: .leading)
-        .background(.bar)
+        .background(BrowserSettingsCanvas.background)
         .overlay(alignment: .bottom) { Divider() }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("settings-page-header")

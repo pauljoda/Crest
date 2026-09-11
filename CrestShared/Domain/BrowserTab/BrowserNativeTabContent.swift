@@ -8,5 +8,6 @@ struct BrowserNativeTabContent: Codable, Equatable, Hashable, Sendable {
     let kind: String
     var resourceID: UUID? = nil
 
+    static let settings = Self(kind: "settings")
     static let gettingStarted = Self(kind: "getting-started")
 }

@@ -7,11 +7,8 @@ import SwiftUI
 /// settings reads as a table, and a toggle is always the switch the rest of
 /// Crest uses rather than the checkbox a nested control would otherwise become.
 ///
-/// The reset is deliberately quiet and deliberately weightless: it hangs off
-/// the end of the title, in the gap the title already leaves, so showing or
-/// hiding it moves nothing. It is there whenever the value has left its
-/// default, so a changed setting is always visibly changed, and the row's
-/// context menu carries it as well.
+/// The reset reserves a consistent slot beside the label. Showing or hiding it
+/// never moves the control, and its larger hit target stays clear of the text.
 struct CrestSettingRow<Control: View>: View {
     private let title: LocalizedStringKey
     private let setting: CrestResettableSetting?
@@ -40,12 +37,11 @@ struct CrestSettingRow<Control: View>: View {
     }
 
     private var label: some View {
-        Text(title)
-            .fixedSize(horizontal: false, vertical: true)
-            .overlay(alignment: .trailing) {
-                resetControl
-                    .alignmentGuide(.trailing) { $0[.leading] - CrestSettingRowMetrics.resetGap }
-            }
+        HStack(alignment: .center, spacing: 4) {
+            Text(title)
+                .fixedSize(horizontal: false, vertical: true)
+            resetControl
+        }
     }
 
     @ViewBuilder
@@ -54,8 +50,13 @@ struct CrestSettingRow<Control: View>: View {
             Button(action: setting.reset) {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 18, height: 18)
+                    .background(CrestBrandTheme.accent.opacity(0.1), in: .circle)
+                    .frame(width: 28, height: 28)
+                    .contentShape(.rect)
             }
-            .buttonStyle(.crestIcon(diameter: CrestSettingRowMetrics.resetDiameter))
+            .buttonStyle(.plain)
+            .foregroundStyle(CrestBrandTheme.accent)
             .opacity(showsReset ? 1 : 0)
             // Only the affordance fades. Animating the row would carry the
             // slider's own value changes along with it.

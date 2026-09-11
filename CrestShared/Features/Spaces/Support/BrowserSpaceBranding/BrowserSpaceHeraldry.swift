@@ -46,14 +46,20 @@ extension BrowserSpaceCrestBackplate: BrowserSpaceHeraldicTerm {
         case .none: "None"
         case .circle: "Round"
         case .shield: "Shield"
+        case .frenchShield: "French Shield"
         case .diamond: "Lozenge"
         case .seal: "Seal"
         case .hexagon: "Hexagon"
         case .octagon: "Octagon"
         case .roundedSquare: "Rounded Square"
+        case .oval: "Oval"
+        case .banner: "Banner"
+        case .badge: "Badge"
         }
     }
 
+    /// The system glyph that stands for the plate in galleries that cannot draw
+    /// the plate itself. Plates without a close glyph borrow the nearest one.
     var systemImage: String? {
         switch self {
         case .none: nil
@@ -64,6 +70,10 @@ extension BrowserSpaceCrestBackplate: BrowserSpaceHeraldicTerm {
         case .hexagon: "hexagon.fill"
         case .octagon: "octagon.fill"
         case .roundedSquare: "square.fill"
+        case .frenchShield: "shield.fill"
+        case .oval: "oval.fill"
+        case .banner: "flag.fill"
+        case .badge: "seal.fill"
         }
     }
 
@@ -77,6 +87,10 @@ extension BrowserSpaceCrestBackplate: BrowserSpaceHeraldicTerm {
         case .hexagon: "hexagon"
         case .octagon: "octagon"
         case .roundedSquare: "square"
+        case .frenchShield: "shield"
+        case .oval: "oval"
+        case .banner: "flag"
+        case .badge: "seal"
         }
     }
 }
@@ -87,6 +101,8 @@ extension BrowserSpaceCrestChargeLayout: BrowserSpaceHeraldicTerm {
         case .single: "One"
         case .paired: "Two"
         case .trio: "Three"
+        case .quad: "Four"
+        case .ring: "Ring"
         }
     }
 }
@@ -102,6 +118,11 @@ extension BrowserSpaceCrestFieldDivision: BrowserSpaceHeraldicTerm {
         case .perBend: "Diagonal"
         case .perChevron: "Chevron"
         case .quarterly: "Quartered"
+        case .perSaltire: "Crossed"
+        case .gyronny: "Wedges"
+        case .barry: "Bars"
+        case .paly: "Stripes"
+        case .checky: "Checks"
         }
     }
 }
@@ -118,6 +139,10 @@ extension BrowserSpaceCrestOrdinary: BrowserSpaceHeraldicTerm {
         case .saltire: "Saltire"
         case .chief: "Chief"
         case .bordure: "Bordure"
+        case .pall: "Pall"
+        case .pile: "Pile"
+        case .canton: "Canton"
+        case .roundel: "Roundel"
         }
     }
 }
@@ -127,10 +152,13 @@ extension BrowserSpaceCrestTrim: BrowserSpaceHeraldicTerm {
         switch self {
         case .none: "None"
         case .shield: "Shield"
+        case .line: "Line"
+        case .doubleLine: "Double Line"
         case .laurel: "Laurel"
         case .sunburst: "Sunburst"
         case .doubleRing: "Double Ring"
         case .seal: "Seal"
+        case .beaded: "Beaded"
         }
     }
 }
@@ -138,6 +166,38 @@ extension BrowserSpaceCrestTrim: BrowserSpaceHeraldicTerm {
 extension BrowserSpaceCrestSymbol: BrowserSpaceHeraldicTerm {
     var title: String {
         switch self {
+        case .dragon: "Dragon"
+        case .direwolf: "Direwolf"
+        case .lion: "Lion"
+        case .stag: "Stag"
+        case .raven: "Raven"
+        case .griffin: "Griffin"
+        case .eagle: "Eagle"
+        case .bear: "Bear"
+        case .boar: "Boar"
+        case .fox: "Fox"
+        case .horse: "Horse"
+        case .unicorn: "Unicorn"
+        case .wyvern: "Wyvern"
+        case .hydra: "Hydra"
+        case .serpent: "Serpent"
+        case .kraken: "Kraken"
+        case .seahorse: "Seahorse"
+        case .scorpion: "Scorpion"
+        case .bat: "Bat"
+        case .falcon: "Falcon"
+        case .rose: "Rose"
+        case .lily: "Fleur-de-lis"
+        case .pine: "Pine"
+        case .willow: "Willow"
+        case .swords: "Crossed Swords"
+        case .axes: "Crossed Axes"
+        case .sword: "Sword"
+        case .trident: "Trident"
+        case .anchor: "Anchor"
+        case .castle: "Castle"
+        case .scales: "Scales"
+        case .dragonHead: "Dragon Head"
         case .hound: "Hound"
         case .paw: "Paw"
         case .hare: "Hare"
@@ -174,11 +234,28 @@ extension BrowserSpaceCrestSymbol: BrowserSpaceHeraldicTerm {
         }
     }
 
-    /// Every charge is an SF Symbol, chosen for a silhouette that survives being
-    /// drawn at a third of a 24pt sidebar icon. Charges Crest wanted but could
-    /// not source a worthy symbol for are absent rather than approximated.
+    /// Legacy symbol fallback for surfaces that cannot load bundled artwork.
+    var assetName: String? {
+        switch self {
+        case .dragon, .direwolf, .lion, .stag, .raven, .griffin, .eagle, .bear, .boar, .fox, .horse, .unicorn, .wyvern,
+            .hydra, .serpent, .kraken, .seahorse, .scorpion, .bat, .falcon, .rose, .lily, .pine, .willow, .swords,
+            .axes, .sword, .trident, .anchor, .castle, .scales, .dragonHead:
+            "CrestCharge-" + rawValue
+        default: nil
+        }
+    }
+
     var systemImage: String {
         switch self {
+        case .dragon: "flame.fill"
+        case .direwolf: "dog.fill"
+        case .lion: "pawprint.fill"
+        case .stag: "leaf.fill"
+        case .raven, .griffin: "bird.fill"
+        case .eagle, .bear, .boar, .fox, .horse, .unicorn, .wyvern, .hydra, .serpent, .kraken, .seahorse, .scorpion,
+            .bat, .falcon, .rose, .lily, .pine, .willow, .swords, .axes, .sword, .trident, .anchor, .castle, .scales,
+            .dragonHead:
+            "shield.fill"
         case .hound: "dog.fill"
         case .paw: "pawprint.fill"
         case .hare: "hare.fill"
@@ -213,6 +290,45 @@ extension BrowserSpaceCrestSymbol: BrowserSpaceHeraldicTerm {
         case .crown: "crown.fill"
         case .horn: "horn.fill"
         case .crossedBanners: "flag.2.crossed.fill"
+        }
+    }
+}
+
+extension BrowserSpaceCrestFinish: BrowserSpaceHeraldicTerm {
+    var title: String {
+        switch self {
+        case .flat: "Flat"
+        case .sheen: "Sheen"
+        case .embossed: "Embossed"
+        }
+    }
+}
+
+extension BrowserSpaceCrestDepth: BrowserSpaceHeraldicTerm {
+    var title: String {
+        switch self {
+        case .none: "None"
+        case .soft: "Soft"
+        case .lifted: "Lifted"
+        }
+    }
+}
+
+extension BrowserSpaceCrestChargeWeight: BrowserSpaceHeraldicTerm {
+    var title: String {
+        switch self {
+        case .light: "Light"
+        case .regular: "Regular"
+        case .bold: "Bold"
+        }
+    }
+}
+
+extension BrowserSpaceCrestMonogramStyle: BrowserSpaceHeraldicTerm {
+    var title: String {
+        switch self {
+        case .serif: "Serif"
+        case .sans: "Sans"
         }
     }
 }

@@ -76,26 +76,26 @@ struct BrowserGeneralSettingsPane: View {
             #endif
 
             Section("Default browser") {
-                CrestSettingsStatusRow("Status") {
+                HStack(spacing: 12) {
                     defaultBrowserStatus
+                    Spacer(minLength: 8)
+                    Button {
+                        Task { await refreshDefaultBrowserStatus() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .frame(width: 28, height: 28)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Check Again")
+                    .accessibilityLabel("Check Again")
+                    .disabled(isCheckingDefaultBrowser || defaultBrowser.isWorking)
+                    .accessibilityIdentifier("check-default-browser-status")
                 }
-
                 if case .unavailable(let message) = defaultBrowser.status {
                     Text(message).crestFormFootnote()
                 }
-
                 defaultBrowserActions
-
-                switch defaultBrowser.requestStyle {
-                case .direct:
-                    CrestFormFootnote(
-                        "macOS asks for consent when Crest requests ownership of HTTP and HTTPS links."
-                    )
-                case .systemSettings:
-                    CrestFormFootnote(
-                        "Choose Crest in Default Apps Settings, then return here and check the status."
-                    )
-                }
             }
         }
         .task {
@@ -134,61 +134,25 @@ struct BrowserGeneralSettingsPane: View {
         }
     }
 
-    /// The desktop claims the handler itself and hides the claim once it holds it;
-    /// iOS can only open Default Apps Settings, and keeps offering to.
     @ViewBuilder
     private var defaultBrowserActions: some View {
         switch defaultBrowser.requestStyle {
         case .direct:
             if defaultBrowser.status != .isDefault {
-                Button(
-                    "Make Crest Default Browser",
-                    systemImage: "checkmark.circle"
-                ) {
+                Button("Set as Default…") {
                     Task { await defaultBrowser.requestDefault() }
                 }
-                .buttonStyle(.crestPrimary)
+                .buttonStyle(.bordered)
                 .disabled(defaultBrowser.isWorking)
                 .accessibilityIdentifier("make-default-browser")
             }
         case .systemSettings:
-            Button {
+            Button("Open Default Apps Settings…", systemImage: "arrow.up.forward") {
                 defaultBrowser.openSystemSettings()
-            } label: {
-                actionRowLabel("Open Default Apps Settings", systemImage: "gear")
             }
-            .buttonStyle(.crestTertiary)
+            .buttonStyle(.bordered)
             .accessibilityIdentifier("open-default-apps-settings")
         }
-
-        Button {
-            Task { await refreshDefaultBrowserStatus() }
-        } label: {
-            actionRowLabel("Check Again", systemImage: "arrow.clockwise")
-        }
-        .buttonStyle(.crestTertiary)
-        .disabled(isCheckingDefaultBrowser || defaultBrowser.isWorking)
-        .accessibilityIdentifier("check-default-browser-status")
-
-        if defaultBrowser.isWorking {
-            ProgressView()
-                .controlSize(.small)
-                .accessibilityLabel("Updating default browser")
-        }
-    }
-
-    /// A quiet action that occupies its whole row.
-    ///
-    /// The two default-browser actions are a pair the reader compares, and shipped
-    /// automation pins that they are the same width and the same rhythm apart. A
-    /// bare `Label` inside `.crestTertiary` would size to its text and break both, so
-    /// the label claims the row and the style's hit shape follows it.
-    private func actionRowLabel(
-        _ title: LocalizedStringKey,
-        systemImage: String
-    ) -> some View {
-        Label(title, systemImage: systemImage)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @MainActor

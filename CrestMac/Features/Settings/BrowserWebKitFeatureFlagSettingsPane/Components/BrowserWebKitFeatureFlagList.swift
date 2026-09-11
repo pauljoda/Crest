@@ -18,6 +18,9 @@ struct BrowserWebKitFeatureFlagList: View {
             }
         }
         .listStyle(.inset)
+        .scrollContentBackground(.hidden)
+        .background(BrowserSettingsCanvas.card, in: .rect(cornerRadius: 12))
+        .clipShape(.rect(cornerRadius: 12))
         .overlay {
             if groups.isEmpty {
                 if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

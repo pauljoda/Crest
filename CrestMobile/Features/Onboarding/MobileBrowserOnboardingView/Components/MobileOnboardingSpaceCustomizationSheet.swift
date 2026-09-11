@@ -50,7 +50,6 @@ struct MobileOnboardingSpaceCustomizationSheet: View {
                 }
                 .padding(MobileOnboardingLayout.customizationContentPadding)
             }
-            .scrollsSpaceAppearancePages()
             .navigationTitle("Customize Space")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

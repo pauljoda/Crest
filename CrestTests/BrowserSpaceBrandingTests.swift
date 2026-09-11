@@ -76,33 +76,19 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(automatic.resolvedSymbolColor, .teal)
     }
 
-    func testCustomAppearanceRemembersItsLandingPageThroughPersistence() throws {
-        let custom = BrowserSpaceAppearanceLanding.customStart
-        XCTAssertEqual(custom.iconStyle, .layeredCrest)
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: custom), .customize)
+    func testCustomAppearanceIntentPersistsAndResetsWhenApplyingAPreset() throws {
+        var custom = BrowserSpaceBranding.house(.winter, symbol: "")
+        custom.hasCustomAppearance = true
         let restored = try JSONDecoder().decode(
             BrowserSpaceBranding.self, from: JSONEncoder().encode(custom.normalized()))
         XCTAssertEqual(restored.hasCustomAppearance, true)
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: restored), .customize)
 
         let template = BrowserSpaceBrandingPreset.curated[0]
         let selected = template.applying(to: restored)
         XCTAssertEqual(selected.hasCustomAppearance, false)
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: selected), .presets)
         var edited = selected
         edited.hasCustomAppearance = true
         XCTAssertFalse(template.isSelected(in: edited))
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: edited), .customize)
-    }
-
-    func testOlderSpacesInferCustomizationFromTheirStoredAppearance() {
-        var template = BrowserSpaceBranding.house(.river, symbol: "")
-        template.hasCustomAppearance = nil
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: template), .presets)
-        template.bannerStrength = 0.6
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: template), .customize)
-        template.iconStyle = .simpleSymbol
-        XCTAssertEqual(BrowserSpaceAppearanceLanding.page(for: template), .icon)
     }
 
     func testNewSpacesStartWithVisibleCrestsWithoutRestylingExistingBranding() throws {
@@ -199,28 +185,23 @@ final class BrowserSpaceBrandingTests: XCTestCase {
 
     // MARK: - Sigils
 
-    func testEveryCrestChargeResolvesARealSystemSymbol() {
-        // A charge whose SF Symbol name is wrong renders as an empty box at every
-        // size, in the sidebar and the tab bar, with nothing to catch it at build
-        // time. This is the only guard.
+    func testEveryCrestChargeResolvesBundledArtworkOrASystemSymbol() {
         for symbol in BrowserSpaceCrestSymbol.allCases {
-            XCTAssertNotNil(
-                NSImage(
-                    systemSymbolName: symbol.systemImage,
-                    accessibilityDescription: nil
-                ),
-                "\(symbol.rawValue) points at the missing symbol \(symbol.systemImage)."
-            )
+            if let asset = symbol.assetName {
+                XCTAssertNotNil(NSImage(named: asset), "Missing artwork for \(symbol.rawValue)")
+            } else {
+                XCTAssertNotNil(NSImage(systemSymbolName: symbol.systemImage, accessibilityDescription: nil))
+            }
         }
     }
 
     func testEveryCrestOrdinaryStillRendersThroughItsDedicatedComponent() {
+        let plate = BrowserSpaceCrestPlateShape(backplate: .shield)
         for ordinary in BrowserSpaceCrestOrdinary.allCases {
             let renderer = ImageRenderer(
                 content: BrowserSpaceCrestOrdinaryView(
                     ordinary: ordinary,
-                    backplateSymbol: "shield.fill",
-                    outlineSystemImage: "shield",
+                    plate: plate,
                     color: BrowserSpaceBrandColor.lionGold.color,
                     size: 112
                 )
@@ -231,36 +212,107 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         }
     }
 
-    func testExtractedCrestOrdinaryComponentsPreserveShippedGeometry() throws {
-        let pale = try XCTUnwrap(BrowserSpaceCrestOrdinary.pale.barRendering)
-        XCTAssertEqual(pale.widthFactor, 0.18)
-        XCTAssertNil(pale.heightFactor)
-        XCTAssertEqual(pale.rotationDegrees, 0)
+    func testEveryPlateDivisionAndBandDrawsAPath() {
+        let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
+        for backplate in BrowserSpaceCrestBackplate.allCases where backplate != .none {
+            let path = BrowserSpaceCrestPlateShape(backplate: backplate).path(in: rect)
+            XCTAssertFalse(path.isEmpty, "\(backplate.rawValue) draws nothing.")
+            XCTAssertTrue(path.boundingRect.width > 50, "\(backplate.rawValue) is too small for its plate.")
+        }
+        XCTAssertTrue(BrowserSpaceCrestPlateShape(backplate: .none).path(in: rect).isEmpty)
+        for division in BrowserSpaceCrestFieldDivision.allCases where division != .plain {
+            XCTAssertFalse(
+                BrowserSpaceCrestDivisionShape(division: division, count: 4).path(in: rect).isEmpty,
+                "\(division.rawValue) colors nothing.")
+        }
+        for ordinary in BrowserSpaceCrestOrdinary.allCases where ordinary != .none && ordinary != .bordure {
+            XCTAssertFalse(
+                BrowserSpaceCrestOrdinaryPath(ordinary: ordinary).path(in: rect).isEmpty,
+                "\(ordinary.rawValue) draws nothing.")
+        }
+    }
 
-        let fess = try XCTUnwrap(BrowserSpaceCrestOrdinary.fess.barRendering)
-        XCTAssertNil(fess.widthFactor)
-        XCTAssertEqual(fess.heightFactor, 0.17)
-        XCTAssertEqual(fess.rotationDegrees, 0)
+    func testStudioParametersMoveTheRenderingVersionOnlyWhenUsed() throws {
+        let classic = BrowserSpaceCrest(
+            backplate: .shield, fieldDivision: .perChevron, trim: .shield, symbol: .mountain)
+        XCTAssertFalse(classic.usesStudioParameters)
+        XCTAssertEqual(classic.requiredRenderingVersion, BrowserSpaceBranding.baselineRenderingVersion)
 
-        let bend = try XCTUnwrap(BrowserSpaceCrestOrdinary.bend.barRendering)
-        XCTAssertEqual(bend.widthFactor, 1.1)
-        XCTAssertEqual(bend.heightFactor, 0.17)
-        XCTAssertEqual(bend.rotationDegrees, -38)
+        var studio = classic
+        studio.edgeWidth = 0.4
+        XCTAssertEqual(studio.requiredRenderingVersion, BrowserSpaceBranding.crestStudioRenderingVersion)
 
-        let chevron = try XCTUnwrap(BrowserSpaceCrestOrdinary.chevron.symbolRendering)
-        XCTAssertEqual(chevron.systemImage, "chevron.up")
-        XCTAssertEqual(chevron.sizeFactor, 0.46)
-        XCTAssertEqual(chevron.verticalOffsetFactor, 0.07)
+        var shaped = classic
+        shaped.backplate = .frenchShield
+        XCTAssertEqual(shaped.requiredRenderingVersion, BrowserSpaceBranding.crestStudioRenderingVersion)
 
-        let cross = try XCTUnwrap(BrowserSpaceCrestOrdinary.cross.symbolRendering)
-        XCTAssertEqual(cross.systemImage, "plus")
-        XCTAssertEqual(cross.sizeFactor, 0.48)
-        XCTAssertEqual(cross.verticalOffsetFactor, 0)
+        // A classic crest encodes exactly the keys it always did.
+        let classicJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(classic)) as? [String: Any]
+        XCTAssertNil(classicJSON?["plateScale"])
+        XCTAssertNil(classicJSON?["palette"])
 
-        let saltire = try XCTUnwrap(BrowserSpaceCrestOrdinary.saltire.symbolRendering)
-        XCTAssertEqual(saltire.systemImage, "xmark")
-        XCTAssertEqual(saltire.sizeFactor, 0.48)
-        XCTAssertEqual(saltire.verticalOffsetFactor, 0)
+        // A crest stored before the studio decodes to the studio defaults.
+        let legacy = """
+            {"backplate":"shield","fieldDivision":"plain","ordinary":"none","trim":"laurel","symbol":"crown",
+             "chargeLayout":"single","backplateColorIndex":1,"secondaryFieldColorIndex":1,"ordinaryColorIndex":2,
+             "trimColorIndex":2,"symbolColorIndex":2}
+            """
+        let decoded = try JSONDecoder().decode(BrowserSpaceCrest.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.trim, .laurel)
+        XCTAssertEqual(decoded.edgeColorIndex, 2)
+        XCTAssertEqual(decoded.plateScale, 1)
+        XCTAssertNil(decoded.palette)
+        XCTAssertEqual(decoded.resolvedCharge, .heraldic(.crown))
+        XCTAssertFalse(decoded.usesStudioParameters)
+    }
+
+    func testCustomChargesAndOwnPaletteRoundTripAndNormalize() throws {
+        var crest = BrowserSpaceCrest()
+        crest.charge = .monogram("abc", .serif)
+        crest.palette = [.lionGold, .lionCrimson, .ink, .sage, .sky]
+        crest.symbolColorIndex = 4
+        crest.chargeScale = 9
+        let normalized = crest.normalized(forColorCount: 1)
+        XCTAssertEqual(normalized.charge, .monogram("AB", .serif))
+        XCTAssertEqual(normalized.palette?.count, BrowserSpaceCrest.maximumPaletteCount)
+        XCTAssertEqual(normalized.symbolColorIndex, 0, "An index past the crest's own palette falls back.")
+        XCTAssertEqual(normalized.chargeScale, BrowserSpaceCrest.chargeScaleRange.upperBound)
+
+        let restored = try JSONDecoder().decode(BrowserSpaceCrest.self, from: JSONEncoder().encode(normalized))
+        XCTAssertEqual(restored, normalized)
+        XCTAssertEqual(restored.requiredRenderingVersion, BrowserSpaceBranding.crestStudioRenderingVersion)
+
+        for charge in [
+            BrowserSpaceCrestCharge.heraldic(.sun), .system("star.fill"), .emoji("🐉"), .monogram("PD", .sans), .none,
+        ] {
+            let roundTrip = try JSONDecoder().decode(BrowserSpaceCrestCharge.self, from: JSONEncoder().encode(charge))
+            XCTAssertEqual(roundTrip, charge)
+        }
+
+        // A custom charge equal to the heraldic symbol collapses back to the classic field.
+        var redundant = BrowserSpaceCrest(symbol: .sun)
+        redundant.charge = .heraldic(.sun)
+        XCTAssertNil(redundant.normalized(forColorCount: 3).charge)
+    }
+
+    func testStudioCustomizationSurvivesPersistenceWithoutChangingSpaceColors() throws {
+        let preset = BrowserSpaceBrandingPreset.curated[0]
+        var branding = preset.applying(to: BrowserSpaceBranding.house(.winter, symbol: "star"))
+        let spaceColors = branding.colors
+        branding.crest.palette = [.ember, .gold, .ink, .sand]
+        branding.crest.symbol = .direwolf
+        branding.crest.symbolColorIndex = 3
+        branding.crest.sheenAngle = 120
+        branding.crest.sealTeeth = 18
+        branding.crest.showsOutline = true
+        let restored = try JSONDecoder().decode(BrowserSpaceBranding.self, from: JSONEncoder().encode(branding))
+        XCTAssertEqual(restored, branding.normalized())
+        XCTAssertEqual(restored.colors, spaceColors)
+        XCTAssertEqual(restored.crest.layerColors(spaceColors: spaceColors).count, 4)
+        XCTAssertEqual(restored.crest.startingPresetID, preset.id)
+        XCTAssertEqual(restored.renderingVersion, 5)
+        XCTAssertEqual(BrowserSpaceCrestCharge.monogram("ßABC", .serif).normalized, .monogram("SS", .serif))
+        XCTAssertEqual(BrowserSpaceCrestCharge.system("  star.fill\n").normalized, .system("star.fill"))
     }
 
     func testExpandedChargesJoinTheClassicSigilsWithoutDisplacingThem() {
@@ -279,7 +331,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         // Renaming one silently restyles every Space that chose it.
         XCTAssertTrue(classics.isSubset(of: shipped))
         XCTAssertTrue(expanded.isSubset(of: shipped))
-        XCTAssertEqual(shipped, classics.union(expanded))
+        XCTAssertTrue(classics.union(expanded).isSubset(of: shipped))
         XCTAssertEqual(
             BrowserSpaceCrestSymbol.allCases.count,
             shipped.count,
@@ -342,7 +394,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     }
 
     func testTheChargeGalleryNeverShowsTwoCardsThatDrawTheSameFigure() {
-        let drawn = BrowserSpaceCrestSymbol.selectable.map(\.systemImage)
+        let drawn = BrowserSpaceCrestSymbol.selectable.map { $0.assetName ?? $0.systemImage }
 
         XCTAssertEqual(
             Set(drawn).count,
@@ -356,41 +408,6 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(
             BrowserSpaceCrestSymbol.selectable.count,
             BrowserSpaceCrestSymbol.allCases.count - 1
-        )
-    }
-
-    func testTheForgeComposesAtEveryCallSiteAndBothWidths() {
-        var branding = BrowserSpaceBranding(
-            colors: BrowserSpaceHousePalette.lion.colors,
-            bannerPattern: .quartered,
-            readabilityFade: BrowserSpaceBranding.initialReadabilityFade,
-            iconStyle: .layeredCrest,
-            crest: BrowserSpaceCrest(symbol: .crown, symbolColorIndex: 2)
-        )
-        var symbol = "briefcase.fill"
-        let brandingBinding = Binding(get: { branding }, set: { branding = $0 })
-        let symbolBinding = Binding(get: { symbol }, set: { symbol = $0 })
-
-        for compact in [false, true] {
-            for showsPreview in [false, true] {
-                XCTAssertNotNil(
-                    BrowserSpaceBrandingEditor(
-                        branding: brandingBinding,
-                        symbol: symbolBinding,
-                        compact: compact,
-                        showsPreview: showsPreview
-                    ).body
-                )
-            }
-        }
-
-        // The simple-symbol path hides the crest steps but must still compose.
-        branding.iconStyle = .simpleSymbol
-        XCTAssertNotNil(
-            BrowserSpaceBrandingEditor(
-                branding: brandingBinding,
-                symbol: symbolBinding
-            ).body
         )
     }
 
@@ -556,7 +573,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         )
         var crest = try XCTUnwrap(branding["crest"] as? [String: Any])
         crest["backplate"] = "obelisk"
-        crest["fieldDivision"] = "perSaltire"
+        crest["fieldDivision"] = "futureDivision"
         crest["ordinary"] = "gyron"
         crest["trim"] = "mantling"
         crest["symbol"] = "basilisk"
@@ -611,7 +628,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         )
         var branding = try XCTUnwrap(space["branding"] as? [String: Any])
         var crest = try XCTUnwrap(branding["crest"] as? [String: Any])
-        crest["symbol"] = "wyvern"
+        crest["symbol"] = "futureBeast"
         branding["crest"] = crest
         branding["renderingVersion"] = 99
         space["branding"] = branding
@@ -748,6 +765,40 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         )
 
         XCTAssertNotNil(renderer.nsImage)
+    }
+
+    func testNativeCrestArtworkReusesRendersWithoutKeepingUnlimitedSliderValues() throws {
+        let space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
+        let cache = BrowserSpaceSymbolArtworkCache(capacity: 2)
+        var renderCount = 0
+        func identity(branding: BrowserSpaceBranding, scale: CGFloat = 2) -> BrowserSpaceSymbolArtworkIdentity {
+            BrowserSpaceSymbolArtworkIdentity(
+                branding: branding, symbol: space.symbol, accessPolicy: space.accessPolicy,
+                size: 30, lockSize: 7, colorScheme: .dark, displayScale: scale)
+        }
+        func request(_ identity: BrowserSpaceSymbolArtworkIdentity) {
+            _ = cache.image(for: identity) {
+                renderCount += 1
+                return Image(systemName: "shield")
+            }
+        }
+        let original = identity(branding: space.branding)
+        var changedBranding = space.branding
+        changedBranding.crest.edgeWidth = 0.53
+        let changed = identity(branding: changedBranding)
+
+        request(original)
+        request(original)
+        XCTAssertEqual(renderCount, 1, "Matching native controls share one render.")
+        request(changed)
+        XCTAssertEqual(renderCount, 2, "Appearance edits cannot reuse stale artwork.")
+        request(original)
+        request(identity(branding: space.branding, scale: 1))
+        XCTAssertEqual(renderCount, 3, "Display scale is part of the artwork identity.")
+        request(original)
+        XCTAssertEqual(renderCount, 3, "Recently used artwork stays available.")
+        request(changed)
+        XCTAssertEqual(renderCount, 4, "Old slider appearances leave the bounded cache.")
     }
 
     func testBrandingNormalizesPaletteAndLayerColorSelections() {

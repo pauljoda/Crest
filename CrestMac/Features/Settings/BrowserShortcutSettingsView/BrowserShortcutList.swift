@@ -53,6 +53,9 @@ struct BrowserShortcutList: View {
                 }
             }
             .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .background(BrowserSettingsCanvas.card, in: .rect(cornerRadius: 12))
+            .clipShape(.rect(cornerRadius: 12))
             .overlay {
                 if model.commandGroups.isEmpty
                     && model.extensionCommandGroups.isEmpty

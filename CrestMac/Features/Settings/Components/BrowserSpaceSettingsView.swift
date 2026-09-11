@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 
 struct BrowserSpaceSettingsView: View {
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
+    @Environment(\.browserSettingsSelectLiveSpace) private var liveSpaceSelection
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
@@ -31,7 +33,7 @@ struct BrowserSpaceSettingsView: View {
                         dataDeleter: dataDeleter,
                         spacePicker: BrowserSpaceCustomizationPicker(
                             spaces: browser.session.spaces, selectedSpaceID: space.id,
-                            selectSpace: { selectedSpaceID = $0 }, moveSpace: moveSpace,
+                            selectSpace: { selectEditedSpace($0) }, moveSpace: moveSpace,
                             addSpace: addSpace)
                     )
                     .id(space.id)
@@ -59,6 +61,11 @@ struct BrowserSpaceSettingsView: View {
         .onChange(of: requestRevision, initial: true) {
             applyRequestedSelection()
         }
+    }
+
+    private func selectEditedSpace(_ id: SpaceID?) {
+        selectedSpaceID = id
+        if let id, id != browser.selectedSpace?.id { liveSpaceSelection?.select(id) }
     }
 
     private var spaceToolbar: some View {
@@ -126,7 +133,7 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private func spacePicker(compact: Bool) -> some View {
-        Picker("Space", selection: $selectedSpaceID) {
+        Picker("Space", selection: Binding(get: { editedSpaceID }, set: selectEditedSpace)) {
             ForEach(browser.session.spaces) { space in
                 BrowserSpaceIdentityLabel(space: space)
                     .accessibilityLabel("\(space.name), \(spaceSummary(space))")
@@ -198,9 +205,13 @@ struct BrowserSpaceSettingsView: View {
         browser.moveSpaces(from: IndexSet(integer: source), to: target > source ? target + 1 : target)
     }
 
+    private var editedSpaceID: SpaceID? {
+        usesLiveSidebar ? browser.session.selectedSpaceID : selectedSpaceID
+    }
+
     private var space: BrowserSpace? {
-        guard let selectedSpaceID else { return nil }
-        return browser.session.space(id: selectedSpaceID)
+        guard let editedSpaceID else { return nil }
+        return browser.session.space(id: editedSpaceID)
     }
 
     private func spaceSummary(_ space: BrowserSpace) -> String {

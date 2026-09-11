@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The native mobile form container for a shared settings pane.
 struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
     let destination: BrowserSettingsDestination
     @ViewBuilder let content: Content
 
@@ -14,18 +15,32 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     }
 
     var body: some View {
-        Form {
-            BrowserSettingsPaneHeader(
-                destination: destination,
-                identifier: "settings-header-\(destination.rawValue)",
-                layout: .mobilePage
-            )
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+        if usesLiveSidebar {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(destination.title).font(.title2.weight(.semibold))
+                    BrowserSettingsSectionGrid(allowsColumns: ![.passwords, .about, .extensions].contains(destination))
+                    {
+                        content
+                    }
+                }.padding(24)
+            }
+            .background(BrowserSettingsCanvas.background)
+            .accessibilityIdentifier("settings-form-\(destination.rawValue)")
+        } else {
+            Form {
+                BrowserSettingsPaneHeader(
+                    destination: destination,
+                    identifier: "settings-header-\(destination.rawValue)",
+                    layout: .mobilePage
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
 
-            content
+                content
+            }
+            .accessibilityIdentifier("settings-form-\(destination.rawValue)")
         }
-        .accessibilityIdentifier("settings-form-\(destination.rawValue)")
     }
 }

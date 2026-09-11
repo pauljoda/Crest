@@ -7,6 +7,7 @@ struct BrowserExtensionsView: View {
     /// Absent on a shell that has no way to install a replacement package, in
     /// which case the updates section has nothing to offer and stays hidden.
     private let updateModel: BrowserExtensionUpdateModel?
+    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
 
     init(
         space: BrowserSpace,
@@ -28,14 +29,12 @@ struct BrowserExtensionsView: View {
         @Bindable var model = model
 
         Group {
-            BrowserInstalledExtensionsSection(
-                model: model,
-                platformActions: platformActions
-            )
+            if !usesLiveSidebar { installedExtensions }
             if let updateModel {
                 BrowserExtensionUpdatesSection(model: updateModel)
             }
             BrowserPlatformExtensionAddSection(model: model)
+            if usesLiveSidebar { installedExtensions }
         }
         .modifier(BrowserExtensionPackageImportModifier(model: model))
         .modifier(BrowserPlatformExtensionsViewSizingModifier())
@@ -76,6 +75,11 @@ struct BrowserExtensionsView: View {
                 "\(extensionSummary.displayName) and its Space-local data will be removed. The host app and other Spaces are unchanged."
             )
         }
+    }
+
+    private var installedExtensions: some View {
+        BrowserInstalledExtensionsSection(model: model, platformActions: platformActions)
+            .containerValue(\.settingsFullWidth, true)
     }
 }
 

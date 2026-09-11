@@ -41,15 +41,15 @@ enum BrowserSpaceHousePalette: String, CaseIterable, Equatable, Sendable {
         let symbol: BrowserSpaceCrestSymbol
         let trim: BrowserSpaceCrestTrim
         switch self {
-        case .winter: (shape, division, symbol, trim) = (.shield, .perChevron, .snowflake, .shield)
-        case .lion: (shape, division, symbol, trim) = (.shield, .plain, .crown, .laurel)
-        case .storm: (shape, division, symbol, trim) = (.hexagon, .perBend, .lightning, .none)
-        case .dragon: (shape, division, symbol, trim) = (.shield, .perPale, .flame, .shield)
-        case .meadow: (shape, division, symbol, trim) = (.circle, .plain, .leaf, .laurel)
-        case .iron: (shape, division, symbol, trim) = (.hexagon, .perFess, .hammer, .none)
-        case .river: (shape, division, symbol, trim) = (.shield, .perBend, .sailboat, .shield)
+        case .winter: (shape, division, symbol, trim) = (.frenchShield, .plain, .direwolf, .line)
+        case .lion: (shape, division, symbol, trim) = (.shield, .plain, .lion, .line)
+        case .storm: (shape, division, symbol, trim) = (.hexagon, .perBend, .stag, .none)
+        case .dragon: (shape, division, symbol, trim) = (.shield, .plain, .dragon, .line)
+        case .meadow: (shape, division, symbol, trim) = (.circle, .plain, .rose, .laurel)
+        case .iron: (shape, division, symbol, trim) = (.hexagon, .plain, .kraken, .none)
+        case .river: (shape, division, symbol, trim) = (.banner, .perBend, .seahorse, .line)
         case .sun: (shape, division, symbol, trim) = (.circle, .plain, .sun, .sunburst)
-        case .vigil: (shape, division, symbol, trim) = (.diamond, .perPale, .tower, .none)
+        case .vigil: (shape, division, symbol, trim) = (.shield, .plain, .raven, .line)
         }
         return BrowserSpaceCrest(
             backplate: shape,
@@ -60,7 +60,9 @@ enum BrowserSpaceHousePalette: String, CaseIterable, Equatable, Sendable {
             secondaryFieldColorIndex: 1,
             ordinaryColorIndex: 1,
             trimColorIndex: 2,
-            symbolColorIndex: 2
+            symbolColorIndex: 2,
+            trimWeight: 0.75,
+            chargeScale: 1.2
         )
     }
 

@@ -32,7 +32,6 @@ struct BrowserImportSpaceCustomizationEditor: View {
             .contentMargins(.trailing, 16, for: .scrollContent)
             .frame(maxWidth: 640)
         }
-        .scrollsSpaceAppearancePages()
         .frame(maxWidth: 1_080, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 38)
         .padding(.vertical, 28)

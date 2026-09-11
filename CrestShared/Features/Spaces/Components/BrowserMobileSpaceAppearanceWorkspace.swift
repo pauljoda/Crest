@@ -8,10 +8,18 @@
         @Binding var name: String
         var space: BrowserSpace? = nil
         var spacePicker: BrowserSpaceCustomizationPicker? = nil
-        var showsNameHint = false
+        @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
         var body: some View {
+            if usesLiveSidebar {
+                BrowserCrestStudioWorkspace(branding: $branding, symbol: $symbol, name: $name)
+            } else {
+                compactWorkspace
+            }
+        }
+
+        private var compactWorkspace: some View {
             GeometryReader { geometry in
                 let wide = geometry.size.width >= 700 && horizontalSizeClass == .regular
                 HStack(alignment: .top, spacing: wide ? 24 : 0) {
@@ -27,7 +35,7 @@
                             if !wide { preview(compact: true) }
                             BrowserSpaceBrandingEditor(
                                 branding: $branding, symbol: $symbol,
-                                compact: !wide, showsPreview: false, dense: true)
+                                previewName: name, compact: !wide, showsPreview: false, editableName: $name)
                         }
                         .padding(wide ? 24 : 20)
                         .frame(maxWidth: 600)
@@ -35,7 +43,6 @@
                         .id("mobile-space-appearance-top")
                     }
                     .scrollDismissesKeyboard(.interactively)
-                    .scrollsSpaceAppearancePages(anchorID: "mobile-space-appearance-top")
                 }
             }
             .background(BrowserOnboardingPalette.parchment)
@@ -43,9 +50,11 @@
         }
 
         private func preview(compact: Bool) -> some View {
-            BrowserSpaceAppearanceHero(
-                branding: branding, symbol: symbol, name: name, compact: compact,
-                space: space, editableName: $name, showsNameHint: showsNameHint, spacePicker: spacePicker)
+            VStack(spacing: 16) {
+                if let spacePicker { spacePicker }
+                BrowserCrestStudioPreview(
+                    branding: branding, symbol: symbol, name: name, space: space, compact: compact)
+            }
         }
     }
 #endif

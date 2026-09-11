@@ -9,9 +9,12 @@ struct BrowserSpaceBranding: Codable, Equatable, Sendable {
     static let baselineRenderingVersion = 2
     /// The vocabulary that adds the expanded heraldic charges.
     static let expandedChargeRenderingVersion = 3
-    /// The newest vocabulary this build can produce.
+    /// The vocabulary that adds the customization surfaces and backplates.
     static let customizationRenderingVersion = 4
-    static let currentRenderingVersion = customizationRenderingVersion
+    /// The Crest Studio vocabulary: parametric shapes, own tinctures, custom
+    /// charges, finishes, and depth. The newest this build can produce.
+    static let crestStudioRenderingVersion = 5
+    static let currentRenderingVersion = crestStudioRenderingVersion
 
     var colors: [BrowserSpaceBrandColor]
     var bannerPattern: BrowserSpaceBannerPattern

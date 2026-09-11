@@ -78,7 +78,8 @@ struct BrowserRootSidebarContent: View {
         spaceSettingsPresentation.present(
             assignment: BrowserSpaceRuntimeAssignment(space: space)
         )
-        openWindow(id: BrowserSceneID.settings.rawValue)
+        model.browser.openSettings()
+        model.pages.select(session: model.browser.session)
     }
 
     private func presentExtensions(for space: BrowserSpace) {
@@ -86,7 +87,8 @@ struct BrowserRootSidebarContent: View {
             .extensions,
             assignment: BrowserSpaceRuntimeAssignment(space: space)
         )
-        openWindow(id: BrowserSceneID.settings.rawValue)
+        model.browser.openSettings()
+        model.pages.select(session: model.browser.session)
     }
 
     private func createSpace() {

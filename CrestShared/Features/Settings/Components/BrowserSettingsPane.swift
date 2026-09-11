@@ -1,13 +1,7 @@
 import SwiftUI
 
-/// The container a shared settings pane puts its sections in.
-///
-/// The two shells place a pane's identity differently, and neither placement is
-/// negotiable: iOS carries the header *inside* the scroll view as the form's first,
-/// chrome-less row and keeps the platform's grouped background; macOS centres the
-/// header above a form that the surrounding settings page has already sized and
-/// scrolled. Wrapping that difference here is what lets a shared pane's body be
-/// its sections and nothing else.
+/// Shared sections use an adaptive canvas in browser tabs and a grouped Form
+/// in compact Settings sheets, without duplicating preference bindings.
 struct BrowserSettingsPane<Content: View>: View {
     let destination: BrowserSettingsDestination
     @ViewBuilder let content: Content
