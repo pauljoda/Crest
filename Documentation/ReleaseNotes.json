@@ -869,6 +869,10 @@
     "2026-09-10-split-divider-and-compact-toolbar": {
       "category": "improved",
       "message": "Resize split panes with a clearer divider that stays aligned beside compact developer toolbars"
+    },
+    "2026-09-10-mobile-window-appearance-parity": {
+      "category": "new",
+      "message": "Choose borderless pages and a right-side sidebar on iPhone and iPad, with a live Settings preview and swipe-in access from the chosen edge"
     }
   }
 }

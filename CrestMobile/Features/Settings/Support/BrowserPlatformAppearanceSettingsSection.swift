@@ -1,4 +1,9 @@
 import SwiftUI
 
-/// Mobile has no Crest-owned window transparency preferences.
-typealias BrowserPlatformAppearanceSettingsSection = EmptyView
+struct BrowserPlatformAppearanceSettingsSection: View {
+    var body: some View {
+        Section("Appearance") {
+            BrowserChromeAppearanceSettingsControls()
+        }
+    }
+}

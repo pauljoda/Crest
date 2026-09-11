@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// A live miniature of the sidebar and page edge choices.
-struct BrowserWindowTransparencySettingsPreview: View {
+struct BrowserChromeAppearanceSettingsPreview: View {
     var appearance = BrowserChromeAppearance()
-    @Environment(BrowserWindowTransparencyStore.self) private var transparency
+    var atmosphereOpacity: Double = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -29,9 +29,7 @@ struct BrowserWindowTransparencySettingsPreview: View {
         .frame(height: 190)
         .background {
             BrowserSpaceBannerBackground(branding: .init(colors: [.ink], bannerPattern: .solid))
-                .opacity(
-                    BrowserWindowTransparencyPolicy.baseLayerOpacity(
-                        isEnabled: transparency.isEnabled, strength: transparency.strength, isWindowFocused: true))
+                .opacity(atmosphereOpacity)
         }
         .clipShape(.rect(cornerRadius: 10))
         .padding(16)
@@ -67,9 +65,11 @@ struct BrowserWindowTransparencySettingsPreview: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 4) {
-                ForEach([Color.red, .yellow, .green], id: \.self) { color in
-                    Circle().fill(color).frame(width: 6, height: 6)
-                }
+                #if os(macOS)
+                    ForEach([Color.red, .yellow, .green], id: \.self) { color in
+                        Circle().fill(color).frame(width: 6, height: 6)
+                    }
+                #endif
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.left")
                 Image(systemName: "chevron.right")

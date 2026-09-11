@@ -17,7 +17,8 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
     let didPromoteTransientPage: () -> Void
     let compact: Compact
     let regular: (MobileRegularWindowLayout) -> Regular
-    let palette: (MobileRegularWindowLayout) -> Palette
+    let palette: (EdgeInsets) -> Palette
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         ZStack {
@@ -42,8 +43,13 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                     regular(layout)
                         .allowsHitTesting(!isCommandPalettePresented)
                         .accessibilityHidden(isCommandPalettePresented)
-                        .overlay {
-                            palette(layout)
+                        .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
+                            GeometryReader { pageProxy in
+                                let rect = anchor.map { pageProxy[$0] } ?? CGRect(origin: .zero, size: pageProxy.size)
+                                palette(
+                                    BrowserChromeAppearance.contentInsets(
+                                        for: rect, in: pageProxy.size, direction: layoutDirection))
+                            }
                         }
                 }
             }

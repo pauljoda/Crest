@@ -15,8 +15,8 @@ import SwiftUI
 /// — a feedback loop that halves tracking and turns a point of pointer noise
 /// into a standing oscillation.
 ///
-/// The Mac capsule remains visible at rest. It shares the existing resize
-/// target and gesture; mobile retains its drag-only indicator.
+/// The capsule remains visible at rest and shares the existing resize target
+/// and gesture on every platform.
 /// `BrowserPlatformColumnResizePointerModifier` gives each platform its own
 /// answer to "this boundary moves" rather than leaving it to be discovered.
 struct BrowserSplitCardResizeHandle: View {
@@ -68,11 +68,7 @@ struct BrowserSplitCardResizeHandle: View {
     }
 
     private var idleIndicatorOpacity: Double {
-        #if os(macOS)
-            0.18
-        #else
-            0
-        #endif
+        0.18
     }
 
     private func dragChanged(_ value: DragGesture.Value) {

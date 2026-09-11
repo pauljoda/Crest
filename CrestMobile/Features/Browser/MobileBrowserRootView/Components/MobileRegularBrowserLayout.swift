@@ -7,6 +7,9 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     BrowserChromeAnimating
 {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @Environment(\.browserChromeAppearance) private var appearance
+
+    private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
 
     let layout: MobileRegularWindowLayout
     let sidebarPresentation: BrowserSidebarPresentation
@@ -21,20 +24,17 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
     let detail: Detail
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            HStack(spacing: 0) {
-                BrowserRootSidebarLayoutReservation(
-                    presentation: effectivePresentation,
-                    width: layout.sidebarWidth,
-                    isApproachingDock: false
-                )
-
-                detail
-            }
-
+        BrowserSidebarPageLayout(
+            presentation: effectivePresentation, width: layout.sidebarWidth, edge: sidebarEdge
+        ) {
+            detail
+                // Extend only the page; sidebar controls keep their safe-area placement.
+                .ignoresSafeArea(.container, edges: appearance.borderless ? .bottom : [])
+        } sidebar: {
             BrowserRootSidebarSurfaceLayer(
                 presentation: effectivePresentation,
                 width: layout.sidebarWidth,
+                edge: sidebarEdge,
                 space: space,
                 reduceTransparency: reduceTransparency,
                 spaces: spaces,
@@ -43,29 +43,31 @@ struct MobileRegularBrowserLayout<Sidebar: View, Detail: View>: View,
                 sidebar
             }
 
+        } controls: {
             if effectivePresentation == .collapsed {
                 BrowserCollapsedSidebarRevealControl(
                     capabilities: BrowserInteractionCapabilities(
                         supportsTouch: true
                     ),
-                    showSidebar: showSidebar
+                    showSidebar: showSidebar, edge: sidebarEdge
                 )
                 .zIndex(BrowserRootMetrics.floatingSidebarZIndex)
             } else if effectivePresentation == .docked {
                 BrowserSidebarResizeHandle(
                     width: $preferredSidebarWidth,
-                    onResizeEnded: commitSidebarWidth
+                    onResizeEnded: commitSidebarWidth, edge: sidebarEdge
                 )
                 .offset(
                     x: BrowserChromeDirectionPolicy.leadingOffset(
-                        layout.sidebarWidth
-                            - MobileBrowserRootLayout.resizeHandleOverlap,
+                        (layout.sidebarWidth - MobileBrowserRootLayout.resizeHandleOverlap)
+                            * (sidebarEdge == .leading ? 1 : -1),
                         layoutDirection: layoutDirection
                     )
                 )
                 .zIndex(BrowserRootMetrics.sidebarResizeControlZIndex)
             }
         }
+        .animation(chromeAnimation(CrestMotion.collection), value: appearance.sidebarOnRight)
         .animation(
             chromeAnimation(
                 effectivePresentation == .docked

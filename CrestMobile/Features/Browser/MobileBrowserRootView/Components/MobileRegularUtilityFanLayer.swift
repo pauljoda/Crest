@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct MobileRegularUtilityFanLayer: View {
+    @Environment(\.browserChromeAppearance) private var appearance
     let layout: MobileRegularWindowLayout
     let layoutDirection: LayoutDirection
     let triggerFrameInGlobal: CGRect?
@@ -28,14 +29,9 @@ struct MobileRegularUtilityFanLayer: View {
                     BrowserUtilitySwitcherLayout.buttonSize / 2
                     + BrowserUtilitySwitcherLayout.destinationGap
                 let destinationX =
-                    switch layoutDirection {
-                    case .leftToRight:
-                        layout.sidebarWidth + edgeOffset
-                    case .rightToLeft:
-                        proxy.size.width - layout.sidebarWidth - edgeOffset
-                    @unknown default:
-                        layout.sidebarWidth + edgeOffset
-                    }
+                    appearance.sidebarOnRight
+                    ? proxy.size.width - layout.sidebarWidth - edgeOffset
+                    : layout.sidebarWidth + edgeOffset
 
                 BrowserUtilityFanControl(
                     isExpanded: isExpanded,

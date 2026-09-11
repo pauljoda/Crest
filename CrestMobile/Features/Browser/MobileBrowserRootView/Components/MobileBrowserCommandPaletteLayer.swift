@@ -20,7 +20,7 @@ struct MobileBrowserCommandPaletteLayer: View {
         ) -> Bool
     let dismiss: () -> Void
     let morphNamespace: Namespace.ID
-    let overlayContentLeadingInset: CGFloat
+    let overlayContentInsets: EdgeInsets
 
     var body: some View {
         if let mode, let sourceAssignment,
@@ -38,7 +38,7 @@ struct MobileBrowserCommandPaletteLayer: View {
                 dismiss: dismiss,
                 morphNamespace: morphNamespace,
                 morphID: "crest-address-command-\(space?.id.id.uuidString ?? "none")",
-                overlayContentLeadingInset: overlayContentLeadingInset
+                overlayContentInsets: overlayContentInsets
             )
             .id(
                 BrowserCommandPalettePresentationIdentity(

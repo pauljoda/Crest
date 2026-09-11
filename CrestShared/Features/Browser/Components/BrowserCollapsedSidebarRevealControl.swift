@@ -51,7 +51,9 @@ struct BrowserCollapsedSidebarRevealControl: View {
             ? (edge == .leading
                 ? "Move the pointer to the leading edge to preview the sidebar"
                 : "Move the pointer to the trailing edge to preview the sidebar")
-            : "You can also swipe inward from the leading edge"
+            : (edge == .leading
+                ? "You can also swipe inward from the leading edge"
+                : "You can also swipe inward from the trailing edge")
     }
 
     private func revealIfSwipedInward(_ value: DragGesture.Value) {

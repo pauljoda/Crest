@@ -1106,7 +1106,69 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertTrue(navigation.compactShowsPage)
     }
 
-    func testCollapsedSidebarFullscreenOnlyChangesTheFloatingSinglePageFrame() {
+    func testLegacyMobileBorderPreferenceMigratesOnceWithoutOverwritingNewChoice() {
+        let suite = "app270-migration-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let oldKey = "crest.sidebar.collapsed.fullscreen.mobile"
+        for enabled in [false, true] {
+            defaults.removeObject(forKey: BrowserChromeAppearancePreference.borderlessKey)
+            defaults.set(enabled, forKey: oldKey)
+            BrowserChromeAppearancePreference.migrateLegacyMobilePreference(in: defaults)
+            XCTAssertEqual(defaults.bool(forKey: BrowserChromeAppearancePreference.borderlessKey), enabled)
+            XCTAssertNil(defaults.object(forKey: oldKey))
+        }
+        defaults.set(false, forKey: BrowserChromeAppearancePreference.borderlessKey)
+        defaults.set(true, forKey: oldKey)
+        BrowserChromeAppearancePreference.migrateLegacyMobilePreference(in: defaults)
+        XCTAssertFalse(defaults.bool(forKey: BrowserChromeAppearancePreference.borderlessKey))
+    }
+
+    func testSidebarSideChangesKeepTheMobilePageHostAndDocument() async throws {
+        let space = makeSpace(index: 270)
+        let page = MobileBrowserPage(tab: space.tabs[0], space: space, openNewTab: { _ in })
+        page.webView.loadHTMLString(
+            "<body style='height:4000px'><input id='draft' value='keep me'><script>window.documentToken='resident';</script></body>",
+            baseURL: nil)
+        for _ in 0..<100 {
+            if !page.webView.isLoading, page.completedNavigationCount > 0 { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let controller = UIHostingController(rootView: MobileChromeContinuityShell(page: page, space: space))
+        controller.additionalSafeAreaInsets.bottom = 24
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+        window.rootViewController = controller
+        window.isHidden = false
+        defer { window.isHidden = true }
+        window.layoutIfNeeded()
+        try await Task.sleep(for: .milliseconds(100))
+        let originalHost = try XCTUnwrap(page.webView.superview)
+        let navigationCount = page.completedNavigationCount
+        for direction in [LayoutDirection.leftToRight, .rightToLeft] {
+            for right in [true, false] {
+                controller.rootView = MobileChromeContinuityShell(
+                    page: page, space: space, appearance: .init(sidebarOnRight: right, borderless: true),
+                    direction: direction)
+                window.layoutIfNeeded()
+                try await Task.sleep(for: .milliseconds(100))
+                controller.view.setNeedsLayout()
+                controller.view.layoutIfNeeded()
+                window.layoutIfNeeded()
+                XCTAssertTrue(page.webView.superview === originalHost)
+                let frame = page.webView.convert(page.webView.bounds, to: window)
+                XCTAssertEqual(frame.minX, right ? 0 : 320, accuracy: 1)
+                XCTAssertEqual(frame.width, 880, accuracy: 1)
+                XCTAssertEqual(frame.maxY, window.bounds.maxY, accuracy: 1)
+                XCTAssertEqual(page.completedNavigationCount, navigationCount)
+                let state =
+                    try await page.webView.evaluateJavaScript(
+                        "[window.documentToken,document.querySelector('#draft').value]") as? [String]
+                XCTAssertEqual(state, ["resident", "keep me"])
+            }
+        }
+    }
+
+    func testBorderlessAppearanceAppliesToDockedAndSplitPages() {
         XCTAssertFalse(
             MobileSidebarPageFramePolicy.usesBorderlessFrame(
                 preferenceIsEnabled: false,
@@ -1140,7 +1202,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
             ),
             "The docked phone's tab-to-detail transition remains the existing borderless presentation."
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             MobileSidebarPageFramePolicy.usesBorderlessFrame(
                 preferenceIsEnabled: true,
                 sidebarPresentation: .docked,
@@ -1148,7 +1210,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
                 browserPresentation: .regular
             )
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             MobileSidebarPageFramePolicy.usesBorderlessFrame(
                 preferenceIsEnabled: true,
                 sidebarPresentation: .floating,
@@ -3942,5 +4004,26 @@ private final class RecordingMobileWebsiteDataStoreRemover:
         for profile: BrowsingProfile
     ) async throws {
         removedProfileIDs.append(profile.id)
+    }
+}
+
+private struct MobileChromeContinuityShell: View {
+    let page: MobileBrowserPage
+    let space: BrowserSpace
+    var appearance = BrowserChromeAppearance()
+    var direction = LayoutDirection.leftToRight
+
+    var body: some View {
+        MobileRegularBrowserLayout(
+            layout: MobileRegularWindowLayoutPolicy.resolve(availableWidth: 1200, preferredSidebarWidth: 320),
+            sidebarPresentation: .docked, preferredSidebarWidth: .constant(320), reduceTransparency: true,
+            layoutDirection: direction, space: space, showSidebar: {}, commitSidebarWidth: { _ in },
+            sidebar: Color.clear,
+            detail: MobileBrowserWebView(page: page)
+                .padding(appearance.pageInsets(docked: true, direction: direction))
+        )
+        .environment(\.browserChromeAppearance, appearance)
+        .transaction { $0.disablesAnimations = true }
+        .environment(\.layoutDirection, direction)
     }
 }

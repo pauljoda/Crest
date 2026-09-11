@@ -3,30 +3,18 @@ import SwiftUI
 /// The General pane's macOS-only sections: the window Crest draws itself, and the
 /// Split View focus behaviour that only a pointer-driven shell has.
 ///
-/// Mobile aliases this name to `EmptyView`, which makes it the seam where the
-/// desktop contributes settings the phone and tablet have no equivalent for.
+/// Both platforms share the appearance controls; Mac adds window transparency.
 struct BrowserPlatformAppearanceSettingsSection: View {
     @AppStorage(SpacePageMotionPreference.key)
     private var animatesSpacePages = SpacePageMotionPreference.defaultValue
 
-    @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
-    private var sidebarOnRight = false
-    @AppStorage(BrowserChromeAppearancePreference.borderlessKey, store: BrowserChromeAppearancePreference.defaults)
-    private var borderless = false
+    @Environment(BrowserWindowTransparencyStore.self) private var transparency
 
     var body: some View {
         Section("Appearance") {
-            Toggle("Borderless Window", isOn: $borderless)
-                .accessibilityIdentifier("borderless-window")
-            Toggle("Sidebar on Right", isOn: $sidebarOnRight)
-                .accessibilityIdentifier("sidebar-on-right")
-            CrestFormFootnote(
-                "Apply to all browser windows. Borderless windows place web content directly beside the sidebar and at the window edges."
-            )
-
-            BrowserWindowTransparencySettingsPreview(
-                appearance: BrowserChromeAppearance(sidebarOnRight: sidebarOnRight, borderless: borderless)
-            )
+            BrowserChromeAppearanceSettingsControls(
+                atmosphereOpacity: BrowserWindowTransparencyPolicy.baseLayerOpacity(
+                    isEnabled: transparency.isEnabled, strength: transparency.strength, isWindowFocused: true))
 
             Toggle("Animate Pages When Switching Spaces", isOn: $animatesSpacePages)
                 .accessibilityIdentifier("animate-space-pages")

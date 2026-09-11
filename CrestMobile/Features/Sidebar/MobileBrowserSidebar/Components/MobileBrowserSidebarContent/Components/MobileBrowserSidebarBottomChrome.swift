@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MobileBrowserSidebarBottomChrome: View {
+    @Environment(\.browserChromeAppearance) private var appearance
     let configuration: MobileBrowserSidebarContentConfiguration
 
     var body: some View {
@@ -10,7 +11,8 @@ struct MobileBrowserSidebarBottomChrome: View {
             if configuration.showsSidebarToggle {
                 HStack {
                     Button(action: configuration.toggleSidebar) {
-                        MobileSpaceUtilityButtonLabel(systemImage: "sidebar.left")
+                        MobileSpaceUtilityButtonLabel(
+                            systemImage: appearance.sidebarOnRight ? "sidebar.right" : "sidebar.left")
                     }
                     .buttonStyle(.plain)
                     .controlSize(.large)

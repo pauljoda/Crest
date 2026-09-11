@@ -21,9 +21,9 @@ extension MobileBrowserRootContent {
         return model.presentedSplitMembers.count > 1
     }
 
-    var usesCollapsedSidebarBorderlessFrame: Bool {
+    var usesBorderlessPageFrame: Bool {
         MobileSidebarPageFramePolicy.usesBorderlessFrame(
-            preferenceIsEnabled: collapsedSidebarFullscreenIsEnabled,
+            preferenceIsEnabled: borderless,
             sidebarPresentation: navigation.regularSidebarPresentation,
             presentsSplitView: presentsSplitView,
             browserPresentation: presentation
@@ -64,13 +64,13 @@ extension MobileBrowserRootContent {
     /// The expanded detail area. The container decides whether it adjoins a
     /// docked sidebar, while the page and split composition stay identical.
     func regularPageSurface(
-        adjoinsLeadingSidebar: Bool
+        adjoinsSidebar: Bool
     ) -> MobileRegularPageSurface {
         MobileRegularPageSurface(
             model: model,
-            adjoinsLeadingSidebar: adjoinsLeadingSidebar,
-            usesCollapsedSidebarBorderlessFrame:
-                usesCollapsedSidebarBorderlessFrame,
+            adjoinsSidebar: adjoinsSidebar,
+            usesBorderlessPageFrame:
+                usesBorderlessPageFrame,
             address: model.addressBinding,
             isAddressEditing: $isAddressEditing,
             addressFocusRequest: addressFocusRequest,

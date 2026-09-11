@@ -20,7 +20,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     @State private var spacePagerPresentation = SpacePagerPresentation()
 
     private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
-    private var sidebarAlignment: Alignment { sidebarEdge == .leading ? .leading : .trailing }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -32,72 +31,49 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 isWindowFocused: model.isWindowFocused
             )
 
-            HStack(spacing: 0) {
-                BrowserRootSidebarLayoutReservation(
-                    presentation: model.sidebarPresentation,
-                    width: sidebarEdge == .leading ? model.sidebarWidth : 0,
-                    isApproachingDock: model.isSidebarApproachingDock
-                )
-
-                BrowserSpacePageSurface(
-                    model: model,
-                    tabPromotionNamespace: tabPromotionNamespace,
-                    appearance: appearance
-                )
-                .anchorPreference(key: BrowserRootPageBoundsKey.self, value: .bounds) { $0 }
-
-                BrowserRootSidebarLayoutReservation(
-                    presentation: model.sidebarPresentation,
-                    width: sidebarEdge == .trailing ? model.sidebarWidth : 0,
-                    isApproachingDock: model.isSidebarApproachingDock
-                )
-            }
-            .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-            .accessibilityHidden(model.chrome.isCommandPalettePresented)
-
-            // One content tree owns the sidebar in every presentation. Card
-            // styling and layout move around it, so docking never recreates
-            // the native space pager or replays its initial scroll position.
-            BrowserRootSidebarSurfaceLayer(
+            BrowserSidebarPageLayout(
                 presentation: model.sidebarPresentation,
                 width: model.sidebarWidth,
                 edge: sidebarEdge,
-                space: model.browser.selectedSpace,
-                reduceTransparency: reduceTransparency,
-                spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
-                hoverChanged: {
-                    model.sidebarSurfaceHoverChanged(
-                        $0,
-                        reduceMotion: reduceMotion
+                isApproachingDock: model.isSidebarApproachingDock
+            ) {
+                BrowserSpacePageSurface(
+                    model: model, tabPromotionNamespace: tabPromotionNamespace, appearance: appearance)
+            } sidebar: {
+                BrowserRootSidebarSurfaceLayer(
+                    presentation: model.sidebarPresentation,
+                    width: model.sidebarWidth,
+                    edge: sidebarEdge,
+                    space: model.browser.selectedSpace,
+                    reduceTransparency: reduceTransparency,
+                    spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
+                    hoverChanged: {
+                        model.sidebarSurfaceHoverChanged(
+                            $0,
+                            reduceMotion: reduceMotion
+                        )
+                    }
+                ) {
+                    BrowserRootSidebarContent(
+                        model: model,
+                        sidebarOnRight: appearance.sidebarOnRight,
+                        spaceSettingsPresentation: spaceSettingsPresentation,
+                        commandSurfaceNamespace: commandSurfaceNamespace,
+                        tabPromotionNamespace: tabPromotionNamespace
                     )
                 }
-            ) {
-                BrowserRootSidebarContent(
-                    model: model,
-                    sidebarOnRight: appearance.sidebarOnRight,
-                    spaceSettingsPresentation: spaceSettingsPresentation,
-                    commandSurfaceNamespace: commandSurfaceNamespace,
-                    tabPromotionNamespace: tabPromotionNamespace
-                )
+                .background {
+                    BrowserSidebarAuxiliaryMouseMonitor(
+                        isSidebarVisible:
+                            model.sidebarPresentation.showsSidebar
+                            && !model.chrome.isCommandPalettePresented,
+                        perform: model.handleAuxiliaryMouseAction
+                    )
+                }
+            } controls: {
+                BrowserRootShellControls(
+                    model: model, storedSidebarWidth: $storedSidebarWidth, sidebarEdge: sidebarEdge)
             }
-            .background {
-                BrowserSidebarAuxiliaryMouseMonitor(
-                    isSidebarVisible:
-                        model.sidebarPresentation.showsSidebar
-                        && !model.chrome.isCommandPalettePresented,
-                    perform: model.handleAuxiliaryMouseAction
-                )
-            }
-            .frame(maxWidth: .infinity, alignment: sidebarAlignment)
-            .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-            .accessibilityHidden(model.chrome.isCommandPalettePresented)
-
-            BrowserRootShellControls(
-                model: model,
-                storedSidebarWidth: $storedSidebarWidth,
-                sidebarEdge: sidebarEdge
-            )
-            .frame(maxWidth: .infinity, alignment: sidebarAlignment)
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
 
@@ -160,6 +136,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // so the sidebar reads it from here rather than being handed a value
         // per tab through the tree between them.
         .environment(downloadFeedback)
+        .environment(\.browserChromeAppearance, appearance)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .environment(
             \.browserWebFocusRestorationGate,

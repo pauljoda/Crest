@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// App-wide Mac chrome choices. Presentation never changes browsing ownership.
+/// App-wide chrome choices. Presentation never changes browsing ownership.
 struct BrowserChromeAppearance: Equatable {
     var sidebarOnRight = false
     var borderless = false
@@ -39,8 +39,29 @@ enum BrowserChromeAppearancePreference {
     static let defaults = defaults(for: .current)
 
     static func defaults(for environment: BrowserLaunchEnvironment) -> UserDefaults {
-        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else { return .standard }
-        let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-        return UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id))!
+        let defaults: UserDefaults
+        if BrowserLaunchIsolationPolicy.requiresIsolation(environment) {
+            let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
+            defaults = UserDefaults(suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id))!
+        } else {
+            defaults = .standard
+        }
+        migrateLegacyMobilePreference(in: defaults)
+        return defaults
     }
+}
+
+extension BrowserChromeAppearancePreference {
+    static func migrateLegacyMobilePreference(in defaults: UserDefaults) {
+        let legacyKey = "crest.sidebar.collapsed.fullscreen.mobile"
+        guard defaults.object(forKey: legacyKey) != nil else { return }
+        if defaults.object(forKey: borderlessKey) == nil {
+            defaults.set(defaults.bool(forKey: legacyKey), forKey: borderlessKey)
+        }
+        defaults.removeObject(forKey: legacyKey)
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var browserChromeAppearance = BrowserChromeAppearance()
 }

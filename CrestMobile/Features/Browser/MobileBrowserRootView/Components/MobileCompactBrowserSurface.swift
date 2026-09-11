@@ -68,21 +68,16 @@ struct MobileCompactBrowserSurface<
             }
     }
 
-    @ViewBuilder
     private var floatingDetail: some View {
-        if usesBorderlessFloatingPageFrame {
-            page
-        } else {
-            BrowserRootDetailSurface(
-                adjoinsLeadingSidebar: false,
-                usesBorderlessFrame: false,
-                isStartPage: isStartPage,
-                hasActivePage: hasActivePage,
-                completedNavigationCount: completedNavigationCount,
-                hasSelectedSpace: hasSelectedSpace,
-                handleWebContentInteraction: {},
-                content: page
-            )
-        }
+        BrowserRootDetailSurface(
+            adjoinsLeadingSidebar: false,
+            usesBorderlessFrame: usesBorderlessFloatingPageFrame,
+            isStartPage: isStartPage,
+            hasActivePage: hasActivePage,
+            completedNavigationCount: completedNavigationCount,
+            hasSelectedSpace: hasSelectedSpace,
+            handleWebContentInteraction: {},
+            content: page
+        )
     }
 }

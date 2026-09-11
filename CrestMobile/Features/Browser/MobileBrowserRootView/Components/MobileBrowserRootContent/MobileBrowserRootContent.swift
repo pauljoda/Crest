@@ -22,8 +22,14 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
-    @AppStorage(MobileCollapsedSidebarFullscreenPreference.key)
-    var collapsedSidebarFullscreenIsEnabled = false
+    @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
+    var sidebarOnRight = false
+    @AppStorage(BrowserChromeAppearancePreference.borderlessKey, store: BrowserChromeAppearancePreference.defaults)
+    var borderless = false
+
+    var chromeAppearance: BrowserChromeAppearance {
+        .init(sidebarOnRight: sidebarOnRight, borderless: borderless)
+    }
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace
 
@@ -72,7 +78,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 reduceTransparency: reduceTransparency,
                 layoutDirection: layoutDirection,
                 usesBorderlessFloatingPageFrame:
-                    usesCollapsedSidebarBorderlessFrame,
+                    usesBorderlessPageFrame,
                 isStartPage: browser.selectedTab?.isStartPage != false,
                 hasActivePage: model.selectedPage != nil,
                 completedNavigationCount:
@@ -283,7 +289,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         }
                     ),
                     detail: regularPageSurface(
-                        adjoinsLeadingSidebar:
+                        adjoinsSidebar:
                             navigation.regularSidebarIsDocked
                             && layout.reservesSidebarWidth
                     )
@@ -310,7 +316,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     )
                 }
             },
-            palette: { layout in
+            palette: { contentInsets in
                 MobileBrowserCommandPaletteLayer(
                     mode: commandPaletteMode,
                     space: browser.selectedSpace,
@@ -324,14 +330,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     },
                     dismiss: dismissCommandPalette,
                     morphNamespace: compactChromeNamespace,
-                    overlayContentLeadingInset: layout.reservesSidebarWidth
-                        ? navigation.regularSidebarPresentation.reservedWidth(
-                            for: layout.sidebarWidth
-                        ) : 0
+                    overlayContentInsets: contentInsets
                 )
             }
         )
         .environment(\.spacePagerPresentation, spacePagerPresentation)
+        .environment(\.browserChromeAppearance, chromeAppearance)
         .focusedSceneValue(
             \.mobileBrowserCommandContext,
             mobileBrowserCommandContext

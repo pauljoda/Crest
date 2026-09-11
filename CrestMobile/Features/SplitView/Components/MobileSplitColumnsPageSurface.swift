@@ -19,10 +19,12 @@ import SwiftUI
 /// on the membership change rather than per card, because there is no lazy
 /// materialization here to hang it off.
 struct MobileSplitColumnsPageSurface: View {
+    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.layoutDirection) private var layoutDirection
     let model: MobileBrowserRootModel
     let space: BrowserSpace
     let members: [BrowserTab]
-    let adjoinsLeadingSidebar: Bool
+    let adjoinsSidebar: Bool
     /// The slot a drag out of the sidebar would drop a card into.
     /// `MobileRegularPageSurface` owns the decision; the row only draws it.
     let placeholderIndex: Int?
@@ -31,9 +33,7 @@ struct MobileSplitColumnsPageSurface: View {
         BrowserSplitColumnsView(
             members: members,
             focusedTabID: model.browser.selectedTab?.id,
-            frameInsets: BrowserChromeLayout.pageFrameInsets(
-                adjoinsLeadingSidebar: adjoinsLeadingSidebar
-            ),
+            frameInsets: appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection),
             accent: space.branding.primaryColor.color,
             placeholderIndex: placeholderIndex,
             // "Fancy Move" is a pointer gesture: ⇧⌘-held mouse-down, and a
@@ -69,6 +69,7 @@ struct MobileSplitColumnsPageSurface: View {
                 )
             }
         )
+        .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)
         .simultaneousGesture(
             TapGesture().onEnded {
                 model.navigation.utilityPresentation.handleInteraction(.webContent)

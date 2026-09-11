@@ -69,10 +69,6 @@ enum MobileBrowserRootPreferences {
     static let adaptiveSidebarWidthKey = "crest.sidebar.width.ipad"
 }
 
-enum MobileCollapsedSidebarFullscreenPreference {
-    static let key = "crest.sidebar.collapsed.fullscreen.mobile"
-}
-
 enum MobileBrowserPresentationPolicy {
     static let expandedLayoutMinimumWidth: CGFloat = 600
 
@@ -93,13 +89,12 @@ enum MobileSidebarPageFramePolicy {
         presentsSplitView: Bool,
         browserPresentation: MobileBrowserPresentation
     ) -> Bool {
-        guard !presentsSplitView else { return false }
         if browserPresentation == .compact,
             sidebarPresentation == .docked
         {
             return true
         }
-        return preferenceIsEnabled && sidebarPresentation != .docked
+        return preferenceIsEnabled
     }
 
     static func showsCompactToolbar(

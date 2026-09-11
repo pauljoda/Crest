@@ -16,9 +16,11 @@ import SwiftUI
 /// cards as frames — plus the one thing a touch shell has to add: a feed that
 /// carries the finger's positions to the reorder state while it is over the page.
 struct MobileRegularPageSurface: View {
+    @Environment(\.browserChromeAppearance) private var appearance
+    @Environment(\.layoutDirection) private var layoutDirection
     let model: MobileBrowserRootModel
-    let adjoinsLeadingSidebar: Bool
-    let usesCollapsedSidebarBorderlessFrame: Bool
+    let adjoinsSidebar: Bool
+    let usesBorderlessPageFrame: Bool
     @Binding var address: String
     @Binding var isAddressEditing: Bool
     let addressFocusRequest: Int
@@ -74,13 +76,13 @@ struct MobileRegularPageSurface: View {
                 model: model,
                 space: space,
                 members: members,
-                adjoinsLeadingSidebar: adjoinsLeadingSidebar,
+                adjoinsSidebar: adjoinsSidebar,
                 placeholderIndex: placeholderIndex
             )
         } else {
             BrowserRootDetailSurface(
-                adjoinsLeadingSidebar: adjoinsLeadingSidebar,
-                usesBorderlessFrame: usesCollapsedSidebarBorderlessFrame,
+                adjoinsLeadingSidebar: adjoinsSidebar,
+                usesBorderlessFrame: usesBorderlessPageFrame,
                 isStartPage: model.browser.selectedTab?.isStartPage != false,
                 hasActivePage: model.selectedPage != nil,
                 completedNavigationCount:
@@ -91,6 +93,7 @@ struct MobileRegularPageSurface: View {
                         .handleInteraction(.webContent)
                     model.navigation.handleRegularPageInteraction()
                 },
+                frameInsets: appearance.pageInsets(docked: adjoinsSidebar, direction: layoutDirection),
                 content: MobileBrowserDetailSurface(
                     browser: model.browser,
                     pages: model.pages,
