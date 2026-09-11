@@ -55,7 +55,6 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
 
 #### Completed
@@ -64,6 +63,7 @@ the live status for each issue.
 - [x] [Select and act on multiple tabs and folders](https://github.com/pauljoda/Crest/issues/42) — [`6d3df743`](https://github.com/pauljoda/Crest/commit/6d3df743f0472266b0dde11d0b297b124c7bce4c)
 - [x] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43) — [`299ea325`](https://github.com/pauljoda/Crest/commit/299ea3256ce115cec2f56ca51f775912ba18172c)
 - [x] [Make new-link focus preferences consistent](https://github.com/pauljoda/Crest/issues/48) — [`143a9f0e`](https://github.com/pauljoda/Crest/commit/143a9f0ef4dfc35f2e4f774ba756f0952f799d87)
+- [x] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51)
 - [x] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62) — [`5e6f4ca0`](https://github.com/pauljoda/Crest/commit/5e6f4ca04c373444d31ec886ecf98f8583f521f9)
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
 - [x] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64) — [`3f7513f2`](https://github.com/pauljoda/Crest/commit/3f7513f216cb6d650d18867545d4c16c423e4feb)
