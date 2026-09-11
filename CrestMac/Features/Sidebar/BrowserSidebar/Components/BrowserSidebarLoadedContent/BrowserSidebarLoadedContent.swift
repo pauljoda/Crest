@@ -16,6 +16,7 @@ struct BrowserSidebarLoadedContent: View {
     let activateAddress: () -> Void
     let submitAddress: () -> Void
     let openNewTab: () -> Void
+    var sidebarOnRight = false
     let sidebarToggleAction: BrowserSidebarToggleAction
     let toggleSidebar: () -> Void
     let commandSurfaceNamespace: Namespace.ID
@@ -197,7 +198,8 @@ struct BrowserSidebarLoadedContent: View {
         BrowserSpaceSwitcherAccessories(
             sidebarToggle: BrowserSpaceSwitcherSidebarToggle(
                 action: sidebarToggleAction,
-                toggle: toggleSidebar
+                toggle: toggleSidebar,
+                sidebarOnRight: sidebarOnRight
             ),
             commonLists: BrowserSpaceSwitcherCommonLists(
                 isExpanded: context.utilityPresentation.isSwitcherExpanded,

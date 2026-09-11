@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserSpacePageSurface: NSViewRepresentable {
     let model: BrowserRootModel
     let tabPromotionNamespace: Namespace.ID
+    var appearance = BrowserChromeAppearance()
 
     @AppStorage(SpacePageMotionPreference.key)
     private var animatesSpacePages = SpacePageMotionPreference.defaultValue
@@ -23,7 +24,9 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
             SpacePageRoot(
                 content: BrowserRootPageSurface(
                     model: model, space: space, isSelectedSpace: isSelected,
-                    tabPromotionNamespace: tabPromotionNamespace),
+                    tabPromotionNamespace: tabPromotionNamespace,
+                    appearance: appearance,
+                    layoutDirection: context.environment.layoutDirection),
                 assignment: BrowserSpaceRuntimeAssignment(space: space))
         }
     }

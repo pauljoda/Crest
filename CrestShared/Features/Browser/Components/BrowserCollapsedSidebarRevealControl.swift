@@ -11,6 +11,7 @@ import SwiftUI
 struct BrowserCollapsedSidebarRevealControl: View {
     let capabilities: BrowserInteractionCapabilities
     let showSidebar: () -> Void
+    var edge: HorizontalEdge = .leading
 
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -47,14 +48,16 @@ struct BrowserCollapsedSidebarRevealControl: View {
     /// actually answers.
     private var hint: LocalizedStringKey {
         metrics.swipeDistance == nil
-            ? "Move the pointer to the leading edge to preview the sidebar"
+            ? (edge == .leading
+                ? "Move the pointer to the leading edge to preview the sidebar"
+                : "Move the pointer to the trailing edge to preview the sidebar")
             : "You can also swipe inward from the leading edge"
     }
 
     private func revealIfSwipedInward(_ value: DragGesture.Value) {
         guard
             BrowserChromeDirectionPolicy.isLeadingEdgeReveal(
-                value.translation,
+                CGSize(width: value.translation.width * (edge == .leading ? 1 : -1), height: value.translation.height),
                 layoutDirection: layoutDirection
             )
         else { return }

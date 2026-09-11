@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     let presentation: BrowserSidebarPresentation
     let width: CGFloat
+    let edge: HorizontalEdge
     let space: BrowserSpace?
     let reduceTransparency: Bool
     let spaces: [BrowserSpace]
@@ -14,6 +15,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     init(
         presentation: BrowserSidebarPresentation,
         width: CGFloat,
+        edge: HorizontalEdge = .leading,
         space: BrowserSpace?,
         reduceTransparency: Bool,
         spaces: [BrowserSpace] = [],
@@ -22,6 +24,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     ) {
         self.presentation = presentation
         self.width = width
+        self.edge = edge
         self.space = space
         self.reduceTransparency = reduceTransparency
         self.spaces = spaces
@@ -126,7 +129,7 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
     private var hiddenOffset: CGFloat {
         guard presentation == .collapsed else { return 0 }
         return BrowserChromeDirectionPolicy.leadingOffset(
-            -surfaceRegionWidth,
+            edge == .leading ? -surfaceRegionWidth : surfaceRegionWidth,
             layoutDirection: layoutDirection
         )
     }

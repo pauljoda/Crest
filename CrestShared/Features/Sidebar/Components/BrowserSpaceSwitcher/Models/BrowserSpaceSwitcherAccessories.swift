@@ -18,6 +18,7 @@ struct BrowserSpaceSwitcherAccessories {
 struct BrowserSpaceSwitcherSidebarToggle {
     let action: BrowserSidebarToggleAction
     let toggle: () -> Void
+    var sidebarOnRight = false
 }
 
 /// The switcher's trailing accessory: the archive, history, and downloads

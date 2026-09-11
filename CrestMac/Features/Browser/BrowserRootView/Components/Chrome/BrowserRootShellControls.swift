@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserRootShellControls: View {
     let model: BrowserRootModel
     @Binding var storedSidebarWidth: Double
+    var sidebarEdge: HorizontalEdge = .leading
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -13,7 +14,8 @@ struct BrowserRootShellControls: View {
         case .collapsed:
             BrowserCollapsedSidebarRevealControl(
                 capabilities: interactionCapabilities,
-                showSidebar: presentFloatingSidebar
+                showSidebar: presentFloatingSidebar,
+                edge: sidebarEdge
             )
             // The shared control keeps its capability-driven hover behavior for
             // every pointer shell. The Mac shell also listens through AppKit so
@@ -29,12 +31,13 @@ struct BrowserRootShellControls: View {
         case .docked:
             BrowserSidebarResizeHandle(
                 width: model.sidebarWidthBinding,
-                onResizeEnded: commitSidebarWidth
+                onResizeEnded: commitSidebarWidth,
+                edge: sidebarEdge
             )
             .offset(
                 x: BrowserChromeDirectionPolicy.leadingOffset(
-                    model.sidebarWidth
-                        - BrowserRootMetrics.sidebarResizeHandleOffset,
+                    (model.sidebarWidth - BrowserRootMetrics.sidebarResizeHandleOffset)
+                        * (sidebarEdge == .leading ? 1 : -1),
                     layoutDirection: layoutDirection
                 )
             )

@@ -861,6 +861,14 @@
     "2026-09-10-picture-in-picture-discovery-work": {
       "category": "improved",
       "message": "Reduce background work when detecting videos for Picture in Picture"
+    },
+    "2026-09-10-window-chrome-layout": {
+      "category": "new",
+      "message": "Choose borderless Mac windows or a right-side sidebar, with a live preview in Settings"
+    },
+    "2026-09-10-split-divider-and-compact-toolbar": {
+      "category": "improved",
+      "message": "Resize split panes with a clearer divider that stays aligned beside compact developer toolbars"
     }
   }
 }

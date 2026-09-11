@@ -15,8 +15,8 @@ import SwiftUI
 /// — a feedback loop that halves tracking and turns a point of pointer noise
 /// into a standing oscillation.
 ///
-/// The capsule only appears once a drag owns the handle, so the affordance a
-/// pointer gets beforehand is the pointer itself:
+/// The Mac capsule remains visible at rest. It shares the existing resize
+/// target and gesture; mobile retains its drag-only indicator.
 /// `BrowserPlatformColumnResizePointerModifier` gives each platform its own
 /// answer to "this boundary moves" rather than leaving it to be discovered.
 struct BrowserSplitCardResizeHandle: View {
@@ -44,7 +44,7 @@ struct BrowserSplitCardResizeHandle: View {
                         .primary.opacity(
                             isDragging
                                 ? BrowserSplitCardResizeHandleMetrics.activeIndicatorOpacity
-                                : 0
+                                : idleIndicatorOpacity
                         )
                     )
                     .frame(
@@ -61,9 +61,18 @@ struct BrowserSplitCardResizeHandle: View {
                 .onChanged(dragChanged)
                 .onEnded(dragEnded)
             )
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityTitle)
             .accessibilityValue(accessibilityMeasurement ?? String(localized: "Divider \(dividerIndex + 1)"))
             .accessibilityAdjustableAction(adjustWidth)
+    }
+
+    private var idleIndicatorOpacity: Double {
+        #if os(macOS)
+            0.18
+        #else
+            0
+        #endif
     }
 
     private func dragChanged(_ value: DragGesture.Value) {

@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserSidebarResizeHandle: View {
     @Binding var width: CGFloat
     var onResizeEnded: (CGFloat) -> Void = { _ in }
+    var edge: HorizontalEdge = .leading
 
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var dragStartWidth: CGFloat?
@@ -46,7 +47,7 @@ struct BrowserSidebarResizeHandle: View {
                 + BrowserChromeDirectionPolicy.sidebarResizeDelta(
                     value.translation.width,
                     layoutDirection: layoutDirection
-                )
+                ) * (edge == .leading ? 1 : -1)
         )
     }
 

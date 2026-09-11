@@ -10,6 +10,14 @@ enum BrowserNativeWindowControlsPolicy {
         .zoomButton,
     ]
 
+    static func sidebarOffset(
+        onRight: Bool, windowWidth: CGFloat, sidebarWidth: CGFloat,
+        in styleMask: NSWindow.StyleMask
+    ) -> CGFloat {
+        guard onRight, !styleMask.contains(.fullScreen) else { return 0 }
+        return max(0, windowWidth - sidebarWidth)
+    }
+
     static func showsToolbar(in styleMask: NSWindow.StyleMask) -> Bool {
         !styleMask.contains(.fullScreen)
     }

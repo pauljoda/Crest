@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserDeveloperViewportMenu: View {
     let page: BrowserPage
     @State private var showsCustomSize = false
+    @State private var showsCustomSizeEditor = false
     @State private var width = ""
     @State private var height = ""
 
@@ -13,21 +14,20 @@ struct BrowserDeveloperViewportMenu: View {
     }
 
     var body: some View {
-        HStack(spacing: BrowserDeveloperToolbarMetrics.itemSpacing) {
-            viewportMenu
-            if showsCustomSize {
+        viewportMenu
+            .popover(isPresented: $showsCustomSizeEditor, arrowEdge: .top) {
                 BrowserDeveloperCustomViewportFields(width: $width, height: $height) {
                     guard let viewport = BrowserDeveloperViewport.customSize(width: width, height: height) else {
                         return
                     }
                     page.developerViewport = viewport
                 }
+                .padding(12)
             }
-        }
-        .onAppear(perform: synchronizeCustomSize)
-        .onChange(of: page.developerViewport) { _, _ in
-            synchronizeCustomSize()
-        }
+            .onAppear(perform: synchronizeCustomSize)
+            .onChange(of: page.developerViewport) { _, _ in
+                synchronizeCustomSize()
+            }
     }
 
     private var viewportMenu: some View {
@@ -50,6 +50,7 @@ struct BrowserDeveloperViewportMenu: View {
                         case .custom:
                             if !showsCustomSize { populateCustomSize() }
                             showsCustomSize = true
+                            showsCustomSizeEditor = true
                         }
                     }
                 )

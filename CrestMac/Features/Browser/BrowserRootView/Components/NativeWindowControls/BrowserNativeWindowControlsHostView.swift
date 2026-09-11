@@ -5,6 +5,13 @@ final class BrowserNativeWindowControlsHostView: NSView {
     private var originalChrome: BrowserNativeWindowChromeSnapshot?
     private var chromeToolbar: NSToolbar?
     private var windowObservers: [NSObjectProtocol] = []
+    private var nativeButtonOrigins: [NSWindow.ButtonType: CGFloat] = [:]
+    var sidebarPosition: CGFloat = 0
+    var sidebarOnRight: Bool {
+        get { sidebarPosition == 1 }
+        set { sidebarPosition = newValue ? 1 : 0 }
+    }
+    var sidebarWidth: CGFloat = BrowserChromeLayout.sidebarIdealWidth
     var isVisible = true {
         didSet {
             guard isVisible != oldValue else { return }
@@ -24,6 +31,11 @@ final class BrowserNativeWindowControlsHostView: NSView {
         captureOriginalChrome()
         observeWindow()
         applyBrowserChrome()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        positionWindowControls()
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -56,11 +68,39 @@ final class BrowserNativeWindowControlsHostView: NSView {
             guard button.isHidden != shouldHide else { continue }
             button.isHidden = shouldHide
         }
+        positionWindowControls()
+    }
+
+    /// Move the existing AppKit controls inside their titlebar, retaining their
+    /// native actions, accessibility, sizes and order. Fullscreen owns placement.
+    private func positionWindowControls() {
+        guard let window, !window.styleMask.contains(.fullScreen) else { return }
+        let offset =
+            BrowserNativeWindowControlsPolicy.sidebarOffset(
+                onRight: true,
+                windowWidth: window.contentView?.bounds.width ?? bounds.width,
+                sidebarWidth: sidebarWidth,
+                in: window.styleMask
+            ) * sidebarPosition
+        for type in BrowserNativeWindowControlsPolicy.buttonTypes {
+            guard let button = window.standardWindowButton(type), let parent = button.superview else { continue }
+            if nativeButtonOrigins[type] == nil {
+                nativeButtonOrigins[type] = parent.convert(button.frame.origin, to: nil).x
+            }
+            guard let nativeX = nativeButtonOrigins[type] else { continue }
+            let target = parent.convert(NSPoint(x: nativeX + offset, y: 0), from: nil).x
+            if abs(button.frame.minX - target) > 0.5 {
+                button.setFrameOrigin(NSPoint(x: target, y: button.frame.minY))
+            }
+        }
     }
 
     func restoreWindowChrome() {
         stopObservingWindow()
         guard let window, let originalChrome else { return }
+        sidebarOnRight = false
+        positionWindowControls()
+        nativeButtonOrigins.removeAll()
         window.styleMask = originalChrome.styleMask
         window.titleVisibility = originalChrome.titleVisibility
         window.titlebarAppearsTransparent = originalChrome.titlebarAppearsTransparent
@@ -128,6 +168,10 @@ final class BrowserNativeWindowControlsHostView: NSView {
         guard let window else { return }
         let names: [Notification.Name] = [
             NSWindow.didBecomeKeyNotification,
+            NSWindow.didResignKeyNotification,
+            NSWindow.didUpdateNotification,
+            NSWindow.didResizeNotification,
+            NSWindow.willEnterFullScreenNotification,
             NSWindow.didEnterFullScreenNotification,
             NSWindow.didExitFullScreenNotification,
         ]
@@ -138,6 +182,17 @@ final class BrowserNativeWindowControlsHostView: NSView {
                 queue: .main
             ) { [weak self] _ in
                 MainActor.assumeIsolated {
+                    if name == NSWindow.didUpdateNotification {
+                        self?.positionWindowControls()
+                        return
+                    }
+                    if name == NSWindow.willEnterFullScreenNotification, let self {
+                        let position = self.sidebarPosition
+                        self.sidebarPosition = 0
+                        self.positionWindowControls()
+                        self.sidebarPosition = position
+                        return
+                    }
                     DispatchQueue.main.async { [weak self] in
                         self?.applyBrowserChrome()
                     }

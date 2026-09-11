@@ -6,16 +6,21 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     let shortcuts: BrowserShortcutStore?
     @Binding var storedSidebarWidth: Double
+    var appearance = BrowserChromeAppearance()
     let windowTransparencyIsEnabled: Bool
     let windowTransparencyStrength: Double
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
 
+    @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(BrowserExtensionSidebarStore.self) private var extensionSidebar: BrowserExtensionSidebarStore?
     @State private var downloadFeedback = BrowserMacDownloadFeedbackState()
     @State private var spacePagerPresentation = SpacePagerPresentation()
+
+    private var sidebarEdge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
+    private var sidebarAlignment: Alignment { sidebarEdge == .leading ? .leading : .trailing }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -30,13 +35,21 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             HStack(spacing: 0) {
                 BrowserRootSidebarLayoutReservation(
                     presentation: model.sidebarPresentation,
-                    width: model.sidebarWidth,
+                    width: sidebarEdge == .leading ? model.sidebarWidth : 0,
                     isApproachingDock: model.isSidebarApproachingDock
                 )
 
                 BrowserSpacePageSurface(
                     model: model,
-                    tabPromotionNamespace: tabPromotionNamespace
+                    tabPromotionNamespace: tabPromotionNamespace,
+                    appearance: appearance
+                )
+                .anchorPreference(key: BrowserRootPageBoundsKey.self, value: .bounds) { $0 }
+
+                BrowserRootSidebarLayoutReservation(
+                    presentation: model.sidebarPresentation,
+                    width: sidebarEdge == .trailing ? model.sidebarWidth : 0,
+                    isApproachingDock: model.isSidebarApproachingDock
                 )
             }
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
@@ -48,6 +61,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             BrowserRootSidebarSurfaceLayer(
                 presentation: model.sidebarPresentation,
                 width: model.sidebarWidth,
+                edge: sidebarEdge,
                 space: model.browser.selectedSpace,
                 reduceTransparency: reduceTransparency,
                 spaces: BrowserSidebarAccessPolicy.availableSpaces(in: model.browser),
@@ -60,6 +74,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             ) {
                 BrowserRootSidebarContent(
                     model: model,
+                    sidebarOnRight: appearance.sidebarOnRight,
                     spaceSettingsPresentation: spaceSettingsPresentation,
                     commandSurfaceNamespace: commandSurfaceNamespace,
                     tabPromotionNamespace: tabPromotionNamespace
@@ -73,17 +88,20 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     perform: model.handleAuxiliaryMouseAction
                 )
             }
+            .frame(maxWidth: .infinity, alignment: sidebarAlignment)
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
 
             BrowserRootShellControls(
                 model: model,
-                storedSidebarWidth: $storedSidebarWidth
+                storedSidebarWidth: $storedSidebarWidth,
+                sidebarEdge: sidebarEdge
             )
+            .frame(maxWidth: .infinity, alignment: sidebarAlignment)
             .allowsHitTesting(!model.chrome.isCommandPalettePresented)
             .accessibilityHidden(model.chrome.isCommandPalettePresented)
 
-            BrowserRootUtilityFanLayer(model: model)
+            BrowserRootUtilityFanLayer(model: model, sidebarOnRight: appearance.sidebarOnRight)
                 .zIndex(BrowserRootMetrics.utilityFanZIndex)
 
             BrowserMacDownloadFeedbackLayer(model: model, feedback: downloadFeedback)
@@ -95,9 +113,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             )
 
             BrowserNativeWindowControlsBridge(
-                isVisible: model.sidebarPresentation.showsWindowControls
+                isVisible: model.sidebarPresentation.showsWindowControls,
+                sidebarPosition: appearance.sidebarOnRight ? 1 : 0,
+                sidebarWidth: model.sidebarWidth
             )
-            .frame(width: 0, height: 0)
+            .frame(maxWidth: .infinity)
+            .frame(height: 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
@@ -108,12 +129,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             .frame(width: 0, height: 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-
-            BrowserRootCommandPaletteLayer(
-                model: model,
-                shortcuts: shortcuts,
-                commandSurfaceNamespace: commandSurfaceNamespace
-            )
 
             BrowserRootPeekLayer(
                 model: model,
@@ -126,6 +141,19 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
 
             if let label = model.visiblePageZoomFeedbackLabel {
                 BrowserPageZoomFeedbackView(label: label)
+            }
+        }
+        .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
+            GeometryReader { proxy in
+                let rect = anchor.map { proxy[$0] } ?? CGRect(origin: .zero, size: proxy.size)
+                BrowserRootCommandPaletteLayer(
+                    model: model,
+                    shortcuts: shortcuts,
+                    commandSurfaceNamespace: commandSurfaceNamespace,
+                    contentInsets: BrowserChromeAppearance.contentInsets(
+                        for: rect, in: proxy.size, direction: layoutDirection
+                    )
+                )
             }
         }
         // One per-window host answers for every row and tile in this shell,
@@ -143,6 +171,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 pageChromeOwnsFocus: false
             )
         )
+        .animation(chromeAnimation(CrestMotion.collection), value: appearance.sidebarOnRight)
         .animation(
             chromeAnimation(
                 model.isSidebarApproachingDock

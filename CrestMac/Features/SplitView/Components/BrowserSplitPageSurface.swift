@@ -34,6 +34,7 @@ struct BrowserSplitPageSurface: View {
     /// it.
     let placeholderIndex: Int?
     let tabPromotionNamespace: Namespace.ID
+    var appearance = BrowserChromeAppearance()
 
     /// Optional so a host that renders cards without the app's preference store —
     /// a preview, a future embedded surface — degrades to click-to-focus only
@@ -65,9 +66,8 @@ struct BrowserSplitPageSurface: View {
         BrowserSplitColumnsView(
             members: displayMembers,
             focusedTabID: isSelectedSpace ? model.pages.activeTabID : space.selectedTabID,
-            frameInsets: BrowserChromeLayout.pageFrameInsets(
-                adjoinsLeadingSidebar:
-                    model.sidebarPresentation.reservesSidebarWidth
+            frameInsets: appearance.pageInsets(
+                docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection
             ),
             accent: space.branding.primaryColor.color,
             placeholderIndex: placeholderIndex,
@@ -109,6 +109,7 @@ struct BrowserSplitPageSurface: View {
                 }
             }
         )
+        .environment(\.browserSplitUsesBorderlessFrame, appearance.borderless)
         .background {
             if isSelectedSpace {
                 BrowserSplitCardPointerMonitor(

@@ -8,6 +8,7 @@ import SwiftUI
 /// scene-pointing implementations live here rather than travelling down as data.
 struct BrowserRootSidebarContent: View {
     let model: BrowserRootModel
+    var sidebarOnRight = false
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
@@ -34,6 +35,7 @@ struct BrowserRootSidebarContent: View {
                 activateAddress: { model.chrome.openLocation(model.address) },
                 submitAddress: model.submitAddress,
                 openNewTab: model.openNewTab,
+                sidebarOnRight: sidebarOnRight,
                 sidebarToggleAction:
                     model.sidebarPresentation.sidebarToggleAction,
                 toggleSidebar: {

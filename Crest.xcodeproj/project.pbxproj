@@ -4176,6 +4176,7 @@
 		AA2720E09999AA2720E00005 /* MobileTranslationLongPressGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2720E09999AA2720E00004 /* MobileTranslationLongPressGesture.swift */; };
 		AB2720000000000000000002 /* BrowserPageToolbarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2720000000000000000001 /* BrowserPageToolbarHost.swift */; };
 		AB2720000000000000000003 /* BrowserPageToolbarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2720000000000000000001 /* BrowserPageToolbarHost.swift */; };
+		ADC36ADA947219E6988A2B6C /* BrowserChromeAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1C03A26A812F5C6A460CC8 /* BrowserChromeAppearance.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -6865,6 +6866,7 @@
 		AA2720E09999AA2720E00001 /* BrowserTranslationPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserTranslationPreference.swift; sourceTree = "<group>"; };
 		AA2720E09999AA2720E00004 /* MobileTranslationLongPressGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileTranslationLongPressGesture.swift; sourceTree = "<group>"; };
 		AB2720000000000000000001 /* BrowserPageToolbarHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPageToolbarHost.swift; sourceTree = "<group>"; };
+		8F1C03A26A812F5C6A460CC8 /* BrowserChromeAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserChromeAppearance.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -6937,6 +6939,7 @@
 			isa = PBXGroup;
 			children = (
 				528F4A1FE47BD52E971F9272 /* BrowserWindowTransparencyPreference.swift */,
+				8F1C03A26A812F5C6A460CC8 /* BrowserChromeAppearance.swift */,
 				888DA4D05F134DD08A2A95A5 /* SpacePageMotionPreference.swift */,
 			);
 			path = Models;
@@ -20991,6 +20994,7 @@
 				C2C423CCA3CF875A47F170DF /* SpaceExtensionScopeBanner.swift in Sources */,
 				250D8C3B8EC2D769D0CA2D96 /* SpacePagerGesture.swift in Sources */,
 				5A63569E2CA86751B28A7489 /* SpacePagerPresentation.swift in Sources */,
+				ADC36ADA947219E6988A2B6C /* BrowserChromeAppearance.swift in Sources */,
 				A434EDB38E924A53A15E036A /* SpacePageMotionPreference.swift in Sources */,
 				7CD710D4979B4C90957A21AE /* SpacePickerScrollProgress.swift in Sources */,
 				518147DE2E8E4438812C902D /* SpacePagerInterpolation.swift in Sources */,

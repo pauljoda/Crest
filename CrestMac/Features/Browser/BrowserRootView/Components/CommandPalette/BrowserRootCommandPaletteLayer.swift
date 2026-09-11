@@ -4,6 +4,7 @@ struct BrowserRootCommandPaletteLayer: View {
     let model: BrowserRootModel
     let shortcuts: BrowserShortcutStore?
     let commandSurfaceNamespace: Namespace.ID
+    var contentInsets = EdgeInsets()
 
     @Environment(\.openWindow) private var openWindow
     @Environment(\.layoutDirection) private var layoutDirection
@@ -30,10 +31,7 @@ struct BrowserRootCommandPaletteLayer: View {
                 morphID: BrowserRootCommandSurfaceID.address(
                     spaceID: model.browser.selectedSpace?.id
                 ),
-                overlayContentLeadingInset: model.sidebarPresentation.reservedWidth(
-                    for: model.sidebarWidth,
-                    whileApproachingDock: model.isSidebarApproachingDock
-                )
+                overlayContentInsets: contentInsets
             )
             .id(
                 BrowserCommandPalettePresentationIdentity(

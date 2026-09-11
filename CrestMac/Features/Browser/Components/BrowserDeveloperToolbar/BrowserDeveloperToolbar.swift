@@ -37,6 +37,15 @@ struct BrowserDeveloperToolbar: View {
                 address: $address,
                 navigate: navigate
             )
+            ViewThatFits(in: .horizontal) {
+                actionControls.fixedSize(horizontal: true, vertical: false)
+                overflowMenu
+            }
+        }
+    }
+
+    private var actionControls: some View {
+        HStack(spacing: BrowserDeveloperToolbarMetrics.itemSpacing) {
             BrowserDeveloperToolbarButton(
                 label: "Copy Link",
                 systemImage: "link",
@@ -50,6 +59,35 @@ struct BrowserDeveloperToolbar: View {
             BrowserDeveloperToolbarDivider()
             BrowserDeveloperInspectorControls(page: page)
         }
+    }
+
+    private var overflowMenu: some View {
+        Menu {
+            Button("Copy Link", systemImage: "link", action: page.copyDeveloperPageLink)
+            Menu("Capture Window", systemImage: "rectangle.inset.filled") {
+                Button("Capture in Portrait Mode", systemImage: "rectangle.portrait.on.rectangle.portrait") {
+                    page.savePortraitCapture()
+                }
+                Button("Copy Full Page Capture", systemImage: "doc.on.clipboard") {
+                    page.copyFullPageCapture()
+                }
+            }
+            Button("Capture", systemImage: "camera", action: page.beginRegionCapture)
+            Divider()
+            Button("Toggle Console", systemImage: "apple.terminal") { page.toggleDeveloperPanel(.console) }
+            Button("Toggle Network Panel", systemImage: "network") { page.toggleDeveloperPanel(.network) }
+            Button("Inspect Element", systemImage: "scope") { page.toggleDeveloperPanel(.elements) }
+        } label: {
+            Image(systemName: "ellipsis")
+                .frame(
+                    width: BrowserDeveloperToolbarMetrics.buttonSize, height: BrowserDeveloperToolbarMetrics.buttonSize)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel("Developer Tools")
+        .accessibilityIdentifier("developer-tools-overflow")
+        .help("Developer Tools")
     }
 
     private func synchronizeAddress() {

@@ -69,6 +69,7 @@ struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
     let onPanelResizeCommit: (CGFloat) -> Void
     @ViewBuilder let panelContent: Panel
 
+    @Environment(\.browserSplitUsesBorderlessFrame) private var borderless
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
@@ -147,7 +148,8 @@ struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
                     if members.count > 1 {
                         BrowserSplitCardFocusIndicator(
                             isFocused: member.id == focusedTabID,
-                            accent: accent
+                            accent: accent,
+                            cornerRadius: borderless ? 0 : BrowserChromeLayout.pageCornerRadius
                         )
                     }
                 }
@@ -173,15 +175,16 @@ struct BrowserSplitColumnsView<Content: View, Panel: View>: View {
     private func slotSurface(_ slot: BrowserSplitColumnSlot) -> some View {
         let isGap = slot.member.map { $0.id == liftedTabID } ?? false
         return BrowserRootContentSurface(
-            cornerRadius: BrowserChromeLayout.pageCornerRadius,
-            seamWidth: BrowserChromeLayout.pageBrandSeamWidth,
+            cornerRadius: borderless ? 0 : BrowserChromeLayout.pageCornerRadius,
+            seamWidth: borderless ? 0 : BrowserChromeLayout.pageBrandSeamWidth,
             frameInsets: EdgeInsets(),
             usesTransparentInnerSurface: isGap
                 // An empty column is not a page that draws its own atmosphere,
                 // whether it is empty because nothing has arrived yet or because
                 // its card is out on the pointer.
                 ? false
-                : slot.member.map(usesTransparentInnerSurface) ?? false
+                : slot.member.map(usesTransparentInnerSurface) ?? false,
+            showsBoundary: !borderless
         ) {
             switch slot {
             case .member(let member):
@@ -390,4 +393,9 @@ extension BrowserSplitColumnsView where Panel == EmptyView {
             panelContent: { EmptyView() }
         )
     }
+}
+
+// Default preserves the mobile and embedded split presentation.
+extension EnvironmentValues {
+    @Entry var browserSplitUsesBorderlessFrame = false
 }

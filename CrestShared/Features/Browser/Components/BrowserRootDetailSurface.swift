@@ -20,6 +20,7 @@ struct BrowserRootDetailSurface<Content: View>: View {
     let completedNavigationCount: Int
     let hasSelectedSpace: Bool
     let handleWebContentInteraction: () -> Void
+    var frameInsets: EdgeInsets? = nil
     let content: Content
 
     var body: some View {
@@ -32,9 +33,10 @@ struct BrowserRootDetailSurface<Content: View>: View {
                 : BrowserChromeLayout.pageBrandSeamWidth,
             frameInsets: usesBorderlessFrame
                 ? EdgeInsets()
-                : BrowserChromeLayout.pageFrameInsets(
-                    adjoinsLeadingSidebar: adjoinsLeadingSidebar
-                ),
+                : frameInsets
+                    ?? BrowserChromeLayout.pageFrameInsets(
+                        adjoinsLeadingSidebar: adjoinsLeadingSidebar
+                    ),
             usesTransparentInnerSurface:
                 BrowserPageSurfacePolicy.usesTransparentInnerSurface(
                     isStartPage: isStartPage,

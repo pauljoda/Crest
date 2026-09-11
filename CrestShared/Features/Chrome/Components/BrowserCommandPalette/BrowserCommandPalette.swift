@@ -7,6 +7,7 @@ struct BrowserCommandPalette: View {
     let morphNamespace: Namespace.ID?
     let morphID: String?
     let overlayContentLeadingInset: CGFloat
+    let overlayContentInsets: EdgeInsets?
 
     @State private var model: BrowserCommandPaletteModel
 
@@ -28,12 +29,14 @@ struct BrowserCommandPalette: View {
         morphNamespace: Namespace.ID? = nil,
         morphID: String? = nil,
         overlayContentLeadingInset: CGFloat = 0,
+        overlayContentInsets: EdgeInsets? = nil,
         emptySelectionActions: BrowserEmptySelectionPaletteActions? = nil
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
         self.morphID = morphID
         self.overlayContentLeadingInset = overlayContentLeadingInset
+        self.overlayContentInsets = overlayContentInsets
         _model = State(
             initialValue: BrowserCommandPaletteModel(
                 space: space,
@@ -55,7 +58,8 @@ struct BrowserCommandPalette: View {
             presentation: presentation,
             morphNamespace: morphNamespace,
             morphID: morphID,
-            overlayContentLeadingInset: overlayContentLeadingInset
+            overlayContentLeadingInset: overlayContentLeadingInset,
+            overlayContentInsets: overlayContentInsets
         )
         .onChange(of: model.isCompletionSourceAvailable) { _, available in
             if !available { model.invalidateURLCompletion() }

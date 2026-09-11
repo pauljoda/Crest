@@ -14,13 +14,14 @@ import SwiftUI
 struct BrowserSplitCardFocusIndicator: View {
     let isFocused: Bool
     let accent: Color
+    var cornerRadius: CGFloat = BrowserChromeLayout.pageCornerRadius
 
     private static let strokeWidth: CGFloat = 2
     private static let focusedOpacity = 0.9
 
     var body: some View {
         RoundedRectangle(
-            cornerRadius: BrowserChromeLayout.pageCornerRadius,
+            cornerRadius: cornerRadius,
             style: .continuous
         )
         .strokeBorder(

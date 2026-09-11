@@ -3,6 +3,7 @@ import SwiftUI
 
 struct BrowserRootUtilityFanLayer: View {
     let model: BrowserRootModel
+    var sidebarOnRight = false
 
     @Environment(\.layoutDirection) private var layoutDirection
 
@@ -16,7 +17,7 @@ struct BrowserRootUtilityFanLayer: View {
                     model: model,
                     proxy: proxy,
                     triggerFrame: triggerFrame,
-                    layoutDirection: layoutDirection
+                    layoutDirection: sidebarOnRight ? .rightToLeft : .leftToRight
                 )
 
             }

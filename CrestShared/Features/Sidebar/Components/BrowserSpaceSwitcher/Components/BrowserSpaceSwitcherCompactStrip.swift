@@ -66,7 +66,7 @@ struct BrowserSpaceSwitcherCompactStrip: View {
     ) -> some View {
         Button(
             sidebarToggle.action.title,
-            systemImage: "sidebar.left",
+            systemImage: sidebarToggle.sidebarOnRight ? "sidebar.right" : "sidebar.left",
             action: sidebarToggle.toggle
         )
         .labelStyle(.iconOnly)

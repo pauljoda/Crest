@@ -6,13 +6,15 @@ struct BrowserCommandPalettePresentationView: View {
     let morphNamespace: Namespace.ID?
     let morphID: String?
     let overlayContentLeadingInset: CGFloat
+    var overlayContentInsets: EdgeInsets? = nil
     let queryIsFocused: FocusState<Bool>.Binding
 
     @ViewBuilder
     var body: some View {
         if presentation == .overlay {
             GeometryReader { proxy in
-                let availableHeight = proxy.size.height
+                let availableHeight =
+                    proxy.size.height - (overlayContentInsets?.top ?? 0) - (overlayContentInsets?.bottom ?? 0)
                 let maximumResultAreaHeight =
                     BrowserCommandPaletteLayout
                     .overlayResultAreaHeight(availableHeight: availableHeight)
@@ -29,7 +31,9 @@ struct BrowserCommandPalettePresentationView: View {
                     )
                     .padding(BrowserCommandPaletteMetrics.overlayCardPadding)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.leading, overlayContentLeadingInset)
+                    .padding(
+                        overlayContentInsets
+                            ?? EdgeInsets(top: 0, leading: overlayContentLeadingInset, bottom: 0, trailing: 0))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

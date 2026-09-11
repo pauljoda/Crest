@@ -12,6 +12,8 @@ struct BrowserRootPageSurface: View {
     let space: BrowserSpace
     let isSelectedSpace: Bool
     let tabPromotionNamespace: Namespace.ID
+    var appearance = BrowserChromeAppearance()
+    var layoutDirection = LayoutDirection.leftToRight
 
     private var selectedTab: BrowserTab? {
         space.tabs.first { $0.id == space.selectedTabID }
@@ -71,13 +73,14 @@ struct BrowserRootPageSurface: View {
                 space: space,
                 members: members,
                 placeholderIndex: placeholderIndex,
-                tabPromotionNamespace: tabPromotionNamespace
+                tabPromotionNamespace: tabPromotionNamespace,
+                appearance: appearance
             )
         } else {
             BrowserRootDetailSurface(
                 adjoinsLeadingSidebar:
                     model.sidebarPresentation.reservesSidebarWidth,
-                usesBorderlessFrame: false,
+                usesBorderlessFrame: appearance.borderless,
                 isStartPage: previewsStartPage || selectedTab?.isStartPage == true,
                 hasActivePage: surfacePage != nil,
                 completedNavigationCount: surfacePage?.completedNavigationCount ?? 0,
@@ -86,6 +89,8 @@ struct BrowserRootPageSurface: View {
                     model.chrome.utilityPresentation
                         .handleInteraction(.webContent)
                 },
+                frameInsets: appearance.pageInsets(
+                    docked: model.sidebarPresentation.reservesSidebarWidth, direction: layoutDirection),
                 content: Group {
                     if model.spaceAccess.isLocked(space) {
                         BrowserSpaceAccessView(

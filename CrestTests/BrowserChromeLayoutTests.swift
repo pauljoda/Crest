@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import WebKit
 import XCTest
 
 @testable import Crest
@@ -2889,5 +2890,206 @@ private final class SidebarMorphWaits {
         for waiter in readyWaiters {
             waiter.continuation.resume()
         }
+    }
+}
+
+extension BrowserChromeLayoutTests {
+    @MainActor
+    func testChromePreferencesPersistOnlyInTheirNamedIsolationDomain() {
+        let id = "chrome-test-\(UUID().uuidString)"
+        let environment = BrowserLaunchEnvironment(
+            values: ["CREST_ISOLATED_SESSION": "1", "CREST_ISOLATED_PERSISTENCE_ID": id],
+            isXCTestRuntime: false
+        )
+        let defaults = BrowserChromeAppearancePreference.defaults(for: environment)
+        defer {
+            defaults.removePersistentDomain(
+                forName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id))
+        }
+        XCTAssertFalse(defaults.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey))
+        XCTAssertFalse(defaults.bool(forKey: BrowserChromeAppearancePreference.borderlessKey))
+        defaults.set(true, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)
+        defaults.set(true, forKey: BrowserChromeAppearancePreference.borderlessKey)
+        let restored = BrowserChromeAppearancePreference.defaults(for: environment)
+        XCTAssertTrue(restored.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey))
+        XCTAssertTrue(restored.bool(forKey: BrowserChromeAppearancePreference.borderlessKey))
+        XCTAssertFalse(restored === UserDefaults.standard)
+    }
+
+    func testMeasuredContentBoundsCenterPaletteOnEitherSidebarSideAndReadingDirection() {
+        let size = CGSize(width: 1200, height: 800)
+        for direction in [LayoutDirection.leftToRight, .rightToLeft] {
+            for rect in [
+                CGRect(x: 289, y: 0, width: 911, height: 800), CGRect(x: 0, y: 0, width: 911, height: 800),
+                CGRect(origin: .zero, size: size),
+            ] {
+                let insets = BrowserChromeAppearance.contentInsets(for: rect, in: size, direction: direction)
+                let left = direction == .leftToRight ? insets.leading : insets.trailing
+                let right = direction == .leftToRight ? insets.trailing : insets.leading
+                XCTAssertEqual(left + (size.width - left - right) / 2, rect.midX)
+                XCTAssertEqual(size.width - left - right, rect.width)
+            }
+        }
+    }
+
+    @MainActor
+    func testNativeWindowButtonsKeepIdentityAndRestorePlacementAfterRightDocking() throws {
+        let window = NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 1200, height: 800),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let host = BrowserNativeWindowControlsHostView(frame: .zero)
+        window.contentView?.addSubview(host)
+        host.applyBrowserChrome()
+        defer {
+            host.restoreWindowChrome()
+            window.close()
+        }
+        let buttons = try BrowserNativeWindowControlsPolicy.buttonTypes.map {
+            try XCTUnwrap(window.standardWindowButton($0))
+        }
+        let origins = buttons.map { $0.convert(.zero, to: nil).x }
+        host.sidebarOnRight = true
+        for width in [1200.0, 900.0, 1500.0] {
+            window.setContentSize(CGSize(width: width, height: 800))
+            host.applyBrowserChrome()
+            for (index, button) in buttons.enumerated() {
+                XCTAssertTrue(
+                    window.standardWindowButton(BrowserNativeWindowControlsPolicy.buttonTypes[index]) === button)
+                XCTAssertEqual(
+                    button.convert(.zero, to: nil).x, origins[index] + width - host.sidebarWidth, accuracy: 0.5)
+            }
+        }
+        host.sidebarOnRight = false
+        host.applyBrowserChrome()
+        for (index, button) in buttons.enumerated() {
+            XCTAssertEqual(button.convert(.zero, to: nil).x, origins[index], accuracy: 0.5)
+        }
+        XCTAssertEqual(
+            BrowserNativeWindowControlsPolicy.sidebarOffset(
+                onRight: true, windowWidth: 1200, sidebarWidth: 289, in: [.titled, .fullScreen]), 0)
+    }
+
+    @MainActor
+    func testChromeAppearanceChangesPreserveLivePageHostsAndDocumentState() async throws {
+        for split in [false, true] {
+            var space = BrowserRootPreviewFixture.space
+            space.tabs = split ? BrowserRootPreviewFixture.splitMembers : [BrowserRootPreviewFixture.splitMembers[0]]
+            for index in space.tabs.indices {
+                space.tabs[index].url = URL(string: "about:blank")
+                if !split { space.tabs[index].splitGroupID = nil }
+            }
+            space.selectedTabID = space.tabs[0].id
+            let browser = BrowserStore(
+                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                persistence: InMemoryBrowserSessionPersistence())
+            let pages = BrowserPagePool()
+            pages.select(session: browser.session)
+            let model = BrowserRootModel(
+                browser: browser, pages: pages, chrome: BrowserChromeState(sidebarIsPresented: true),
+                spaceAccess: BrowserSpaceAccessController(), windowState: nil, startupBehavior: .showStartPage,
+                persistedSidebarWidth: 289)
+            let livePages = try space.tabs.map { tab in
+                try XCTUnwrap(pages.surfacePage(for: tab, in: space, accessController: model.spaceAccess))
+            }
+            // Finish the pool's initial blank documents before starting this
+            // navigation, so their late completion cannot contaminate the baseline.
+            for _ in 0..<100 {
+                if livePages.allSatisfy({ !$0.webView.isLoading && $0.completedNavigationCount > 0 }) { break }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let initialCounts = livePages.map(\.completedNavigationCount)
+            for page in livePages {
+                page.setDeveloperToolbarVisible(true)
+                page.webView.loadHTMLString(
+                    "<body style='height:4000px'><input id='draft'><script>window.chromeIdentity=Math.random().toString(36);</script></body>",
+                    baseURL: nil)
+            }
+            for _ in 0..<100 {
+                if livePages.enumerated().allSatisfy({
+                    !$0.element.webView.isLoading && $0.element.completedNavigationCount > initialCounts[$0.offset]
+                }) {
+                    break
+                }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let host = NSHostingView(rootView: ChromeContinuityTestShell(model: model))
+            let window = NSWindow(
+                contentRect: CGRect(x: 0, y: 0, width: 1200, height: 800), styleMask: [.titled, .closable, .resizable],
+                backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = host
+            window.orderFront(nil)
+            defer { window.close() }
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(80))
+            let parents = try livePages.map { try XCTUnwrap($0.webView.superview) }
+            let navigationCounts = livePages.map(\.completedNavigationCount)
+            var documentIDs: [String] = []
+            for page in livePages {
+                let identifier = try await page.webView.evaluateJavaScript(
+                    "document.querySelector('#draft').value='unsaved';window.scrollTo(0,300);window.chromeIdentity")
+                documentIDs.append(try XCTUnwrap(identifier as? String))
+            }
+            for appearance in [
+                BrowserChromeAppearance(sidebarOnRight: true, borderless: true),
+                .init(sidebarOnRight: false, borderless: true), .init(sidebarOnRight: true, borderless: false), .init(),
+            ] {
+                host.rootView = ChromeContinuityTestShell(model: model, appearance: appearance)
+                host.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(300))
+                XCTAssertEqual(browser.session.selectedSpaceID, space.id)
+                XCTAssertEqual(browser.selectedTab?.id, space.selectedTabID)
+                for (index, page) in livePages.enumerated() {
+                    XCTAssertTrue(
+                        page.webView.superview === parents[index], "A chrome change must not detach the live web view")
+                    XCTAssertEqual(page.completedNavigationCount, navigationCounts[index])
+                    let value =
+                        try await page.webView.evaluateJavaScript(
+                            "[window.chromeIdentity,document.querySelector('#draft').value,Math.round(scrollY)]")
+                        as? [Any]
+                    XCTAssertEqual(value?[0] as? String, documentIDs[index])
+                    XCTAssertEqual(value?[1] as? String, "unsaved")
+                    XCTAssertEqual(value?[2] as? Int, 300)
+                }
+            }
+            if split {
+                host.rootView = ChromeContinuityTestShell(
+                    model: model, appearance: .init(sidebarOnRight: true, borderless: true))
+                window.setContentSize(NSSize(width: 1000, height: 800))
+                model.splitWidthTransactionBinding.wrappedValue = BrowserSplitWidthTransaction(
+                    persistedFractions: [0.8, 0.2])
+                for focusedIndex in [1, 0, 1] {
+                    model.focusSplitCard(space.tabs[focusedIndex].id)
+                    pages.select(session: browser.session)
+                    host.layoutSubtreeIfNeeded()
+                    try await Task.sleep(for: .milliseconds(300))
+                    let frames = livePages.map { $0.webView.convert($0.webView.bounds, to: host) }
+                    XCTAssertEqual(
+                        frames[1].minX - frames[0].maxX, BrowserSplitLayoutMetrics.interCardGap,
+                        accuracy: 1, "Focusing a narrow developer toolbar must not widen the divider")
+                    XCTAssertEqual(frames[1].width, BrowserSplitLayoutMetrics.minimumCardWidth, accuracy: 1)
+                    for (index, livePage) in livePages.enumerated() {
+                        XCTAssertTrue(livePage.webView.superview === parents[index])
+                        XCTAssertEqual(livePage.completedNavigationCount, navigationCounts[index])
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct ChromeContinuityTestShell: View {
+    let model: BrowserRootModel
+    var appearance = BrowserChromeAppearance()
+    @Namespace private var commandNamespace
+    @Namespace private var tabNamespace
+    var body: some View {
+        BrowserRootShell(
+            model: model, transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            spaceSettingsPresentation: BrowserSpaceSettingsPresentationState(), shortcuts: nil,
+            storedSidebarWidth: .constant(289), appearance: appearance, windowTransparencyIsEnabled: false,
+            windowTransparencyStrength: 0, commandSurfaceNamespace: commandNamespace,
+            tabPromotionNamespace: tabNamespace)
     }
 }
