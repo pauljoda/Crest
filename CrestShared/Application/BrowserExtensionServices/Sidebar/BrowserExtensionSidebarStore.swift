@@ -193,8 +193,16 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     func closeChromePanel(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID, tab: TabID?) throws {
         let registration = try registration(for: client)
         let scope = tab.map(BrowserExtensionSidebarScope.tab) ?? .default
-        let intent = presentationsByWindow[window]?[registration.spaceID]?[scope]
-        if tab != nil, intent?.clientID != client { throw BrowserExtensionSidebarError.noTabSpecificPanel }
+        let options = registration.registry.resolved(at: scope)
+        if tab != nil {
+            guard options.scope == scope, options.presentsPanel else {
+                throw BrowserExtensionSidebarError.noTabSpecificPanel
+            }
+        } else if !options.presentsPanel {
+            throw BrowserExtensionSidebarError.noActivePanel
+        }
+        // Chrome validates the configured scope, even if its document is
+        // already closed. Closing it again is then a successful no-op.
         removePresentation(for: client, in: window, spaceID: registration.spaceID, scope: scope)
     }
 
@@ -207,17 +215,18 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         refresh(in: window, spaceID: spaceID)
     }
 
-    func closePresentedPanel(in window: BrowserWindowID, spaceID: SpaceID) {
-        presentationsByWindow[window]?[spaceID] = nil
+    func closePresentedPanel(in window: BrowserWindowID, spaceID: SpaceID, activeTab: TabID?) {
+        // Chrome's UI close resets the global and active tab registries.
+        // Inactive tabs retain their own panels and can restore them later.
+        presentationsByWindow[window]?[spaceID]?[.default] = nil
+        if let activeTab { presentationsByWindow[window]?[spaceID]?[.tab(activeTab)] = nil }
         refresh(in: window, spaceID: spaceID)
     }
 
     func toggle(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID, tab: TabID?) throws {
         let registration = try registration(for: client)
         if let panel = panel(in: window, spaceID: registration.spaceID, activeTab: tab), panel.clientID == client {
-            removePresentation(
-                for: client, in: window, spaceID: registration.spaceID,
-                scope: panel.tabID.map(BrowserExtensionSidebarScope.tab) ?? .default)
+            closePresentedPanel(in: window, spaceID: registration.spaceID, activeTab: tab)
         } else {
             try open(for: client, in: window, tab: tab)
         }
@@ -235,10 +244,10 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         guard let presentations = presentationsByWindow[window]?[spaceID],
             let intent = activeTab.flatMap({ presentations[.tab($0)] }) ?? presentations[.default],
             let registration = registrations[intent.clientID],
-            registration.registry.resolved(for: activeTab).isEnabled
+            registration.registry.resolved(for: activeTab).presentsPanel
         else { return nil }
         return makePanel(
-            client: intent.clientID, options: intent.options,
+            client: intent.clientID, options: presentationOptions(intent, activeTab: activeTab),
             isAvailable: visibility[window]?[spaceID]?.isAvailable ?? true)
     }
 
@@ -246,8 +255,21 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     /// replacing, disabling or removing their owning scope releases them.
     func retainedPanels(in window: BrowserWindowID, spaceID: SpaceID) -> [BrowserExtensionSidebarPanel] {
         (presentationsByWindow[window]?[spaceID] ?? [:]).values.compactMap {
-            makePanel(client: $0.clientID, options: $0.options, isAvailable: true)
+            makePanel(
+                client: $0.clientID,
+                options: presentationOptions($0, activeTab: visibility[window]?[spaceID]?.tabID), isAvailable: true)
         }
+    }
+
+    private func presentationOptions(_ intent: BrowserExtensionSidebarPresentation, activeTab: TabID?)
+        -> BrowserExtensionSidebarResolvedOptions
+    {
+        guard let registration = registrations[intent.clientID],
+            registration.registry.defaults.flavor == .sidebarAction
+        else { return intent.options }
+        // Firefox keeps one window sidebar and resolves its resource from
+        // the selected tab. Chrome retains each explicitly opened scope.
+        return registration.registry.resolved(for: activeTab)
     }
 
     func availablePanels(in window: BrowserWindowID, spaceID: SpaceID, activeTab: TabID?)
@@ -269,8 +291,9 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         } else if hostWindowsBySpace[spaceID] == window {
             hostWindowsBySpace[spaceID] = nil
         }
-        let next = Visibility(tabID: activeTab, isAvailable: isAvailable)
         let previous = visibility[window]?[spaceID]
+        let next = Visibility(
+            tabID: isAvailable ? activeTab : activeTab ?? previous?.tabID, isAvailable: isAvailable)
         if previous != next {
             visibility[window, default: [:]][spaceID] = next
             // Tab selection is an explicit input to panel resolution.
@@ -345,7 +368,7 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         registrations[client] = value
         // Update only each open document's own options. Disabling a scope
         // also removes its open intent so it cannot reappear with stale state.
-        for (window, spaces) in presentationsByWindow {
+        for (window, spaces) in presentationsByWindow where value.registry.defaults.flavor == .sidePanel {
             for (scope, intent) in spaces[value.spaceID] ?? [:] where intent.clientID == client {
                 let options = value.registry.resolved(at: intent.options.scope)
                 if !options.presentsPanel {

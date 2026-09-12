@@ -373,8 +373,19 @@ open intents remain distinct within each native window and Space. A tab-specific
 panel appears only beside its owning tab; switching away hides it and switching
 back restores the same document. Other tabs can open their own panel without
 replacing that conversation. Global panels remain visible across tabs without
-an open tab-specific panel. Firefox options inherit through tab, window, and
-default layers for its window-owned sidebar.
+an open tab-specific panel. Firefox uses one window-owned sidebar whose resource
+follows the selected tab's settings, then window and global settings, then the
+manifest. A changed resource replaces that window document; an unchanged resource
+keeps it. `sidebarAction.setPanel(null)` and an empty path remove the specified
+override and restore inheritance. Switching Spaces retains the last selected
+resource until its own tab selection or settings change.
+
+These contracts follow [Chrome's panel scopes](https://developer.chrome.com/docs/extensions/reference/api/sidePanel#type-OpenOptions)
+and [Firefox's sidebar resource inheritance](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/sidebarAction/setPanel).
+Chrome close requests validate the configured scope before closing it. Repeated
+closes of a valid scope succeed without affecting a global panel or another tab;
+requests for an unconfigured or disabled scope fail. This follows
+[Chromium's side-panel service](https://github.com/chromium/chromium/blob/main/chrome/browser/extensions/api/side_panel/side_panel_service.cc).
 
 The coordinator validates native tab/window identities and gesture eligibility
 before changing the store. `sidebar.watch` is a permission-checked event stream
@@ -386,12 +397,21 @@ to WebKit's registered tab view.
 The macOS host presents a trailing split-row card backed by an extension
 `WKWebView`, never a tab adapter. Documents are keyed by native window, Space,
 extension origin, and optional owning tab. Switching Spaces hides their documents.
-Closing the card clears that Space's open intents; API close requests affect only
-the requested scope. Removing a tab releases its document. Disabling a scope
+Closing the card or toggling its action clears the global and active tab's open
+intents; other tabs keep their panels. API close requests affect only the requested
+scope. Removing a tab releases its document. Disabling a scope
 closes it; locking or uninstalling releases its documents. Width and last-used
 client are local window preferences; action behavior persists per client. Open
 intent and runtime options do not survive relaunch. Firefox fresh-install opening
 is consumed once when the host becomes available, not on restoration.
+
+Tabs with retained tab-specific panels carry the extension's icon as a badge on
+the favicon, including inactive tabs and pinned tiles. Global and Firefox window
+panels do not mark an owning tab. The per-window host resolves badges from the
+same panel store, verifies the Space and live tab, and hides them when the panel
+closes, its tab is removed, or its Space is locked. The badge stays outside the
+unloaded-tab fade and scales with sidebar icon density. Tab accessibility values
+also name the attached extension.
 
 The resident webpage receives the reduced card viewport as the panel opens or
 resizes. Responsive pages retain the requested zoom. An authored document/body

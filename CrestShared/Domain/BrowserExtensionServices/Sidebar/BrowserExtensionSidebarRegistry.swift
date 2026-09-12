@@ -1,7 +1,7 @@
 import Foundation
 
-/// Runtime options for one extension in one Space. Only a tab-owned path
-/// creates a separate document, including when it equals the default path.
+/// Runtime options for one extension in one Space. Chrome tab paths create
+/// separate documents; Firefox resolves these layers in one window sidebar.
 struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
     let defaults: BrowserExtensionSidebarDefaults
     let displayName: String
@@ -25,7 +25,14 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
 
     mutating func merge(_ options: BrowserExtensionSidebarOptions, at scope: BrowserExtensionSidebarScope) {
         var current = layer(scope)
-        current.merge(options)
+        var update = options
+        if defaults.flavor == .sidebarAction, update.path == "" {
+            // Firefox setPanel(null/"") removes this override and inherits
+            // from the next layer, ultimately falling back to the manifest.
+            current.path = nil
+            update.path = nil
+        }
+        current.merge(update)
         setLayer(current, at: scope)
     }
 

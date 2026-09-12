@@ -12,6 +12,7 @@ struct BrowserSidebarTabLabel: View {
     var restoreSavedLocation: (() -> Void)?
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
+    var sidePanelSpaceID: SpaceID?
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var textScale = 1.0
     @ScaledMetric(relativeTo: .body) private var baseTextSize = BrowserSidebarDensityPolicy.bodySize
@@ -28,7 +29,7 @@ struct BrowserSidebarTabLabel: View {
             HStack(spacing: 3) {
                 BrowserSidebarTabFavicon(
                     tab: tab, profileID: profileID, metrics: metrics,
-                    isProminent: isSelected, isLoaded: isLoaded)
+                    isProminent: isSelected, isLoaded: isLoaded, sidePanelSpaceID: sidePanelSpaceID)
                 if tab.placement == .saved, tab.isAwayFromSavedLocation, let restoreSavedLocation {
                     BrowserTabSavedLocationIndicator(restore: restoreSavedLocation)
                         .browserTabResidency(isLoaded: isLoaded)

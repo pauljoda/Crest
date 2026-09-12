@@ -101,7 +101,7 @@ struct PinnedTabGridContent: View {
                 .help(tab.displayTitle)
                 .modifier(
                     BrowserTabSelectionAccessibility(
-                        tabID: tab.id, browser: browser,
+                        tabID: tab.id, spaceID: assignment.spaceID, browser: browser,
                         isActive: tab.id == selectedTabID, isLoaded: loaded)
                 )
                 .modifier(

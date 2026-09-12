@@ -15,8 +15,8 @@ enum BrowserExtensionSidebarScope: Hashable, Sendable {
     case tab(TabID)
 }
 
-/// One override layer. A missing field inherits; an empty path disables the
-/// document. API adapters distinguish a missing field from a requested reset.
+/// One override layer. A missing field inherits. An empty Chrome path disables
+/// the document; Firefox uses it to reset the path to the inherited resource.
 struct BrowserExtensionSidebarOptions: Equatable, Sendable {
     var path: String?
     var isEnabled: Bool?

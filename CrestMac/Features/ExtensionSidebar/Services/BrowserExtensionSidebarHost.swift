@@ -4,7 +4,7 @@ import SwiftUI
 
 @Observable
 @MainActor
-final class BrowserExtensionSidebarHost {
+final class BrowserExtensionSidebarHost: BrowserTabSidePanelResolving {
     let store: BrowserExtensionSidebarStore
     let windowID: BrowserWindowID
     private(set) var document: BrowserExtensionSidebarDocument?
@@ -77,7 +77,7 @@ final class BrowserExtensionSidebarHost {
 
     func close() {
         guard let panel else { return }
-        store.closePresentedPanel(in: windowID, spaceID: panel.spaceID)
+        store.closePresentedPanel(in: windowID, spaceID: panel.spaceID, activeTab: browser.selectedTab?.id)
         reconcile()
     }
 
@@ -87,6 +87,17 @@ final class BrowserExtensionSidebarHost {
     /// icon is cached on `icon`, the others are read on demand.
     func icon(for candidate: BrowserExtensionSidebarPanel) -> NSImage? {
         candidate.clientID == panel?.clientID ? icon : pages.extensionSidebarIcon(for: candidate)
+    }
+
+    func sidePanelPresentation(forTab tabID: TabID, in spaceID: SpaceID) -> BrowserTabSidePanelPresentation? {
+        guard let space = browser.session.space(id: spaceID), space.contains(tabID), !spaceAccess.isLocked(space),
+            let bound = store.panel(in: windowID, spaceID: spaceID, activeTab: tabID), bound.tabID == tabID,
+            let url = bound.documentURL,
+            pages.extensionControllerPool.extensionPageConfiguration(for: url, in: spaceID) != nil
+        else { return nil }
+        return .init(
+            title: bound.title,
+            icon: pages.extensionSidebarIcon(for: bound).map { Image(nsImage: $0).renderingMode(.original) })
     }
 
     var availablePanels: [BrowserExtensionSidebarPanel] {

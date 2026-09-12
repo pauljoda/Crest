@@ -12,6 +12,73 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
     private let other = BrowserExtensionServiceClientID("other")!
     private let baseURL = URL(string: "webkit-extension://chatgpt/")!
 
+    func testFirefoxSidebarFollowsActiveTabOverridesAndResetsToInheritedResources() throws {
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        store.register(
+            client: client, spaceID: space,
+            defaults: .init(flavor: .sidebarAction, path: "manifest.html"),
+            displayName: "Firefox", baseURL: baseURL)
+        let second = TabID()
+        try store.setOptions(.init(path: "global.html"), scope: .default, from: client)
+        try store.setOptions(.init(path: "window.html"), scope: .window, from: client)
+        try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
+        try store.open(for: client, in: window, tab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, "tab.html")
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab)?.tabID)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: second, isAvailable: true)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: second)?.path, "window.html")
+        try store.setOptions(.init(path: "inactive.html"), scope: .tab(tab), from: client)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: second)?.path, "window.html")
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).map(\.path), ["window.html"])
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, "inactive.html")
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: nil, isAvailable: false)
+        XCTAssertEqual(
+            store.retainedPanels(in: window, spaceID: space).map(\.path), ["inactive.html"],
+            "Switching Spaces must retain the resolved document, not replace it with its default")
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        for (scope, inheritedPath) in [
+            (BrowserExtensionSidebarScope.tab(tab), "window.html"), (.window, "global.html"),
+            (.default, "manifest.html"),
+        ] {
+            try store.setOptions(.init(path: ""), scope: scope, from: client)
+            XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, inheritedPath)
+            XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).map(\.path), [inheritedPath])
+            XCTAssertTrue(store.isOpen(for: client, in: window))
+        }
+        try store.close(for: client, in: window, tab: nil)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: second, isAvailable: true)
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: second))
+    }
+
+    func testChromeCloseValidatesConfiguredScopeAndIsIdempotent() throws {
+        let store = makeStore()
+        try store.setChromeOptions(.init(path: "tab.html"), tab: tab, from: client)
+        try store.open(for: client, in: window, tab: nil)
+        try store.closeChromePanel(for: client, in: window, tab: tab)
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab)?.tabID)
+        try store.open(for: client, in: window, tab: tab)
+        try store.closeChromePanel(for: client, in: window, tab: tab)
+        try store.closeChromePanel(for: client, in: window, tab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, "panel.html")
+        XCTAssertThrowsError(try store.closeChromePanel(for: client, in: window, tab: TabID()))
+        try store.closeChromePanel(for: client, in: window, tab: nil)
+        try store.closeChromePanel(for: client, in: window, tab: nil)
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+    }
+
+    func testChromeGlobalPanelHidesWhenTheTabHasNoConfiguredResource() throws {
+        let store = makeStore()
+        try store.open(for: client, in: window, tab: nil)
+        let second = TabID()
+        try store.setChromeOptions(.init(isEnabled: true), tab: second, from: client)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: second, isAvailable: true)
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: second))
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).map(\.path), ["panel.html"])
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, "panel.html")
+    }
+
     func testTabOwnedPanelCannotAppearBesideAnotherPageAndRetainsItsSession() throws {
         let store = makeStore()
         let second = TabID()
@@ -196,7 +263,7 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         let opened = store.panel(in: window, spaceID: space, activeTab: inactive)
         XCTAssertEqual(opened?.clientID, other)
         XCTAssertEqual(opened?.tabID, inactive)
-        try store.closeChromePanel(for: other, in: window, tab: nil)
+        XCTAssertThrowsError(try store.closeChromePanel(for: other, in: window, tab: nil))
         XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: inactive), opened)
         try store.closeChromePanel(for: other, in: window, tab: inactive)
         XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: inactive)?.clientID, client)
@@ -207,19 +274,26 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).count, 1)
     }
 
-    func testCloseClearsTheSingleSelectionAndNoTabResurrectsIt() throws {
-        let store = makeStore()
-        let otherTab = TabID()
-        for target in [tab, otherTab] {
-            try store.setChromeOptions(.init(path: "tab.html"), tab: target, from: client)
-            try store.open(for: client, in: window, tab: target)
+    func testUserCloseClearsGlobalAndActiveTabButRetainsOtherTabs() throws {
+        for useToggle in [false, true] {
+            let store = makeStore()
+            let otherTab = TabID()
+            try store.open(for: client, in: window, tab: nil)
+            for target in [tab, otherTab] {
+                try store.setChromeOptions(.init(path: "tab.html"), tab: target, from: client)
+                try store.open(for: client, in: window, tab: target)
+            }
+            store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+            if useToggle {
+                try store.toggle(for: client, in: window, tab: tab)
+            } else {
+                store.closePresentedPanel(in: window, spaceID: space, activeTab: tab)
+            }
+            XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab))
+            XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).map(\.tabID), [otherTab])
+            store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
+            XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: otherTab)?.tabID, otherTab)
         }
-        store.closePresentedPanel(in: window, spaceID: space)
-        for selected in [tab, otherTab] {
-            store.reconcilePresentation(in: window, spaceID: space, activeTab: selected, isAvailable: true)
-            XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: selected))
-        }
-        XCTAssertTrue(store.retainedPanels(in: window, spaceID: space).isEmpty)
     }
 
     func testToggleOnAnotherTabDoesNotCloseTheHiddenTabPanel() throws {
@@ -276,7 +350,7 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         store.reconcilePresentation(in: window, spaceID: space, activeTab: nil, isAvailable: true)
         XCTAssertFalse(store.isOpen(for: client, in: window))
         XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).count, 1)
-        store.closePresentedPanel(in: window, spaceID: space)
+        store.closePresentedPanel(in: window, spaceID: space, activeTab: nil)
         store.unregister(client: client)
         var remainder: [BrowserExtensionSidebarEvent] = []
         while let event = await events.next() { remainder.append(event) }

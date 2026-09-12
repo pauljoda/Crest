@@ -26,9 +26,12 @@ struct BrowserTabSelectionTarget: ViewModifier {
 /// Selection belongs to the activation button, never its close control.
 struct BrowserTabSelectionAccessibility: ViewModifier {
     let tabID: TabID
+    let spaceID: SpaceID
     let browser: BrowserStore?
     let isActive: Bool
     let isLoaded: Bool
+
+    @Environment(\.browserTabSidePanel) private var sidePanel
 
     private var selected: Bool { browser?.tabMultiSelection.contains(tabID) == true }
 
@@ -54,7 +57,9 @@ struct BrowserTabSelectionAccessibility: ViewModifier {
         var parts = [BrowserChromeAccessibility.tabValue(isLoaded: isLoaded)]
         if isActive { parts.append(String(localized: "Active page")) }
         if selected { parts.append(String(localized: "Selected for tab actions")) }
-        return parts.joined(separator: ", ")
+        return BrowserTabSidePanelAccessibility.value(
+            parts.joined(separator: ", "),
+            panelTitle: sidePanel?.sidePanelPresentation(forTab: tabID, in: spaceID)?.title)
     }
 }
 

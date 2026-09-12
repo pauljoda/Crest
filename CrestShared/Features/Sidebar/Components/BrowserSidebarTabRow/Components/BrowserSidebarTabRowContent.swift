@@ -56,7 +56,7 @@ struct BrowserSidebarTabRowContent: View {
             )
             .modifier(
                 BrowserTabSelectionAccessibility(
-                    tabID: configuration.tab.id, browser: configuration.browser,
+                    tabID: configuration.tab.id, spaceID: configuration.spaceID, browser: configuration.browser,
                     isActive: configuration.isSelected, isLoaded: configuration.isLoaded))
         }
     }

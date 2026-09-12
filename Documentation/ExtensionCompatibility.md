@@ -1089,6 +1089,33 @@ resource paths still have separate document identities and isolated stores.
 Closing the owning tab releases its panel. Global panels receive native live tab
 events and queries.
 
+The follow-up scope review keeps this extension-defined behavior. Chrome global
+panels remain global, while tab-specific panels belong to their requested tabs.
+Firefox's `sidebarAction` has one window sidebar and resolves its resource for the
+selected tab through tab, window, global and manifest settings. Crest now updates
+that resource on selection and explicit option changes; resetting it with `null`
+or an empty path removes the override instead of disabling the sidebar. Hidden
+Spaces retain their last resolved resource. This follows
+[Firefox's documented inheritance](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/sidebarAction/setPanel)
+and its [tab-selection implementation](https://github.com/mozilla-firefox/firefox/blob/main/browser/components/extensions/parent/ext-sidebarAction.js).
+Chrome close requests validate configured scope and remain idempotent for a valid
+scope, matching [Chromium's service](https://github.com/chromium/chromium/blob/main/chrome/browser/extensions/api/side_panel/side_panel_service.cc).
+A Chrome tab override without a path cannot present the global resource merely
+because it has `enabled: true`. No vendor message rewriting or tab-ID remapping
+is required for this presentation contract.
+
+The panel close button and action toggle clear the global and active tab's
+selection while preserving other tabs' panels, following
+[Chromium's close lifecycle](https://github.com/chromium/chromium/blob/main/chrome/browser/ui/views/side_panel/side_panel_coordinator.cc).
+The restored extension badge identifies tabs with retained tab-specific panels on
+both row favicons and pinned tiles. It remains visible on inactive owner tabs and
+is removed when their panel closes. Global and Firefox window panels have no tab
+badge. The original badge geometry was restored from commit `00ac91db`, adapted
+to sidebar density scaling, and rendered for manual review in light and dark
+appearance, including unloaded tabs. The temporary rendering probe was removed;
+permanent coverage asserts ownership and document retention rather than pixels
+or styling.
+
 A separate actual `tabs.captureVisibleTab` regression exposed an unnecessary
 snapshot delegate: WebKit supplied that delegate a zero-sized rectangle, and
 Crest forwarded it, producing `data:,`. Removing the delegate and its two platform
@@ -1111,6 +1138,15 @@ groups, and text-replacement preference migration. The two synthetic LastPass va
 and temporary form tab were removed after validation; the trace account remained
 signed in. Long-running token rotation and authenticated Microsoft favicon wire
 capture remain outside this validation.
+
+Validation for 0.5.108 passed 111 cases with one opt-in clipboard case skipped.
+After badge restoration and the final close-lifecycle correction, all 24 affected
+ownership, native activation/screenshot, and sidebar-state cases passed again.
+The final iOS Simulator build, Swift formatting, and architecture checks passed.
+The global-only experiment and temporary visual probe were removed. Retained
+coverage replaces the obsolete close-all-tabs expectation with preservation of
+other tabs' documents and badges. An authenticated Claude or LastPass sign-in was
+not repeated during this scope and badge follow-up.
 
 ## Firefox extensions from addons.mozilla.org
 

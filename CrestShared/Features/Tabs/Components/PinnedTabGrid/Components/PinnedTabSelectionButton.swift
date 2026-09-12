@@ -20,6 +20,11 @@ struct PinnedTabSelectionButton: View {
             TabFaviconView(tab: tab, profileID: profileID, size: 19 * BrowserSidebarDensityPolicy.scale(iconScale))
                 .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
+                .overlay(alignment: .bottomTrailing) {
+                    BrowserTabSidePanelBadge(
+                        tabID: tab.id, spaceID: spaceID,
+                        scale: BrowserSidebarDensityPolicy.scale(iconScale))
+                }
                 .frame(maxWidth: .infinity)
                 .frame(height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale))
                 .contentShape(.rect)
