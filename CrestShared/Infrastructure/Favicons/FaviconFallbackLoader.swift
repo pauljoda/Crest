@@ -4,16 +4,6 @@ actor BrowserFaviconFallbackLoader {
     static let shared = BrowserFaviconFallbackLoader()
     private static let maximumCachedByteCount = 4 * 1_024 * 1_024
     private static let maximumMissingCount = 256
-    private static let session: URLSession = {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpCookieStorage = nil
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        configuration.timeoutIntervalForRequest = 8
-        configuration.timeoutIntervalForResource = 12
-        return URLSession(configuration: configuration)
-    }()
-
     private let downloadData: @Sendable (URL) async -> Data?
     private var cachedData: [BrowserFaviconFallbackCacheKey: Data] = [:]
     private var cacheRecency: [BrowserFaviconFallbackCacheKey] = []
@@ -152,18 +142,6 @@ actor BrowserFaviconFallbackLoader {
         _ iconURL: URL,
         session requestedSession: URLSession? = nil
     ) async -> Data? {
-        var request = URLRequest(url: iconURL)
-        request.setValue(
-            "image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.5", forHTTPHeaderField: "Accept")
-        let downloadSession = requestedSession ?? session
-        guard let (data, response) = try? await downloadSession.data(for: request),
-            let response = response as? HTTPURLResponse,
-            (200...299).contains(response.statusCode),
-            response.mimeType?.lowercased().hasPrefix("image/") == true
-                || response.mimeType?.lowercased() == "application/octet-stream",
-            !data.isEmpty,
-            data.count <= BrowserFaviconCapture.maximumByteCount
-        else { return nil }
-        return data
+        await BrowserFaviconCapture.downloadCandidate(iconURL, session: requestedSession)
     }
 }

@@ -227,17 +227,26 @@ worker leaves only the later key present. Serializing the writes fixes it. Each
 
 ## Reproducing
 
-Both instruments live in the macOS test target and are skipped unless asked
-for, because each run idles past WebKit's background unload:
+The investigation instruments were retired from the permanent suite during
+[the September 11 test audit](Audits/2026-09-11/test-retention.md). They measure
+WebKit idle timing and experimental reload behavior, rather than a contract
+of Crest's shipping recovery path. The measurements above remain historical
+evidence, not current runtime guarantees.
+
+To repeat the original investigation, use an isolated checkout of
+[`6f53535b0e9081a3bb42fd62495ed763a4bc4782`](https://github.com/pauljoda/Crest/tree/6f53535b0e9081a3bb42fd62495ed763a4bc4782),
+which contains both instruments:
 
 - `CrestTests/BrowserExtensionBackgroundWakeExperimentTests.swift` — event
   wake, delivery, and the no-event control.
 - `CrestTests/BrowserExtensionBackgroundRestartMeasurementTests.swift` —
   `unload` + `load` against storage and `onInstalled`.
 
-```
-touch /tmp/CrestRunBackgroundWakeExperiment            # or CREST_RUN_BACKGROUND_WAKE_EXPERIMENT=1
-touch /tmp/CrestWakePersistentStore                    # persistent store; omit for ephemeral
+In that historical checkout, opt in with the test process environment:
+
+```sh
+TEST_RUNNER_CREST_RUN_BACKGROUND_WAKE_EXPERIMENT=1 \
+TEST_RUNNER_CREST_WAKE_PERSISTENT_STORE=1 \
 xcodebuild -project Crest.xcodeproj -scheme Crest \
   -destination 'platform=macOS,arch=arm64' \
   -only-testing:CrestTests/BrowserExtensionBackgroundWakeExperimentTests test

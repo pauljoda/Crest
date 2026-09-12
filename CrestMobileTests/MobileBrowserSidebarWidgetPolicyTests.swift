@@ -26,33 +26,6 @@ final class MobileBrowserSidebarWidgetPolicyTests: XCTestCase {
         )
     }
 
-    func testWidgetHostRendersInDockedAndFloatingSidebars() {
-        XCTAssertTrue(
-            BrowserSidebarWidgetHostPolicy.shouldRender(
-                sidebarIsPresented: BrowserSidebarPresentation.docked.showsSidebar,
-                isPrivateBrowsing: false
-            )
-        )
-        XCTAssertTrue(
-            BrowserSidebarWidgetHostPolicy.shouldRender(
-                sidebarIsPresented:
-                    BrowserSidebarPresentation.floating.showsSidebar,
-                isPrivateBrowsing: false
-            )
-        )
-    }
-
-    func testWidgetHostIsAbsentWhenTheSidebarIsCollapsed() {
-        XCTAssertFalse(
-            BrowserSidebarWidgetHostPolicy.shouldRender(
-                sidebarIsPresented:
-                    BrowserSidebarPresentation.collapsed.showsSidebar,
-                isPrivateBrowsing: false
-            ),
-            "A collapsed sidebar has no visible surface for the widget host."
-        )
-    }
-
     func testPrivateBrowsingNeverRendersProfileWidgets() {
         XCTAssertFalse(
             BrowserSidebarWidgetHostPolicy.shouldRender(

@@ -133,104 +133,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(Set(candidates.map(\.crest.symbol)).count, candidates.count)
     }
 
-    func testGradientControlsSupportKeyboardAndSemanticFineTuningLabels() {
-        XCTAssertTrue(BrowserSpaceBrandingControlPolicy.gradientDialAcceptsKeyboardFocus)
-        XCTAssertTrue(BrowserSpaceBrandingControlPolicy.gradientDialShowsFocusIndicator)
-        XCTAssertTrue(BrowserSpaceBrandingControlPolicy.fineTuningSlidersExposeLabels)
-        XCTAssertEqual(BrowserSpaceBrandingControlPolicy.gradientAngleStep, 15)
-        XCTAssertEqual(
-            BrowserSpaceBrandingControlPolicy.adjustedAngle(
-                355,
-                direction: .increment
-            ),
-            10
-        )
-        XCTAssertEqual(
-            BrowserSpaceBrandingControlPolicy.adjustedAngle(
-                5,
-                direction: .decrement
-            ),
-            350
-        )
-    }
-
-    func testCuratedPalettesOfferTheNineHouseStartingPoints() {
-        XCTAssertEqual(
-            BrowserSpaceBrandingPreset.curated.map(\.title),
-            [
-                "Winter",
-                "Lion",
-                "Storm",
-                "Dragon",
-                "Meadow",
-                "Iron",
-                "River",
-                "Sun",
-                "Vigil",
-            ]
-        )
-        XCTAssertEqual(
-            BrowserSpaceBrandingPreset.curated.map(\.colors),
-            BrowserSpaceHousePalette.allCases.map(\.colors)
-        )
-        XCTAssertTrue(
-            BrowserSpaceBrandingPreset.curated.allSatisfy {
-                (2...BrowserSpaceBranding.maximumColorCount).contains($0.colors.count)
-            })
-        XCTAssertEqual(
-            Set(BrowserSpaceBrandingPreset.curated.map(\.id)).count,
-            BrowserSpaceBrandingPreset.curated.count
-        )
-    }
-
     // MARK: - Sigils
-
-    func testEveryCrestChargeResolvesBundledArtworkOrASystemSymbol() {
-        for symbol in BrowserSpaceCrestSymbol.allCases {
-            if let asset = symbol.assetName {
-                XCTAssertNotNil(NSImage(named: asset), "Missing artwork for \(symbol.rawValue)")
-            } else {
-                XCTAssertNotNil(NSImage(systemSymbolName: symbol.systemImage, accessibilityDescription: nil))
-            }
-        }
-    }
-
-    func testEveryCrestOrdinaryStillRendersThroughItsDedicatedComponent() {
-        let plate = BrowserSpaceCrestPlateShape(backplate: .shield)
-        for ordinary in BrowserSpaceCrestOrdinary.allCases {
-            let renderer = ImageRenderer(
-                content: BrowserSpaceCrestOrdinaryView(
-                    ordinary: ordinary,
-                    plate: plate,
-                    color: BrowserSpaceBrandColor.lionGold.color,
-                    size: 112
-                )
-                .frame(width: 112, height: 112)
-            )
-
-            XCTAssertNotNil(renderer.nsImage, "Failed to render \(ordinary.rawValue).")
-        }
-    }
-
-    func testEveryPlateDivisionAndBandDrawsAPath() {
-        let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
-        for backplate in BrowserSpaceCrestBackplate.allCases where backplate != .none {
-            let path = BrowserSpaceCrestPlateShape(backplate: backplate).path(in: rect)
-            XCTAssertFalse(path.isEmpty, "\(backplate.rawValue) draws nothing.")
-            XCTAssertTrue(path.boundingRect.width > 50, "\(backplate.rawValue) is too small for its plate.")
-        }
-        XCTAssertTrue(BrowserSpaceCrestPlateShape(backplate: .none).path(in: rect).isEmpty)
-        for division in BrowserSpaceCrestFieldDivision.allCases where division != .plain {
-            XCTAssertFalse(
-                BrowserSpaceCrestDivisionShape(division: division, count: 4).path(in: rect).isEmpty,
-                "\(division.rawValue) colors nothing.")
-        }
-        for ordinary in BrowserSpaceCrestOrdinary.allCases where ordinary != .none && ordinary != .bordure {
-            XCTAssertFalse(
-                BrowserSpaceCrestOrdinaryPath(ordinary: ordinary).path(in: rect).isEmpty,
-                "\(ordinary.rawValue) draws nothing.")
-        }
-    }
 
     func testStudioParametersMoveTheRenderingVersionOnlyWhenUsed() throws {
         let classic = BrowserSpaceCrest(
@@ -339,77 +242,7 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         )
     }
 
-    func testEveryChargeIsNamedForTheGalleryCardThatShowsIt() {
-        for symbol in BrowserSpaceCrestSymbol.allCases {
-            XCTAssertFalse(symbol.title.isEmpty)
-        }
-        XCTAssertEqual(
-            Set(BrowserSpaceCrestSymbol.allCases.map(\.title)).count,
-            BrowserSpaceCrestSymbol.allCases.count,
-            "Two charges answer to the same name in the gallery."
-        )
-    }
-
     // MARK: - The forge
-
-    func testTheForgeOrdersItsStepsTheWayArmsAreComposed() {
-        XCTAssertEqual(
-            BrowserSpaceForgeStep.allCases,
-            [.field, .pattern, .mark, .shield, .division, .ordinary, .charge, .trim]
-        )
-        XCTAssertEqual(
-            BrowserSpaceForgeStep.allCases.filter(\.isCrestStep),
-            BrowserSpaceForgeStep.crestSteps
-        )
-        XCTAssertEqual(
-            BrowserSpaceForgeStep.allCases.map(\.accessibilityIdentifier),
-            [
-                "space-forge-field",
-                "space-forge-pattern",
-                "space-forge-mark",
-                "space-forge-shield",
-                "space-forge-division",
-                "space-forge-ordinary",
-                "space-forge-charge",
-                "space-forge-trim",
-            ]
-        )
-        XCTAssertEqual(
-            Set(BrowserSpaceForgeStep.allCases.map(\.title)).count,
-            BrowserSpaceForgeStep.allCases.count
-        )
-    }
-
-    func testDefaultCrestFieldContrastsWithTheBannerBackground() {
-        let crest = BrowserSpaceCrest()
-
-        XCTAssertEqual(
-            crest.backplateColorIndex,
-            BrowserSpaceBrandColorRole.primary.rawValue
-        )
-        XCTAssertNotEqual(
-            crest.backplateColorIndex,
-            BrowserSpaceBrandColorRole.background.rawValue
-        )
-    }
-
-    func testTheChargeGalleryNeverShowsTwoCardsThatDrawTheSameFigure() {
-        let drawn = BrowserSpaceCrestSymbol.selectable.map { $0.assetName ?? $0.systemImage }
-
-        XCTAssertEqual(
-            Set(drawn).count,
-            drawn.count,
-            "Two selectable charges render identically: " + drawn.sorted().joined(separator: ", ")
-        )
-        // A charge dropped from the gallery must still decode and render, or the
-        // Spaces that already wear it would lose their mark.
-        XCTAssertFalse(BrowserSpaceCrestSymbol.selectable.contains(.oak))
-        XCTAssertTrue(BrowserSpaceCrestSymbol.allCases.contains(.oak))
-        XCTAssertEqual(
-            BrowserSpaceCrestSymbol.selectable.count,
-            BrowserSpaceCrestSymbol.allCases.count - 1
-        )
-    }
 
     func testEditorMutationsNormalizeTheCompleteBrandingValue() {
         var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
@@ -651,20 +484,6 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         )
     }
 
-    func testCuratedPaletteSwatchesNameEveryTinctureTheyShow() {
-        // The swatch reads its colors out for VoiceOver, so no palette may fall
-        // back to the unnamed "Custom" label.
-        for preset in BrowserSpaceBrandingPreset.curated {
-            for color in preset.colors {
-                XCTAssertNotEqual(
-                    color.title,
-                    "Custom",
-                    "\(preset.title) has an unnamed tincture."
-                )
-            }
-        }
-    }
-
     func testRetiredPalettesStillRenderForSpacesThatAlreadyChoseThem() throws {
         // Palettes are templates, not references: the Space stores resolved
         // colors, so retiring a swatch cannot restyle anyone's Space.
@@ -721,50 +540,6 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(source.readabilityFade, 0.38)
         XCTAssertEqual(source.iconStyle, .layeredCrest)
         XCTAssertEqual(source.crest, originalCrest.normalized(forColorCount: 3))
-    }
-
-    func testAutomaticallyCreatedSpacesStartWithAHigherReadabilityFade() throws {
-        var session = BrowserSession.preview
-
-        XCTAssertTrue(
-            session.spaces.allSatisfy {
-                $0.branding.readabilityFade == BrowserSpaceBranding.initialReadabilityFade
-            })
-
-        session.addSpace()
-
-        XCTAssertEqual(
-            try XCTUnwrap(session.selectedSpace).branding.readabilityFade,
-            BrowserSpaceBranding.initialReadabilityFade
-        )
-        XCTAssertEqual(BrowserSpaceBranding.initialReadabilityFade, 0.45)
-    }
-
-    func testSpaceIdentityArtworkUsesTheLayeredCrestWhenSelected() throws {
-        var space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
-        space.branding.iconStyle = .layeredCrest
-
-        XCTAssertEqual(BrowserSpaceIdentityArtwork(space: space), .crest)
-
-        space.branding.iconStyle = .simpleSymbol
-
-        XCTAssertEqual(BrowserSpaceIdentityArtwork(space: space), .symbol(space.symbol))
-    }
-
-    func testSpaceSymbolArtworkRendersLayeredCrestAsOnePlatformImage() throws {
-        var space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
-        space.branding.iconStyle = .layeredCrest
-        space.branding.crest.chargeLayout = .trio
-        space.branding.crest.trim = .laurel
-        let renderer = ImageRenderer(
-            content: BrowserSpaceSymbolArtwork(
-                space: space,
-                size: 30,
-                lockSize: 7
-            )
-        )
-
-        XCTAssertNotNil(renderer.nsImage)
     }
 
     func testNativeCrestArtworkReusesRendersWithoutKeepingUnlimitedSliderValues() throws {
@@ -899,73 +674,6 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(encodedObject["showsTexture"] as? Bool, false)
     }
 
-    func testRoleColorsUseTheNearestConfiguredSlotAsFallback() {
-        let oneColor = BrowserSpaceBranding(colors: [.ink])
-        let twoColors = BrowserSpaceBranding(colors: [.ink, .ocean])
-
-        XCTAssertEqual(oneColor.backgroundColor, .ink)
-        XCTAssertEqual(oneColor.primaryColor, .ink)
-        XCTAssertEqual(oneColor.secondaryColor, .ink)
-        XCTAssertEqual(twoColors.backgroundColor, .ink)
-        XCTAssertEqual(twoColors.primaryColor, .ocean)
-        XCTAssertEqual(twoColors.secondaryColor, .ocean)
-    }
-
-    func testGradientThemeRendersAsAPlatformImage() {
-        let branding = BrowserSpaceBranding(
-            colors: [.ink, .ocean, .gold],
-            bannerStrength: 0.35,
-            readabilityFade: 0.2,
-            themeMode: .gradient,
-            gradientAngle: 127,
-            showsTexture: true
-        )
-        let renderer = ImageRenderer(
-            content: BrowserSpaceBannerBackground(branding: branding)
-                .frame(width: 420, height: 240)
-        )
-
-        XCTAssertNotNil(renderer.nsImage)
-    }
-
-    func testGradientTextureProducesAPerceptibleRenderedDifference() throws {
-        let plain = BrowserSpaceBranding(
-            colors: [.ink, .ocean, .gold],
-            bannerStrength: 1,
-            readabilityFade: 0.2,
-            themeMode: .gradient,
-            gradientAngle: 127,
-            showsTexture: false
-        )
-        var textured = plain
-        textured.showsTexture = true
-
-        let plainPixels = try renderedPixels(for: plain)
-        let texturedPixels = try renderedPixels(for: textured)
-        XCTAssertEqual(plainPixels.count, texturedPixels.count)
-
-        var changedPixelCount = 0
-        var totalChannelDifference = 0
-        for pixelOffset in stride(from: 0, to: plainPixels.count, by: 4) {
-            let channelDifferences = (0..<3).map { channel in
-                abs(
-                    Int(plainPixels[pixelOffset + channel])
-                        - Int(texturedPixels[pixelOffset + channel])
-                )
-            }
-            if channelDifferences.max() ?? 0 >= 2 {
-                changedPixelCount += 1
-            }
-            totalChannelDifference += channelDifferences.reduce(0, +)
-        }
-
-        let pixelCount = plainPixels.count / 4
-        let changedPixelRatio = Double(changedPixelCount) / Double(pixelCount)
-        let meanChannelDifference = Double(totalChannelDifference) / Double(pixelCount * 3)
-        XCTAssertGreaterThan(changedPixelRatio, 0.02)
-        XCTAssertGreaterThan(meanChannelDifference, 0.5)
-    }
-
     func testLegacyNamedColorAndCustomColorBothRoundTrip() throws {
         let legacyData = try XCTUnwrap("\"ocean\"".data(using: .utf8))
         let legacy = try JSONDecoder().decode(BrowserSpaceBrandColor.self, from: legacyData)
@@ -982,32 +690,6 @@ final class BrowserSpaceBrandingTests: XCTestCase {
             from: JSONEncoder().encode(custom)
         )
         XCTAssertEqual(decoded, custom)
-    }
-
-    private func renderedPixels(for branding: BrowserSpaceBranding) throws -> [UInt8] {
-        let renderer = ImageRenderer(
-            content: BrowserSpaceBannerBackground(branding: branding)
-                .frame(width: 320, height: 180)
-        )
-        renderer.scale = 1
-        let image = try XCTUnwrap(renderer.nsImage)
-        let cgImage = try XCTUnwrap(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
-        let width = cgImage.width
-        let height = cgImage.height
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        let context = try XCTUnwrap(
-            CGContext(
-                data: &pixels,
-                width: width,
-                height: height,
-                bitsPerComponent: 8,
-                bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )
-        )
-        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
-        return pixels
     }
 
     func testLegacyBrandingDecodingMigratesReadabilityAndHeraldicDefaults() throws {

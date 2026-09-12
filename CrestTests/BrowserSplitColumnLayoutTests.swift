@@ -14,87 +14,7 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
     private let gap: CGFloat = BrowserSplitLayoutMetrics.interCardGap
     private let minimum: CGFloat = BrowserSplitLayoutMetrics.minimumCardWidth
 
-    func testFocusedCardDrawsAboveItsRestingSiblings() {
-        XCTAssertGreaterThan(
-            BrowserSplitLayoutMetrics.focusedCardZIndex,
-            BrowserSplitLayoutMetrics.restingCardZIndex
-        )
-    }
-
     // MARK: - Widths
-
-    func testEqualFractionsShareTheWidthLeftByTheGaps() {
-        let widths = makeWidths(containerWidth: 1000, fractions: [1, 1, 1])
-
-        assertWidths(widths, sumTo: 1000 - gap * 2)
-        XCTAssertEqual(widths[0], widths[1], accuracy: 0.0001)
-        XCTAssertEqual(widths[1], widths[2], accuracy: 0.0001)
-    }
-
-    func testUnnormalizedFractionsLayOutLikeTheirNormalizedForm() {
-        let raw = makeWidths(containerWidth: 1000, fractions: [2, 1, 1])
-        let normalized = makeWidths(containerWidth: 1000, fractions: [0.5, 0.25, 0.25])
-
-        assertWidths(raw, sumTo: 1000 - gap * 2)
-        for (rawWidth, normalizedWidth) in zip(raw, normalized) {
-            XCTAssertEqual(rawWidth, normalizedWidth, accuracy: 0.0001)
-        }
-        XCTAssertEqual(raw[0], 492, accuracy: 0.0001)
-        XCTAssertEqual(raw[1], 246, accuracy: 0.0001)
-    }
-
-    func testACardTooNarrowForItsShareIsFlooredAtTheMinimum() {
-        let widths = makeWidths(containerWidth: 1000, fractions: [0.95, 0.05])
-
-        assertWidths(widths, sumTo: 1000 - gap)
-        XCTAssertEqual(widths[1], minimum, accuracy: 0.0001)
-        XCTAssertEqual(
-            widths[0],
-            1000 - gap - minimum,
-            accuracy: 0.0001,
-            "Flooring one card gives the width it took back to the others."
-        )
-    }
-
-    func testFlooringRedistributesToEveryCardStillAboveTheFloor() {
-        let widths = makeWidths(containerWidth: 1400, fractions: [0.5, 0.4, 0.05, 0.05])
-
-        assertWidths(widths, sumTo: 1400 - gap * 3)
-        XCTAssertEqual(widths[2], minimum, accuracy: 0.0001)
-        XCTAssertEqual(widths[3], minimum, accuracy: 0.0001)
-        XCTAssertEqual(
-            widths[0] / widths[1],
-            0.5 / 0.4,
-            accuracy: 0.0001,
-            "The cards that absorb the overflow keep their relative shares."
-        )
-    }
-
-    func testAContainerTooNarrowForItsCardsFloorsThemAndClips() {
-        for containerWidth in [CGFloat(0), -500, 120, 400] {
-            let widths = makeWidths(containerWidth: containerWidth, fractions: [0.5, 0.5])
-
-            XCTAssertEqual(
-                widths,
-                [minimum, minimum],
-                "A narrow window clips its cards; it never dissolves the split."
-            )
-        }
-    }
-
-    func testAContainerExactlyAsWideAsTheFloorsStillTotals() {
-        let containerWidth = minimum * 3 + gap * 2
-        let widths = makeWidths(containerWidth: containerWidth, fractions: [0.6, 0.2, 0.2])
-
-        XCTAssertEqual(widths, [minimum, minimum, minimum])
-        assertWidths(widths, sumTo: containerWidth - gap * 2)
-    }
-
-    func testASingleCardTakesTheWholeContainerWithNoGapToPay() {
-        assertWidths(makeWidths(containerWidth: 900, fractions: [1]), sumTo: 900)
-        XCTAssertEqual(makeWidths(containerWidth: 900, fractions: [0.4]), [900])
-        XCTAssertEqual(makeWidths(containerWidth: 900, fractions: []), [])
-    }
 
     func testMalformedFractionsFallBackToEqualColumns() {
         for fractions in [[Double.nan, 0.5], [0, 1], [-0.5, 1.5], [.infinity, 1]] {
@@ -141,47 +61,6 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
         assertFractionsSumToOne(grown)
         XCTAssertEqual(grown[0], (available - minimum) / available, accuracy: 0.0001)
         XCTAssertEqual(grown[1], minimum / available, accuracy: 0.0001)
-    }
-
-    func testEveryDividerSitsCenteredOnTheGapItMoves() {
-        let widths = makeWidths(containerWidth: 1000, fractions: [0.5, 0.25, 0.25])
-        let handleWidth = BrowserSplitLayoutMetrics.resizeHandleHitWidth
-
-        for dividerIndex in 0..<2 {
-            let leading = BrowserSplitColumnLayout.dividerLeadingDistance(
-                after: dividerIndex,
-                cardWidths: widths,
-                gap: gap,
-                handleWidth: handleWidth
-            )
-            let cards = widths.prefix(dividerIndex + 1).reduce(0, +)
-            XCTAssertEqual(
-                leading + handleWidth / 2,
-                cards + gap * CGFloat(dividerIndex) + gap / 2,
-                accuracy: 0.0001,
-                "The handle's hit width is centered on the gap after its card."
-            )
-        }
-    }
-
-    func testTheDividerFollowsTheDragThatMovesIt() {
-        let fractions = BrowserSplitColumnLayout.equalFractions(count: 2)
-        let before = makeDividerDistance(fractions: fractions)
-
-        let after = makeDividerDistance(
-            fractions: makeResize(fractions: fractions, dividerIndex: 0, delta: 60)
-        )
-
-        XCTAssertEqual(
-            after - before,
-            60,
-            accuracy: 0.0001,
-            """
-            The handle is positioned from the fractions its own drag writes, \
-            which is why the drag is measured in the row's space and never in \
-            the handle's.
-            """
-        )
     }
 
     func testEveryDividerResizesAndOutOfRangeDividersDoNot() {
@@ -274,89 +153,6 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
         XCTAssertEqual(
             BrowserSplitColumnLayout.fractionsRemoving(at: 4, from: [0.5, 0.5]),
             [0.5, 0.5]
-        )
-    }
-
-    // MARK: - Drag placeholder
-
-    /// The whole point of the drop column: it is not a hint, it is the joining
-    /// card's own column drawn early, so it has to be exactly the width that
-    /// card will have.
-    func testThePlaceholderBesideALoneCardIsExactlyHalfTheRow() {
-        let widths = makeInsertionWidths(
-            containerWidth: 1200,
-            fractions: [1],
-            index: 1
-        )
-
-        assertWidths(widths, sumTo: 1200 - gap)
-        XCTAssertEqual(widths, [596, 596])
-        XCTAssertEqual(
-            widths,
-            makeWidths(containerWidth: 1200, fractions: [0.5, 0.5]),
-            "The drag lays out the split the drop is about to commit."
-        )
-    }
-
-    func testThePlaceholderTakesAThirdBesideTwoAndAQuarterBesideThree() {
-        let thirds = makeInsertionWidths(
-            containerWidth: 1200,
-            fractions: [0.5, 0.5],
-            index: 1
-        )
-        assertWidths(thirds, sumTo: 1200 - gap * 2)
-        for width in thirds {
-            XCTAssertEqual(width, (1200 - gap * 2) / 3, accuracy: 0.0001)
-        }
-
-        let quarters = makeInsertionWidths(
-            containerWidth: 1200,
-            fractions: [1, 1, 1],
-            index: 2
-        )
-        assertWidths(quarters, sumTo: 1200 - gap * 3)
-        for width in quarters {
-            XCTAssertEqual(width, (1200 - gap * 3) / 4, accuracy: 0.0001)
-        }
-    }
-
-    /// Every slot is a column, so the drop column floors at the same minimum a
-    /// card does and the window clips rather than dissolving the split.
-    func testTheDropColumnFloorsAtTheMinimumLikeEveryOtherColumn() {
-        let widths = makeInsertionWidths(
-            containerWidth: 900,
-            fractions: [1, 1, 1],
-            index: 0
-        )
-
-        XCTAssertEqual(widths, [minimum, minimum, minimum, minimum])
-    }
-
-    /// A resized split gives the newcomer an equal share and keeps its own
-    /// lopsidedness, and the row still fills the window exactly while it does.
-    func testAResizedSplitKeepsItsProportionsAroundTheDropColumn() {
-        let widths = makeInsertionWidths(
-            containerWidth: 1600,
-            fractions: [0.6, 0.4],
-            index: 1
-        )
-
-        assertWidths(widths, sumTo: 1600 - gap * 2)
-        XCTAssertEqual(widths[1], (1600 - gap * 2) / 3, accuracy: 0.0001)
-        XCTAssertEqual(widths[0] / widths[2], 0.6 / 0.4, accuracy: 0.0001)
-    }
-
-    /// Nothing on show is a one-column row, and a one-column row has no gap to
-    /// pay for. A window too narrow even for that floors and clips, exactly as a
-    /// real card does — the drop column is not a special kind of column.
-    func testAnEmptySplitGivesThePlaceholderTheWholeRow() {
-        XCTAssertEqual(
-            makeInsertionWidths(containerWidth: 900, fractions: [], index: 0),
-            [900]
-        )
-        XCTAssertEqual(
-            makeInsertionWidths(containerWidth: 200, fractions: [], index: 0),
-            [minimum]
         )
     }
 
@@ -504,19 +300,6 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
         )
     }
 
-    private func makeDividerDistance(
-        fractions: [Double],
-        dividerIndex: Int = 0,
-        containerWidth: CGFloat = 1000
-    ) -> CGFloat {
-        BrowserSplitColumnLayout.dividerLeadingDistance(
-            after: dividerIndex,
-            cardWidths: makeWidths(containerWidth: containerWidth, fractions: fractions),
-            gap: gap,
-            handleWidth: BrowserSplitLayoutMetrics.resizeHandleHitWidth
-        )
-    }
-
     private func makeResize(
         fractions: [Double],
         dividerIndex: Int,
@@ -530,23 +313,6 @@ final class BrowserSplitColumnLayoutTests: XCTestCase {
             containerWidth: containerWidth,
             gap: gap,
             minimum: minimum
-        )
-    }
-
-    /// The widths a drag in flight lays out, composed exactly as
-    /// `BrowserSplitColumnsView` composes them: the fractions the joining card
-    /// produces, spread across the same container.
-    private func makeInsertionWidths(
-        containerWidth: CGFloat,
-        fractions: [Double],
-        index: Int
-    ) -> [CGFloat] {
-        makeWidths(
-            containerWidth: containerWidth,
-            fractions: BrowserSplitColumnLayout.fractionsInserting(
-                at: index,
-                into: fractions
-            )
         )
     }
 

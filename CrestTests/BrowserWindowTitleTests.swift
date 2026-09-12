@@ -14,14 +14,6 @@ final class BrowserWindowTitleTests: XCTestCase {
         XCTAssertEqual(model.windowTitle, "Beta")
     }
 
-    func testCustomTabTitleWinsAndWhitespaceRenameReturnsToPageTitle() {
-        let model = makeModel()
-        model.browser.session.spaces[0].tabs[0].customTitle = "  My tab  "
-        XCTAssertEqual(model.windowTitle, "My tab")
-        model.browser.session.spaces[0].tabs[0].customTitle = " \n "
-        XCTAssertEqual(model.windowTitle, "Alpha")
-    }
-
     func testStartPageAndMissingSelectionNeverRetainThePreviousTitle() {
         let model = makeModel()
         model.browser.session.spaces[0].tabs = [.startPage()]

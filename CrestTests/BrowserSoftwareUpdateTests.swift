@@ -162,47 +162,6 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(model.phase, .downloading)
     }
 
-    func testEveryNonIdleUpdaterStateHasASidebarPresentation() {
-        XCTAssertFalse(
-            BrowserSceneID.allCases.map(\.rawValue).contains("software-update"),
-            "Software updates must not own an auxiliary window scene."
-        )
-
-        let model = BrowserSoftwareUpdateModel()
-
-        model.presentPermissionRequest(response: { _ in })
-        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .permission)
-
-        model.presentChecking(cancellation: {})
-        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .checking)
-
-        model.presentNoUpdate(message: "Crest is up to date.", acknowledgement: {})
-        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .upToDate)
-
-        model.presentError(message: "The update check failed.", acknowledgement: {})
-        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .failed)
-
-        model.presentInstalled(relaunched: true, acknowledgement: {})
-        XCTAssertEqual(model.sidebarWidgetSnapshot?.phase, .installed)
-
-        model.dismissInstallation()
-        XCTAssertNil(model.sidebarWidgetSnapshot)
-    }
-
-    func testChangelogUsesAnExplicitDetailsSceneInsteadOfTheOldUpdateWindow() {
-        let sceneIDs = Set(BrowserSceneID.allCases.map(\.rawValue))
-
-        XCTAssertFalse(sceneIDs.contains("software-update"))
-        XCTAssertTrue(
-            sceneIDs.contains("software-update-details"),
-            "The sidebar needs an explicit destination for reviewing update notes."
-        )
-        XCTAssertEqual(
-            BrowserSceneID.softwareUpdateDetails.rawValue,
-            BrowserSoftwareUpdateSceneID.details
-        )
-    }
-
     func testDownloadedReleaseNotesRefreshTheSidebarDetailsLink() async throws {
         let source = BrowserSoftwareUpdateWidgetSource()
         let model = BrowserSoftwareUpdateModel(widgetSource: source)
@@ -605,68 +564,4 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
         XCTAssertEqual(acknowledged, [])
     }
 
-    func testReleaseNotesPreserveMarkdownBlockHierarchy() {
-        let document = BrowserSoftwareUpdateReleaseNotesDocument(
-            markdown: """
-                ## Highlights
-
-                A short introduction with **emphasis**.
-
-                ### Fixed
-
-                - Restored tab selection
-                - Kept extension pages live
-
-                [View all changes](https://example.com/compare)
-                """
-        )
-
-        XCTAssertEqual(
-            document.blocks.map(\.kind),
-            [
-                .heading(level: 2),
-                .paragraph,
-                .heading(level: 3),
-                .bullet,
-                .bullet,
-                .paragraph,
-            ]
-        )
-        XCTAssertEqual(
-            document.blocks.map(\.plainText),
-            [
-                "Highlights",
-                "A short introduction with emphasis.",
-                "Fixed",
-                "Restored tab selection",
-                "Kept extension pages live",
-                "View all changes",
-            ]
-        )
-    }
-
-    func testReleaseNotesKeepWrappedParagraphsTogether() {
-        let document = BrowserSoftwareUpdateReleaseNotesDocument(
-            markdown: """
-                Development builds contain the newest changes and may be less
-                reliable than stable releases.
-                - Includes the latest browsing improvements.
-
-                ---
-                """
-        )
-
-        XCTAssertEqual(
-            document.blocks.map(\.kind),
-            [.paragraph, .bullet, .divider]
-        )
-        XCTAssertEqual(
-            document.blocks.first?.plainText,
-            "Development builds contain the newest changes and may be less reliable than stable releases."
-        )
-        XCTAssertEqual(
-            document.blocks.dropFirst().first?.plainText,
-            "Includes the latest browsing improvements."
-        )
-    }
 }

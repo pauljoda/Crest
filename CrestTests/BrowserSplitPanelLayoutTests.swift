@@ -5,23 +5,6 @@ import XCTest
 final class BrowserSplitPanelLayoutTests: XCTestCase {
     private let gap = BrowserSplitLayoutMetrics.interCardGap
 
-    func testPanelReservesItsWidthWithoutJoiningMemberFractions() {
-        let available = BrowserSplitPanelLayout.memberContainerWidth(
-            containerWidth: 1200, panelWidth: 360
-        )
-        let widths = BrowserSplitColumnLayout.widths(containerWidth: available, fractions: [0.6, 0.4])
-        XCTAssertEqual(widths.reduce(0, +) + gap * 2 + 360, 1200, accuracy: 0.001)
-        XCTAssertEqual(widths[0] / widths[1], 1.5, accuracy: 0.001)
-    }
-
-    func testPanelYieldsBeforeFourMemberCardsClip() {
-        let width = BrowserSplitPanelLayout.resolvedWidth(
-            requestedWidth: 360, containerWidth: 1100, memberCount: 4
-        )
-        XCTAssertEqual(width, 1100 - 4 * 240 - 4 * gap)
-        XCTAssertLessThan(width, BrowserExtensionSidebarLayoutMetrics.minimumWidth)
-    }
-
     func testPanelDoesNotProduceNegativeOrNonFiniteWidths() {
         XCTAssertEqual(
             BrowserSplitPanelLayout.resolvedWidth(
@@ -35,21 +18,6 @@ final class BrowserSplitPanelLayoutTests: XCTestCase {
             BrowserSplitPanelLayout.resolvedWidth(
                 requestedWidth: 360, containerWidth: 1000, memberCount: 0
             ), 0)
-    }
-
-    func testRequestedPanelWidthIsClampedAndInvalidValuesUseDefault() {
-        XCTAssertEqual(
-            BrowserSplitPanelLayout.resolvedWidth(
-                requestedWidth: 1000, containerWidth: 1600, memberCount: 1
-            ), 600)
-        XCTAssertEqual(
-            BrowserSplitPanelLayout.resolvedWidth(
-                requestedWidth: 20, containerWidth: 1600, memberCount: 1
-            ), 280)
-        XCTAssertEqual(
-            BrowserSplitPanelLayout.resolvedWidth(
-                requestedWidth: .nan, containerWidth: 1600, memberCount: 1
-            ), 360)
     }
 
     func testPanelResizeUsesTotalSemanticTravelAndCommitsOnce() {

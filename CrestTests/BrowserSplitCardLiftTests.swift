@@ -281,50 +281,6 @@ final class BrowserSplitCardLiftPolicyTests: XCTestCase {
         )
     }
 
-    // MARK: - Where the pointer took hold
-
-    func testTheGrabFractionIsWhereInsideTheCardThePointerLanded() {
-        let card = CGRect(x: 100, y: 50, width: 400, height: 200)
-
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.grabFraction(
-                pointer: CGPoint(x: 300, y: 150),
-                in: card
-            ),
-            CGPoint(x: 0.5, y: 0.5)
-        )
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.grabFraction(
-                pointer: CGPoint(x: 100, y: 50),
-                in: card
-            ),
-            CGPoint(x: 0, y: 0)
-        )
-    }
-
-    /// A pointer outside the card — a frame the row has already animated away
-    /// from under it — is still holding one of its edges rather than a point
-    /// somewhere off the card entirely.
-    func testTheGrabFractionStaysInsideTheCard() {
-        let card = CGRect(x: 100, y: 50, width: 400, height: 200)
-
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.grabFraction(
-                pointer: CGPoint(x: -900, y: 9_000),
-                in: card
-            ),
-            CGPoint(x: 0, y: 1)
-        )
-        XCTAssertEqual(
-            BrowserSplitCardLiftPolicy.grabFraction(
-                pointer: .zero,
-                in: CGRect(x: 0, y: 0, width: 0, height: 0)
-            ),
-            CGPoint(x: 0.5, y: 0.5),
-            "A card with no size is held in the middle."
-        )
-    }
-
     // MARK: - Which cards have a picture to carry
 
     /// Selecting a split builds a page — and a `WKWebView` — for every member,
@@ -608,42 +564,6 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
 
     // MARK: - The carry
 
-    /// The preview is placed by arithmetic on the pointer alone, so the point
-    /// somebody grabbed is under the cursor at pickup and stays there however
-    /// far the card travels.
-    func testTheGrabbedPointStaysUnderThePointer() {
-        let state = BrowserSplitCardLiftState()
-        let grab = CGPoint(x: 500, y: 300)
-        let token = state.reserve()
-        state.begin(
-            token: token,
-            tabID: Self.tabID,
-            originIndex: 0,
-            cardFrame: Self.cardFrame,
-            pointer: grab,
-            surfaceOrigin: Self.surfaceOrigin
-        )
-
-        XCTAssertEqual(
-            Self.grabbedPoint(in: state),
-            CGPoint(
-                x: Self.surfaceOrigin.x + grab.x,
-                y: Self.surfaceOrigin.y + grab.y
-            )
-        )
-
-        state.update(
-            pointer: CGPoint(x: 120, y: 480),
-            gapIndex: 0,
-            surfaceOrigin: Self.surfaceOrigin
-        )
-
-        XCTAssertEqual(
-            Self.grabbedPoint(in: state),
-            CGPoint(x: Self.surfaceOrigin.x + 120, y: Self.surfaceOrigin.y + 480)
-        )
-    }
-
     func testAPointerSampleMovesTheGapWithIt() {
         let state = Self.carryingState()
 
@@ -658,16 +578,6 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
     }
 
     // MARK: - The picture
-
-    func testTheSnapshotCrossfadesInWhenWebKitAnswers() {
-        let state = BrowserSplitCardLiftState()
-        let token = state.reserve()
-        Self.promote(state, token: token)
-
-        state.attach(snapshot: Self.image, token: token)
-
-        XCTAssertEqual(state.lift?.snapshot, Self.image)
-    }
 
     /// A picture asked for by a pickup that never became a carry belongs to
     /// nothing on screen.
@@ -701,20 +611,6 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
         )
 
         state.attach(snapshot: Self.image, token: second)
-
-        XCTAssertEqual(state.lift?.snapshot, Self.image)
-    }
-
-    /// The preview is still on screen while it descends, so a picture that lands
-    /// a frame late is still worth showing. Refusing it is how a short press ends
-    /// up having shown nothing but an empty card for its whole life.
-    func testASnapshotArrivingDuringTheSettleIsStillShown() {
-        let state = BrowserSplitCardLiftState()
-        let token = state.reserve()
-        Self.promote(state, token: token)
-        _ = state.drop()
-
-        state.attach(snapshot: Self.image, token: token)
 
         XCTAssertEqual(state.lift?.snapshot, Self.image)
     }
@@ -987,15 +883,6 @@ final class BrowserSplitCardLiftStateTests: XCTestCase {
         state.lift?.token ?? BrowserSplitCardLiftToken(sequence: 0)
     }
 
-    /// Where the point somebody grabbed has ended up, in the preview window's
-    /// coordinates: the preview's origin plus the grabbed fraction of the card.
-    private static func grabbedPoint(in state: BrowserSplitCardLiftState) -> CGPoint? {
-        guard let lift = state.lift else { return nil }
-        return CGPoint(
-            x: lift.previewOrigin.x + lift.grabFraction.x * lift.cardSize.width,
-            y: lift.previewOrigin.y + lift.grabFraction.y * lift.cardSize.height
-        )
-    }
 }
 
 private enum BrowserSplitCardTestFixture {

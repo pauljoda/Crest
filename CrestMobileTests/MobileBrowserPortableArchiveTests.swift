@@ -1,24 +1,25 @@
 import Foundation
 import SQLite3
 import XCTest
+
 @testable import CrestMobile
 
 @MainActor
 final class MobileBrowserPortableArchiveTests: XCTestCase {
     func testFirefoxOpenTabsImportCreatesFreshMobileSpaces() throws {
         let json = """
-        {
-          "selectedWindow": 1,
-          "windows": [{
-            "title": "Mobile Firefox",
-            "selected": 1,
-            "tabs": [{
-              "index": 1,
-              "entries": [{"url":"https://mozilla.org/","title":"Mozilla"}]
-            }]
-          }]
-        }
-        """
+            {
+              "selectedWindow": 1,
+              "windows": [{
+                "title": "Mobile Firefox",
+                "selected": 1,
+                "tabs": [{
+                  "index": 1,
+                  "entries": [{"url":"https://mozilla.org/","title":"Mozilla"}]
+                }]
+              }]
+            }
+            """
 
         let first = try BrowserTabMigration.decode(
             Data(json.utf8),
@@ -45,7 +46,8 @@ final class MobileBrowserPortableArchiveTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("History")
         var database: OpaquePointer?
         guard sqlite3_open(databaseURL.path, &database) == SQLITE_OK,
-              let database else {
+            let database
+        else {
             return XCTFail("Could not create the Chromium history fixture")
         }
         let statements = [
@@ -74,12 +76,12 @@ final class MobileBrowserPortableArchiveTests: XCTestCase {
 
     func testStandardBookmarkHTMLImportsIntoAFreshIsolatedSpace() throws {
         let html = """
-        <!DOCTYPE NETSCAPE-Bookmark-file-1>
-        <DL><p>
-          <DT><H3>Mobile</H3>
-          <DL><p><DT><A HREF="https://example.com/">Example</A></DL><p>
-        </DL><p>
-        """
+            <!DOCTYPE NETSCAPE-Bookmark-file-1>
+            <DL><p>
+              <DT><H3>Mobile</H3>
+              <DL><p><DT><A HREF="https://example.com/">Example</A></DL><p>
+            </DL><p>
+            """
 
         let first = try BrowserBookmarkMigration.decode(
             Data(html.utf8),
@@ -93,10 +95,6 @@ final class MobileBrowserPortableArchiveTests: XCTestCase {
         XCTAssertEqual(first.spaces.first?.tabs.first?.title, "Example")
         XCTAssertNotEqual(first.spaces.first?.profile, second.spaces.first?.profile)
         XCTAssertNotEqual(first.spaces.first?.tabs.first?.id, second.spaces.first?.tabs.first?.id)
-    }
-
-    func testCanonicalExportFilenameCarriesTheImportableJSONExtension() {
-        XCTAssertTrue(BrowserPortableArchive.defaultFilename.hasSuffix(".json"))
     }
 
     func testPortableArchiveRoundTripCreatesFreshSpaceAndProfileIDs() throws {

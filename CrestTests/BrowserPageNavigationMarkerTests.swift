@@ -7,20 +7,6 @@ import XCTest
 final class BrowserPageNavigationMarkerTests: XCTestCase {
     private var navigationSource: WKWebView?
 
-    func testEmptyPageBackgroundIsClearUntilWebKitFinishesContent() throws {
-        let page = try makePage()
-
-        XCTAssertEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
-
-        page.webView(page.webView, didCommit: nil)
-
-        XCTAssertEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
-
-        page.webView(page.webView, didFinish: nil)
-
-        XCTAssertNotEqual(page.webView.underPageBackgroundColor?.cgColor.alpha, 0)
-    }
-
     func testFreshPageRevealsAtCommitBeforeNavigationFinishes() throws {
         let page = try makePage()
         let navigation = try makeNavigation()

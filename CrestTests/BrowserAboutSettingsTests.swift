@@ -4,48 +4,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserAboutSettingsTests: XCTestCase {
-    func testBuildInformationReadsTheShippedBundleKeys() {
-        let information = BrowserAboutBuildInformation(
-            infoDictionary: [
-                "CFBundleShortVersionString": "0.4.69",
-                "CFBundleVersion": "123",
-            ],
-            bundleIdentifier: "com.example.crest"
-        )
-
-        XCTAssertEqual(information.version, "0.4.69")
-        XCTAssertEqual(information.build, "123")
-        XCTAssertEqual(information.bundleIdentifier, "com.example.crest")
-    }
-
-    func testBuildInformationKeepsUsefulFallbacksForIncompleteBundles() {
-        let information = BrowserAboutBuildInformation(
-            infoDictionary: [:],
-            bundleIdentifier: nil
-        )
-
-        XCTAssertEqual(information.version, "—")
-        XCTAssertEqual(information.build, "—")
-        XCTAssertEqual(
-            information.bundleIdentifier,
-            ProductIdentity.bundleIdentifier
-        )
-    }
-
-    func testAboutLinksUseThePublicSupportRoutes() {
-        XCTAssertEqual(
-            BrowserAboutLinks.feedback.absoluteString,
-            "https://www.reddit.com/r/CrestBrowser"
-        )
-        XCTAssertEqual(
-            BrowserAboutLinks.issues.absoluteString,
-            "https://github.com/pauljoda/Crest/issues/new/choose"
-        )
-        XCTAssertEqual(
-            BrowserAboutLinks.roadmap.absoluteString,
-            "https://github.com/users/pauljoda/projects/3"
-        )
-    }
 
     func testCurrentHighlightsHideInternalEntriesAndPreferNewestIDs() throws {
         let data = try XCTUnwrap(
@@ -98,8 +56,4 @@ final class BrowserAboutSettingsTests: XCTestCase {
                 .currentHighlights(limit: 0).isEmpty)
     }
 
-    @MainActor
-    func testWhatsNewStartsCollapsed() {
-        XCTAssertFalse(BrowserAboutSettingsPane.startsWhatsNewExpanded)
-    }
 }

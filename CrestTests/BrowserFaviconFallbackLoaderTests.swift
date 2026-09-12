@@ -202,14 +202,8 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
         let iconURL = try XCTUnwrap(
             URL(string: "https://res.cdn.office.net/admin-favicon.ico")
         )
-        let pageURL = try XCTUnwrap(
-            URL(string: "https://admin.microsoft.com/AdminPortal/Home")
-        )
-
         let data = await BrowserFaviconCapture.downloadCandidate(
             iconURL,
-            pageURL: pageURL,
-            cookies: [],
             userAgent: "Mozilla/5.0 Crest favicon fixture",
             session: session
         )
@@ -218,7 +212,8 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
         let request = try XCTUnwrap(FaviconURLProtocolStub.lastRequest)
         XCTAssertEqual(request.cachePolicy, .reloadIgnoringLocalAndRemoteCacheData)
         XCTAssertEqual(request.value(forHTTPHeaderField: "Cache-Control"), "no-cache")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Referer"), pageURL.absoluteString)
+        XCTAssertNil(request.value(forHTTPHeaderField: "Referer"))
+        XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
         XCTAssertEqual(
             request.value(forHTTPHeaderField: "User-Agent"),
             "Mozilla/5.0 Crest favicon fixture"

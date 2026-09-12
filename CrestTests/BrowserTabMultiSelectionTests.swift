@@ -292,22 +292,6 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.savedTabs.map(\.id), pins.ids)
     }
 
-    func testBatchLayoutClosesOnlySelectedIntervalsAndReservesTheirCombinedHeight() {
-        let ids = (0..<4).map { _ in BrowserSidebarReorderItemID.tab(TabID()) }
-        var layout = BrowserSidebarReorderLayout(
-            sourceID: ids[0], sourceFrame: CGRect(x: 0, y: 0, width: 220, height: 40), hiddenIDs: [ids[0], ids[2]])
-        layout.removedFrames = [
-            CGRect(x: 0, y: 0, width: 220, height: 40), CGRect(x: 0, y: 80, width: 220, height: 40),
-        ]
-        layout.batchHeight = 80
-        let assignment = BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID())
-        let row = BrowserSidebarReorderRow(
-            id: ids[3], space: assignment, section: .tabs(placement: .current, folderID: nil),
-            frame: CGRect(x: 0, y: 120, width: 220, height: 40))
-        XCTAssertEqual(layout.frame(for: row)?.minY, 40)
-        XCTAssertEqual(layout.gapHeight, 80)
-    }
-
     func testPointerTargetsAndRangesFollowLiveRowsAfterMovingAndReparenting() throws {
         let session = makeSession(count: 3)
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())

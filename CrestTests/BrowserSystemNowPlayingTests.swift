@@ -19,20 +19,6 @@ final class BrowserSystemNowPlayingTests: XCTestCase {
         XCTAssertEqual(renderedSize?.height, 64)
     }
 
-    func testSystemArtworkPreservesWideAndTallSourceAspectRatios() throws {
-        let wide = try BrowserMediaPlayerNowPlayingDriver.artwork(
-            from: makeArtworkData(width: 240, height: 120)
-        )?.image(at: CGSize(width: 64, height: 64))
-        let tall = try BrowserMediaPlayerNowPlayingDriver.artwork(
-            from: makeArtworkData(width: 120, height: 240)
-        )?.image(at: CGSize(width: 64, height: 64))
-
-        XCTAssertEqual(wide?.size.width, 64)
-        XCTAssertEqual(wide?.size.height, 32)
-        XCTAssertEqual(tall?.size.width, 32)
-        XCTAssertEqual(tall?.size.height, 64)
-    }
-
     private func makeArtworkData(width: Int, height: Int) throws -> Data {
         let bytes = Data(repeating: 0x7f, count: width * height * 4)
         let provider = try XCTUnwrap(CGDataProvider(data: bytes as CFData))

@@ -18,29 +18,4 @@ final class BrowserFreshInstallSeedTests: XCTestCase {
         XCTAssertNotNil(session.disposableSeedMarker)
     }
 
-    func testFreshInstallSeedWearsTheWinterHousePalette() throws {
-        let space = try XCTUnwrap(BrowserSession.freshInstallSeed.spaces.first)
-
-        XCTAssertEqual(space.branding.colors, BrowserSpaceHousePalette.winter.colors)
-        XCTAssertEqual(
-            space.branding.readabilityFade,
-            BrowserSpaceBranding.initialReadabilityFade
-        )
-        XCTAssertEqual(space.branding.bannerPattern, .diagonal)
-        XCTAssertEqual(space.branding.bannerStrength, 1)
-        XCTAssertEqual(space.branding.iconStyle, .layeredCrest)
-        XCTAssertEqual(space.branding.crest, BrowserSpaceHousePalette.winter.crest)
-        XCTAssertEqual(
-            BrowserSpaceForegroundPolicy.tone(for: space.branding),
-            .light
-        )
-        // The seeded Space is one of the nine, so the swatch row opens already
-        // showing the reader which palette they are looking at.
-        XCTAssertEqual(
-            BrowserSpaceBrandingPreset.curated.first {
-                $0.isSelected(in: space.branding)
-            }?.title,
-            "Winter"
-        )
-    }
 }

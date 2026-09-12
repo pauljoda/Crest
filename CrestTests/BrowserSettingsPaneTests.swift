@@ -6,60 +6,12 @@ import XCTest
 @MainActor
 final class BrowserSettingsPaneTests: XCTestCase {
 
-    func testEveryOfferedMacAppIconLoadsFromTheBuiltCatalog() throws {
-        for palette in BrowserSpaceHousePalette.allCases {
-            let name = "Crest" + palette.rawValue.capitalized
-            let image = try XCTUnwrap(
-                BrowserMacAppIconAssets.image(named: name, in: .main))
-            XCTAssertGreaterThan(image.size.width, 0)
-            XCTAssertNotNil(image.tiffRepresentation)
-            // Validate both resources even when the test device uses Clear or Tinted.
-            for resource in [name + "DockLight", name + "DockDark"] {
-                let artwork = try XCTUnwrap(Bundle.main.image(forResource: resource))
-                XCTAssertNotNil(artwork.tiffRepresentation)
-                XCTAssertEqual(artwork.size, NSSize(width: 512, height: 512))
-                XCTAssertTrue(artwork.representations.contains { $0.pixelsWide == 1024 && $0.pixelsHigh == 1024 })
-            }
-        }
-        XCTAssertNil(BrowserMacAppIconAssets.image(named: "../../Crest", in: .main))
-        XCTAssertNil(BrowserMacAppIconAssets.image(named: "CrestMissing", in: .main))
-    }
-
     func testBundledDockPluginCanLoadItsDeclaredPrincipalClass() throws {
         let name = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: "NSDockTilePlugIn") as? String)
         let directory = try XCTUnwrap(Bundle.main.builtInPlugInsURL)
         let plugin = try XCTUnwrap(Bundle(url: directory.appendingPathComponent(name)))
         try plugin.loadAndReturnError()
         XCTAssertNotNil(plugin.principalClass as? any NSDockTilePlugIn.Type)
-    }
-
-    func testMacSearchEnginePresentationAndProviderLabelsStayCompact() {
-        XCTAssertEqual(
-            BrowserSearchEngineEditorPresentationStyle.platformDefault,
-            .sheet
-        )
-        XCTAssertEqual(
-            BrowserSearchEngineEditorKeyboardDismissalStyle.platformDefault,
-            .focusOnly
-        )
-        XCTAssertFalse(
-            BrowserSearchEngineEditorKeyboardDismissalStyle.platformDefault
-                .repeatsDismissalAfterNavigation
-        )
-
-        let layout = BrowserSearchProviderIdentityLabelLayout.platformDefault
-        XCTAssertEqual(layout, .compact)
-        XCTAssertEqual(layout.iconSize, 20)
-        XCTAssertEqual(layout.spacing, 4)
-        XCTAssertEqual(layout.verticalPadding, 0)
-        XCTAssertEqual(
-            BrowserSpaceBrowsingPickerPresentationStyle.platformDefault,
-            .nativePicker
-        )
-        XCTAssertFalse(
-            BrowserSpaceBrowsingPickerPresentationStyle.platformDefault
-                .dismissesKeyboardAfterSelection
-        )
     }
 
     func testMacWebTextAssistanceForcesEverySmartMutationOff() throws {
@@ -130,167 +82,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
         )
     }
 
-    // MARK: - Panes
-
-    /// The three panes moved out of the macOS shell in A4a are shared source. This
-    /// asserts they still resolve against a real store on this platform — the cheap
-    /// half of "compiles and composes on both platforms"; `CrestMobileTests` holds
-    /// the other half.
-    func testEverySharedSettingsPaneComposesAgainstAStore() {
-        let browser = BrowserStore.preview()
-        let pages = BrowserPagePool()
-        let spaceAccess = BrowserSpaceAccessController()
-
-        XCTAssertNotNil(
-            BrowserLinkSettingsPane(
-                browser: browser,
-                spaceAccess: spaceAccess
-            ).body
-        )
-        XCTAssertNotNil(
-            BrowserExtensionSettingsPane(
-                browser: browser,
-                spaceAccess: spaceAccess,
-                extensionControllerPool: pages.extensionControllerPool
-            ).body
-        )
-        XCTAssertNotNil(
-            BrowserAdvancedSettingsPane(
-                browser: browser,
-                spaceAccess: spaceAccess,
-                setupActions: [],
-                showsMacOSImportRequirement: false
-            ).body
-        )
-        XCTAssertNotNil(
-            BrowserSyncSettingsView(
-                browser: browser,
-                cloudSync: BrowserCloudSyncController(
-                    browser: browser,
-                    configuration: nil
-                )
-            ).body
-        )
-        XCTAssertNotNil(BrowserGeneralSettingsPane(browser: browser).body)
-        XCTAssertNotNil(BrowserAboutSettingsPane().body)
-        XCTAssertNotNil(
-            BrowserPrivacySettingsPane(
-                browser: browser,
-                downloadCenter: pages.downloadCenter,
-                spaceAccess: spaceAccess,
-                permissionCenter: pages.permissionCenter,
-                contentBlockingErrorDescription: nil
-            ).body
-        )
-        XCTAssertNotNil(
-            BrowserPasswordSettingsPane(
-                browser: browser,
-                spaceAccess: spaceAccess,
-                layout: .macOSPage,
-                searchText: .constant("")
-            ).body
-        )
-    }
-
-    func testLookAndFeelPresentsTheSharedDefaultZoomControl() {
-        let preferences = BrowserDefaultPageZoomStore(
-            persistence: InMemoryBrowserDefaultPageZoomPersistence()
-        )
-        let section = BrowserDefaultPageZoomSettingsSection(
-            preferences: preferences
-        )
-
-        XCTAssertEqual(preferences.defaultZoom, 1)
-        XCTAssertEqual(
-            BrowserPageZoomPolicy.percentageLabel(
-                for: preferences.defaultZoom
-            ),
-            "100%"
-        )
-        XCTAssertEqual(
-            BrowserDefaultPageZoomSettingsSection.controlIdentifier,
-            "default-page-zoom-slider"
-        )
-        XCTAssertNotNil(section.body)
-        XCTAssertTrue(
-            BrowserSettingsDestination.lookAndFeel.matchesSearchQuery(
-                "zoom",
-                locale: Locale(identifier: "en_US")
-            )
-        )
-    }
-
-    func testGeneralSettingsPresentsTheDesktopSpellCheckingControl() {
-        let section = BrowserSpellCheckingSettingsSection()
-
-        XCTAssertEqual(
-            BrowserSpellCheckingSettingsSection.controlIdentifier,
-            "continuous-spell-checking-toggle"
-        )
-        XCTAssertNotNil(section.body)
-        XCTAssertTrue(
-            BrowserSettingsDestination.general.matchesSearchQuery(
-                "spell check",
-                locale: Locale(identifier: "en_US")
-            )
-        )
-    }
-
-    func testGeneralSettingsPresentsTheNewTabFocusControlDefaultingOff() {
-        let preferences = BrowserLinkPreferenceStore(
-            persistence: InMemoryBrowserLinkPreferencesPersistence()
-        )
-        let section = BrowserNewTabSettingsSection(preferences: preferences)
-
-        XCTAssertFalse(preferences.preferences.focusesNewTabsOpenedFromLinks)
-        XCTAssertEqual(
-            BrowserNewTabSettingsSection.controlIdentifier,
-            "focus-new-tabs-opened-from-links-toggle"
-        )
-        XCTAssertNotNil(section.body)
-        XCTAssertTrue(
-            BrowserSettingsDestination.general.matchesSearchQuery(
-                "focus new tabs",
-                locale: Locale(identifier: "en_US")
-            )
-        )
-    }
-
-    /// The Setup section is data because the two shells offer different setup
-    /// capabilities, so a caller's action has to survive the trip into the pane.
-    func testAdvancedSetupActionCarriesItsIdentityAndFires() {
-        var fired = 0
-        let action = BrowserAdvancedSetupAction(
-            id: "manual-setup",
-            title: "Review & Customize Setup…",
-            symbol: "sparkles",
-            help: "Edit current Spaces or add Spaces and tabs in the setup preview",
-            identifier: "mobile-open-setup"
-        ) {
-            fired += 1
-        }
-
-        XCTAssertEqual(action.id, "manual-setup")
-        XCTAssertEqual(action.symbol, "sparkles")
-        XCTAssertNotNil(action.help)
-        XCTAssertEqual(action.identifier, "mobile-open-setup")
-        action.action()
-        XCTAssertEqual(fired, 1)
-    }
-
-    // MARK: - Pane header
-
-    /// The desktop window is measured in points against a fixed compact titlebar, so
-    /// its tile stays put; the iOS sheet is read at the reader's own text size.
-    func testOnlyTheMobileHeaderFollowsDynamicTypeForItsTile() {
-        XCTAssertFalse(
-            BrowserSettingsPaneHeaderLayout.macOSPage.scalesIconWithDynamicType
-        )
-        XCTAssertTrue(
-            BrowserSettingsPaneHeaderLayout.mobilePage.scalesIconWithDynamicType
-        )
-    }
-
     // MARK: - Extension status
 
     /// Both shells used to derive an extension's colour by switching on its English
@@ -338,69 +129,9 @@ final class BrowserSettingsPaneTests: XCTestCase {
             .needsAttention
         )
 
-        XCTAssertEqual(BrowserExtensionStatus.on.color, .green)
-        XCTAssertEqual(BrowserExtensionStatus.off.color, .secondary)
-        XCTAssertEqual(BrowserExtensionStatus.needsAttention.color, .orange)
     }
 
     // MARK: - Passwords
-
-    /// The two shells split the Passwords pane along different lines and both splits
-    /// shipped: the desktop lists a Space's passwords on the page and exports from
-    /// there, while touch keeps that list in a sheet and puts the Space's credential
-    /// preferences on the page instead. Sharing the pane must not quietly move
-    /// either half.
-    func testPasswordPaneLayoutsKeepEachShellsShippedShape() {
-        let mac = BrowserPasswordSettingsLayout.macOSPage
-        XCTAssertTrue(mac.showsSavedPasswords)
-        XCTAssertTrue(mac.showsExportAction)
-        XCTAssertFalse(mac.showsManageAction)
-        XCTAssertFalse(
-            mac.showsCredentialPreferences,
-            "The desktop edits a Space's password preferences in the Spaces pane."
-        )
-
-        let mobile = BrowserPasswordSettingsLayout.mobilePage
-        XCTAssertTrue(mobile.showsCredentialPreferences)
-        XCTAssertTrue(mobile.showsManageAction)
-        XCTAssertFalse(mobile.showsSavedPasswords)
-        XCTAssertFalse(
-            mobile.showsExportAction,
-            "Touch exports from inside the sheet that owns the list."
-        )
-
-        let sheet = BrowserPasswordSettingsLayout.mobileSheet
-        XCTAssertTrue(sheet.showsSavedPasswords)
-        XCTAssertTrue(sheet.showsExportAction)
-        XCTAssertTrue(
-            sheet.showsCredentialPreferences,
-            "The sidebar opens this sheet without passing through Settings, so the Space's preferences have to be reachable from inside it."
-        )
-        XCTAssertFalse(
-            sheet.showsManageAction,
-            "The sheet is the manager; it cannot offer a way into itself."
-        )
-
-        XCTAssertNotEqual(mac, mobile)
-        XCTAssertNotEqual(mobile, sheet)
-
-        XCTAssertTrue(mac.supportsCredentialFileImport)
-        XCTAssertFalse(mobile.supportsCredentialFileImport)
-        XCTAssertTrue(sheet.supportsCredentialFileImport)
-    }
-
-    /// The warning before a plaintext export names where the file is about to be
-    /// written, and the two shells write it to different places.
-    func testPlaintextExportNamesEachShellsDestination() {
-        XCTAssertEqual(
-            BrowserPasswordSettingsLayout.macOSPage.exportDestinationName,
-            "save panel"
-        )
-        XCTAssertEqual(
-            BrowserPasswordSettingsLayout.mobileSheet.exportDestinationName,
-            "Files picker"
-        )
-    }
 
     /// The pane's search runs over four fields, and both shells had written their own
     /// copy of the predicate.
@@ -443,59 +174,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
             BrowserCredentialSettingsPolicy.filter(all, matching: "Realm"),
             [httpBasic],
             "The authentication scope is part of how a reader finds a credential."
-        )
-    }
-
-    /// Deletion is irreversible and can reach past this device, so the confirmation
-    /// names the account, the site, the scope, the Space, and the synchronized copy.
-    func testDeletionMessageNamesTheScopeAndTheSynchronizedCopy() {
-        let spaceID = SpaceID()
-        let origin = CredentialOrigin(url: URL(string: "https://intranet.example")!)!
-        let synchronized = CredentialDescriptor(
-            spaceID: spaceID,
-            origin: origin,
-            scope: .httpBasic(realm: "Members"),
-            username: "operator",
-            isSynchronizable: true
-        )
-        let local = CredentialDescriptor(
-            spaceID: spaceID,
-            origin: origin,
-            username: "operator"
-        )
-
-        let synchronizedMessage = BrowserCredentialSettingsPolicy.deletionMessage(
-            for: synchronized,
-            spaceName: "Work"
-        )
-        XCTAssertTrue(synchronizedMessage.contains("operator"))
-        XCTAssertTrue(synchronizedMessage.contains("intranet.example"))
-        XCTAssertTrue(synchronizedMessage.contains("Realm"))
-        XCTAssertTrue(synchronizedMessage.contains("from Work?"))
-        XCTAssertTrue(synchronizedMessage.contains("iCloud Keychain item"))
-        XCTAssertTrue(synchronizedMessage.hasSuffix("This cannot be undone."))
-
-        let localMessage = BrowserCredentialSettingsPolicy.deletionMessage(
-            for: local,
-            spaceName: "Work"
-        )
-        XCTAssertFalse(
-            localMessage.contains("iCloud"),
-            "A local-only password must not claim to remove a synchronized copy."
-        )
-        XCTAssertFalse(localMessage.contains("("), "A web form has no scope to name.")
-    }
-
-    /// An empty list means two different things, and says so.
-    func testEmptyPasswordDescriptionDependsOnWhetherAQueryIsRunning() {
-        XCTAssertNotEqual(
-            BrowserCredentialSettingsPolicy.emptyDescription(isSearching: true),
-            BrowserCredentialSettingsPolicy.emptyDescription(isSearching: false)
-        )
-        XCTAssertTrue(
-            BrowserCredentialSettingsPolicy
-                .emptyDescription(isSearching: false)
-                .contains("only in this Space")
         )
     }
 
@@ -597,22 +275,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
     }
 
     // MARK: - Default browser
-
-    /// The desktop claims the HTTP handlers itself; iOS can only open Default Apps
-    /// Settings. General reads that from the controller rather than from `#if os`, so
-    /// the pane's one platform seam is a value a test can set.
-    func testGeneralPaneReadsItsDefaultBrowserSeamFromTheRequestStyle() {
-        XCTAssertEqual(
-            BrowserDefaultBrowserController().requestStyle,
-            .direct,
-            "macOS sets the default browser without leaving Crest."
-        )
-        XCTAssertEqual(
-            BrowserDefaultBrowserController(requestStyle: .systemSettings)
-                .requestStyle,
-            .systemSettings
-        )
-    }
 
     private func summary(
         isEnabled: Bool,

@@ -3308,9 +3308,8 @@ final class BrowserSyncTests: XCTestCase {
     }
 
     /// A Space record written by a newer build can name heraldic vocabulary this
-    /// build has never seen. Because a payload that refuses to decode fails the
-    /// whole fetched batch — not just its own record — the branding decoder has to
-    /// absorb the unknown value rather than throw.
+    /// build has never seen. The branding decoder must keep the readable Space
+    /// data instead of losing the record to an unknown decorative value.
     func testSyncedSpaceSurvivesBrandingVocabularyFromANewerBuild() throws {
         var session = BrowserSession.preview
         session.spaces[0].branding = BrowserSpaceBranding(
@@ -3338,10 +3337,10 @@ final class BrowserSyncTests: XCTestCase {
         var space = try XCTUnwrap(payload["value"] as? [String: Any])
         var branding = try XCTUnwrap(space["branding"] as? [String: Any])
         var crest = try XCTUnwrap(branding["crest"] as? [String: Any])
-        crest["symbol"] = "griffin"
-        crest["trim"] = "mantling"
+        crest["symbol"] = "__unknown_future_symbol__"
+        crest["trim"] = "__unknown_future_trim__"
         branding["crest"] = crest
-        branding["renderingVersion"] = 4
+        branding["renderingVersion"] = BrowserSpaceBranding.currentRenderingVersion + 1
         space["branding"] = branding
         payload["value"] = space
 

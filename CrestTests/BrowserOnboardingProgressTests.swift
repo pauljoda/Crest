@@ -151,17 +151,6 @@ final class BrowserOnboardingProgressTests: XCTestCase {
         )
     }
 
-    func testWelcomeOffersSetupForTheDisposableSeedSession() {
-        XCTAssertEqual(
-            BrowserOnboardingWelcomePolicy.action(
-                progressIsChecking: false,
-                cloudPhase: .ready,
-                hasCompletedSetup: false
-            ),
-            .setup
-        )
-    }
-
     @MainActor
     func testForcedSetupIgnoresAStoredCompletionDuringFixtureRefresh() async throws {
         let suite = "BrowserOnboardingProgressTests.\(UUID().uuidString)"

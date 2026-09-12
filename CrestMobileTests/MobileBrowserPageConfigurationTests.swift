@@ -21,7 +21,10 @@ final class MobileBrowserPageConfigurationTests: XCTestCase {
             "iOS is the platform that jetsams, so resident background tabs must let WebKit suspend them."
         )
         XCTAssertTrue(configuration.preferences.isElementFullscreenEnabled)
-        XCTAssertTrue(configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+        XCTAssertFalse(
+            configuration.preferences.javaScriptCanOpenWindowsAutomatically,
+            "Automatic popups require the owning site's permission."
+        )
         XCTAssertFalse(configuration.limitsNavigationsToAppBoundDomains)
         XCTAssertTrue(configuration.upgradeKnownHostsToHTTPS)
         XCTAssertTrue(configuration.allowsAirPlayForMediaPlayback)

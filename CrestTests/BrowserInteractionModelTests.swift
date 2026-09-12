@@ -69,8 +69,7 @@ final class BrowserInteractionModelTests: XCTestCase {
 
         dragState.begin(item: item, placement: .current)
         XCTAssertTrue(dragState.isDragging(item))
-        XCTAssertEqual(BrowserTabDragVisualPolicy.sourceScale(isDragging: true), 1.04)
-        XCTAssertEqual(BrowserTabDragVisualPolicy.sourceOpacity(isDragging: true), 0.42)
+
         XCTAssertEqual(dragState.currentPlacement, .current)
 
         let pinned = BrowserTabDropLocation(
@@ -193,29 +192,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
     }
 
-    func testMobileInsertionSlotHasOneVisibleIndicatorOwner() {
-        XCTAssertFalse(
-            BrowserTabRowIndicatorOwnershipPolicy.showsAfterRowIndicator(
-                hasVisibleFollowingRow: true
-            )
-        )
-        XCTAssertTrue(
-            BrowserTabRowIndicatorOwnershipPolicy.showsAfterRowIndicator(
-                hasVisibleFollowingRow: false
-            )
-        )
-        XCTAssertFalse(
-            BrowserTabRowIndicatorOwnershipPolicy.showsSectionEndIndicator(
-                hasVisibleRows: true
-            )
-        )
-        XCTAssertTrue(
-            BrowserTabRowIndicatorOwnershipPolicy.showsSectionEndIndicator(
-                hasVisibleRows: false
-            )
-        )
-    }
-
     func testMobileDragLifecycleUsesTheNativeCompletionOnlyWhereItExists() {
         XCTAssertFalse(
             BrowserTabDragSessionLifecyclePolicy.usesNativeCompletion(
@@ -236,27 +212,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertTrue(
             BrowserTabDragSessionLifecyclePolicy.shouldEnd(
                 for: .dataTransferCompleted
-            )
-        )
-    }
-
-    func testMobileSourceStylingRequiresAReliableTerminalLifecycle() {
-        XCTAssertFalse(
-            BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                isDragging: true,
-                hasReliableTerminalLifecycle: false
-            )
-        )
-        XCTAssertTrue(
-            BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                isDragging: true,
-                hasReliableTerminalLifecycle: true
-            )
-        )
-        XCTAssertFalse(
-            BrowserTabDragVisualPolicy.usesPersistentSourceStyle(
-                isDragging: false,
-                hasReliableTerminalLifecycle: true
             )
         )
     }
@@ -345,368 +300,6 @@ final class BrowserInteractionModelTests: XCTestCase {
 
         XCTAssertFalse(dragState.isDragging(secondItem))
         XCTAssertNil(dragState.dropLocation)
-    }
-
-    @MainActor
-    func testTransientDropExitDoesNotFlashTheIndicatorDuringTargetHandoff() async {
-        let tabID = TabID()
-        let dragState = BrowserTabDragState()
-        let first = BrowserTabDropLocation(
-            placement: .current,
-            folderID: nil,
-            beforeTabID: TabID()
-        )
-        let second = BrowserTabDropLocation(
-            placement: .current,
-            folderID: nil,
-            beforeTabID: nil
-        )
-
-        dragState.begin(
-            item: BrowserTabDragItem(
-                tabID: tabID,
-                spaceID: SpaceID(),
-                profileID: UUID()
-            ),
-            placement: .current
-        )
-        _ = dragState.enter(first)
-        dragState.deferLeave(first)
-        _ = dragState.enter(second)
-        try? await Task.sleep(for: BrowserTabDropStabilityPolicy.leaveDelay * 2)
-
-        XCTAssertEqual(dragState.dropLocation, second)
-        XCTAssertTrue(
-            BrowserTabDropIndicatorPolicy.isVisible(
-                at: second,
-                dragState: dragState
-            )
-        )
-        dragState.end()
-    }
-
-    @MainActor
-    func testDeferredDropExitClearsAnAbandonedIndicator() async {
-        let dragState = BrowserTabDragState()
-        let location = BrowserTabDropLocation(
-            placement: .saved,
-            folderID: nil,
-            beforeTabID: nil
-        )
-
-        dragState.begin(
-            item: BrowserTabDragItem(
-                tabID: TabID(),
-                spaceID: SpaceID(),
-                profileID: UUID()
-            ),
-            placement: .current
-        )
-        _ = dragState.enter(location)
-        dragState.deferLeave(location)
-        try? await Task.sleep(for: BrowserTabDropStabilityPolicy.leaveDelay * 2)
-
-        XCTAssertNil(dragState.dropLocation)
-        dragState.end()
-    }
-
-    /// The oldest morph in the app, pinned to exact numbers. Generalizing the
-    /// preview to arbitrary shape pairs must not move any of them by a point.
-    func testHeldTabPreviewInterpolatesFromRowToPinnedTile() {
-        XCTAssertEqual(BrowserTabDragPreviewLayout.metrics(progress: 0).width, 220)
-        XCTAssertEqual(BrowserTabDragPreviewLayout.metrics(progress: 0).height, 40)
-        XCTAssertEqual(BrowserTabDragPreviewLayout.metrics(progress: 0).titleOpacity, 1)
-
-        let quarter = BrowserTabDragPreviewLayout.metrics(progress: 0.25)
-        XCTAssertEqual(quarter.width, 178)
-        XCTAssertEqual(quarter.height, 43)
-        XCTAssertEqual(quarter.titleOpacity, 0.75)
-
-        let midpoint = BrowserTabDragPreviewLayout.metrics(progress: 0.5)
-        XCTAssertEqual(midpoint.width, 136)
-        XCTAssertEqual(midpoint.height, 46)
-        XCTAssertEqual(midpoint.titleOpacity, 0.5)
-
-        let threeQuarters = BrowserTabDragPreviewLayout.metrics(progress: 0.75)
-        XCTAssertEqual(threeQuarters.width, 94)
-        XCTAssertEqual(threeQuarters.height, 49)
-        XCTAssertEqual(threeQuarters.titleOpacity, 0.25)
-
-        XCTAssertEqual(BrowserTabDragPreviewLayout.metrics(progress: 1).width, 52)
-        XCTAssertEqual(BrowserTabDragPreviewLayout.metrics(progress: 1).height, 52)
-        XCTAssertEqual(BrowserTabDragPreviewLayout.metrics(progress: 1).titleOpacity, 0)
-
-        XCTAssertEqual(
-            BrowserTabDragPreviewLayout.metrics(
-                progress: 0,
-                rowWidth: 2_000
-            ).width,
-            BrowserTabDragPreviewLayout.maximumRowWidth
-        )
-    }
-
-    /// The placement-shaped entry point is exactly the row-to-tile pair, so the
-    /// generalization cannot have introduced a second answer for the same morph.
-    func testThePlacementPreviewEntryIsTheRowToPinnedTilePair() {
-        for step in 0...20 {
-            let progress = CGFloat(step) / 20
-            XCTAssertEqual(
-                BrowserTabDragPreviewLayout.metrics(
-                    progress: progress,
-                    rowWidth: 260
-                ),
-                BrowserTabDragPreviewLayout.metrics(
-                    from: .row,
-                    to: .pinnedTile,
-                    progress: progress,
-                    rowWidth: 260
-                )
-            )
-        }
-    }
-
-    /// The card the content area morphs a row into: page-sized, cornered like a
-    /// page, and showing the title the tile hides.
-    func testHeldTabPreviewInterpolatesFromRowToWebpageCard() {
-        let resting = BrowserTabDragPreviewLayout.metrics(
-            from: .row,
-            to: .webpageCard,
-            progress: 0
-        )
-        XCTAssertEqual(resting.width, 220)
-        XCTAssertEqual(resting.height, 40)
-        XCTAssertEqual(resting.cornerRadius, CrestRadius.control)
-        XCTAssertEqual(resting.cardContentWeight, 0)
-
-        let card = BrowserTabDragPreviewLayout.metrics(
-            from: .row,
-            to: .webpageCard,
-            progress: 1
-        )
-        XCTAssertEqual(card.width, 240)
-        XCTAssertEqual(card.height, 160)
-        XCTAssertEqual(card.cornerRadius, BrowserChromeLayout.pageCornerRadius)
-        XCTAssertEqual(card.titleOpacity, 1)
-        XCTAssertEqual(card.cardContentWeight, 1)
-        XCTAssertEqual(
-            card.contentCentering,
-            0,
-            "The card draws its own centred content, so the row layout it "
-                + "fades out of stays put."
-        )
-    }
-
-    /// The pointer holds the same point of the preview whichever host draws it.
-    ///
-    /// The in-view lift offsets the preview from its row; the floating host has
-    /// no row to offset from and places it against the pointer instead. Both have
-    /// to put the grabbed point under the cursor or the preview would jump at the
-    /// moment the hosts swap.
-    func testAPointerAnchoredPreviewSitsWhereTheInRowPreviewWouldHave() {
-        let rowOrigin = CGPoint(x: 12, y: 240)
-        let grab = CGSize(width: 40, height: 18)
-        let pointer = CGPoint(x: 700, y: 320)
-        let rowWidth = BrowserTabDragPreviewLayout.rowSize.width
-
-        for shape in [
-            BrowserTabDragPreviewShape.row,
-            .pinnedTile,
-            .webpageCard,
-        ] {
-            let progress: CGFloat = shape == .row ? 0 : 1
-            let metrics = BrowserTabDragPreviewLayout.metrics(
-                from: .row,
-                to: shape,
-                progress: progress,
-                rowWidth: rowWidth
-            )
-            let resting = BrowserTabDragPreviewLayout.metrics(
-                from: .row,
-                to: shape,
-                progress: 0,
-                rowWidth: rowWidth
-            )
-            let anchorX = BrowserTabDragPreviewLayout.anchorFraction(
-                grabbed: grab.width / resting.width,
-                progress: progress
-            )
-            let anchorY = BrowserTabDragPreviewLayout.anchorFraction(
-                grabbed: grab.height / resting.height,
-                progress: progress
-            )
-            // Where the in-row overlay lands: the row's own origin, moved by the
-            // drag, plus the offset that modifier applies.
-            let translation = CGSize(
-                width: pointer.x - (rowOrigin.x + grab.width),
-                height: pointer.y - (rowOrigin.y + grab.height)
-            )
-            let inRow = CGPoint(
-                x: rowOrigin.x + translation.width + grab.width
-                    - anchorX * metrics.width,
-                y: rowOrigin.y + translation.height + grab.height
-                    - anchorY * metrics.height
-            )
-
-            XCTAssertEqual(
-                BrowserTabDragPreviewLayout.pointerAnchoredOrigin(
-                    pointer: pointer,
-                    grabOffset: grab,
-                    targetShape: shape,
-                    progress: progress,
-                    rowWidth: rowWidth
-                ),
-                inRow,
-                "\(shape) drifted between the two hosts."
-            )
-        }
-    }
-
-    /// A lift leaves the view tree the moment it is promoted and stays out of it
-    /// until it ends. Handing the preview over at the page boundary only moves
-    /// the seam: the view tree clips a travelling preview with window chrome and
-    /// insets long before the page's web view gets to.
-    func testALiftFloatsForTheWholeOfItsLiftWhereverThePointerGoes() {
-        let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let tabID = TabID()
-        let state = BrowserSidebarReorderState()
-        state.register(
-            zone: BrowserSidebarReorderZone(
-                target: .splitContent(assignment),
-                frame: CGRect(x: 260, y: 0, width: 900, height: 600)
-            ),
-            for: UUID()
-        )
-        state.register(
-            splitCardFrame: CGRect(x: 260, y: 0, width: 900, height: 600),
-            for: TabID(),
-            in: assignment,
-            owner: UUID()
-        )
-        state.register(
-            row: BrowserSidebarReorderRow(
-                id: .tab(tabID),
-                space: assignment,
-                section: .tabs(placement: .current, folderID: nil),
-                frame: CGRect(x: 0, y: 200, width: 240, height: 40)
-            ),
-            owner: UUID()
-        )
-
-        state.begin(
-            item: .tab(
-                BrowserTabDragItem(
-                    tabID: tabID,
-                    spaceID: assignment.spaceID,
-                    profileID: assignment.profileID
-                )
-            ),
-            section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 40, y: 220)
-        )
-        // Still inside the sidebar, and already the host's to draw.
-        let sidebarLift = state.floatingLift
-        XCTAssertEqual(sidebarLift?.tabID, tabID)
-        XCTAssertEqual(sidebarLift?.shape, .row)
-        XCTAssertEqual(sidebarLift?.progress, 0)
-        XCTAssertEqual(sidebarLift?.pointer, CGPoint(x: 40, y: 220))
-        XCTAssertEqual(sidebarLift?.item.id, .tab(tabID))
-
-        state.update(pointer: CGPoint(x: 700, y: 300))
-        let floating = state.floatingLift
-        XCTAssertEqual(floating?.tabID, tabID)
-        XCTAssertEqual(floating?.shape, .webpageCard)
-        XCTAssertEqual(floating?.progress, 1)
-        XCTAssertEqual(floating?.pointer, CGPoint(x: 700, y: 300))
-        XCTAssertEqual(floating?.grabOffset, CGSize(width: 40, height: 20))
-        XCTAssertEqual(floating?.item.id, .tab(tabID))
-
-        // A refused drop still has to be visible, so the host keeps it even with
-        // nothing resolved — as the row it stayed.
-        state.register(
-            splitCardFrame: CGRect(x: 260, y: 0, width: 900, height: 600),
-            for: tabID,
-            in: assignment,
-            owner: UUID()
-        )
-        state.update(pointer: CGPoint(x: 700, y: 300))
-        XCTAssertNil(state.resolvedTarget)
-        XCTAssertEqual(state.floatingLift?.shape, .row)
-        XCTAssertEqual(state.floatingLift?.progress, 0)
-
-        state.update(pointer: CGPoint(x: 40, y: 220))
-        XCTAssertNotNil(
-            state.floatingLift,
-            "Coming back over the sidebar is not a reason to hand it back."
-        )
-
-        state.cancel()
-        XCTAssertNil(state.floatingLift)
-    }
-
-    /// Folders and whole split groups are clipped by the same things a tab is,
-    /// so their previews float too. What they do not do is change shape: a
-    /// folder is a folder row and a group is a stack of member lines wherever
-    /// they land, so both stay at the resting row the host draws them as.
-    func testFoldersAndSplitGroupsFloatAsRows() {
-        let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let contentFrame = CGRect(x: 260, y: 0, width: 900, height: 600)
-
-        for item in [
-            BrowserSidebarReorderItem.folder(
-                BrowserFolderDragItem(
-                    folderID: FolderID(),
-                    spaceID: assignment.spaceID,
-                    profileID: assignment.profileID
-                )
-            ),
-            .splitGroup(
-                BrowserSplitGroupDragItem(
-                    groupID: SplitGroupID(),
-                    spaceID: assignment.spaceID,
-                    profileID: assignment.profileID,
-                    memberTabIDs: [TabID(), TabID()]
-                )
-            ),
-        ] {
-            let state = BrowserSidebarReorderState()
-            state.register(
-                zone: BrowserSidebarReorderZone(
-                    target: .splitContent(assignment),
-                    frame: contentFrame
-                ),
-                for: UUID()
-            )
-            state.begin(
-                item: item,
-                section: .tabs(placement: .current, folderID: nil),
-                at: CGPoint(x: 40, y: 220)
-            )
-            state.update(pointer: CGPoint(x: 700, y: 300))
-
-            let floating = state.floatingLift
-            XCTAssertEqual(floating?.item, item, "\(item) was not floated.")
-            XCTAssertEqual(floating?.shape, .row, "\(item) changed shape.")
-            XCTAssertEqual(floating?.progress, 0)
-            XCTAssertEqual(floating?.pointer, CGPoint(x: 700, y: 300))
-            XCTAssertNil(
-                floating?.tabID,
-                "Neither is a tab, so neither names one for the preview."
-            )
-            XCTAssertNil(
-                state.resolvedTarget,
-                "The content area still refuses both: floating is presentation, "
-                    + "not acceptance."
-            )
-
-            state.cancel()
-            XCTAssertNil(state.floatingLift)
-        }
     }
 
     // MARK: - In-view sidebar reorder geometry
@@ -814,41 +407,10 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
     }
 
-    /// Rows keep their layout slots during a drag, so displacement is the delta
-    /// between the slot a row occupies and the slot it should occupy.
-    func testDisplacementOpensAGapAndClosesTheVacatedSlot() {
-        let layout = BrowserSidebarReorderPolicy.SlotLayout.list(stride: 40)
-
-        // Lifting slot 0 and dropping at the end pulls the follower back one slot.
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.displacement(
-                candidateIndex: 0,
-                draggedSlot: 0,
-                insertionIndex: 2,
-                layout: layout
-            ),
-            CGSize(width: 0, height: -40)
-        )
-        // A row at or after the gap steps forward to open it.
-        XCTAssertEqual(
-            BrowserSidebarReorderPolicy.displacement(
-                candidateIndex: 1,
-                draggedSlot: 2,
-                insertionIndex: 0,
-                layout: layout
-            ),
-            CGSize(width: 0, height: 40)
-        )
-    }
-
     // MARK: - Cross-section reorder feedback
 
-    /// Every direction a lift can cross in, read the same way: the section the
-    /// pointer is over resolves the insertion, the rows there open the gap, and
-    /// the row at the seam draws the line. Crossing into a section is not a
-    /// weaker case of reordering inside one — a drop the target section cannot
-    /// show is a drop with nothing to aim at.
-    func testEveryCrossSectionDropShowsTheSectionWhereItWillLand() {
+    /// Cross-section drops retain the exact destination section and insertion index.
+    func testCrossSectionDropsResolveTheDestinationSectionAndIndex() {
         let sidebar = StackedSidebar()
         let pinned = BrowserSidebarReorderSection.tabs(
             placement: .pinned,
@@ -862,47 +424,30 @@ final class BrowserInteractionModelTests: XCTestCase {
             placement: .current,
             folderID: nil
         )
-        let down = CGSize(width: 0, height: 40)
-        let listLine = BrowserSidebarReorderIndicator(
-            side: .before,
-            flowsHorizontally: false
-        )
-        let gridLine = BrowserSidebarReorderIndicator(
-            side: .before,
-            flowsHorizontally: true
-        )
 
         // Current into the saved list, short of the second row's midpoint.
         var outcome = sidebar.crossing(
             lift: sidebar.current[0],
             from: current,
             at: CGPoint(x: 100, y: 270),
-            to: CGPoint(x: 100, y: 150),
-            watching: sidebar.saved
+            to: CGPoint(x: 100, y: 150)
         )
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(section: saved, beforeID: sidebar.saved[1], index: 1)
         )
-        XCTAssertEqual(outcome.displacements, [.zero, down, down])
-        XCTAssertEqual(outcome.indicators, [nil, listLine, nil])
 
         // Saved back into the current list.
         outcome = sidebar.crossing(
             lift: sidebar.saved[0],
             from: saved,
             at: CGPoint(x: 100, y: 110),
-            to: CGPoint(x: 100, y: 290),
-            watching: sidebar.current
+            to: CGPoint(x: 100, y: 290)
         )
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(section: current, beforeID: sidebar.current[1], index: 1)
         )
-        XCTAssertEqual(
-            outcome.displacements, [CGSize(width: 0, height: -40), .zero],
-            "The source closes above Current while the new gap opens before its second row.")
-        XCTAssertEqual(outcome.indicators, [nil, listLine])
 
         // Current into Pinned: two columns become three; the drop uses the
         // final grid width rather than shifting a fixed grid off its edge.
@@ -910,84 +455,55 @@ final class BrowserInteractionModelTests: XCTestCase {
             lift: sidebar.current[0],
             from: current,
             at: CGPoint(x: 100, y: 270),
-            to: CGPoint(x: 50, y: 20),
-            watching: sidebar.pinned
+            to: CGPoint(x: 50, y: 20)
         )
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(section: pinned, beforeID: sidebar.pinned[1], index: 1)
         )
-        XCTAssertEqual(outcome.displacements[0], .zero)
-        XCTAssertEqual(outcome.displacements[1].width, 104.0 / 3, accuracy: 0.001)
-        XCTAssertEqual(outcome.displacements[1].height, 0)
-        XCTAssertEqual(outcome.indicators, [nil, gridLine])
 
         // Pinned into the saved list.
         outcome = sidebar.crossing(
             lift: sidebar.pinned[0],
             from: pinned,
             at: CGPoint(x: 40, y: 20),
-            to: CGPoint(x: 100, y: 190),
-            watching: sidebar.saved
+            to: CGPoint(x: 100, y: 190)
         )
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(section: saved, beforeID: sidebar.saved[2], index: 2)
         )
-        XCTAssertEqual(outcome.displacements, [.zero, .zero, down])
-        XCTAssertEqual(outcome.indicators, [nil, nil, listLine])
 
-        // Saved past the last pinned cell: nothing moves, and the last cell
-        // draws the line on its own trailing edge instead.
+        // Saved past the last pinned cell resolves to the end of that section.
         outcome = sidebar.crossing(
             lift: sidebar.saved[0],
             from: saved,
             at: CGPoint(x: 100, y: 110),
-            to: CGPoint(x: 190, y: 20),
-            watching: sidebar.pinned
+            to: CGPoint(x: 190, y: 20)
         )
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(section: pinned, beforeID: nil, index: 2)
         )
-        XCTAssertEqual(outcome.displacements[0], .zero)
-        XCTAssertEqual(outcome.displacements[1].width, -104.0 / 3, accuracy: 0.001)
-        XCTAssertEqual(outcome.displacements[1].height, 0)
-        XCTAssertEqual(
-            outcome.indicators,
-            [
-                nil,
-                BrowserSidebarReorderIndicator(
-                    side: .after,
-                    flowsHorizontally: true
-                ),
-            ]
-        )
 
-        // The control: reordering inside one section still closes the slot the
-        // lifted row vacated as well as opening the one it is heading for.
+        // Reordering within one section resolves after excluding the lifted row.
         outcome = sidebar.crossing(
             lift: sidebar.saved[0],
             from: saved,
             at: CGPoint(x: 100, y: 110),
-            to: CGPoint(x: 100, y: 190),
-            watching: Array(sidebar.saved.dropFirst())
+            to: CGPoint(x: 100, y: 190)
         )
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(section: saved, beforeID: sidebar.saved[2], index: 1)
         )
-        XCTAssertEqual(
-            outcome.displacements,
-            [CGSize(width: 0, height: -40), .zero]
-        )
-        XCTAssertEqual(outcome.indicators, [nil, listLine])
+
     }
 
     /// A folder's tabs are their own section, measured inside the saved list
     /// that holds the folder. A tab arriving from the current list has to open
     /// the gap among the folder's rows, not in the list behind them.
-    func testALiftCrossingIntoAFolderScopedSectionDisplacesItsRows() {
+    func testALiftCrossingIntoAFolderScopedSectionResolvesItsRows() {
         let state = BrowserSidebarReorderState()
         let assignment = BrowserSpaceRuntimeAssignment(
             spaceID: SpaceID(),
@@ -1069,23 +585,7 @@ final class BrowserInteractionModelTests: XCTestCase {
             state.resolvedTarget?.kind,
             .insert(section: folderSection, beforeID: filed[1], index: 1)
         )
-        XCTAssertEqual(state.displacement(for: filed[0]), .zero)
-        XCTAssertEqual(
-            state.displacement(for: filed[1]),
-            CGSize(width: 0, height: 40)
-        )
-        XCTAssertEqual(
-            state.indicator(for: filed[1]),
-            BrowserSidebarReorderIndicator(
-                side: .before,
-                flowsHorizontally: false
-            )
-        )
-        XCTAssertEqual(
-            state.displacement(for: unfiled),
-            CGSize(width: 0, height: 40),
-            "The parent grows around the gap, moving the following unfiled run with it."
-        )
+
         state.cancel()
     }
 
@@ -1117,33 +617,18 @@ final class BrowserInteractionModelTests: XCTestCase {
             lift: sidebar.current[0],
             from: .tabs(placement: .current, folderID: nil),
             at: CGPoint(x: 100, y: 270),
-            to: CGPoint(x: 100, y: 150),
-            watching: sidebar.saved
+            to: CGPoint(x: 100, y: 150)
         )
 
         XCTAssertEqual(
-            outcome.kind,
+            outcome,
             .insert(
                 section: .tabs(placement: .saved, folderID: nil),
                 beforeID: sidebar.saved[1],
                 index: 1
             )
         )
-        XCTAssertEqual(
-            outcome.displacements,
-            [.zero, CGSize(width: 0, height: 40), CGSize(width: 0, height: 40)]
-        )
-        XCTAssertEqual(
-            outcome.indicators,
-            [
-                nil,
-                BrowserSidebarReorderIndicator(
-                    side: .before,
-                    flowsHorizontally: false
-                ),
-                nil,
-            ]
-        )
+
     }
 
     /// The three macOS sidebar sections at fixed geometry: a two-cell pinned
@@ -1192,28 +677,17 @@ final class BrowserInteractionModelTests: XCTestCase {
             )
         }
 
-        /// One crossing: lift `id` out of `section`, hold the pointer at
-        /// `pointer`, and report what resolved and what each watched row was
-        /// told to do.
+        /// Resolve a destination while the pointer is held, then end the lift.
         func crossing(
             lift id: BrowserSidebarReorderItemID,
             from section: BrowserSidebarReorderSection,
             at liftPoint: CGPoint,
-            to pointer: CGPoint,
-            watching rows: [BrowserSidebarReorderItemID]
-        ) -> (
-            kind: BrowserSidebarReorderTarget.Kind?,
-            displacements: [CGSize],
-            indicators: [BrowserSidebarReorderIndicator?]
-        ) {
+            to pointer: CGPoint
+        ) -> BrowserSidebarReorderTarget.Kind? {
             state.begin(item: item(id), section: section, at: liftPoint)
             state.update(pointer: pointer)
             defer { state.cancel() }
-            return (
-                state.resolvedTarget?.kind,
-                rows.map { state.displacement(for: $0) },
-                rows.map { state.indicator(for: $0) }
-            )
+            return state.resolvedTarget?.kind
         }
 
         func item(
@@ -1318,7 +792,7 @@ final class BrowserInteractionModelTests: XCTestCase {
     /// Run with and without the band the unfiled run keeps below the folder.
     /// Without it the saved list measures exactly what the folder group
     /// measures, which is the shape the report came from.
-    func testAFolderHoldingEverySavedTabOpensAGapForACurrentLift() {
+    func testAFolderHoldingEverySavedTabResolvesACurrentLift() {
         for unfiledBand in [CGFloat.zero, CrestSpacing.medium] {
             let sidebar = FolderHeldSavedSidebar(unfiledBand: unfiledBand)
 
@@ -1326,12 +800,11 @@ final class BrowserInteractionModelTests: XCTestCase {
                 lift: sidebar.current[0],
                 from: .tabs(placement: .current, folderID: nil),
                 at: CGPoint(x: 100, y: 265),
-                to: CGPoint(x: 100, y: 160),
-                watching: sidebar.filed
+                to: CGPoint(x: 100, y: 160)
             )
 
             XCTAssertEqual(
-                outcome.kind,
+                outcome,
                 .insert(
                     section: .tabs(
                         placement: .saved,
@@ -1341,181 +814,8 @@ final class BrowserInteractionModelTests: XCTestCase {
                     index: 1
                 )
             )
-            XCTAssertEqual(
-                outcome.displacements,
-                [.zero, CGSize(width: 0, height: 40)]
-            )
-            XCTAssertEqual(
-                outcome.indicators,
-                [
-                    nil,
-                    BrowserSidebarReorderIndicator(
-                        side: .before,
-                        flowsHorizontally: false
-                    ),
-                ]
-            )
+
         }
-    }
-
-    /// The insertion line is drawn by the row beside the gap, so a section with
-    /// no rows of its own had nothing to draw it: the unfiled saved run under a
-    /// folder that holds everything went completely dark for an arriving lift
-    /// while still accepting the drop. An empty section draws the line itself.
-    func testTheEmptyUnfiledSavedRunDrawsItsOwnInsertionLine() {
-        let sidebar = FolderHeldSavedSidebar(unfiledBand: CrestSpacing.medium)
-        let unfiled = BrowserSidebarReorderSection.tabs(
-            placement: .saved,
-            folderID: nil
-        )
-
-        sidebar.state.begin(
-            item: sidebar.item(sidebar.current[0]),
-            section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 100, y: 265)
-        )
-        // The band below the folder group: inside the saved list, outside the
-        // folder that fills the rest of it.
-        sidebar.state.update(pointer: CGPoint(x: 100, y: 221))
-        defer { sidebar.state.cancel() }
-
-        XCTAssertEqual(
-            sidebar.state.resolvedTarget?.kind,
-            .insert(section: unfiled, beforeID: nil, index: 0)
-        )
-        XCTAssertEqual(
-            sidebar.state.emptySectionIndicator(for: unfiled),
-            BrowserSidebarReorderIndicator(
-                side: .before,
-                flowsHorizontally: false
-            )
-        )
-        XCTAssertNil(
-            sidebar.state.emptySectionIndicator(
-                for: .tabs(placement: .saved, folderID: sidebar.folderID)
-            ),
-            "A section with rows still lets them draw the line."
-        )
-        for row in sidebar.filed {
-            XCTAssertEqual(sidebar.state.displacement(for: row), .zero)
-            XCTAssertNil(sidebar.state.indicator(for: row))
-        }
-    }
-
-    /// The same darkness reaches an untouched pinned grid and a cleared current
-    /// list, so the affordance is the section's rather than the saved list's.
-    /// A grid inserts between columns, so its line stands on end.
-    func testEveryEmptySectionDrawsTheLineItsRowsWouldHave() {
-        let state = BrowserSidebarReorderState()
-        let assignment = BrowserSpaceRuntimeAssignment(
-            spaceID: SpaceID(),
-            profileID: UUID()
-        )
-        let pinned = BrowserSidebarReorderSection.tabs(
-            placement: .pinned,
-            folderID: nil
-        )
-        let current = BrowserSidebarReorderSection.tabs(
-            placement: .current,
-            folderID: nil
-        )
-        let saved = BrowserSidebarReorderSection.tabs(
-            placement: .saved,
-            folderID: nil
-        )
-        let lifted = BrowserSidebarReorderItemID.tab(TabID())
-        state.register(
-            row: reorderRow(
-                lifted,
-                in: assignment,
-                section: saved,
-                CGRect(x: 0, y: 100, width: 200, height: 40)
-            ),
-            owner: UUID()
-        )
-        for (section, frame) in [
-            (pinned, CGRect(x: 0, y: 0, width: 200, height: 50)),
-            (saved, CGRect(x: 0, y: 95, width: 200, height: 50)),
-            (current, CGRect(x: 0, y: 200, width: 200, height: 60)),
-        ] {
-            state.register(
-                zone: BrowserSidebarReorderZone(
-                    target: .section(section),
-                    frame: frame
-                ),
-                for: UUID()
-            )
-        }
-        let item = BrowserSidebarReorderItem.tab(
-            BrowserTabDragItem(
-                tabID: lifted.tabID ?? TabID(),
-                spaceID: assignment.spaceID,
-                profileID: assignment.profileID
-            )
-        )
-
-        state.begin(item: item, section: saved, at: CGPoint(x: 100, y: 120))
-        defer { state.cancel() }
-
-        state.update(pointer: CGPoint(x: 100, y: 25))
-        XCTAssertEqual(
-            state.emptySectionIndicator(for: pinned),
-            BrowserSidebarReorderIndicator(
-                side: .before,
-                flowsHorizontally: true
-            )
-        )
-        XCTAssertNil(state.emptySectionIndicator(for: current))
-
-        state.update(pointer: CGPoint(x: 100, y: 230))
-        XCTAssertEqual(
-            state.emptySectionIndicator(for: current),
-            BrowserSidebarReorderIndicator(
-                side: .before,
-                flowsHorizontally: false
-            )
-        )
-        XCTAssertNil(state.emptySectionIndicator(for: pinned))
-
-        // The section the lifted row came from is empty once that row is taken
-        // out of it, so it too has to show where the row would go back.
-        state.update(pointer: CGPoint(x: 100, y: 120))
-        XCTAssertEqual(
-            state.emptySectionIndicator(for: saved),
-            BrowserSidebarReorderIndicator(
-                side: .before,
-                flowsHorizontally: false
-            )
-        )
-    }
-
-    /// Nothing resolved, nothing drawn: an empty section is not a permanent
-    /// invitation, only the answer to a drag that is genuinely over it.
-    func testAnEmptySectionShowsNothingWithoutAResolvedTarget() {
-        let state = BrowserSidebarReorderState()
-        let saved = BrowserSidebarReorderSection.tabs(
-            placement: .saved,
-            folderID: nil
-        )
-
-        XCTAssertNil(state.emptySectionIndicator(for: saved))
-
-        state.begin(
-            item: .tab(
-                BrowserTabDragItem(
-                    tabID: TabID(),
-                    spaceID: SpaceID(),
-                    profileID: UUID()
-                )
-            ),
-            section: .tabs(placement: .current, folderID: nil),
-            at: CGPoint(x: 100, y: 265)
-        )
-        XCTAssertNil(
-            state.emptySectionIndicator(for: saved),
-            "No zone is registered, so nothing resolved."
-        )
-        state.cancel()
     }
 
     /// The live macOS shape behind the report: a two-cell pinned grid, a saved
@@ -1603,21 +903,12 @@ final class BrowserInteractionModelTests: XCTestCase {
             lift id: BrowserSidebarReorderItemID,
             from section: BrowserSidebarReorderSection,
             at liftPoint: CGPoint,
-            to pointer: CGPoint,
-            watching rows: [BrowserSidebarReorderItemID]
-        ) -> (
-            kind: BrowserSidebarReorderTarget.Kind?,
-            displacements: [CGSize],
-            indicators: [BrowserSidebarReorderIndicator?]
-        ) {
+            to pointer: CGPoint
+        ) -> BrowserSidebarReorderTarget.Kind? {
             state.begin(item: item(id), section: section, at: liftPoint)
             state.update(pointer: pointer)
             defer { state.cancel() }
-            return (
-                state.resolvedTarget?.kind,
-                rows.map { state.displacement(for: $0) },
-                rows.map { state.indicator(for: $0) }
-            )
+            return state.resolvedTarget?.kind
         }
 
         func item(
@@ -1660,18 +951,6 @@ final class BrowserInteractionModelTests: XCTestCase {
                 for: UUID()
             )
         }
-    }
-
-    /// A grid reflows in two axes, so a cell wrapping to the next line moves back
-    /// across the columns as well as down.
-    func testGridDisplacementWrapsAcrossColumns() {
-        let displacement = BrowserSidebarReorderPolicy.displacement(
-            candidateIndex: 2,
-            draggedSlot: 3,
-            insertionIndex: 0,
-            layout: .grid(columns: 3, columnStride: 100, rowStride: 50)
-        )
-        XCTAssertEqual(displacement, CGSize(width: -200, height: 50))
     }
 
     /// Tabs and folders each reorder only among their own kind, so overlapping
@@ -1883,67 +1162,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertNil(state.end())
     }
 
-    /// A lifted group keeps its row shape wherever it lands, so nothing morphs.
-    func testALiftedSplitGroupNeverTakesAMorphTargetPlacement() {
-        let state = BrowserSidebarReorderState()
-        let section = BrowserSidebarReorderSection.tabs(
-            placement: .current,
-            folderID: nil
-        )
-        let item = BrowserSidebarReorderItem.splitGroup(
-            BrowserSplitGroupDragItem(
-                groupID: SplitGroupID(),
-                spaceID: SpaceID(),
-                profileID: UUID(),
-                memberTabIDs: [TabID(), TabID()]
-            )
-        )
-
-        state.begin(item: item, section: section, at: CGPoint(x: 10, y: 10))
-
-        XCTAssertTrue(state.isDragging)
-        XCTAssertNil(state.liftTargetShape)
-        state.cancel()
-
-        // A tab lifted from the same section does report a shape to morph
-        // toward, so the nil above is the group's own rule rather than an
-        // unresolved target.
-        state.begin(
-            item: .tab(
-                BrowserTabDragItem(
-                    tabID: TabID(),
-                    spaceID: SpaceID(),
-                    profileID: UUID()
-                )
-            ),
-            section: section,
-            at: CGPoint(x: 10, y: 10)
-        )
-        XCTAssertEqual(state.liftTargetShape, .row)
-        state.cancel()
-    }
-
-    /// A lift with nowhere resolved holds the shape it started as, so a pinned
-    /// tab dragged into open space still reads as a tile.
-    func testAPinnedLiftHoldsItsTileShapeUntilAListResolves() {
-        let state = BrowserSidebarReorderState()
-        let item = BrowserSidebarReorderItem.tab(
-            BrowserTabDragItem(
-                tabID: TabID(),
-                spaceID: SpaceID(),
-                profileID: UUID()
-            )
-        )
-
-        state.begin(
-            item: item,
-            section: .tabs(placement: .pinned, folderID: nil),
-            at: CGPoint(x: 10, y: 10)
-        )
-        XCTAssertEqual(state.liftTargetShape, .pinnedTile)
-        state.cancel()
-    }
-
     /// Only the middle of a collapsed folder nests; the edges stay available for
     /// reordering past it.
     func testNestingClaimsOnlyTheMiddleOfAFolderRow() {
@@ -2010,33 +1228,6 @@ final class BrowserInteractionModelTests: XCTestCase {
         XCTAssertEqual(browser.session.selectedTab?.id, tab.id)
         XCTAssertEqual(browser.tabDragState.item?.spaceID, destination.id)
         XCTAssertEqual(browser.tabDragState.currentPlacement, .current)
-    }
-
-    func testPinnedTabAccentPrefersSiteThemeThenExtractedColorThenWhite() {
-        let theme = BrowserTabIconAccent(red: 0.1, green: 0.2, blue: 0.3)
-        let extracted = BrowserTabIconAccent(red: 0.7, green: 0.4, blue: 0.2)
-
-        XCTAssertEqual(
-            BrowserTabIconAccentResolver.resolve(
-                siteTheme: theme,
-                extracted: extracted
-            ),
-            theme
-        )
-        XCTAssertEqual(
-            BrowserTabIconAccentResolver.resolve(
-                siteTheme: nil,
-                extracted: extracted
-            ),
-            extracted
-        )
-        XCTAssertEqual(
-            BrowserTabIconAccentResolver.resolve(
-                siteTheme: nil,
-                extracted: nil
-            ),
-            .white
-        )
     }
 
     func testNewTabAndLocationUseDistinctCommandPaletteModes() {

@@ -6,12 +6,6 @@ self.__listenerCount = 0;
 self.__messageListenerCount = 0;
 self.__connectListenerCount = 0;
 
-// Every step this worker takes, in order. Steps are buffered here as well as
-// announced, because the earliest ones happen before any popup exists to hear
-// them and would otherwise be lost.
-self.__steps = [];
-self.__startupSteps = [];
-
 const describeError = (error) =>
   String(error && error.message ? error.message : error);
 
@@ -26,30 +20,6 @@ const attempt = (work) => {
     return `<threw: ${describeError(error)}>`;
   }
 };
-
-// Resolves in bounded time no matter what the promise does. A storage call
-// that never settles is one of the hypotheses under test, so nothing here may
-// await one unguarded.
-const settle = (work, milliseconds) =>
-  new Promise((resolve) => {
-    let done = false;
-    let timer;
-    const finish = (outcome) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      resolve(outcome);
-    };
-    timer = setTimeout(() => finish({ state: "timedOut" }), milliseconds);
-    try {
-      Promise.resolve(work).then(
-        (value) => finish({ state: "resolved", value: value ?? null }),
-        (error) => finish({ state: "rejected", error: describeError(error) })
-      );
-    } catch (error) {
-      finish({ state: "rejected", error: describeError(error) });
-    }
-  });
 
 // What one `*.storage` root actually looks like from here. The lexical `chrome`
 // a rewritten worker bootstrap destructures need not be the native global, so
@@ -103,14 +73,6 @@ const announce = (payload) => {
   }
 };
 
-// Records a step on both channels. Never awaited by its caller: the point of a
-// step is that it is legible even when the next call hangs.
-const step = (name, bucket) => {
-  (bucket ?? self.__steps).push(name);
-  announce({ kind: "step", step: name });
-  return name;
-};
-
 announce({ kind: "storageSurface", surface: self.__storageSurface });
 
 // Whichever storage area actually exists, in preference order, along with the
@@ -148,36 +110,9 @@ const writeStorage = (values) => {
   try {
     Promise.resolve(resolved.area.set(values)).catch(() => {});
   } catch (error) {
-    // Reported by whichever step announcement follows.
+    // The retained callers also report their result through native state or messages.
   }
 };
-
-// STARTUP STORAGE, at top level and outside every handler. Its outcome is the
-// control for the same race run from inside an onMessage handler: if the
-// startup write settles and the in-handler one does not, the handler context
-// is the difference rather than storage itself.
-step("startupStorage:start", self.__startupSteps);
-const startupArea = resolveStorageArea("local");
-if (!startupArea) {
-  step("startupStorage:noSurface", self.__startupSteps);
-} else {
-  step(`startupStorage:using:${startupArea.name}`, self.__startupSteps);
-  settle(
-    attempt(() => startupArea.area.set({ __startupStorage: Date.now() })),
-    2000
-  ).then((outcome) => {
-    if (outcome.state === "resolved") {
-      step("startupStorage:setResolved", self.__startupSteps);
-    } else if (outcome.state === "rejected") {
-      step(
-        `startupStorage:setRejected:${outcome.error}`,
-        self.__startupSteps
-      );
-    } else {
-      step("startupStorage:setTimedOut", self.__startupSteps);
-    }
-  });
-}
 
 // A classic MV3 service worker whose first job is to stand up one offscreen
 // document at startup, the way a password manager brings up its offscreen
@@ -193,10 +128,8 @@ async function createProbeOffscreenDocument() {
       justification: "probe"
     });
     record = { state: "created" };
-    step("offscreen:created");
   } catch (error) {
     record = { state: "failed", message: describeError(error) };
-    step(`offscreen:failed:${record.message}`);
   }
   // Deliberately not awaited: a hanging write must not strand this function.
   writeStorage({ offscreenCreation: record });
@@ -246,144 +179,14 @@ addConnectListener((port) => {
   port.postMessage(senderReport(port.sender));
 });
 
-// Walks the storage calls under test against whichever area exists, each
-// raced, announcing every step as it goes. It always resolves, so its caller
-// can always reply.
-async function runStorageProbeSteps() {
-  const at = Date.now();
-  step("storageProbe:start");
-  const surface = attempt(captureStorageSurface);
-  self.__storageSurface = surface;
-
-  const local = resolveStorageArea("local");
-  if (!local) {
-    step("storageProbe:noSurface");
-    step("storageProbe:replying");
-    return {
-      ok: false,
-      at,
-      areaName: null,
-      setState: "noSurface",
-      setError: null,
-      getState: "noSurface",
-      storageSurface: surface,
-      steps: self.__steps.slice(),
-      startupSteps: self.__startupSteps.slice()
-    };
-  }
-  step(`storageProbe:using:${local.name}`);
-
-  const setOutcome = await settle(
-    attempt(() => local.area.set({ __storageProbe: at })),
-    2000
-  );
-  if (setOutcome.state === "resolved") {
-    step("storageProbe:setResolved");
-  } else if (setOutcome.state === "rejected") {
-    step(`storageProbe:setRejected:${setOutcome.error}`);
-  } else {
-    step("storageProbe:setTimedOut");
-  }
-
-  const getOutcome = await settle(
-    attempt(() => local.area.get("__storageProbe")),
-    2000
-  );
-  if (getOutcome.state === "resolved") {
-    step(
-      `storageProbe:getResolved:${JSON.stringify(
-        getOutcome.value?.__storageProbe ?? null
-      )}`
-    );
-  } else if (getOutcome.state === "rejected") {
-    step(`storageProbe:getRejected:${getOutcome.error}`);
-  } else {
-    step("storageProbe:getTimedOut");
-  }
-
-  const session = resolveStorageArea("session");
-  if (!session) {
-    step("storageProbe:sessionUnavailable");
-  } else {
-    step(`storageProbe:sessionUsing:${session.name}`);
-    const sessionOutcome = await settle(
-      attempt(() => session.area.set({ __s: 1 })),
-      2000
-    );
-    if (sessionOutcome.state === "resolved") {
-      step("storageProbe:sessionSetResolved");
-    } else if (sessionOutcome.state === "rejected") {
-      step(`storageProbe:sessionSetRejected:${sessionOutcome.error}`);
-    } else {
-      step("storageProbe:sessionSetTimedOut");
-    }
-  }
-
-  step("storageProbe:replying");
-  return {
-    ok: setOutcome.state === "resolved",
-    at,
-    areaName: local.name,
-    setState: setOutcome.state,
-    setError: setOutcome.error ?? null,
-    getState: getOutcome.state,
-    storageSurface: surface,
-    steps: self.__steps.slice(),
-    startupSteps: self.__startupSteps.slice()
-  };
-}
-
-// THE FIRST-REGISTERED MESSAGE LISTENER. Every probe whose own reachability
-// must not be in question is answered from inside this one listener, so that a
-// dispatcher which invokes only the first listener can still answer them. In
-// particular the storage probe and the listener count live here: asking them
-// from a later listener would confound the very thing they exist to isolate.
+// Keep sender and listener-count replies in the first registered listener.
 addMessageListener((message, sender, sendResponse) => {
-  if (message?.kind === "storageProbe") {
-    // Every storage call inside is raced, so this always replies. A reply that
-    // says "timed out" is the finding; a reply that never comes is not.
-    runStorageProbeSteps().then(sendResponse, (error) =>
-      sendResponse({
-        ok: false,
-        error: describeError(error),
-        storageSurface: self.__storageSurface,
-        steps: self.__steps.slice(),
-        startupSteps: self.__startupSteps.slice()
-      })
-    );
-    return true;
-  }
-
   if (message?.kind === "listenerCount") {
     sendResponse({
       listenerCount: self.__listenerCount,
       messageListenerCount: self.__messageListenerCount,
       connectListenerCount: self.__connectListenerCount,
-      storageSurface: self.__storageSurface,
-      steps: self.__steps.slice(),
-      startupSteps: self.__startupSteps.slice()
-    });
-    return false;
-  }
-
-  if (message?.kind === "requestBroadcast") {
-    // The worker-to-popup half of a post-unlock sync: fire-and-forget, with
-    // nothing replying to it. The send's own outcome is reported on both
-    // channels, and the send itself is raced, so an announcement that never
-    // settles cannot swallow the record of it.
-    const sent = chrome.runtime.sendMessage({
-      kind: "broadcast",
-      at: Date.now()
-    });
-    settle(sent, 2000).then((outcome) => {
-      const record =
-        outcome.state === "resolved"
-          ? { resolved: true, returnedType: typeof sent }
-          : outcome.state === "rejected"
-            ? { rejected: outcome.error, returnedType: typeof sent }
-            : { rejected: "the send never settled", returnedType: typeof sent };
-      writeStorage({ __broadcastSend: record });
-      announce({ kind: "broadcastOutcome", ...record });
+      storageSurface: self.__storageSurface
     });
     return false;
   }

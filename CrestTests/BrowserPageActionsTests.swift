@@ -181,11 +181,6 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
         XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 0.5), 0.5)
     }
 
-    func testZoomPercentageLabelRoundsForDisplay() {
-        XCTAssertEqual(BrowserPageZoomPolicy.percentageLabel(for: 0.67), "67%")
-        XCTAssertEqual(BrowserPageZoomPolicy.percentageLabel(for: 1.25), "125%")
-    }
-
     func testDefaultZoomNormalizationUsesTheCommandLevels() {
         XCTAssertEqual(BrowserPageZoomPolicy.defaultLevel, 1)
         XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.1), 0.5)

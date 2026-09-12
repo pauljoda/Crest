@@ -148,22 +148,6 @@ window.__messageProbe = () =>
     });
   });
 
-// The worker-to-popup half of a post-unlock sync: ask the worker to announce
-// something, then wait on the popup's own `chrome.runtime.onMessage` listener
-// for it. The real flow has no timeout behind this wait, so an announcement
-// that never arrives leaves the popup contentless.
-window.__broadcastProbe = () =>
-  new Promise((resolve) => {
-    const timer = setTimeout(() => resolve({ timeout: true }), 4000);
-    chrome.runtime.onMessage.addListener((message) => {
-      if (message?.kind === "broadcast") {
-        clearTimeout(timer);
-        resolve({ received: message });
-      }
-    });
-    chrome.runtime.sendMessage({ kind: "requestBroadcast" });
-  });
-
 // Drives one of the worker's multi-listener message kinds from the popup. The
 // callback form is used deliberately: it is the form whose reply the worker's
 // listeners compete to supply.
@@ -181,14 +165,8 @@ window.__multiProbe = (kind) =>
 // reports on; collecting both is what lets an unrun listener be told apart
 // from an unlanded write.
 window.__dispatchRecords = [];
-window.__broadcastOutcomes = [];
-window.__workerSteps = [];
 window.__storageSurface = null;
 chrome.runtime.onMessage.addListener((message) => {
-  if (message?.kind === "step") {
-    window.__workerSteps.push(message.step);
-    return;
-  }
   if (message?.kind === "storageSurface") {
     // Announced at worker startup, before this popup existed, so it usually
     // arrives only via the probe replies. Kept here for the case where a
@@ -203,13 +181,7 @@ chrome.runtime.onMessage.addListener((message) => {
     });
     return;
   }
-  if (message?.kind === "broadcastOutcome") {
-    window.__broadcastOutcomes.push({
-      resolved: message.resolved ?? null,
-      rejected: message.rejected ?? null,
-      returnedType: message.returnedType ?? null
-    });
-  }
+
 });
 
 // Resolves in bounded time no matter what the promise does. The popup's own
@@ -255,30 +227,6 @@ window.__readStorage = async (key, milliseconds) => {
     return { state: "resolved", value: outcome.value?.[key] ?? null };
   }
   return outcome;
-};
-
-// Is a write the worker makes visible to the popup at all? The worker walks
-// three raced storage calls and reports every step over the announcement
-// channel, which does not depend on storage; the popup then reads the same key
-// back itself, also raced. Disagreement between the two isolates the channel.
-window.__storageProbe = async () => {
-  const replyOutcome = await window.__settle(
-    new Promise((resolve) => {
-      chrome.runtime.sendMessage({ kind: "storageProbe" }, (reply) =>
-        resolve({ reply, lastError: chrome.runtime.lastError?.message })
-      );
-    }),
-    12000
-  );
-  const read = await window.__readStorage("__storageProbe", 2000);
-  return {
-    replyState: replyOutcome.state,
-    reply: replyOutcome.value?.reply ?? null,
-    lastError: replyOutcome.value?.lastError ?? null,
-    read,
-    workerSteps: (window.__workerSteps ?? []).slice(),
-    announcedStorageSurface: window.__storageSurface ?? null
-  };
 };
 
 // How many listeners the worker believes it registered, answered from the

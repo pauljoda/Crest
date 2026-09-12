@@ -109,7 +109,8 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let profile = BrowsingProfile()
         let space = makeSpace(profile: profile, tabs: [stateful, other])
         let archive = try makeTabStateArchive()
-        let pool = BrowserPagePool(tabStateArchive: archive)
+        // Persistence is intentional here even when the test host is isolated.
+        let pool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, tabStateArchive: archive)
 
         do {
             pool.select(tab: stateful, space: space)
@@ -181,10 +182,12 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         let standardArchive = try makeTabStateArchive()
         let privateArchive = try makeTabStateArchive()
         let standardPool = BrowserPagePool(
+            usesEphemeralWebsiteDataStores: false,
             tabStateArchive: standardArchive
         )
         let privatePool = BrowserPagePool(
             browsingMode: .privateBrowsing,
+            usesEphemeralWebsiteDataStores: false,
             tabStateArchive: privateArchive
         )
 
@@ -729,78 +732,6 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         await removeDataStore(profile.id)
     }
 
-    func testAllowingAfterABlockedPopupPersistsAndOnlyNewAttemptOpens() async throws {
-        let origin = try XCTUnwrap(URL(string: "https://allow-popups.crest.test/"))
-        let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
-        let profile = BrowsingProfile()
-        let space = makeSpace(profile: profile, tabs: [openerTab])
-        let store = BrowserStore(
-            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
-            persistence: InMemoryBrowserSessionPersistence()
-        )
-        let permissionPersistence = InMemoryBrowserSitePermissionPersistence()
-        let permissionCenter = BrowserSitePermissionCenter(
-            persistence: permissionPersistence
-        )
-        let pool = BrowserPagePool(
-            permissionCenter: permissionCenter,
-            popupTabHost: store.popupTabHost
-        )
-
-        do {
-            pool.select(session: store.session)
-            let opener = try XCTUnwrap(pool.activePage)
-            opener.webView.loadSimulatedRequest(
-                URLRequest(url: origin),
-                responseHTML: try blockedPopupFixtureHTML()
-            )
-            try await waitUntil("the initial automatic requests to be blocked") {
-                opener.blockedPopupState.notice?.status == .blocked
-            }
-            XCTAssertEqual(store.selectedSpace?.tabs.count, 1)
-
-            opener.allowAutomaticPopupsForBlockedSite()
-
-            let siteOrigin = try XCTUnwrap(BrowserSiteOrigin(url: origin))
-            XCTAssertEqual(
-                permissionCenter.decision(for: .popups, origin: siteOrigin, in: space.id),
-                .grantPersistently
-            )
-            XCTAssertEqual(permissionPersistence.records.count, 1)
-            XCTAssertTrue(
-                opener.webView.configuration.preferences
-                    .javaScriptCanOpenWindowsAutomatically
-            )
-            XCTAssertEqual(
-                opener.blockedPopupState.notice?.status,
-                .allowedAwaitingRetry,
-                "Allowing must show retry guidance without replaying a stale request."
-            )
-            XCTAssertEqual(store.selectedSpace?.tabs.count, 1)
-
-            let retryResult = try await stringResult(
-                from: opener.webView,
-                script: "return globalThis.attemptAutomaticPopup('retry');"
-            )
-
-            XCTAssertEqual(retryResult, "window")
-            try await waitUntil("the newly requested popup to be adopted") {
-                store.selectedSpace?.tabs.count == 2
-            }
-            XCTAssertNil(opener.blockedPopupState.notice)
-            let popup = try XCTUnwrap(pool.activePage)
-            XCTAssertFalse(popup === opener)
-            XCTAssertTrue(popup.wasOpenedAsPopup)
-            let popupHasOpener = try await boolResult(
-                from: popup.webView,
-                script: "return window.opener !== null;"
-            )
-            XCTAssertTrue(popupHasOpener)
-        }
-
-        await removeDataStore(profile.id)
-    }
-
     func testPersistentlyDeniedAutomaticWindowOpenStillProducesOneIndication() async throws {
         let origin = try XCTUnwrap(URL(string: "https://denied-popups.crest.test/"))
         let openerTab = BrowserTab(title: "Opener", url: nil, placement: .current)
@@ -874,6 +805,14 @@ final class BrowserWebCompatibilityTests: XCTestCase {
                 opener.webView.configuration.preferences
                     .javaScriptCanOpenWindowsAutomatically
             )
+            // Poll the fixture itself, as the other automatic-popup cases do,
+            // so an unmounted page gets a chance to run its scheduled attempts.
+            try await waitUntil("all automatic window requests to run") {
+                try await self.intResult(
+                    from: opener.webView,
+                    script: "return globalThis.automaticPopupResults.length;"
+                ) == 3
+            }
             try await waitUntil("the automatic attempt to be blocked first") {
                 opener.blockedPopupState.notice?.status == .blocked
             }

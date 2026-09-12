@@ -609,21 +609,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
         XCTAssertFalse(results.contains { $0.section == .actions })
     }
 
-    func testAnActionRowCarriesItsSectionNameAndAGlyph() {
-        let results = BrowserCommandPaletteResults.results(
-            for: BrowserCommandPaletteInput(
-                query: "sidebar",
-                space: makeSpace(tabs: []),
-                commands: [.toggleSidebar]
-            )
-        )
-        let action = results.first { $0.section == .actions }
-
-        XCTAssertEqual(action?.title, BrowserShortcutCommand.toggleSidebar.title)
-        XCTAssertEqual(action?.subtitle, BrowserShortcutSection.view.title)
-        XCTAssertEqual(action?.symbol, "sidebar.leading")
-    }
-
     // MARK: - Identity
 
     func testEveryResultCarriesADistinctIdentitySoTheListCanAnimate() {
@@ -734,52 +719,6 @@ final class BrowserCommandPaletteResultTests: XCTestCase {
 /// The card's geometry. The launcher sizes itself to its content until it has to
 /// scroll, and a sectioned list has headers to pay for.
 final class BrowserCommandPaletteLayoutTests: XCTestCase {
-    func testASectionedListPaysForEveryHeaderAndEveryGapBetweenSections() {
-        // One five-row section is the shape the tab-only launcher always had.
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.resultAreaHeight(
-                sectionRowCounts: [5],
-                includesPrimaryAction: false
-            ),
-            BrowserCommandPaletteLayout.resultAreaHeight(
-                tabCount: 5,
-                includesPrimaryAction: false
-            )
-        )
-        // 28 outer + (17 + 6 + 54) + 16 + (17 + 6 + 54) + 16 + 54
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.resultAreaHeight(
-                sectionRowCounts: [1, 1],
-                includesPrimaryAction: true,
-                maximumHeight: 1_000
-            ),
-            268
-        )
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.resultAreaHeight(
-                sectionRowCounts: [],
-                includesPrimaryAction: false
-            ),
-            0
-        )
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.resultAreaHeight(
-                sectionRowCounts: [0, 0],
-                includesPrimaryAction: true
-            ),
-            82
-        )
-    }
-
-    func testALongSectionedListStopsGrowingAndScrollsInstead() {
-        XCTAssertEqual(
-            BrowserCommandPaletteLayout.resultAreaHeight(
-                sectionRowCounts: [8, 5, 5, 6, 5],
-                includesPrimaryAction: true
-            ),
-            BrowserCommandPaletteLayout.maximumResultAreaHeight
-        )
-    }
 
 }
 

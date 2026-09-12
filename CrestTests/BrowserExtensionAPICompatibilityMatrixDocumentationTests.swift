@@ -98,36 +98,4 @@ final class BrowserExtensionAPICompatibilityMatrixDocumentationTests: XCTestCase
         }
     }
 
-    /// The pinned revisions are also repeated in hand-written prose and links.
-    /// A revision hash that is not the pinned one is drift, wherever it appears.
-    func testDocumentationRepeatsOnlyPinnedRevisions() throws {
-        let pinned: Set<String> = [
-            BrowserExtensionAPICompatibilityMatrix.chromiumRevision,
-            BrowserExtensionAPICompatibilityMatrix.firefoxRevision,
-            BrowserExtensionAPICompatibilityMatrix.webKitRevision,
-        ]
-        let expression = try NSRegularExpression(pattern: "[0-9a-f]{40}")
-
-        for document in Self.documents {
-            let url = Self.repositoryRoot.appendingPathComponent(document.relativePath)
-            let contents = try String(contentsOf: url, encoding: .utf8)
-            let matches = expression.matches(
-                in: contents,
-                range: NSRange(contents.startIndex..<contents.endIndex, in: contents)
-            )
-
-            for match in matches {
-                guard let range = Range(match.range, in: contents) else { continue }
-                let revision = String(contents[range])
-                XCTAssertTrue(
-                    pinned.contains(revision),
-                    """
-                    \(document.relativePath) references revision \(revision), which is not \
-                    pinned by BrowserExtensionAPICompatibilityMatrix. Update the document or \
-                    the matrix so one revision review covers both.
-                    """
-                )
-            }
-        }
-    }
 }

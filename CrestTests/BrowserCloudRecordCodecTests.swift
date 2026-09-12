@@ -118,13 +118,24 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
             .crown, .risingSun, .paw, .hound, .horn, .snowflake, .drop,
             .flower, .crossedBanners,
         ]
-        for index in session.spaces.indices {
-            session.spaces[index].branding.iconStyle = .layeredCrest
-            session.spaces[index].branding.crest.symbol =
-                expanded[
-                    index % expanded.count
-                ]
+        session.spaces = expanded.map { symbol in
+            BrowserSpace(
+                id: SpaceID(),
+                profile: BrowsingProfile(),
+                name: symbol.rawValue,
+                symbol: "globe",
+                accent: .indigo,
+                branding: BrowserSpaceBranding(
+                    colors: [.ink, .ocean, .gold],
+                    iconStyle: .layeredCrest,
+                    crest: BrowserSpaceCrest(trim: .none, symbol: symbol)
+                ),
+                folders: [],
+                tabs: [],
+                selectedTabID: nil
+            )
         }
+        session.selectedSpaceID = try XCTUnwrap(session.spaces.first).id
         var journal = BrowserSyncJournal(
             deviceID: UUID(uuidString: "10000000-0000-0000-0000-000000000009")!
         )
@@ -135,7 +146,7 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
             .filter { $0.id.kind == .space }
             .map { try codec.decode(codec.encode($0)) }
 
-        XCTAssertFalse(decoded.isEmpty)
+        XCTAssertEqual(decoded.count, expanded.count)
         for record in decoded {
             guard case .space(let space)? = record.payload,
                 let source = session.spaces.first(where: { $0.id == space.id })

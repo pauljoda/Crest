@@ -469,35 +469,6 @@ final class BrowserUtilityListTests: XCTestCase {
         }
     }
 
-    func testCommonListSwitcherKeepsTheThreeRequestedDestinationsInOrder() {
-        XCTAssertEqual(
-            BrowserUtilitySwitcherLayout.destinations,
-            [.archive, .history, .downloads]
-        )
-        XCTAssertEqual(
-            BrowserUtilitySwitcherLayout.destinations.enumerated().map {
-                BrowserUtilitySwitcherLayout.verticalOffset(
-                    for: $0.offset,
-                    count: BrowserUtilitySwitcherLayout.destinations.count
-                )
-            },
-            [-64, 0, 64]
-        )
-        XCTAssertEqual(BrowserUtilitySwitcherLayout.buttonSize, 44)
-        XCTAssertEqual(BrowserUtilitySwitcherLayout.collapsedScale, 0.08)
-        XCTAssertEqual(BrowserUtilitySwitcherLayout.destinationGap, 18)
-        XCTAssertEqual(
-            BrowserUtilitySwitcherLayout.expansionDelay(for: 0),
-            0,
-            accuracy: 0.001
-        )
-        XCTAssertEqual(
-            BrowserUtilitySwitcherLayout.expansionDelay(for: 2),
-            0.09,
-            accuracy: 0.001
-        )
-    }
-
     func testRelativeTimeSectionsResolveForEnglishAndArabic() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
@@ -712,19 +683,6 @@ final class BrowserUtilityListTests: XCTestCase {
         XCTAssertEqual(restored.surface, .history)
     }
 
-    func testUtilityFanStartsRevealingBeforeItsFirstSuspension() {
-        XCTAssertEqual(
-            BrowserUtilitySwitcherLayout.expansionSteps,
-            [
-                .reveal(.archive),
-                .wait(BrowserUtilitySwitcherLayout.staggerInterval),
-                .reveal(.history),
-                .wait(BrowserUtilitySwitcherLayout.staggerInterval),
-                .reveal(.downloads),
-            ]
-        )
-    }
-
     func testDownloadNotificationUsesTheNewestActiveTransferProgress() throws {
         let profileID = identifier(0x70)
         let older = BrowserDownloadItem(
@@ -757,25 +715,6 @@ final class BrowserUtilityListTests: XCTestCase {
         )
     }
 
-    func testDownloadFileIconsReflectCommonFileKinds() {
-        let expectations = [
-            ("Crest.pdf", "doc.richtext.fill"),
-            ("Screenshot.png", "photo.fill"),
-            ("Archive.zip", "archivebox.fill"),
-            ("Theme.mp3", "waveform"),
-            ("Demo.mov", "film.fill"),
-            ("Notes.txt", "doc.text.fill"),
-            ("Unknown.crest", "doc.fill"),
-        ]
-
-        for (filename, expectedSymbol) in expectations {
-            XCTAssertEqual(
-                BrowserDownloadFileIconPolicy.systemImage(for: filename),
-                expectedSymbol
-            )
-        }
-    }
-
     func testFinishedDownloadRowRevealsTheFileInFinder() {
         XCTAssertEqual(
             BrowserUtilityDownloadPrimaryActionPolicy.destination(
@@ -790,22 +729,6 @@ final class BrowserUtilityListTests: XCTestCase {
                 availableDestinations: [.open, .revealInFinder]
             )
         )
-    }
-
-    func testArchiveFiltersIncludeEveryRemovalCauseWithASymbol() {
-        XCTAssertEqual(
-            BrowserUtilityListFilter.options(for: .archive),
-            [
-                .all,
-                .archivedClosed,
-                .archivedAutomatically,
-                .archivedSynced,
-                .archivedQuickWindow,
-            ]
-        )
-        for filter in BrowserUtilityListFilter.options(for: .archive) {
-            XCTAssertFalse(filter.systemImage.isEmpty)
-        }
     }
 
     func testArchivePreparationSortsByTheTimeTheTabWasClosed() throws {

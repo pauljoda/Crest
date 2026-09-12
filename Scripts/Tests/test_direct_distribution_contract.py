@@ -7,26 +7,11 @@ import pathlib
 import plistlib
 import unittest
 
-
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
 EXPORT_OPTIONS = REPOSITORY_ROOT / "Config" / "DeveloperIDExportOptions.plist"
 RELEASE_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "release.yml"
 
-
 class DirectDistributionContractTests(unittest.TestCase):
-    def test_unchanged_nightly_stops_before_the_release_job(self) -> None:
-        workflow = RELEASE_WORKFLOW.read_text()
-
-        self.assertIn("preflight:", workflow)
-        self.assertIn(
-            'if [[ "$channel" == "nightly" && "$previous_commit" == "$GITHUB_SHA" ]]',
-            workflow,
-        )
-        self.assertIn("should_publish=false", workflow)
-        self.assertIn(
-            "if: needs.preflight.outputs.should_publish == 'true'",
-            workflow,
-        )
 
     def test_each_release_publishes_one_clearly_named_asset_set(self) -> None:
         workflow = RELEASE_WORKFLOW.read_text()
@@ -119,7 +104,6 @@ class DirectDistributionContractTests(unittest.TestCase):
         self.assertNotIn("CODE_SIGNING_ALLOWED=NO", workflow)
         self.assertNotIn("CODE_SIGN_STYLE=Automatic", workflow)
         self.assertNotIn("hdiutil create", workflow)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,11 +9,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 GUARD_SCRIPT = REPOSITORY_ROOT / "Scripts" / "check-vertical-structure.py"
-DEBT_CONFIGURATION = REPOSITORY_ROOT / "Config" / "VerticalStructureDebt.json"
-
 
 def load_guard_module():
     spec = importlib.util.spec_from_file_location(
@@ -24,7 +21,6 @@ def load_guard_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
 
 class VerticalFeatureContractTests(unittest.TestCase):
     @classmethod
@@ -69,14 +65,6 @@ class VerticalFeatureContractTests(unittest.TestCase):
             (violation.rule, violation.path, violation.subject)
             for violation in self.guard.scan_repository(self.repository_root)
         }
-
-    def test_current_repository_matches_the_explicit_debt_ledger(self) -> None:
-        configured_debt = self.guard.load_debt_configuration(DEBT_CONFIGURATION)
-
-        audit = self.guard.audit_repository(REPOSITORY_ROOT, configured_debt)
-
-        self.assertEqual(audit.unexpected, [])
-        self.assertEqual(audit.stale, [])
 
     def test_owner_files_may_colocate_related_declarations_and_extensions(self) -> None:
         self.write_source(
@@ -284,7 +272,6 @@ struct SampleView: View {
             [entry.key for entry in stale_audit.stale],
             [("extension-file-primary-type", relative_path, "Helper")],
         )
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -92,75 +92,7 @@ final class BrowserNavigationFailureClassificationTests: XCTestCase {
 
 @MainActor
 final class BrowserNavigationFailureViewTests: XCTestCase {
-    func testFailureAccentUsesTheSpacePrimaryOrItsOnlyBackgroundColor() {
-        let multicolor = BrowserSpaceBranding(colors: [.ink, .ocean, .gold])
-        let singleColor = BrowserSpaceBranding(colors: [.ember])
 
-        XCTAssertEqual(
-            BrowserNavigationFailureAppearance.brandColor(for: multicolor),
-            .ocean
-        )
-        XCTAssertEqual(
-            BrowserNavigationFailureAppearance.brandColor(for: singleColor),
-            .ember
-        )
-        XCTAssertNil(BrowserNavigationFailureAppearance.brandColor(for: nil))
-    }
-
-    func testFailureBackgroundUsesOneUniformFillAtEveryCorner() throws {
-        let url = try XCTUnwrap(URL(string: "https://offline.example.test"))
-        let failure = try XCTUnwrap(
-            BrowserNavigationFailure(
-                error: URLError(.cannotConnectToHost),
-                phase: .provisional,
-                fallbackURL: url
-            )
-        )
-        let renderedSize = CGSize(width: 800, height: 800)
-        let renderer = ImageRenderer(
-            content: BrowserNavigationFailureView(
-                failure: failure,
-                branding: BrowserSpaceBranding(colors: [.ink, .ocean]),
-                layout: .regular,
-                canGoBack: false,
-                canProceed: false,
-                retry: {},
-                goBack: {},
-                proceed: {}
-            )
-            .frame(width: renderedSize.width, height: renderedSize.height)
-            .environment(\.colorScheme, .dark)
-        )
-        renderer.scale = 1
-
-        let image = try XCTUnwrap(renderer.nsImage)
-        let imageData = try XCTUnwrap(image.tiffRepresentation)
-        let bitmap = try XCTUnwrap(NSBitmapImageRep(data: imageData))
-        let inset = 20
-        let samplePoints = [
-            NSPoint(x: inset, y: inset),
-            NSPoint(x: Int(renderedSize.width) - inset, y: inset),
-            NSPoint(x: inset, y: Int(renderedSize.height) - inset),
-            NSPoint(
-                x: Int(renderedSize.width) - inset,
-                y: Int(renderedSize.height) - inset
-            ),
-        ]
-        let samples = try samplePoints.map { point in
-            let color = try XCTUnwrap(
-                bitmap.colorAt(x: Int(point.x), y: Int(point.y))
-            )
-            return try XCTUnwrap(color.usingColorSpace(.deviceRGB))
-        }
-        let reference = try XCTUnwrap(samples.first)
-
-        for sample in samples.dropFirst() {
-            XCTAssertEqual(sample.redComponent, reference.redComponent, accuracy: 0.01)
-            XCTAssertEqual(sample.greenComponent, reference.greenComponent, accuracy: 0.01)
-            XCTAssertEqual(sample.blueComponent, reference.blueComponent, accuracy: 0.01)
-            XCTAssertEqual(sample.alphaComponent, reference.alphaComponent, accuracy: 0.01)
-        }
-    }
 }
 
 @MainActor

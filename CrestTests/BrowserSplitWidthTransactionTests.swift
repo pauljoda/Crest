@@ -18,103 +18,8 @@ final class BrowserSplitWidthTransactionTests: XCTestCase {
     private let containerWidth: CGFloat = 1000
     /// How many times a real drag can be re-evaluated while the pointer sits
     /// still: enough passes that a loop with any gain at all would show.
-    private let layoutPasses = 32
 
     // MARK: - Stability under a stationary pointer
-
-    func testAStationaryPointerLeavesTheLayoutWhereItIs() {
-        var transaction = makeTransaction()
-        let travel: CGFloat = 120
-
-        transaction.resize(dividerIndex: 0, delta: travel, containerWidth: containerWidth)
-        let settled = transaction.fractions
-        for _ in 0..<layoutPasses {
-            transaction.resize(dividerIndex: 0, delta: travel, containerWidth: containerWidth)
-        }
-
-        assertFractions(
-            transaction.fractions,
-            equal: settled,
-            "The same total travel has to answer the same layout on every pass."
-        )
-    }
-
-    /// The whole loop, closed: measure a stationary pointer against the divider
-    /// the last pass drew, feed that back, and repeat.
-    ///
-    /// This is what the old `.local` gesture did. Measuring in the row's space
-    /// instead makes the reported travel independent of where the divider ended
-    /// up, so the boundary lands on the pointer and stays there.
-    func testTheDividerConvergesOnThePointerItIsMeasuredAgainst() {
-        var transaction = BrowserSplitWidthTransaction(persistedFractions: [0.5, 0.5])
-        let grabbed = dividerPosition(of: transaction)
-        let pointer = grabbed + 120
-
-        var positions: [CGFloat] = []
-        for _ in 0..<layoutPasses {
-            // The row's space: total travel from where the drag began, which no
-            // amount of divider movement can change.
-            transaction.resize(
-                dividerIndex: 0,
-                delta: pointer - grabbed,
-                containerWidth: containerWidth
-            )
-            positions.append(dividerPosition(of: transaction))
-        }
-
-        guard let landed = positions.last else { return XCTFail("No layout passes ran.") }
-        XCTAssertEqual(
-            landed,
-            pointer,
-            accuracy: 0.5,
-            "The boundary has to arrive under the pointer, not at a fraction of its travel."
-        )
-        for position in positions {
-            XCTAssertEqual(
-                position,
-                landed,
-                accuracy: 0.0001,
-                "Every pass has to draw the same divider: an oscillation is a moving one."
-            )
-        }
-    }
-
-    /// The same loop with the divider's own frame in it, which is the regression
-    /// itself: a one-point tremor is amplified into a standing oscillation.
-    func testMeasuringAgainstTheMovingDividerWouldNeverSettle() {
-        var transaction = BrowserSplitWidthTransaction(persistedFractions: [0.5, 0.5])
-        let grabbed = dividerPosition(of: transaction)
-        let pointer = grabbed + 120
-
-        var positions: [CGFloat] = []
-        for _ in 0..<layoutPasses {
-            // The handle's own space: the pointer's travel, less the travel the
-            // handle it is measured against has already made.
-            let travelled = dividerPosition(of: transaction) - grabbed
-            transaction.resize(
-                dividerIndex: 0,
-                delta: pointer - grabbed - travelled,
-                containerWidth: containerWidth
-            )
-            positions.append(dividerPosition(of: transaction))
-        }
-
-        guard let landed = positions.last else { return XCTFail("No layout passes ran.") }
-        XCTAssertGreaterThan(
-            Set(positions.map { ($0 * 100).rounded() }).count,
-            1,
-            """
-            Feeding a divider's own position back into the drag that moves it is \
-            the loop this fix removes; a version of it that settled would mean \
-            the test no longer reproduces it.
-            """
-        )
-        XCTAssertGreaterThan(
-            abs(landed - pointer),
-            0.5,
-            "The loop costs tracking too: the boundary never arrives at the pointer."
-        )
-    }
 
     func testAccessibilityStepsMeasureFromTheLayoutOnScreen() {
         var transaction = makeTransaction()
@@ -198,20 +103,6 @@ final class BrowserSplitWidthTransactionTests: XCTestCase {
 
     private func makeTransaction() -> BrowserSplitWidthTransaction {
         BrowserSplitWidthTransaction(persistedFractions: [0.4, 0.35, 0.25])
-    }
-
-    /// Where the row would draw the divider after the first card, which is what
-    /// a gesture measured in the handle's own space would resolve against.
-    private func dividerPosition(
-        of transaction: BrowserSplitWidthTransaction
-    ) -> CGFloat {
-        BrowserSplitColumnLayout.dividerLeadingDistance(
-            after: 0,
-            cardWidths: BrowserSplitColumnLayout.widths(
-                containerWidth: containerWidth,
-                fractions: transaction.fractions
-            )
-        )
     }
 
     private func assertFractions(

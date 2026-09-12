@@ -12,26 +12,26 @@ enum BrowserFaviconCapture {
             script,
             arguments: [:],
             in: nil,
-            contentWorld: .page
+            contentWorld: .defaultClient
         )
         let discovered = discovery(from: value, pageURL: pageURL)
-        let cookies = await allCookies(
-            in: webView.configuration.websiteDataStore.httpCookieStore
-        )
+        guard webView.url == pageURL, !Task.isCancelled else { return nil }
         var manifestIcons: [URL] = []
         for manifestURL in discovered.manifestURLs {
             guard
-                let manifestData = await downloadManifest(
+                let manifest = await downloadResource(
                     manifestURL,
+                    in: webView,
                     pageURL: pageURL,
-                    cookies: cookies,
-                    userAgent: discovered.userAgent
+                    userAgent: discovered.userAgent,
+                    maximumByteCount: 1_024 * 1_024,
+                    accept: BrowserFaviconResourceLoader.manifestAccept
                 )
             else { continue }
             manifestIcons.append(
                 contentsOf: manifestIconURLs(
-                    from: manifestData,
-                    manifestURL: manifestURL
+                    from: manifest.data,
+                    manifestURL: manifest.url
                 )
             )
         }
@@ -55,12 +55,15 @@ enum BrowserFaviconCapture {
                 }
                 continue
             }
-            if let downloadedCandidate = await downloadedCandidate(
+            guard webView.url == pageURL, !Task.isCancelled else { return nil }
+            if let downloadedCandidate = await downloadResource(
                 candidate,
+                in: webView,
                 pageURL: pageURL,
-                cookies: cookies,
-                userAgent: discovered.userAgent
-            ) {
+                userAgent: discovered.userAgent,
+                maximumByteCount: maximumByteCount,
+                accept: BrowserFaviconResourceLoader.iconAccept
+            ), downloadedCandidate.isImage {
                 if let renderableData = await renderableCandidateData(
                     downloadedCandidate.data,
                     mimeType: downloadedCandidate.mimeType,
@@ -111,20 +114,21 @@ enum BrowserFaviconCapture {
         return data
     }
 
-    static func downloadCandidate(
+    nonisolated static func downloadCandidate(
         _ iconURL: URL,
-        pageURL: URL,
-        cookies: [HTTPCookie],
         userAgent: String? = nil,
-        session: URLSession = candidateSession
+        session: URLSession? = nil
     ) async -> Data? {
-        await downloadedCandidate(
-            iconURL,
-            pageURL: pageURL,
-            cookies: cookies,
-            userAgent: userAgent,
-            session: session
-        )?.data
+        guard
+            let resource = await BrowserFaviconResourceLoader.download(
+                iconURL,
+                maximumByteCount: maximumByteCount,
+                accept: BrowserFaviconResourceLoader.iconAccept,
+                userAgent: userAgent,
+                session: session
+            ), resource.isImage
+        else { return nil }
+        return resource.data
     }
 
     static func rasterizedSVGData(
@@ -152,28 +156,47 @@ enum BrowserFaviconCapture {
         return decodeDataURL(dataURL)
     }
 
-    private static func downloadedCandidate(
-        _ iconURL: URL,
+    private static func downloadResource(
+        _ url: URL,
+        in webView: WKWebView,
         pageURL: URL,
-        cookies: [HTTPCookie],
         userAgent: String?,
-        session: URLSession = candidateSession
-    ) async -> DownloadedCandidate? {
-        guard isHTTPFamily(iconURL),
-            let (data, response) = await download(
-                iconURL,
-                pageURL: pageURL,
-                cookies: cookies,
-                userAgent: userAgent,
-                session: session,
-                maximumByteCount: maximumByteCount,
-                accept:
-                    "image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.5"
-            ),
-            response.mimeType?.lowercased().hasPrefix("image/") == true
-                || response.mimeType?.lowercased() == "application/octet-stream"
-        else { return nil }
-        return DownloadedCandidate(data: data, mimeType: response.mimeType)
+        maximumByteCount: Int,
+        accept: String
+    ) async -> BrowserFaviconResourceLoader.Resource? {
+        guard isHTTPFamily(url), webView.url == pageURL, !Task.isCancelled else { return nil }
+        // The isolated world keeps page scripts from replacing fetch. WebKit
+        // owns cookie scope, SameSite, Space storage, and redirect credentials.
+        // No referrer is needed for discovery, even when a policy permits one.
+        let value = try? await webView.callAsyncJavaScript(
+            fetchResourceScript,
+            arguments: [
+                "resourceURL": url.absoluteString,
+                "pageURL": pageURL.absoluteString,
+                "maximumByteCount": maximumByteCount,
+                "accept": accept,
+            ],
+            in: nil,
+            contentWorld: .defaultClient
+        )
+        guard webView.url == pageURL, !Task.isCancelled else { return nil }
+        if let result = value as? [String: Any],
+            let base64 = result["base64"] as? String,
+            base64.utf8.count <= ((maximumByteCount + 2) / 3) * 4,
+            let data = Data(base64Encoded: base64),
+            !data.isEmpty, data.count <= maximumByteCount,
+            let source = result["url"] as? String, let responseURL = URL(string: source)
+        {
+            return .init(data: data, mimeType: result["mimeType"] as? String, url: responseURL)
+        }
+        // Public CDN icons may not grant CORS access. The native fallback
+        // carries neither the page URL nor its credentials, on any redirect.
+        return await BrowserFaviconResourceLoader.download(
+            url,
+            maximumByteCount: maximumByteCount,
+            accept: accept,
+            userAgent: userAgent
+        )
     }
 
     private static func renderableCandidateData(
@@ -206,58 +229,6 @@ enum BrowserFaviconCapture {
         else { return nil }
         let start = value.index(value.startIndex, offsetBy: 5)
         return String(value[start..<separator]).lowercased()
-    }
-
-    private static func downloadManifest(
-        _ manifestURL: URL,
-        pageURL: URL,
-        cookies: [HTTPCookie],
-        userAgent: String?
-    ) async -> Data? {
-        guard isHTTPFamily(manifestURL),
-            let (data, _) = await download(
-                manifestURL,
-                pageURL: pageURL,
-                cookies: cookies,
-                userAgent: userAgent,
-                session: candidateSession,
-                maximumByteCount: 1_024 * 1_024,
-                accept: "application/manifest+json,application/json,*/*;q=0.5"
-            )
-        else { return nil }
-        return data
-    }
-
-    private static func download(
-        _ url: URL,
-        pageURL: URL,
-        cookies: [HTTPCookie],
-        userAgent: String?,
-        session: URLSession,
-        maximumByteCount: Int,
-        accept: String
-    ) async -> (Data, HTTPURLResponse)? {
-        var request = URLRequest(
-            url: url,
-            cachePolicy: .reloadIgnoringLocalAndRemoteCacheData,
-            timeoutInterval: 12
-        )
-        request.setValue(accept, forHTTPHeaderField: "Accept")
-        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-        request.setValue(pageURL.absoluteString, forHTTPHeaderField: "Referer")
-        if let userAgent = normalizedUserAgent(userAgent) {
-            request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        }
-        if let cookieHeader = cookieHeader(for: url, cookies: cookies) {
-            request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        }
-        guard let (data, response) = try? await session.data(for: request),
-            let response = response as? HTTPURLResponse,
-            (200..<300).contains(response.statusCode),
-            !data.isEmpty,
-            data.count <= maximumByteCount
-        else { return nil }
-        return (data, response)
     }
 
     static func manifestIconURLs(
@@ -398,27 +369,6 @@ enum BrowserFaviconCapture {
         }
     }
 
-    private static func cookieHeader(
-        for url: URL,
-        cookies: [HTTPCookie]
-    ) -> String? {
-        guard let host = url.host()?.lowercased() else { return nil }
-        let matching = cookies.filter { cookie in
-            BrowserSiteDataPolicy.matchesCookieDomain(cookie.domain, host: host)
-                && (!cookie.isSecure || url.scheme?.lowercased() == "https")
-                && url.path.hasPrefix(cookie.path)
-        }
-        return HTTPCookie.requestHeaderFields(with: matching)["Cookie"]
-    }
-
-    private static func allCookies(
-        in cookieStore: WKHTTPCookieStore
-    ) async -> [HTTPCookie] {
-        await withCheckedContinuation { continuation in
-            cookieStore.getAllCookies { continuation.resume(returning: $0) }
-        }
-    }
-
     private static func isHTTPFamily(_ url: URL?) -> Bool {
         url?.scheme?.lowercased() == "https"
             || url?.scheme?.lowercased() == "http"
@@ -459,6 +409,55 @@ enum BrowserFaviconCapture {
         return value
     }
 
+    private static let fetchResourceScript = #"""
+        if (location.href !== pageURL) return null;
+        const target = new URL(resourceURL);
+        // Cross-origin public resources use the credential-free native loader.
+        if (target.origin !== location.origin || target.username || target.password) return null;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        try {
+            const response = await fetch(target.href, {
+                credentials: 'same-origin',
+                referrer: '',
+                referrerPolicy: 'no-referrer',
+                cache: 'no-store',
+                headers: { Accept: accept },
+                signal: controller.signal
+            });
+            if (!response.ok || !response.body) return null;
+            const length = Number(response.headers.get('content-length'));
+            if (length > maximumByteCount) return null;
+            const reader = response.body.getReader();
+            const chunks = [];
+            let count = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                count += value.byteLength;
+                if (count > maximumByteCount) return null;
+                chunks.push(value);
+            }
+            if (!count) return null;
+            let binary = '';
+            for (const chunk of chunks) {
+                for (let offset = 0; offset < chunk.length; offset += 8192) {
+                    binary += String.fromCharCode(...chunk.subarray(offset, offset + 8192));
+                }
+            }
+            return {
+                base64: btoa(binary),
+                mimeType: (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase(),
+                url: response.url
+            };
+        } catch {
+            return null;
+        } finally {
+            controller.abort();
+            clearTimeout(timeout);
+        }
+        """#
+
     private static let rasterizeSVGScript = #"""
         const image = new Image();
         image.src = `data:image/svg+xml;base64,${svgBase64}`;
@@ -480,19 +479,6 @@ enum BrowserFaviconCapture {
         """#
 
     private static let maximumRasterizedPixelSize = 512
-
-    private static let candidateSession: URLSession = {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpCookieStorage = nil
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        return URLSession(configuration: configuration)
-    }()
-
-    private struct DownloadedCandidate {
-        let data: Data
-        let mimeType: String?
-    }
 
     private struct IconCandidate {
         let url: URL

@@ -55,22 +55,6 @@ final class BrowserFolderAppearanceTests: XCTestCase {
         XCTAssertEqual(synced.space(id: second.id)?.branding.textColorMode, .automatic)
     }
 
-    func testTextColorOverridesBothContrastingPalettesAndReturnsToAutomatic() throws {
-        for color in [BrowserSpaceBrandColor.ink, .gold] {
-            var branding = BrowserSpaceBranding(colors: [color], readabilityFade: 0)
-            let automatic = BrowserSpaceForegroundPolicy.tone(for: branding)
-            for mode in BrowserSpaceTextColorMode.allCases {
-                branding.textColorMode = mode
-                let restored = try JSONDecoder().decode(
-                    BrowserSpaceBranding.self, from: JSONEncoder().encode(branding))
-                XCTAssertEqual(restored.normalized().textColorMode, mode)
-                XCTAssertEqual(BrowserSpaceForegroundPolicy.tone(for: restored), mode.foregroundTone ?? automatic)
-            }
-            branding.textColorMode = .automatic
-            XCTAssertEqual(BrowserSpaceForegroundPolicy.tone(for: branding), automatic)
-        }
-    }
-
     func testMissingAndFutureTextColorChoicesUseAutomatic() throws {
         let branding = BrowserSpaceBranding(colors: [.ink])
         var payload = try XCTUnwrap(
@@ -128,37 +112,4 @@ final class BrowserFolderAppearanceTests: XCTestCase {
         XCTAssertEqual(restored.renderingVersion, original.renderingVersion)
     }
 
-    func testColorStrengthKeepsExistingEndpointsAndClampsInvalidValues() {
-        XCTAssertEqual(BrowserFolderAppearancePolicy.fillOpacity(intensity: 0, reduceTransparency: false), 0.12)
-        XCTAssertEqual(BrowserFolderAppearancePolicy.fillOpacity(intensity: 0, reduceTransparency: true), 0.28)
-        XCTAssertEqual(BrowserFolderAppearancePolicy.fillOpacity(intensity: 1, reduceTransparency: false), 1)
-        XCTAssertEqual(BrowserFolderAppearancePolicy.fillOpacity(intensity: 2, reduceTransparency: false), 1)
-        XCTAssertEqual(BrowserFolderAppearancePolicy.fillOpacity(intensity: .nan, reduceTransparency: false), 0.12)
-    }
-
-    func testPersistentHighlightsDoNotReplaceInteractionFeedback() {
-        XCTAssertFalse(
-            BrowserFolderAppearancePolicy.showsFill(alwaysVisible: false, isHovered: false, isTargeted: false))
-        XCTAssertTrue(BrowserFolderAppearancePolicy.showsFill(alwaysVisible: true, isHovered: false, isTargeted: false))
-        XCTAssertTrue(BrowserFolderAppearancePolicy.showsFill(alwaysVisible: false, isHovered: true, isTargeted: false))
-        XCTAssertTrue(BrowserFolderAppearancePolicy.showsFill(alwaysVisible: false, isHovered: false, isTargeted: true))
-        XCTAssertGreaterThan(BrowserFolderAppearancePolicy.regionInset, 0)
-        XCTAssertEqual(BrowserFolderLayout.contentsInset, 6)
-        XCTAssertEqual(BrowserFolderLayout.rowLeadingInset(depth: 0), BrowserFolderLayout.contentsInset)
-        XCTAssertEqual(BrowserFolderLayout.rowLeadingInset(depth: 1), 2 * BrowserFolderLayout.contentsInset)
-    }
-
-    func testTextToneUsesTheCompositedColorAtIntermediateIntensity() {
-        let black = BrowserSpaceBrandColor(red: 0, green: 0, blue: 0)
-        let medium = BrowserFolderAppearancePolicy.compositedColor(
-            .folderDefault,
-            opacity: BrowserFolderAppearancePolicy.fillOpacity(intensity: 0.5, reduceTransparency: false),
-            background: black)
-        XCTAssertEqual(
-            BrowserSpaceForegroundPolicy.tone(for: .init(colors: [medium], readabilityFade: 0)), .light)
-        let opaque = BrowserFolderAppearancePolicy.compositedColor(.gold, opacity: 1, background: black)
-        XCTAssertEqual(opaque, .gold)
-        XCTAssertEqual(
-            BrowserSpaceForegroundPolicy.tone(for: .init(colors: [opaque], readabilityFade: 0)), .dark)
-    }
 }

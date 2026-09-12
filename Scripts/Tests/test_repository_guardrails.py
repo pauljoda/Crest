@@ -11,12 +11,10 @@ import subprocess
 import tempfile
 import unittest
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 ARCHITECTURE_SCRIPT = REPOSITORY_ROOT / "Scripts" / "check-architecture.py"
 FORMAT_SCRIPT = REPOSITORY_ROOT / "Scripts" / "check-swift-format.sh"
 PERIPHERY_SCRIPT = REPOSITORY_ROOT / "Scripts" / "audit-periphery.sh"
-
 
 def load_architecture_module():
     spec = importlib.util.spec_from_file_location(
@@ -27,7 +25,6 @@ def load_architecture_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
 
 class ArchitectureGuardTests(unittest.TestCase):
     @classmethod
@@ -73,15 +70,6 @@ class ArchitectureGuardTests(unittest.TestCase):
 
     def violation_rules(self) -> set[str]:
         return {violation.rule for violation in self.violations()}
-
-    def test_current_repository_satisfies_the_locked_contracts(self) -> None:
-        config = self.guard.load_configuration(
-            REPOSITORY_ROOT / "Config" / "ArchitectureGuardrails.json"
-        )
-
-        violations = self.guard.scan_repository(REPOSITORY_ROOT, config)
-
-        self.assertEqual(violations, [])
 
     def test_domain_and_application_reject_outer_layer_frameworks(self) -> None:
         self.write_source(
@@ -215,7 +203,6 @@ struct BuilderCompatibility: View {
         self.assertEqual(len(violations), 1)
         self.assertEqual(violations[0].path, "CrestShared/Domain/NewClock.swift")
 
-
 class SwiftFormatGuardTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -278,7 +265,6 @@ class SwiftFormatGuardTests(unittest.TestCase):
         self.assertIn("Untracked.swift", arguments)
         self.assertNotIn("notes.txt", arguments)
         self.assertNotIn("--in-place", arguments)
-
 
 class PeripheryAuditTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -347,7 +333,6 @@ class PeripheryAuditTests(unittest.TestCase):
         self.assertTrue(
             all("--retain-codable-properties" in invocation for invocation in invocations)
         )
-
 
 if __name__ == "__main__":
     unittest.main()

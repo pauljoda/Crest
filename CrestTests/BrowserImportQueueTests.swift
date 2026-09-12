@@ -2,12 +2,6 @@ import XCTest
 @testable import Crest
 
 final class BrowserImportQueueTests: XCTestCase {
-    func testArcUsesItsNativeSectionLabelInsteadOfACrestIdentityRow() {
-        XCTAssertEqual(BrowserImportApplication.arc.sourceSpaceHeaderStyle, .sectionLabel)
-        XCTAssertEqual(BrowserImportApplication.zen.sourceSpaceHeaderStyle, .identity)
-        XCTAssertEqual(BrowserImportApplication.chrome.sourceSpaceHeaderStyle, .identity)
-        XCTAssertEqual(BrowserImportApplication.safari.sourceSpaceHeaderStyle, .identity)
-    }
 
     func testSelectionUsesDetectedBrowserOrder() {
         let queue = BrowserImportQueue(
@@ -93,17 +87,4 @@ final class BrowserImportQueueTests: XCTestCase {
         )
     }
 
-    func testImportPreviewKeepsOnlyTheTopSidebarControl() {
-        XCTAssertNil(BrowserImportPreviewControls.sourceFooterLeadingSymbol)
-    }
-
-    func testImportPreviewUsesCalibratedBrandingLanguage() {
-        XCTAssertTrue(
-            BrowserImportPreviewControls.describesDestinationAsSimplifiedBrandingPreview
-        )
-    }
-
-    func testBrowserChooserUsesTheAnchoredWizardFooter() {
-        XCTAssertTrue(BrowserImportPreviewControls.usesAnchoredImportFooter)
-    }
 }

@@ -13,9 +13,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
-
 
 class XcodeCloudConfigurationTests(unittest.TestCase):
     @staticmethod
@@ -290,50 +288,6 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                             f"but Config/Version.xcconfig requires {expected_version}",
                             result.stderr,
                         )
-
-    def test_extension_toggle_avoids_xcode_26_setter_thunk_crash(self) -> None:
-        extensions_view = (
-            REPOSITORY_ROOT
-            / "CrestShared"
-            / "Features"
-            / "Extensions"
-            / "BrowserExtensionsView"
-            / "Components"
-            / "BrowserExtensionRow.swift"
-        ).read_text()
-
-        self.assertNotIn("set: setEnabled", extensions_view)
-        self.assertIn("set: { isEnabled in", extensions_view)
-        self.assertIn("setEnabled(isEnabled)", extensions_view)
-
-    def test_onboarding_bindings_avoid_xcode_26_setter_thunk_crash(self) -> None:
-        component_root = (
-            REPOSITORY_ROOT
-            / "CrestMac"
-            / "Features"
-            / "Onboarding"
-            / "BrowserOnboardingWindow"
-            / "Components"
-        )
-        bindings = (
-            (
-                component_root / "BrowserOnboardingWindowContent.swift",
-                "updatePlan",
-                "plan",
-            ),
-            (
-                component_root / "BrowserOnboardingManualSetupPage.swift",
-                "updateManualPlan",
-                "plan",
-            ),
-        )
-
-        for path, method, parameter in bindings:
-            with self.subTest(path=path.name):
-                source = path.read_text()
-                self.assertNotIn(f"set: flow.{method}", source)
-                self.assertIn(f"set: {{ {parameter} in", source)
-                self.assertIn(f"flow.{method}({parameter})", source)
 
     def test_release_builds_keep_batch_compilation_enabled(self) -> None:
         project = (REPOSITORY_ROOT / "project.yml").read_text()

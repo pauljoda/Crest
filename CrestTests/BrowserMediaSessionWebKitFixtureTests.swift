@@ -260,7 +260,9 @@ final class BrowserMediaSessionWebKitFixtureTests: XCTestCase {
         func check(_ script: String, active: Bool, _ reason: String) async throws {
             let count = events.count
             try await webView.evaluateJavaScript(script + "; globalThis.__crestMediaSessionBridge.emit(); true")
-            try await waitUntil("a fresh report for " + reason) { events.count > count }
+            try await waitUntil("a fresh report for " + reason) {
+                events.count > count && events.last?.hasActiveSession == active
+            }
             XCTAssertEqual(events.last?.hasActiveSession, active, reason)
         }
         try await check(
@@ -322,7 +324,7 @@ final class BrowserMediaSessionWebKitFixtureTests: XCTestCase {
         let beforeReplacement = events.count
         try await webView.evaluateJavaScript("player.replaceChildren(document.createElement('p')); true")
         try await waitUntil("DOM replacement to publish without another media event") {
-            events.count > beforeReplacement
+            events.count > beforeReplacement && events.last?.hasActiveSession == false
         }
         XCTAssertEqual(events.last?.hasActiveSession, false)
 

@@ -131,11 +131,12 @@ final class MobileBrowserInteropTests: XCTestCase {
         await Self.removeDataStore(profile.id)
     }
 
-    func testPrivateHostileWebKitDownloadWaitsForItsSpaceAndCancellationWritesNothing() async throws {
-        let filename = "crest-private-\(UUID().uuidString).command"
+    func testPrivateDisguisedExecutableDownloadWaitsForItsSpaceAndCancellationWritesNothing() async throws {
+        let filename = "crest-private-\(UUID().uuidString).jpg"
         let server = try MobileDownloadHTTPServer(
             payload: Data("potentially dangerous private download".utf8),
-            filename: filename
+            filename: filename,
+            mimeType: "application/x-mach-binary"
         )
         let port = try await server.start()
         let sourceURL = try XCTUnwrap(URL(string: "http://localhost:\(port)/\(filename)"))
@@ -165,6 +166,8 @@ final class MobileBrowserInteropTests: XCTestCase {
             pages.closePrivateBrowsingSession(browser.session)
         }
 
+        // User initiation bypasses the extra prompt for ordinary installers.
+        // An executable disguised as an image still requires confirmation.
         page.webView.startDownload(using: URLRequest(url: sourceURL)) { download in
             pages.downloadCenter.start(
                 download,
@@ -180,7 +183,8 @@ final class MobileBrowserInteropTests: XCTestCase {
         }
         let request = try XCTUnwrap(pages.downloadRiskConfirmation.request)
         XCTAssertEqual(request.assessment.sanitizedFilename, filename)
-        XCTAssertTrue(request.assessment.requiresConfirmation)
+        XCTAssertTrue(request.assessment.requiresConfirmation(isUserInitiated: true))
+        XCTAssertTrue(request.assessment.reasons.contains(.dangerousTypeMismatch))
         XCTAssertEqual(request.spaceName, "Private")
         XCTAssertEqual(request.sourceLabel, "localhost")
         XCTAssertEqual(pages.downloadCenter.items.first?.state, .awaitingApproval)
@@ -293,17 +297,6 @@ final class MobileBrowserInteropTests: XCTestCase {
         XCTAssertEqual(MobileBrowserFileSelectionPolicy.contentTypes(allowsDirectories: true), [.item, .folder])
     }
 
-    func testUnsupportedResponseTypesBecomeDownloads() {
-        XCTAssertEqual(
-            BrowserNavigationDecider.decidePolicy(canShowMIMEType: false),
-            .download
-        )
-        XCTAssertEqual(
-            BrowserNavigationDecider.decidePolicy(canShowMIMEType: true),
-            .allow
-        )
-    }
-
     func testDisplayableInlineDirectVideoUsesMobilePlaybackDocument() throws {
         let url = try XCTUnwrap(
             URL(string: "https://media.example/watch?id=mobile&quality=source")
@@ -390,20 +383,6 @@ final class MobileBrowserInteropTests: XCTestCase {
         )
     }
 
-    func testDownloadRecordsRemainProfileScopedAndCanBeClearedIndependently() {
-        var ledger = BrowserDownloadLedger()
-        let workProfileID = UUID()
-        let personalProfileID = UUID()
-        let workItemID = ledger.begin(profileID: workProfileID, filename: "work.pdf")
-        _ = ledger.begin(profileID: personalProfileID, filename: "personal.pdf")
-
-        ledger.finish(workItemID)
-        ledger.remove(workItemID)
-
-        XCTAssertTrue(ledger.items(for: workProfileID).isEmpty)
-        XCTAssertEqual(ledger.items(for: personalProfileID).map(\.filename), ["personal.pdf"])
-    }
-
     func testMobileDownloadTransferMovesFromPrivateStagingToTheVisibleRecord() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -429,10 +408,10 @@ final class MobileBrowserInteropTests: XCTestCase {
 
     private func waitUntil(
         timeout: TimeInterval,
-        condition: @escaping @MainActor () -> Bool
+        condition: @escaping @MainActor () async throws -> Bool
     ) async throws {
         let deadline = Date().addingTimeInterval(timeout)
-        while !condition() {
+        while try await !condition() {
             if Date() >= deadline {
                 throw MobileBrowserInteropTestError.timedOutWaitingForDownload
             }
@@ -543,6 +522,11 @@ final class MobileBrowserInteropTests: XCTestCase {
                 """
         )
 
+        // Observe the fixture's attempts before checking the native notice.
+        // A native-only poll leaves this unmounted page's timers suspended.
+        try await waitUntil(timeout: 5) {
+            (try? await context.opener.webView.evaluateJavaScript("globalThis.results?.length")) as? Int == 3
+        }
         try await waitUntil(timeout: 5) {
             context.opener.blockedPopupState.notice?.status == .blocked
         }
@@ -1279,6 +1263,9 @@ final class MobileBrowserInteropTests: XCTestCase {
         _ = try await original.webView.evaluateJavaScript(
             "document.body.innerHTML += '<input id=note>'; document.getElementById('note').value = 'draft'; window.scrollTo(0, 850);"
         )
+        try await waitUntil(timeout: 5) {
+            ((try? await original.webView.evaluateJavaScript("window.scrollY")) as? Double ?? 0) > 0
+        }
         let scrollValue = try await original.webView.evaluateJavaScript("window.scrollY")
         let scroll = try XCTUnwrap(scrollValue as? Double)
         XCTAssertGreaterThan(scroll, 0)
@@ -1620,12 +1607,13 @@ private final class MobileDownloadHTTPServer: @unchecked Sendable {
     init(
         payload: Data,
         filename: String,
+        mimeType: String = "application/octet-stream",
         basicAuthentication: (username: String, password: String)? = nil
     ) throws {
         listener = try NWListener(using: .tcp, on: .any)
         let header = """
             HTTP/1.1 200 OK\r
-            Content-Type: application/octet-stream\r
+            Content-Type: \(mimeType)\r
             Content-Disposition: attachment; filename="\(filename)"\r
             Content-Length: \(payload.count)\r
             Connection: close\r

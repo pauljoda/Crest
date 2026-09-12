@@ -528,6 +528,14 @@ pins native presentation and controller ownership.
 
 ### Cookies for sites an extension frames
 
+The [September 2026 cookie ownership review](Audits/2026-09-11-cookie-ownership.md)
+confirmed that this workaround leaves relaxed site cookies usable after host
+permission revocation and by another extension sharing the hosted store. It also
+found partition identity loss in synchronization. The ordinary browsing jar
+retains its SameSite protections, but the hosted-store permission boundaries
+remain open security work. The behavior below describes the current
+compatibility mechanism; its mechanics tests do not establish those boundaries.
+
 Claude's side panel offers a "Cowork" mode that frames
 `https://claude.ai/cic/new?surface=cic_sidepanel` inside the extension page.
 The frame loads, and claude.ai inside it reports that nobody is signed in.

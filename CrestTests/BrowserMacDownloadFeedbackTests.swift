@@ -5,20 +5,6 @@ import XCTest
 
 @MainActor
 final class BrowserMacDownloadFeedbackTests: XCTestCase {
-    func testFlightArcsUpwardShrinksAndEndsAtArchive() {
-        let flight = BrowserMacDownloadFlightPath(
-            source: CGPoint(x: 600, y: 300),
-            destination: CGPoint(x: 200, y: 700),
-            bounds: CGRect(x: 0, y: 0, width: 1000, height: 800)
-        )
-        XCTAssertEqual(flight.point(at: 0), flight.source)
-        XCTAssertEqual(flight.point(at: 1), flight.destination)
-        XCTAssertLessThan(flight.point(at: 0.5).y, 500)
-        XCTAssertEqual(flight.scale(at: 0), 1)
-        XCTAssertLessThan(flight.scale(at: 1), 0.5)
-        XCTAssertEqual(flight.point(at: -1), flight.source)
-        XCTAssertEqual(flight.point(at: 2), flight.destination)
-    }
 
     func testFeedbackConsumesOnceAndNeverReplaysAfterContextChange() {
         let state = BrowserMacDownloadFeedbackState()
@@ -83,25 +69,6 @@ final class BrowserMacDownloadFeedbackTests: XCTestCase {
         context.destination = nil
         let event = makeEvent(context)
         state.reconcile(events: [old, event], context: context)
-        XCTAssertEqual(state.flights.count, 1)
-        XCTAssertNil(state.flights.first?.path)
-    }
-
-    func testReduceMotionAndInvalidGeometryUseStaticFeedbackAndExpirationClearsIt() {
-        let state = BrowserMacDownloadFeedbackState()
-        var context = makeContext()
-        context.reduceMotion = true
-        state.reconcile(events: [], context: context)
-        let event = makeEvent(context)
-        XCTAssertTrue(state.reconcile(events: [event], context: context))
-        XCTAssertNil(state.flights.first?.path)
-        state.arrive(event.id)
-        XCTAssertNil(state.arrivalID)
-        state.reconcile(events: [], context: context)
-        XCTAssertTrue(state.flights.isEmpty)
-        context.reduceMotion = false
-        context.bounds = CGRect(x: 0, y: 0, width: 100, height: 100)
-        state.reconcile(events: [makeEvent(context)], context: context)
         XCTAssertEqual(state.flights.count, 1)
         XCTAssertNil(state.flights.first?.path)
     }

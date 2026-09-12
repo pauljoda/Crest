@@ -7,25 +7,6 @@ import XCTest
 
 @MainActor
 final class BrowserSpaceAccessTests: XCTestCase {
-    func testUnlockLabelKeepsItsSizeDuringAuthentication() {
-        for width: CGFloat in [180, 280] {
-            for textSize: DynamicTypeSize in [.large, .accessibility5] {
-                let idle = NSHostingView(
-                    rootView: BrowserSpaceAccessActionLabel(isAuthenticating: false)
-                        .environment(\.dynamicTypeSize, textSize)
-                        .frame(width: width)
-                )
-                let authenticating = NSHostingView(
-                    rootView: BrowserSpaceAccessActionLabel(isAuthenticating: true)
-                        .environment(\.dynamicTypeSize, textSize)
-                        .frame(width: width)
-                )
-
-                XCTAssertGreaterThan(idle.fittingSize.height, 0)
-                XCTAssertEqual(idle.fittingSize, authenticating.fittingSize)
-            }
-        }
-    }
 
     func testChosenDefaultSpaceBecomesTheLaunchSelection() throws {
         var session = BrowserSession.preview

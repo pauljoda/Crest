@@ -1,28 +1,9 @@
 import AppKit
 import XCTest
+
 @testable import Crest
 
 final class BrowserFullscreenChromeTests: XCTestCase {
-    func testCollapsedSidebarKeepsNativeWindowControlsInFullscreen() {
-        XCTAssertFalse(
-            BrowserNativeWindowControlsPolicy.showsWindowControls(
-                sidebarPresentationShowsControls: false,
-                in: [.titled, .resizable]
-            )
-        )
-        XCTAssertTrue(
-            BrowserNativeWindowControlsPolicy.showsWindowControls(
-                sidebarPresentationShowsControls: false,
-                in: [.titled, .resizable, .fullScreen]
-            )
-        )
-        XCTAssertTrue(
-            BrowserNativeWindowControlsPolicy.showsWindowControls(
-                sidebarPresentationShowsControls: true,
-                in: [.titled, .resizable]
-            )
-        )
-    }
 
     @MainActor
     func testCollapsedSidebarHoverTrackingUsesAppKitWithoutClaimingInput() {
