@@ -139,6 +139,19 @@ to buy roadmap priority, private support, or project ownership. See the
 [membership tiers on Ko-fi](https://ko-fi.com/pauljoda/tiers) to become a
 monthly sponsor.
 
+## AI usage
+
+AI tools assist with Crest's development, audits, testing, documentation, and
+project maintenance. Maintainers direct product design and architecture, review
+generated changes, and remain responsible for everything that ships.
+
+Contributors are welcome to use AI tools. You must understand, review, and
+validate what you submit, explain your decisions, and address feedback. The
+same quality standards apply regardless of how a contribution was produced.
+
+Submit only work you can stand behind. AI-generated code, test results, and
+claims need verification before they become part of a contribution.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and change discipline,
