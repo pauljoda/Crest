@@ -308,7 +308,7 @@ jobs:
             DEVELOPMENT_TEAM=3U2R97HLXF \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
-            PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"
+            CREST_PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"
 
           xcodebuild -exportArchive \
             -archivePath "$archive_path" \

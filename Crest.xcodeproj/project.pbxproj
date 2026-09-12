@@ -21464,6 +21464,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pauldavis.crest;
 				PRODUCT_MODULE_NAME = Crest;
 				PRODUCT_NAME = Crest;
+				PROVISIONING_PROFILE_SPECIFIER = "$(CREST_PROVISIONING_PROFILE_SPECIFIER)";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -21588,6 +21589,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pauldavis.crest;
 				PRODUCT_MODULE_NAME = Crest;
 				PRODUCT_NAME = Crest;
+				PROVISIONING_PROFILE_SPECIFIER = "$(CREST_PROVISIONING_PROFILE_SPECIFIER)";
 				SDKROOT = macosx;
 			};
 			name = Debug;

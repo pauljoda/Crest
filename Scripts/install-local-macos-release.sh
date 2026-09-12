@@ -96,7 +96,7 @@ xcodebuild archive \
   DEVELOPMENT_TEAM="$team_id" \
   CODE_SIGN_STYLE=Manual \
   CODE_SIGN_IDENTITY="$signing_identity" \
-  PROVISIONING_PROFILE_SPECIFIER="$provisioning_profile"
+  CREST_PROVISIONING_PROFILE_SPECIFIER="$provisioning_profile"
 
 xcodebuild -exportArchive \
   -quiet \

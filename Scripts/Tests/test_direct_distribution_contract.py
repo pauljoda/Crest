@@ -104,7 +104,7 @@ class DirectDistributionContractTests(unittest.TestCase):
             "DEVELOPER_ID_PROVISIONING_PROFILE_BASE64",
             'CODE_SIGN_STYLE=Manual',
             'CODE_SIGN_IDENTITY="Developer ID Application"',
-            'PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"',
+            'CREST_PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"',
             "com.apple.application-identifier",
             "com.apple.developer.aps-environment",
             "com.apple.developer.icloud-container-identifiers:0",

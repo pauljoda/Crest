@@ -71,6 +71,8 @@ targets:
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: CrestMac/Configuration/Crest.entitlements
+        # Release scripts supply the app profile without provisioning bundled plug-ins.
+        PROVISIONING_PROFILE_SPECIFIER: "$(CREST_PROVISIONING_PROFILE_SPECIFIER)"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CrestMac/Configuration/Crest-Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: Crest
