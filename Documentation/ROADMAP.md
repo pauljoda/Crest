@@ -55,7 +55,16 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74)
+- [ ] [bug: Extension requesting websites](https://github.com/pauljoda/Crest/issues/55)
+- [ ] [bug: "Change icon" (tab) doesn't work for pinned tabs](https://github.com/pauljoda/Crest/issues/56)
+- [ ] [bug: Collapsed sidebar overlay covers search field on iPhone](https://github.com/pauljoda/Crest/issues/60)
+- [ ] [feature: File upload options](https://github.com/pauljoda/Crest/issues/84)
+- [ ] [Keep extension request-header rules consistent](https://github.com/pauljoda/Crest/issues/115)
+- [ ] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116)
+- [ ] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
+- [ ] [Offer a continuous, wider default page-zoom range](https://github.com/pauljoda/Crest/issues/118)
+- [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
+- [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
 
 #### Completed
 
@@ -63,7 +72,7 @@ the live status for each issue.
 - [x] [Select and act on multiple tabs and folders](https://github.com/pauljoda/Crest/issues/42) — [`6d3df743`](https://github.com/pauljoda/Crest/commit/6d3df743f0472266b0dde11d0b297b124c7bce4c)
 - [x] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43) — [`299ea325`](https://github.com/pauljoda/Crest/commit/299ea3256ce115cec2f56ca51f775912ba18172c)
 - [x] [Make new-link focus preferences consistent](https://github.com/pauljoda/Crest/issues/48) — [`143a9f0e`](https://github.com/pauljoda/Crest/commit/143a9f0ef4dfc35f2e4f774ba756f0952f799d87)
-- [x] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51) — [`a924c74c`](https://github.com/pauljoda/Crest/commit/a924c74caed2f4a9f85fdfe527a942f7302e3341)
+- [x] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51) — [`a924c74c`](https://github.com/pauljoda/Crest/commit/a924c74caed2f4a9f85fdfe527a942f7302e3341), [`a0b8a0e3`](https://github.com/pauljoda/Crest/commit/a0b8a0e372f42d25fe8a87796f479972ec8e899c)
 - [x] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62) — [`5e6f4ca0`](https://github.com/pauljoda/Crest/commit/5e6f4ca04c373444d31ec886ecf98f8583f521f9)
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
 - [x] [Refine the Private Space unlock screen](https://github.com/pauljoda/Crest/issues/64) — [`3f7513f2`](https://github.com/pauljoda/Crest/commit/3f7513f216cb6d650d18867545d4c16c423e4feb)
@@ -75,6 +84,7 @@ the live status for each issue.
 - [x] [Keep Start Page new-tab state cohesive](https://github.com/pauljoda/Crest/issues/71) — [`807b4919`](https://github.com/pauljoda/Crest/commit/807b49199698b34b478ce531b2a66dbd0aa2f951)
 - [x] [Open a new tab from empty sidebar space](https://github.com/pauljoda/Crest/issues/72) — [`96f03717`](https://github.com/pauljoda/Crest/commit/96f03717d1a02e6635a229fa4af796a5f85294bc)
 - [x] [Match visited links to exact history entries](https://github.com/pauljoda/Crest/issues/73) — [`fe50f3af`](https://github.com/pauljoda/Crest/commit/fe50f3afe1bb5403dcb6e705e2c978fec70d8fd7)
+- [x] [Expand browser appearance customization](https://github.com/pauljoda/Crest/issues/74) — [`a95f2217`](https://github.com/pauljoda/Crest/commit/a95f221704a12017d996ca60b1d136ab2ab15453), [`ebbcc9ad`](https://github.com/pauljoda/Crest/commit/ebbcc9ad4da5f25b2fd6625c1b2647e7e681c794), [`61fbc15c`](https://github.com/pauljoda/Crest/commit/61fbc15c724c91faf382f2a5f5dbe904e7a07a59)
 - [x] [Preview link destinations on hover](https://github.com/pauljoda/Crest/issues/75) — [`db22c259`](https://github.com/pauljoda/Crest/commit/db22c259fd7b810bad0162975ffb2f1e7fbe9f63)
 - [x] [Reveal page progress before navigation finishes](https://github.com/pauljoda/Crest/issues/77) — [`a8e2f29e`](https://github.com/pauljoda/Crest/commit/a8e2f29ee2a9dcd955b03d738e32e79683110933)
 - [x] [Clarify webpage link destinations across Spaces](https://github.com/pauljoda/Crest/issues/78) — [`0cceb2d3`](https://github.com/pauljoda/Crest/commit/0cceb2d3bda5ef74803b09b3f7ef4f9b4a20bccf)
@@ -96,15 +106,17 @@ the live status for each issue.
 - [x] [Avoid invalid-key feedback for webpage controls](https://github.com/pauljoda/Crest/issues/97) — [`10d124d7`](https://github.com/pauljoda/Crest/commit/10d124d781689b1abf579fa0e5cf0bd4f863a6de)
 - [x] [Preview device viewport sizes from the developer toolbar](https://github.com/pauljoda/Crest/issues/98) — [`2080462c`](https://github.com/pauljoda/Crest/commit/2080462cf030f96d1e59f8adb6bd6d9295752575)
 - [x] [bug: Sidebar auto-collapses after closing context menu even when cursor is hovering](https://github.com/pauljoda/Crest/issues/99) — [`b6bf9595`](https://github.com/pauljoda/Crest/commit/b6bf95956815bf6eebfc0141809eb813db12856b)
-- [x] [bug: Moving a Tab to another Space triggers Command Bar](https://github.com/pauljoda/Crest/issues/100)
+- [x] [bug: Moving a Tab to another Space triggers Command Bar](https://github.com/pauljoda/Crest/issues/100) — [`f5bb7eaf`](https://github.com/pauljoda/Crest/commit/f5bb7eafa22f49fc584ac8c79ec3c23304e0afce)
 - [x] [feature: Right click tab > copy link](https://github.com/pauljoda/Crest/issues/101) — [`9d598d5a`](https://github.com/pauljoda/Crest/commit/9d598d5adf8b0f2afee18df3fb49479d11a61260)
-- [x] [Keep the spacebar available in mobile Start Page search](https://github.com/pauljoda/Crest/issues/102)
-- [x] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103)
+- [x] [Keep the spacebar available in mobile Start Page search](https://github.com/pauljoda/Crest/issues/102) — [`62c0baa7`](https://github.com/pauljoda/Crest/commit/62c0baa7ba05915b1846a114be09e4ac564fa600)
+- [x] [Keep the mobile sidebar responsive after changing folder colors](https://github.com/pauljoda/Crest/issues/103) — [`1d69addd`](https://github.com/pauljoda/Crest/commit/1d69addd18256184b3d25485f898196380aff6c3)
 - [x] [Show video playback widgets only for eligible active videos](https://github.com/pauljoda/Crest/issues/104) — [`c9a88d54`](https://github.com/pauljoda/Crest/commit/c9a88d5429564925c0045df97b992f434ab22cc8)
-- [x] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105)
-- [x] [Prevent upward tab jumps when closing Mac sidebar tabs](https://github.com/pauljoda/Crest/issues/106)
+- [x] [Prevent overlapping address completions while typing](https://github.com/pauljoda/Crest/issues/105) — [`fcf449a9`](https://github.com/pauljoda/Crest/commit/fcf449a98bc0a60bf4ef0196be294791377b8ee2)
+- [x] [Prevent upward tab jumps when closing Mac sidebar tabs](https://github.com/pauljoda/Crest/issues/106) — [`f6937bc1`](https://github.com/pauljoda/Crest/commit/f6937bc16f4d60cd3c5fdb7bf2cb022ddea10459)
 - [x] [Investigate Azure DevOps sign-in failures](https://github.com/pauljoda/Crest/issues/108)
 - [x] [Investigate scrolling, back-navigation and browser performance](https://github.com/pauljoda/Crest/issues/110) — [`88703808`](https://github.com/pauljoda/Crest/commit/8870380890e44f85290e7299b25f46111daae1ac)
+- [x] [Keep favicon discovery private](https://github.com/pauljoda/Crest/issues/113) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
+- [x] [Stop oversized site-icon and manifest downloads early](https://github.com/pauljoda/Crest/issues/114) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
 
 #### Not planned
 
