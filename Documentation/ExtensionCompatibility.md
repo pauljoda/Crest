@@ -1148,6 +1148,10 @@ coverage replaces the obsolete close-all-tabs expectation with preservation of
 other tabs' documents and badges. An authenticated Claude or LastPass sign-in was
 not repeated during this scope and badge follow-up.
 
+The [final native-resource privacy review](NativeResourcePrivacyReview.md) maps the
+original findings to request evidence, records cleanup and the panel-link Space
+repair, and identifies the remaining validation limits.
+
 ## Firefox extensions from addons.mozilla.org
 
 Firefox is in several respects a better native fit for WebKit than Chrome.

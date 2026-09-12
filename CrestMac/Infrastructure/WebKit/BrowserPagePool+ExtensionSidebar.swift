@@ -48,7 +48,9 @@ extension BrowserPagePool {
                     for: configuration, in: panel.spaceID, contentController: contentController)
             },
             openTab: { [weak self] url in
-                self?.openExtensionSidebarLink(url)
+                // Retained panels can navigate after the user switches Spaces.
+                // Their links must keep the document's original profile.
+                self?.openExtensionSidebarLink(url, in: panel.spaceID)
             }
         )
         extensionSidebarDocuments[key] = document

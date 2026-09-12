@@ -1,4 +1,3 @@
-import Network
 import WebKit
 import XCTest
 
@@ -66,9 +65,10 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
     }
 
     func testHostedManifestCSPStillBlocksInlineScriptAndEvalWhileWebsiteScriptsRun() async throws {
-        let server = try FrameServer()
+        let server = try frameServer()
         defer { server.stop() }
-        let frameURL = try await server.start()
+        try await server.start()
+        let frameURL = server.url(host: "127.0.0.1", path: "/").absoluteString
         let root = try fixture(
             name: "Panel CSP owner",
             manifest: [
@@ -121,9 +121,10 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
     }
 
     func testNativeForeignExtensionIsExcludedWhileTheOwnerCanReachItsBackground() async throws {
-        let server = try FrameServer()
+        let server = try frameServer()
         defer { server.stop() }
-        let frameURL = try await server.start()
+        try await server.start()
+        let frameURL = server.url(host: "127.0.0.1", path: "/").absoluteString
         let ownerRoot = try fixture(
             name: "Panel owner",
             manifest: [
@@ -289,6 +290,26 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
             ])
     }
 
+    /// A real cross-origin website catches leaks that extension-origin srcdoc cannot.
+    private func frameServer() throws -> BrowserPrivacyHTTPServer {
+        let server = try BrowserPrivacyHTTPServer()
+        server.overrideResponse = { _ in
+            let body = """
+                <html><body>Isolated website<script>
+                addEventListener('message', event => {
+                    if (event.data !== 'probe') return;
+                    event.source.postMessage([
+                        document.documentElement.dataset.foreignExtension === 'present',
+                        getComputedStyle(document.body).getPropertyValue('--foreign-theme').trim() === 'present'
+                    ], '*');
+                });
+                </script></body></html>
+                """
+            return ("200 OK", "Content-Type: text/html\r\n", Data(body.utf8))
+        }
+        return server
+    }
+
     private func fixture(name: String, manifest: [String: Any], files: [String: String]) throws -> URL {
         let root = FileManager.default.temporaryDirectory.appending(path: "crest-isolation-fixture-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -332,49 +353,4 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
             finished.fulfill()
         }
     }
-}
-
-/// A local website is necessary to exercise cross-origin extension frames;
-/// srcdoc alone inherits the extension origin and cannot catch this leak.
-private final class FrameServer: @unchecked Sendable {
-    private let listener: NWListener
-    private let queue = DispatchQueue(label: "CrestTests.HostedIsolation.HTTP")
-    init() throws { listener = try NWListener(using: .tcp, on: .any) }
-    func start() async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            listener.stateUpdateHandler = { [listener] state in
-                switch state {
-                case .ready:
-                    listener.stateUpdateHandler = nil
-                    continuation.resume(returning: "http://127.0.0.1:\(listener.port!.rawValue)/")
-                case .failed(let error):
-                    listener.stateUpdateHandler = nil
-                    continuation.resume(throwing: error)
-                default: break
-                }
-            }
-            listener.newConnectionHandler = { [queue] connection in
-                connection.start(queue: queue)
-                connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { _, _, _, _ in
-                    let body = """
-                        <html><body>Isolated website<script>
-                        addEventListener('message', event => {
-                            if (event.data !== 'probe') return;
-                            event.source.postMessage([
-                                document.documentElement.dataset.foreignExtension === 'present',
-                                getComputedStyle(document.body).getPropertyValue('--foreign-theme').trim() === 'present'
-                            ], '*');
-                        });
-                        </script></body></html>
-                        """
-                    let response =
-                        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
-                    connection.send(
-                        content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
-                }
-            }
-            listener.start(queue: queue)
-        }
-    }
-    func stop() { listener.cancel() }
 }

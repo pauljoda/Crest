@@ -945,6 +945,10 @@
     "2026-09-12-tab-panel-favicon-badges": {
       "category": "improved",
       "message": "Identify tabs with their own side panels by an extension badge on the favicon, including pinned tabs"
+    },
+    "2026-09-12-panel-link-space-isolation": {
+      "category": "fixed",
+      "message": "Keep side-panel sign-in links in their original Space when you switch Spaces"
     }
   }
 }

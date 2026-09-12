@@ -25,28 +25,29 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
         )
     }
 
-    func testSiteCookieMatchingIncludesOnlyCookiesVisibleToTheHost() {
+    func testSiteCookieRemovalIncludesParentDomainsButNotUnrelatedSites() {
+        XCTAssertTrue(BrowserSiteDataPolicy.includesCookieDomainForRemoval("localhost", host: "api.localhost"))
         XCTAssertTrue(
-            BrowserSiteDataPolicy.matchesCookieDomain(
+            BrowserSiteDataPolicy.includesCookieDomainForRemoval(
                 ".localhost",
                 host: "api.localhost"
             )
         )
         XCTAssertTrue(
-            BrowserSiteDataPolicy.matchesCookieDomain(
+            BrowserSiteDataPolicy.includesCookieDomainForRemoval(
                 "api.localhost",
                 host: "api.localhost"
             )
         )
         XCTAssertFalse(
-            BrowserSiteDataPolicy.matchesCookieDomain(
+            BrowserSiteDataPolicy.includesCookieDomainForRemoval(
                 ".example.com",
                 host: "api.localhost"
             )
         )
     }
 
-    func testRemovingAProfileAlsoRemovesItsHostedExtensionStore() async throws {
+    func testRemovingAProfileAlsoRemovesItsLegacyHostedExtensionStore() async throws {
         let profile = BrowsingProfile()
         let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile.id)
         var removed: [UUID] = []

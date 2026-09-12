@@ -6,14 +6,21 @@ import XCTest
 @MainActor
 final class BrowserExtensionWebsiteDataTests: XCTestCase {
     func testPanelSessionAuthenticatesOnlyPermittedFramesWithoutChangingBrowserCookies() async throws {
-        try await exercisePanelSession(persistent: false)
+        try await exercisePanelSession(ending: .permissionRevocation)
     }
 
     func testPersistentProfileWithBroadHostPermissionClearsItsPanelSessionOnLogout() async throws {
-        try await exercisePanelSession(persistent: true)
+        try await exercisePanelSession(ending: .logout)
     }
 
-    private func exercisePanelSession(persistent: Bool) async throws {
+    func testPanelSessionClearsItsCopiesWhenASourceCookieExpires() async throws {
+        try await exercisePanelSession(ending: .cookieExpiry)
+    }
+
+    private enum SessionEnd { case permissionRevocation, logout, cookieExpiry }
+
+    private func exercisePanelSession(ending: SessionEnd) async throws {
+        let persistent = ending == .logout
         let server = try BrowserPrivacyHTTPServer(tls: true)
         try await server.start()
         defer { server.stop() }
@@ -29,6 +36,9 @@ final class BrowserExtensionWebsiteDataTests: XCTestCase {
                 headers += "Set-Cookie: hostStrict=fixture; Path=/; Secure; HttpOnly; SameSite=Strict\r\n"
                 headers += "Set-Cookie: privatePath=fixture; Path=/private; Secure; SameSite=Lax\r\n"
                 headers += "Set-Cookie: partitioned=fixture; Path=/; Secure; SameSite=None; Partitioned\r\n"
+            }
+            if request.path == "/expire-source" {
+                headers += "Set-Cookie: hostStrict=fixture; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=1\r\n"
             }
             if request.path == "/rotate" {
                 headers += "Set-Cookie: hostStrict=panel-only-refresh; Path=/; Secure; HttpOnly; SameSite=None\r\n"
@@ -263,10 +273,14 @@ final class BrowserExtensionWebsiteDataTests: XCTestCase {
         XCTAssertEqual(after.first { $0.name == "hostLax" }?.sameSitePolicy, .sameSiteLax)
         XCTAssertEqual(after.first { $0.name == "hostStrict" }?.sameSitePolicy, .sameSiteStrict)
 
-        if persistent {
+        switch ending {
+        case .logout:
             await normal.removeData(ofTypes: [WKWebsiteDataTypeCookies], modifiedSince: .distantPast)
-        } else {
+        case .permissionRevocation:
             context.setPermissionStatus(.deniedExplicitly, for: pattern)
+        case .cookieExpiry:
+            tab.load(URLRequest(url: server.url(host: "parent.localhost", path: "/expire-source")))
+            try await wait { !tab.isLoading && tab.url?.path == "/expire-source" }
         }
         try await wait { document.webView == nil }
         try await wait { await hosted.httpCookieStore.allCookies().isEmpty }

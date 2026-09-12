@@ -72,6 +72,53 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertNil(host.sidePanelPresentation(forTab: first.id, in: space.id), "Global panels do not badge tabs")
     }
 
+    func testRetainedPanelLinksKeepTheirOwningSpaceAfterSelectionChanges() async throws {
+        let browser = BrowserStore.preview()
+        let owner = try XCTUnwrap(browser.selectedSpace)
+        let other = try XCTUnwrap(browser.session.spaces.first { $0.id != owner.id })
+        var routedLinks: [(URL, SpaceID)] = []
+        let pool = BrowserExtensionControllerPool()
+        let pages = BrowserPagePool(
+            extensionControllerPool: pool,
+            openNewTab: { url in
+                if let selected = browser.selectedSpace { routedLinks.append((url, selected.id)) }
+            },
+            openModifiedLink: { url, spaceID, _ in
+                routedLinks.append((url, spaceID))
+                return nil
+            })
+        pool.connect(browser: browser, pageProvider: pages)
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        pool.setSidebarService(store)
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "Fixtures/SidePanelProbeExtension", directoryHint: .isDirectory)
+        _ = try await pool.loadExtension(at: fixture, extensionID: "panel-links", in: owner)
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: "panel-links", spaceID: owner.id)
+        let window = BrowserWindowID()
+        try store.open(for: client, in: window, tab: nil)
+        let panel = try XCTUnwrap(store.panel(in: window, spaceID: owner.id, activeTab: owner.selectedTabID))
+        let document = try XCTUnwrap(pages.extensionSidebarDocument(for: panel, in: window))
+        defer { pages.closeExtensionSidebars(inWindow: window) }
+        let webView = try XCTUnwrap(document.webView)
+        for _ in 0..<200 {
+            if webView.url?.path == "/panel.html", !webView.isLoading { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(webView.url?.path, "/panel.html")
+        browser.selectSpace(other.id)
+        pool.reconcileExtensionState(in: browser.session)
+        let destination = URL(string: "https://panel-login.example/complete?code=synthetic")!
+        _ = try await webView.callAsyncJavaScript(
+            "location.href = destination;", arguments: ["destination": destination.absoluteString], contentWorld: .page)
+        for _ in 0..<100 {
+            if !routedLinks.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(routedLinks.count, 1)
+        XCTAssertEqual(routedLinks.first?.0, destination)
+        XCTAssertEqual(routedLinks.first?.1, owner.id, "A delayed panel navigation must not use the selected Space")
+    }
+
     func testOpenPanelReceivesTabActivationAndCapturesTheLiveSelectedPage() async throws {
         let first = BrowserTab(
             title: "First", url: URL(string: "https://panel-state.example/first"), placement: .current)

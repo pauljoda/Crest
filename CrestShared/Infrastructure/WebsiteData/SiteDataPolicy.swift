@@ -1,5 +1,4 @@
 import Foundation
-import WebKit
 
 enum BrowserSiteDataPolicy {
     static func matchesDataRecord(displayName: String, host: String) -> Bool {
@@ -11,7 +10,9 @@ enum BrowserSiteDataPolicy {
             || record.hasSuffix(".\(host)")
     }
 
-    static func matchesCookieDomain(_ domain: String, host: String) -> Bool {
+    /// Site-data deletion intentionally includes parent domains. This is not
+    /// request eligibility: it does not model host-only, Secure, path or SameSite.
+    static func includesCookieDomainForRemoval(_ domain: String, host: String) -> Bool {
         let domain = normalizedHost(domain)
         let host = normalizedHost(host)
         guard !domain.isEmpty, !host.isEmpty else { return false }

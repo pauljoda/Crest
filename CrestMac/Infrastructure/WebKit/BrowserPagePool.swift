@@ -98,7 +98,9 @@ final class BrowserPagePool:
     @ObservationIgnored var extensionSidebarDocuments: [BrowserExtensionSidebarKey: BrowserExtensionSidebarDocument] =
         [:]
 
-    func openExtensionSidebarLink(_ url: URL) { openNewTab(url) }
+    func openExtensionSidebarLink(_ url: URL, in spaceID: SpaceID) {
+        openModifiedLink(URLRequest(url: url), in: spaceID, selecting: true)
+    }
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void

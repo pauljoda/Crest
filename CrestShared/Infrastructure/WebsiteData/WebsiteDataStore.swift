@@ -40,7 +40,7 @@ enum BrowserWebsiteDataStore {
         let cookieStore = dataStore.httpCookieStore
         let cookies = await allCookies(in: cookieStore)
         for cookie in cookies
-        where BrowserSiteDataPolicy.matchesCookieDomain(
+        where BrowserSiteDataPolicy.includesCookieDomainForRemoval(
             cookie.domain,
             host: host
         ) {
