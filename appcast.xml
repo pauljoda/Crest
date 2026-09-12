@@ -6,43 +6,45 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.102</title>
-            <pubDate>Fri, 11 Sep 2026 12:56:51 +0000</pubDate>
+            <title>0.5.106</title>
+            <pubDate>Sat, 12 Sep 2026 12:18:13 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1085</sparkle:version>
-            <sparkle:shortVersionString>0.5.102</sparkle:shortVersionString>
+            <sparkle:version>1088</sparkle:version>
+            <sparkle:shortVersionString>0.5.106</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### New
 
-- Copy a tab's current link from its context menu without opening the tab
-- Preview any website at phone, desktop, or custom sizes from the Mac developer toolbar, available with Command-Shift-I
-- Select tabs, split views, and folders together on Mac to move and organize them in one step
-- Translate webpages on device, with automatic language detection, optional automatic translation, and a translation toolbar available with Command-Shift-L
-- Choose borderless Mac windows or a right-side sidebar, with a live preview in Settings
+- Choose borderless pages and a right-side sidebar on iPhone and iPad, with a live Settings preview and swipe-in access from the chosen edge
+- Look and Feel settings show one live preview of your sidebar and page beside compact, aligned controls, and every changed setting can be reset on its own
+- Tune tab corner shape, tab scale, pin layout, color borders, fills, hover tint, and the address field's colors, with presets for the common choices
+- Choose a color palette for Crest's app icon on Mac, iPhone, and iPad
+- Design Space crests with more heraldic artwork, shapes, patterns, independent colors, emoji, monograms, and a searchable SF Symbols picker
 
 ### Improved
 
-- Allow 120 FPS now starts off for smoother scrolling; turn it back on in Settings if you prefer higher frame rate page animations
-- Reduce background work when detecting videos for Picture in Picture
-- Resize split panes with a clearer divider that stays aligned beside compact developer toolbars
+- Default page zoom moved into Look and Feel and shows in the live preview
+- Folder color intensity and text color moved into each Space's appearance editor
+- Open Settings in a browser tab on Mac and iPad, with more room for controls and live sidebar customization
+- Keep crest previews visible while editing, with faster updates and color choices beside each part of the design
+- Use clearer route cards, full-width settings lists, matching icon pickers, and labeled data-retention choices
 
 ### Fixed
 
-- Show pages reliably after a cold start or sidebar layout change on iPhone and iPad
+- Keep page addresses and sign-in cookies private when discovering site icons, and stop oversized icon downloads early
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c9a88d5429564925c0045df97b992f434ab22cc8...5b89db2d68d1891a3eb021cc51037bc5ae90218c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.102-2026-09-11-1085-r85.1/Installer-Crest-0.5.102-nightly-2026-09-11-5b89db2-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/5b89db2d68d1891a3eb021cc51037bc5ae90218c...c2bf7e328a911a9c962fd3354ad4a83ee4dc1099) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.106-2026-09-12-1088-r88.1/Installer-Crest-0.5.106-nightly-2026-09-12-c2bf7e3-arm64.dmg)
 
 [Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.102-2026-09-11-1085-r85.1/Installer-Crest-0.5.102-nightly-2026-09-11-5b89db2-arm64.dmg" length="11113753" type="application/octet-stream" sparkle:edSignature="WiEgy7bAeKlJJkHbxD6kC+n3sBGfN2xyaojqQlck08wEutgEBQ4VMpEJIAKks9kN0ow5zRj8QHLQGdB4c0fKCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.106-2026-09-12-1088-r88.1/Installer-Crest-0.5.106-nightly-2026-09-12-c2bf7e3-arm64.dmg" length="25524012" type="application/octet-stream" sparkle:edSignature="6/IzdSjz4vahSEt3NToYYffdgP860vYYSPDZzfvaH3vrBnd/D9Jot++/WQeHnJrK/MNqYE7z+wuZzelMqbbeDg=="/>
         </item>
         <item>
             <title>0.5.7</title>
@@ -88,6 +90,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: KeWXaDfmkUIOeD3wWYW4O8B3u+lB5Xfddylj1KsjjNTubMGgFvUo5VZBnw3t2PghxnXQ9qvoCDn42Q/M2sxVDQ==
-length: 5186
+edSignature: OtA5oSWuIZnOk2uUoe1lM6RfZbZLXmLXn/QH5FCvCFaqSFMduLq9NV9uNs8vQd64YTlnLyz8jByvcHwoZxQNDA==
+length: 5540
 -->
