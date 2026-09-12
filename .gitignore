@@ -46,3 +46,7 @@ GEMINI.md
 __pycache__/
 *.py[cod]
 /.crest-review
+
+# Local investigation and submission artifacts
+/Documentation/Audits/
+/Documentation/Launch/

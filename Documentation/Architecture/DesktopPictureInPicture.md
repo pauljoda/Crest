@@ -5,17 +5,13 @@ system window and controls. Automatic entry is enabled by default and can be
 disabled in Settings → General → Video. Manual entry remains available when
 automatic entry is disabled.
 
-## Why the earlier attempt failed
-
-The previous investigation is tracked by Linear APP-245, mirrored in
-[Crest issue #6](https://github.com/pauljoda/Crest/issues/6). Its closing comment
-described a WebKit restriction, rather than a working implementation.
+## WebKit integration
 
 Desktop WebKit exposes the JavaScript PiP API while separately disabling PiP
 media presentation by default for embedders. Thus
 `document.pictureInPictureEnabled` and the existence of
 `requestPictureInPicture()` do not establish that a WKWebView can present it.
-The baseline probe reproduced `NotSupportedError` with those APIs present.
+Requests can fail with `NotSupportedError` even when those APIs are present.
 
 WebKit's own MiniBrowser enables the desktop preference through
 `-[WKPreferences _setAllowsPictureInPictureMediaPlayback:]`.
@@ -25,10 +21,7 @@ access pattern. The preference is enabled before constructing each page's
 WKWebView, including adopted popup configurations. Missing SPI fails closed.
 The iOS configuration property with a similar name is unavailable on macOS.
 
-Crest's Mac app already uses direct distribution without App Sandbox. The
-successful probe used hardened runtime without additional entitlements. This
-establishes the working configuration; it does not establish that removing
-the sandbox alone would have fixed the previous attempt.
+Crest's direct-distribution Mac app uses hardened runtime without App Sandbox.
 
 Reference implementation and definitions:
 
@@ -102,11 +95,9 @@ the sender's Window identity, so a cross-origin player can account for its
 embedding frame's presentation role and visibility. The parent messages carry
 only eligibility, never media URLs or page contents.
 
-The inspected ArkansasAG homepage embeds YouTube with `controls=0` and
-`role="presentation"` on an `elementor-background-video-embed` iframe. A fixture
-reproduces that outer-frame exclusion even with a fully interactive player
-inside. YouTube's watch-page player qualifies through its custom controls and
-was exercised in Crest's real WKWebView.
+An iframe with `role="presentation"` is excluded even when it embeds an
+interactive video. Frame eligibility is evaluated separately from the player's
+own controls.
 
 Classification intentionally favors skipping an ambiguous player over opening
 decorative video. Sites with unusual controls, closed shadow trees, or media
@@ -114,20 +105,6 @@ restrictions may need additional compatibility work. Manual PiP remains a
 separate WebKit capability and is not subject to the automatic classifier.
 
 ## Validation
-
-The development machine ran macOS 27 beta (26A5421a), Xcode 27 beta, with
-Crest's macOS 26.1 deployment target. This is runtime evidence for that machine;
-the deployment target alone is not evidence of a macOS 26.1 runtime test.
-
-The standalone probe reproduces the disabled baseline and the enabled native
-path, including system-window ownership, advancing frames while the source
-view is detached, pause/seek, and return to the same document. Its optional
-capture records only the PiP window. It is excluded from the app target.
-
-```sh
-bash Scripts/Diagnostics/desktop-pip-probe/run.sh
-bash Scripts/Diagnostics/desktop-pip-probe/run.sh --enable-native
-```
 
 Ordinary tests cover default preferences, slot reservation/cancellation,
 manual occupancy, DOM player permutations, frame routing, and decorative
@@ -151,15 +128,9 @@ any existing PiP session first; live tests skip when the slot is already in
 use. Website tests additionally require network access and may be affected by
 consent pages, ads, account requirements, and changes to the selected video.
 
-## Fallback investigation
-
-A same-WKWebView NSPanel prototype also preserved document identity and
-playback. It remains available through the probe's `--flyout` flag as evidence
-for a future fallback if native support regresses. It is not a production
-fallback: it would require reliable player isolation, restored page layout,
-input routing, and window behavior across Spaces and fullscreen applications.
+## Media pipeline
 
 Copying `video.currentSrc` into a new native player would discard the original
-pipeline, and cannot generally recreate Media Source Extensions, encrypted
-media, authentication, or site controls. Replacing the working native path
-with that approach would introduce substantial compatibility work.
+pipeline. It cannot generally recreate Media Source Extensions, encrypted
+media, authentication, or site controls. Native PiP keeps the original WebKit
+page and media pipeline alive.

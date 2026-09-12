@@ -56,4 +56,4 @@ The application supports Apple silicon only.
 
 ## Validation
 
-Behavior changes begin with a focused regression test. Run the smallest relevant gate, then the affected platform suite. Repository scripts cover identity, cache hygiene, browser fixtures, and release validation. Interactive changes are also exercised in the real macOS app and Simulator.
+Use focused tests for browsing state, persistence, privacy, and other durable behavior. Run the relevant tests and affected platform suite. Repository scripts cover identity, cache hygiene, browser fixtures, and release validation. Review layout, animation, and styling in the running app.

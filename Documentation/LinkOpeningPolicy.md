@@ -48,6 +48,6 @@ contract before exposing that choice.
 - [Creating a new WebKit view](https://developer.apple.com/documentation/webkit/wkuidelegate/webview(_:createwebviewwith:for:windowfeatures:))
 - [Safari tab settings](https://support.apple.com/guide/safari/tabs-ibrw1045/mac)
 
-Literal input coverage and simulator limitations are recorded with the APP-277
-validation results. Deterministic delegate tests cover supplied intent, not
-arbitrary site-specific event handling.
+Delegate tests cover supplied navigation intent. Site-specific event handling
+and physical keyboard or pointer behavior also need validation in the running
+browser.

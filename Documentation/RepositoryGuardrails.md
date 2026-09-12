@@ -77,7 +77,7 @@ The check enforces these high-confidence contracts:
 
 The Xcode 27 patterns follow Apple's [TN3211](https://developer.apple.com/documentation/technotes/tn3211-resolving-swiftui-source-incompatibilities-for-state-and-contentbuilder). They supplement compiler validation; they do not attempt to parse every legal Swift expression.
 
-`Config/ArchitectureGuardrails.json` is the machine-readable exception register. Every entry is exact and carries a reason. All WebExtension feature, Application, Infrastructure, and platform-adapter paths are enrolled; none are hidden behind a path exclusion. Current migration debt is limited to one existing Quick Window material expression that is already compiling under Xcode 27 and needs visual validation before changing.
+`Config/ArchitectureGuardrails.json` is the machine-readable exception register. Every entry is exact and carries a reason. All WebExtension feature, Application, Infrastructure, and platform-adapter paths are enrolled; none are hidden behind a path exclusion. Consult the register for the current exemptions.
 
 An exemption is not precedent for another file: add new debt only with a focused review and a written reason, and prefer removing entries as ownership improves.
 
@@ -110,7 +110,7 @@ UI components are canonical in `CrestShared` and read what their environment can
 
 Every fixture, forced-onboarding, setup, showcase, credential test, SwiftUI Preview, or automated app launch must use Crest's isolated launch graph. Set `CREST_ISOLATED_SESSION=1` for validation launches even when another fixture flag already implies isolation.
 
-Never run sample Spaces against the installed profile. A normal installed-app launch without isolation is reserved for an explicit release handoff and must not include fixture flags.
+Use `CREST_ISOLATED_PERSISTENCE_ID=<name>` when a validation profile needs to survive relaunches. Keep fixture launches isolated from normal browsing data.
 
 ## Focused guard tests
 

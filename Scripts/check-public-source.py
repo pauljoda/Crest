@@ -28,6 +28,7 @@ FORBIDDEN_NAMES = {
 FORBIDDEN_COMPONENTS = {
     ".claude",
     ".codex",
+    ".crest-review",
     ".cursor",
     ".idea",
     ".vscode",
@@ -49,7 +50,10 @@ def violation_reason(relative_path: str) -> str | None:
 
     if lowered_name in FORBIDDEN_NAMES:
         return "assistant-only or private working instruction file"
-    if any(component in FORBIDDEN_COMPONENTS for component in lowered_parts):
+    if any(
+        component in FORBIDDEN_COMPONENTS or component.startswith(".codex-")
+        for component in lowered_parts
+    ):
         return "machine-local editor or assistant state"
     if path.suffix.lower() in SIGNING_SUFFIXES:
         return "signing credential or provisioning material"

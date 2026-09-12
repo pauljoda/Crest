@@ -14,7 +14,7 @@ covered by [`TRADEMARKS.md`](TRADEMARKS.md).
 
 ## Validation
 
-Run `Scripts/validate-identity.sh` after product metadata or persistent identifier changes. Run `Scripts/validate-cache-hygiene.sh` before handing work back, and run `Scripts/validate.sh` for the macOS and iOS unit gates. The validation script reuses one temporary Derived Data directory and removes it on success, failure, or interruption.
+Run `Scripts/validate-identity.sh` after product metadata or persistent identifier changes. Run `Scripts/validate-cache-hygiene.sh` after building or testing, and run `Scripts/validate.sh` for the macOS and iOS unit gates. The validation script reuses one temporary Derived Data directory and removes it on success, failure, or interruption.
 
 For repository-only changes, run `Scripts/check-architecture.py`,
 `Scripts/check-vertical-structure.py`, and `Scripts/check-swift-format.sh`; use
@@ -40,9 +40,9 @@ ideas, user questions, and compatibility experiences before they become
 actionable engineering work. Use GitHub Issues for reproducible bugs and
 concrete outcomes. The public
 [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
-release milestones summarize planned work without exposing private planning
-details. The one-way mapping is documented in
-[`Documentation/PlanningSync.md`](Documentation/PlanningSync.md).
+release milestones summarize planned work. [The roadmap](Documentation/ROADMAP.md)
+is generated from public GitHub issues with `Scripts/render-roadmap.py --write`.
+The renderer updates only its marked section, preserving the platform notes.
 
 See [SUPPORT.md](SUPPORT.md) for reporting routes and
 [GOVERNANCE.md](GOVERNANCE.md) for the current ownership and decision model.
@@ -51,8 +51,8 @@ See [SUPPORT.md](SUPPORT.md) for reporting routes and
 
 - Keep SwiftUI presentation native and adaptive.
 - Preserve exact Space isolation for website data, credentials, history, tabs, settings, and synchronization.
-- Add a failing regression test before implementing behavior changes.
-- Keep generated output, user state, credentials, signing exports, and local environment files out of Git.
+- Cover important behavioral contracts with focused regression tests. Review visual appearance, layout, and animation in the running app.
+- Keep build products, diagnostic captures, audit reports, submission packets, user state, credentials, signing exports, and local environment files out of Git. Documentation should help public users and contributors; keep private planning and machine-specific instructions local.
 - Keep editor and coding-assistant instructions or state local; `Scripts/check-public-source.py` rejects them from the tracked tree.
 - Do not enable the managed iOS default-browser entitlement until Apple approves it for the Crest App ID.
 

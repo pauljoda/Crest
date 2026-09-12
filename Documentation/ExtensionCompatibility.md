@@ -354,9 +354,7 @@ different Space with the same `profile.id` already runs the package, the second
 Space falls back to the hashed per-Space host and the fallback is written to
 the `extension-diagnostics` log.
 
-`BrowserExtensionControllerPoolTests.testModuleWorkerUsesWebKitsContentTabIdentity`
-and `testClassicWebSocketWorkerUsesWebKitsContentTabIdentity` pin one-shot and
-Port delivery plus native tab, frame, and document sender identity. Live
+Live
 validation with Bitwarden 2026.8.0 confirmed that the corrected Chrome path
 remained idle after its animated onboarding tab closed, its welcome and login
 popups rendered, and its region changed immediately in the writing popup. A
@@ -367,13 +365,6 @@ interactive on the Generator route. Before the cross-page storage event was
 restored, the same write reached WebKit's storage database but the popup's route
 guard remained subscribed to the old missing value; reopening Crest only hid
 that race by reading the persisted value at startup.
-
-`BrowserChromeWebStoreTests.testCompatibilityLayerDispatchesStorageChangesInTheWritingPage`
-pins callback and Promise mutations, root and area listeners, change values,
-and removal/clear behavior when the native writing page reports no event.
-`BrowserChromeWebStoreTests.testCompatibilityLayerBridgesStorageChangesAcrossExtensionPages`
-pins delivery to an already-open extension page, including a stored `false`
-value of the kind that exposed the first-login deadlock.
 
 ### Externally connectable web pages
 
@@ -521,17 +512,11 @@ suspended worker, and a toolbar popover can disappear while a relayed request
 is still pending. Native authorization remains scoped to the installed
 extension and reviewed permissions, exactly as it is for a background worker.
 
-`BrowserChromeWebStoreTests.testCompatibilityWindowsCreateUsesCapabilityBrokerForSingleURLPopupAndReturnsNativeWindow`
-pins the page contract, and
-`BrowserExtensionControllerPoolTests.testCapabilityBrokerPresentsARejectedPopupAsANativeExtensionWindow`
-pins native presentation and controller ownership.
-
 ### Cookies for sites an extension frames
 
-The [September 2026 cookie ownership review](Audits/2026-09-11-cookie-ownership.md)
-confirmed that this workaround leaves relaxed site cookies usable after host
-permission revocation and by another extension sharing the hosted store. It also
-found partition identity loss in synchronization. The ordinary browsing jar
+This workaround leaves relaxed site cookies usable after host permission
+revocation and by another extension sharing the hosted store. Synchronization
+also loses partition identity. The ordinary browsing jar
 retains its SameSite protections, but the hosted-store permission boundaries
 remain open security work. The behavior below describes the current
 compatibility mechanism; its mechanics tests do not establish those boundaries.
@@ -830,22 +815,9 @@ made a reopened popup wait on a handshake that had already been answered.
 Crest calls `loadBackgroundContent` before presenting a popup, and presents the
 popup only once that call reports back or a 1.5-second deadline passes.
 
-That reverses an earlier decision, recorded here on August 13, 2026, that WebKit
-restarts an evicted nonpersistent background on its own when the popup document
-sends its first `runtime` message. It does not. In an ordinary session on
-August 14, 2026, Dark Reader's background service worker was started at launch,
-terminated 5.6 seconds later, and never restarted; a popup opened 21 seconds
-after that had its opening `ui-bg-get-data` message answered with nothing:
-
-```
-22:13:35.367 [WebKit:ServiceWorker] Created service worker 16 in process PID 48546
-22:13:40.986 [WebKit:ServiceWorker] SWContextManager::terminateWorker 16
-22:14:02.052 [WebKit:Extensions]    Uncaught exception in extension callback:
-                                    TypeError: Cannot destructure property 'data'
-                                    from null or undefined value
-22:14:02.052 [WebKit:Extensions]    Error recorded: Error Domain=
-                                    WKWebExtensionContextErrorDomain Code=7
-```
+WebKit does not reliably restart an evicted background worker when the popup
+sends its first runtime message. An empty reply can leave the popup waiting
+indefinitely for its startup data.
 
 Dark Reader's popup reads the reply as `({data, error}) => …`, so an empty
 answer throws inside the extension callback, the promise the popup awaits never
@@ -889,34 +861,16 @@ Native popup tests exercise reloads initiated by both the popup and its worker,
 including communication with the restarted worker. Storage remains owned by
 WebKit; the popup presenter does not read or rewrite it.
 
-### Where the warm-up is still lied to, and why nothing else ships
+### Background warm-up limitation
 
-The warm-up is honest everywhere except one window. WebKit stops an idle
-service worker while keeping the background page that registered it alive for
-another 40–115 seconds, and inside that window `loadBackgroundContent` reports
-success without starting anything, so the popup is presented against a
-background that cannot answer. Crest ships no second mechanism for it, because
-the two candidates were measured and both fail on their own terms:
+WebKit can stop an idle service worker while retaining the background page
+that registered it. During that interval, `loadBackgroundContent` can report
+success without restarting the worker, leaving a popup unable to obtain its
+startup data. The popup can recover after WebKit unloads the background page.
 
-- **Dispatching a truthful `tabs` event alongside the warm-up.** Measured on
-  August 15, 2026: `didChangeTabProperties` and `didOpenTab` both restart a
-  background WebKit has *fully* unloaded — a new background page and worker 35
-  and 113 milliseconds after dispatch, with the restarted worker receiving the
-  event — but that is the state `loadBackgroundContent` already handles. The
-  lingering-page window could not be reached from a test host at all, so
-  nothing about it would be shipped on evidence.
-- **Restarting the context.** `unload` + `load` does force a real restart, and
-  the extension's `chrome.storage.local` survives it in the shipping
-  persistent configuration. It is still too blunt for a popup click: it
-  restarts every part of the extension, and `runtime.onInstalled` semantics
-  across it are undefined. Commit `eb335b57` shipped a recovery on this and was
-  reverted the same day in `c1fc2c35`.
-
-The standing posture is therefore the warm-up, a WebKit bug report, and saying
-so plainly: an extension clicked during that window can strand its popup until
-the background page is torn down, after which it recovers on its own.
-`Documentation/WebKitExtensionWorkerReport.md` carries the full measurements,
-the log correlations, and the reproduction instructions.
+Crest does not force an extension-context restart on popup clicks. Restarting
+the context affects all extension documents and can alter installation-event
+semantics. Popup warm-up does not guarantee that every worker can answer.
 
 ### Messaging stays split at the engine-owned content-script boundary
 
@@ -1173,8 +1127,7 @@ account, site, popup, update, or optional workflow.
 
 The audit is opt-in for the same reason the Chrome one is: it downloads current
 external packages and is not deterministic enough for the ordinary unit-test
-gate. Run it with `TEST_RUNNER_CREST_RUN_AMO_INTEGRATION=1`, or by creating
-`/tmp/CrestRunAMOIntegration`.
+gate. Run it with `TEST_RUNNER_CREST_RUN_AMO_INTEGRATION=1`.
 
 ## Chrome Web Store origin and action popups
 
@@ -1194,10 +1147,7 @@ neither enable nor restrict it.
 
 ### Dark Reader is not affected by that mismatch
 
-A maintainer report described Dark Reader 4.9.129's popup hanging on
-"Loading, please wait" whenever the active tab was on the store, for an
-extension loaded by launch restoration. **That did not reproduce**, and the
-extension's own source explains why it should not:
+Dark Reader 4.9.129 excludes Chrome Web Store pages in its own source:
 
 - Dark Reader carries its own hardcoded restricted list in `canInjectScript`
   (`background/index.js`). Both branches of its only browser conditional reject
@@ -1210,25 +1160,6 @@ extension's own source explains why it should not:
 - The popup awaits exactly three promises, and active-tab information is a
   field of the `ui-bg-get-data` reply rather than a separate request. Nothing
   in the popup or background awaits a content-script response.
-
-Measured on a live signed package, popup ready time by active tab and load
-path, on the tree that carries the action-popup unload rework, the tab-adapter
-expansion, and the window-geometry and reader-mode relays:
-
-| Active tab | Fresh install | Launch restoration |
-| --- | --- | --- |
-| `https://example.com/` | renders, ~80 ms | renders, ~80 ms |
-| `https://chromewebstore.google.com/` | renders "protected", ~86 ms | renders "protected", ~85 ms |
-
-Every host call Dark Reader's `collectData` awaits settles in 0–2 ms on both
-origins, including `tabs.query`, `tabs.get`, `scripting.executeScript`, and
-`storage.local.get`. MV3 cold start after launch restoration reaches a rendered
-popup, so restoration does not need a forced background load.
-
-The same matrix passes through Crest's real presentation path — the
-`NSPopover` from `action.popupPopover`, including a toggle closed that calls
-`action.closePopup()` to unload the popup web view, followed by a reopen. A
-popup that survived only its first load would be caught there.
 
 ### Diagnosing a popup stall on a device
 
