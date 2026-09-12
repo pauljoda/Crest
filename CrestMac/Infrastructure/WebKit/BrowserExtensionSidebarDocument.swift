@@ -12,6 +12,16 @@ struct BrowserExtensionSidebarKey: Hashable {
     let windowID: BrowserWindowID
     let spaceID: SpaceID
     let extensionBaseURL: URL
+    let tabID: TabID?
+}
+
+/// A panel's configuration keeps its required extension origin for WebKit's
+/// resource authorization. Exclude the view from WebKit's separate enumeration
+/// of candidates for a background's related view: that relationship requires
+/// the background's data store, whereas each panel has its own isolated store.
+private final class BrowserExtensionPanelWebView: WKWebView {
+    @objc(_requiredWebExtensionBaseURL)
+    private func relatedExtensionBaseURL() -> NSURL? { nil }
 }
 
 /// An extension document, deliberately never registered as a browser tab.
@@ -28,19 +38,18 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     private(set) var webView: WKWebView?
     private(set) var errorDescription: String?
     @ObservationIgnored private let openTab: (URL) -> Void
-    /// Absent when the pool has no cookie-access service behind it.
-    @ObservationIgnored private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     @ObservationIgnored private var hasRecoveredProcess = false
     /// The page-world `chrome.runtime` alias and relay on this document's
     /// private content controller.
     @ObservationIgnored private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
     @ObservationIgnored private let contentController = WKUserContentController()
+    @ObservationIgnored private var session: BrowserExtensionPanelSession?
+    @ObservationIgnored private var startup: Task<Void, Never>?
 
     init(
         url: URL,
         tabID: TabID?,
         configuration: BrowserExtensionPageConfiguration,
-        cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
         installRuntimeBridge: (WKUserContentController) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? = { _ in
             nil
         },
@@ -49,15 +58,22 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
         self.url = url
         self.tabID = tabID
         extensionBaseURL = configuration.baseURL
-        self.cookieAccess = cookieAccess
         self.openTab = openTab
-        guard BrowserExtensionHostedContentIsolationPolicy.isSupported else {
+        guard BrowserExtensionHostedContentIsolationPolicy.isSupported,
+            WKWebView.instancesRespond(to: NSSelectorFromString("_requiredWebExtensionBaseURL"))
+        else {
             super.init()
             errorDescription = String(localized: "This version of WebKit cannot isolate extension side panels.")
             return
         }
         runtimeBridge = installRuntimeBridge(contentController)
-        let webView = WKWebView(frame: .zero, configuration: configuration.webViewConfiguration)
+        session = BrowserExtensionPanelSession(configuration: configuration, content: contentController)
+        guard session != nil else {
+            super.init()
+            errorDescription = String(localized: "This version of WebKit cannot isolate extension side panels.")
+            return
+        }
+        let webView = BrowserExtensionPanelWebView(frame: .zero, configuration: configuration.webViewConfiguration)
         self.webView = webView
         super.init()
         webView.navigationDelegate = self
@@ -65,11 +81,25 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
         webView.isInspectable = true
         webView.underPageBackgroundColor = .clear
         webView.appearance = NSApp.effectiveAppearance
-        browserExtensionSidebarDocumentLog.info("panel document load \(url.absoluteString, privacy: .public)")
-        webView.load(URLRequest(url: url))
+        session?.invalidate = { [weak self] in self?.close() }
+        startup = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let ready = await session?.prepare() == true
+            guard !Task.isCancelled, self.webView === webView else { return }
+            guard ready else {
+                errorDescription = String(
+                    localized: "The extension side panel stopped responding. Close and reopen it to try again.")
+                return
+            }
+            webView.load(URLRequest(url: url))
+        }
     }
 
     func close() {
+        startup?.cancel()
+        startup = nil
+        session?.stop()
+        session = nil
         runtimeBridge?.release()
         runtimeBridge = nil
         guard let webView else { return }
@@ -105,23 +135,11 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
             url: url, extensionBaseURL: extensionBaseURL, isMainFrame: action.targetFrame?.isMainFrame ?? true,
             opensNewWindow: action.targetFrame == nil
         )
-        if action.targetFrame?.isMainFrame == false {
-            browserExtensionSidebarDocumentLog.info(
-                "panel frame navigation \(url.host() ?? "-", privacy: .public)\(url.path(), privacy: .public) decision=\(String(describing: decision), privacy: .public)"
-            )
-        }
         switch decision {
         case .allow:
-            // A framed site's cookies have to be usable before the frame's own
-            // request goes out, so the decision waits on the rewrite. Every
-            // other navigation is answered without a hop.
-            guard let cookieAccess, let host = cookieAccess.hostRequiringRewrite(for: action) else {
-                decisionHandler(.allow)
-                return
-            }
-            Task { @MainActor in
-                await cookieAccess.relaxCookies(for: host)
-                decisionHandler(.allow)
+            Task { @MainActor [weak self] in
+                let allowed = await self?.session?.allows(action) == true
+                decisionHandler(allowed ? .allow : .cancel)
             }
         case .openTab:
             decisionHandler(.cancel)
@@ -145,37 +163,20 @@ final class BrowserExtensionSidebarDocument: NSObject, WKNavigationDelegate, WKU
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
-        browserExtensionSidebarDocumentLog.info(
-            "panel document finished \(webView.url?.absoluteString ?? "<nil>", privacy: .public)")
         errorDescription = nil
-    }
-
-    /// Subframe loads never reach the main-frame delegate callbacks, so their
-    /// responses are the only signal of what a framed site answered.
-    func webView(
-        _ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
-        decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
-    ) {
-        if !navigationResponse.isForMainFrame, let http = navigationResponse.response as? HTTPURLResponse {
-            let url = http.url
-            browserExtensionSidebarDocumentLog.info(
-                "panel frame response \(http.statusCode, privacy: .public) \(url?.host() ?? "-", privacy: .public)\(url?.path() ?? "", privacy: .public) \(http.mimeType ?? "-", privacy: .public) location=\(http.value(forHTTPHeaderField: "Location") ?? "-", privacy: .public)"
-            )
-        }
-        decisionHandler(.allow)
     }
 
     func webView(
         _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation?, withError error: any Error
     ) {
         browserExtensionSidebarDocumentLog.error(
-            "panel document provisional failure \(String(describing: error), privacy: .public)")
+            "panel document provisional failure \(String(describing: error), privacy: .private)")
         if (error as NSError).code != NSURLErrorCancelled { errorDescription = error.localizedDescription }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation?, withError error: any Error) {
         browserExtensionSidebarDocumentLog.error(
-            "panel document failure \(String(describing: error), privacy: .public)")
+            "panel document failure \(String(describing: error), privacy: .private)")
         if (error as NSError).code != NSURLErrorCancelled { errorDescription = error.localizedDescription }
     }
 

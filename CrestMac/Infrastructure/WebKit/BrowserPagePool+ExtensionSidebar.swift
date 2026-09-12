@@ -33,22 +33,13 @@ extension BrowserPagePool {
             BrowserExtensionSidebarResourcePolicy.documentURL(path: panel.path, baseURL: configuration.baseURL) == url
         else { return nil }
         let key = BrowserExtensionSidebarKey(
-            windowID: window, spaceID: panel.spaceID, extensionBaseURL: configuration.baseURL)
-        if let existing = extensionSidebarDocuments[key], existing.url == url,
-            existing.tabID == panel.tabID, existing.webView != nil
-        {
+            windowID: window, spaceID: panel.spaceID, extensionBaseURL: configuration.baseURL, tabID: panel.tabID)
+        if let existing = extensionSidebarDocuments[key], existing.url == url, existing.webView != nil {
             return existing
         }
         extensionSidebarDocuments.removeValue(forKey: key)?.close()
-        if let hostedStore = extensionControllerPool.hostedWebsiteDataStore(in: panel.spaceID) {
-            guard BrowserExtensionHostedWebsiteDataStore.apply(hostedStore, to: configuration.webViewConfiguration)
-            else { return nil }
-        }
         let document = BrowserExtensionSidebarDocument(
             url: url, tabID: panel.tabID, configuration: configuration,
-            cookieAccess: BrowserExtensionFramedSiteCookieAccess(
-                configuration: configuration, spaceID: panel.spaceID,
-                service: extensionControllerPool.cookieAccessService),
             // A panel frames websites, and a website named in an extension's
             // `externally_connectable` expects `chrome.runtime` there exactly
             // as it would in a tab.
@@ -69,7 +60,7 @@ extension BrowserPagePool {
             guard key.windowID == window, let document = extensionSidebarDocuments[key] else { return false }
             return !panels.contains { panel in
                 panel.spaceID == key.spaceID
-                    && panel.documentURL == document.url
+                    && panel.documentURL == document.url && panel.tabID == key.tabID
             }
         }
         for key in stale { extensionSidebarDocuments.removeValue(forKey: key)?.close() }

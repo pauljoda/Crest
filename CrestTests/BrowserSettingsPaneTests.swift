@@ -14,7 +14,7 @@ final class BrowserSettingsPaneTests: XCTestCase {
         XCTAssertNotNil(plugin.principalClass as? any NSDockTilePlugIn.Type)
     }
 
-    func testMacWebTextAssistanceForcesEverySmartMutationOff() throws {
+    func testMacWebTextAssistanceDisablesAutomaticCorrectionsWithoutDisablingTextReplacement() throws {
         let suiteName = "crest.tests.webkit-text-input.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -26,7 +26,6 @@ final class BrowserSettingsPaneTests: XCTestCase {
             "WebAutomaticQuoteSubstitutionEnabled",
             "WebAutomaticDashSubstitutionEnabled",
             "WebAutomaticLinkDetectionEnabled",
-            "WebAutomaticTextReplacementEnabled",
         ])
         for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
             defaults.set(true, forKey: key)
@@ -47,6 +46,31 @@ final class BrowserSettingsPaneTests: XCTestCase {
         for key in BrowserMacWebTextAssistancePolicy.disabledSmartTextKeys {
             XCTAssertFalse(defaults.bool(forKey: key), key)
         }
+    }
+
+    func testTextReplacementRemovesTheLegacyForcedOverrideThenPreservesUserChoices() throws {
+        let suiteName = "crest.tests.text-replacement.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let key = "WebAutomaticTextReplacementEnabled"
+        defaults.set(false, forKey: key)
+        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+        XCTAssertNil(defaults.object(forKey: key), "WebKit should inherit the macOS text replacement preference")
+
+        for choice in [true, false, true] {
+            defaults.set(choice, forKey: key)
+            BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+            XCTAssertEqual(defaults.bool(forKey: key), choice)
+        }
+    }
+
+    func testTextReplacementPreservesAnExistingEnabledChoiceDuringMigration() throws {
+        let suiteName = "crest.tests.text-replacement.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: "WebAutomaticTextReplacementEnabled")
+        BrowserMacWebTextAssistancePolicy.configure(defaults: defaults)
+        XCTAssertTrue(defaults.bool(forKey: "WebAutomaticTextReplacementEnabled"))
     }
 
     func testMacWebTextAssistanceDefaultsSpellCheckingOff() throws {

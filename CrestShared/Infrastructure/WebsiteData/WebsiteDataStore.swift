@@ -27,7 +27,7 @@ enum BrowserWebsiteDataStore {
     ) async {
         await clearSiteDataInStore(for: pageURL, in: dataStore)
         if let identifier = dataStore.identifier {
-            let hostedID = BrowserExtensionHostedWebsiteDataStore.identifier(forProfileID: identifier)
+            let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: identifier)
             if await WKWebsiteDataStore.allDataStoreIdentifiers.contains(hostedID) {
                 await clearSiteDataInStore(for: pageURL, in: WKWebsiteDataStore(forIdentifier: hostedID))
             }

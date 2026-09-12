@@ -913,6 +913,30 @@
     "2026-09-11-private-favicon-loading": {
       "category": "fixed",
       "message": "Keep page addresses and sign-in cookies private when discovering site icons, and stop oversized icon downloads early"
+    },
+    "2026-09-12-extension-group-restoration": {
+      "category": "fixed",
+      "message": "Extension regrouping no longer leaves empty current folders behind, and orange groups are easier to distinguish from yellow"
+    },
+    "2026-09-12-native-extension-cookie-boundaries": {
+      "category": "fixed",
+      "message": "Signed-in extension panels use isolated sessions with tighter cookie protections for other sites and Spaces"
+    },
+    "2026-09-12-extension-background-wake-crash": {
+      "category": "fixed",
+      "message": "Prevent a crash when an idle extension wakes while its side panel remains open"
+    },
+    "2026-09-12-preserve-text-replacement-choice": {
+      "category": "fixed",
+      "message": "Text replacement follows your Mac settings and keeps your choice when Crest restarts"
+    },
+    "2026-09-12-extension-panel-tab-ownership": {
+      "category": "fixed",
+      "message": "Keep tab-specific extension panels with their own pages and restore each panel when returning to its tab"
+    },
+    "2026-09-12-native-extension-screenshots": {
+      "category": "fixed",
+      "message": "Extension screenshots capture the selected page correctly"
     }
   }
 }

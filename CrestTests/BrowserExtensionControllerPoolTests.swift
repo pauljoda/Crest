@@ -6,6 +6,140 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionControllerPoolTests: XCTestCase {
+    func testSidebarHostRestoresEachTabsOwnDocumentAndReleasesClosedTabs() async throws {
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let first = try XCTUnwrap(space.tabs.first)
+        let second = try XCTUnwrap(space.tabs.last)
+        XCTAssertNotEqual(first.id, second.id)
+        let pool = BrowserExtensionControllerPool()
+        let pages = BrowserPagePool(monitorsMemoryPressure: false, extensionControllerPool: pool)
+        pool.connect(browser: browser, pageProvider: pages)
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        pool.setSidebarService(store)
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "Fixtures/SidePanelProbeExtension", directoryHint: .isDirectory)
+        let context = try await pool.loadExtension(at: fixture, extensionID: "panel-restoration", in: space)
+        let client = BrowserExtensionServiceClientID.scoped(extensionID: "panel-restoration", spaceID: space.id)
+        let window = BrowserWindowID()
+        let host = BrowserExtensionSidebarHost(
+            store: store, windowID: window, browser: browser, pages: pages,
+            spaceAccess: BrowserSpaceAccessController(), windowState: nil)
+        defer { host.release() }
+        browser.selectTab(first.id)
+        try store.setChromeOptions(.init(path: "panel.html"), tab: first.id, from: client)
+        try store.open(for: client, in: window, tab: first.id)
+        host.reconcile()
+        let original = try XCTUnwrap(host.document)
+        browser.selectTab(second.id)
+        host.reconcile()
+        XCTAssertNil(host.panel)
+        XCTAssertNil(host.document)
+        XCTAssertNotNil(original.webView, "A hidden conversation stays alive")
+        try store.setChromeOptions(.init(path: "panel.html"), tab: second.id, from: client)
+        try store.open(for: client, in: window, tab: second.id)
+        host.reconcile()
+        let other = try XCTUnwrap(host.document)
+        XCTAssertFalse(other === original, "Equal paths still represent separate tab-owned documents")
+        XCTAssertFalse(
+            other.webView?.configuration.websiteDataStore === original.webView?.configuration.websiteDataStore)
+        browser.selectTab(first.id)
+        host.reconcile()
+        XCTAssertTrue(host.document === original)
+        XCTAssertEqual(pages.extensionSidebarDocuments(extensionBaseURL: context.baseURL, in: space.id).count, 2)
+        browser.session.spaces[0].tabs.removeAll { $0.id == second.id }
+        pool.reconcileExtensionState(in: browser.session)
+        host.reconcile()
+        XCTAssertNil(other.webView)
+        XCTAssertTrue(host.document === original)
+    }
+
+    func testOpenPanelReceivesTabActivationAndCapturesTheLiveSelectedPage() async throws {
+        let first = BrowserTab(
+            title: "First", url: URL(string: "https://panel-state.example/first"), placement: .current)
+        let second = BrowserTab(
+            title: "Second", url: URL(string: "https://panel-state.example/second"), placement: .current)
+        var space = BrowserSession.preview.spaces[0]
+        space.tabs = [first, second]
+        space.selectedTabID = first.id
+        let browser = BrowserStore(
+            session: .init(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let pool = BrowserExtensionControllerPool()
+        let pages = PageProviderSpy()
+        pool.connect(browser: browser, pageProvider: pages)
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "Fixtures/SidePanelProbeExtension", directoryHint: .isDirectory)
+        let context = try await pool.loadExtension(at: fixture, extensionID: "panel-state", in: space)
+        context.setPermissionStatus(.grantedExplicitly, for: .tabs)
+        context.setPermissionStatus(
+            .grantedExplicitly, for: try XCTUnwrap(WKWebExtension.MatchPattern(string: "https://panel-state.example/*"))
+        )
+        let window = NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 320, height: 240), styleMask: [.borderless], backing: .buffered,
+            defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        for (tab, color) in [(first, "red"), (second, "blue")] {
+            let configuration = BrowserPageConfiguration.make(
+                for: space.profile, webExtensionController: pool.controller(for: space))
+            let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 320, height: 240), configuration: configuration)
+            pages.webViews[tab.id] = view
+            window.contentView = view
+            window.orderFront(nil)
+            let waiter = ExtensionNavigationWaiter(webView: view)
+            try await waiter.load(
+                simulatedRequest: URLRequest(url: try XCTUnwrap(tab.url)),
+                responseHTML: "<html style='background:\(color)'><body></body></html>")
+        }
+        window.contentView = pages.webViews[first.id]
+        let document = BrowserExtensionSidebarDocument(
+            url: context.baseURL.appending(path: "panel.html"), tabID: nil,
+            configuration: try XCTUnwrap(
+                pool.extensionPageConfiguration(for: context.baseURL.appending(path: "panel.html"), in: space.id)),
+            openTab: { _ in XCTFail("The panel must keep its document") })
+        defer { document.close() }
+        let panel = try XCTUnwrap(document.webView)
+        for _ in 0..<200 {
+            if panel.url?.path == "/panel.html", !panel.isLoading { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(panel.url?.path, "/panel.html")
+        _ = try await panel.evaluateJavaScript(
+            "globalThis.activations = []; browser.tabs.onActivated.addListener(info => activations.push(info.tabId));")
+        let firstID =
+            try await panel.callAsyncJavaScript(
+                "return (await browser.tabs.query({active:true,currentWindow:true}))[0].id;", arguments: [:],
+                contentWorld: .page) as? Int
+        XCTAssertNotNil(firstID)
+
+        browser.selectTab(second.id)
+        window.contentView = pages.webViews[second.id]
+        pool.reconcileExtensionState(in: browser.session)
+        let result =
+            try await panel.callAsyncJavaScript(
+                """
+                for (let i=0; i<100 && !activations.length; ++i) await new Promise(resolve => setTimeout(resolve,25));
+                const [tab] = await browser.tabs.query({active:true,currentWindow:true});
+                return {id:tab.id, url:tab.url, events:activations, screenshot:await browser.tabs.captureVisibleTab(tab.windowId,{format:'png'})};
+                """, arguments: [:], contentWorld: .page) as? [String: Any]
+        XCTAssertNotEqual(result?["id"] as? Int, firstID)
+        XCTAssertEqual(result?["url"] as? String, second.url?.absoluteString)
+        XCTAssertEqual(result?["events"] as? [Int], [try XCTUnwrap(result?["id"] as? Int)])
+        let dataURL = try XCTUnwrap(result?["screenshot"] as? String)
+        XCTAssertTrue(dataURL.hasPrefix("data:image/png;base64,"), "Capture result: \(dataURL.prefix(150))")
+        let image = try XCTUnwrap(
+            NSBitmapImageRep(
+                data: try XCTUnwrap(
+                    Data(base64Encoded: String(dataURL.split(separator: ",").last ?? "").removingPercentEncoding ?? ""))
+            ))
+        let color = try XCTUnwrap(
+            image.colorAt(x: image.pixelsWide / 2, y: image.pixelsHigh / 2)?.usingColorSpace(.deviceRGB))
+        XCTAssertGreaterThan(color.blueComponent, 0.9, "The screenshot must belong to the newly selected page")
+        XCTAssertLessThan(color.redComponent, 0.1)
+        XCTAssertTrue(document.webView === panel)
+    }
+
     func testTabMembershipRequiresVerifiedSpaceButNotSensitiveTabPermission() async throws {
         var space = BrowserSession.preview.spaces[0]
         let tab = BrowserTab(
@@ -56,25 +190,6 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 as? Int, folder.id.rawValue)
     }
 
-    func testNativeHostPermissionRevocationStopsHostedCookieSynchronization() async throws {
-        let pool = BrowserExtensionControllerPool()
-        let jar = InMemoryBrowserExtensionCookieJar()
-        let cookies = BrowserExtensionCookieAccessStore(cookieJar: jar)
-        pool.setCookieAccessService(cookies)
-        let space = BrowserSession.preview.spaces[0]
-        let context = try await pool.loadExtension(at: fixtureURL, extensionID: extensionID, in: space)
-        let pattern = try WKWebExtension.MatchPattern(string: "https://extension-probe.crest.test/*")
-        context.setPermissionStatus(.grantedExplicitly, for: pattern)
-        let client = BrowserExtensionServiceClientID.scoped(extensionID: extensionID, spaceID: space.id)
-        await cookies.relaxCookies(for: "extension-probe.crest.test", client: client, in: space.id)
-        context.setPermissionStatus(.deniedExplicitly, for: pattern)
-        for _ in 0..<100 where !cookies.relaxedHosts(for: client).isEmpty {
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        XCTAssertTrue(cookies.relaxedHosts(for: client).isEmpty)
-        XCTAssertTrue(jar.observedSpaces.isEmpty)
-    }
-
     func testSidebarBrokerVerifiesGrantGestureAndOwningSpace() async throws {
         let pool = BrowserExtensionControllerPool()
         let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
@@ -122,8 +237,8 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         _ = try send(["api": "sidePanel.open", "windowKind": "primary"])
         XCTAssertTrue(store.isOpen(for: client, in: window))
         _ = try send(["api": "sidePanel.setOptions", "scope": ["kind": "default"], "enabled": false])
-        XCTAssertTrue(
-            store.isOpen(for: client, in: window), "Disabling new opens must not dismiss an ongoing Space panel.")
+        XCTAssertFalse(
+            store.isOpen(for: client, in: window), "Disabling a scope also closes its open panel.")
         let options = try send(["api": "sidePanel.getOptions", "scope": ["kind": "default"]])
         XCTAssertEqual(options["path"] as? String, "panel.html")
         XCTAssertEqual(options["enabled"] as? Bool, false)
@@ -3422,8 +3537,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 in: work.id
             )
         )
-        let hostedStore = WKWebsiteDataStore.nonPersistent()
-        pool.setHostedWebsiteDataStoreProvider { $0 == work.id ? hostedStore : nil }
+        let hostedStore = try XCTUnwrap(pool.extensionWebsiteDataStore(in: work.id))
         let extensionCookie = try XCTUnwrap(
             HTTPCookie(properties: [
                 .name: "hosted-extension-state", .value: "remove-me", .path: "/",

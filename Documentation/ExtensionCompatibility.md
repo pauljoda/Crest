@@ -514,67 +514,133 @@ extension and reviewed permissions, exactly as it is for a background worker.
 
 ### Cookies for sites an extension frames
 
-This workaround leaves relaxed site cookies usable after host permission
-revocation and by another extension sharing the hosted store. Synchronization
-also loses partition identity. The ordinary browsing jar
-retains its SameSite protections, but the hosted-store permission boundaries
-remain open security work. The behavior below describes the current
-compatibility mechanism; its mechanics tests do not establish those boundaries.
+Ordinary tabs, authentication views, native extension APIs and offscreen documents
+use their Space's native WebKit store. Side panels have a bounded compatibility
+session in `BrowserExtensionPanelSession`. Each panel receives a new nonpersistent
+store; panels never reuse the old Space-wide hosted store or one another's copies.
+There are no vendor names, extension IDs or cookie names in this policy.
 
-Claude's side panel offers a "Cowork" mode that frames
-`https://claude.ai/cic/new?surface=cic_sidepanel` inside the extension page.
-The frame loads, and claude.ai inside it reports that nobody is signed in.
+System WebKit does not provide Chrome's permission-scoped SameSite exception.
+The panel workaround supplies only the part needed for an authenticated website
+frame, with these limits:
 
-The cause is engine-side. WebKit already relaxes third-party cookie *blocking*
-for extension web views, but `SameSite` is a separate decision made in WebCore
-from the registrable domain of the **top** document, and it has no extension
-exemption. Under a `chrome-extension://` top document a `claude.ai` frame is
-cross-site, so every cookie the site marked `SameSite=Lax` or `Strict` is
-withheld — not only from the frame's own navigation but from every request that
-frame's document makes afterwards, because its site-for-cookies stays the top
-document. Chrome does not have this problem: an extension page holding host
-permission for a site is treated as first-party for that site's cookies.
+- A direct extension frame request must name an HTTPS origin covered by a current
+  native host grant. A redirect cannot activate a new origin. A website frame
+  cannot navigate across origins into a permission-bearing site.
+- Only matching **Secure, explicitly Lax/Strict** cookies enter the panel. Domain,
+  host-only, path and expiry attributes are preserved. The copies use SameSite=None
+  and HttpOnly; changing script-readable cookies to HttpOnly keeps the network
+  exception from exposing their values through `document.cookie`.
+- None, unspecified, insecure and partitioned source cookies are not copied.
+  Some WebKit versions erase partition metadata from `getAllCookies`; excluding
+  None is necessary because WebKit's CHIPS cookies require SameSite=None.
+- WebKit content rules strip cookies outside permitted navigation destinations
+  and outside an activated origin's own document requests. Navigation rules are
+  installed **before the extension page loads**: WebKit makes its initial cookie
+  decision before the navigation callback. A separate document controller carries
+  resource rules and excludes every other extension's injected scripts and CSS.
+- The normal store is authoritative. Its changes update copies; removal of a
+  copied cookie closes and clears the panel session. Panel responses stay in that
+  panel and never write cookies back into the browser's store. WebKit controls
+  whether response cookies are accepted.
+- Closing the panel, changing permissions after activation, or reaching a grant
+  or original-cookie expiry closes the session, disables its cookie store, clears
+  its website data and removes its compiled rules. In-flight requests may finish
+  before the asynchronous WebKit notification and teardown complete.
 
-Crest gives side panels and offscreen documents a separate hosted website data
-store for their Space. Only the hosted cookie copies have their `SameSite`
-restrictions relaxed. Opening a panel no longer removes cross-site protection
-from the normal browsing jar.
+WebKit treats nonpersistent stores as private data, so creating a panel enables
+`hasAccessToPrivateData` for its owning Space's native extension context. Actual
+private windows have a separate pool which loads no extensions; this flag does
+not grant access to that pool. Native `chrome.storage.local` and background IPC
+remain owned by the original extension context and survive panel recreation.
 
-A host becomes eligible only after an embedded HTTP(S) navigation and a native
-`WKWebExtensionContext.hasAccessToURL:` check. The coordinator copies the site's
-normal cookies into the hosted jar before allowing that navigation. It observes
-both jars so login refreshes and logout propagate. When a hosted refresh changes
-a cookie value, the normal copy retains its existing SameSite protection; a
-normal first-party response can still change its own policy. A normal-tab
-change wins if both jars change between synchronization passes. Names, values,
-expiry, Secure and HttpOnly are preserved, and relative Max-Age is not rebased.
+This is deliberately narrower than Chrome. Cross-origin requests inside a
+website frame remain cookieless even when a sibling host has permission. A site
+that relies on a copied SameSite=None cookie, script access to a restrictive
+cookie, shared embedded DOM storage, or a Lax/Strict response refresh may need a
+normal-tab sign-in or may remain unsupported. WebKit can reject those response
+cookies in a cross-site frame; Crest does not override that decision. A server
+rotation confined to a panel is not persisted back into the normal tab, so a
+later panel may need its first-party session refreshed. The workaround changes
+SameSite enforcement only inside these isolated panels; it is not an exact
+implementation of Chrome's engine-level exception.
 
-Hosted storage has a separate identifier derived from the Space's browsing
-profile. It is removed with that profile and included when clearing a site's
-data. Ephemeral profiles get ephemeral hosted storage. The eligible-host list
-is held only while the extension is loaded and still holds the host permission;
-revocation removes that host from pending and future synchronization. Startup
-copies from the normal jar again when a permitted frame first loads. Uninstall
-also clears that extension origin's hosted data without deleting the embedded
-website's own session or another extension's data.
+An extension's own sign-in preflight can also run before its first iframe
+navigation activates that origin. The unchanged Claude 1.0.92 extension exhibited
+this ordering after a cold start: its initial panel showed the website sign-in
+prompt, and **Already signed in? Reload** opened the authenticated Cowork composer
+without another sign-in. Crest does not pre-copy every cookie covered by a broad
+host grant to make that early request succeed. This retry remains a compatibility
+limit of activating sessions only when the extension actually frames a site.
 
-The extension configuration's inherited `_relatedWebView` must be cleared
-before assigning the separate store: WebKit requires related views to share a
-store. The native extension controller is retained, so owner runtime messaging
-and `chrome.storage` still use the extension context. Web-platform storage such
-as localStorage and IndexedDB belongs to the hosted store; it is not shared
-with background documents using the normal store. This differs from Chrome and
-must be considered for packages relying on those cross-document stores.
+The September 12 live check used the existing isolated email/organization-SSO
+profile. The extension options retained the signed-in account and Cowork preference
+across restart; Cowork displayed its composer and model controls after the retry,
+without the earlier extension-connection warning. No chat was sent. The same-tab
+restart/reopen kept the total folder count at 14: the extension replaced its old
+current group with a new group containing the same tab, using the corrected orange.
+Historical empty folders were left alone. This establishes startup and panel
+access, not long-running token rotation or chat execution.
 
-The action popup remains owned and configured by WebKit. Crest does not replace
-its delegate or data store, so framed sites in native popups still follow
-WebKit's cookie behavior.
+The former Space-wide copy mechanism made non-HttpOnly Lax/Strict values readable
+by scripts, authenticated foreign nested frames, and retained relaxed cookies
+after revocation. Its policy, synchronization service, broker plumbing and tests
+were removed. The legacy store identifier remains solely for site-data/profile
+cleanup. New panels do not migrate its cookies or embedded DOM storage.
 
-`BrowserExtensionCookieJarCoordinatorTests` covers normal-jar preservation,
-hosted session refreshes, both logout directions, normal-change precedence,
-observer convergence, and host isolation. The content-isolation fixture also
-loads an extension document in an independent store and reaches its owning
-background while excluding a real foreign extension from its embedded site.
+Panel views also stay out of WebKit's related-view selection for a restarting
+background. When a background idles out, system WebKit can otherwise pick a
+surviving panel with a different store and throw `NSInvalidArgumentException`
+during `WKWebView` initialization. Four reports from Crest 0.5.105 (1087) on
+macOS 27.0 (26A428) shared this stack: one wake followed window focus, and three
+followed `runtime.sendMessage`. A synthetic extension reproduced the exact
+related-view/data-store exception after the native 30-second idle timeout.
+
+`BrowserExtensionPanelWebView` hides only the related-view enumeration marker.
+Its configuration retains the required extension origin: clearing that value
+would break WebKit's resource authorization. Native extension APIs, manifest
+CSP, content-script isolation and the panel's cookie rules remain covered by the
+retained tests. The idle/wake regression also verifies that native local storage
+and the existing panel still work after a new background is created. The reports
+do not identify which installed extension woke; they do not establish that
+LastPass caused these crashes.
+
+The September 12, 2026 loopback HTTPS comparison used Chrome for Testing
+148.0.7778.96 and system WebKit on macOS 27.0 (26A428), built with Xcode 27.0
+(27A266a). Cookies came from real HTTP responses with synthetic values.
+
+| Request or access | Chrome with target host permission | Native WebKit | Scoped Crest panel |
+| --- | --- | --- | --- |
+| Direct permitted iframe: Secure Lax/Strict | Sent | Withheld | Sent |
+| Script reads copied Lax/Strict | Withheld | Withheld | Withheld through HttpOnly copies |
+| Foreign nested frame navigates to permitted host | Lax/Strict withheld | Lax/Strict withheld | Navigation refused |
+| Foreign frame fetches permitted host | Lax/Strict withheld | Lax/Strict withheld | All cookies withheld |
+| Child host without extension permission | Only applicable None | Only applicable None | All cookies withheld |
+| Parent host-only cookie sent to child | Never | Never | Never |
+| Cookie path `/private` used at `/privateer` | Never | Never | Never |
+| Top-level partitioned cookie under extension partition | Withheld | Withheld | Never copied |
+| Requests after native host grant revoked | Not captured in Chrome | Lax/Strict withheld | Session closed and store disabled |
+
+Chrome's tested redirect to an unpermitted host included that destination's
+Lax/Strict cookies. Crest does not reproduce that disclosure. HTTP downgrade
+probes used `.test` hosts because both engines treat localhost as trustworthy
+and may otherwise send Secure cookies over localhost HTTP.
+
+`BrowserExtensionWebsiteDataTests` retains actual request coverage for narrow and
+broad grants, native background messaging, persistent and ephemeral profiles,
+child-host and path scope, source partition metadata, foreign nesting/fetches,
+redirects, response refresh isolation, revocation, logout and another Space.
+`BrowserExtensionHostedContentIsolationTests` protects manifest CSP and foreign
+extension isolation. `BrowserExtensionStartupPipelineTests` protects the private
+pool boundary. Favicon tests separately preserve authenticated discovery,
+credential-free fallback redirects, referrer omission and streaming byte limits.
+No authenticated Microsoft favicon wire capture is claimed.
+
+References: [Chrome extension storage and cookies](https://developer.chrome.com/docs/extensions/develop/concepts/storage-and-cookies),
+[Chromium extension SameSite rules](https://chromium.googlesource.com/website/+/HEAD/site/updates/same-site/test-debug/index.md#testing-chrome-extensions),
+[WebKit issue 260676](https://bugs.webkit.org/show_bug.cgi?id=260676),
+[Apple content-blocking rules](https://developer.apple.com/documentation/safariservices/creating-a-content-blocker),
+[WebKit partition-export correction](https://github.com/WebKit/WebKit/commit/29ed7a84dc8525afe42f8a94ebde345c565d067e).
 
 ### Silent sign-in — `chrome.identity`
 
@@ -991,6 +1057,60 @@ site, popup, update, or optional workflow.
 | React Developer Tools | 7.0.1 | Partial / experimental | `chrome.scripting.ExecutionWorld.ISOLATED` is unavailable |
 | Tampermonkey | 5.5.0 | Partial / experimental | WebKit rejects its `tabs.onUpdated` startup registration. Crest now reports loading and reader-mode changes to that event, but the rejected registration is a WebKit boundary and is unchanged |
 | iCloud Passwords | 3.3.0 | Blocked / Apple entitlement pending | The worker loads through the generic capability runtime, but Apple's password helper rejects the current unsigned-capability parent; pairing and autofill require the managed browser credential entitlement |
+
+LastPass was checked again on September 12 with the signed 4.155.2 package in
+the isolated trace profile on system WebKit. Free account creation and web-vault
+access succeeded. The initial signup session appeared signed in in the action
+popup, but the in-page save operation failed; after restart, its field menu
+requested a logout and login to refresh LastPass. That refresh completed through
+the ordinary LastPass login page. The cause of the initial signup-session failure
+was not isolated, and is not claimed as a fixed Crest defect.
+
+After refreshing that session, LastPass's native in-page prompt saved a synthetic
+login on a loopback-only host. Its field menu filled both values, including after
+a full Crest quit and relaunch without another login. The fixture's HTTP server
+verified the submitted username and password. A record created through the web
+vault also synchronized into the extension and filled successfully. No real
+website password was used in the fixture. This verifies account access, save,
+fill and restoration for this package; it does not certify passkeys, MFA, shared
+vaults or every site's form. No LastPass-specific cookie or injection exception
+was added. The four supplied crash reports are addressed by the generic panel
+background-wake repair described above, rather than attributed to LastPass.
+
+The September 12 tab-switch investigation found that Claude 1.0.92 opens its
+Cowork document with a tab-specific `tabId` in the URL. Its packaged parent bridge
+retains that identity and sends `CURRENT_TAB` updates only for that tab. Crest's
+old Space-wide presentation discarded the API scope, so a panel targeting the
+LastPass page remained beside an unrelated Apple page. No synthetic activation
+event or vendor-specific message rewrite is needed: the store now honors
+[Chrome's global and tab-specific open contract](https://developer.chrome.com/docs/extensions/reference/api/sidePanel#type-OpenOptions).
+Tab-owned documents hide on other tabs and resume unchanged on return; equal
+resource paths still have separate document identities and isolated stores.
+Closing the owning tab releases its panel. Global panels receive native live tab
+events and queries.
+
+A separate actual `tabs.captureVisibleTab` regression exposed an unnecessary
+snapshot delegate: WebKit supplied that delegate a zero-sized rectangle, and
+Crest forwarded it, producing `data:,`. Removing the delegate and its two platform
+image aliases lets WebKit capture the registered view directly. Its
+[capture implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Extensions/Cocoa/WebExtensionTabCocoa.mm)
+only resolves the view itself when no snapshot delegate is supplied. The retained
+test verifies native activation, current-window active-tab queries, and the
+rendered pixels of the newly selected page with the same panel still open.
+This validates generic routing; a new authenticated Cowork chat was not sent as
+part of the repair.
+
+Release validation for 0.5.107 verified 181 distinct cases across the broad run
+and a focused rerun after correcting an obsolete disabled-panel expectation.
+The separate system-clipboard integration case remained opt-in and was skipped.
+No test failures remain unresolved. The iOS Simulator build also passed. The
+retained suite covers cookie wire boundaries, favicon requests and streaming
+limits, extension startup and native storage, panel isolation and background
+recovery, tab ownership and document restoration, actual screenshot pixels, tab
+groups, and text-replacement preference migration. The two synthetic LastPass vault records, local form server
+and temporary form tab were removed after validation; the trace account remained
+signed in. Long-running token rotation and authenticated Microsoft favicon wire
+capture remain outside this validation.
 
 ## Firefox extensions from addons.mozilla.org
 

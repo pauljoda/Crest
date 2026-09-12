@@ -6,6 +6,65 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
+    func testBackgroundCanRestartWhileAnIsolatedPanelRemainsOpen() async throws {
+        let root = try fixture(
+            name: "Panel background recovery",
+            manifest: [
+                "permissions": ["storage"],
+                "background": ["scripts": ["background.js"], "persistent": false],
+            ],
+            files: [
+                "panel.html": "<!doctype html><title>Background recovery</title>",
+                "background.js": """
+                browser.runtime.onMessage.addListener(async () => {
+                    const value = await browser.storage.local.get('marker');
+                    return value.marker;
+                });
+                """,
+            ])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let configuration = WKWebExtensionController.Configuration.nonPersistent()
+        configuration.defaultWebsiteDataStore = .nonPersistent()
+        let controller = WKWebExtensionController(configuration: configuration)
+        let context = WKWebExtensionContext(for: try await WKWebExtension(resourceBaseURL: root))
+        context.hasAccessToPrivateData = true
+        context.setPermissionStatus(.grantedExplicitly, for: .storage)
+        try controller.load(context)
+        defer { try? controller.unload(context) }
+        let document = BrowserExtensionSidebarDocument(
+            url: context.baseURL.appending(path: "panel.html"), tabID: nil,
+            configuration: .init(
+                baseURL: context.baseURL, context: context,
+                webViewConfiguration: try XCTUnwrap(context.webViewConfiguration),
+                clientID: .scoped(extensionID: "recovery", spaceID: SpaceID())),
+            openTab: { _ in XCTFail("Recovery must keep the existing panel") })
+        defer { document.close() }
+        let panel = try XCTUnwrap(document.webView)
+        try await waitUntilLoaded(panel)
+        _ = try await panel.callAsyncJavaScript(
+            "await browser.storage.local.set({marker:'survives-background-restart'});",
+            arguments: [:], contentWorld: .page)
+        let initial = try await panel.callAsyncJavaScript(
+            "return await browser.runtime.sendMessage({ping:true});", arguments: [:], contentWorld: .page)
+        XCTAssertEqual(initial as? String, "survives-background-restart")
+        let previousBackground = try XCTUnwrap(context.value(forKey: "_backgroundWebView") as? WKWebView)
+        XCTAssertFalse(previousBackground.configuration.websiteDataStore === panel.configuration.websiteDataStore)
+
+        // WebKit must not choose the isolated panel as the new background's
+        // related view: that relationship requires the very same data store.
+        for _ in 0..<450 {
+            if context.value(forKey: "_backgroundWebView") == nil { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertNil(context.value(forKey: "_backgroundWebView"), "The background must actually idle out")
+        let recovered = try await panel.callAsyncJavaScript(
+            "return await browser.runtime.sendMessage({ping:true});", arguments: [:], contentWorld: .page)
+        let replacement = try XCTUnwrap(context.value(forKey: "_backgroundWebView") as? WKWebView)
+        XCTAssertFalse(previousBackground === replacement)
+        XCTAssertEqual(recovered as? String, "survives-background-restart")
+        XCTAssertTrue(document.webView === panel)
+    }
+
     func testHostedManifestCSPStillBlocksInlineScriptAndEvalWhileWebsiteScriptsRun() async throws {
         let server = try FrameServer()
         defer { server.stop() }
@@ -39,7 +98,6 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
         try controller.load(owner)
         defer { try? controller.unload(owner) }
         let configuration = try XCTUnwrap(owner.webViewConfiguration)
-        XCTAssertTrue(BrowserExtensionHostedWebsiteDataStore.apply(.nonPersistent(), to: configuration))
         XCTAssertTrue(
             BrowserExtensionHostedPageConfigurationPolicy.clearExtensionContentSecurityPolicyMode(on: configuration))
         let document = BrowserExtensionSidebarDocument(
@@ -47,7 +105,7 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
             configuration: .init(
                 baseURL: owner.baseURL, context: owner, webViewConfiguration: configuration,
                 clientID: .scoped(extensionID: "owner", spaceID: SpaceID())),
-            cookieAccess: nil, openTab: { _ in XCTFail("The fixture must stay inside its panel") })
+            openTab: { _ in XCTFail("The fixture must stay inside its panel") })
         defer { document.close() }
         let panel = try XCTUnwrap(document.webView)
         try await waitUntilLoaded(panel)
@@ -100,14 +158,13 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
         try controller.load(owner)
         defer { try? controller.unload(owner) }
         let configuration = try XCTUnwrap(owner.webViewConfiguration)
-        XCTAssertTrue(BrowserExtensionHostedWebsiteDataStore.apply(.nonPersistent(), to: configuration))
         BrowserExtensionHostedPageConfigurationPolicy.clearExtensionContentSecurityPolicyMode(on: configuration)
         let document = BrowserExtensionSidebarDocument(
             url: owner.baseURL.appending(path: "panel.html"), tabID: nil,
             configuration: .init(
                 baseURL: owner.baseURL, context: owner, webViewConfiguration: configuration,
                 clientID: .scoped(extensionID: "owner", spaceID: SpaceID())),
-            cookieAccess: nil, openTab: { _ in XCTFail("The fixture must stay inside its panel") })
+            openTab: { _ in XCTFail("The fixture must stay inside its panel") })
         defer { document.close() }
         let panel = try XCTUnwrap(document.webView)
         try await waitUntilLoaded(panel)
@@ -218,14 +275,18 @@ final class BrowserExtensionHostedContentIsolationTests: XCTestCase {
 
     private func waitUntilLoaded(_ webView: WKWebView) async throws {
         for _ in 0..<400 {
-            if !webView.isLoading,
+            if webView.url != nil, !webView.isLoading,
                 (try? await webView.evaluateJavaScript("document.readyState")) as? String == "complete"
             {
                 return
             }
             try await Task.sleep(for: .milliseconds(25))
         }
-        XCTFail("The fixture did not finish loading")
+        throw NSError(
+            domain: "CrestHostedContentFixture", code: 1,
+            userInfo: [
+                NSLocalizedDescriptionKey: "The fixture did not finish loading"
+            ])
     }
 
     private func fixture(name: String, manifest: [String: Any], files: [String: String]) throws -> URL {

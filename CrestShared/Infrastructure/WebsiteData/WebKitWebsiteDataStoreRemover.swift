@@ -62,7 +62,7 @@ struct WebKitBrowserWebsiteDataStoreRemover: BrowserWebsiteDataStoreRemoving {
     func removePersistentDataStore(for profile: BrowsingProfile) async throws {
         try await removePersistentDataStore(identifier: profile.id)
         try await removePersistentDataStore(
-            identifier: BrowserExtensionHostedWebsiteDataStore.identifier(forProfileID: profile.id))
+            identifier: BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile.id))
     }
 
     private func removePersistentDataStore(identifier: UUID) async throws {

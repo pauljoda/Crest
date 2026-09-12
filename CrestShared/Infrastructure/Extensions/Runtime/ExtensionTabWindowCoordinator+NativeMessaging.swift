@@ -57,9 +57,6 @@ extension BrowserExtensionTabWindowCoordinator {
             // Chrome drops session rules when an extension's context unloads
             // or reloads and keeps dynamic ones.
             declarativeNetRequestService?.unregister(client: client)
-            // Stop syncing this client's embedded hosts. Normal browsing
-            // cookies retain their own SameSite attributes throughout.
-            cookieAccessService?.unregister(client: client)
             // A context that unloads takes its `onMessageExternal` listeners
             // with it. Finishing the watch streams here ends any delivery
             // still waiting on them instead of holding the page's promise for

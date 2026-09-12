@@ -179,7 +179,7 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         XCTAssertEqual(removed?.kind, .removed)
         XCTAssertEqual(removed?.group.id, group.id)
         XCTAssertTrue(store.groups(in: space.id).isEmpty)
-        XCTAssertTrue(browser.session.spaces[0].folders.contains { $0.id == group.folderID })
+        XCTAssertFalse(browser.session.spaces[0].folders.contains { $0.id == group.folderID })
         let next = try store.group([space.tabs[2].id], in: space.id, into: nil)
         XCTAssertGreaterThan(next.id.rawValue, group.id.rawValue)
         let created = await events.next()
@@ -220,6 +220,31 @@ final class BrowserExtensionTabGroupStoreTests: XCTestCase {
         XCTAssertEqual(ungrouped.savedURL, savedURL)
         XCTAssertNil(ungrouped.folderID)
         XCTAssertNil(store.membership(in: space.id)[tabID])
+        XCTAssertTrue(browser.session.spaces[0].folders.contains { $0.id == group.folderID })
+    }
+
+    func testRestoredExtensionRegroupingDoesNotAccumulateEmptyCurrentFolders() throws {
+        let browser = makeBrowser()
+        let space = browser.session.spaces[0]
+        let tabID = space.tabs[0].id
+        let store = browser.extensionTabGroups
+        let first = try store.group([tabID], in: space.id, into: nil)
+        _ = try store.update(first.id, in: space.id, title: "Claude", color: .orange, isCollapsed: nil)
+        let restored = try JSONDecoder().decode(BrowserSession.self, from: JSONEncoder().encode(browser.session))
+        let relaunched = BrowserStore(session: restored, persistence: InMemoryBrowserSessionPersistence())
+        let untouched = try XCTUnwrap(relaunched.session.addFolder(title: "Keep", location: .current, in: space.id))
+        relaunched.persist(scope: .core)
+        let groups = relaunched.extensionTabGroups
+        // A worker's saved native tab/group IDs may no longer match after a
+        // browser restart. Claude ungroups and regroups the restored tab.
+        groups.ungroup([tabID], in: space.id)
+        let replacement = try groups.group([tabID], in: space.id, into: nil)
+        _ = try groups.update(replacement.id, in: space.id, title: "Claude", color: .orange, isCollapsed: nil)
+        let folders = try XCTUnwrap(relaunched.session.space(id: space.id)).folders
+        XCTAssertEqual(folders.filter { $0.title == "Claude" }.map(\.id), [replacement.folderID])
+        XCTAssertTrue(folders.contains { $0.id == untouched })
+        XCTAssertFalse(folders.contains { $0.id == first.folderID })
+        XCTAssertEqual(groups.membership(in: space.id)[tabID], replacement.id)
     }
 
     func testGroupIdentitySurvivesMovingItsFolderBetweenSavedAndCurrent() throws {

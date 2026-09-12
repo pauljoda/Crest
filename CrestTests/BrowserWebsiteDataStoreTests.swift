@@ -48,7 +48,7 @@ final class BrowserWebsiteDataStoreTests: XCTestCase {
 
     func testRemovingAProfileAlsoRemovesItsHostedExtensionStore() async throws {
         let profile = BrowsingProfile()
-        let hostedID = BrowserExtensionHostedWebsiteDataStore.identifier(forProfileID: profile.id)
+        let hostedID = BrowserLegacyExtensionWebsiteDataStore.identifier(forProfileID: profile.id)
         var removed: [UUID] = []
         let remover = WebKitBrowserWebsiteDataStoreRemover(
             identifierProvider: { [profile.id, hostedID] },

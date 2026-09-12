@@ -187,31 +187,6 @@ final class BrowserExtensionControllerPool {
         tabWindowCoordinator.declarativeNetRequestService = service
     }
 
-    /// Installs the seam that keeps a site's cookies usable inside an
-    /// extension page that frames it.
-    ///
-    /// Absent by default: without a platform cookie jar behind it, a pool
-    /// assembled for a test or a preview rewrites nothing.
-    private var hostedWebsiteDataStoreProvider: (@MainActor (SpaceID) -> WKWebsiteDataStore?)?
-
-    func setHostedWebsiteDataStoreProvider(_ provider: @escaping @MainActor (SpaceID) -> WKWebsiteDataStore?) {
-        hostedWebsiteDataStoreProvider = provider
-    }
-
-    func hostedWebsiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
-        hostedWebsiteDataStoreProvider?(spaceID)
-    }
-
-    func setCookieAccessService(
-        _ service: (any BrowserExtensionCookieAccessHandling)?
-    ) {
-        tabWindowCoordinator.cookieAccessService = service
-    }
-
-    var cookieAccessService: (any BrowserExtensionCookieAccessHandling)? {
-        tabWindowCoordinator.cookieAccessService
-    }
-
     /// The website data store `spaceID`'s extension web views use.
     func extensionWebsiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
         runtimeContextController.websiteDataStore(in: spaceID)
@@ -299,10 +274,9 @@ extension BrowserExtensionControllerPool {
         guard let installation = persistenceController.installation(extensionID: extensionID, in: space.id) else {
             return
         }
-        // Native extension storage belongs to the controller. DOM storage in
-        // hosted panels belongs to our separate website store and needs the
-        // same uninstall lifecycle, including when the extension is disabled.
-        let hostedStore = hostedWebsiteDataStore(in: space.id)
+        // Extension documents share the Space's native website store. Clear
+        // their DOM storage on uninstall as well as WebKit's extension storage.
+        let websiteStore = extensionWebsiteDataStore(in: space.id)
         var origins = Set(
             [false, true].map {
                 BrowserExtensionRuntimeIdentifierPolicy.identity(
@@ -317,9 +291,9 @@ extension BrowserExtensionControllerPool {
             extensionID: extensionID,
             from: space
         )
-        if let hostedStore {
+        if let websiteStore {
             for origin in origins {
-                await BrowserWebsiteDataStore.clearSiteData(for: origin, in: hostedStore)
+                await BrowserWebsiteDataStore.clearSiteData(for: origin, in: websiteStore)
             }
         }
     }

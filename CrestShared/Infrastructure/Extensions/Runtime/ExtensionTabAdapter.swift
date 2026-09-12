@@ -191,22 +191,6 @@ final class BrowserExtensionTabAdapter: NSObject, WKWebExtensionTab {
         }
     }
 
-    func takeSnapshot(
-        using configuration: WKSnapshotConfiguration,
-        for context: WKWebExtensionContext,
-        completionHandler:
-            @escaping (BrowserExtensionSnapshotImage?, Error?) ->
-            Void
-    ) {
-        guard let webView = webView(for: context) else {
-            completionHandler(nil, coordinator?.adapterError(.tabUnavailable))
-            return
-        }
-        webView.takeSnapshot(with: configuration) { image, error in
-            completionHandler(image, error)
-        }
-    }
-
     private func readerModeState(
         for context: WKWebExtensionContext
     ) -> BrowserReaderModeState {

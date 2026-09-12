@@ -12,6 +12,24 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
     private let other = BrowserExtensionServiceClientID("other")!
     private let baseURL = URL(string: "webkit-extension://chatgpt/")!
 
+    func testTabOwnedPanelCannotAppearBesideAnotherPageAndRetainsItsSession() throws {
+        let store = makeStore()
+        let second = TabID()
+        try store.setChromeOptions(.init(path: "panel.html?target=first"), tab: tab, from: client)
+        try store.open(for: client, in: window, tab: tab)
+        let original = try XCTUnwrap(store.panel(in: window, spaceID: space, activeTab: tab))
+        XCTAssertEqual(original.tabID, tab)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: second, isAvailable: true)
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: second))
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space), [original])
+        try store.setChromeOptions(.init(path: "panel.html?target=second"), tab: second, from: client)
+        try store.open(for: client, in: window, tab: second)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: second)?.tabID, second)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab), original)
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).count, 2)
+    }
+
     func testOpenReplacesOnlyThisWindowsSpacePanelAndPublishesBothEvents() async throws {
         let store = makeStore()
         store.register(
@@ -163,26 +181,30 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertEqual(completed, 1)
     }
 
-    func testTabResourceReplacesTheSpacesPanelAndStaysAcrossAllTabs() throws {
+    func testTabPanelOverridesGlobalOnlyForItsOwnerAndScopedCloseRestoresGlobal() throws {
         let store = makeStore()
         store.register(
             client: other, spaceID: space, defaults: .init(flavor: .sidePanel),
-            displayName: "Claude", baseURL: URL(string: "webkit-extension://other/")!)
+            displayName: "Other", baseURL: URL(string: "webkit-extension://other/")!)
         store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
         try store.open(for: client, in: window, tab: nil)
         let inactive = TabID()
         try store.setChromeOptions(.init(path: "side.html?anchor=one"), tab: inactive, from: other)
         try store.open(for: other, in: window, tab: inactive)
-        let opened = store.panel(in: window, spaceID: space, activeTab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.clientID, client)
+        store.reconcilePresentation(in: window, spaceID: space, activeTab: inactive, isAvailable: true)
+        let opened = store.panel(in: window, spaceID: space, activeTab: inactive)
         XCTAssertEqual(opened?.clientID, other)
-        XCTAssertEqual(opened?.path, "side.html?anchor=one")
-        XCTAssertNil(opened?.tabID, "The document belongs to the Space even when a tab selected its resource.")
-        for selected in [inactive, tab, TabID()] {
-            store.reconcilePresentation(in: window, spaceID: space, activeTab: selected, isAvailable: true)
-            XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: selected), opened)
-            XCTAssertTrue(store.isOpen(for: other, in: window))
-            XCTAssertFalse(store.isOpen(for: client, in: window))
-        }
+        XCTAssertEqual(opened?.tabID, inactive)
+        try store.closeChromePanel(for: other, in: window, tab: nil)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: inactive), opened)
+        try store.closeChromePanel(for: other, in: window, tab: inactive)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: inactive)?.clientID, client)
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).count, 1)
+        try store.open(for: other, in: window, tab: inactive)
+        try store.open(for: client, in: window, tab: inactive)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: inactive)?.clientID, client)
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).count, 1)
     }
 
     func testCloseClearsTheSingleSelectionAndNoTabResurrectsIt() throws {
@@ -200,30 +222,33 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         XCTAssertTrue(store.retainedPanels(in: window, spaceID: space).isEmpty)
     }
 
-    func testToggleClosesTheSelectedExtensionEvenAfterSwitchingTabs() throws {
+    func testToggleOnAnotherTabDoesNotCloseTheHiddenTabPanel() throws {
         let store = makeStore()
         try store.setChromeOptions(.init(path: "tab.html"), tab: tab, from: client)
         try store.toggle(for: client, in: window, tab: tab)
         let otherTab = TabID()
         store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
         try store.toggle(for: client, in: window, tab: otherTab)
+        XCTAssertTrue(store.isOpen(for: client, in: window))
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: otherTab)?.tabID)
+        try store.toggle(for: client, in: window, tab: otherTab)
         XCTAssertFalse(store.isOpen(for: client, in: window))
-        XCTAssertTrue(store.retainedPanels(in: window, spaceID: space).isEmpty)
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).map(\.tabID), [tab])
     }
 
-    func testDisabledAndUnrelatedTabOptionsDoNotDestroyTheOpenDocument() throws {
+    func testDisabledScopeClosesItsDocumentWithoutDiscardingOtherTabSessions() throws {
         let store = makeStore()
         try store.open(for: client, in: window, tab: nil)
         let opened = store.panel(in: window, spaceID: space, activeTab: tab)
-        try store.setChromeOptions(.init(path: "unrelated.html"), tab: tab, from: client)
-        store.reconcilePresentation(in: window, spaceID: space, activeTab: tab, isAvailable: true)
+        try store.setChromeOptions(.init(path: "tab.html"), tab: tab, from: client)
         XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab), opened)
+        try store.open(for: client, in: window, tab: tab)
         try store.setChromeOptions(.init(isEnabled: false), tab: tab, from: client)
-        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab), opened)
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: tab))
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).map(\.path), ["panel.html"])
         XCTAssertThrowsError(try store.open(for: client, in: window, tab: tab))
         try store.setChromeOptions(.init(isEnabled: false), tab: nil, from: client)
-        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab), opened)
-        store.closePresentedPanel(in: window, spaceID: space)
+        XCTAssertTrue(store.retainedPanels(in: window, spaceID: space).isEmpty)
         XCTAssertThrowsError(try store.open(for: client, in: window, tab: nil))
     }
 
@@ -232,13 +257,13 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
         try store.open(for: client, in: window, tab: tab)
         try store.setOptions(.init(path: "updated.html", title: "Updated"), scope: .tab(tab), from: client)
-        let panel = store.panel(in: window, spaceID: space, activeTab: TabID())
+        let panel = store.panel(in: window, spaceID: space, activeTab: tab)
         XCTAssertEqual(panel?.path, "updated.html")
         XCTAssertEqual(panel?.title, "Updated")
-        XCTAssertNil(panel?.tabID)
+        XCTAssertEqual(panel?.tabID, tab)
     }
 
-    func testTabChangesDoNotPublishSpuriousCloseAndOpenEvents() async throws {
+    func testTabChangesPublishVisibilityEventsWithTheOwningTab() async throws {
         let store = makeStore()
         var events = store.events(for: client).makeAsyncIterator()
         try store.setOptions(.init(path: "tab.html"), scope: .tab(tab), from: client)
@@ -249,16 +274,18 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
         try store.setChromeOptions(.init(path: "different.html"), tab: otherTab, from: client)
         store.reconcilePresentation(in: window, spaceID: space, activeTab: otherTab, isAvailable: true)
         store.reconcilePresentation(in: window, spaceID: space, activeTab: nil, isAvailable: true)
-        XCTAssertTrue(store.isOpen(for: client, in: window), "An empty Space still holds its panel.")
+        XCTAssertFalse(store.isOpen(for: client, in: window))
+        XCTAssertEqual(store.retainedPanels(in: window, spaceID: space).count, 1)
         store.closePresentedPanel(in: window, spaceID: space)
         store.unregister(client: client)
         var remainder: [BrowserExtensionSidebarEvent] = []
         while let event = await events.next() { remainder.append(event) }
         XCTAssertEqual(remainder.map(\.kind), [.closed])
         XCTAssertEqual(remainder.first?.path, opened?.path)
+        XCTAssertEqual(remainder.first?.tabID, tab)
     }
 
-    func testClosingTheSourceTabKeepsTheSelectedDocument() throws {
+    func testClosingTheSourceTabReleasesItsDocument() throws {
         let store = makeStore()
         try store.setChromeOptions(.init(path: "source.html"), tab: tab, from: client)
         try store.open(for: client, in: window, tab: tab)
@@ -267,7 +294,8 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
             accent: .indigo, folders: [], tabs: [], selectedTabID: nil)
         store.repair(using: .init(spaces: [browserSpace], selectedSpaceID: space))
         store.reconcilePresentation(in: window, spaceID: space, activeTab: nil, isAvailable: true)
-        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: nil)?.path, "source.html")
+        XCTAssertNil(store.panel(in: window, spaceID: space, activeTab: nil))
+        XCTAssertTrue(store.retainedPanels(in: window, spaceID: space).isEmpty)
         XCTAssertEqual(try store.layer(.tab(tab), for: client), .init())
     }
 

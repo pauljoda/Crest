@@ -334,7 +334,7 @@ still needs an enforceable request hook.
 
 ## App-side service layout
 
-Notifications, side panels, tab groups, and framed-site cookies have
+Notifications, side panels, and tab groups have
 Application-layer service ports. Other broker capabilities are implemented
 where their state lives.
 
@@ -344,7 +344,6 @@ where their state lives.
 | Side panels | `CrestShared/Domain/BrowserExtensionServices/Sidebar/`, `CrestShared/Application/BrowserExtensionServices/Sidebar/`, `CrestShared/Infrastructure/Extensions/Services/`, `CrestMac/Features/ExtensionSidebar/` | `BrowserExtensionSidebarHandling`, observable store, behavior persistence adapters, per-window host and native document |
 | Tab groups | `CrestShared/Domain/BrowserExtensionServices/TabGroups/`, `CrestShared/Application/BrowserExtensionServices/TabGroups/`, `CrestShared/Infrastructure/Extensions/Runtime/ExtensionTabWindowCoordinator+TabGroups.swift` | `BrowserExtensionTabGroupHandling` port, observable store over a Space-scoped registry, and an async event hub that fans one change out to every extension in the Space. No persistence adapter: Chrome's group ids are session-local too |
 | Declarative header rules | `CrestShared/Domain/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Application/BrowserExtensionServices/DeclarativeNetRequest/`, `CrestShared/Infrastructure/Extensions/Services/`, `CrestShared/Infrastructure/Extensions/Runtime/ExtensionTabWindowCoordinator+DeclarativeNetRequest.swift` | `BrowserExtensionDeclarativeNetRequestHandling` port, observable store keyed by extension and Space, an event hub per client, and `UserDefaults`/in-memory persistence adapters for the dynamic ruleset |
-| Framed-site cookies | `CrestShared/Domain/BrowserExtensionServices/CookieAccess/`, `CrestShared/Application/BrowserExtensionServices/CookieAccess/`, `CrestShared/Infrastructure/Extensions/Services/InMemoryExtensionCookieJar.swift`, `CrestMac/Infrastructure/WebKit/BrowserExtensions/BrowserExtensionCookieJarCoordinator.swift` | `BrowserExtensionCookieAccessHandling` and `BrowserExtensionCookieJarRelaxing` ports, an observable store keyed by client and Space, the `BrowserExtensionCookieJarCoordinator` WebKit adapter, and the `InMemoryBrowserExtensionCookieJar` double. No persistence adapter: the relaxation follows a live page, so a launch that never frames the site again relaxes nothing |
 | Idle state | `CrestMac/Infrastructure/WebKit/BrowserNativeMessagingService.swift` | `BrowserExtensionIdleWatch` reads macOS session and input state directly inside the broker connection; there is no port and no separate service type |
 | Context menus and install lifecycle | `CrestShared/Infrastructure/Extensions/Runtime/ExtensionWebpageMenuRegistry.swift` with `CrestMac/Infrastructure/WebKit/BrowserExtensionWebpageMenuProvider.swift` | A registry and a platform menu provider reached over the same broker transport, not an Application-layer service |
 | Offscreen documents and downloads | `CrestShared/Infrastructure/Extensions/Runtime/` | Answered by the tab/window coordinator and page provider, because both need live WebKit and Crest browser state |
@@ -369,29 +368,30 @@ identifiers and so cannot name an unpacked development extension.
 
 ## Side panels — `chrome.sidePanel` and `browser.sidebarAction`
 
-Both APIs share a per-client options registry and one selected document per native
-window and Space. Chrome tab-specific options choose the resource when opened;
-Firefox title, icon, and panel options inherit through tab, window, and default layers.
+Both APIs share a per-client options registry. Chrome global and tab-specific
+open intents remain distinct within each native window and Space. A tab-specific
+panel appears only beside its owning tab; switching away hides it and switching
+back restores the same document. Other tabs can open their own panel without
+replacing that conversation. Global panels remain visible across tabs without
+an open tab-specific panel. Firefox options inherit through tab, window, and
+default layers for its window-owned sidebar.
+
 The coordinator validates native tab/window identities and gesture eligibility
 before changing the store. `sidebar.watch` is a permission-checked event stream
-separate from notification and idle watches.
+separate from notification and idle watches. Visibility events and
+`runtime.getContexts` retain the owning tab identity. Native `tabs.onActivated`
+and active-tab queries deliver live state; screenshot capture delegates directly
+to WebKit's registered tab view.
 
 The macOS host presents a trailing split-row card backed by an extension
-`WKWebView`, never a tab adapter. Selecting another extension replaces the current
-panel throughout the Space. Switching tabs keeps the document mounted; native
-tab events update the extension's active-page context. Switching Spaces hides
-the document and restores that Space's selected panel. Closing, replacing,
-locking, or uninstalling releases the document. Disabling an option prevents
-new opens without dismissing an ongoing panel. Width and last-used client are local
-window preferences; action behavior persists per client. Open intent and
-runtime options do not survive relaunch. Firefox fresh-install opening is
-consumed once when the host becomes available, not on restoration.
-
-The card header names the selected extension. There are no per-tab panel
-selections, scope labels, or tab/toolbar panel indicators. Closing a panel cannot
-reveal an older selection. Removing the tab used to open a resource does not
-close the panel, and a Space with no tabs can keep its current panel. This
-presentation deliberately differs from Chrome's contextual-panel switching.
+`WKWebView`, never a tab adapter. Documents are keyed by native window, Space,
+extension origin, and optional owning tab. Switching Spaces hides their documents.
+Closing the card clears that Space's open intents; API close requests affect only
+the requested scope. Removing a tab releases its document. Disabling a scope
+closes it; locking or uninstalling releases its documents. Width and last-used
+client are local window preferences; action behavior persists per client. Open
+intent and runtime options do not survive relaunch. Firefox fresh-install opening
+is consumed once when the host becomes available, not on restoration.
 
 The resident webpage receives the reduced card viewport as the panel opens or
 resizes. Responsive pages retain the requested zoom. An authored document/body
@@ -632,40 +632,21 @@ Under console capture each skip is reported once per header name as
 `dnr.emulatedHeaders.skipped`, and each application once per host and header
 set as `dnr.emulatedHeaders.applied` — header **names** only, never values.
 
-## Framed-site cookies — no namespace
+## Website cookies — isolated panel sessions
 
-The only service with no JavaScript surface and no broker envelope. It is not
-an API an extension calls; it is a rule Crest applies on the extension's behalf
-when one of its own pages frames a site, because WebCore decides `SameSite`
-from the top document and leaves no embedder seam. What the rule is, what it
-costs, and why it is bounded to the Space are in *Cookies for sites an
-extension frames* in `Documentation/ExtensionCompatibility.md`.
+Authentication views, ordinary extension pages and offscreen documents use the
+Space's native WebKit store. Side panels use `BrowserExtensionPanelSession` to
+copy only matching Secure Lax/Strict cookies into a new nonpersistent store after
+a direct frame request passes native host permission checks. Copies are HttpOnly;
+WebKit content rules restrict their destinations and frame initiators. The
+normal jar is authoritative and receives no writes from the panel.
 
-The shape follows the other services, with the port split in two so no
-Foundation-only layer has to name WebKit:
-
-| Piece | Type | Responsibility |
-| --- | --- | --- |
-| Domain | `BrowserExtensionCookieAccessPolicy` | Pure functions over `HTTPCookie`: `host(for:)` accepts only `http`/`https`; `appliesTo(cookie:host:)` is RFC 6265 domain matching with the leading dot stripped; `restrictsCrossSiteUse(_:)` recognizes only `Lax` and `Strict`; `relaxed(_:)` returns a copy without `SameSite`, or `nil` when there is nothing to write |
-| Application port | `BrowserExtensionCookieAccessHandling` | `relaxCookies(for:client:in:)` and `unregister(client:)`. There is no `register`: a client appears the first time it frames a permitted site |
-| Application port | `BrowserExtensionCookieJarRelaxing` | `relax(host:in:)` and `observe(spaceID:onChange:)`, the jar expressed without WebKit. A `nil` handler removes the observation |
-| Application store | `BrowserExtensionCookieAccessStore` | Relaxed hosts per client per Space, and the only thing that knows a Space's full host set — so it, not the jar, decides what a change notification re-applies |
-| Infrastructure double | `InMemoryBrowserExtensionCookieJar` | Records `relax` calls and can stand in for a third-party write with `simulateCookieChange(in:)` |
-| Infrastructure adapter | `BrowserExtensionCookieJarCoordinator` (CrestMac) | Resolves the Space's `WKWebsiteDataStore` from its extension controller, rewrites through `WKHTTPCookieStore`, and owns the `WKHTTPCookieStoreObserver` |
-| Trigger | `BrowserExtensionFramedSiteCookieAccess` (CrestMac) | Held by the side panel and offscreen documents; in `decidePolicyFor` it checks subframe, scheme, and `hasAccessToURL:`, then awaits the rewrite before allowing the navigation |
-
-Two details keep the observer from chasing its own writes. `relaxed(_:)`
-answers `nil` for a cookie that already places no cross-site restriction, so a
-second pass writes nothing at all — and WebKit reports an unspecified
-`SameSite` as `none` rather than as no value, which is why the check is a
-policy question rather than a nil test. On top of that, the coordinator
-suppresses notifications raised during its own pass and re-reads once
-afterwards if any arrived, so the login response that establishes a session is
-never the one that gets dropped.
-
-`unregister` runs from `unregisterNativeMessagingIdentity`, beside the sidebar,
-tab-group, declarative-rule, and debugger unregisters, and stops enforcing a
-host only once no client in that Space still lists it.
+This is a document-owned compatibility adapter, without a broker method,
+Space-wide cookie service or persistent hosted store. Close, permission changes,
+original-cookie removal and expiry discard it. Native extension storage and IPC
+remain on the extension context. See *Cookies for sites an extension frames* in
+`Documentation/ExtensionCompatibility.md` for the measured security boundaries
+and compatibility limits.
 
 ## External web-page messages — `runtime.onMessageExternal`
 

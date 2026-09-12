@@ -126,17 +126,6 @@ struct CrestApp: App {
             persistence: declarativeNetRequestPersistence
         )
         extensionControllerPool.setDeclarativeNetRequestService(extensionDeclarativeNetRequest)
-        // Embedded sign-in uses a separate jar. Refreshes and logout remain
-        // synchronized while normal tabs keep their SameSite protection.
-        let extensionCookieJar = BrowserExtensionCookieJarCoordinator {
-            [weak extensionControllerPool] spaceID in
-            extensionControllerPool?.extensionWebsiteDataStore(in: spaceID)
-        }
-        let extensionCookieAccess = BrowserExtensionCookieAccessStore(cookieJar: extensionCookieJar)
-        extensionControllerPool.setCookieAccessService(extensionCookieAccess)
-        extensionControllerPool.setHostedWebsiteDataStoreProvider { [extensionCookieJar] spaceID in
-            extensionCookieJar.hostedWebsiteDataStore(in: spaceID)
-        }
         // `chrome.identity.launchWebAuthFlow` runs in a Crest-owned web view
         // on the Space's own data store, so a provider the person is already
         // signed in to answers a `prompt=none` re-authorization silently and

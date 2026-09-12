@@ -27,7 +27,7 @@ enum BrowserExtensionTabGroupColor: String, Codable, CaseIterable, Sendable {
         case .pink: .init(red: 1, green: 0.22, blue: 0.37)
         case .purple: .init(red: 0.75, green: 0.35, blue: 0.95)
         case .cyan: .init(red: 0.39, green: 0.82, blue: 1)
-        case .orange: .init(red: 1, green: 0.62, blue: 0.04)
+        case .orange: .init(red: 0.91, green: 0.43, blue: 0.23)
         }
     }
 }

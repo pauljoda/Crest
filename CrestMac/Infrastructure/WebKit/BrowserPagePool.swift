@@ -387,17 +387,8 @@ final class BrowserPagePool:
         else {
             throw BrowserExtensionOffscreenDocumentError.unavailable
         }
-        if let hostedStore = extensionControllerPool.hostedWebsiteDataStore(in: spaceID) {
-            guard BrowserExtensionHostedWebsiteDataStore.apply(hostedStore, to: configuration.webViewConfiguration)
-            else { throw BrowserExtensionOffscreenDocumentError.unavailable }
-        }
         let document = try BrowserExtensionOffscreenDocument(
             configuration: configuration.webViewConfiguration,
-            cookieAccess: BrowserExtensionFramedSiteCookieAccess(
-                configuration: configuration,
-                spaceID: spaceID,
-                service: extensionControllerPool.cookieAccessService
-            ),
             // An offscreen document frames websites too, and an externally
             // connectable site expects `chrome.runtime` in every frame Chrome
             // would give it one.
@@ -2454,14 +2445,12 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
     let contextID = UUID().uuidString
     private(set) var url: URL?
     private let webView: WKWebView
-    private let cookieAccess: BrowserExtensionFramedSiteCookieAccess?
     private var runtimeBridge: BrowserExtensionHostedDocumentRuntimeBridge.Handle?
     private let contentController = WKUserContentController()
     private var loadContinuation: CheckedContinuation<Void, any Error>?
 
     init(
         configuration: WKWebViewConfiguration,
-        cookieAccess: BrowserExtensionFramedSiteCookieAccess?,
         installRuntimeBridge: (WKUserContentController) -> BrowserExtensionHostedDocumentRuntimeBridge.Handle? = { _ in
             nil
         }
@@ -2471,16 +2460,11 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
         }
         runtimeBridge = installRuntimeBridge(contentController)
         webView = WKWebView(frame: .zero, configuration: configuration)
-        self.cookieAccess = cookieAccess
         super.init()
         webView.navigationDelegate = self
         webView.isInspectable = true
     }
 
-    /// The same first-party-for-cookies rule the side panel applies. An
-    /// offscreen document frames sites too, and WebCore treats its
-    /// `chrome-extension://` top document as cross-site in exactly the same
-    /// way.
     func webView(
         _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
         preferences: WKWebpagePreferences,
@@ -2490,24 +2474,7 @@ private final class BrowserExtensionOffscreenDocument: NSObject,
             decisionHandler(.cancel, preferences)
             return
         }
-        self.webView(webView, decidePolicyFor: action) { policy in decisionHandler(policy, preferences) }
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        decidePolicyFor navigationAction: WKNavigationAction,
-        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
-    ) {
-        guard let cookieAccess,
-            let host = cookieAccess.hostRequiringRewrite(for: navigationAction)
-        else {
-            decisionHandler(.allow)
-            return
-        }
-        Task { @MainActor in
-            await cookieAccess.relaxCookies(for: host)
-            decisionHandler(.allow)
-        }
+        decisionHandler(.allow, preferences)
     }
 
     func load(_ url: URL) async throws {

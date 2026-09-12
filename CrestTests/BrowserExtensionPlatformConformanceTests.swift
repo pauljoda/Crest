@@ -80,7 +80,6 @@ final class BrowserExtensionPlatformConformanceTests: XCTestCase {
             "isReaderModeActiveForWebExtensionContext:",
             "setReaderModeActive:forWebExtensionContext:completionHandler:",
             "detectWebpageLocaleForWebExtensionContext:completionHandler:",
-            "takeSnapshotUsingConfiguration:forWebExtensionContext:completionHandler:",
         ] {
             XCTAssertTrue(
                 adapter.responds(to: NSSelectorFromString(name)),

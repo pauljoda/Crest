@@ -74,6 +74,7 @@ final class BrowserExtensionTabGroupStore: BrowserExtensionTabGroupHandling {
             }
             folderID = created
         }
+        removeEmptiedCurrentGroups(from: space, in: &next)
         commit(next)
         guard let value = groups(in: spaceID).first(where: { $0.folderID == folderID }) else {
             throw BrowserExtensionTabGroupError.unavailableTab(tabs[0])
@@ -108,7 +109,28 @@ final class BrowserExtensionTabGroupStore: BrowserExtensionTabGroupHandling {
             }.map(\.id)
             _ = next.fileTabs(moving, in: spaceID, into: nil, location: location)
         }
+        removeEmptiedCurrentGroups(from: space, in: &next)
         commit(next)
+    }
+
+    /// Explicit extension grouping operations remove empty current groups.
+    /// Saved folders, untouched folders and folder hierarchies retain their
+    /// ordinary Crest lifetime; only a group emptied by this operation ends.
+    private func removeEmptiedCurrentGroups(from previous: BrowserSpace?, in session: inout BrowserSession) {
+        guard let previous, let index = session.spaces.firstIndex(where: { $0.id == previous.id }) else { return }
+        let current = session.spaces[index]
+        let membership = Dictionary(uniqueKeysWithValues: current.tabs.map { ($0.id, $0.folderID) })
+        let emptied = Set(
+            previous.tabs.compactMap { tab -> FolderID? in
+                guard let folderID = tab.folderID, membership[tab.id] != folderID else { return nil }
+                return folderID
+            })
+        let occupied = Set(current.tabs.compactMap(\.folderID))
+        let parents = Set(current.folders.compactMap(\.parentID))
+        session.spaces[index].folders.removeAll {
+            $0.location == .current && emptied.contains($0.id)
+                && !occupied.contains($0.id) && !parents.contains($0.id)
+        }
     }
 
     func move(_ id: BrowserExtensionTabGroupID, in spaceID: SpaceID, to index: Int) throws -> BrowserExtensionTabGroup {

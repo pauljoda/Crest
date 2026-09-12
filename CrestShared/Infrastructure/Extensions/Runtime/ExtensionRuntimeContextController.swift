@@ -340,10 +340,8 @@ final class BrowserExtensionRuntimeContextController {
     /// The website data store a Space's extension web views were configured
     /// with, or `nil` before that Space has an extension controller.
     ///
-    /// This is the store itself rather than a fresh
-    /// `BrowserWebsiteDataStore.persistent(for:)` for the profile, so a caller
-    /// that rewrites cookies cannot land them in a jar the extension's own
-    /// frames never read.
+    /// Backgrounds, popups and authentication views use this native store,
+    /// including when the Space is ephemeral. Side panels isolate their sessions.
     func websiteDataStore(in spaceID: SpaceID) -> WKWebsiteDataStore? {
         controllerEntries[spaceID]?.controller.configuration.defaultWebsiteDataStore
     }
@@ -496,8 +494,8 @@ final class BrowserExtensionRuntimeContextController {
         // private data and will refuse content-script injection, messaging, and
         // tab access to a context without this access. An isolated launch or a
         // test runs every ordinary profile non-persistently, so extensions there
-        // need the grant to work at all; production runs persistently and does
-        // not.
+        // need the grant to work at all. Production starts without it; opening
+        // an isolated side-panel session enables it for that Space's context.
         context.hasAccessToPrivateData = usesEphemeralWebKitStorage
         // Mirrors `BrowserPage`, which makes every ordinary web view
         // inspectable. An extension's background content and popups are the
@@ -892,17 +890,6 @@ final class BrowserExtensionRuntimeContextController {
             in: spaceID,
             excluding: internalGrantedPermissions(for: context)
         )
-        tabWindowCoordinator.cookieAccessService?.revalidatePermissions(
-            for: .scoped(extensionID: extensionID, spaceID: spaceID)
-        ) { host in
-            ["https", "http"].contains { scheme in
-                var components = URLComponents()
-                components.scheme = scheme
-                components.host = host
-                components.path = "/"
-                return components.url.map { context.hasAccess(to: $0) } == true
-            }
-        }
     }
 
     private func persistRuntimeSummary(
