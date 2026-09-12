@@ -149,10 +149,9 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         shaped.backplate = .frenchShield
         XCTAssertEqual(shaped.requiredRenderingVersion, BrowserSpaceBranding.crestStudioRenderingVersion)
 
-        // A classic crest encodes exactly the keys it always did.
-        let classicJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(classic)) as? [String: Any]
-        XCTAssertNil(classicJSON?["plateScale"])
-        XCTAssertNil(classicJSON?["palette"])
+        XCTAssertEqual(
+            try JSONDecoder().decode(BrowserSpaceCrest.self, from: JSONEncoder().encode(classic)),
+            classic)
 
         // A crest stored before the studio decodes to the studio defaults.
         let legacy = """
@@ -216,6 +215,18 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(restored.renderingVersion, 5)
         XCTAssertEqual(BrowserSpaceCrestCharge.monogram("ßABC", .serif).normalized, .monogram("SS", .serif))
         XCTAssertEqual(BrowserSpaceCrestCharge.system("  star.fill\n").normalized, .system("star.fill"))
+    }
+
+    func testInactiveCrestControlsSurvivePersistence() throws {
+        for crest in [
+            BrowserSpaceCrest(divisionCount: 7),
+            BrowserSpaceCrest(trimDetail: 20),
+            BrowserSpaceCrest(sealTeeth: 18),
+        ] {
+            let restored = try JSONDecoder().decode(
+                BrowserSpaceCrest.self, from: JSONEncoder().encode(crest))
+            XCTAssertEqual(restored, crest)
+        }
     }
 
     func testExpandedChargesJoinTheClassicSigilsWithoutDisplacingThem() {

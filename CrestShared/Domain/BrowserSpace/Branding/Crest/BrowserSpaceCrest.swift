@@ -291,7 +291,6 @@ struct BrowserSpaceCrest: Codable, Equatable, Sendable {
         try container.encode(trimColorIndex, forKey: .trimColorIndex)
         try container.encode(symbolColorIndex, forKey: .symbolColorIndex)
         try container.encodeIfPresent(startingPresetID, forKey: .startingPresetID)
-        guard usesStudioParameters || edgeColorIndex != trimColorIndex else { return }
         try container.encode(edgeColorIndex, forKey: .edgeColorIndex)
         try container.encodeIfPresent(palette, forKey: .palette)
         try container.encodeIfPresent(charge, forKey: .charge)

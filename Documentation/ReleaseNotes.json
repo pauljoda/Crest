@@ -949,6 +949,10 @@
     "2026-09-12-panel-link-space-isolation": {
       "category": "fixed",
       "message": "Keep side-panel sign-in links in their original Space when you switch Spaces"
+    },
+    "2026-09-12-preserve-space-customization-during-sync": {
+      "category": "fixed",
+      "message": "Keep Space customization when edits overlap an iCloud sync, and preserve saved crest controls when switching designs"
     }
   }
 }

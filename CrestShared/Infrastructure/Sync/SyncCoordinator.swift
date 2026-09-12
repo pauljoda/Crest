@@ -87,6 +87,11 @@ final class BrowserSyncCoordinator: @unchecked Sendable {
             storeRevision: storeRevision,
             staleResult: localSession
         ) { journal in
+            // Incoming batches can arrive before a coalesced local edit stages.
+            // Preserve that edit in the same transaction before materialization.
+            if !localSession.hasDisposableSeedState {
+                try journal.stage(session: localSession, deletionReason: .superseded, at: date)
+            }
             try journal.merge(remoteRecords)
             var materialized = try journal.materializedSession(applyingTo: localSession)
             let removedRecords = materialized.applyDataRetentionPolicies(now: date)

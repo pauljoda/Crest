@@ -1743,6 +1743,47 @@ final class BrowserStoreTests: XCTestCase {
         XCTAssertTrue(coordinator.journal.pendingRecordIDs.isEmpty)
     }
 
+    func testIncomingSyncPreservesCustomizationWaitingForCoalescedPersistence() async throws {
+        let session = BrowserSession.preview
+        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
+        try coordinator.stage(session: session)
+        try coordinator.markUploaded(coordinator.journal.pendingRecordIDs)
+        var remote = BrowserSyncJournal()
+        try remote.merge(coordinator.journal.records)
+        var remoteSession = session
+        let newTab = BrowserTab.startPage()
+        remoteSession.spaces[0].tabs.append(newTab)
+        try remote.stage(session: remoteSession)
+
+        let persistence = InMemoryBrowserSessionPersistence()
+        let store = BrowserStore(
+            session: session, persistence: persistence, syncCoordinator: coordinator,
+            syncCoalescingDelay: .milliseconds(100))
+        let otherWindow = store.makeWindowStore()
+        let spaceID = session.spaces[0].id
+        var branding = session.spaces[0].branding
+        branding.iconStyle = .layeredCrest
+        branding.crest.symbol = .direwolf
+        branding.crest.palette = [.ink, .gold, .ocean]
+        otherWindow.updateSpaceBranding(branding, in: spaceID)
+
+        // The receiving window must retain an edit from another window before
+        // invalidating its delayed stage to apply this CloudKit batch.
+        try store.mergeRemoteSyncRecords(remote.records)
+        await otherWindow.flushPendingSyncPersistence()
+
+        XCTAssertEqual(store.session.space(id: spaceID)?.branding, branding)
+        XCTAssertEqual(otherWindow.session.space(id: spaceID)?.branding, branding)
+        XCTAssertEqual(persistence.session?.space(id: spaceID)?.branding, branding)
+        XCTAssertTrue(store.session.spaces[0].tabs.contains { $0.id == newTab.id })
+        let spaceRecordID = BrowserSyncRecordID(kind: .space, value: spaceID.rawValue)
+        XCTAssertTrue(coordinator.journal.pendingRecordIDs.contains(spaceRecordID))
+        try remote.merge(coordinator.journal.records)
+        XCTAssertEqual(
+            try remote.materializedSession(applyingTo: remoteSession).space(id: spaceID)?.branding,
+            branding)
+    }
+
     func testSceneActivationSweepArchivesExpiredCurrentTabsInALongLivedSession() throws {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let fixture = Self.makeCleanupSweepFixture(now: now)

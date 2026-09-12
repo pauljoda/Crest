@@ -163,6 +163,79 @@ final class BrowserCloudRecordCodecTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testFullSpaceCustomizationSyncsBetweenStoresAndSurvivesReload() async throws {
+        let session = BrowserSession.preview
+        let spaceID = session.spaces[0].id
+        let senderCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
+        let receiverCoordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
+        try senderCoordinator.stage(session: session)
+        let sender = BrowserStore(
+            session: session, persistence: InMemoryBrowserSessionPersistence(),
+            syncCoordinator: senderCoordinator, syncCoalescingDelay: .zero)
+        let receiverPersistence = InMemoryBrowserSessionPersistence()
+        let receiver = BrowserStore(
+            session: session, persistence: receiverPersistence,
+            syncCoordinator: receiverCoordinator, syncCoalescingDelay: .zero)
+        let codec = BrowserCloudRecordCodec()
+        try receiver.mergeRemoteSyncRecords(
+            senderCoordinator.journal.records.map { try codec.decode(codec.encode($0)) })
+        try senderCoordinator.markUploaded(senderCoordinator.journal.pendingRecordIDs)
+
+        var branding = BrowserSpaceBranding(
+            colors: [.ink, .ocean, .gold], bannerPattern: .lozenges,
+            bannerStrength: 0.63, readabilityFade: 0.37, themeMode: .gradient,
+            gradientAngle: 217, showsTexture: true, iconStyle: .layeredCrest,
+            symbolColor: .ember,
+            crest: BrowserSpaceCrest(
+                backplate: .frenchShield, fieldDivision: .gyronny, ordinary: .pall,
+                trim: .beaded, symbol: .direwolf, chargeLayout: .trio,
+                backplateColorIndex: 1, secondaryFieldColorIndex: 2, ordinaryColorIndex: 3,
+                trimColorIndex: 0, symbolColorIndex: 2, edgeColorIndex: 3,
+                palette: [.ember, .gold, .ink, .sand], plateScale: 0.85, edgeWidth: 0.43,
+                divisionCount: 6, finish: .sheen, ordinaryWidth: 1.2, trimWeight: 1.3,
+                trimDetail: 18, chargeScale: 1.1, chargeOffset: -0.12, chargeWeight: .light,
+                startingPresetID: "winter", sheenAngle: 125, sealTeeth: 16,
+                showsOutline: true, depth: .lifted),
+            folderColorIntensity: 0.71, textColorMode: .light, hasCustomAppearance: true)
+        let charges = BrowserSpaceCrestSymbol.allCases.map(BrowserSpaceCrestCharge.heraldic)
+            + [.system("hammer.fill"), .emoji("🐉"), .monogram("PD", .serif), .none]
+        for charge in charges {
+            branding.crest.charge = charge
+            sender.updateSpaceBranding(branding, in: spaceID)
+            await sender.flushPendingSyncPersistence()
+            let pending = senderCoordinator.journal.records.filter {
+                senderCoordinator.journal.pendingRecordIDs.contains($0.id)
+            }
+            XCTAssertEqual(pending.map(\.id.kind), [.space])
+            try receiver.mergeRemoteSyncRecords(pending.map { try codec.decode(codec.encode($0)) })
+            try senderCoordinator.markUploaded(Dictionary(uniqueKeysWithValues: pending.map { ($0.id, $0.version) }))
+
+            let expected = try XCTUnwrap(sender.session.space(id: spaceID)?.branding)
+            XCTAssertEqual(receiver.session.space(id: spaceID)?.branding, expected, "Charge: \(charge)")
+            let reloaded = try JSONDecoder().decode(
+                BrowserSession.self, from: JSONEncoder().encode(XCTUnwrap(receiverPersistence.session)))
+            XCTAssertEqual(reloaded.space(id: spaceID)?.branding, expected)
+            XCTAssertEqual(reloaded.space(id: spaceID)?.profile.id, session.spaces[0].profile.id)
+        }
+
+        // Editing on the receiving device must produce a fresh Space record too.
+        var returnedBranding = try XCTUnwrap(receiver.session.space(id: spaceID)?.branding)
+        returnedBranding.iconStyle = .simpleSymbol
+        returnedBranding.symbolColor = .gold
+        returnedBranding.crest.palette = nil
+        returnedBranding.crest.charge = .system("leaf.fill")
+        receiver.updateSpaceIdentity(spaceID, name: "Garden", symbol: "leaf.fill", accent: .teal)
+        receiver.updateSpaceBranding(returnedBranding, in: spaceID)
+        await receiver.flushPendingSyncPersistence()
+        try sender.mergeRemoteSyncRecords(
+            receiverCoordinator.journal.records.map { try codec.decode(codec.encode($0)) })
+        XCTAssertEqual(sender.session.space(id: spaceID)?.branding, returnedBranding.normalized())
+        XCTAssertEqual(sender.session.space(id: spaceID)?.name, "Garden")
+        XCTAssertEqual(sender.session.space(id: spaceID)?.symbol, "leaf.fill")
+        XCTAssertEqual(sender.session.space(id: spaceID)?.accent, .teal)
+    }
+
     func testTombstoneRoundTripsWithoutAPayload() throws {
         let id = BrowserSyncRecordID(
             kind: .tab,
