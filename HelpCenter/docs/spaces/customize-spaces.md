@@ -32,7 +32,7 @@ Choose an app icon palette here too. These controls change the browser on this d
 
 ## Reorder Spaces
 
-Drag a Space in the picker or reorder it in Settings. Position matters for **Control-1** through **Control-9**, so put frequently used Spaces first.
+Drag a Space in the picker, or use **Move Up** and **Move Down** in **Settings → Spaces**. Position matters for **Control-1** through **Control-9**, so put frequently used Spaces first.
 
 ## Automatic cleanup
 

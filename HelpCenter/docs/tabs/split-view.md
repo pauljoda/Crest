@@ -30,6 +30,8 @@ On Mac, **Focus Follows Mouse in Split View** can make pointer movement choose t
 
 Drag a divider to resize columns on Mac or iPad. Crest remembers widths for the window. Use **Shift-Command-Left/Right** to move the focused card, or drag when the interface exposes a reordering target.
 
+In the sidebar, drag the split's header to move the whole group. Drag an individual tab row to move just that tab out of the split, into a folder, or into another Split View. The remaining tabs stay together.
+
 ## Remove or separate tabs
 
 **Remove Tab From Split** takes the focused tab out of the group. **Separate All Tabs** turns every card back into an independent tab; its default shortcut is **Option-Command-U**. Closing the focused card closes that tab while the remaining group survives.
@@ -41,4 +43,3 @@ iPad uses the same resizable column model as Mac. On iPhone, the group remains c
 ## Sync behavior
 
 The durable group and its card order can sync with the Space. A receiving device adapts the presentation to its screen instead of flattening the group.
-

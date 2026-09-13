@@ -98,7 +98,6 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 parentSplitGroupID: configuration.isSplitGroupMember ? configuration.tab.splitGroupID : nil,
                 isEnabled: !interaction.isRenaming
                     && configuration.isAvailableForDisplay
-                    && configuration.isReorderSource
                     && configuration.capabilities.supportsOrganization,
                 requiresSelectedSpace: true
             )

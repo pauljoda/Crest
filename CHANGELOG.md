@@ -11,12 +11,26 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added a public Crest 0.5 project and milestone, clear Reddit/GitHub/security support routes, maintainer governance, a documentation index, and Ko-fi and GitHub Sponsors links.
 - Added simple monthly sponsor levels with optional public recognition and clear boundaries around access, endorsement, and roadmap influence.
+- Added live drag-to-Peek previews for webpage links on Mac.
+
+### Changed
+
+- Drag an individual sidebar tab out of Split View, or drag the group's header to move the whole split.
+- Select multiple tabs and folders on iPhone and iPad through context menus and VoiceOver actions.
+- Reorder Spaces with Move Up and Move Down controls in Settings, with more responsive appearance previews while scrolling and editing.
+- Rerun onboarding from the Welcome screen through Advanced settings.
 
 ### Fixed
 
 - Made setup request Safari access before reading protected data, stopped empty Arc records from tripping the Space limit, and kept browser import to only the Spaces explicitly reviewed, finishing setup without an extra blank Space or manual-customization detour.
 - Made a site's allowed location request resume immediately with a real Core Location result, and surfaced the macOS system-privacy block with a direct Settings recovery path instead of failing invisibly or asking again after refresh.
 - Delivered allowed website notifications through macOS Notification Center, while keeping Crest's per-site decision boundary and surfacing the system notification setting when macOS blocks delivery.
+- Open Getting Started in the first Space after initial setup or an explicit onboarding rerun, reusing an existing guide when available.
+- Open Settings in the browsing canvas on wider windows and in a sheet on compact layouts, while preserving loaded Settings and guide state when switching tabs or Spaces.
+- Keep Settings actions within the current unlocked Space and reject locked destinations.
+- Restore native link previews and image actions on iPhone and iPad.
+- Keep page titles, history, Reader Mode, and favicon updates attached to the page and Space that requested them.
+- Clear unfinished sidebar drags when private browsing ends and preserve an active drag when another tab moves between Spaces.
 
 ## [0.4.0] - 2026-08-18
 

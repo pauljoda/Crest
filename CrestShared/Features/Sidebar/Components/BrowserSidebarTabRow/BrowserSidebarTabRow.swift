@@ -27,8 +27,6 @@ struct BrowserSidebarTabRow: View {
     /// Set by the container that nests this row inside a split group. See
     /// `BrowserSidebarTabRowConfiguration.isSplitGroupMember`.
     var isSplitGroupMember = false
-    /// Whether this row accepts its own drag gesture.
-    var isReorderSource = true
     /// The row a drop below this one would land in front of. Only read where
     /// the shell draws its insertion line on the rows themselves.
     var followingTabID: TabID? = nil
@@ -91,7 +89,6 @@ struct BrowserSidebarTabRow: View {
             restoreSavedLocation: restoreSavedLocation,
             promotionNamespace: promotionNamespace,
             isSplitGroupMember: isSplitGroupMember,
-            isReorderSource: isReorderSource,
             followingTabID: followingTabID,
             hasVisibleFollowingRow: hasVisibleFollowingRow,
             select: select,

@@ -1121,6 +1121,10 @@
     "sidebar-individual-split-tab-drag": {
       "category": "improved",
       "message": "Drag individual tabs out of a split, or move the whole split from its header"
+    },
+    "sidebar-reorder-configuration-cleanup": {
+      "category": "internal",
+      "message": "Remove unused sidebar drag configuration and stale selection commentary"
     }
   }
 }

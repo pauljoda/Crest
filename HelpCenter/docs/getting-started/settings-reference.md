@@ -9,7 +9,7 @@ keywords: [settings, preferences, General, Look and Feel, appearance, app icon, 
 
 Open **Crest → Settings** on Mac. On iPhone and iPad, open Settings from the browser interface. Some controls appear only on the platform that supports them.
 
-On Mac and iPad, Settings opens as a browser tab and keeps your place when you switch away. On iPhone, it opens as a dismissible sheet while your current page stays selected.
+On Mac and wider iPad windows, Settings opens as a browser tab and keeps your place when you switch away. In compact layouts, including iPhone, it opens as a dismissible sheet while your current page stays selected.
 
 ## General
 
@@ -54,6 +54,8 @@ Available on Mac. Install, enable, remove, pin, inspect, update, and control sit
 ## Advanced
 
 Import and export browser data, access runtime and diagnostic controls, and manage developer-facing behavior. Change advanced options deliberately; many of them exist to diagnose a specific browser or WebKit condition rather than improve everyday browsing.
+
+Choose **Rerun onboarding** to return to Welcome and go through setup again. Completing setup opens Getting Started in your first Space, reusing its existing guide when available.
 
 ## Feature Flags and About
 

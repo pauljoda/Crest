@@ -13,7 +13,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
             isSelected: true, canClose: true, browser: context.store, spaceAccess: access,
             capabilities: BrowserInteractionCapabilities(), isLoaded: true,
             unload: nil, pullNewIcon: nil, restoreSavedLocation: nil, promotionNamespace: nil,
-            isSplitGroupMember: false, isReorderSource: true,
+            isSplitGroupMember: false,
             followingTabID: nil, hasVisibleFollowingRow: false, select: { _ in })
         XCTAssertTrue(row.isAvailableForDisplay, "The unprovided presentation keeps the live fallback")
         XCTAssertTrue(SidebarSpaceRole.permitsInteraction(isSelected: nil, isAvailable: row.isAvailableForDisplay))
