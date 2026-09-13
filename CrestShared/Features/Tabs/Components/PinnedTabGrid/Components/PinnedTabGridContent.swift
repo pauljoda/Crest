@@ -22,6 +22,7 @@ struct PinnedTabGridContent: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isTrailingDropTargeted = false
     @State private var renamingAssignment: BrowserTabRuntimeAssignment?
+    @State private var iconRequest: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var tabScale = 1.0
@@ -84,7 +85,8 @@ struct PinnedTabGridContent: View {
                         select(runtimeAssignment)
                     },
                     isMultiSelected: browser?.tabMultiSelection.contains(tab.id) == true,
-                    branding: browser?.space(matching: assignment)?.branding
+                    branding: browser?.space(matching: assignment)?.branding,
+                    iconCustomization: iconCustomization(for: tab)
                 )
                 .browserPinnedTabPromotionDestination(
                     id: BrowserTabPromotionID.value(for: tab.id),
@@ -153,7 +155,8 @@ struct PinnedTabGridContent: View {
                             unload: unload,
                             pullNewIcon: pullNewIcon,
                             restoreSavedLocation: restoreSavedLocation,
-                            renameTab: { beginRenaming(tab) }
+                            renameTab: { beginRenaming(tab) },
+                            changeIcon: { beginChangingIcon(runtimeAssignment) }
                         )
                     }
                 }
@@ -205,6 +208,61 @@ struct PinnedTabGridContent: View {
             guard !isLive else { return }
             renamingAssignment = nil
         }
+        .onChange(of: iconRequestIsLive) { _, isLive in
+            guard !isLive else { return }
+            iconRequest = nil
+        }
+        .onChange(of: assignment) { _, _ in iconRequest = nil }
+        .onDisappear { iconRequest = nil }
+    }
+
+    private var iconActions: BrowserTabOrganizationAction? {
+        guard let browser, let spaceAccess else { return nil }
+        return BrowserTabOrganizationAction(browser: browser, spaceAccess: spaceAccess)
+    }
+
+    private var iconRequestIsLive: Bool {
+        guard let iconRequest,
+            iconRequest.spaceID == assignment.spaceID,
+            iconRequest.profileID == assignment.profileID,
+            capabilities.supportsOrganization
+        else { return false }
+        return iconActions?.canCustomizePinnedIcon(for: iconRequest) == true
+    }
+
+    private func beginChangingIcon(_ request: BrowserTabRuntimeAssignment) {
+        guard capabilities.supportsOrganization,
+            iconActions?.canCustomizePinnedIcon(for: request) == true
+        else { return }
+        iconRequest = request
+    }
+
+    private func iconCustomization(for tab: BrowserTab) -> BrowserIconCustomizationPresentation {
+        let request = runtimeAssignment(for: tab.id)
+        return BrowserIconCustomizationPresentation(
+            isPresented: Binding(
+                get: { iconRequest == request && iconRequestIsLive },
+                set: { isPresented in
+                    if isPresented {
+                        beginChangingIcon(request)
+                    } else if iconRequest == request {
+                        iconRequest = nil
+                    }
+                }
+            ),
+            title: "Tab Icon",
+            currentEmoji: tab.emojiIcon,
+            showsReset: BrowserTabIconCustomizationPolicy.showsReset(for: tab),
+            resetTitle: "Use Website Icon",
+            setEmoji: { emoji in
+                guard iconRequest == request, iconRequestIsLive else { return }
+                iconActions?.setPinnedTabEmoji(emoji, for: request)
+            },
+            reset: {
+                guard iconRequest == request, iconRequestIsLive else { return }
+                iconActions?.clearPinnedTabIcon(for: request)
+            }
+        )
     }
 
     /// A pinned tile shows an icon and no editable label, so renaming one asks

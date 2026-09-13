@@ -11,6 +11,7 @@ struct PinnedTabOrganizationMenu: View {
     let pullNewIcon: ((BrowserTabRuntimeAssignment) -> Void)?
     let restoreSavedLocation: ((BrowserTabRuntimeAssignment) -> Void)?
     let renameTab: () -> Void
+    let changeIcon: () -> Void
 
     var body: some View {
         BrowserTabOrganizationMenu(
@@ -22,7 +23,8 @@ struct PinnedTabOrganizationMenu: View {
             unload: unloadAction,
             pullNewIcon: pullNewIconAction,
             restoreSavedLocation: restoreSavedLocationAction,
-            renameTab: renameTab
+            renameTab: renameTab,
+            changeIcon: changeIcon
         )
         .tint(.primary)
         .onAppear(perform: contextMenuDidOpen)

@@ -5,6 +5,22 @@ struct BrowserTabOrganizationAction {
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
 
+    func canCustomizePinnedIcon(for assignment: BrowserTabRuntimeAssignment) -> Bool {
+        liveSpaceAssignment(for: assignment, expectedPlacement: .pinned) != nil
+    }
+
+    @discardableResult
+    func setPinnedTabEmoji(_ emoji: String, for assignment: BrowserTabRuntimeAssignment) -> Bool {
+        guard let space = liveSpaceAssignment(for: assignment, expectedPlacement: .pinned) else { return false }
+        return browser.setTabEmojiIcon(emoji, for: assignment.tabID, matching: space)
+    }
+
+    @discardableResult
+    func clearPinnedTabIcon(for assignment: BrowserTabRuntimeAssignment) -> Bool {
+        guard let space = liveSpaceAssignment(for: assignment, expectedPlacement: .pinned) else { return false }
+        return browser.clearTabIcon(for: assignment.tabID, matching: space)
+    }
+
     func linkURL(for assignment: BrowserTabRuntimeAssignment) -> URL? {
         let spaceAssignment = BrowserSpaceRuntimeAssignment(
             spaceID: assignment.spaceID, profileID: assignment.profileID)

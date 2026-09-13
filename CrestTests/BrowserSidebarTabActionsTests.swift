@@ -8,6 +8,64 @@ import XCTest
 /// `MobileBrowserSidebarTabActionsTests`.
 @MainActor
 final class BrowserSidebarTabActionsTests: XCTestCase {
+    func testPinnedIconChoiceAndRestorePreserveBrowsingState() throws {
+        let context = makeContext()
+        context.browser.session.spaces[0].tabs[0].placement = .pinned
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
+        let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
+        let before = context.browser.session
+
+        XCTAssertTrue(action.canCustomizePinnedIcon(for: assignment))
+        XCTAssertEqual(context.browser.session, before, "Opening the editor cannot activate or load the pin")
+        XCTAssertTrue(action.setPinnedTabEmoji("👩🏽‍🚀", for: assignment))
+        let changed = context.browser.session.spaces[0].tabs[0]
+        XCTAssertEqual(changed.emojiIcon, "👩🏽‍🚀")
+        XCTAssertEqual(changed.url, before.spaces[0].tabs[0].url)
+        XCTAssertEqual(changed.savedURL, before.spaces[0].tabs[0].savedURL)
+        XCTAssertEqual(changed.lastActivatedAt, before.spaces[0].tabs[0].lastActivatedAt)
+        XCTAssertEqual(context.browser.session.selectedSpaceID, before.selectedSpaceID)
+        XCTAssertEqual(context.browser.selectedSpace?.selectedTabID, before.spaces[0].selectedTabID)
+        XCTAssertEqual(context.browser.session.spaces[0].tabs[1], before.spaces[0].tabs[1])
+        let restored = try JSONDecoder().decode(
+            BrowserSession.self, from: JSONEncoder().encode(context.browser.session))
+        XCTAssertEqual(restored.spaces[0].tabs[0].emojiIcon, "👩🏽‍🚀")
+
+        XCTAssertTrue(action.clearPinnedTabIcon(for: assignment))
+        XCTAssertEqual(context.browser.session.spaces[0].tabs[0].iconMode, .automatic)
+        XCTAssertNil(context.browser.session.spaces[0].tabs[0].emojiIcon)
+        XCTAssertEqual(context.browser.selectedSpace?.selectedTabID, before.spaces[0].selectedTabID)
+    }
+
+    func testPinnedIconActionsRejectInvalidatedTargetsWithoutMutatingEitherSpace() {
+        let invalidations: [(Context) -> Void] = [
+            { $0.browser.selectSpace($0.otherSpace.id) },
+            { $0.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: $0.space.id) },
+            { $0.browser.session.spaces[0] = self.replacingProfile(in: $0.browser.session.spaces[0]) },
+            { $0.browser.session.spaces[0].tabs.removeFirst() },
+            { $0.browser.session.spaces[0].tabs[0].placement = .saved },
+            {
+                let moved = $0.browser.session.spaces[0].tabs.removeFirst()
+                $0.browser.session.spaces[1].tabs.append(moved)
+            },
+        ]
+        for invalidate in invalidations {
+            let context = makeContext()
+            context.browser.session.spaces[0].tabs[0].placement = .pinned
+            let assignment = BrowserTabRuntimeAssignment(
+                tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id)
+            let action = BrowserTabOrganizationAction(browser: context.browser, spaceAccess: context.access)
+            XCTAssertTrue(action.setPinnedTabEmoji("🌙", for: assignment))
+            invalidate(context)
+            let before = context.browser.session
+
+            XCTAssertFalse(action.canCustomizePinnedIcon(for: assignment))
+            XCTAssertFalse(action.setPinnedTabEmoji("⭐️", for: assignment))
+            XCTAssertFalse(action.clearPinnedTabIcon(for: assignment))
+            XCTAssertEqual(context.browser.session, before)
+        }
+    }
+
     func testTabLinkUsesLiveTargetURLWithoutChangingSelectionOrSavedRoot() throws {
         let context = makeContext()
         let assignment = BrowserTabRuntimeAssignment(

@@ -10,6 +10,7 @@ struct PinnedTabSelectionButton: View {
     let select: () -> Void
     var isMultiSelected = false
     var branding: BrowserSpaceBranding? = nil
+    let iconCustomization: BrowserIconCustomizationPresentation
 
     @State private var isHovering = false
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
@@ -20,6 +21,7 @@ struct PinnedTabSelectionButton: View {
             TabFaviconView(tab: tab, profileID: profileID, size: 19 * BrowserSidebarDensityPolicy.scale(iconScale))
                 .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
+                .browserIconCustomizationPopover(iconCustomization, arrowEdge: .leading)
                 .overlay(alignment: .bottomTrailing) {
                     BrowserTabSidePanelBadge(
                         tabID: tab.id, spaceID: spaceID,

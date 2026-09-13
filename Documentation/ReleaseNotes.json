@@ -969,6 +969,10 @@
     "iphone-floating-sidebar-search-editing": {
       "category": "fixed",
       "message": "Keep new-tab search visible on iPhone and prevent the floating sidebar from closing while you edit an address"
+    },
+    "pinned-tab-change-icon-presentation": {
+      "category": "fixed",
+      "message": "Change pinned tab icons on Mac and iPad without opening the tab, and restore the website icon when needed"
     }
   }
 }
