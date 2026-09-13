@@ -1037,6 +1037,10 @@
     "space-switch-page-metadata-ownership": {
       "category": "fixed",
       "message": "Keep page titles and browsing history in the correct Space while switching tabs or Spaces"
+    },
+    "sidebar-capability-sizing-and-native-selection-adapters": {
+      "category": "internal",
+      "message": "Make shared sidebar sizing follow host input capabilities and isolate native selection adapters"
     }
   }
 }

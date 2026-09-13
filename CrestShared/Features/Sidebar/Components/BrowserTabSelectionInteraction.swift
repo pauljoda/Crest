@@ -9,17 +9,14 @@ struct BrowserTabSelectionTarget: ViewModifier {
     var folderID: FolderID? = nil
 
     func body(content: Content) -> some View {
-        content.background {
-            #if os(macOS)
-                if let item = folderID.map(BrowserSelectionItemID.folder) ?? tabID.map(BrowserSelectionItemID.tab),
-                    let browser, isEnabled
-                {
-                    BrowserNativeTabSelectionTarget(itemID: item, browser: browser, assignment: assignment)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            #endif
-        }
+        content.modifier(
+            BrowserPlatformTabSelectionTarget(
+                itemID: folderID.map(BrowserSelectionItemID.folder) ?? tabID.map(BrowserSelectionItemID.tab),
+                browser: browser,
+                assignment: assignment,
+                isEnabled: isEnabled
+            )
+        )
     }
 }
 

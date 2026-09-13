@@ -56,6 +56,7 @@ struct BrowserSidebarTabRow: View {
                 interaction: interaction
             )
         )
+        .environment(\.browserInteractionCapabilities, capabilities)
         .onChange(of: runtimeAssignment) { _, assignment in
             guard renameRequest != assignment else { return }
             cancelTitleEditing()

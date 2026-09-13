@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserSpaceSidebarPreview: View {
     let space: BrowserSpace
+    @Environment(\.browserInteractionCapabilities) private var capabilities
 
     var body: some View {
         ZStack {
@@ -44,7 +45,8 @@ struct BrowserSpaceSidebarPreview: View {
                                     space: space
                                 ),
                                 selectedTabID: space.selectedTabID,
-                                select: { _ in }
+                                select: { _ in },
+                                capabilities: capabilities
                             )
                         }
                         BrowserSpaceSidebarSection(

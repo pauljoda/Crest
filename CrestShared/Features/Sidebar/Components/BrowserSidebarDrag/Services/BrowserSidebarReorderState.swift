@@ -362,10 +362,7 @@ final class BrowserSidebarReorderState {
 
         for key in Array(zones.keys) where zones[key]?.scrollRegionID == id {
             guard var registration = zones[key] else { continue }
-            registration.zone = BrowserSidebarReorderZone(
-                target: registration.zone.target,
-                frame: registration.zone.frame.offsetBy(dx: 0, dy: offsetY)
-            )
+            registration.zone.frame = registration.zone.frame.offsetBy(dx: 0, dy: offsetY)
             zones[key] = registration
         }
 
@@ -402,7 +399,9 @@ final class BrowserSidebarReorderState {
                 }
             }
             guard !frame.isNull, !frame.isEmpty else { return nil }
-            return BrowserSidebarReorderZone(target: registration.zone.target, frame: frame)
+            var zone = registration.zone
+            zone.frame = frame
+            return zone
         }
     }
 
@@ -430,7 +429,7 @@ final class BrowserSidebarReorderState {
         let emptyHeight = max(zone.minimumHeight, ordered.isEmpty ? zone.frame.height : 0)
         return (
             pinnedLayout(ids: ordered.map(\.id), in: lift.item.spaceAssignment).applyingPreferences(
-                width: zone.frame.width), zone.frame, emptyHeight
+                width: zone.frame.width, touch: zone.supportsTouch), zone.frame, emptyHeight
         )
     }
 

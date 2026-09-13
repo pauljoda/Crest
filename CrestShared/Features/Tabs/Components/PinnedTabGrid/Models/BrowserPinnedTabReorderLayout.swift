@@ -20,7 +20,7 @@ struct BrowserPinnedTabReorderLayout: Equatable {
     var tabScale = 1.0
     var tileHeight: CGFloat = Self.cellHeight
     var tileSpacing: CGFloat = Self.spacing
-    var minimumTileWidth: CGFloat = BrowserSidebarDensityPolicy.pinMinimumWidth(scale: 1)
+    var minimumTileWidth: CGFloat = BrowserSidebarDensityPolicy.pinMinimumWidth(scale: 1, touch: false)
 
     var slots: [Slot] {
         var result = ids.filter { $0 != liftedID && !liftedIDs.contains($0) }.map(Slot.tab)
@@ -56,7 +56,7 @@ struct BrowserPinnedTabReorderLayout: Equatable {
     }
 
     @MainActor
-    func applyingPreferences(width: CGFloat) -> Self {
+    func applyingPreferences(width: CGFloat, touch: Bool) -> Self {
         var value = self
         value.availableWidth = width.isFinite ? max(0, width) : BrowserChromeLayout.sidebarIdealWidth
         value.preferredColumns = Int(
@@ -66,9 +66,9 @@ struct BrowserPinnedTabReorderLayout: Equatable {
                 ), 6))
         let scale = BrowserSidebarDensityPreference.number(BrowserSidebarDensityPreference.scaleKey, default: 1)
         value.tabScale = scale
-        value.tileHeight = BrowserSidebarDensityPolicy.pinHeight(scale: scale)
+        value.tileHeight = BrowserSidebarDensityPolicy.pinHeight(scale: scale, touch: touch)
         value.tileSpacing = BrowserSidebarDensityPolicy.pinSpacing(scale: scale)
-        value.minimumTileWidth = BrowserSidebarDensityPolicy.pinMinimumWidth(scale: scale)
+        value.minimumTileWidth = BrowserSidebarDensityPolicy.pinMinimumWidth(scale: scale, touch: touch)
         return value
     }
 }

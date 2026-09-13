@@ -1,13 +1,6 @@
 import SwiftUI
 
-/// The row that opens a new tab, at the head of the current run, on every
-/// shell.
-///
-/// One row rather than two resemblances: what differs between a pointer shell
-/// and a touch one — where the insets sit, whether the height is exact, whether
-/// a hover surface and a shortcut tooltip exist at all — is read from
-/// `BrowserSidebarInteractionPolicy` instead of from which target compiled the
-/// file.
+/// Opens a tab using the hosting sidebar’s input and density preferences.
 struct BrowserNewTabRow: View {
     let capabilities: BrowserInteractionCapabilities
     let action: () -> Void
@@ -15,7 +8,6 @@ struct BrowserNewTabRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
     private var tabScale = 1.0
-    @ScaledMetric(relativeTo: .body) private var baseTextSize = BrowserSidebarDensityPolicy.bodySize
 
     private var tabMetrics: BrowserSidebarTabRowMetrics {
         BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
@@ -25,9 +17,6 @@ struct BrowserNewTabRow: View {
         BrowserSidebarInteractionPolicy.newTabRowMetrics(capabilities)
     }
 
-    /// The height the row rests at. A shell that holds one exact height pins
-    /// both ends of the frame to it; a shell that lets the row grow pins only
-    /// the floor.
     private var rowHeight: CGFloat {
         let base = BrowserSidebarInteractionPolicy.rowMinHeight(
             capabilities,
@@ -42,9 +31,7 @@ struct BrowserNewTabRow: View {
         Button(action: action) {
             Label {
                 Text("New Tab")
-                    .font(
-                        tabScale == 1 ? nil : .system(size: baseTextSize * BrowserSidebarDensityPolicy.scale(tabScale))
-                    )
+                    .modifier(BrowserSidebarDensityFont(scale: tabScale, supportsTouch: capabilities.supportsTouch))
                     .lineLimit(1)
             } icon: {
                 Image(systemName: "plus")
@@ -79,8 +66,6 @@ struct BrowserNewTabRow: View {
     }
 }
 
-/// The treatment a pointer resting over the row earns it. A touch shell has
-/// nothing to respond to, so the row is drawn plain there.
 private struct BrowserNewTabRowSurface: ViewModifier {
     let metrics: BrowserSidebarNewTabRowMetrics
 
@@ -96,8 +81,6 @@ private struct BrowserNewTabRowSurface: ViewModifier {
     }
 }
 
-/// The shortcut the row names while a pointer rests on it, where both a pointer
-/// and the keyboard it belongs to exist.
 private struct BrowserNewTabRowTooltip: ViewModifier {
     let metrics: BrowserSidebarNewTabRowMetrics
 

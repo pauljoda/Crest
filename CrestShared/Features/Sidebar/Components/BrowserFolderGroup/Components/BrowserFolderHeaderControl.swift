@@ -1,17 +1,12 @@
 import SwiftUI
 
-/// The folder header's content: the disclosure button a reader opens the
-/// folder with, or the field they are renaming it in.
-///
-/// Renaming happens in place, where the title already is, so the row keeps its
-/// icon and its shape and only the text becomes editable. Return commits,
-/// Escape abandons the edit, and losing focus commits — the group owns the
-/// focus so that last rule has one place to live.
+/// Renames in place: Return or focus loss commits, and Escape cancels.
 struct BrowserFolderHeaderControl: View {
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
 
     private var folder: BrowserFolder { configuration.folder }
+    @Environment(\.browserInteractionCapabilities) private var capabilities
     @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsTabCounts = true
     @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
@@ -20,7 +15,6 @@ struct BrowserFolderHeaderControl: View {
     private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var textScale = 1.0
-    @ScaledMetric(relativeTo: .body) private var baseTextSize = BrowserSidebarDensityPolicy.bodySize
 
     private var isEditing: Bool {
         interaction.editingFolderRequest.wrappedValue
@@ -86,7 +80,7 @@ struct BrowserFolderHeaderControl: View {
                 .buttonStyle(BrowserFolderHeaderButtonStyle())
             }
         }
-        .font(textScale == 1 ? nil : .system(size: baseTextSize * BrowserSidebarDensityPolicy.scale(textScale)))
+        .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
     }
 
     private var containsCurrentTab: Bool {

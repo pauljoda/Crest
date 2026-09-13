@@ -4,6 +4,7 @@ struct BrowserSpaceSidebarTabRow: View {
     let tab: BrowserTab
     let profileID: UUID
     let isSelected: Bool
+    @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.sidebarSpacePresentation) private var presentation
 
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
@@ -24,11 +25,15 @@ struct BrowserSpaceSidebarTabRow: View {
             .horizontal,
             BrowserManualSetupSidebarPreviewMetrics.tabHorizontalPadding
         )
-        .font(.system(size: BrowserSidebarDensityPolicy.bodySize * BrowserSidebarDensityPolicy.scale(tabScale)))
+        .font(
+            .system(
+                size: BrowserSidebarDensityPolicy.bodySize(touch: capabilities.supportsTouch)
+                    * BrowserSidebarDensityPolicy.scale(tabScale))
+        )
         .frame(
             minHeight: BrowserSidebarDensityPolicy.rowHeight(
                 base: BrowserManualSetupSidebarPreviewMetrics.tabHeight, scale: tabScale,
-                touch: BrowserSidebarDensityPolicy.usesTouch)
+                touch: capabilities.supportsTouch)
         )
         .modifier(
             BrowserTabAppearanceSurface(

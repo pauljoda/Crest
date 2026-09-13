@@ -59,6 +59,7 @@ struct BrowserSidebar<Content: View>: View {
 
     var body: some View {
         content(context)
+            .environment(\.browserInteractionCapabilities, capabilities)
             .modifier(
                 BrowserSidebarClearHistoryDialog(
                     browser: browser,

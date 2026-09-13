@@ -13,14 +13,14 @@ struct BrowserSidebarTabLabel: View {
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
     var sidePanelSpaceID: SpaceID?
+    @Environment(\.browserInteractionCapabilities) private var capabilities
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var textScale = 1.0
-    @ScaledMetric(relativeTo: .body) private var baseTextSize = BrowserSidebarDensityPolicy.bodySize
 
     var body: some View {
         Label {
             Text(tab.displayTitle)
-                .font(textScale == 1 ? nil : .system(size: baseTextSize * BrowserSidebarDensityPolicy.scale(textScale)))
+                .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .browserTabResidency(isLoaded: isLoaded)

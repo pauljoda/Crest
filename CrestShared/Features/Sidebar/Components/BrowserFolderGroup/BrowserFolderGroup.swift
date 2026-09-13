@@ -102,6 +102,7 @@ struct BrowserFolderGroup: View {
                 folderContents
             }
         }
+        .environment(\.browserInteractionCapabilities, capabilities)
         .modifier(
             BrowserFolderSectionSurface(
                 color: folder.color,

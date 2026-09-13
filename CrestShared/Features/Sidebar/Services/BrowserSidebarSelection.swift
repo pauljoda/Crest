@@ -9,14 +9,9 @@ enum BrowserSidebarSelection {
     static func itemUnits(in browser: BrowserStore) -> [[BrowserSelectionItemID]] {
         guard let space = browser.selectedSpace else { return [] }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
-        let items: [BrowserSelectionItemID]
-        #if os(macOS)
-            items =
-                BrowserNativeTabSelectionTarget.TargetView.orderedItems(browser: browser, assignment: assignment)
-                ?? registeredItems(in: browser, assignment: assignment)
-        #else
-            items = registeredItems(in: browser, assignment: assignment)
-        #endif
+        let items =
+            BrowserPlatformSidebarSelectionOrder.orderedItems(in: browser, assignment: assignment)
+            ?? registeredItems(in: browser, assignment: assignment)
         var included: Set<BrowserSelectionItemID> = []
         return items.compactMap { item in
             guard !included.contains(item) else { return nil }

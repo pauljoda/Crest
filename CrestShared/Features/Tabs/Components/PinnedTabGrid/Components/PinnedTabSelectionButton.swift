@@ -12,6 +12,7 @@ struct PinnedTabSelectionButton: View {
     var branding: BrowserSpaceBranding? = nil
     let iconCustomization: BrowserIconCustomizationPresentation
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
     @State private var isHovering = false
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var iconScale = 1.0
@@ -28,7 +29,9 @@ struct PinnedTabSelectionButton: View {
                         scale: BrowserSidebarDensityPolicy.scale(iconScale))
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale))
+                .frame(
+                    height: BrowserSidebarDensityPolicy.pinHeight(scale: iconScale, touch: capabilities.supportsTouch)
+                )
                 .contentShape(.rect)
                 .modifier(
                     PinnedTabInteractionSurface(

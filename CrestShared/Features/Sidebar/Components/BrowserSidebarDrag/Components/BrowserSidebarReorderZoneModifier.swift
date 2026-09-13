@@ -25,6 +25,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     /// pages alive and they register the same targets, so registrations must not
     /// key on the target or offscreen pages clobber the visible one.
     @State private var identity = UUID()
+    @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
     @Environment(\.browserSidebarDropViewportID) private var sidebarViewportID
     @Environment(\.sidebarSpaceIsSelected) private var isSelected
@@ -36,19 +37,20 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
                 || SidebarSpaceRole.permitsInteraction(isSelected: isSelected, isAvailable: true))
         return
             content
-            .onGeometryChange(for: CGRect?.self) { proxy in
+            .onGeometryChange(for: BrowserSidebarReorderZone?.self) { proxy in
                 guard isActive else { return nil }
-                return proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
-            } action: { frame in
-                guard let frame else {
+                return BrowserSidebarReorderZone(
+                    target: target,
+                    frame: resolvedFrame(proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)),
+                    minimumHeight: minimumHeight,
+                    supportsTouch: capabilities.supportsTouch)
+            } action: { zone in
+                guard let zone else {
                     state.removeZone(for: identity)
                     return
                 }
                 state.register(
-                    zone: BrowserSidebarReorderZone(
-                        target: target,
-                        frame: resolvedFrame(frame), minimumHeight: minimumHeight
-                    ),
+                    zone: zone,
                     for: identity,
                     sidebarViewportID: sidebarViewportID,
                     scrollRegionID: scrollRegionID

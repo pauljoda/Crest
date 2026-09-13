@@ -1,12 +1,6 @@
 import SwiftUI
 
-/// The Space's pinned tabs as one drop section, on every shell.
-///
-/// What differs between a pointer shell and a touch one is read from
-/// `BrowserSidebarInteractionPolicy` rather than from which target compiled the
-/// file. What the two shells genuinely cannot share — where a page lives, what
-/// opening a tab means to the host, how a tab gets home — arrives as the page
-/// seam and a handful of closures the host binds.
+/// Uses one input policy for pinned tiles and their drop targets.
 struct BrowserPinnedTabsDropSection: View {
     let space: BrowserSpace
     let tabSections: BrowserTabSections
@@ -63,6 +57,7 @@ struct BrowserPinnedTabsDropSection: View {
             minimumHeight: metrics.sectionEndBandHeight
         )
         .accessibilityHint("Drop a tab here to pin it")
+        .environment(\.browserInteractionCapabilities, capabilities)
     }
 
     private var metrics: BrowserSidebarTabListMetrics {

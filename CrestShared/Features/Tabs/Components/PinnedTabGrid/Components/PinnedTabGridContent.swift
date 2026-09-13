@@ -185,6 +185,7 @@ struct PinnedTabGridContent: View {
             BrowserVisualAccessibilityPolicy.animation(CrestMotion.dragSource, reduceMotion: reduceMotion),
             value: projection.slots
         )
+        .environment(\.browserInteractionCapabilities, capabilities)
         .crestCollectionMotion(ids: tabs.map(\.id))
         .overlay(alignment: .trailing) {
             if moveTab != nil, let dragState, dragState.item != nil {
@@ -304,10 +305,10 @@ struct PinnedTabGridContent: View {
         let ids = tabs.map { BrowserSidebarReorderItemID.tab($0.id) }
         var value =
             (reorderContext?.state.pinnedLayout(ids: ids, in: assignment) ?? BrowserPinnedTabReorderLayout(ids: ids))
-            .applyingPreferences(width: BrowserChromeLayout.sidebarIdealWidth)
+            .applyingPreferences(width: BrowserChromeLayout.sidebarIdealWidth, touch: capabilities.supportsTouch)
         value.preferredColumns = min(max(pinColumns, 0), 6)
         value.tabScale = tabScale
-        value.tileHeight = BrowserSidebarDensityPolicy.pinHeight(scale: tabScale)
+        value.tileHeight = BrowserSidebarDensityPolicy.pinHeight(scale: tabScale, touch: capabilities.supportsTouch)
         value.tileSpacing = BrowserSidebarDensityPolicy.pinSpacing(scale: tabScale)
         return value
     }

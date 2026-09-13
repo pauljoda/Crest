@@ -1,3 +1,5 @@
+import SwiftUI
+
 /// Independent interaction features supplied by the shell. Touch and hover may coexist.
 struct BrowserInteractionCapabilities: Equatable, Sendable {
     /// Enables affordances revealed by a resting pointer.
@@ -20,4 +22,8 @@ struct BrowserInteractionCapabilities: Equatable, Sendable {
 
     /// Allows drag, drop, and organization menus. Appearance previews disable this.
     var supportsOrganization = true
+}
+
+extension EnvironmentValues {
+    @Entry var browserInteractionCapabilities = BrowserInteractionCapabilities()
 }

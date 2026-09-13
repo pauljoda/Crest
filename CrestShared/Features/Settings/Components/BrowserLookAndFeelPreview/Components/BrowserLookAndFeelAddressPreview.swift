@@ -8,6 +8,8 @@ struct BrowserLookAndFeelAddressPreview: View {
 
     @Namespace private var namespace
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         if showsBackground {
             field
@@ -30,7 +32,7 @@ struct BrowserLookAndFeelAddressPreview: View {
                 progress: 0,
                 isLoading: false,
                 capabilities: .init(
-                    supportsTouch: BrowserSidebarDensityPolicy.usesTouch,
+                    supportsTouch: capabilities.supportsTouch,
                     pairsRowWithPromotedSurface: false),
                 activate: {},
                 submit: {},

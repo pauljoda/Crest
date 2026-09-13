@@ -19,8 +19,9 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
     }
 
     let target: Target
-    let frame: CGRect
+    var frame: CGRect
     var minimumHeight: CGFloat = 0
+    var supportsTouch = false
 
     /// Higher wins when zones overlap.
     ///

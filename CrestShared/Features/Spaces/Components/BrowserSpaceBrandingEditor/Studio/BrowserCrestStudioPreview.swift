@@ -20,6 +20,8 @@ struct BrowserCrestStudioPreview: View {
         return value
     }
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         VStack(spacing: 18) {
             VStack(spacing: 8) {
@@ -39,7 +41,7 @@ struct BrowserCrestStudioPreview: View {
                     BrowserSpaceHeader(
                         space: preview, isPrivateBrowsing: false, isSavedTabsExpanded: .constant(true),
                         capabilities: BrowserInteractionCapabilities(
-                            supportsTouch: BrowserSidebarDensityPolicy.usesTouch,
+                            supportsTouch: capabilities.supportsTouch,
                             pairsRowWithPromotedSurface: false, supportsOrganization: false),
                         actions: BrowserSpaceHeaderActions(
                             openNewTab: {}, createFolder: {}, showHistory: {}, cleanup: {}))

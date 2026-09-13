@@ -17,10 +17,7 @@ struct PinnedTabGrid: View {
         _ in nil
     }
     var promotionNamespace: Namespace.ID? = nil
-    /// What the hosting shell can do. The grid reads one thing from it: which
-    /// promotion anchor — if any — a tile may claim, which is a presentation
-    /// transform over the view the drag interaction lifts. See
-    /// `BrowserPinnedTabPromotionPolicy`.
+    /// Input sizing, organization actions, and promotion anchors supplied by the host.
     var capabilities = BrowserInteractionCapabilities()
 
     var body: some View {

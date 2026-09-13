@@ -16,8 +16,16 @@ struct BrowserSidebarCustomizationPreview: View {
     /// window crop already stands on that atmosphere, so it asks for the
     /// sidebar's contents alone.
     var showsBackground = true
+    @Environment(\.browserInteractionCapabilities) private var hostCapabilities
     @State private var sample = BrowserAppearancePreviewState()
     @State private var editingFolder: BrowserFolderRuntimeAssignment?
+
+    private var capabilities: BrowserInteractionCapabilities {
+        var value = hostCapabilities
+        value.pairsRowWithPromotedSurface = false
+        value.supportsOrganization = false
+        return value
+    }
 
     var body: some View {
         let preview = sample.space
@@ -30,7 +38,7 @@ struct BrowserSidebarCustomizationPreview: View {
                     select: { sample.browser.selectTab($0.tabID) },
                     browser: sample.browser, spaceAccess: sample.spaceAccess,
                     siteThemeAccent: sample.siteThemeAccent,
-                    capabilities: sample.capabilities
+                    capabilities: capabilities
                 )
                 .padding(.horizontal, 8)
             }
@@ -38,14 +46,14 @@ struct BrowserSidebarCustomizationPreview: View {
                 space: preview, tabSections: tabSections,
                 browser: sample.browser, spaceAccess: sample.spaceAccess,
                 pageAccess: sample.pageAccess, tabActions: sample.tabActions,
-                capabilities: sample.capabilities, restoreSavedLocation: { _ in },
+                capabilities: capabilities, restoreSavedLocation: { _ in },
                 select: sample.browser.selectTab, editingFolderRequest: $editingFolder)
             if showsCurrentTabs {
                 BrowserCurrentTabsDropSection(
                     space: preview, tabSections: tabSections,
                     browser: sample.browser, spaceAccess: sample.spaceAccess,
                     pageAccess: sample.pageAccess, tabActions: sample.tabActions,
-                    capabilities: sample.capabilities,
+                    capabilities: capabilities,
                     select: sample.browser.selectTab, openNewTab: {})
             }
         }
@@ -55,6 +63,7 @@ struct BrowserSidebarCustomizationPreview: View {
         .clipShape(.rect(cornerRadius: showsBackground ? 14 : 0))
         .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: preview.branding))
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: preview, isUnlocked: true))
+        .environment(\.browserInteractionCapabilities, capabilities)
         .environment(\.folderPreviewShowsHighlight, !followsHighlightPreference)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
@@ -76,10 +85,6 @@ private final class BrowserAppearancePreviewState {
     let spaceAccess = BrowserSpaceAccessController()
     let downloads = BrowserDownloadCenter(
         permissionCenter: BrowserSitePermissionCenter(persistence: InMemoryBrowserSitePermissionPersistence()))
-    let capabilities = BrowserInteractionCapabilities(
-        supportsTouch: BrowserSidebarDensityPolicy.usesTouch,
-        pairsRowWithPromotedSurface: false,
-        supportsOrganization: false)
     /// The color each sample site would hand its pin, keyed the way the shipping
     /// sidebar asks for it.
     private let siteAccents: [TabID: BrowserTabIconAccent]
