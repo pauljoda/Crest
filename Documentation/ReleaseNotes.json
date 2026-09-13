@@ -1017,6 +1017,10 @@
     "native-tab-loaded-state": {
       "category": "fixed",
       "message": "Keep Settings and Getting Started where you left them when switching tabs or Spaces"
+    },
+    "shared-full-width-appearance-sliders": {
+      "category": "improved",
+      "message": "Adjust appearance with consistent full-width sliders in Look and Feel and Space customization on every platform"
     }
   }
 }

@@ -36,12 +36,8 @@ struct CrestSettingSliderReadout: Sendable {
     }
 }
 
-/// The one slider presentation Crest's settings use: the title on the leading
-/// edge, and on the trailing edge a fixed-width track with its live readout.
-///
-/// The readout does the work end labels used to: it names the zero point
-/// ("Borderless", "Square") and reports the exact value everywhere else, so a
-/// slider row is one line tall like every other row.
+/// Shared by settings and Space appearance: title, reset, and live value above
+/// a full-width native slider. Readouts can name endpoints such as "Borderless".
 struct CrestSettingSlider: View {
     private let title: LocalizedStringKey
     private let value: CrestSettingValue<Double>
@@ -49,6 +45,7 @@ struct CrestSettingSlider: View {
     private let step: Double?
     private let readout: CrestSettingSliderReadout
     private let identifier: String?
+    private let onEditingChanged: (Bool) -> Void
 
     init(
         _ title: LocalizedStringKey,
@@ -56,7 +53,8 @@ struct CrestSettingSlider: View {
         range: ClosedRange<Double> = 0...1,
         step: Double? = nil,
         readout: CrestSettingSliderReadout = .percent,
-        identifier: String? = nil
+        identifier: String? = nil,
+        onEditingChanged: @escaping (Bool) -> Void = { _ in }
     ) {
         self.title = title
         self.value = value
@@ -64,29 +62,27 @@ struct CrestSettingSlider: View {
         self.step = step
         self.readout = readout
         self.identifier = identifier
+        self.onEditingChanged = onEditingChanged
     }
 
     var body: some View {
-        CrestSettingRow(title, setting: value.resettable(title)) {
-            HStack(spacing: CrestSettingRowMetrics.controlSpacing) {
-                slider
-                    .frame(width: CrestSettingRowMetrics.sliderWidth)
+        VStack(spacing: CrestSettingRowMetrics.sliderSpacing) {
+            CrestSettingRow(title, setting: value.resettable(title)) {
                 Text(valueLabel)
-                    .font(CrestTypography.metadata)
-                    .foregroundStyle(CrestColor.textSecondary)
+                    .foregroundStyle(.secondary)
                     .monospacedDigit()
-                    .lineLimit(1)
-                    .frame(width: CrestSettingRowMetrics.readoutWidth, alignment: .trailing)
             }
+            slider
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var slider: some View {
         Group {
             if let step {
-                Slider(value: value.binding, in: range, step: step) { Text(title) }
+                Slider(value: value.binding, in: range, step: step, onEditingChanged: onEditingChanged) { Text(title) }
             } else {
-                Slider(value: value.binding, in: range) { Text(title) }
+                Slider(value: value.binding, in: range, onEditingChanged: onEditingChanged) { Text(title) }
             }
         }
         .labelsHidden()

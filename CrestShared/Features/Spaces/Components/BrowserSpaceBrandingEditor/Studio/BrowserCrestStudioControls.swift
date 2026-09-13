@@ -77,15 +77,10 @@ struct BrowserCrestStudioSlider: View {
     var readout: CrestSettingSliderReadout = .percent
 
     var body: some View {
-        VStack(spacing: 8) {
-            CrestSettingRow(title, setting: value.resettable(title)) {
-                Text(readout.label(value.wrappedValue)).monospacedDigit().foregroundStyle(.secondary)
-            }
-            Slider(value: value.binding, in: range, onEditingChanged: editingChanged.callAsFunction) { Text(title) }
-                .labelsHidden()
-                .accessibilityLabel(Text(title))
-                .accessibilityValue(readout.label(value.wrappedValue))
-        }
+        CrestSettingSlider(
+            title, value: value, range: range, readout: readout,
+            onEditingChanged: editingChanged.callAsFunction
+        )
     }
 }
 
