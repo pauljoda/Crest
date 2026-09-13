@@ -26,9 +26,6 @@ final class BrowserStore {
     private(set) var sessionRevision = 0
     var localSyncErrorDescription: String?
     let browsingMode: BrowserBrowsingMode
-    let tabDragState = BrowserTabDragState()
-    let folderDragState = BrowserFolderDragState()
-    let sidebarReorderState = BrowserSidebarReorderState()
     let tabMultiSelection = BrowserTabMultiSelection()
     let family: BrowserStoreFamily
     @ObservationIgnored let persistence: any BrowserSessionPersisting
@@ -42,6 +39,7 @@ final class BrowserStore {
     @ObservationIgnored var tabSelectionHistory: BrowserTabSelectionHistory
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
+    @ObservationIgnored weak var interactionObserver: (any BrowserStoreInteractionObserving)?
     @ObservationIgnored weak var tabLinkProvider: (any BrowserTabLinkProviding)?
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
     @ObservationIgnored private var preservesEmptyWindowSelection = false
@@ -121,8 +119,7 @@ extension BrowserStore {
         syncStageGeneration = 0
         credentialSaveOperations.removeAll()
         family.resetDeletionState()
-        tabDragState.end()
-        folderDragState.end()
+        interactionObserver?.browserWillResetSession()
         session = .privateBrowsing()
         localSyncErrorDescription = nil
         let revision = family.publish(session, from: self)

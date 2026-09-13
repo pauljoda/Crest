@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct BrowserTabBatchMenu: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let request: BrowserTabBatchRequest
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
@@ -69,7 +71,8 @@ struct BrowserTabBatchMenu: View {
         Button("Delete \(count) Tabs", systemImage: "trash", role: .destructive) { perform(.delete) }
         Divider()
         Button("Select All Tabs") {
-            browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser))
+            browser.tabMultiSelection.selectAll(
+                units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
         }
         Button("Deselect All") { browser.tabMultiSelection.clear() }
     }
@@ -104,7 +107,9 @@ struct BrowserTabBatchMenu: View {
             }
             Divider()
             Button("Select All Items") {
-                browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser))
+                browser.tabMultiSelection.selectAll(
+                    units: BrowserSidebarSelection.itemUnits(
+                        in: browser, reorder: sidebarInteraction.sidebarReorderState))
             }
             Button("Deselect All") { browser.tabMultiSelection.clear() }
         }

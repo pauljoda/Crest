@@ -15,6 +15,7 @@ import SwiftUI
 /// `BrowserSidebarInteractionPolicy` rather than from which target compiled the
 /// file, so the two shells share this row instead of a resemblance.
 struct BrowserSidebarSplitGroupRow: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let groupID: SplitGroupID
     let members: [BrowserTab]
     let spaceID: SpaceID
@@ -81,6 +82,7 @@ struct BrowserSidebarSplitGroupRow: View {
 
     private var configuration: BrowserSidebarSplitGroupRowConfiguration {
         BrowserSidebarSplitGroupRowConfiguration(
+            sidebarInteraction: sidebarInteraction,
             groupID: groupID,
             members: members,
             spaceID: spaceID,

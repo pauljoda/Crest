@@ -16,6 +16,8 @@ import SwiftUI
 /// open colour popover, and a request that can no longer be honoured is
 /// dropped instead of landing on whatever took its place.
 struct BrowserFolderGroup: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let node: BrowserFolderNode
     let tree: BrowserFolderTree
     let ordering: BrowserSidebarFolderListItem.Projection
@@ -51,6 +53,7 @@ struct BrowserFolderGroup: View {
 
     private var configuration: BrowserFolderGroupConfiguration {
         BrowserFolderGroupConfiguration(
+            sidebarInteraction: sidebarInteraction,
             node: node,
             tabs: tabs,
             subtreeTabIDs: subtreeTabIDs,
@@ -112,16 +115,16 @@ struct BrowserFolderGroup: View {
                 hasVisibleContents: isExpanded || configuration.keptCollapsedItem(for: collapsedTabVisibility) != nil,
                 isSelected: browser.tabMultiSelection.contains(.folder(folder.id))
                     && !BrowserSidebarSelection.isCoveredBySelectedFolder(.folder(folder.id), in: browser),
-                folderID: folder.id, reorder: browser.sidebarReorderState)
+                folderID: folder.id, reorder: sidebarInteraction.sidebarReorderState)
         )
         .modifier(BrowserFolderReorderContainer(configuration: configuration))
         .browserSidebarReorderZone(
             .section(.tabs(placement: folder.location.tabPlacement, folderID: folder.id)),
-            state: browser.sidebarReorderState
+            state: sidebarInteraction.sidebarReorderState
         )
         .browserSidebarReorderZone(
             .folder(folder.id),
-            state: browser.sidebarReorderState,
+            state: sidebarInteraction.sidebarReorderState,
             isActive: !isExpanded
         )
         .modifier(
@@ -189,7 +192,8 @@ struct BrowserFolderGroup: View {
             }
         }
         .browserSidebarReorderSectionIndicator(
-            .tabs(placement: folder.location.tabPlacement, folderID: folder.id), state: browser.sidebarReorderState)
+            .tabs(placement: folder.location.tabPlacement, folderID: folder.id),
+            state: sidebarInteraction.sidebarReorderState)
     }
 
     private var subtreeTabIDs: [TabID] {
@@ -227,7 +231,7 @@ struct BrowserFolderGroup: View {
     }
 
     private func toggleExpansion() {
-        guard !browser.sidebarReorderState.suppressesActivation,
+        guard !sidebarInteraction.sidebarReorderState.suppressesActivation,
             editingFolderRequest != configuration.folderRuntimeAssignment,
             let liveSpace = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
                 matching: configuration.assignment, in: browser, accessController: spaceAccess),
@@ -415,6 +419,8 @@ struct BrowserFolderGroup: View {
 /// The full folder keeps its registration for an owned lift, while ordinary
 /// input follows the page role entirely within this interaction leaf.
 private struct BrowserFolderReorderContainer: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserFolderGroupConfiguration
 
     @Environment(\.sidebarSpaceIsSelected) private var isSelected
@@ -429,7 +435,8 @@ private struct BrowserFolderReorderContainer: ViewModifier {
                     memberTabIDs: configuration.subtreeTabIDs)),
             section: configuration.folder.reorderSection,
             reorder: BrowserSidebarReorderContext(
-                browser: configuration.browser, spaceAccess: configuration.spaceAccess),
+                browser: configuration.browser, spaceAccess: configuration.spaceAccess,
+                state: sidebarInteraction.sidebarReorderState),
             isEnabled: (SidebarSpaceRole.permitsInteraction(
                 isSelected: isSelected, isAvailable: configuration.isAvailableForDisplay) || isLiftedFolder)
                 && configuration.capabilities.supportsOrganization
@@ -437,7 +444,7 @@ private struct BrowserFolderReorderContainer: ViewModifier {
     }
 
     private var isLiftedFolder: Bool {
-        guard let lift = configuration.browser.sidebarReorderState.lift,
+        guard let lift = sidebarInteraction.sidebarReorderState.lift,
             case .folder(let item) = lift.item
         else { return false }
         return item.folderID == configuration.folder.id
@@ -451,6 +458,8 @@ private struct BrowserFolderReorderContainer: ViewModifier {
 /// that reserves those places gets a zone of its own here. Where the seam is
 /// aimable the reservation would only add an empty band nothing lands in.
 private struct BrowserFolderReorderReservation: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserFolderGroupConfiguration
 
     @ViewBuilder
@@ -458,7 +467,7 @@ private struct BrowserFolderReorderReservation: ViewModifier {
         if configuration.capabilities.reservesReorderSectionZones {
             content.browserSidebarReorderSectionReservation(
                 .tabs(placement: configuration.folder.location.tabPlacement, folderID: configuration.folder.id),
-                state: configuration.browser.sidebarReorderState
+                state: sidebarInteraction.sidebarReorderState
             )
         } else {
             content

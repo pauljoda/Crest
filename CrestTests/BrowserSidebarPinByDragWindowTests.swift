@@ -26,7 +26,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
     func testDraggingACurrentTabOntoThePinnedGridPinsIt() throws {
         let fixture = try makeHostedWindow()
         defer { fixture.window.close() }
-        let state = fixture.model.browser.sidebarReorderState
+        let state = fixture.model.sidebarInteraction.sidebarReorderState
 
         let tileFrame = try XCTUnwrap(
             state.frame(ofRow: .tab(fixture.pinned.id)),
@@ -83,7 +83,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
     func testPinningWorksWithTheSidebarFloatingOverThePage() throws {
         let fixture = try makeHostedWindow()
         defer { fixture.window.close() }
-        let state = fixture.model.browser.sidebarReorderState
+        let state = fixture.model.sidebarInteraction.sidebarReorderState
         fixture.model.chrome.columnVisibility = .detailOnly
         fixture.model.isFloatingSidebarPresented = true
         pump(0.8)
@@ -233,6 +233,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
 
         let host = NSHostingView(
             rootView: BrowserSidebarPinByDragTestSurface(model: model)
+                .environment(model.sidebarInteraction)
         )
         let window = NSWindow(
             contentRect: CGRect(x: 120, y: 120, width: 1_160, height: 620),

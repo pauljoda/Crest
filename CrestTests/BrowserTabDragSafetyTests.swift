@@ -164,23 +164,23 @@ final class BrowserTabDragSafetyTests: XCTestCase {
 
     func testStaleDragSessionCannotEndANewerDragWithTheSameTabID() {
         let context = makeContext()
-        let firstSession: BrowserDragSessionToken = context.browser.tabDragState.begin(
+        let firstSession: BrowserDragSessionToken = context.sidebarInteraction.tabDragState.begin(
             item: context.item,
             placement: context.tab.placement
         )
-        let secondSession: BrowserDragSessionToken = context.browser.tabDragState.begin(
+        let secondSession: BrowserDragSessionToken = context.sidebarInteraction.tabDragState.begin(
             item: context.item,
             placement: context.tab.placement
         )
 
         XCTAssertNotEqual(firstSession, secondSession)
-        context.browser.tabDragState.end(session: firstSession)
-        XCTAssertEqual(context.browser.tabDragState.item, context.item)
-        XCTAssertEqual(context.browser.tabDragState.sessionToken, secondSession)
+        context.sidebarInteraction.tabDragState.end(session: firstSession)
+        XCTAssertEqual(context.sidebarInteraction.tabDragState.item, context.item)
+        XCTAssertEqual(context.sidebarInteraction.tabDragState.sessionToken, secondSession)
 
-        context.browser.tabDragState.end(session: secondSession)
-        XCTAssertNil(context.browser.tabDragState.item)
-        XCTAssertNil(context.browser.tabDragState.sessionToken)
+        context.sidebarInteraction.tabDragState.end(session: secondSession)
+        XCTAssertNil(context.sidebarInteraction.tabDragState.item)
+        XCTAssertNil(context.sidebarInteraction.tabDragState.sessionToken)
     }
 
     func testExactStoreMoveWithDuplicateTabIDsMutatesOnlyTheCapturedSource() throws {
@@ -222,8 +222,9 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             spaceID: capturedSource.id,
             profileID: capturedSource.profile.id
         )
-        let token = browser.tabDragState.begin(item: item, placement: .current)
-        defer { browser.tabDragState.end(session: token) }
+        let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        let token = sidebarInteraction.tabDragState.begin(item: item, placement: .current)
+        defer { sidebarInteraction.tabDragState.end(session: token) }
 
         XCTAssertTrue(
             browser.moveTab(
@@ -406,7 +407,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     /// for the whole stack, and the neighbour has to step over all of it.
     func testAStagedMobileSplitGroupLiftPromotesAndCommitsTheWholeRun() throws {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
             folderID: nil
@@ -483,7 +484,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     /// and forth.
     func testMobileSplitGroupLiftClosesItsWholeMixedHeightSlot() {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
             folderID: nil
@@ -543,7 +544,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     /// offset back into the next one and can push a current tab into Saved.
     func testActiveDragKeepsTheRestingRowGeometryStable() {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
             folderID: nil
@@ -640,7 +641,8 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             spaces: [space],
             selectedSpaceID: space.id
         )
-        let state = browser.sidebarReorderState
+        let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        let state = sidebarInteraction.sidebarReorderState
         let pinned = BrowserSidebarReorderSection.tabs(
             placement: .pinned,
             folderID: nil
@@ -733,7 +735,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
     /// header's highlight is drawn from.
     func testACollapsedFolderReportsItselfAsTheNestingTargetWhileLifted() {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let folderID = FolderID()
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
@@ -1097,7 +1099,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
 
     func testOffscreenExpandedFolderCannotStealAPinnedDrop() {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let scrollRegionID = UUID()
         let viewport = CGRect(x: 8, y: 220, width: 374, height: 320)
         let currentSection = BrowserSidebarReorderSection.tabs(
@@ -1172,7 +1174,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
 
     func testScrollingDuringLiftMovesFrozenRowsAndAcceptsNewLazyRows() {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let scrollRegionID = UUID()
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
@@ -1242,7 +1244,7 @@ final class BrowserTabDragSafetyTests: XCTestCase {
 
     func testOffscreenRowsStillCountTowardAScrolledSectionsInsertionIndex() {
         let context = makeSplitContext()
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         let scrollRegionID = UUID()
         let section = BrowserSidebarReorderSection.tabs(
             placement: .current,
@@ -1485,12 +1487,26 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         )
     }
 
+    @MainActor
     private struct Context {
+        let sidebarInteraction: BrowserSidebarInteractionState
         let browser: BrowserStore
         let spaceAccess: BrowserSpaceAccessController
         let source: BrowserSpace
         let destination: BrowserSpace
         let tab: BrowserTab
+
+        init(
+            browser: BrowserStore, spaceAccess: BrowserSpaceAccessController, source: BrowserSpace,
+            destination: BrowserSpace, tab: BrowserTab
+        ) {
+            self.browser = browser
+            self.spaceAccess = spaceAccess
+            self.source = source
+            self.destination = destination
+            self.tab = tab
+            sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        }
 
         var sourceAssignment: BrowserSpaceRuntimeAssignment {
             BrowserSpaceRuntimeAssignment(space: source)
@@ -1509,13 +1525,28 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         }
     }
 
+    @MainActor
     private struct SplitContext {
+        let sidebarInteraction: BrowserSidebarInteractionState
         let browser: BrowserStore
         let spaceAccess: BrowserSpaceAccessController
         let space: BrowserSpace
         let groupID: SplitGroupID
         let members: [BrowserTab]
         let outsider: BrowserTab
+
+        init(
+            browser: BrowserStore, spaceAccess: BrowserSpaceAccessController, space: BrowserSpace,
+            groupID: SplitGroupID, members: [BrowserTab], outsider: BrowserTab
+        ) {
+            self.browser = browser
+            self.spaceAccess = spaceAccess
+            self.space = space
+            self.groupID = groupID
+            self.members = members
+            self.outsider = outsider
+            sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        }
 
         var assignment: BrowserSpaceRuntimeAssignment {
             BrowserSpaceRuntimeAssignment(space: space)

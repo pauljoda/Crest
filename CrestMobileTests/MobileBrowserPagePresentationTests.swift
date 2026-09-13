@@ -98,6 +98,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
         let firstPort = MobileSelectedPageActionPort(
             browser: browser,
             pages: pages,
+            spaceAccess: BrowserSpaceAccessController(),
             expectedAssignment: assignment(tab: firstTab, space: firstSpace)
         )
 
@@ -109,6 +110,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
         let secondPort = MobileSelectedPageActionPort(
             browser: browser,
             pages: pages,
+            spaceAccess: BrowserSpaceAccessController(),
             expectedAssignment: assignment(tab: secondTab, space: secondSpace)
         )
 
@@ -141,6 +143,7 @@ final class MobileBrowserPagePresentationTests: XCTestCase {
         let wrongProfilePort = MobileSelectedPageActionPort(
             browser: browser,
             pages: pages,
+            spaceAccess: BrowserSpaceAccessController(),
             expectedAssignment: BrowserTabRuntimeAssignment(
                 tabID: secondTab.id,
                 spaceID: secondSpace.id,

@@ -9,6 +9,8 @@ import SwiftUI
 /// `BrowserSidebarInteractionPolicy` rather than from which target compiled
 /// the file, so the two shells share this row instead of a resemblance.
 struct BrowserSidebarTabRow: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let tab: BrowserTab
     let spaceID: SpaceID
     let profileID: UUID
@@ -124,7 +126,7 @@ struct BrowserSidebarTabRow: View {
         // the button would suppress the lift — so the release that ends a
         // reorder also arrives here. Reject it rather than opening the tab that
         // was just moved.
-        guard !browser.sidebarReorderState.suppressesActivation else { return }
+        guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
         select(tab.id)
     }
 

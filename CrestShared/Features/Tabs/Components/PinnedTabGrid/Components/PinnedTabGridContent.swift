@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PinnedTabGridContent: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let tabs: [BrowserTab]
     let assignment: BrowserSpaceRuntimeAssignment
     let selectedTabID: TabID?
@@ -56,7 +57,8 @@ struct PinnedTabGridContent: View {
         else { return nil }
         return BrowserSidebarReorderContext(
             browser: browser,
-            spaceAccess: spaceAccess
+            spaceAccess: spaceAccess,
+            state: sidebarInteraction.sidebarReorderState
         )
     }
 

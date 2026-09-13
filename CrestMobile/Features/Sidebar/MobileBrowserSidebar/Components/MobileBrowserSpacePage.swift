@@ -8,6 +8,7 @@ import SwiftUI
 /// that covers the whole sidebar, and the page-facing closures only a single
 /// compact page can answer.
 struct MobileBrowserSpacePage: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let space: BrowserSpace
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
@@ -110,7 +111,7 @@ struct MobileBrowserSpacePage: View {
     private var tabActions: BrowserSidebarTabActions {
         BrowserSidebarTabActions(
             assignment: assignment,
-            browser: browser,
+            browser: browser, reorderState: sidebarInteraction.sidebarReorderState,
             pages: pages,
             spaceAccess: spaceAccess
         )

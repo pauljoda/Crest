@@ -18,27 +18,12 @@ struct BrowserNativeTabHost: View {
             {
                 switch content.kind {
                 case BrowserNativeTabContent.gettingStarted.kind:
-                    #if os(macOS)
-                        BrowserGettingStartedView(
-                            state: runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
-                        ) { url in
-                            actions.openURL(assignment, content, url)
-                        }
-                    #else
-                        BrowserMobileGettingStartedView(
-                            showsCompactNavigation: bottomChromeHeight > 0,
-                            state: runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() })
-                    #endif
+                    BrowserGettingStartedTabAdapter(runtime: runtime, bottomChromeHeight: bottomChromeHeight) { url in
+                        actions.openURL(assignment, content, url)
+                    }
                 case BrowserNativeTabContent.settings.kind:
                     if let settingsContent {
-                        #if os(macOS)
-                            settingsContent.makeView(runtime)
-                        #else
-                            Button("Open Settings", systemImage: "gearshape") {
-                                settingsContent.present(assignment)
-                            }
-                            .buttonStyle(.borderedProminent)
-                        #endif
+                        settingsContent.makeView(runtime)
                     } else {
                         ContentUnavailableView("Settings unavailable", systemImage: "gearshape")
                     }

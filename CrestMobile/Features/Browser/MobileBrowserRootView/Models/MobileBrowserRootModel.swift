@@ -6,19 +6,20 @@ import SwiftUI
 @MainActor
 final class MobileBrowserRootModel {
     let browser: BrowserStore
+    let sidebarInteraction: BrowserSidebarInteractionState
     let pages: MobileBrowserPageStore
     let navigation: MobileBrowserNavigationState
     let spaceAccess: BrowserSpaceAccessController
+    private let pageSession: BrowserPageSessionSynchronizer
     let windowState: BrowserWindowStateStore?
+    private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: BrowserStartupBehavior
 
     var address = ""
     var hasPreparedBrowser = false
     var showsSettings = false
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
-    /// Live column fractions for the presented split, seeded from this window's
-    /// stored layout whenever membership changes. Pointer-rate resizing lives in
-    /// the transaction so a divider drag is not a persistence event per frame.
+    /// Live widths stay local until the divider drag commits.
     var splitWidthTransaction = BrowserSplitWidthTransaction(
         persistedFractions: []
     )
@@ -33,10 +34,13 @@ final class MobileBrowserRootModel {
         persistedSidebarWidth: CGFloat
     ) {
         self.browser = browser
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         self.pages = pages
         self.navigation = navigation
         self.spaceAccess = spaceAccess
+        pageSession = BrowserPageSessionSynchronizer(browser: browser, spaceAccess: spaceAccess)
         self.windowState = windowState
+        layoutPersistence = BrowserWindowLayoutPersistence(windowState: windowState)
         self.startupBehavior = startupBehavior
         sidebarWidthTransaction = BrowserSidebarWidthTransaction(
             persistedWidth: persistedSidebarWidth
@@ -66,9 +70,7 @@ extension MobileBrowserRootModel {
         synchronizeSelection()
     }
 
-    /// Brings resident pages back in line with the tabs the session still has,
-    /// releasing pages whose tab moved to another Space or profile and dropping
-    /// the archived state of tabs that are gone for good.
+    /// Releases moved pages and discards archived state for removed tabs.
     func reconcileResidentPages() {
         pages.reconcile(session: browser.session)
     }
@@ -77,9 +79,7 @@ extension MobileBrowserRootModel {
         pages.reconcileTabIcons(in: browser.session)
     }
 
-    /// Carries each Space's "save passwords" preference into the running pages, so
-    /// turning it off takes effect on the surface the user is looking at rather
-    /// than only on the next page they open.
+    /// Applies current Space credential preferences to resident pages.
     func reconcileCredentialAccess() {
         pages.reconcileCredentialAccess(in: browser.session)
     }
@@ -142,29 +142,19 @@ extension MobileBrowserRootModel {
 
 extension MobileBrowserRootModel {
     func synchronizePageMetadata(isAddressEditing: Bool) {
-        guard let page = selectedPage else { return }
-        browser.updateSelectedTabFromPage(
-            url: page.displayURL,
-            title: page.navigationFailure?.displayHost ?? page.title,
-            faviconData: page.faviconData,
-            iconAccent: page.siteThemeIconAccent
-        )
-        if !isAddressEditing {
-            address =
-                (page.displayURL ?? browser.selectedTab?.url)?.absoluteString
-                ?? ""
-        }
+        guard let page = selectedPage, let source = selectedTabAssignment,
+            let updatedAddress = pageSession.synchronize(page.metadata, matching: source)
+        else { return }
+        if !isAddressEditing { address = updatedAddress }
     }
 
     func recordCompletedNavigation(isAddressEditing: Bool) {
-        guard let page = selectedPage,
-            let url = page.url
-        else { return }
+        guard let page = selectedPage, page.url != nil, let source = selectedTabAssignment else { return }
         synchronizePageMetadata(isAddressEditing: isAddressEditing)
-        browser.recordVisit(url: url, title: page.title)
-        guard let space = browser.selectedSpace else { return }
+        guard let space = pageSession.recordCompletedNavigation(page.metadata, matching: source) else { return }
         Task { await pages.styleVisitedLinks(in: space) }
     }
+
 }
 
 // MARK: - Navigation
@@ -305,7 +295,7 @@ extension MobileBrowserRootModel {
     }
 
     var selectedPageActions: MobileSelectedPageActionPort? {
-        MobileSelectedPageActionPort(browser: browser, pages: pages)
+        MobileSelectedPageActionPort(browser: browser, pages: pages, spaceAccess: spaceAccess)
     }
 
     var selectedPage: MobileBrowserPage? {
@@ -397,21 +387,11 @@ extension MobileBrowserRootModel {
     }
 
     func restoreSidebarWidth(_ width: CGFloat) {
-        guard windowState == nil else { return }
-        guard width != sidebarWidthTransaction.persistedWidth else { return }
-        sidebarWidthTransaction.restore(persistedWidth: width)
+        layoutPersistence.restoreSidebarWidth(width, transaction: &sidebarWidthTransaction)
     }
 
     func commitSidebarWidth(_ width: CGFloat) -> CGFloat? {
-        sidebarWidthTransaction.resize(to: width)
-        guard let committedWidth = sidebarWidthTransaction.commit() else {
-            return nil
-        }
-        if let windowState {
-            windowState.captureSidebar(width: Double(committedWidth))
-            return nil
-        }
-        return committedWidth
+        layoutPersistence.commitSidebarWidth(width, transaction: &sidebarWidthTransaction)
     }
 
     func revealSidebarForUtilityCommand(
@@ -497,38 +477,17 @@ extension MobileBrowserRootModel {
         )
     }
 
-    /// Adopts the layout this window last stored for the presented group.
-    ///
-    /// Called whenever the presented membership changes — a different group, a
-    /// member joining or leaving, members reordering — because fractions are
-    /// positional and a list written for one arrangement means nothing under
-    /// another. A group this window has never resized starts as equal columns.
     func seedSplitColumnFractions() {
-        let members = presentedSplitMembers
-        guard !members.isEmpty else { return }
-        let persisted = presentedSplitGroupID.flatMap { groupID in
-            windowState?.splitColumnFractions(for: groupID)
-        }
-        splitWidthTransaction.begin(
-            fractions: BrowserSplitLayoutSeedPolicy.fractions(
-                persisted: persisted,
-                memberCount: members.count
-            )
+        layoutPersistence.seedSplitLayout(
+            groupID: presentedSplitGroupID, memberCount: presentedSplitMembers.count,
+            transaction: &splitWidthTransaction
         )
     }
 
-    /// Records what a completed divider drag settled on. Column widths are a
-    /// per-window, device-local preference and never reach the session or sync.
     func commitSplitColumnFractions(_ fractions: [Double]) {
-        guard let windowState, let groupID = presentedSplitGroupID else { return }
-        windowState.captureSplitLayout(fractions: fractions, for: groupID)
+        layoutPersistence.commitSplitLayout(fractions, groupID: presentedSplitGroupID)
     }
 
-    /// Makes one presented card the focused card.
-    ///
-    /// Focus *is* selection, so this is an ordinary selection change: the
-    /// existing selection observer re-presents the group with the new focus and
-    /// every chrome surface follows without a second focus state anywhere.
     func focusSplitCard(_ tabID: TabID) {
         guard tabID != browser.selectedTab?.id,
             let member = presentedSplitMembers.first(where: { $0.id == tabID }),
@@ -585,7 +544,7 @@ extension MobileBrowserRootModel {
 // MARK: - Command Palette
 
 extension MobileBrowserRootModel {
-    var paletteSourceAssignment: BrowserTabRuntimeAssignment? {
+    var selectedTabAssignment: BrowserTabRuntimeAssignment? {
         guard let space = browser.selectedSpace, let tab = browser.selectedTab else {
             return nil
         }

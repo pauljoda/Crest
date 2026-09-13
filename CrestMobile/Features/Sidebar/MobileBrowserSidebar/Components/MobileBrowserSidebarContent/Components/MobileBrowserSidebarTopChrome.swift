@@ -105,7 +105,8 @@ struct MobileBrowserSidebarTopChrome: View {
     private var selectedPageActions: MobileSelectedPageActionPort? {
         MobileSelectedPageActionPort(
             browser: configuration.context.browser,
-            pages: configuration.pages
+            pages: configuration.pages,
+            spaceAccess: configuration.context.spaceAccess
         )
     }
 

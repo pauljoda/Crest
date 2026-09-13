@@ -8,6 +8,8 @@ import SwiftUI
 /// in: with no rows left it sits directly below the new-tab row, where the
 /// first current tab would appear.
 struct BrowserCurrentTabsEndDropTarget: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let tabs: [BrowserTab]
     let browser: BrowserStore
     let capabilities: BrowserInteractionCapabilities
@@ -22,7 +24,7 @@ struct BrowserCurrentTabsEndDropTarget: View {
                 ) {
                     BrowserTabDropIndicator(
                         location: dropLocation,
-                        dragState: browser.tabDragState,
+                        dragState: sidebarInteraction.tabDragState,
                         isTargeted: false
                     )
                 }

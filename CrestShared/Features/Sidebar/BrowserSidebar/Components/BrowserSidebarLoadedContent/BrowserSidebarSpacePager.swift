@@ -33,10 +33,10 @@ struct BrowserSidebarSpacePager<Page: View>: View {
             .onGeometryChange(for: CGRect.self) { proxy in
                 proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
             } action: { frame in
-                context.browser.sidebarReorderState.register(sidebarViewport: frame, for: dropViewportID)
+                context.sidebarInteraction.sidebarReorderState.register(sidebarViewport: frame, for: dropViewportID)
             }
             .onDisappear {
-                context.browser.sidebarReorderState.removeSidebarViewport(for: dropViewportID)
+                context.sidebarInteraction.sidebarReorderState.removeSidebarViewport(for: dropViewportID)
             }
         }
     }
@@ -53,9 +53,9 @@ struct BrowserSidebarSpacePager<Page: View>: View {
     /// rows its drop was aimed at for another Space's.
     private var isInteractionLocked: Bool {
         BrowserSpacePagerPolicy.isInteractionLocked(
-            hasSidebarLift: context.browser.sidebarReorderState.hasLiftInFlight,
-            hasTabDrag: context.browser.tabDragState.item != nil,
-            hasFolderDrag: context.browser.folderDragState.item != nil
+            hasSidebarLift: context.sidebarInteraction.sidebarReorderState.hasLiftInFlight,
+            hasTabDrag: context.sidebarInteraction.tabDragState.item != nil,
+            hasFolderDrag: context.sidebarInteraction.folderDragState.item != nil
         )
     }
 }

@@ -7,6 +7,8 @@ import SwiftUI
 /// start below the new-tab row, which is where a cleared list has to show that
 /// it will still take a drop.
 struct BrowserCurrentTabsDropSection: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let space: BrowserSpace
     let tabSections: BrowserTabSections
     let browser: BrowserStore
@@ -46,7 +48,7 @@ struct BrowserCurrentTabsDropSection: View {
                 )
                 .browserSidebarReorderSectionIndicator(
                     section,
-                    state: browser.sidebarReorderState
+                    state: sidebarInteraction.sidebarReorderState
                 )
             } else {
                 VStack(spacing: 0) {
@@ -64,7 +66,7 @@ struct BrowserCurrentTabsDropSection: View {
                 }
                 .browserSidebarReorderSectionIndicator(
                     section,
-                    state: browser.sidebarReorderState
+                    state: sidebarInteraction.sidebarReorderState
                 )
             }
         }
@@ -72,12 +74,12 @@ struct BrowserCurrentTabsDropSection: View {
         .contentShape(.rect)
         .browserSidebarReorderZone(
             .section(section),
-            state: browser.sidebarReorderState
+            state: sidebarInteraction.sidebarReorderState
         )
         .modifier(
             BrowserSidebarSectionReservation(
                 section: section,
-                state: browser.sidebarReorderState,
+                state: sidebarInteraction.sidebarReorderState,
                 capabilities: capabilities
             )
         )
@@ -146,9 +148,9 @@ struct BrowserCurrentTabsDropSection: View {
                     select: select
                 )
                 #if os(macOS)
-                // Resolve collection movement once for the whole row, including
-                // native controls and SwiftUI drawing layers.
-                .geometryGroup()
+                    // Resolve collection movement once for the whole row, including
+                    // native controls and SwiftUI drawing layers.
+                    .geometryGroup()
                 #endif
                 .id(tab.id)
             case .splitGroup(let groupID, let members):
@@ -174,7 +176,7 @@ struct BrowserCurrentTabsDropSection: View {
                     select: select
                 )
                 #if os(macOS)
-                .geometryGroup()
+                    .geometryGroup()
                 #endif
             }
         }

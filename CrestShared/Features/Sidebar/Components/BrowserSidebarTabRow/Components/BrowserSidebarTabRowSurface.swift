@@ -24,6 +24,8 @@ import UniformTypeIdentifiers
 /// `BrowserInteractionCapabilities.pairsRowWithPromotedSurface` exist to keep
 /// from happening.
 struct BrowserSidebarTabRowSurface: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserSidebarTabRowConfiguration
     let interaction: BrowserSidebarTabRowInteractionContext
 
@@ -87,10 +89,11 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 tab: configuration.tab,
                 profileID: configuration.profileID,
                 spaceID: configuration.spaceID,
-                dragState: configuration.browser.tabDragState,
+                dragState: sidebarInteraction.tabDragState,
                 reorder: BrowserSidebarReorderContext(
                     browser: configuration.browser,
-                    spaceAccess: configuration.spaceAccess
+                    spaceAccess: configuration.spaceAccess,
+                    state: sidebarInteraction.sidebarReorderState
                 ),
                 // Disabled means no lift gesture *and* no registered reorder
                 // frame, so a grouped member neither drags out on its own nor
@@ -110,7 +113,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             )
             .browserSidebarReorderZone(
                 .currentTab(configuration.tab.id),
-                state: configuration.browser.sidebarReorderState,
+                state: sidebarInteraction.sidebarReorderState,
                 isActive: configuration.tab.placement == .current
                     && configuration.tab.folderID == nil
                     && configuration.tab.splitGroupID == nil
@@ -119,7 +122,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             )
             .overlay {
                 BrowserFolderNestDropHighlight(
-                    isTargeted: configuration.browser.sidebarReorderState.resolvedTarget?.kind
+                    isTargeted: sidebarInteraction.sidebarReorderState.resolvedTarget?.kind
                         == .createCurrentFolder(configuration.tab.id)
                 )
                 .allowsHitTesting(false)
@@ -154,18 +157,18 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
         )
         .tint(.primary)
         .onAppear {
-            configuration.browser.tabDragState.contextMenuDidOpen(
+            sidebarInteraction.tabDragState.contextMenuDidOpen(
                 for: configuration.runtimeAssignment
             )
             // Both states, because the two lifts are different machines: the
             // pointer drag reports through `tabDragState`, and the touch lift
             // through the reorder state, which has no session left to hear
             // from once this menu has the press.
-            configuration.browser.sidebarReorderState
+            sidebarInteraction.sidebarReorderState
                 .yieldToCompetingInteraction()
         }
         .onDisappear {
-            configuration.browser.tabDragState.contextMenuDidClose(
+            sidebarInteraction.tabDragState.contextMenuDidClose(
                 for: configuration.runtimeAssignment
             )
         }

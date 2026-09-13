@@ -44,8 +44,8 @@ struct MobileRegularPageSurface: View {
             } ?? false,
             selectedTabID: model.browser.selectedTab?.id,
             hasEnteredSplitContent:
-                model.browser.sidebarReorderState.hasEnteredSplitContent,
-            resolvedTarget: model.browser.sidebarReorderState.resolvedTarget,
+                model.sidebarInteraction.sidebarReorderState.hasEnteredSplitContent,
+            resolvedTarget: model.sidebarInteraction.sidebarReorderState.resolvedTarget,
             presentsTrailingPanel: false
         )
     }
@@ -55,7 +55,7 @@ struct MobileRegularPageSurface: View {
         return surface(presentation)
             .browserSplitContentDropZone(
                 assignment: presentation.dropAssignment,
-                state: model.browser.sidebarReorderState
+                state: model.sidebarInteraction.sidebarReorderState
             )
             .modifier(
                 MobileSplitContentDropFeed(
@@ -127,7 +127,7 @@ struct MobileRegularPageSurface: View {
             .browserSplitDropCardFrame(
                 tabID: presentation.singleCardTabID,
                 assignment: presentation.dropAssignment,
-                state: model.browser.sidebarReorderState
+                state: model.sidebarInteraction.sidebarReorderState
             )
         }
     }

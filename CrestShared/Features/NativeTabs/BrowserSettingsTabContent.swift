@@ -1,15 +1,5 @@
 import SwiftUI
 
-/// Desktop supplies its Settings view; mobile supplies its sheet action. Neither
-/// belongs in the saved tab, which contains only the stable content kind.
-struct BrowserSettingsTabContent {
-    #if os(macOS)
-        let makeView: @MainActor (BrowserNativeTabRuntime) -> BrowserSettingsView
-    #else
-        let present: @MainActor (BrowserTabRuntimeAssignment) -> Void
-    #endif
-}
-
 private struct BrowserSettingsTabContentKey: EnvironmentKey {
     static let defaultValue: BrowserSettingsTabContent? = nil
 }

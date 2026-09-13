@@ -10,9 +10,9 @@ struct MobileBrowserSidebarContent: View {
             MobileBrowserSidebarLayout(configuration: configuration)
                 .gesture(
                     MobileDragReleaseGesture {
-                        configuration.context.browser.tabDragState
+                        configuration.context.sidebarInteraction.tabDragState
                             .endAfterTouchRelease()
-                        configuration.context.browser.folderDragState
+                        configuration.context.sidebarInteraction.folderDragState
                             .endAfterTouchRelease()
                     }
                 )

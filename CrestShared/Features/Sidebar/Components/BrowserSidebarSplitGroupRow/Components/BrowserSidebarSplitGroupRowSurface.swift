@@ -3,6 +3,8 @@ import SwiftUI
 /// The grouped container a split's tab rows sit in: one surface, one drag
 /// source, one set of drop anchors, and one context menu for the whole run.
 struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
@@ -73,7 +75,7 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                     // rows do, and the menu that wins the press leaves no session
                     // to report the lift ended. See `yieldToCompetingInteraction`.
                     .onAppear {
-                        configuration.browser.sidebarReorderState
+                        sidebarInteraction.sidebarReorderState
                             .yieldToCompetingInteraction()
                     }
                 }

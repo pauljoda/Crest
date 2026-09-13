@@ -13,6 +13,7 @@ import SwiftUI
 /// them once, in the root's body, for every view the shell hangs off this.
 @MainActor
 struct BrowserSidebarContext {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let browser: BrowserStore
     let pageAccess: BrowserSidebarPageAccess
     let spaceAccess: BrowserSpaceAccessController

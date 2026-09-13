@@ -74,7 +74,8 @@
                 .browserNativeScrollState(state.scroll)
                 .background(CrestBrandTheme.canvas)
             }
-            .onDisappear { _ = practice.browser.sidebarReorderState.end() }
+            .environment(practice.sidebarInteraction)
+            .onDisappear { practice.sidebarInteraction.cancel() }
             .animation(reduceMotion ? nil : CrestMotion.collection, value: practice.space.tabs)
 
         }

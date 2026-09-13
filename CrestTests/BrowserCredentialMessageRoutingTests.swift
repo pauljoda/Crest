@@ -85,6 +85,73 @@ final class BrowserCredentialMessageRoutingTests: XCTestCase {
         page.dismissCredentialSaveCandidate()
     }
 
+    func testPageFillsTheRequestedPasswordFieldAndRevocationRejectsFurtherFills() async throws {
+        let page = try makePage()
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: try XCTUnwrap(URL(string: "https://login.crest.test/oauth"))),
+            responseHTML: Self.loginDocument
+        )
+        try await waitUntil { page.completedNavigationCount == 1 }
+        let request = try await focusPassword(in: page)
+        let credential = BrowserCredential(
+            descriptor: CredentialDescriptor(
+                spaceID: page.spaceID, origin: request.origin,
+                username: "saved@example.com", createdAt: .now
+            ),
+            password: "saved-secret"
+        )
+
+        try await page.fillCredential(credential, for: request.id)
+        XCTAssertNil(page.credentialFillRequest)
+        let filled =
+            try await page.webView.evaluateJavaScript(
+                "[document.querySelector('input[autocomplete=username]').value, document.querySelector('input[type=password]').value]"
+            ) as? [String]
+        XCTAssertEqual(filled, ["saved@example.com", "saved-secret"])
+
+        _ = try await page.webView.evaluateJavaScript(
+            "document.querySelector('input[type=password]').autocomplete = 'new-password'"
+        )
+        let generationRequest = try await focusPassword(in: page)
+        try await page.fillGeneratedPassword("generated-secret", for: generationRequest.id)
+        XCTAssertNil(page.credentialFillRequest)
+
+        let revokedRequest = try await focusPassword(in: page)
+        page.setCredentialAccessEnabled(false)
+        XCTAssertNil(page.credentialFillRequest)
+        do {
+            try await page.fillGeneratedPassword("rejected-secret", for: revokedRequest.id)
+            XCTFail("A revoked credential request must not fill the page")
+        } catch {
+            XCTAssertEqual(error as? BrowserCredentialFillError, .staleOrMismatchedRequest)
+        }
+        let password =
+            try await page.webView.evaluateJavaScript(
+                "document.querySelector('input[type=password]').value"
+            ) as? String
+        XCTAssertEqual(password, "generated-secret")
+    }
+
+    private func focusPassword(in page: BrowserPage) async throws -> BrowserCredentialFillRequest {
+        let previousRequestID = page.credentialFillRequest?.id
+        let focused = try await page.webView.callAsyncJavaScript(
+            """
+            const input = document.querySelector(selector);
+            input.blur();
+            input.focus();
+            return document.activeElement === input;
+            """,
+            arguments: ["selector": "input[type=password]"],
+            in: nil,
+            contentWorld: .page
+        )
+        XCTAssertEqual(focused as? Bool, true)
+        try await waitUntil {
+            page.credentialFillRequest != nil && page.credentialFillRequest?.id != previousRequestID
+        }
+        return try XCTUnwrap(page.credentialFillRequest)
+    }
+
     private static let loginDocument = """
         <!doctype html>
         <style>input { display: block; width: 220px; height: 32px; }</style>

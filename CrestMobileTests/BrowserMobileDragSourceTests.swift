@@ -10,7 +10,7 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
     ) -> UIContextMenuConfiguration? { nil }
 
     func testNativeCompletionBelongsToItsSessionAndPreservesSwiftUIDropMetadata() throws {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+        let window = try makeWindow()
         window.isHidden = false
         defer { window.isHidden = true }
         let host = UIView(frame: window.bounds)
@@ -46,8 +46,8 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
         XCTAssertFalse(host.interactions.contains { $0 is UIDragInteraction })
     }
 
-    func testAbandonedNativeProviderQueryReleasesResourcesWhenSourceLeaves() {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+    func testAbandonedNativeProviderQueryReleasesResourcesWhenSourceLeaves() throws {
+        let window = try makeWindow()
         window.isHidden = false
         defer { window.isHidden = true }
         let host = UIView(frame: window.bounds)
@@ -75,9 +75,7 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
     }
 
     func testCancelledLiftReleasesReorderLockWithoutEndingANewerDrag() throws {
-        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
-        let window = UIWindow(windowScene: scene)
-        window.frame = CGRect(x: 0, y: 0, width: 320, height: 640)
+        let window = try makeWindow()
         window.isHidden = false
         defer { window.isHidden = true }
         let host = UIView(frame: window.bounds)
@@ -127,7 +125,7 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
     }
 
     func testHeldPreviewChangesShapeWithoutRestagingOrRenderingEveryMovement() throws {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+        let window = try makeWindow()
         window.isHidden = false
         defer { window.isHidden = true }
         let host = UIView(frame: window.bounds)
@@ -176,7 +174,7 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
     }
 
     func testSourceSelectionRespectsNestedRowsClippingAndHiddenAncestors() throws {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+        let window = try makeWindow()
         window.isHidden = false
         defer { window.isHidden = true }
         let host = UIView(frame: window.bounds)
@@ -230,7 +228,7 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
     }
 
     func testDropUsesOriginatingSessionWhenUIKitCopiesTheDragItem() throws {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 640))
+        let window = try makeWindow()
         window.isHidden = false
         defer { window.isHidden = true }
         let host = UIView(frame: window.bounds)
@@ -262,6 +260,13 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
         anchor.removeFromSuperview()
     }
 
+    private func makeWindow() throws -> UIWindow {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 320, height: 640)
+        return window
+    }
+
     private func source(name: String, frame: CGRect, began: @escaping (String) -> Void) -> BrowserMobileDragAnchor {
         let source = BrowserMobileDragAnchor()
         source.frame = frame
@@ -280,7 +285,7 @@ final class BrowserMobileDragSourceTests: XCTestCase, UIContextMenuInteractionDe
             completions.append(completion)
         }
         func complete(at position: UIViewAnimatingPosition) {
-            completions.forEach { $0(position) }
+            for completion in completions { completion(position) }
         }
     }
 

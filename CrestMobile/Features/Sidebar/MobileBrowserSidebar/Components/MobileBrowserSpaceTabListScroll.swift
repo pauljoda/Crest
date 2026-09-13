@@ -8,6 +8,8 @@ import SwiftUI
 /// for the same reason — a row that materializes offscreen has no frame for the
 /// transition to grow from.
 struct MobileBrowserSpaceTabListScroll<Content: View>: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let space: BrowserSpace
     let browser: BrowserStore
     let compactPageIsFullyPresented: Bool
@@ -39,12 +41,12 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: geometry.size.height, alignment: .top)
                 }
-                .modifier(SidebarScrollAffordance(isDragging: browser.sidebarReorderState.isDragging))
+                .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
                 .scrollClipDisabled(
                     !BrowserSidebarReorderVisuals.clipsScrollableRegion(
                         clipsWhenIdle: BrowserSidebarScrollLayoutPolicy
                             .clipsScrollableRegion,
-                        isDragging: browser.sidebarReorderState.isDragging
+                        isDragging: sidebarInteraction.sidebarReorderState.isDragging
                     )
                 )
                 .simultaneousGesture(

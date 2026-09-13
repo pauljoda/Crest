@@ -4,6 +4,8 @@ import SwiftUI
 /// surface, the drag source, and the drop feedback that belong to the folder
 /// rather than to its contents.
 struct BrowserFolderHeader: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
 
@@ -42,11 +44,12 @@ struct BrowserFolderHeader: View {
             folder: folder,
             profileID: configuration.profileID,
             spaceID: configuration.spaceID,
-            dragState: configuration.browser.folderDragState,
+            dragState: sidebarInteraction.folderDragState,
             memberTabIDs: configuration.subtreeTabIDs,
             reorder: BrowserSidebarReorderContext(
                 browser: configuration.browser,
-                spaceAccess: configuration.spaceAccess
+                spaceAccess: configuration.spaceAccess,
+                state: sidebarInteraction.sidebarReorderState
             ),
             isEnabled: interaction.editingFolderRequest.wrappedValue
                 != configuration.folderRuntimeAssignment

@@ -33,7 +33,7 @@ final class BrowserTabDragState {
         dropLocation = nil
         liveMoveCount = 0
         expirationTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(30))
+            try? await Task.sleep(for: BrowserDragReleaseFallbackPolicy.sessionExpiration)
             guard !Task.isCancelled else { return }
             self?.end(session: token)
         }

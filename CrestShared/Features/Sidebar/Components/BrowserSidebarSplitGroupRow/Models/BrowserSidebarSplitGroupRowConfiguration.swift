@@ -9,6 +9,7 @@ import SwiftUI
 /// of them.
 @MainActor
 struct BrowserSidebarSplitGroupRowConfiguration {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let groupID: SplitGroupID
     let members: [BrowserTab]
     let spaceID: SpaceID
@@ -158,7 +159,8 @@ struct BrowserSidebarSplitGroupRowConfiguration {
     var reorderContext: BrowserSidebarReorderContext {
         BrowserSidebarReorderContext(
             browser: browser,
-            spaceAccess: spaceAccess
+            spaceAccess: spaceAccess,
+            state: sidebarInteraction.sidebarReorderState
         )
     }
 

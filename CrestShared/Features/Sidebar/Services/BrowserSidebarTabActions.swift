@@ -12,6 +12,7 @@ import Foundation
 @MainActor
 struct BrowserSidebarTabActions {
     let assignment: BrowserSpaceRuntimeAssignment
+    private let reorderState: BrowserSidebarReorderState
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
 
@@ -31,6 +32,7 @@ struct BrowserSidebarTabActions {
     init(
         assignment: BrowserSpaceRuntimeAssignment,
         browser: BrowserStore,
+        reorderState: BrowserSidebarReorderState,
         spaceAccess: BrowserSpaceAccessController,
         syncPagesAfterMutation: @escaping @MainActor () -> Void,
         pullFavicon:
@@ -41,6 +43,7 @@ struct BrowserSidebarTabActions {
     ) {
         self.assignment = assignment
         self.browser = browser
+        self.reorderState = reorderState
         self.spaceAccess = spaceAccess
         self.syncPagesAfterMutation = syncPagesAfterMutation
         self.pullFavicon = pullFavicon
@@ -85,7 +88,7 @@ struct BrowserSidebarTabActions {
     /// command. Recheck ownership when the gesture ends, after any Space change.
     @discardableResult
     func openNewTab(_ command: () -> Void) -> Bool {
-        guard !browser.sidebarReorderState.isDragging,
+        guard !reorderState.isDragging,
             BrowserSidebarAccessPolicy.selectedUnlockedSpace(
                 matching: assignment,
                 in: browser,

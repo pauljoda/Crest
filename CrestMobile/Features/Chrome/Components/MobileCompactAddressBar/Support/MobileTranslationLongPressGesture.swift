@@ -2,13 +2,15 @@ import SwiftUI
 import UIKit
 
 struct MobileTranslationLongPressGesture: UIGestureRecognizerRepresentable {
+    private static let minimumPressDuration: TimeInterval = 0.4
+
     let action: @MainActor () -> Void
 
     func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
 
     func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
         let gesture = UILongPressGestureRecognizer()
-        gesture.minimumPressDuration = 0.4
+        gesture.minimumPressDuration = Self.minimumPressDuration
         gesture.cancelsTouchesInView = true
         gesture.delegate = context.coordinator
         return gesture

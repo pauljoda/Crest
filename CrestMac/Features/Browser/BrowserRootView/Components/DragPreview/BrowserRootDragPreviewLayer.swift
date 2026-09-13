@@ -22,8 +22,8 @@ struct BrowserRootDragPreviewLayer: View {
     var body: some View {
         BrowserDragPreviewWindowBridge(
             content: content,
-            onSidebarLandingComplete: model.browser.sidebarReorderState.finishLanding,
-            onSidebarLandingArrived: model.browser.sidebarReorderState.revealLanding
+            onSidebarLandingComplete: model.sidebarInteraction.sidebarReorderState.finishLanding,
+            onSidebarLandingArrived: model.sidebarInteraction.sidebarReorderState.revealLanding
         )
         .frame(width: 0, height: 0)
         .allowsHitTesting(false)
@@ -64,7 +64,7 @@ struct BrowserRootDragPreviewLayer: View {
     /// the selected Space's rows as drag sources, so a lift that reaches this
     /// point is one of these by construction.
     private var sidebarLiftContent: BrowserSidebarLiftPreviewContent? {
-        guard let lift = model.browser.sidebarReorderState.floatingLift,
+        guard let lift = model.sidebarInteraction.sidebarReorderState.floatingLift,
             let space = model.browser.selectedSpace,
             let subject = subject(for: lift.item, in: space)
         else { return nil }
@@ -81,9 +81,9 @@ struct BrowserRootDragPreviewLayer: View {
         for item: BrowserSidebarReorderItem,
         in space: BrowserSpace
     ) -> BrowserSidebarLiftPreviewSubject? {
-        if item.selection != nil, let lift = model.browser.sidebarReorderState.floatingLift {
+        if item.selection != nil, let lift = model.sidebarInteraction.sidebarReorderState.floatingLift {
             let rows = BrowserSidebarSelectionPreviewRow.resolve(lift.previewRows, in: space) { folderID in
-                model.browser.sidebarReorderState.folderPreviewRows(
+                model.sidebarInteraction.sidebarReorderState.folderPreviewRows(
                     for: .folder(
                         BrowserFolderDragItem(
                             folderID: folderID, spaceID: space.id, profileID: space.profile.id)))
@@ -96,7 +96,7 @@ struct BrowserRootDragPreviewLayer: View {
                 .map(BrowserSidebarLiftPreviewSubject.tab)
         case .folder(let folder):
             let rows = BrowserFolderDragPreviewRow.resolve(
-                model.browser.sidebarReorderState.floatingLift?.previewRows ?? [],
+                model.sidebarInteraction.sidebarReorderState.floatingLift?.previewRows ?? [],
                 in: space, rootFolderID: folder.folderID)
 
             return space.folders.first { $0.id == folder.folderID }

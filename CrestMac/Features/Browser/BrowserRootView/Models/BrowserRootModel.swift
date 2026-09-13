@@ -5,14 +5,16 @@ import SwiftUI
 @Observable
 @MainActor
 final class BrowserRootModel {
-    /// Waits out one stretch of a sidebar morph. See ``sidebarMorphWait``.
     typealias SidebarMorphWait = @MainActor (Duration) async throws -> Void
 
     let browser: BrowserStore
+    let sidebarInteraction: BrowserSidebarInteractionState
     let pages: BrowserPagePool
     let chrome: BrowserChromeState
     let spaceAccess: BrowserSpaceAccessController
+    private let pageSession: BrowserPageSessionSynchronizer
     let windowState: BrowserWindowStateStore?
+    private let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: BrowserStartupBehavior
     let extensionSidebarWindowID: BrowserWindowID
     var extensionSidebar: BrowserExtensionSidebarHost?
@@ -46,36 +48,18 @@ final class BrowserRootModel {
     private(set) var isSidebarApproachingDock = false
     private(set) var isSidebarSurfaceHovered = false
     private var sidebarMorphRevision = 0
-    /// The sidebar morph currently in flight, if any.
-    ///
-    /// Held so a second toggle can cancel the first, and readable so a caller
-    /// that has to see the settled sidebar — a test driving
-    /// ``sidebarMorphWait`` — can suspend until the last step has run instead
-    /// of guessing how long that takes.
+    /// Cancels or awaits the current sidebar transition.
     @ObservationIgnored private(set) var sidebarMorphTask: Task<Void, Never>?
-    /// Waits out one stretch of a sidebar morph.
-    ///
-    /// The phases of a morph are paced to the animations they start, so this
-    /// sleeps. A test that has to observe a phase the sidebar only passes
-    /// through supplies its own instead: it decides when each stretch ends
-    /// rather than trying to look in between two timers a busy machine can run
-    /// down late.
+    /// Injectable phase timing for sidebar transitions.
     @ObservationIgnored
     var sidebarMorphWait: SidebarMorphWait = { try await Task.sleep(for: $0) }
     var isWindowFocused = true
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
-    /// Pointer-rate column widths for the presented split, seeded from this
-    /// window's stored layout and committed back to it once per drag. A window
-    /// presenting a single tab holds the one-column identity rather than a
-    /// separate "no split" state.
+    /// Live widths stay local until the divider drag commits.
     var splitWidthTransaction = BrowserSplitWidthTransaction(
         persistedFractions: [1]
     )
-    /// The card this window is carrying on the pointer, if any.
-    ///
-    /// Per window rather than per surface, because the shell has to reach it
-    /// too: the preview travels in a window ordered above this one, and that is
-    /// seated at the root rather than inside the content area it left.
+    /// The window owns the lift so its preview can outlive the source surface.
     let splitCardLift = BrowserSplitCardLiftState()
 
     init(
@@ -88,10 +72,13 @@ final class BrowserRootModel {
         persistedSidebarWidth: CGFloat
     ) {
         self.browser = browser
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         self.pages = pages
         self.chrome = chrome
         self.spaceAccess = spaceAccess
+        pageSession = BrowserPageSessionSynchronizer(browser: browser, spaceAccess: spaceAccess)
         self.windowState = windowState
+        layoutPersistence = BrowserWindowLayoutPersistence(windowState: windowState)
         extensionSidebarWindowID = windowState?.id ?? BrowserWindowID()
         self.startupBehavior = startupBehavior
         sidebarWidthTransaction = BrowserSidebarWidthTransaction(
@@ -214,35 +201,25 @@ extension BrowserRootModel {
     }
 
     func synchronizePageMetadata() {
-        guard let page = selectedPage else { return }
-        browser.updateSelectedTabFromPage(
-            url: page.displayURL,
-            title: page.navigationFailure?.displayHost ?? page.title,
-            faviconData: page.faviconData,
-            iconAccent: page.siteThemeIconAccent
-        )
-        if !isAddressEditing {
-            address =
-                (page.displayURL ?? browser.selectedTab?.url)?.absoluteString
-                ?? ""
-        }
+        guard let page = selectedPage, let source = selectedTabAssignment,
+            let updatedAddress = pageSession.synchronize(page.metadata, matching: source)
+        else { return }
+        if !isAddressEditing { address = updatedAddress }
     }
 
     func recordCompletedNavigation() {
-        guard let page = selectedPage, let url = page.url else { return }
+        guard let page = selectedPage, page.url != nil, let source = selectedTabAssignment else { return }
         synchronizePageMetadata()
-        browser.recordVisit(url: url, title: page.title)
-        guard let space = browser.selectedSpace else { return }
+        guard let space = pageSession.recordCompletedNavigation(page.metadata, matching: source) else { return }
         Task { await pages.styleVisitedLinks(in: space) }
     }
+
 }
 
 // MARK: - Navigation
 
 extension BrowserRootModel {
-    /// What the root observer watches for a selection change. A Space change
-    /// and a tab change want different work, so both halves travel together
-    /// and the transition is read off the pair.
+    /// Distinguishes Space changes from tab changes.
     var selectionSnapshot: BrowserRootSelectionSnapshot {
         BrowserRootSelectionSnapshot(
             tabID: browser.selectedTab?.id,
@@ -369,21 +346,11 @@ extension BrowserRootModel {
     }
 
     func restoreSidebarWidth(_ width: CGFloat) {
-        guard windowState == nil else { return }
-        guard width != sidebarWidthTransaction.persistedWidth else { return }
-        sidebarWidthTransaction.restore(persistedWidth: width)
+        layoutPersistence.restoreSidebarWidth(width, transaction: &sidebarWidthTransaction)
     }
 
     func commitSidebarWidth(_ width: CGFloat) -> CGFloat? {
-        sidebarWidthTransaction.resize(to: width)
-        guard let committedWidth = sidebarWidthTransaction.commit() else {
-            return nil
-        }
-        if let windowState {
-            windowState.captureSidebar(width: Double(committedWidth))
-            return nil
-        }
-        return committedWidth
+        layoutPersistence.commitSidebarWidth(width, transaction: &sidebarWidthTransaction)
     }
 
     func hideSidebar(reduceMotion: Bool) {
@@ -598,38 +565,17 @@ extension BrowserRootModel {
         )
     }
 
-    /// Adopts the layout this window last stored for the presented group.
-    ///
-    /// Called whenever the presented membership changes — a different group, a
-    /// member joining or leaving, members reordering — because fractions are
-    /// positional and a list written for one arrangement means nothing under
-    /// another. A group this window has never resized starts as equal columns.
     func seedSplitColumnFractions() {
-        let members = presentedSplitMembers
-        guard !members.isEmpty else { return }
-        let persisted = presentedSplitGroupID.flatMap { groupID in
-            windowState?.splitColumnFractions(for: groupID)
-        }
-        splitWidthTransaction.begin(
-            fractions: BrowserSplitLayoutSeedPolicy.fractions(
-                persisted: persisted,
-                memberCount: members.count
-            )
+        layoutPersistence.seedSplitLayout(
+            groupID: presentedSplitGroupID, memberCount: presentedSplitMembers.count,
+            transaction: &splitWidthTransaction
         )
     }
 
-    /// Records what a completed divider drag settled on. Column widths are a
-    /// per-window, device-local preference and never reach the session or sync.
     func commitSplitColumnFractions(_ fractions: [Double]) {
-        guard let windowState, let groupID = presentedSplitGroupID else { return }
-        windowState.captureSplitLayout(fractions: fractions, for: groupID)
+        layoutPersistence.commitSplitLayout(fractions, groupID: presentedSplitGroupID)
     }
 
-    /// Makes one presented card the focused card.
-    ///
-    /// Focus *is* selection, so this is an ordinary selection change: the
-    /// existing selection observer re-presents the group with the new focus and
-    /// every chrome surface follows without a second focus state anywhere.
     func focusSplitCard(_ tabID: TabID) {
         guard tabID != browser.selectedTab?.id,
             presentedSplitMembers.contains(where: { $0.id == tabID })
@@ -641,7 +587,7 @@ extension BrowserRootModel {
 // MARK: - Command Palette
 
 extension BrowserRootModel {
-    var paletteSourceAssignment: BrowserTabRuntimeAssignment? {
+    var selectedTabAssignment: BrowserTabRuntimeAssignment? {
         guard let space = browser.selectedSpace, let tab = browser.selectedTab else {
             return nil
         }

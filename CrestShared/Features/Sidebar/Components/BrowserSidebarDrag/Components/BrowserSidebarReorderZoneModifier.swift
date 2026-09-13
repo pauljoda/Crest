@@ -1,12 +1,6 @@
 import SwiftUI
 
-/// Registers a region that can accept a lifted sidebar item — an ordered
-/// section, a collapsed folder row, or a space picker segment.
-///
-/// Every zone registered here has a target that is fixed for the life of the
-/// view: a section is its placement, a folder row is its folder. The content
-/// area is not, so it registers through `BrowserSplitContentDropZoneModifier`
-/// instead, which re-registers when the Space it is showing changes.
+/// Registers a sidebar drop zone, clipped to its visible scroll and pager regions.
 struct BrowserSidebarReorderZoneModifier: ViewModifier {
     let target: BrowserSidebarReorderZone.Target
     let state: BrowserSidebarReorderState
@@ -35,15 +29,20 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
             self.isActive
             && (!requiresSelectedSpace
                 || SidebarSpaceRole.permitsInteraction(isSelected: isSelected, isAvailable: true))
+        let target = target
+        let topInset = topInset
+        let minimumHeight = minimumHeight
+        let supportsTouch = capabilities.supportsTouch
         return
             content
             .onGeometryChange(for: BrowserSidebarReorderZone?.self) { proxy in
                 guard isActive else { return nil }
                 return BrowserSidebarReorderZone(
                     target: target,
-                    frame: resolvedFrame(proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)),
+                    frame: Self.resolvedFrame(
+                        proxy.frame(in: BrowserSidebarReorderSpace.globalSpace), target: target, topInset: topInset),
                     minimumHeight: minimumHeight,
-                    supportsTouch: capabilities.supportsTouch)
+                    supportsTouch: supportsTouch)
             } action: { zone in
                 guard let zone else {
                     state.removeZone(for: identity)
@@ -63,7 +62,9 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
 
     /// A nesting target claims only the middle of its row so the edges stay
     /// available for reordering past it.
-    private func resolvedFrame(_ frame: CGRect) -> CGRect {
+    nonisolated private static func resolvedFrame(
+        _ frame: CGRect, target: BrowserSidebarReorderZone.Target, topInset: CGFloat
+    ) -> CGRect {
         switch target {
         case .folder, .currentFolder, .currentTab:
             return BrowserSidebarReorderPolicy.nestingFrame(for: frame)

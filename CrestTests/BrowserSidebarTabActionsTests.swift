@@ -195,7 +195,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
     func testNewTabIsRefusedDuringSidebarReordering() {
         let context = makeContext()
         let action = makeActions(context, pullFavicon: { _, _ in nil })
-        context.browser.sidebarReorderState.begin(
+        context.sidebarInteraction.sidebarReorderState.begin(
             item: .tab(
                 BrowserTabDragItem(
                     tabID: context.tab.id,
@@ -209,7 +209,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         var invocationCount = 0
 
         XCTAssertFalse(action.openNewTab { invocationCount += 1 })
-        context.browser.sidebarReorderState.cancel()
+        context.sidebarInteraction.sidebarReorderState.cancel()
         XCTAssertTrue(action.openNewTab { invocationCount += 1 })
 
         XCTAssertEqual(invocationCount, 1)
@@ -331,6 +331,7 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         BrowserSidebarTabActions(
             assignment: context.assignment,
             browser: context.browser,
+            reorderState: context.sidebarInteraction.sidebarReorderState,
             spaceAccess: context.access,
             syncPagesAfterMutation: syncPagesAfterMutation,
             pullFavicon: pullFavicon
@@ -420,12 +421,26 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         )
     }
 
+    @MainActor
     private struct Context {
+        let sidebarInteraction: BrowserSidebarInteractionState
         let browser: BrowserStore
         let access: BrowserSpaceAccessController
         let space: BrowserSpace
         let otherSpace: BrowserSpace
         let tab: BrowserTab
+
+        init(
+            browser: BrowserStore, access: BrowserSpaceAccessController, space: BrowserSpace, otherSpace: BrowserSpace,
+            tab: BrowserTab
+        ) {
+            self.browser = browser
+            self.access = access
+            self.space = space
+            self.otherSpace = otherSpace
+            self.tab = tab
+            sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        }
 
         var assignment: BrowserSpaceRuntimeAssignment {
             BrowserSpaceRuntimeAssignment(space: space)
@@ -574,6 +589,7 @@ extension BrowserSidebarTabActionsTests {
 }
 
 private struct RetainedSidebarContent: View {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let space: BrowserSpace
     let browser: BrowserStore
     let pages: BrowserPagePool
@@ -582,8 +598,16 @@ private struct RetainedSidebarContent: View {
     @Namespace private var commands
     @Namespace private var promotion
 
+    init(space: BrowserSpace, browser: BrowserStore, pages: BrowserPagePool) {
+        self.space = space
+        self.browser = browser
+        self.pages = pages
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+    }
+
     var body: some View {
         let context = BrowserSidebarContext(
+            sidebarInteraction: sidebarInteraction,
             browser: browser,
             pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: access),
             spaceAccess: access, capabilities: BrowserInteractionCapabilities(), availableSpaces: [space],
@@ -596,6 +620,8 @@ private struct RetainedSidebarContent: View {
             toggleUtilitySwitcher: {})
         BrowserSidebarSpacePage(
             space: space, isSelected: true, context: context, pages: pages, openNewTab: {},
-            commandSurfaceNamespace: commands, tabPromotionNamespace: promotion)
+            commandSurfaceNamespace: commands, tabPromotionNamespace: promotion
+        )
+        .environment(sidebarInteraction)
     }
 }

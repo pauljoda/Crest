@@ -12,7 +12,7 @@ struct BrowserRootCommandPaletteLayer: View {
     @ViewBuilder
     var body: some View {
         if let mode = model.chrome.commandPaletteMode,
-            let source = model.paletteSourceAssignment,
+            let source = model.selectedTabAssignment,
             model.isPaletteSourceAvailable(source)
         {
             BrowserCommandPalette(

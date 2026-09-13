@@ -3,6 +3,7 @@ import SwiftUI
 /// Owns shared Space selection, utility state, and clear-history confirmation.
 /// Each platform supplies its layout through `BrowserSidebarContext`.
 struct BrowserSidebar<Content: View>: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let browser: BrowserStore
     let pageAccess: BrowserSidebarPageAccess
     let spaceAccess: BrowserSpaceAccessController
@@ -83,6 +84,7 @@ struct BrowserSidebar<Content: View>: View {
 
     private var context: BrowserSidebarContext {
         BrowserSidebarContext(
+            sidebarInteraction: sidebarInteraction,
             browser: browser,
             pageAccess: pageAccess,
             spaceAccess: spaceAccess,
@@ -189,5 +191,6 @@ struct BrowserSidebar<Content: View>: View {
             .opacity(isSelected ? 1 : 0.4)
         }
     }
+    .environment(BrowserSidebarInteractionState.connected(to: browser))
     .frame(width: 280, height: 420)
 }

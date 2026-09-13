@@ -43,7 +43,8 @@
                 .contentMargins(.trailing, 8, for: .scrollContent)
                 .background(CrestBrandTheme.canvas)
             }
-            .onDisappear { _ = practice.browser.sidebarReorderState.end() }
+            .environment(practice.sidebarInteraction)
+            .onDisappear { practice.sidebarInteraction.cancel() }
             .font(CrestTypography.sans(14))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: chapter)
         }

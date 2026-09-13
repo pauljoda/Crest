@@ -65,7 +65,7 @@ struct MobileSplitColumnsPageSurface: View {
                 .browserSplitDropCardFrame(
                     tabID: member.id,
                     assignment: BrowserSpaceRuntimeAssignment(space: space),
-                    state: model.browser.sidebarReorderState
+                    state: model.sidebarInteraction.sidebarReorderState
                 )
             }
         )

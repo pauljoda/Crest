@@ -50,8 +50,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         pendingServerTrustIdentity = nil
         linkActivationSourceStore.removeAll()
         credentialState.didStartNavigation()
-        readerModeGeneration &+= 1
-        readerModeState = .unavailable
+        readerModeSession.invalidate()
         faviconGeneration &+= 1
     }
 
@@ -294,6 +293,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         translation.reset()
+        readerModeSession.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
         httpAuthenticationSession.authenticationFailed()
         recordWebContentTermination()

@@ -2,16 +2,16 @@ import Foundation
 
 @MainActor
 enum BrowserSidebarSelection {
-    static func units(in browser: BrowserStore) -> [[TabID]] {
-        itemUnits(in: browser).map { $0.compactMap(\.tabID) }.filter { !$0.isEmpty }
+    static func units(in browser: BrowserStore, reorder: BrowserSidebarReorderState) -> [[TabID]] {
+        itemUnits(in: browser, reorder: reorder).map { $0.compactMap(\.tabID) }.filter { !$0.isEmpty }
     }
 
-    static func itemUnits(in browser: BrowserStore) -> [[BrowserSelectionItemID]] {
+    static func itemUnits(in browser: BrowserStore, reorder: BrowserSidebarReorderState) -> [[BrowserSelectionItemID]] {
         guard let space = browser.selectedSpace else { return [] }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         let items =
             BrowserPlatformSidebarSelectionOrder.orderedItems(in: browser, assignment: assignment)
-            ?? registeredItems(in: browser, assignment: assignment)
+            ?? registeredItems(in: browser, assignment: assignment, reorder: reorder)
         var included: Set<BrowserSelectionItemID> = []
         return items.compactMap { item in
             guard !included.contains(item) else { return nil }
@@ -29,10 +29,12 @@ enum BrowserSidebarSelection {
         }
     }
 
-    private static func registeredItems(in browser: BrowserStore, assignment: BrowserSpaceRuntimeAssignment)
+    private static func registeredItems(
+        in browser: BrowserStore, assignment: BrowserSpaceRuntimeAssignment, reorder: BrowserSidebarReorderState
+    )
         -> [BrowserSelectionItemID]
     {
-        browser.sidebarReorderState.selectionRows(in: assignment).compactMap {
+        reorder.selectionRows(in: assignment).compactMap {
             switch $0.id {
             case .tab(let id): .tab(id)
             case .folder(let id): .folder(id)
@@ -56,14 +58,20 @@ enum BrowserSidebarSelection {
         return false
     }
 
-    static func request(for id: TabID, browser: BrowserStore) -> BrowserTabBatchRequest? {
-        request(for: .tab(id), browser: browser)
+    static func request(for id: TabID, browser: BrowserStore, reorder: BrowserSidebarReorderState)
+        -> BrowserTabBatchRequest?
+    {
+        request(for: .tab(id), browser: browser, reorder: reorder)
     }
 
-    static func request(for item: BrowserSelectionItemID, browser: BrowserStore) -> BrowserTabBatchRequest? {
+    static func request(for item: BrowserSelectionItemID, browser: BrowserStore, reorder: BrowserSidebarReorderState)
+        -> BrowserTabBatchRequest?
+    {
         let selection = browser.tabMultiSelection
         guard selection.contains(item), let space = browser.selectedSpace else { return nil }
-        let items = itemUnits(in: browser).flatMap { $0 }.filter { selection.selectedItems.contains($0) }
+        let items = itemUnits(in: browser, reorder: reorder).flatMap { $0 }.filter {
+            selection.selectedItems.contains($0)
+        }
         guard items.contains(item) else { return nil }
         return BrowserTabBatchRequest(items: items, in: space)
     }

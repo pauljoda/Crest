@@ -8,6 +8,8 @@ import SwiftUI
 /// the place a dragged folder lands beside the last root folder rather than
 /// inside it.
 struct BrowserSavedTabsEndDropTarget: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let tabs: [BrowserTab]
     let browser: BrowserStore
     let capabilities: BrowserInteractionCapabilities
@@ -22,7 +24,7 @@ struct BrowserSavedTabsEndDropTarget: View {
                 ) {
                     BrowserTabDropIndicator(
                         location: tabLocation,
-                        dragState: browser.tabDragState,
+                        dragState: sidebarInteraction.tabDragState,
                         isTargeted: false
                     )
                 }
@@ -30,7 +32,7 @@ struct BrowserSavedTabsEndDropTarget: View {
             .overlay(alignment: .bottom) {
                 BrowserFolderDropIndicator(
                     location: folderLocation,
-                    dragState: browser.folderDragState,
+                    dragState: sidebarInteraction.folderDragState,
                     isTargeted: false
                 )
             }

@@ -37,8 +37,8 @@ struct BrowserRootPageSurface: View {
             isSelectedSpaceLocked: model.spaceAccess.isLocked(space),
             selectedTabID: space.selectedTabID,
             hasEnteredSplitContent:
-                isSelectedSpace && model.browser.sidebarReorderState.hasEnteredSplitContent,
-            resolvedTarget: isSelectedSpace ? model.browser.sidebarReorderState.resolvedTarget : nil,
+                isSelectedSpace && model.sidebarInteraction.sidebarReorderState.hasEnteredSplitContent,
+            resolvedTarget: isSelectedSpace ? model.sidebarInteraction.sidebarReorderState.resolvedTarget : nil,
             presentsTrailingPanel: isSelectedSpace && model.extensionSidebar?.panel != nil
         )
     }
@@ -51,7 +51,7 @@ struct BrowserRootPageSurface: View {
             .accessibilityHidden(!isSelectedSpace)
             .browserSplitContentDropZone(
                 assignment: isSelectedSpace ? presentation.dropAssignment : nil,
-                state: model.browser.sidebarReorderState
+                state: model.sidebarInteraction.sidebarReorderState
             )
             .environment(
                 \.browserWebFocusRestorationGate,
@@ -130,7 +130,7 @@ struct BrowserRootPageSurface: View {
             .browserSplitDropCardFrame(
                 tabID: isSelectedSpace ? presentation.singleCardTabID : nil,
                 assignment: isSelectedSpace ? presentation.dropAssignment : nil,
-                state: model.browser.sidebarReorderState
+                state: model.sidebarInteraction.sidebarReorderState
             )
         }
     }

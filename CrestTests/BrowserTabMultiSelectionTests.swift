@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import XCTest
 
 @testable import Crest
@@ -231,7 +232,8 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                 tabID: ids[0], spaceID: source.id, profileID: source.profile.id)
         ).selecting(request)
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
-        let state = browser.sidebarReorderState
+        let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        let state = sidebarInteraction.sidebarReorderState
         state.begin(item: item, section: .tabs(placement: .current, folderID: nil), at: .zero)
         XCTAssertTrue(state.isLifted(.tab(ids[0])))
         XCTAssertTrue(state.isLifted(.tab(ids[1])))
@@ -292,9 +294,46 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.savedTabs.map(\.id), pins.ids)
     }
 
+    func testRemovingAScrollRegionReconcilesItsSelectedRows() async throws {
+        let session = makeSession(count: 3)
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let interaction = BrowserSidebarInteractionState.connected(to: browser)
+        let reorder = interaction.sidebarReorderState
+        let space = session.spaces[0]
+        let ids = space.tabs.map(\.id)
+        let region = UUID()
+        for (index, tab) in space.tabs.enumerated() {
+            reorder.register(
+                row: BrowserSidebarReorderRow(
+                    id: .tab(tab.id), space: BrowserSpaceRuntimeAssignment(space: space),
+                    section: .tabs(placement: tab.placement, folderID: nil),
+                    frame: CGRect(x: 0, y: index * 40, width: 200, height: 40)),
+                owner: UUID(), scrollRegionID: index == 0 ? nil : region)
+        }
+        browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser, reorder: reorder))
+        XCTAssertEqual(browser.tabMultiSelection.selectedIDs, Set(ids))
+        let reconciled = expectation(description: "Selection reconciles after its rows disappear")
+        withObservationTracking {
+            _ = reorder.selectionRowsRevision
+        } onChange: {
+            Task { @MainActor in
+                browser.tabMultiSelection.reconcile(
+                    units: BrowserSidebarSelection.itemUnits(in: browser, reorder: reorder))
+                reconciled.fulfill()
+            }
+        }
+
+        reorder.removeScrollRegion(for: region)
+        await fulfillment(of: [reconciled], timeout: 1)
+
+        XCTAssertEqual(browser.tabMultiSelection.selectedIDs, [ids[0]])
+        XCTAssertEqual(browser.session, session)
+    }
+
     func testPointerTargetsAndRangesFollowLiveRowsAfterMovingAndReparenting() throws {
         let session = makeSession(count: 3)
         let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         let space = try XCTUnwrap(browser.selectedSpace)
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
         let window = NSWindow(
@@ -323,7 +362,7 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         XCTAssertEqual(target(rows[0]), space.tabs[0].id)
         XCTAssertEqual(target(rows[1]), space.tabs[1].id)
         XCTAssertEqual(
-            BrowserSidebarSelection.units(in: browser).flatMap { $0 },
+            BrowserSidebarSelection.units(in: browser, reorder: sidebarInteraction.sidebarReorderState).flatMap { $0 },
             [
                 space.tabs[1].id, space.tabs[2].id, space.tabs[0].id,
             ])
@@ -333,7 +372,9 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
         container.setFrameOrigin(NSPoint(x: 40, y: 100))
         XCTAssertEqual(target(rows[0]), space.tabs[0].id)
         XCTAssertEqual(target(rows[2]), space.tabs[2].id)
-        XCTAssertEqual(BrowserSidebarSelection.units(in: browser).first, [space.tabs[0].id])
+        XCTAssertEqual(
+            BrowserSidebarSelection.units(in: browser, reorder: sidebarInteraction.sidebarReorderState).first,
+            [space.tabs[0].id])
         container.isHidden = true
         XCTAssertNil(target(rows[2]))
         rows[0].removeFromSuperview()

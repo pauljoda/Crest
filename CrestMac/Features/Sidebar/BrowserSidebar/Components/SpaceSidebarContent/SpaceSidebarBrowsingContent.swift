@@ -7,6 +7,8 @@ import SwiftUI
 /// shared ones; this shell supplies scrolling chrome and the page-facing
 /// closures that need the windowed card pool.
 struct SpaceSidebarBrowsingContent: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let space: BrowserSpace
     let tabSections: BrowserTabSections
     let browser: BrowserStore
@@ -89,14 +91,15 @@ struct SpaceSidebarBrowsingContent: View {
             )
         }
         .onHover { isHoveringTabList = $0 }
-        .task(id: browser.sidebarReorderState.selectionRowsRevision) {
+        .task(id: sidebarInteraction.sidebarReorderState.selectionRowsRevision) {
             // Let replacement rows finish registering before pruning a collapsed
             // subtree or a removed tab from the window's selection.
             do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
             guard browser.session.selectedSpaceID == space.id,
-                !browser.sidebarReorderState.hasLiftInFlight
+                !sidebarInteraction.sidebarReorderState.hasLiftInFlight
             else { return }
-            browser.tabMultiSelection.reconcile(units: BrowserSidebarSelection.itemUnits(in: browser))
+            browser.tabMultiSelection.reconcile(
+                units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
         }
         .background {
             BrowserTabSelectionMonitor(
@@ -124,7 +127,7 @@ struct SpaceSidebarBrowsingContent: View {
     private var tabActions: BrowserSidebarTabActions {
         BrowserSidebarTabActions(
             assignment: BrowserSpaceRuntimeAssignment(space: space),
-            browser: browser,
+            browser: browser, reorderState: sidebarInteraction.sidebarReorderState,
             pages: pages,
             spaceAccess: spaceAccess
         )
@@ -133,7 +136,9 @@ struct SpaceSidebarBrowsingContent: View {
     /// Selection and presentation in the one order that works: the page a
     /// shell brings on screen is whichever one the session now points at.
     private func activate(_ tabID: TabID) {
-        browser.tabMultiSelection.click(tabID, units: BrowserSidebarSelection.itemUnits(in: browser))
+        browser.tabMultiSelection.click(
+            tabID,
+            units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
         BrowserTabActivationPolicy.activate(
             tabID,
             selectTab: browser.selectTab,

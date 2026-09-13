@@ -3,6 +3,8 @@ import SwiftUI
 /// Saved folders and unfiled tabs share one ordered run, using the same
 /// projection as Current so a tab can remain between sibling folders.
 struct BrowserSavedTabsDropSection: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let space: BrowserSpace
     let tabSections: BrowserTabSections
     let browser: BrowserStore
@@ -39,7 +41,7 @@ struct BrowserSavedTabsDropSection: View {
                 )
                 .browserSidebarReorderSectionIndicator(
                     section,
-                    state: browser.sidebarReorderState
+                    state: sidebarInteraction.sidebarReorderState
                 )
             } else {
                 VStack(spacing: 0) {
@@ -58,7 +60,7 @@ struct BrowserSavedTabsDropSection: View {
                 }
                 .browserSidebarReorderSectionIndicator(
                     section,
-                    state: browser.sidebarReorderState
+                    state: sidebarInteraction.sidebarReorderState
                 )
             }
         }
@@ -66,12 +68,12 @@ struct BrowserSavedTabsDropSection: View {
         .contentShape(.rect)
         .browserSidebarReorderZone(
             .section(section),
-            state: browser.sidebarReorderState
+            state: sidebarInteraction.sidebarReorderState
         )
         .modifier(
             BrowserSidebarSectionReservation(
                 section: section,
-                state: browser.sidebarReorderState,
+                state: sidebarInteraction.sidebarReorderState,
                 capabilities: capabilities
             )
         )

@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// One event owner per active sidebar. Modifier clicks never reach page
-/// activation, while ordinary clicks and drags keep their existing controls.
+/// Routes sidebar selection keys and modifier clicks before row activation.
 struct BrowserTabSelectionMonitor: NSViewRepresentable {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
     let assignment: BrowserSpaceRuntimeAssignment
@@ -14,6 +14,7 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
 
     func updateNSView(_ view: SelectionView, context: Context) {
         view.browser = browser
+        view.sidebarInteraction = sidebarInteraction
         view.spaceAccess = spaceAccess
         view.assignment = assignment
         view.activate = activate
@@ -29,6 +30,7 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
 
     final class SelectionView: NSView {
         weak var browser: BrowserStore?
+        weak var sidebarInteraction: BrowserSidebarInteractionState?
         weak var spaceAccess: BrowserSpaceAccessController?
         var assignment: BrowserSpaceRuntimeAssignment?
         var activate: ((TabID) -> Void)?
@@ -61,7 +63,7 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
         }
 
         private func handle(_ event: NSEvent) -> NSEvent? {
-            guard event.window === window, let browser, let spaceAccess, let assignment,
+            guard event.window === window, let browser, let sidebarInteraction, let spaceAccess, let assignment,
                 browser.session.selectedSpaceID == assignment.spaceID
             else { return event }
             guard
@@ -73,8 +75,10 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
             }
             let selection = browser.tabMultiSelection
             if event.type == .keyDown {
-                if event.keyCode == 53, selection.isEngaged, browser.sidebarReorderState.hasLiftInFlight {
-                    browser.sidebarReorderState.cancel()
+                if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .escape, selection.isEngaged,
+                    sidebarInteraction.sidebarReorderState.hasLiftInFlight
+                {
+                    sidebarInteraction.sidebarReorderState.cancel()
                     selection.clear()
                     return nil
                 }
@@ -95,7 +99,7 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
                 selection.clear()
                 return event
             }
-            let units = BrowserSidebarSelection.itemUnits(in: browser)
+            let units = BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState)
             selection.reconcile(units: units)
             if event.type == .rightMouseDown || event.modifierFlags.contains(.control) {
                 if !selection.contains(id) { selection.clear() }
@@ -116,13 +120,14 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
         }
 
         private func handleKey(_ event: NSEvent, browser: BrowserStore) -> NSEvent? {
+            guard let sidebarInteraction else { return event }
             let selection = browser.tabMultiSelection
-            let units = BrowserSidebarSelection.itemUnits(in: browser)
+            let units = BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState)
             selection.reconcile(units: units)
             let command = event.modifierFlags.contains(.command)
             let shift = event.modifierFlags.contains(.shift)
-            if event.keyCode == 53 {
-                browser.sidebarReorderState.cancel()
+            if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .escape {
+                sidebarInteraction.sidebarReorderState.cancel()
                 selection.clear()
                 return nil
             }
@@ -132,7 +137,8 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
             }
             if command, !shift, !event.modifierFlags.contains(.option),
                 !event.modifierFlags.contains(.control), let id = selection.focusedItem,
-                let request = BrowserSidebarSelection.request(for: id, browser: browser), let spaceAccess
+                let request = BrowserSidebarSelection.request(
+                    for: id, browser: browser, reorder: sidebarInteraction.sidebarReorderState), let spaceAccess
             {
                 let actions = BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess)
                 switch event.charactersIgnoringModifiers?.lowercased() {
@@ -147,16 +153,18 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
                     return nil
                 default: break
                 }
-                if event.keyCode == 51 {
+                if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .delete {
                     actions.perform(request, action: .delete)
                     return nil
                 }
             }
-            if [123, 124, 125, 126, 115, 119].contains(event.keyCode), !units.isEmpty {
+            if let key = BrowserShortcutHardwareKeyCode(rawValue: event.keyCode),
+                [.leftArrow, .rightArrow, .downArrow, .upArrow, .home, .end].contains(key), !units.isEmpty
+            {
                 let current =
                     units.firstIndex { $0.contains(selection.focusedItem ?? selection.anchorItem ?? units[0][0]) } ?? 0
-                let backwards = event.keyCode == 123 || event.keyCode == 126 || event.keyCode == 115
-                let edge = command || event.keyCode == 115 || event.keyCode == 119
+                let backwards = key == .leftArrow || key == .upArrow || key == .home
+                let edge = command || key == .home || key == .end
                 let index =
                     edge
                     ? (backwards ? 0 : units.count - 1) : min(max(current + (backwards ? -1 : 1), 0), units.count - 1)
@@ -164,7 +172,7 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
                 if !shift { selection.selectForKeyboard(units[index][0], units: units) }
                 return nil
             }
-            if event.keyCode == 36, let id = selection.focusedItem {
+            if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .returnKey, let id = selection.focusedItem {
                 if let tabID = id.tabID { activate?(tabID) }
                 if let folderID = id.folderID,
                     let folder = browser.selectedSpace?.folders.first(where: { $0.id == folderID })
@@ -178,8 +186,9 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
         }
 
         override func selectAll(_ sender: Any?) {
-            guard let browser else { return }
-            browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser))
+            guard let browser, let sidebarInteraction else { return }
+            browser.tabMultiSelection.selectAll(
+                units: BrowserSidebarSelection.itemUnits(in: browser, reorder: sidebarInteraction.sidebarReorderState))
         }
     }
 }

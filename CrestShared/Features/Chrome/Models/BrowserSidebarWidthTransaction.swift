@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Keeps pointer-frequency resize updates in view-owned memory. Durable
-/// preferences advance only when the interaction commits, which avoids making
-/// UserDefaults an animation-rate source of SwiftUI invalidations.
+/// Keeps resize updates local until the interaction commits.
 struct BrowserSidebarWidthTransaction: Equatable {
     private(set) var width: CGFloat
     private(set) var persistedWidth: CGFloat

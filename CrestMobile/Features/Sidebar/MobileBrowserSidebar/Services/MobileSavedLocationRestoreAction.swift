@@ -30,6 +30,7 @@ struct MobileSavedLocationRestoreAction {
         let pageActions = MobileSelectedPageActionPort(
             browser: browser,
             pages: pages,
+            spaceAccess: spaceAccess,
             expectedAssignment: assignment
         )
         guard let page = pageActions.activePage

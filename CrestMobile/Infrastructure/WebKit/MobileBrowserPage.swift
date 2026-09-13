@@ -51,10 +51,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     let translation = BrowserPageTranslation()
-    var readerModeState = BrowserReaderModeState.unavailable
+    var readerModeState: BrowserReaderModeState { readerModeSession.state }
     private(set) var isContentBlockingActive = false
     private(set) var isRequestingDesktopSite = false
-    private(set) var isCredentialAccessEnabled: Bool
+    var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
     /// True once iOS reclaimed this page's web-content process while it was off
     /// screen. Selecting the tab again is what brings the page back.
     private(set) var needsWebContentRestore = false
@@ -88,9 +88,14 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let spaceName: String
     @ObservationIgnored private var processRecovery = BrowserProcessRecovery()
     @ObservationIgnored private let findSession = BrowserFindSession()
-    @ObservationIgnored var readerModeGeneration = 0
+    @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
+        document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
+    )
     @ObservationIgnored var faviconGeneration = 0
-    @ObservationIgnored let credentialState: BrowserCredentialPageState<CredentialFillTarget>
+    @ObservationIgnored private let credentialSession: BrowserWebKitCredentialSession
+    var credentialState: BrowserCredentialPageState<BrowserWebKitCredentialSession.FillTarget> {
+        credentialSession.state
+    }
     @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
     @ObservationIgnored private var linkActivationMessageProxy: MobileLinkActivationScriptMessageProxy?
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
@@ -109,13 +114,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// every popup does. Installing the same script message handler twice on it
     /// throws, and removing one would strip it from the opener.
     @ObservationIgnored private let ownsUserContentController: Bool
-    /// False for a page that may never touch credentials at all, such as a
-    /// private-browsing page. It outranks the Space's own saving preference.
-    @ObservationIgnored private let supportsCredentialAccess: Bool
     @ObservationIgnored private var defaultPageZoom: CGFloat
     @ObservationIgnored private var hasTemporaryPageZoomOverride = false
-
-    typealias CredentialFillTarget = (formID: String, frame: WKFrameInfo)
 
     var displayURL: URL? {
         navigationFailure?.failingURL ?? pendingNavigationURL ?? url
@@ -215,22 +215,24 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
             }
         )
-        supportsCredentialAccess = allowsCredentialAccess
-        self.isCredentialAccessEnabled =
-            allowsCredentialAccess
-            && isCredentialAccessEnabled
         let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
             defaultPageZoom
         )
         self.defaultPageZoom = normalizedDefaultPageZoom
         pageZoom = normalizedDefaultPageZoom
-        credentialState = BrowserCredentialPageState(spaceID: space.id)
-        httpAuthenticationSession = BrowserHTTPAuthenticationSession(
+        let httpAuthenticationSession = BrowserHTTPAuthenticationSession(
             spaceID: space.id,
             allowsCredentialSaving: allowsCredentialAccess
                 && isCredentialAccessEnabled,
             loadCredential: loadHTTPAuthenticationCredential,
             saveCredential: saveHTTPAuthenticationCredential
+        )
+        self.httpAuthenticationSession = httpAuthenticationSession
+        credentialSession = BrowserWebKitCredentialSession(
+            spaceID: space.id,
+            supportsAccess: allowsCredentialAccess,
+            isEnabled: isCredentialAccessEnabled,
+            httpAuthentication: httpAuthenticationSession
         )
 
         // WebKit hands popups a configuration derived from their opener's, and it
@@ -487,6 +489,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         mediaCaptureSession.reset()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
+        readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForRemoval()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
@@ -788,90 +791,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func refreshReaderModeAvailability() async {
-        guard !readerModeState.isActive else { return }
-        readerModeGeneration &+= 1
-        let generation = readerModeGeneration
-        let navigationURL = webView.url
-        guard navigationURL != nil else {
-            readerModeState = .unavailable
-            return
-        }
-
-        readerModeState = .checking
-        do {
-            let isAvailable = try await BrowserReaderModeController.isAvailable(
-                in: webView
-            )
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else { return }
-            readerModeState = isAvailable ? .available : .unavailable
-        } catch {
-            guard generation == readerModeGeneration else { return }
-            readerModeState = .unavailable
-        }
+        await readerModeSession.refreshAvailability()
     }
 
     func setReaderModeActive(_ isActive: Bool) async throws {
-        readerModeGeneration &+= 1
-        let generation = readerModeGeneration
-        let navigationURL = webView.url
-        try await translation.prepareForReaderMode()
-        guard generation == readerModeGeneration, navigationURL == webView.url else {
-            throw BrowserReaderModeError.presentationFailed
-        }
-        guard navigationURL != nil else {
-            readerModeState = .unavailable
-            throw BrowserReaderModeError.articleUnavailable
-        }
-
-        if isActive {
-            if readerModeState != .available {
-                let isAvailable = try await BrowserReaderModeController.isAvailable(
-                    in: webView
-                )
-                guard isAvailable else {
-                    readerModeState = .unavailable
-                    throw BrowserReaderModeError.articleUnavailable
-                }
-            }
-            readerModeState = .activating
-            do {
-                try await BrowserReaderModeController.activate(in: webView)
-            } catch {
-                readerModeState = .unavailable
-                throw error
-            }
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else {
-                throw BrowserReaderModeError.presentationFailed
-            }
-            readerModeState = .active
-        } else {
-            try await BrowserReaderModeController.deactivate(in: webView)
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else {
-                throw BrowserReaderModeError.presentationFailed
-            }
-            let isAvailable = try await BrowserReaderModeController.isAvailable(
-                in: webView
-            )
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else {
-                throw BrowserReaderModeError.presentationFailed
-            }
-            readerModeState = isAvailable ? .available : .unavailable
-        }
+        try await readerModeSession.setActive(isActive)
     }
 
     func toggleReaderMode() {
-        let shouldActivate = !readerModeState.isActive
-        Task { [weak self] in
-            try? await self?.setReaderModeActive(shouldActivate)
-        }
+        readerModeSession.toggle()
     }
 
     @discardableResult
@@ -993,60 +921,16 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         credentialState.dismissSaveCandidate()
     }
 
-    /// Brings this page in line with its Space's "save passwords" preference.
-    ///
-    /// Turning it off has to reach further than the next prompt: HTTP
-    /// authentication stops offering to store what it collects, and any fill or
-    /// save request already on screen goes away with the permission that raised it.
     func setCredentialAccessEnabled(_ isEnabled: Bool) {
-        let resolvedValue = supportsCredentialAccess && isEnabled
-        guard isCredentialAccessEnabled != resolvedValue else { return }
-        isCredentialAccessEnabled = resolvedValue
-        httpAuthenticationSession.setCredentialStorageEnabled(resolvedValue)
-        if !resolvedValue {
-            credentialState.reset()
-        }
+        credentialSession.setEnabled(isEnabled)
     }
 
     func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
-        guard isCredentialAccessEnabled else {
-            throw BrowserCredentialFillError.staleOrMismatchedRequest
-        }
-        let context = try credentialState.fillContext(for: requestID, credential: credential)
-        let result = try await webView.callAsyncJavaScript(
-            "return globalThis.__crestCredentialBridge?.fill(formID, username, password) === true;",
-            arguments: [
-                "formID": context.target.formID,
-                "username": credential.descriptor.username,
-                "password": credential.password,
-            ],
-            in: context.target.frame,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
-        )
-        guard result as? Bool == true else {
-            throw BrowserCredentialFillError.formChanged
-        }
-        credentialState.completeFill(username: credential.descriptor.username, requestID: requestID)
+        try await credentialSession.fill(credential, for: requestID, in: webView)
     }
 
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
-        guard isCredentialAccessEnabled else {
-            throw BrowserCredentialFillError.staleOrMismatchedRequest
-        }
-        let context = try credentialState.generatedPasswordFillContext(for: requestID)
-        let result = try await webView.callAsyncJavaScript(
-            "return globalThis.__crestCredentialBridge?.fillGenerated(formID, password) === true;",
-            arguments: [
-                "formID": context.target.formID,
-                "password": password,
-            ],
-            in: context.target.frame,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
-        )
-        guard result as? Bool == true else {
-            throw BrowserCredentialFillError.formChanged
-        }
-        credentialState.completeGeneratedPasswordFill(requestID: requestID)
+        try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
     }
 
     private func installObservations() {
@@ -1221,6 +1105,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         mediaCaptureSession.reset()
         sitePermissionRequests.cancelAll()
         translation.reset()
+        readerModeSession.invalidate()
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
@@ -1358,24 +1243,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
-        guard isCredentialAccessEnabled,
-            isOwnScriptMessage(scriptMessage),
-            scriptMessage.name == BrowserCredentialContentBridge.messageHandlerName,
-            let message = BrowserCredentialFormMessage(body: scriptMessage.body),
-            let frameOrigin = credentialOrigin(for: scriptMessage.frameInfo.securityOrigin),
-            let topLevelURL = webView.url,
-            let topLevelOrigin = CredentialOrigin(url: topLevelURL)
-        else {
-            return
-        }
-
-        credentialState.receive(
-            message,
-            frameOrigin: frameOrigin,
-            topLevelOrigin: topLevelOrigin,
-            isMainFrame: scriptMessage.frameInfo.isMainFrame,
-            fillTarget: message.formID.map { ($0, scriptMessage.frameInfo) }
-        )
+        credentialSession.receive(scriptMessage, in: webView)
     }
 
     /// Whether this page's own web view sent `scriptMessage`.
@@ -1387,14 +1255,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// opener's web view against a frame belonging to the popup's.
     private func isOwnScriptMessage(_ scriptMessage: WKScriptMessage) -> Bool {
         scriptMessage.webView === webView
-    }
-
-    private func credentialOrigin(for securityOrigin: WKSecurityOrigin) -> CredentialOrigin? {
-        CredentialOrigin(
-            securityProtocol: securityOrigin.protocol,
-            host: securityOrigin.host,
-            port: securityOrigin.port
-        )
     }
 
     private func receiveLinkActivationMessage(_ message: WKScriptMessage) {

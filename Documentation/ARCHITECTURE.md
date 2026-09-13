@@ -48,11 +48,15 @@ The privacy manifest is shipped from `CrestShared/Resources/PrivacyInfo.xcprivac
 
 Shared infrastructure decides navigation, downloads, content blocking, reader mode, authentication, permissions, failure recovery, and website data ownership. Platform roots provide the actual WebKit view host and native chrome. This keeps policy shared while allowing macOS, iPad, and iPhone to use presentation appropriate to each device.
 
+`BrowserReaderModeSession` owns request cancellation and document changes through a document adapter. `BrowserWebKitCredentialSession` shares origin validation and filling while the platform page owns its WebKit host. Root metadata and history updates use `BrowserPageSessionSynchronizer` with an exact, unlocked tab assignment; native page stores validate the page before supplying its metadata.
+
 ## Platform shape
 
 macOS and iPad share the same structural model: persistent sidebar, page surface, Space switcher, pinned sites, saved tabs, current tabs, and archive. iPhone presents the same data through compact navigation and sheets rather than forcing desktop chrome into a narrow screen.
 
 Shared views read independent interaction capabilities from their environment. Touch, hover, organization, and navigation transitions describe what the hosting shell supports; they are not device identities. Container width and Dynamic Type remain environmental inputs. Shared components own common content and actions, with accessory slots or optional actions for native presentation differences.
+
+Each window and browsing mode owns a `BrowserSidebarInteractionState` for drag sessions and measured reorder geometry. The root supplies it to sidebar and page surfaces; repeated root composition reuses its live connection. Practice and previews compose their own owner. Geometry registration and target resolution are separate collaborators of the reorder lifecycle. `BrowserStore` reports session reset and tab relocation through a weak, domain-only observer, so application state never constructs or retains feature presentation.
 
 Platform roots compose scenes, supply persistence and system services, host WebKit, and translate native input. Shared handlers own interaction state, source validation, cancellation, and commitment. Content-blocking reconciliation decides reload policy once, while platform page stores apply that decision to their resident pages.
 

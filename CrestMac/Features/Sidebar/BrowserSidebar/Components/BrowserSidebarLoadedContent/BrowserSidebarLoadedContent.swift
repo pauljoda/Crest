@@ -448,5 +448,6 @@ final class BrowserSidebarWidgetDeckScrollObserverView: NSView {
             tabPromotionNamespace: tabPromotionNamespace
         )
     }
+    .environment(BrowserSidebarInteractionState.connected(to: browser))
     .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 680)
 }

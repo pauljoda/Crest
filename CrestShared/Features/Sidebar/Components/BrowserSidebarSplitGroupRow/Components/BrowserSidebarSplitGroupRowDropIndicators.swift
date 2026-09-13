@@ -10,6 +10,8 @@ import SwiftUI
 /// apply these; where the section's own zone carries the whole answer, the
 /// group stays quiet and this modifier steps aside entirely.
 struct BrowserSidebarSplitGroupRowDropIndicators: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserSidebarSplitGroupRowConfiguration
 
     @ViewBuilder
@@ -19,7 +21,7 @@ struct BrowserSidebarSplitGroupRowDropIndicators: ViewModifier {
                 .overlay(alignment: .top) {
                     BrowserTabDropIndicator(
                         location: configuration.beforeDropLocation,
-                        dragState: configuration.browser.tabDragState,
+                        dragState: sidebarInteraction.tabDragState,
                         isTargeted: false
                     )
                 }
@@ -38,7 +40,7 @@ struct BrowserSidebarSplitGroupRowDropIndicators: ViewModifier {
         ) {
             BrowserTabDropIndicator(
                 location: configuration.afterDropLocation,
-                dragState: configuration.browser.tabDragState,
+                dragState: sidebarInteraction.tabDragState,
                 isTargeted: false
             )
         }

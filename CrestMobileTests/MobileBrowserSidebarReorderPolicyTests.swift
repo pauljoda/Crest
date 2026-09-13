@@ -1072,6 +1072,7 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
     /// `BrowserSplitColumnLayout` shares the remainder between.
     @MainActor
     private struct PadContentAreaFixture {
+        let sidebarInteraction: BrowserSidebarInteractionState
         let browser: BrowserStore
         let spaceAccess = BrowserSpaceAccessController()
         let cards: [BrowserTab]
@@ -1121,9 +1122,10 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
                 persistence: InMemoryBrowserSessionPersistence(),
                 browsingMode: .privateBrowsing
             )
+            sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         }
 
-        var state: BrowserSidebarReorderState { browser.sidebarReorderState }
+        var state: BrowserSidebarReorderState { sidebarInteraction.sidebarReorderState }
 
         var assignment: BrowserSpaceRuntimeAssignment {
             BrowserSpaceRuntimeAssignment(spaceID: spaceID, profileID: profileID)
@@ -1228,7 +1230,8 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         ) {
             BrowserSidebarReorderContext(
                 browser: browser,
-                spaceAccess: spaceAccess
+                spaceAccess: spaceAccess,
+                state: state
             )
             .commit(drop.target, for: drop.item)
         }

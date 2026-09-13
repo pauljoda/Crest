@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 struct MobileBrowserRootContent: View, BrowserChromeAnimating {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let model: MobileBrowserRootModel
     let dataDeleter: any BrowserSpaceDataDeleting
     let transientBrowsing: BrowserTransientBrowsingCoordinator
@@ -378,7 +380,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             )
         )
         .onChange(
-            of: isAddressEditing || browser.sidebarReorderState.isDragging,
+            of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging,
             initial: true
         ) { _, keepsSidebarVisible in
             navigation.setTransientSidebarDismissalPaused(keepsSidebarVisible)

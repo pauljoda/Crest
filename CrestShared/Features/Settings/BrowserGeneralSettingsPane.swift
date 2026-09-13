@@ -1,17 +1,6 @@
 import SwiftUI
 
-/// What Crest does when it opens, and whether the system hands it links.
-///
-/// Startup was already the same three rows twice, down to the footnote. The default
-/// browser section was not, and could not be: the desktop can claim the HTTP and
-/// HTTPS handlers directly, while iOS can only send the reader to Default Apps
-/// Settings and ask again afterwards. That difference is not styling — it is what
-/// each system permits — so it is read from
-/// ``BrowserDefaultBrowserController/requestStyle`` rather than from `#if os`, which
-/// also makes it the one thing about this pane a test can pin.
-///
-/// Window transparency stays macOS-only because it is a property of a window Crest
-/// draws itself.
+/// Startup, browsing preferences, and the platform's default-browser actions.
 struct BrowserGeneralSettingsPane: View {
     let browser: BrowserStore
 
@@ -116,9 +105,6 @@ struct BrowserGeneralSettingsPane: View {
 
     // MARK: - Default browser
 
-    /// A status the reader can act on, and the spinner that says Crest is still
-    /// finding out. Both shells pin `default-browser-status` on whichever of the two
-    /// is showing, because that is the element automation reads the answer from.
     @ViewBuilder
     private var defaultBrowserStatus: some View {
         if isCheckingDefaultBrowser {
@@ -171,9 +157,6 @@ struct BrowserGeneralSettingsPane: View {
         defaultBrowser.refreshStatus()
     }
 
-    /// Plain `String`s rather than catalog keys, exactly as both shells wrote them:
-    /// these are read out of a `switch` into a `Label`, and one of them arrives from
-    /// the system as an error description.
     private var defaultBrowserStatusTitle: String {
         switch defaultBrowser.status {
         case .unknown: "Not checked"
@@ -244,9 +227,7 @@ struct BrowserNewTabSettingsSection: View {
 }
 
 #if os(macOS)
-    /// The one supported app-level override for WebKit's macOS text checker.
-    /// WebKit initializes the text checker once per process, so the persisted
-    /// preference intentionally advertises its relaunch boundary in the UI.
+    /// WebKit reads this spelling preference once per process.
     struct BrowserSpellCheckingSettingsSection: View {
         static let controlIdentifier = "continuous-spell-checking-toggle"
 

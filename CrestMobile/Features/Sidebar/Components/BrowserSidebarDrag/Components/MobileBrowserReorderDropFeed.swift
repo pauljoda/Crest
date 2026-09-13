@@ -11,6 +11,8 @@ import SwiftUI
 /// single global point regardless, so all this has to do is convert the drop's
 /// local location using the region's own origin.
 struct MobileBrowserReorderDropFeed: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
 
@@ -30,12 +32,13 @@ struct MobileBrowserReorderDropFeed: ViewModifier {
                 BrowserMobileReorderDropTarget(
                     reorder: BrowserSidebarReorderContext(
                         browser: browser,
-                        spaceAccess: spaceAccess
+                        spaceAccess: spaceAccess,
+                        state: sidebarInteraction.sidebarReorderState
                     ),
                     origin: origin
                 )
                 // A committed drop must not intercept the next tap.
-                .allowsHitTesting(browser.sidebarReorderState.hasLiftInFlight)
+                .allowsHitTesting(sidebarInteraction.sidebarReorderState.hasLiftInFlight)
                 .accessibilityHidden(true)
             }
     }

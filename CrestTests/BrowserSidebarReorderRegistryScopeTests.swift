@@ -4,22 +4,7 @@ import XCTest
 
 @testable import Crest
 
-/// Which rows a sidebar drag is allowed to count.
-///
-/// One `BrowserSidebarReorderState` belongs to a `BrowserStore`, and a store is
-/// what every window onto a session shares — macOS opens more than one — so
-/// every sidebar on screen registers its rows into the same registry. A single
-/// sidebar adds to it more than once as well: its Space pager keeps the pages
-/// either side of the visible one alive so a swipe can already show them, and
-/// each of those pages measures its own Space's rows. A section identity is only
-/// a placement, so all of it arrives in one bucket.
-///
-/// The pinned grid is where that shows first, because it is the only run with a
-/// cap. Counted across every sidebar on screen, a grid with room to spare
-/// reaches the cap and refuses the pin it is being offered — and refuses it in
-/// silence, since a refused target means no slot, no insertion line, and no
-/// reason given. Ordering goes the same way: a Space alongside has tiles on the
-/// same line, and the pointer reads them as already passed.
+/// Reorder capacity and ordering exclude other Spaces retained by the pager.
 @MainActor
 final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
 
@@ -32,7 +17,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
     /// is the sixth rather than the second.
     func testAForeignSpacesPinnedRowsNeitherFillNorReorderThisDragsGrid() {
         let fixture = ReorderRegistryFixture(ownPinCount: 2)
-        let state = fixture.browser.sidebarReorderState
+        let state = fixture.sidebarInteraction.sidebarReorderState
         fixture.register(in: state)
 
         fixture.liftTheJoiner(in: state, to: CGPoint(x: 144, y: 92))
@@ -71,7 +56,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
         let fixture = ReorderRegistryFixture(
             ownPinCount: BrowserSpace.maximumPinnedTabs
         )
-        let state = fixture.browser.sidebarReorderState
+        let state = fixture.sidebarInteraction.sidebarReorderState
         fixture.register(in: state)
 
         fixture.liftTheJoiner(in: state, to: CGPoint(x: 144, y: 92))
@@ -157,7 +142,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
             ownCardCount: 2,
             foreignCardCount: 2
         )
-        let state = fixture.browser.sidebarReorderState
+        let state = fixture.sidebarInteraction.sidebarReorderState
         fixture.register(in: state)
 
         fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
@@ -189,7 +174,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
             ownCardCount: 2,
             foreignCardCount: 1
         )
-        let state = fixture.browser.sidebarReorderState
+        let state = fixture.sidebarInteraction.sidebarReorderState
         fixture.register(in: state)
 
         fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
@@ -211,7 +196,7 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
             ownCardCount: BrowserSplitGroupPolicy.maximumMembers,
             foreignCardCount: 1
         )
-        let state = fixture.browser.sidebarReorderState
+        let state = fixture.sidebarInteraction.sidebarReorderState
         fixture.register(in: state)
 
         fixture.liftTheJoiner(in: state, to: fixture.pointerInSecondOwnCard)
@@ -266,11 +251,10 @@ private func tile(_ index: Int, pageOffset: CGFloat) -> CGRect {
     )
 }
 
-/// A two-Space session, the way one store holds every Space every window shows:
-/// the Space the drag happens in, and one alongside whose sidebar — a second
-/// window, or the pager page next door — has a nearly full grid of its own.
+/// One window retains both the active Space and an adjacent pager page.
 @MainActor
 private struct ReorderRegistryFixture {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let browser: BrowserStore
     let ownPins: [BrowserTab]
     let foreignPins: [BrowserTab]
@@ -323,6 +307,7 @@ private struct ReorderRegistryFixture {
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 
     var ownSpace: BrowserSpaceRuntimeAssignment {
@@ -454,6 +439,7 @@ private func splitCardFrames(count: Int) -> [CGRect] {
 /// same rectangles until SwiftUI runs their disappearance.
 @MainActor
 private struct SplitCardRegistryFixture {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let browser: BrowserStore
     let ownCards: [BrowserTab]
     let foreignCards: [BrowserTab]
@@ -508,6 +494,7 @@ private struct SplitCardRegistryFixture {
             persistence: InMemoryBrowserSessionPersistence(),
             browsingMode: .privateBrowsing
         )
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 
     var ownSpace: BrowserSpaceRuntimeAssignment {

@@ -27,6 +27,8 @@ import SwiftUI
 /// delegate to report one, which it cannot do if the layer waits for the
 /// promotion it is supposed to cause.
 struct MobileSplitContentDropFeed: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
 
@@ -41,7 +43,7 @@ struct MobileSplitContentDropFeed: ViewModifier {
                     )
                 )
                 .allowsHitTesting(
-                    browser.sidebarReorderState.hasLiftInFlight
+                    sidebarInteraction.sidebarReorderState.hasLiftInFlight
                 )
                 .accessibilityHidden(true)
         }

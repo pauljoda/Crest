@@ -61,6 +61,8 @@ struct BrowserFolderSelectionAccessibility: ViewModifier {
 }
 
 private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let item: BrowserSelectionItemID
     let browser: BrowserStore?
     @Environment(\.browserInteractionCapabilities) private var capabilities
@@ -73,11 +75,15 @@ private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
                     named: browser.tabMultiSelection.contains(item) ? "Remove from Selection" : "Add to Selection"
                 ) {
                     browser.tabMultiSelection.click(
-                        item, units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
+                        item,
+                        units: BrowserSidebarSelection.itemUnits(
+                            in: browser, reorder: sidebarInteraction.sidebarReorderState), command: true)
                 }
                 .accessibilityAction(named: "Select Range to Here") {
                     browser.tabMultiSelection.click(
-                        item, units: BrowserSidebarSelection.itemUnits(in: browser), command: true, shift: true)
+                        item,
+                        units: BrowserSidebarSelection.itemUnits(
+                            in: browser, reorder: sidebarInteraction.sidebarReorderState), command: true, shift: true)
                 }
         } else {
             content

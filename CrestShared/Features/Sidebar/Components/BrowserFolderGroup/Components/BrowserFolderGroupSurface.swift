@@ -3,6 +3,8 @@ import SwiftUI
 /// The folder as one thing: its header, the rows it holds, the menu that acts
 /// on it, and the two presentations that menu can raise.
 struct BrowserFolderGroupSurface: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
     var showsExpandedRows = true
@@ -55,17 +57,17 @@ struct BrowserFolderGroupSurface: View {
                 // otherwise lift the folder. Telling the drag state the menu has
                 // the press is what keeps the two from both claiming it.
                 .onAppear {
-                    configuration.browser.folderDragState.contextMenuDidOpen(
+                    sidebarInteraction.folderDragState.contextMenuDidOpen(
                         for: dragItem
                     )
                     // And the reorder state, which is where a touch lift lives and
                     // which no drag session will report back to once the menu has
                     // the press. See `yieldToCompetingInteraction`.
-                    configuration.browser.sidebarReorderState
+                    sidebarInteraction.sidebarReorderState
                         .yieldToCompetingInteraction()
                 }
                 .onDisappear {
-                    configuration.browser.folderDragState.contextMenuDidClose(
+                    sidebarInteraction.folderDragState.contextMenuDidClose(
                         for: dragItem
                     )
                 }

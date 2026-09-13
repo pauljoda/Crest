@@ -16,7 +16,7 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
         let other = BrowserSession.makeBlankSpace(number: 2)
         context.browser.session.spaces.append(other)
         let assignment = BrowserSpaceRuntimeAssignment(space: context.space)
-        let state = context.browser.sidebarReorderState
+        let state = context.sidebarInteraction.sidebarReorderState
         state.register(
             row: .init(
                 id: .folder(folder.id), space: assignment, section: .folders(parentID: nil),
@@ -31,11 +31,14 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
                 section: .tabs(placement: .current, folderID: nil),
                 frame: CGRect(x: 0, y: 88, width: 240, height: 44)), owner: UUID())
 
-        let units = BrowserSidebarSelection.itemUnits(in: context.browser)
+        let units = BrowserSidebarSelection.itemUnits(
+            in: context.browser, reorder: context.sidebarInteraction.sidebarReorderState)
         XCTAssertEqual(units, [[.folder(folder.id)], [.tab(context.tab.id)]])
         context.browser.tabMultiSelection.click(.folder(folder.id), units: units, command: true)
         context.browser.tabMultiSelection.click(.tab(context.tab.id), units: units, command: true, shift: true)
-        let request = try XCTUnwrap(BrowserSidebarSelection.request(for: context.tab.id, browser: context.browser))
+        let request = try XCTUnwrap(
+            BrowserSidebarSelection.request(
+                for: context.tab.id, browser: context.browser, reorder: context.sidebarInteraction.sidebarReorderState))
         XCTAssertEqual(request.rootItems, [.folder(folder.id), .tab(context.tab.id)])
         let actions = BrowserTabBatchActions(browser: context.browser, spaceAccess: context.access)
         context.browser.selectSpace(other.id)
@@ -117,6 +120,7 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
         BrowserSidebarTabActions(
             assignment: BrowserSpaceRuntimeAssignment(space: context.space),
             browser: context.browser,
+            reorderState: context.sidebarInteraction.sidebarReorderState,
             pages: context.pages,
             spaceAccess: context.access
         )
@@ -167,12 +171,26 @@ final class MobileBrowserSidebarTabActionsTests: XCTestCase {
         )
     }
 
+    @MainActor
     private struct Context {
+        let sidebarInteraction: BrowserSidebarInteractionState
         let browser: BrowserStore
         let pages: MobileBrowserPageStore
         let access: BrowserSpaceAccessController
         let space: BrowserSpace
         let tab: BrowserTab
+
+        init(
+            browser: BrowserStore, pages: MobileBrowserPageStore, access: BrowserSpaceAccessController,
+            space: BrowserSpace, tab: BrowserTab
+        ) {
+            self.browser = browser
+            self.pages = pages
+            self.access = access
+            self.space = space
+            self.tab = tab
+            sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        }
     }
 
     private final class AcceptingAuthenticator: BrowserDeviceAuthenticating {

@@ -51,13 +51,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     let translation = BrowserPageTranslation()
-    var readerModeState = BrowserReaderModeState.unavailable
+    var readerModeState: BrowserReaderModeState { readerModeSession.state }
     private(set) var isContentBlockingActive = false
     private(set) var developerPanel: BrowserDeveloperPanel?
     private(set) var isRegionCapturePresented = false
     private(set) var developerCaptureFeedback: String?
     private(set) var developerCaptureFeedbackRevision = 0
-    private(set) var isCredentialAccessEnabled: Bool
+    var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
     private(set) var chromeWebStoreInstallItem: BrowserChromeWebStoreItem?
@@ -94,7 +94,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// keeps the same controller. Installing the same script message handler
     /// twice on it throws, and removing one would strip it from the opener.
     @ObservationIgnored private let ownsUserContentController: Bool
-    @ObservationIgnored private let supportsCredentialAccess: Bool
     @ObservationIgnored private var defaultPageZoom: CGFloat
     @ObservationIgnored private var hasTemporaryPageZoomOverride = false
     @ObservationIgnored var viewportFitOwner: UUID?
@@ -131,7 +130,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var observations: Set<AnyCancellable> = []
     @ObservationIgnored var processRecovery = BrowserProcessRecovery()
     @ObservationIgnored private let findSession = BrowserFindSession()
-    @ObservationIgnored var readerModeGeneration = 0
+    @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
+        document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
+    )
     @ObservationIgnored var faviconGeneration = 0
     @ObservationIgnored var sharingPicker: NSSharingServicePicker?
     @ObservationIgnored private var printOperation: NSPrintOperation?
@@ -156,7 +157,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var hostedNotificationIdentifiers: Set<String> = []
     @ObservationIgnored var hostedNotificationDocumentIdentifier = UUID().uuidString
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
-    @ObservationIgnored let credentialState: BrowserCredentialPageState<CredentialFillTarget>
+    @ObservationIgnored private let credentialSession: BrowserWebKitCredentialSession
+    var credentialState: BrowserCredentialPageState<BrowserWebKitCredentialSession.FillTarget> {
+        credentialSession.state
+    }
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
     @ObservationIgnored private var appliedContentRuleLists: [WKContentRuleList]
     @ObservationIgnored private let prepareChromeWebStoreExtension:
@@ -166,8 +170,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         @MainActor (BrowserChromeWebStoreCandidate) async throws
             -> BrowserExtensionSummary
     @ObservationIgnored private var chromeWebStoreTask: Task<Void, Never>?
-
-    typealias CredentialFillTarget = (formID: String, frame: WKFrameInfo)
 
     var displayURL: URL? {
         navigationFailure?.failingURL ?? pendingNavigationURL ?? url
@@ -312,10 +314,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             )
         }
         self.ownsUserContentController = ownsUserContentController
-        supportsCredentialAccess = allowsCredentialAccess
-        self.isCredentialAccessEnabled =
-            allowsCredentialAccess
-            && isCredentialAccessEnabled
         let normalizedDefaultPageZoom = BrowserPageZoomPolicy.normalizedDefault(
             defaultPageZoom
         )
@@ -344,13 +342,19 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.splitLinkHost = splitLinkHost
         self.linkDestinationHost = linkDestinationHost
         self.extensionWebpageMenuItems = extensionWebpageMenuItems
-        credentialState = BrowserCredentialPageState(spaceID: spaceID)
-        httpAuthenticationSession = BrowserHTTPAuthenticationSession(
+        let httpAuthenticationSession = BrowserHTTPAuthenticationSession(
             spaceID: spaceID,
             allowsCredentialSaving: allowsCredentialAccess
                 && isCredentialAccessEnabled,
             loadCredential: loadHTTPAuthenticationCredential,
             saveCredential: saveHTTPAuthenticationCredential
+        )
+        self.httpAuthenticationSession = httpAuthenticationSession
+        credentialSession = BrowserWebKitCredentialSession(
+            spaceID: spaceID,
+            supportsAccess: allowsCredentialAccess,
+            isEnabled: isCredentialAccessEnabled,
+            httpAuthentication: httpAuthenticationSession
         )
         navigationDecider = BrowserNavigationDecider()
         // Built before the popup coordinator so a popup whose destination belongs
@@ -774,6 +778,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         mediaCaptureSession.reset()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
+        readerModeSession.invalidate()
         linkHover.detach()
         linkDrag.detach()
         (webView as? BrowserDesktopWebView)?.linkHover = nil
@@ -1143,90 +1148,15 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func refreshReaderModeAvailability() async {
-        guard !readerModeState.isActive else { return }
-        readerModeGeneration &+= 1
-        let generation = readerModeGeneration
-        let navigationURL = webView.url
-        guard navigationURL != nil else {
-            readerModeState = .unavailable
-            return
-        }
-
-        readerModeState = .checking
-        do {
-            let isAvailable = try await BrowserReaderModeController.isAvailable(
-                in: webView
-            )
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else { return }
-            readerModeState = isAvailable ? .available : .unavailable
-        } catch {
-            guard generation == readerModeGeneration else { return }
-            readerModeState = .unavailable
-        }
+        await readerModeSession.refreshAvailability()
     }
 
     func setReaderModeActive(_ isActive: Bool) async throws {
-        readerModeGeneration &+= 1
-        let generation = readerModeGeneration
-        let navigationURL = webView.url
-        try await translation.prepareForReaderMode()
-        guard generation == readerModeGeneration, navigationURL == webView.url else {
-            throw BrowserReaderModeError.presentationFailed
-        }
-        guard navigationURL != nil else {
-            readerModeState = .unavailable
-            throw BrowserReaderModeError.articleUnavailable
-        }
-
-        if isActive {
-            if readerModeState != .available {
-                let isAvailable = try await BrowserReaderModeController.isAvailable(
-                    in: webView
-                )
-                guard isAvailable else {
-                    readerModeState = .unavailable
-                    throw BrowserReaderModeError.articleUnavailable
-                }
-            }
-            readerModeState = .activating
-            do {
-                try await BrowserReaderModeController.activate(in: webView)
-            } catch {
-                readerModeState = .unavailable
-                throw error
-            }
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else {
-                throw BrowserReaderModeError.presentationFailed
-            }
-            readerModeState = .active
-        } else {
-            try await BrowserReaderModeController.deactivate(in: webView)
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else {
-                throw BrowserReaderModeError.presentationFailed
-            }
-            let isAvailable = try await BrowserReaderModeController.isAvailable(
-                in: webView
-            )
-            guard generation == readerModeGeneration,
-                navigationURL == webView.url
-            else {
-                throw BrowserReaderModeError.presentationFailed
-            }
-            readerModeState = isAvailable ? .available : .unavailable
-        }
+        try await readerModeSession.setActive(isActive)
     }
 
     func toggleReaderMode() {
-        let shouldActivate = !readerModeState.isActive
-        Task { [weak self] in
-            try? await self?.setReaderModeActive(shouldActivate)
-        }
+        readerModeSession.toggle()
     }
 
     func dismissCredentialFillRequest() {
@@ -1234,13 +1164,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func setCredentialAccessEnabled(_ isEnabled: Bool) {
-        let resolvedValue = supportsCredentialAccess && isEnabled
-        guard isCredentialAccessEnabled != resolvedValue else { return }
-        isCredentialAccessEnabled = resolvedValue
-        httpAuthenticationSession.setCredentialStorageEnabled(resolvedValue)
-        if !resolvedValue {
-            credentialState.reset()
-        }
+        credentialSession.setEnabled(isEnabled)
     }
 
     func dismissCredentialSaveCandidate() {
@@ -1248,46 +1172,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
-        guard isCredentialAccessEnabled else {
-            throw BrowserCredentialFillError.staleOrMismatchedRequest
-        }
-        let context = try credentialState.fillContext(for: requestID, credential: credential)
-
-        let result = try await webView.callAsyncJavaScript(
-            "return globalThis.__crestCredentialBridge?.fill(formID, username, password) === true;",
-            arguments: [
-                "formID": context.target.formID,
-                "username": credential.descriptor.username,
-                "password": credential.password,
-            ],
-            in: context.target.frame,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
-        )
-        guard result as? Bool == true else {
-            throw BrowserCredentialFillError.formChanged
-        }
-
-        credentialState.completeFill(username: credential.descriptor.username, requestID: requestID)
+        try await credentialSession.fill(credential, for: requestID, in: webView)
     }
 
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
-        guard isCredentialAccessEnabled else {
-            throw BrowserCredentialFillError.staleOrMismatchedRequest
-        }
-        let context = try credentialState.generatedPasswordFillContext(for: requestID)
-        let result = try await webView.callAsyncJavaScript(
-            "return globalThis.__crestCredentialBridge?.fillGenerated(formID, password) === true;",
-            arguments: [
-                "formID": context.target.formID,
-                "password": password,
-            ],
-            in: context.target.frame,
-            contentWorld: BrowserCredentialContentBridge.contentWorld
-        )
-        guard result as? Bool == true else {
-            throw BrowserCredentialFillError.formChanged
-        }
-        credentialState.completeGeneratedPasswordFill(requestID: requestID)
+        try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
     }
 
     @discardableResult
@@ -1577,6 +1466,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         mediaCaptureSession.reset()
         sitePermissionRequests.cancelAll()
         translation.reset()
+        readerModeSession.invalidate()
         pictureInPicture.invalidate()
         linkHover.beginNavigation()
         focusRestoration.invalidate()
@@ -1854,24 +1744,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {
-        guard isCredentialAccessEnabled,
-            isOwnScriptMessage(scriptMessage),
-            scriptMessage.name == BrowserCredentialContentBridge.messageHandlerName,
-            let message = BrowserCredentialFormMessage(body: scriptMessage.body),
-            let frameOrigin = credentialOrigin(for: scriptMessage.frameInfo.securityOrigin),
-            let topLevelURL = webView.url,
-            let topLevelOrigin = CredentialOrigin(url: topLevelURL)
-        else {
-            return
-        }
-
-        credentialState.receive(
-            message,
-            frameOrigin: frameOrigin,
-            topLevelOrigin: topLevelOrigin,
-            isMainFrame: scriptMessage.frameInfo.isMainFrame,
-            fillTarget: message.formID.map { ($0, scriptMessage.frameInfo) }
-        )
+        credentialSession.receive(scriptMessage, in: webView)
     }
 
     /// Records the link the person just right-clicked, moments before WebKit
@@ -1978,11 +1851,4 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         )
     }
 
-    private func credentialOrigin(for securityOrigin: WKSecurityOrigin) -> CredentialOrigin? {
-        CredentialOrigin(
-            securityProtocol: securityOrigin.protocol,
-            host: securityOrigin.host,
-            port: securityOrigin.port
-        )
-    }
 }

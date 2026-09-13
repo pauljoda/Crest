@@ -33,7 +33,8 @@ struct MobileBrowserDetailView: View {
     var body: some View {
         let pageActions = MobileSelectedPageActionPort(
             browser: browser,
-            pages: pages
+            pages: pages,
+            spaceAccess: spaceAccess
         )
         let page = selectedSpaceIsLocked ? nil : pageActions?.activePage
         let pagePresentation = pagePresentation(for: page)

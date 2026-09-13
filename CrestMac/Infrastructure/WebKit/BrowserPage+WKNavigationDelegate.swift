@@ -30,8 +30,7 @@ extension BrowserPage: WKNavigationDelegate {
         clearNavigationFailure(preservingPendingURL: true)
         pendingServerTrustIdentity = nil
         credentialState.didStartNavigation()
-        readerModeGeneration &+= 1
-        readerModeState = .unavailable
+        readerModeSession.invalidate()
         faviconGeneration &+= 1
     }
 
@@ -308,6 +307,7 @@ extension BrowserPage: WKNavigationDelegate {
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         translation.reset()
+        readerModeSession.invalidate()
         linkHover.beginNavigation()
         linkDrag.beginNavigation()
         focusRestoration.invalidate()

@@ -64,6 +64,7 @@ struct BrowserSidebarCustomizationPreview: View {
         .environment(\.colorScheme, BrowserSpaceForegroundPolicy.colorScheme(for: preview.branding))
         .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: preview, isUnlocked: true))
         .environment(\.browserInteractionCapabilities, capabilities)
+        .environment(sample.sidebarInteraction)
         .environment(\.folderPreviewShowsHighlight, !followsHighlightPreference)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
@@ -81,6 +82,7 @@ struct BrowserSidebarCustomizationPreview: View {
 
 @MainActor
 private final class BrowserAppearancePreviewState {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let browser: BrowserStore
     let spaceAccess = BrowserSpaceAccessController()
     let downloads = BrowserDownloadCenter(
@@ -134,6 +136,7 @@ private final class BrowserAppearancePreviewState {
         browser = BrowserStore(
             session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
             persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 
     var space: BrowserSpace { browser.session.spaces[0] }
@@ -162,7 +165,8 @@ private final class BrowserAppearancePreviewState {
 
     var tabActions: BrowserSidebarTabActions {
         BrowserSidebarTabActions(
-            assignment: assignment, browser: browser, spaceAccess: spaceAccess,
+            assignment: assignment, browser: browser, reorderState: sidebarInteraction.sidebarReorderState,
+            spaceAccess: spaceAccess,
             syncPagesAfterMutation: {}, pullFavicon: { _, _ in nil })
     }
 }

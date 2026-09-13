@@ -10,12 +10,14 @@ extension BrowserSidebarTabActions {
     init(
         assignment: BrowserSpaceRuntimeAssignment,
         browser: BrowserStore,
+        reorderState: BrowserSidebarReorderState,
         pages: BrowserPagePool,
         spaceAccess: BrowserSpaceAccessController
     ) {
         self.init(
             assignment: assignment,
             browser: browser,
+            reorderState: reorderState,
             spaceAccess: spaceAccess,
             syncPagesAfterMutation: {
                 pages.reconcile(session: browser.session)

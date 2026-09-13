@@ -450,6 +450,42 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertEqual(fixture.navigation.regularSidebarPresentation, .floating)
     }
 
+    func testLockImmediatelyRevokesRetainedPageActionsBeforeReconciliation() async throws {
+        var space = makeSpace(index: 52)
+        space.accessPolicy = .deviceOwnerAuthentication
+        let access = BrowserSpaceAccessController(authenticator: MobileRootDeviceAuthenticator())
+        let unlocked = await access.unlock(space)
+        XCTAssertTrue(unlocked)
+        let fixture = makeFixture(
+            spaces: [space], selectedSpaceID: space.id,
+            startupBehavior: .lastActiveTab, spaceAccess: access
+        )
+        fixture.model.presentationChanged(to: .regular)
+        await fixture.model.prepareBrowser()
+        let page = try XCTUnwrap(fixture.model.selectedPage)
+        let actions = try XCTUnwrap(fixture.model.selectedPageActions)
+        XCTAssertTrue(actions.isAvailable)
+        let session = fixture.browser.session
+
+        access.lock(space.id)
+        actions.presentFind()
+        fixture.model.synchronizePageMetadata(isAddressEditing: false)
+        fixture.model.recordCompletedNavigation(isAddressEditing: false)
+
+        XCTAssertTrue(fixture.pages.activePage === page)
+        XCTAssertNil(fixture.model.selectedPage)
+        XCTAssertFalse(actions.isAvailable)
+        XCTAssertNil(actions.pageAssignment)
+        XCTAssertNil(actions.activeURL)
+        XCTAssertFalse(page.isFindPresented)
+        XCTAssertEqual(fixture.browser.session, session)
+
+        let unlockedAgain = await access.unlock(space)
+        XCTAssertTrue(unlockedAgain)
+        XCTAssertTrue(actions.isAvailable)
+        XCTAssertTrue(actions.activePage === page)
+    }
+
     func testPaletteActionsRejectStaleProfilesAndSelectExactDestinations() throws {
         var source = makeSpace(index: 60)
         let targetTab = BrowserTab(title: "Destination", url: URL(string: "about:blank"), placement: .current)

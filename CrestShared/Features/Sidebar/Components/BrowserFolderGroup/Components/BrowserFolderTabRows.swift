@@ -10,6 +10,8 @@ import SwiftUI
 /// to, and no run for the line to stand in — so it took the tab in silence, and
 /// the drag read as refused right up until it landed.
 struct BrowserFolderTabRows: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
     var displayedItems: [BrowserSidebarTabListItem]? = nil
@@ -122,7 +124,7 @@ struct BrowserFolderTabRows: View {
     }
 
     private var emptyRunBandHeight: CGFloat {
-        let state = configuration.browser.sidebarReorderState
+        let state = sidebarInteraction.sidebarReorderState
         guard !state.layout.isActive, state.emptySectionIndicator(for: section) != nil else { return 0 }
         let metrics =
             BrowserSidebarInteractionPolicy

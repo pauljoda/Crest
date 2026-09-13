@@ -28,6 +28,8 @@ import SwiftUI
 /// - **`BrowserSplitCardLifecycleModifier`**, which keeps this member's tab row and
 ///   history current while some other card holds focus.
 struct BrowserSplitCardView: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let tab: BrowserTab
     let space: BrowserSpace
     let browser: BrowserStore
@@ -90,7 +92,7 @@ struct BrowserSplitCardView: View {
         .browserSplitDropCardFrame(
             tabID: isSelectedSpace ? tab.id : nil,
             assignment: isSelectedSpace ? BrowserSpaceRuntimeAssignment(space: space) : nil,
-            state: browser.sidebarReorderState
+            state: sidebarInteraction.sidebarReorderState
         )
     }
 

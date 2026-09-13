@@ -5,6 +5,7 @@ import SwiftUI
 /// real sidebar here must never let a practice gesture reach the person's tabs.
 @Observable @MainActor
 final class BrowserGettingStartedPractice {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let browser: BrowserStore
     let spaceAccess = BrowserSpaceAccessController()
     let downloads = BrowserDownloadCenter(
@@ -45,6 +46,7 @@ final class BrowserGettingStartedPractice {
             tabs: [calendar, reading, mail, trail, packing], selectedTabID: trail.id)
         seed = BrowserSession(spaces: [space], selectedSpaceID: space.id)
         browser = BrowserStore(session: seed, persistence: InMemoryBrowserSessionPersistence())
+        sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 
     var space: BrowserSpace { browser.session.spaces[0] }
@@ -59,7 +61,7 @@ final class BrowserGettingStartedPractice {
     }
 
     func reset() {
-        _ = browser.sidebarReorderState.end()
+        sidebarInteraction.cancel()
         browser.session = seed
         splitWidthMembers = []
         reconcileSplitWidths()
@@ -110,7 +112,8 @@ final class BrowserGettingStartedPractice {
 
     var tabActions: BrowserSidebarTabActions {
         BrowserSidebarTabActions(
-            assignment: assignment, browser: browser, spaceAccess: spaceAccess,
+            assignment: assignment, browser: browser, reorderState: sidebarInteraction.sidebarReorderState,
+            spaceAccess: spaceAccess,
             syncPagesAfterMutation: {}, pullFavicon: { _, _ in nil })
     }
 }

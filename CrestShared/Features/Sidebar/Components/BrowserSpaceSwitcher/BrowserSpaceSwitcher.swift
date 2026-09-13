@@ -9,6 +9,8 @@ import SwiftUI
 /// `BrowserInteractionCapabilities`, and two shared arrangements underneath
 /// it. Accessories are inputs the scrolling arrangement simply ignores.
 struct BrowserSpaceSwitcher: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let browser: BrowserStore
 
     /// Held directly rather than behind the sidebar's page seam, the way
@@ -27,7 +29,7 @@ struct BrowserSpaceSwitcher: View {
             BrowserSpaceSwitcherCompactStrip(
                 spaces: spaces,
                 selectedSpaceID: selectedSpaceID,
-                reorderState: browser.sidebarReorderState,
+                reorderState: sidebarInteraction.sidebarReorderState,
                 metrics: metrics,
                 selectSpace: selectSpace,
                 accessories: accessories,
@@ -37,7 +39,7 @@ struct BrowserSpaceSwitcher: View {
             BrowserSpaceSwitcherScrollingSegments(
                 spaces: spaces,
                 selectedSpaceID: selectedSpaceID,
-                reorderState: browser.sidebarReorderState,
+                reorderState: sidebarInteraction.sidebarReorderState,
                 metrics: metrics,
                 selectSpace: selectSpace
             )

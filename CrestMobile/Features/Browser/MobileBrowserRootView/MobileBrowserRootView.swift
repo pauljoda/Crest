@@ -57,6 +57,7 @@ struct MobileBrowserRootView: View {
             togglePrivateBrowsing: togglePrivateBrowsing,
             closePrivateBrowsing: closePrivateBrowsing
         )
+        .environment(model.sidebarInteraction)
         .environment(\.browserNativeTabs, model.pages.nativeTabs)
         .environment(
             \.browserSettingsTabContent,

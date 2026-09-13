@@ -63,21 +63,14 @@ enum BrowserSidebarReorderPolicy {
     /// How long a row ignores its own activation after being dropped.
     static let activationSuppression: Duration = .milliseconds(250)
 
-    /// How long an unpromoted stage may sit before it is written off.
-    ///
-    /// A stage is inert bookkeeping, not a lift: nothing is hidden, nothing has
-    /// moved, and the only thing reading it is the Space pager, which holds
-    /// still from the moment one exists. It is cleared by the promotion that
-    /// turns it into a real lift, by the drop that ends that lift, or by a
-    /// context menu taking the press. Native session completion also clears it.
-    /// This expiry only covers a provider query that never becomes a session.
-    ///
-    /// Thirty seconds, matching the expiry `BrowserTabDragState` and
-    /// `BrowserFolderDragState` have always armed on their own pointer drags. It
-    /// is a backstop rather than a schedule: every path that ends a stage
-    /// honestly cancels it first, so the only stage it can ever collect is one
-    /// no drag is coming back for.
-    static let stagedLiftExpiration: Duration = .seconds(30)
+    /// Backstop for a provider query that never starts or completes a native drag.
+    static let stagedLiftExpiration = BrowserDragReleaseFallbackPolicy.sessionExpiration
+
+    /// Rows within this vertical distance share a selection line.
+    static let selectionLineTolerance: CGFloat = 2
+
+    /// Taller blocks use their moving edge when crossing another row.
+    static let movingEdgeProbeMinimumHeight = CrestLayout.sidebarRowHeight * 1.5
 
     /// Gap the lifted row leaves behind, as a fraction of its own height.
     static let displacementFraction: CGFloat = 1

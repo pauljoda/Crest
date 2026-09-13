@@ -7,6 +7,8 @@ import SwiftUI
 /// split group's member and its container owns the run's anchors — the row
 /// stays quiet and this modifier steps aside entirely.
 struct BrowserSidebarTabRowDropIndicators: ViewModifier {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserSidebarTabRowConfiguration
     let isDropTargeted: Bool
     @Binding var dropTargetHeight: CGFloat
@@ -23,7 +25,7 @@ struct BrowserSidebarTabRowDropIndicators: ViewModifier {
                 .overlay(alignment: .top) {
                     BrowserTabDropIndicator(
                         location: configuration.beforeDropLocation,
-                        dragState: configuration.browser.tabDragState,
+                        dragState: sidebarInteraction.tabDragState,
                         isTargeted: isDropTargeted
                     )
                 }
@@ -42,7 +44,7 @@ struct BrowserSidebarTabRowDropIndicators: ViewModifier {
         ) {
             BrowserTabDropIndicator(
                 location: configuration.afterDropLocation,
-                dragState: configuration.browser.tabDragState,
+                dragState: sidebarInteraction.tabDragState,
                 isTargeted: isDropTargeted
             )
         }

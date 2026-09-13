@@ -31,6 +31,7 @@ struct PlatformSpacePaletteColorWell: NSViewRepresentable {
         well.deactivate()
     }
 
+    @MainActor
     final class Coordinator: NSObject {
         var selection: Binding<Color>
         init(selection: Binding<Color>) { self.selection = selection }

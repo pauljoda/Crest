@@ -74,12 +74,12 @@
                             .onTapGesture { practice.browser.selectTab(tab.id) }
                             .browserSplitDropCardFrame(
                                 tabID: tab.id, assignment: practice.assignment,
-                                state: practice.browser.sidebarReorderState)
+                                state: practice.sidebarInteraction.sidebarReorderState)
                     }
                 }
             }.background(CrestBrandTheme.surface)
                 .browserSplitContentDropZone(
-                    assignment: practice.assignment, state: practice.browser.sidebarReorderState)
+                    assignment: practice.assignment, state: practice.sidebarInteraction.sidebarReorderState)
         }
 
         private func practiceDocument(_ tab: BrowserTab) -> some View {
@@ -172,7 +172,7 @@
 
         #if os(macOS)
             private var liftPreview: some View {
-                let state = practice.browser.sidebarReorderState
+                let state = practice.sidebarInteraction.sidebarReorderState
                 return BrowserDragPreviewWindowBridge(
                     content: liftContent,
                     onSidebarLandingComplete: state.finishLanding, onSidebarLandingArrived: state.revealLanding
@@ -181,7 +181,7 @@
             }
 
             private var liftContent: BrowserDragPreviewWindowContent? {
-                guard let lift = practice.browser.sidebarReorderState.floatingLift else { return nil }
+                guard let lift = practice.sidebarInteraction.sidebarReorderState.floatingLift else { return nil }
                 let subject: BrowserSidebarLiftPreviewSubject?
                 switch lift.item {
                 case .tab(let item):

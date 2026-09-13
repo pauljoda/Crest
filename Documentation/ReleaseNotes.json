@@ -1045,6 +1045,30 @@
     "mobile-shared-sidebar-multi-selection": {
       "category": "improved",
       "message": "Select multiple tabs and folders on iPhone and iPad using shared sidebar menus and VoiceOver actions"
+    },
+    "mobile-locked-space-action-revocation": {
+      "category": "fixed",
+      "message": "Disable page actions immediately when a Space locks on iPhone and iPad"
+    },
+    "private-session-reorder-reset": {
+      "category": "fixed",
+      "message": "Clear unfinished tab and folder drags when closing private browsing"
+    },
+    "reader-navigation-request-ownership": {
+      "category": "fixed",
+      "message": "Keep Reader Mode in sync when navigating or changing Reader requests"
+    },
+    "shared-browser-workflow-and-sidebar-presentation": {
+      "category": "internal",
+      "message": "Share page workflows and layout persistence, isolate sidebar interaction ownership, and separate settings and icon components"
+    },
+    "cross-space-drag-source-retention": {
+      "category": "fixed",
+      "message": "Keep a tab drag attached to its tab when other tabs move between Spaces"
+    },
+    "search-engine-keyboard-dismissal-lifetime": {
+      "category": "fixed",
+      "message": "Avoid unexpected keyboard dismissals while editing search engines"
     }
   }
 }

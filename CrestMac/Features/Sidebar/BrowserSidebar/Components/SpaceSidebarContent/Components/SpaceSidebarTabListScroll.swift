@@ -10,6 +10,8 @@ import SwiftUI
 /// tap anywhere over the region gives up address focus, because on this shell
 /// the address field keeps it until something takes it away.
 struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let browser: BrowserStore
     @ViewBuilder let background: () -> Background
     @ViewBuilder let content: () -> Content
@@ -32,19 +34,19 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 .frame(minHeight: geometry.size.height, alignment: .top)
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
-            .modifier(SidebarScrollAffordance(isDragging: browser.sidebarReorderState.isDragging))
+            .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
             .scrollClipDisabled(
                 !BrowserSidebarScrollLayoutPolicy.clipsScrollableRegion
             )
             .background {
                 BrowserSidebarDragAutoscrollObserver(
                     regionID: scrollRegionID,
-                    state: browser.sidebarReorderState
+                    state: sidebarInteraction.sidebarReorderState
                 )
             }
         }
         .onDisappear {
-            browser.sidebarReorderState.removeScrollRegion(for: scrollRegionID)
+            sidebarInteraction.sidebarReorderState.removeScrollRegion(for: scrollRegionID)
         }
         .simultaneousGesture(
             TapGesture().onEnded {

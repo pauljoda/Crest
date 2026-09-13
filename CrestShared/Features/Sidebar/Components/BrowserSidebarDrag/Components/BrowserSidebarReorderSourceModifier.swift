@@ -74,7 +74,9 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                         case .splitGroup(let group): group.memberTabIDs.first.map(BrowserSelectionItemID.tab)
                         case .folder(let folder): .folder(folder.folderID)
                         }
-                    var request = firstID.flatMap { BrowserSidebarSelection.request(for: $0, browser: reorder.browser) }
+                    var request = firstID.flatMap {
+                        BrowserSidebarSelection.request(for: $0, browser: reorder.browser, reorder: reorder.state)
+                    }
                     if let captured = request, let space = reorder.browser.selectedSpace {
                         request = reorder.browser.tabMultiSelection.prepareForDrag(captured, in: space)
                         if let id = firstID?.tabID, request?.ids.contains(id) != true {

@@ -12,7 +12,7 @@ final class MobileContentBlockingActionTests: XCTestCase {
         )
         pages.select(session: browser.session)
         let pageActions = try XCTUnwrap(
-            MobileSelectedPageActionPort(browser: browser, pages: pages)
+            MobileSelectedPageActionPort(browser: browser, pages: pages, spaceAccess: BrowserSpaceAccessController())
         )
         let action = MobileContentBlockingAction(
             browser: browser,

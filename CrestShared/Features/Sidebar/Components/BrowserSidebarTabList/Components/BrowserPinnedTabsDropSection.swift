@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Uses one input policy for pinned tiles and their drop targets.
 struct BrowserPinnedTabsDropSection: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let space: BrowserSpace
     let tabSections: BrowserTabSections
     let browser: BrowserStore
@@ -28,7 +30,7 @@ struct BrowserPinnedTabsDropSection: View {
                     select(runtimeAssignment.tabID)
                 },
                 moveTab: move,
-                dragState: browser.tabDragState,
+                dragState: sidebarInteraction.tabDragState,
                 browser: browser,
                 spaceAccess: spaceAccess,
                 isLoaded: pageAccess.containsResidentPageMatching,
@@ -46,14 +48,14 @@ struct BrowserPinnedTabsDropSection: View {
         .contentShape(.rect)
         .browserSidebarReorderSectionIndicator(
             .tabs(placement: .pinned, folderID: nil),
-            state: browser.sidebarReorderState
+            state: sidebarInteraction.sidebarReorderState
         )
         // On the whole section, not just the empty placeholder: a zone inside
         // one branch vanishes the moment any tab is pinned, and dragging into a
         // populated grid becomes impossible.
         .browserSidebarReorderZone(
             .section(.tabs(placement: .pinned, folderID: nil)),
-            state: browser.sidebarReorderState,
+            state: sidebarInteraction.sidebarReorderState,
             minimumHeight: metrics.sectionEndBandHeight
         )
         .accessibilityHint("Drop a tab here to pin it")

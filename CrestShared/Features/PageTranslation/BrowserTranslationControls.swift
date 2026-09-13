@@ -27,12 +27,8 @@ struct BrowserTranslationMenu: View {
         }
         .buttonStyle(.plain)
         .menuOrder(.fixed)
-        #if os(iOS)
-            .gesture(MobileTranslationLongPressGesture(action: translation.start))
-        #endif
         .accessibilityLabel("Translate Page")
         .accessibilityValue(translation.status)
-        .accessibilityHint("Tap for options. Touch and hold to translate now.")
         .accessibilityAction(named: "Translate Now", translation.start)
         .accessibilityIdentifier("page-translation-menu")
     }

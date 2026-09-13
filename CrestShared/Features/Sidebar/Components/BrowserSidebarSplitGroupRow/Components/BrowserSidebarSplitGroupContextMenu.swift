@@ -7,13 +7,16 @@ import SwiftUI
 /// action beside them — is on the member row's own menu, so there is one place
 /// that owns tab organization and one that owns the group.
 struct BrowserSidebarSplitGroupContextMenu: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
     var body: some View {
         Group {
             if let first = configuration.members.first,
-                let request = BrowserSidebarSelection.request(for: first.id, browser: configuration.browser)
+                let request = BrowserSidebarSelection.request(
+                    for: first.id, browser: configuration.browser, reorder: sidebarInteraction.sidebarReorderState)
             {
                 BrowserTabBatchMenu(
                     request: request, browser: configuration.browser,

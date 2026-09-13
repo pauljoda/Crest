@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Renames in place: Return or focus loss commits, and Escape cancels.
 struct BrowserFolderHeaderControl: View {
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+
     let configuration: BrowserFolderGroupConfiguration
     let interaction: BrowserFolderGroupInteractionContext
 
@@ -46,9 +48,11 @@ struct BrowserFolderHeaderControl: View {
                 .browserSavedFolderHeaderLayout(configuration: configuration)
             } else {
                 Button {
-                    guard !configuration.browser.sidebarReorderState.suppressesActivation else { return }
+                    guard !sidebarInteraction.sidebarReorderState.suppressesActivation else { return }
                     configuration.browser.tabMultiSelection.click(
-                        .folder(folder.id), units: BrowserSidebarSelection.itemUnits(in: configuration.browser))
+                        .folder(folder.id),
+                        units: BrowserSidebarSelection.itemUnits(
+                            in: configuration.browser, reorder: sidebarInteraction.sidebarReorderState))
                     interaction.toggleExpansion()
                 } label: {
                     HStack(spacing: 7) {

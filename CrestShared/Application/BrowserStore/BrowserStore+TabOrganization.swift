@@ -38,6 +38,7 @@ extension BrowserStore {
         before destinationTabID: TabID? = nil
     ) -> Bool {
         guard let actualSourceSpaceID = session.spaceID(containing: id),
+            let actualSourceSpace = session.space(id: actualSourceSpaceID),
             !deletingSpaceIDs.contains(actualSourceSpaceID),
             !deletingSpaceIDs.contains(session.selectedSpaceID),
             sourceSpaceID == nil
@@ -67,7 +68,9 @@ extension BrowserStore {
         guard moved else { return false }
         if actualSourceSpaceID != session.selectedSpaceID {
             guard let destinationSpace = session.selectedSpace else { return false }
-            tabDragState.relocate(
+            interactionObserver?.browserDidMoveTab(
+                from: BrowserTabRuntimeAssignment(
+                    tabID: id, spaceID: actualSourceSpace.id, profileID: actualSourceSpace.profile.id),
                 to: BrowserSpaceRuntimeAssignment(space: destinationSpace)
             )
         }
@@ -162,7 +165,7 @@ extension BrowserStore {
         }
         guard moved else { return false }
         if sourceAssignment != destinationAssignment {
-            tabDragState.relocate(to: destinationAssignment)
+            interactionObserver?.browserDidMoveTab(from: item.runtimeAssignment, to: destinationAssignment)
         }
         persist(syncUrgency: .coalesced, scope: .core)
         return true
@@ -205,7 +208,8 @@ extension BrowserStore {
     ) -> Bool {
         guard !deletingSpaceIDs.contains(sourceSpaceID),
             !deletingSpaceIDs.contains(destinationSpaceID),
-            session.space(id: sourceSpaceID)?.contains(id) == true,
+            let sourceSpace = session.space(id: sourceSpaceID),
+            sourceSpace.contains(id),
             moveTabBetweenSpaces(
                 id,
                 from: sourceSpaceID,
@@ -217,7 +221,8 @@ extension BrowserStore {
         guard let destinationSpace = session.space(id: destinationSpaceID) else {
             return false
         }
-        tabDragState.relocate(
+        interactionObserver?.browserDidMoveTab(
+            from: BrowserTabRuntimeAssignment(tabID: id, spaceID: sourceSpace.id, profileID: sourceSpace.profile.id),
             to: BrowserSpaceRuntimeAssignment(space: destinationSpace)
         )
         persist(syncUrgency: .coalesced, scope: .core)

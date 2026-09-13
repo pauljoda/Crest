@@ -804,6 +804,8 @@ private struct ChromeContinuityTestShell: View {
             spaceSettingsPresentation: BrowserSpaceSettingsPresentationState(), shortcuts: nil,
             storedSidebarWidth: .constant(289), appearance: appearance, windowTransparencyIsEnabled: false,
             windowTransparencyStrength: 0, commandSurfaceNamespace: commandNamespace,
-            tabPromotionNamespace: tabNamespace)
+            tabPromotionNamespace: tabNamespace
+        )
+        .environment(model.sidebarInteraction)
     }
 }

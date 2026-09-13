@@ -9,6 +9,7 @@ import SwiftUI
 /// seam and a handful of closures the host binds.
 @MainActor
 struct BrowserFolderGroupConfiguration {
+    let sidebarInteraction: BrowserSidebarInteractionState
     let node: BrowserFolderNode
     let tabs: [BrowserTab]
     var subtreeTabIDs: [TabID] = []
@@ -104,7 +105,7 @@ struct BrowserFolderGroupConfiguration {
     /// can appear here: a split group moves as one block and refuses folder
     /// zones outright.
     var nestingLift: BrowserSidebarReorderItem? {
-        let state = browser.sidebarReorderState
+        let state = sidebarInteraction.sidebarReorderState
         guard state.isTargetedFolder(folder.id) else { return nil }
         return state.lift?.item
     }

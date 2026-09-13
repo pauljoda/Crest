@@ -27,7 +27,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
     func testAPointerDragFromTheSidebarIntoThePageOpensAndCommitsASplit() throws {
         let fixture = try makeHostedWindow()
         defer { fixture.window.close() }
-        let state = fixture.model.browser.sidebarReorderState
+        let state = fixture.model.sidebarInteraction.sidebarReorderState
 
         let contentCard = try XCTUnwrap(state.orderedSplitCardFrames.first)
         XCTAssertEqual(
@@ -137,7 +137,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
     func testDraggingThePresentedTabOntoItsOwnPageResolvesNothing() throws {
         let fixture = try makeHostedWindow()
         defer { fixture.window.close() }
-        let state = fixture.model.browser.sidebarReorderState
+        let state = fixture.model.sidebarInteraction.sidebarReorderState
 
         let contentCard = try XCTUnwrap(state.orderedSplitCardFrames.first)
         let rowFrame = try XCTUnwrap(
@@ -276,6 +276,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
 
         let host = NSHostingView(
             rootView: BrowserSplitDragToSplitTestSurface(model: model)
+                .environment(model.sidebarInteraction)
         )
         let window = NSWindow(
             contentRect: CGRect(x: 120, y: 120, width: 1_160, height: 620),

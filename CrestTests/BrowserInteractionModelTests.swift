@@ -1209,7 +1209,8 @@ final class BrowserInteractionModelTests: XCTestCase {
             spaceID: source.id,
             profileID: source.profile.id
         )
-        browser.tabDragState.begin(item: item, placement: tab.placement)
+        let sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
+        let token = sidebarInteraction.tabDragState.begin(item: item, placement: tab.placement)
 
         browser.selectSpace(destination.id)
         XCTAssertTrue(
@@ -1226,8 +1227,9 @@ final class BrowserInteractionModelTests: XCTestCase {
         )
         XCTAssertEqual(moved.placement, .saved)
         XCTAssertEqual(browser.session.selectedTab?.id, tab.id)
-        XCTAssertEqual(browser.tabDragState.item?.spaceID, destination.id)
-        XCTAssertEqual(browser.tabDragState.currentPlacement, .current)
+        XCTAssertEqual(sidebarInteraction.tabDragState.item?.spaceID, destination.id)
+        XCTAssertEqual(sidebarInteraction.tabDragState.currentPlacement, .current)
+        XCTAssertEqual(sidebarInteraction.tabDragState.sessionToken, token)
     }
 
     func testNewTabAndLocationUseDistinctCommandPaletteModes() {

@@ -232,7 +232,7 @@ struct BrowserSplitPageSurface: View {
                 ),
                 memberCount: members.count,
                 isDraggingSidebarItem:
-                    model.browser.sidebarReorderState.isDragging,
+                    model.sidebarInteraction.sidebarReorderState.isDragging,
                 isCommandPalettePresented: model.chrome.isCommandPalettePresented
             ),
             let card
@@ -345,7 +345,7 @@ struct BrowserSplitPageSurface: View {
                 followsMouse: splitFocus?.followsMouse == true,
                 isCardFocused: model.pages.activeTabID == tabID,
                 isAddressEditing: model.isAddressEditing,
-                isDraggingSidebarItem: model.browser.sidebarReorderState.isDragging,
+                isDraggingSidebarItem: model.sidebarInteraction.sidebarReorderState.isDragging,
                 isCarryingCard: model.splitCardLift.isCarrying,
                 isCommandPalettePresented: model.chrome.isCommandPalettePresented
             )
@@ -357,7 +357,7 @@ struct BrowserSplitPageSurface: View {
             BrowserSplitFocusPolicy.focusesOnClick(
                 isCardFocused: model.pages.activeTabID == tabID,
                 isDraggingSidebarItem:
-                    model.browser.sidebarReorderState.isDragging,
+                    model.sidebarInteraction.sidebarReorderState.isDragging,
                 isCarryingCard: model.splitCardLift.isCarrying,
                 isCommandPalettePresented: model.chrome.isCommandPalettePresented
             )

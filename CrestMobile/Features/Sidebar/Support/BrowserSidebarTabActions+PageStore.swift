@@ -8,12 +8,14 @@ extension BrowserSidebarTabActions {
     init(
         assignment: BrowserSpaceRuntimeAssignment,
         browser: BrowserStore,
+        reorderState: BrowserSidebarReorderState,
         pages: MobileBrowserPageStore,
         spaceAccess: BrowserSpaceAccessController
     ) {
         self.init(
             assignment: assignment,
             browser: browser,
+            reorderState: reorderState,
             spaceAccess: spaceAccess,
             syncPagesAfterMutation: {},
             pullFavicon: { tabID, assignment in
