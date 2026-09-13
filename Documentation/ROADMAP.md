@@ -59,7 +59,6 @@ the live status for each issue.
 - [ ] [bug: Collapsed sidebar overlay covers search field on iPhone](https://github.com/pauljoda/Crest/issues/60)
 - [ ] [feature: File upload options](https://github.com/pauljoda/Crest/issues/84)
 - [ ] [Keep extension request-header rules consistent](https://github.com/pauljoda/Crest/issues/115)
-- [ ] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116)
 - [ ] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
 - [ ] [Offer a continuous, wider default page-zoom range](https://github.com/pauljoda/Crest/issues/118)
 - [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
@@ -118,6 +117,7 @@ the live status for each issue.
 - [x] [Investigate scrolling, back-navigation and browser performance](https://github.com/pauljoda/Crest/issues/110) — [`88703808`](https://github.com/pauljoda/Crest/commit/8870380890e44f85290e7299b25f46111daae1ac)
 - [x] [Keep favicon discovery private](https://github.com/pauljoda/Crest/issues/113) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
 - [x] [Stop oversized site-icon and manifest downloads early](https://github.com/pauljoda/Crest/issues/114) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
+- [x] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116)
 
 #### Not planned
 
