@@ -53,6 +53,7 @@ See [SUPPORT.md](SUPPORT.md) for reporting routes and
 - Preserve exact Space isolation for website data, credentials, history, tabs, settings, and synchronization.
 - Cover important behavioral contracts with focused regression tests. Review visual appearance, layout, and animation in the running app.
 - Keep build products, diagnostic captures, audit reports, submission packets, user state, credentials, signing exports, and local environment files out of Git. Documentation should help public users and contributors; keep private planning and machine-specific instructions local.
+- Do not add task-specific Markdown results or closeout reports, including under Documentation, or upload them as release or issue attachments. Summarize validation in the task or issue discussion. Keep necessary local evidence outside the checkout; maintained docs should describe lasting behavior and instructions, not dated test totals or cleanup narratives.
 - Keep editor and coding-assistant instructions or state local; `Scripts/check-public-source.py` rejects them from the tracked tree.
 - Do not enable the managed iOS default-browser entitlement until Apple approves it for the Crest App ID.
 

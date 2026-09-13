@@ -573,15 +573,6 @@ without another sign-in. Crest does not pre-copy every cookie covered by a broad
 host grant to make that early request succeed. This retry remains a compatibility
 limit of activating sessions only when the extension actually frames a site.
 
-The September 12 live check used the existing isolated email/organization-SSO
-profile. The extension options retained the signed-in account and Cowork preference
-across restart; Cowork displayed its composer and model controls after the retry,
-without the earlier extension-connection warning. No chat was sent. The same-tab
-restart/reopen kept the total folder count at 14: the extension replaced its old
-current group with a new group containing the same tab, using the corrected orange.
-Historical empty folders were left alone. This establishes startup and panel
-access, not long-running token rotation or chat execution.
-
 The former Space-wide copy mechanism made non-HttpOnly Lax/Strict values readable
 by scripts, authenticated foreign nested frames, and retained relaxed cookies
 after revocation. Its policy, synchronization service, broker plumbing and tests
@@ -591,40 +582,14 @@ cleanup. New panels do not migrate its cookies or embedded DOM storage.
 Panel views also stay out of WebKit's related-view selection for a restarting
 background. When a background idles out, system WebKit can otherwise pick a
 surviving panel with a different store and throw `NSInvalidArgumentException`
-during `WKWebView` initialization. Four reports from Crest 0.5.105 (1087) on
-macOS 27.0 (26A428) shared this stack: one wake followed window focus, and three
-followed `runtime.sendMessage`. A synthetic extension reproduced the exact
-related-view/data-store exception after the native 30-second idle timeout.
+during `WKWebView` initialization.
 
 `BrowserExtensionPanelWebView` hides only the related-view enumeration marker.
 Its configuration retains the required extension origin: clearing that value
 would break WebKit's resource authorization. Native extension APIs, manifest
 CSP, content-script isolation and the panel's cookie rules remain covered by the
-retained tests. The idle/wake regression also verifies that native local storage
-and the existing panel still work after a new background is created. The reports
-do not identify which installed extension woke; they do not establish that
-LastPass caused these crashes.
-
-The September 12, 2026 loopback HTTPS comparison used Chrome for Testing
-148.0.7778.96 and system WebKit on macOS 27.0 (26A428), built with Xcode 27.0
-(27A266a). Cookies came from real HTTP responses with synthetic values.
-
-| Request or access | Chrome with target host permission | Native WebKit | Scoped Crest panel |
-| --- | --- | --- | --- |
-| Direct permitted iframe: Secure Lax/Strict | Sent | Withheld | Sent |
-| Script reads copied Lax/Strict | Withheld | Withheld | Withheld through HttpOnly copies |
-| Foreign nested frame navigates to permitted host | Lax/Strict withheld | Lax/Strict withheld | Navigation refused |
-| Foreign frame fetches permitted host | Lax/Strict withheld | Lax/Strict withheld | All cookies withheld |
-| Child host without extension permission | Only applicable None | Only applicable None | All cookies withheld |
-| Parent host-only cookie sent to child | Never | Never | Never |
-| Cookie path `/private` used at `/privateer` | Never | Never | Never |
-| Top-level partitioned cookie under extension partition | Withheld | Withheld | Never copied |
-| Requests after native host grant revoked | Not captured in Chrome | Lax/Strict withheld | Session closed and store disabled |
-
-Chrome's tested redirect to an unpermitted host included that destination's
-Lax/Strict cookies. Crest does not reproduce that disclosure. HTTP downgrade
-probes used `.test` hosts because both engines treat localhost as trustworthy
-and may otherwise send Secure cookies over localhost HTTP.
+retained tests. Native local storage and the existing panel remain owned by the
+extension context when a new background is created.
 
 `BrowserExtensionWebsiteDataTests` retains actual request coverage for narrow and
 broad grants, native background messaging, persistent and ephemeral profiles,
@@ -1058,39 +1023,16 @@ site, popup, update, or optional workflow.
 | Tampermonkey | 5.5.0 | Partial / experimental | WebKit rejects its `tabs.onUpdated` startup registration. Crest now reports loading and reader-mode changes to that event, but the rejected registration is a WebKit boundary and is unchanged |
 | iCloud Passwords | 3.3.0 | Blocked / Apple entitlement pending | The worker loads through the generic capability runtime, but Apple's password helper rejects the current unsigned-capability parent; pairing and autofill require the managed browser credential entitlement |
 
-LastPass was checked again on September 12 with the signed 4.155.2 package in
-the isolated trace profile on system WebKit. Free account creation and web-vault
-access succeeded. The initial signup session appeared signed in in the action
-popup, but the in-page save operation failed; after restart, its field menu
-requested a logout and login to refresh LastPass. That refresh completed through
-the ordinary LastPass login page. The cause of the initial signup-session failure
-was not isolated, and is not claimed as a fixed Crest defect.
+## Panel scope and tab ownership
 
-After refreshing that session, LastPass's native in-page prompt saved a synthetic
-login on a loopback-only host. Its field menu filled both values, including after
-a full Crest quit and relaunch without another login. The fixture's HTTP server
-verified the submitted username and password. A record created through the web
-vault also synchronized into the extension and filled successfully. No real
-website password was used in the fixture. This verifies account access, save,
-fill and restoration for this package; it does not certify passkeys, MFA, shared
-vaults or every site's form. No LastPass-specific cookie or injection exception
-was added. The four supplied crash reports are addressed by the generic panel
-background-wake repair described above, rather than attributed to LastPass.
-
-The September 12 tab-switch investigation found that Claude 1.0.92 opens its
-Cowork document with a tab-specific `tabId` in the URL. Its packaged parent bridge
-retains that identity and sends `CURRENT_TAB` updates only for that tab. Crest's
-old Space-wide presentation discarded the API scope, so a panel targeting the
-LastPass page remained beside an unrelated Apple page. No synthetic activation
-event or vendor-specific message rewrite is needed: the store now honors
+Crest honors
 [Chrome's global and tab-specific open contract](https://developer.chrome.com/docs/extensions/reference/api/sidePanel#type-OpenOptions).
 Tab-owned documents hide on other tabs and resume unchanged on return; equal
 resource paths still have separate document identities and isolated stores.
 Closing the owning tab releases its panel. Global panels receive native live tab
 events and queries.
 
-The follow-up scope review keeps this extension-defined behavior. Chrome global
-panels remain global, while tab-specific panels belong to their requested tabs.
+Chrome global panels remain global, while tab-specific panels belong to their requested tabs.
 Firefox's `sidebarAction` has one window sidebar and resolves its resource for the
 selected tab through tab, window, global and manifest settings. Crest now updates
 that resource on selection and explicit option changes; resetting it with `null`
@@ -1110,47 +1052,12 @@ selection while preserving other tabs' panels, following
 The restored extension badge identifies tabs with retained tab-specific panels on
 both row favicons and pinned tiles. It remains visible on inactive owner tabs and
 is removed when their panel closes. Global and Firefox window panels have no tab
-badge. The original badge geometry was restored from commit `00ac91db`, adapted
-to sidebar density scaling, and rendered for manual review in light and dark
-appearance, including unloaded tabs. The temporary rendering probe was removed;
-permanent coverage asserts ownership and document retention rather than pixels
-or styling.
+badge.
 
-A separate actual `tabs.captureVisibleTab` regression exposed an unnecessary
-snapshot delegate: WebKit supplied that delegate a zero-sized rectangle, and
-Crest forwarded it, producing `data:,`. Removing the delegate and its two platform
-image aliases lets WebKit capture the registered view directly. Its
+`tabs.captureVisibleTab` lets WebKit capture the registered view directly without
+a snapshot delegate. Its
 [capture implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Extensions/Cocoa/WebExtensionTabCocoa.mm)
-only resolves the view itself when no snapshot delegate is supplied. The retained
-test verifies native activation, current-window active-tab queries, and the
-rendered pixels of the newly selected page with the same panel still open.
-This validates generic routing; a new authenticated Cowork chat was not sent as
-part of the repair.
-
-Release validation for 0.5.107 verified 181 distinct cases across the broad run
-and a focused rerun after correcting an obsolete disabled-panel expectation.
-The separate system-clipboard integration case remained opt-in and was skipped.
-No test failures remain unresolved. The iOS Simulator build also passed. The
-retained suite covers cookie wire boundaries, favicon requests and streaming
-limits, extension startup and native storage, panel isolation and background
-recovery, tab ownership and document restoration, actual screenshot pixels, tab
-groups, and text-replacement preference migration. The two synthetic LastPass vault records, local form server
-and temporary form tab were removed after validation; the trace account remained
-signed in. Long-running token rotation and authenticated Microsoft favicon wire
-capture remain outside this validation.
-
-Validation for 0.5.108 passed 111 cases with one opt-in clipboard case skipped.
-After badge restoration and the final close-lifecycle correction, all 24 affected
-ownership, native activation/screenshot, and sidebar-state cases passed again.
-The final iOS Simulator build, Swift formatting, and architecture checks passed.
-The global-only experiment and temporary visual probe were removed. Retained
-coverage replaces the obsolete close-all-tabs expectation with preservation of
-other tabs' documents and badges. An authenticated Claude or LastPass sign-in was
-not repeated during this scope and badge follow-up.
-
-The [final native-resource privacy review](NativeResourcePrivacyReview.md) maps the
-original findings to request evidence, records cleanup and the panel-link Space
-repair, and identifies the remaining validation limits.
+only resolves the view itself when no snapshot delegate is supplied.
 
 ## Firefox extensions from addons.mozilla.org
 
