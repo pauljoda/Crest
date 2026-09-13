@@ -4,6 +4,7 @@ struct BrowserOnboardingWelcomePage: View {
     let progressIsChecking: Bool
     let cloudPhase: BrowserCloudSyncPhase
     let hasCompletedSetup: Bool
+    let entryPoint: BrowserOnboardingEntryPoint
     let hasDisposableSeedState: Bool
     let continueSetup: () -> Void
     let openCrest: () -> Void
@@ -12,7 +13,8 @@ struct BrowserOnboardingWelcomePage: View {
         BrowserOnboardingWelcomePolicy.action(
             progressIsChecking: progressIsChecking,
             cloudPhase: cloudPhase,
-            hasCompletedSetup: hasCompletedSetup
+            hasCompletedSetup: hasCompletedSetup,
+            entryPoint: entryPoint
         )
     }
 

@@ -139,6 +139,21 @@ final class MobileBrowserWindowSceneModel {
         self.linkPreferenceStore = linkPreferenceStore
     }
 
+    @discardableResult
+    func presentGettingStartedAfterSetup(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
+        guard
+            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
+                in: browser, accessController: spaceAccess),
+            browser.session.spaces.first?.id == space.id,
+            space.selectedTabID == assignment.tabID,
+            space.tabs.first(where: { $0.id == assignment.tabID })?.nativeContent == .gettingStarted
+        else { return false }
+        pages.select(session: browser.session)
+        navigation.presentSelectedTabAfterSetup()
+        return true
+    }
+
     func activateWindow() {
         pageStoreRegistry.register(pages)
     }

@@ -58,11 +58,29 @@ final class MobileBrowserOnboardingPolicyTests: XCTestCase {
         )
     }
 
-    func testSettingsReplayStartsAtSpaceCustomization() {
+    func testDirectCustomizationStartsAtSpaceCustomization() {
         XCTAssertEqual(
             MobileBrowserOnboardingPolicy.initialStep(for: .manualSetup),
             .manualSetup
         )
+    }
+
+    func testExplicitRerunStartsAtWelcome() {
+        XCTAssertEqual(MobileBrowserOnboardingPolicy.initialStep(for: .rerun), .welcome)
+        XCTAssertNotEqual(BrowserOnboardingRequest.rerun, BrowserOnboardingRequest.rerun)
+    }
+
+    @MainActor
+    func testRerunDiscardsTheOldDraftAndKeepsExistingSpaces() throws {
+        let session = BrowserSession.preview
+        var oldDraft = BrowserManualSetupPlan(existing: session)
+        let uncommittedID = try oldDraft.addSpace()
+        let persistence = MobileOnboardingDraftPersistence(load: { oldDraft }, save: { _ in }, clear: {})
+        let resumed = persistence.plan(for: .firstRun, existing: session)
+        XCTAssertTrue(resumed.spaces.contains { $0.id == uncommittedID })
+        let rerun = persistence.plan(for: .rerun, existing: session)
+        XCTAssertEqual(rerun, BrowserManualSetupPlan(existing: session))
+        XCTAssertFalse(rerun.spaces.contains { $0.id == uncommittedID })
     }
 
     func testImportRequestExplainsTheMacHandoff() {

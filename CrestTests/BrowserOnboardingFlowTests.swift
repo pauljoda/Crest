@@ -7,13 +7,16 @@ import XCTest
 final class BrowserOnboardingFlowTests: XCTestCase {
     func testEntryPointsChooseExhaustiveInitialStates() {
         let firstRun = makeFlow(entryPoint: .firstRun)
+        let rerun = makeFlow(entryPoint: .rerun)
         let browserImport = makeFlow(entryPoint: .importBrowser)
         let manualSetup = makeFlow(entryPoint: .manualSetup)
 
         XCTAssertEqual(firstRun.state, .welcome)
+        XCTAssertEqual(rerun.state, .welcome)
         XCTAssertEqual(browserImport.state, .importSelection)
         XCTAssertEqual(manualSetup.state, .manualSetup)
         XCTAssertNil(firstRun.manualPlan)
+        XCTAssertNil(rerun.manualPlan)
         XCTAssertNil(browserImport.manualPlan)
         XCTAssertNotNil(manualSetup.manualPlan)
     }
@@ -284,31 +287,33 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         XCTAssertTrue(flow.browser.session.spaces.contains { $0.id == imported.id })
     }
 
-    func testFinalFirstRunImportAdvancesToSpaceCustomization() async {
-        let flow = makeFlow(
-            entryPoint: .firstRun,
-            sourceDiscovery: StubSourceDiscovery(sources: [source(.safari)]),
-            reader: ImmediateImportReader(
-                result: .success(
-                    readOutput(
-                        application: .safari,
-                        import: portableImport(
-                            spaces: [makeSpace(name: "First Run Import")]
+    func testGuidedImportAdvancesToSpaceCustomization() async {
+        for entryPoint: BrowserOnboardingEntryPoint in [.firstRun, .rerun] {
+            let flow = makeFlow(
+                entryPoint: entryPoint,
+                sourceDiscovery: StubSourceDiscovery(sources: [source(.safari)]),
+                reader: ImmediateImportReader(
+                    result: .success(
+                        readOutput(
+                            application: .safari,
+                            import: portableImport(
+                                spaces: [makeSpace(name: "First Run Import")]
+                            )
                         )
                     )
                 )
             )
-        )
-        flow.discoverInstalledSources()
-        flow.toggleImportSelection(.safari)
-        flow.continueImportQueue()
-        await waitUntil { flow.state == .reviewing(.safari) }
+            flow.discoverInstalledSources()
+            flow.toggleImportSelection(.safari)
+            flow.continueImportQueue()
+            await waitUntil { flow.state == .reviewing(.safari) }
 
-        flow.commitReviewedImport()
-        await waitUntil { flow.state == .manualSetup }
+            flow.commitReviewedImport()
+            await waitUntil { flow.state == .manualSetup }
 
-        XCTAssertEqual(flow.state, .manualSetup)
-        XCTAssertNotNil(flow.manualPlan)
+            XCTAssertEqual(flow.state, .manualSetup)
+            XCTAssertNotNil(flow.manualPlan)
+        }
     }
 
     func testCommitRequiresAtLeastOneIncludedSpace() async throws {
@@ -503,7 +508,92 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         )
     }
 
-    func testManualCommitCompletesWithAPluralAwareSummary() throws {
+    func testResetAndDismissalCancelPendingGuideCompletion() async {
+        for resetsRequest in [true, false] {
+            var first = makeSpace(name: "First")
+            first.accessPolicy = .deviceOwnerAuthentication
+            let second = makeSpace(name: "Selected")
+            let session = BrowserSession(spaces: [first, second], selectedSpaceID: second.id)
+            let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+            let flow = makeFlow(entryPoint: .rerun, browser: browser)
+            flow.show(.complete)
+            let persistence = InMemoryBrowserOnboardingProgressPersistence()
+            let progress = BrowserOnboardingProgressStore(persistence: persistence)
+            let authenticator = SuspendedGuideAuthenticator()
+            let access = BrowserSpaceAccessController(authenticator: authenticator)
+            var didOpenBrowser = false
+
+            flow.completeSetup(progress: progress, spaceAccess: access) { didOpenBrowser = true }
+            await waitUntil { authenticator.hasPendingRequest }
+            XCTAssertTrue(flow.isCompletingSetup)
+            flow.show(.importBrowser)
+            XCTAssertEqual(flow.state, .complete)
+
+            if resetsRequest {
+                flow.reset(for: .rerun)
+            } else {
+                flow.cancelOperations()
+            }
+            authenticator.complete()
+            await waitUntil { access.authenticatingAssignment == nil }
+            await Task.yield()
+
+            XCTAssertFalse(didOpenBrowser)
+            XCTAssertFalse(flow.isCompletingSetup)
+            XCTAssertEqual(flow.state, resetsRequest ? .welcome : .complete)
+            XCTAssertEqual(browser.session, session)
+            XCTAssertFalse(persistence.hasCompletedSetup)
+
+            flow.completeSetup(progress: progress, spaceAccess: access) { didOpenBrowser = true }
+            await waitUntil { didOpenBrowser }
+            XCTAssertFalse(flow.isCompletingSetup)
+            XCTAssertEqual(browser.session.selectedSpaceID, first.id)
+            XCTAssertEqual(browser.selectedTab?.nativeContent, .gettingStarted)
+            XCTAssertTrue(persistence.hasCompletedSetup)
+        }
+    }
+
+    func testDeniedGuideAuthorizationKeepsManualDraftPendingUntilSuccessfulRetry() async throws {
+        var first = makeSpace(name: "First")
+        first.accessPolicy = .deviceOwnerAuthentication
+        let session = BrowserSession(spaces: [first], selectedSpaceID: first.id)
+        let browser = BrowserStore(session: session, persistence: InMemoryBrowserSessionPersistence())
+        let flow = makeFlow(entryPoint: .rerun, browser: browser)
+        flow.beginManualSetup()
+        var plan = try XCTUnwrap(flow.manualPlan)
+        let newSpaceID = try plan.addSpace()
+        plan.setSpaceIdentity(name: "Renamed", symbol: first.symbol, for: first.id)
+        flow.updateManualPlan(plan)
+        let progress = BrowserOnboardingProgressStore(
+            persistence: InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: true))
+        let authenticator = SuspendedGuideAuthenticator()
+        let access = BrowserSpaceAccessController(authenticator: authenticator)
+        var completionCount = 0
+
+        flow.completeSetup(progress: progress, spaceAccess: access) { completionCount += 1 }
+        await waitUntil { authenticator.hasPendingRequest }
+        authenticator.complete(with: false)
+        await waitUntil { !flow.isCompletingSetup }
+
+        XCTAssertEqual(browser.session, session)
+        XCTAssertEqual(flow.manualPlan, plan)
+        XCTAssertEqual(flow.state, .manualSetup)
+        XCTAssertEqual(completionCount, 0)
+
+        flow.completeSetup(progress: progress, spaceAccess: access) { completionCount += 1 }
+        await waitUntil { authenticator.hasPendingRequest }
+        authenticator.complete()
+        await waitUntil { completionCount == 1 }
+
+        XCTAssertNil(flow.manualPlan)
+        XCTAssertEqual(flow.state, .complete)
+        XCTAssertEqual(browser.session.spaces.filter { $0.id == newSpaceID }.count, 1)
+        XCTAssertEqual(browser.session.spaces.first?.name, "Renamed")
+        XCTAssertEqual(browser.session.selectedSpaceID, first.id)
+        XCTAssertEqual(browser.selectedTab?.nativeContent, .gettingStarted)
+    }
+
+    func testManualCommitCompletesWithAPluralAwareSummary() async throws {
         let flow = makeFlow(entryPoint: .manualSetup)
         var plan = try XCTUnwrap(flow.manualPlan)
         let spaceID = try XCTUnwrap(plan.spaces.first?.id)
@@ -514,7 +604,12 @@ final class BrowserOnboardingFlowTests: XCTestCase {
         )
         flow.updateManualPlan(plan)
 
-        flow.commitManualSetup()
+        var didComplete = false
+        flow.completeSetup(
+            progress: BrowserOnboardingProgressStore(persistence: InMemoryBrowserOnboardingProgressPersistence()),
+            spaceAccess: BrowserSpaceAccessController()
+        ) { didComplete = true }
+        await waitUntil { didComplete }
 
         XCTAssertEqual(flow.state, .complete)
         XCTAssertEqual(
@@ -585,6 +680,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
 
     private func makeFlow(
         entryPoint: BrowserOnboardingEntryPoint = .importBrowser,
+        browser: BrowserStore? = nil,
         sourceDiscovery: any BrowserInstalledImportSourceDiscovering =
             StubSourceDiscovery(sources: []),
         dataAccessProvider: any BrowserOnboardingDataAccessProviding =
@@ -597,10 +693,11 @@ final class BrowserOnboardingFlowTests: XCTestCase {
     ) -> BrowserOnboardingFlow {
         BrowserOnboardingFlow(
             request: BrowserOnboardingRequest(entryPoint: entryPoint),
-            browser: BrowserStore(
-                session: BrowserSession.preview,
-                persistence: InMemoryBrowserSessionPersistence()
-            ),
+            browser: browser
+                ?? BrowserStore(
+                    session: BrowserSession.preview,
+                    persistence: InMemoryBrowserSessionPersistence()
+                ),
             sourceDiscovery: sourceDiscovery,
             dataAccessProvider: dataAccessProvider,
             importReader: reader,
@@ -948,4 +1045,19 @@ private enum TestFailure: LocalizedError {
     case read
 
     var errorDescription: String? { "The browser import could not be read." }
+}
+
+@MainActor
+private final class SuspendedGuideAuthenticator: BrowserDeviceAuthenticating {
+    private var continuation: CheckedContinuation<Bool, Never>?
+    var hasPendingRequest: Bool { continuation != nil }
+
+    func authenticate(reason: String) async throws -> Bool {
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func complete(with result: Bool = true) {
+        continuation?.resume(returning: result)
+        continuation = nil
+    }
 }

@@ -19,6 +19,7 @@ struct BrowserOnboardingStepContent: View {
                 progressIsChecking: progress.isChecking,
                 cloudPhase: cloudSync.phase,
                 hasCompletedSetup: progress.hasCompletedSetup,
+                entryPoint: flow.request.entryPoint,
                 hasDisposableSeedState:
                     flow.browser.session.hasDisposableSeedState,
                 continueSetup: { transition(to: .importBrowser) },
@@ -63,7 +64,7 @@ struct BrowserOnboardingStepContent: View {
             BrowserOnboardingManualSetupPage(
                 flow: flow,
                 browserSession: flow.browser.session,
-                opensGettingStarted: flow.request.entryPoint == .firstRun && progress.willOpenGettingStarted,
+                opensGettingStarted: progress.willOpenGettingStarted(for: flow.request.entryPoint),
                 selectedSpaceID: $selectedManualSpaceID,
                 back: { transition(to: .importBrowser) },
                 openCrest: openCrest

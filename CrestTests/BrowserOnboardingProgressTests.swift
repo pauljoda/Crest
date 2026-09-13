@@ -31,6 +31,21 @@ final class BrowserOnboardingProgressTests: XCTestCase {
     }
 
     @MainActor
+    func testRerunStartsSetupAndReopensGuideWithoutResettingInstallCompletion() {
+        let persistence = InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: true)
+        let progress = BrowserOnboardingProgressStore(persistence: persistence)
+        XCTAssertFalse(progress.shouldPresentWelcome)
+        XCTAssertEqual(
+            BrowserOnboardingWelcomePolicy.action(
+                progressIsChecking: false, cloudPhase: .ready, hasCompletedSetup: progress.hasCompletedSetup,
+                entryPoint: .rerun), .setup)
+        XCTAssertTrue(progress.willOpenGettingStarted(for: .rerun))
+        XCTAssertTrue(progress.completeSetup(for: .rerun))
+        XCTAssertTrue(persistence.hasCompletedSetup)
+        XCTAssertFalse(progress.shouldPresentWelcome)
+    }
+
+    @MainActor
     func testNamedIsolatedInstallKeepsCompletionAcrossLaunches() throws {
         let id = "onboarding-test-\(UUID().uuidString)"
         let suite = BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id)

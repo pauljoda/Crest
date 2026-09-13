@@ -7,6 +7,7 @@ struct BrowserOnboardingWindowPreviewFixture {
     let browser: BrowserStore
     let cloudSync: BrowserCloudSyncController
     let progress: BrowserOnboardingProgressStore
+    let spaceAccess: BrowserSpaceAccessController
     let flow: BrowserOnboardingFlow
 
     init(
@@ -44,6 +45,7 @@ struct BrowserOnboardingWindowPreviewFixture {
             forceWelcome: true
         )
         self.flow = flow
+        spaceAccess = BrowserSpaceAccessController(authenticator: BrowserPreviewAuthenticator(result: false))
     }
 
     static let session = BrowserSession(

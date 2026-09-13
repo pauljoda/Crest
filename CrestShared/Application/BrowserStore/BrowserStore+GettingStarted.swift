@@ -22,6 +22,18 @@ extension BrowserStore {
         return openNativeTab(.gettingStarted, title: String(localized: "Getting Started"), symbol: "book.closed.fill")
     }
 
+    @discardableResult
+    func openGettingStartedAfterSetup(matching assignment: BrowserSpaceRuntimeAssignment)
+        -> BrowserTabRuntimeAssignment?
+    {
+        guard !isPrivateBrowsing, let firstSpace = session.spaces.first,
+            BrowserSpaceRuntimeAssignment(space: firstSpace) == assignment
+        else { return nil }
+        selectSpace(firstSpace.id)
+        guard let tabID = openGettingStarted() else { return nil }
+        return BrowserTabRuntimeAssignment(tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID)
+    }
+
     /// Settings is one ordinary, closable native tab per Space. Repeated menu
     /// commands focus that tab without creating duplicates or opening WebKit.
     @discardableResult

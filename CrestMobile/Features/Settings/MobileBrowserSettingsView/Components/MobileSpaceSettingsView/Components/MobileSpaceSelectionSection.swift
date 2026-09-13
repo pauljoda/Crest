@@ -13,10 +13,17 @@ struct MobileSpaceSelectionSection: View {
                 }
             }
 
-            Button("Add Space", systemImage: "plus") {
+            HStack {
+                Text("Order")
+                Spacer()
+                BrowserSpaceOrderControls(browser: browser, spaceID: selectedSpaceID)
+            }
+
+            Button("New Space", systemImage: "plus") {
                 browser.addSpace()
                 selectedSpaceID = browser.session.selectedSpaceID
             }
+            .accessibilityIdentifier("space-settings-add")
         }
     }
 }

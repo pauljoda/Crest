@@ -27,7 +27,8 @@ struct BrowserSpaceBrandingEditor: View {
     }
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 16) {
+        // Keep section heights stable while the nested galleries lay out during scrolling.
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 20) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Crest Studio").font(CrestTypography.display(28))

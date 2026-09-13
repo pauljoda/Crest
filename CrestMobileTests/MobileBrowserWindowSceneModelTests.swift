@@ -39,6 +39,42 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         }
     }
 
+    func testSetupLoadsItsNativeRuntimeBeforeOpeningTheDefaultStartupBrowser() async throws {
+        let rootBrowser = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let registry = MobileBrowserPageStoreRegistry(
+            primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
+        let model = MobileBrowserWindowSceneModel(
+            id: BrowserWindowID(), rootBrowser: rootBrowser, permissionCenter: BrowserSitePermissionCenter(),
+            pageStoreRegistry: registry, spaceAccess: BrowserSpaceAccessController(), tabStateArchive: nil,
+            windowStatePersistence: InMemoryBrowserWindowStatePersistence(), startupBehavior: .showStartPage,
+            monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
+        model.privateBrowser.openNewTab(url: try XCTUnwrap(URL(string: "https://private.example")))
+        let privateSession = model.privateBrowser.session
+        let progress = BrowserOnboardingProgressStore(persistence: InMemoryBrowserOnboardingProgressPersistence())
+        var assignment: BrowserTabRuntimeAssignment?
+        let result = await BrowserOnboardingCompletion.complete(
+            request: .firstRun, browser: model.browser, progress: progress, spaceAccess: model.spaceAccess,
+            willComplete: { guide in
+                XCTAssertTrue(progress.isLaunchGateActive)
+                guard let guide else { return XCTFail("Setup did not create a guide") }
+                assignment = guide
+                XCTAssertTrue(model.presentGettingStartedAfterSetup(matching: guide))
+                XCTAssertNotNil(model.pages.nativeTabs.runtime(matching: guide, content: .gettingStarted))
+                XCTAssertTrue(model.navigation.compactShowsPage)
+            })
+        let guide = try XCTUnwrap(assignment)
+        XCTAssertEqual(result, .completed(guide: guide))
+        XCTAssertEqual(model.browser.session.spaces.first?.id, guide.spaceID)
+        XCTAssertNil(model.pages.activePage)
+        XCTAssertEqual(model.privateBrowser.session, privateSession)
+        model.navigation.adapt(to: .compact)
+        XCTAssertTrue(model.navigation.compactShowsPage)
+        XCTAssertFalse(
+            model.presentGettingStartedAfterSetup(
+                matching:
+                    BrowserTabRuntimeAssignment(tabID: guide.tabID, spaceID: guide.spaceID, profileID: UUID())))
+    }
+
     func testIsolatedWindowModelUsesOnlyEphemeralWebsiteData() throws {
         let rootBrowser = BrowserStore(
             session: .preview,

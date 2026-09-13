@@ -14,10 +14,7 @@ struct BrowserOnboardingManualSetupPage: View {
             selectedSpaceID: $selectedSpaceID,
             opensGettingStarted: opensGettingStarted,
             back: back,
-            finish: {
-                flow.commitManualSetup()
-                if flow.step == .complete { openCrest() }
-            }
+            finish: openCrest
         )
         .overlay(alignment: .bottom) {
             if let message = flow.failure?.message {

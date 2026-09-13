@@ -20,12 +20,15 @@ final class BrowserOnboardingFlow {
     private(set) var completionSummary: LocalizedStringResource?
     private(set) var isChoosingDataAccess = false
     private(set) var isCommittingImport = false
+    private(set) var isCompletingSetup = false
+    private(set) var completionFailure: LocalizedStringResource?
 
     @ObservationIgnored private let sourceDiscovery: any BrowserInstalledImportSourceDiscovering
     @ObservationIgnored private let dataAccessProvider: any BrowserOnboardingDataAccessProviding
     @ObservationIgnored private let importCommitter: any BrowserOnboardingImportCommitting
     @ObservationIgnored private let importReadCoordinator: BrowserOnboardingImportReadCoordinator
     @ObservationIgnored private var commitTask: Task<Void, Never>?
+    @ObservationIgnored private var completionTask: Task<Void, Never>?
     @ObservationIgnored private var finalizationTask:
         Task<
             Result<BrowserPasswordImportResult, any Error>,
@@ -41,7 +44,7 @@ final class BrowserOnboardingFlow {
     }
 
     var isImportSelectionLocked: Bool {
-        isReading || isChoosingDataAccess || isCommittingImport
+        isReading || isChoosingDataAccess || isCommittingImport || isCompletingSetup
     }
 
     var nextImportStep: BrowserOnboardingStep {
@@ -117,6 +120,7 @@ final class BrowserOnboardingFlow {
         currentImportPayload = nil
         failure = nil
         completionSummary = nil
+        completionFailure = nil
 
         manualPlan =
             request.entryPoint == .manualSetup
@@ -137,6 +141,39 @@ final class BrowserOnboardingFlow {
         case .welcome, .featureSpaces, .featureTabs, .featureSync,
             .importSelection, .reviewing, .manualSetup, .complete:
             break
+        }
+    }
+
+    func completeSetup(
+        progress: BrowserOnboardingProgressStore,
+        spaceAccess: BrowserSpaceAccessController,
+        onCompleted: @escaping @MainActor () -> Void
+    ) {
+        guard !isImportSelectionLocked else { return }
+        let generation = operationGeneration
+        let request = self.request
+        let browser = self.browser
+        let pendingPlan = step == .manualSetup ? manualPlan : nil
+        isCompletingSetup = true
+        completionFailure = nil
+        completionTask = Task { @MainActor [weak self] in
+            let result = await BrowserOnboardingCompletion.complete(
+                request: request, browser: browser, progress: progress, spaceAccess: spaceAccess,
+                manualPlan: pendingPlan)
+            guard let self, !Task.isCancelled,
+                operationGeneration == generation, self.request == request
+            else { return }
+            completionTask = nil
+            isCompletingSetup = false
+            switch result {
+            case .completed:
+                if let pendingPlan { finishManualSetup(pendingPlan) }
+                onCompleted()
+            case .cancelled:
+                break
+            case .sourceChanged:
+                completionFailure = LocalizedStringResource("Setup could not finish. Review your Spaces and try again.")
+            }
         }
     }
 
@@ -296,25 +333,15 @@ final class BrowserOnboardingFlow {
         plan = updated
     }
 
-    func commitManualSetup() {
-        guard let manualPlan, !isCommittingImport else { return }
-        do {
-            try browser.commitManualSetup(manualPlan)
-            let addedTabs = manualPlan.spaces.reduce(0) {
-                $0 + $1.addedTabs.count
-            }
-            let newSpaces = manualPlan.spaces.filter(\.isNew).count
-            completionSummary = BrowserOnboardingSummary.completedManualSetup(
-                newSpaceCount: newSpaces,
-                addedTabCount: addedTabs
-            )
-            self.manualPlan = nil
-            plan = nil
-            failure = nil
-            state = .complete
-        } catch {
-            failure = .manualCommit(error.localizedDescription)
-        }
+    private func finishManualSetup(_ manualPlan: BrowserManualSetupPlan) {
+        completionSummary = BrowserOnboardingSummary.completedManualSetup(
+            newSpaceCount: manualPlan.spaces.filter(\.isNew).count,
+            addedTabCount: manualPlan.spaces.reduce(0) { $0 + $1.addedTabs.count }
+        )
+        self.manualPlan = nil
+        plan = nil
+        failure = nil
+        state = .complete
     }
 
     func commitReviewedImport() {
@@ -450,7 +477,7 @@ final class BrowserOnboardingFlow {
         for entryPoint: BrowserOnboardingEntryPoint
     ) -> BrowserOnboardingFlowState {
         switch entryPoint {
-        case .firstRun:
+        case .firstRun, .rerun:
             .welcome
         case .importBrowser:
             .importSelection
@@ -752,6 +779,10 @@ final class BrowserOnboardingFlow {
 
     private func invalidateOperations() {
         operationGeneration &+= 1
+        completionTask?.cancel()
+        completionTask = nil
+        isCompletingSetup = false
+        completionFailure = nil
         importReadCoordinator.cancel()
         isChoosingDataAccess = false
         commitTask?.cancel()

@@ -271,19 +271,33 @@ final class BrowserSpaceBrandingTests: XCTestCase {
     }
 
     func testEditorPreviewNormalizesWithoutMutatingTheLiveBinding() {
-        var branding = BrowserSpaceBrandingPreviewFixture.gradientBranding
-        let original = branding
-        let binding = Binding(get: { branding }, set: { branding = $0 })
+        let original = BrowserSpaceBrandingPreviewFixture.gradientBranding
+        for snapshot in [nil, Optional(original)] {
+            var branding = original
+            branding.readabilityFade = original.readabilityFade == 0 ? 1 : 0
+            let liveValue = branding
+            var liveReads = 0
+            let binding = Binding(
+                get: {
+                    liveReads += 1
+                    return branding
+                }, set: { branding = $0 })
+            let context = BrowserCrestStudioContext(
+                branding: binding, defaults: original, compact: false, previewBranding: snapshot)
+            liveReads = 0
 
-        let preview = binding.editorPreview { candidate in
-            candidate.bannerStrength = -4
-            candidate.crest.trimColorIndex = 99
+            let preview = context.preview { candidate in
+                candidate.bannerStrength = -4
+                candidate.crest.trimColorIndex = 99
+            }
+
+            XCTAssertEqual(branding, liveValue)
+            XCTAssertEqual(preview.iconStyle, .layeredCrest)
+            XCTAssertEqual(preview.bannerStrength, 0)
+            XCTAssertEqual(preview.crest.trimColorIndex, 0)
+            XCTAssertEqual(preview.readabilityFade, (snapshot ?? liveValue).readabilityFade)
+            XCTAssertEqual(liveReads, snapshot == nil ? 1 : 0)
         }
-
-        XCTAssertEqual(branding, original)
-        XCTAssertEqual(preview.iconStyle, .layeredCrest)
-        XCTAssertEqual(preview.bannerStrength, 0)
-        XCTAssertEqual(preview.crest.trimColorIndex, 0)
     }
 
     func testEditorPaletteAddsAndRemovesOnlyTheTrailingRole() {
@@ -555,12 +569,16 @@ final class BrowserSpaceBrandingTests: XCTestCase {
 
     func testNativeCrestArtworkReusesRendersWithoutKeepingUnlimitedSliderValues() throws {
         let space = try XCTUnwrap(BrowserSession.preview.selectedSpace)
-        let cache = BrowserSpaceSymbolArtworkCache(capacity: 2)
+        var cache = BrowserSpaceSymbolArtworkCache(capacity: 2)
         var renderCount = 0
-        func identity(branding: BrowserSpaceBranding, scale: CGFloat = 2) -> BrowserSpaceSymbolArtworkIdentity {
+        func identity(
+            branding: BrowserSpaceBranding, scale: CGFloat = 2, symbol: String? = nil,
+            access: BrowserSpaceAccessPolicy = .open, size: CGFloat = 30, lockSize: CGFloat = 7,
+            colorScheme: ColorScheme = .dark
+        ) -> BrowserSpaceSymbolArtworkIdentity {
             BrowserSpaceSymbolArtworkIdentity(
-                branding: branding, symbol: space.symbol, accessPolicy: space.accessPolicy,
-                size: 30, lockSize: 7, colorScheme: .dark, displayScale: scale)
+                branding: branding, symbol: symbol ?? space.symbol, accessPolicy: access,
+                size: size, lockSize: lockSize, colorScheme: colorScheme, displayScale: scale)
         }
         func request(_ identity: BrowserSpaceSymbolArtworkIdentity) {
             _ = cache.image(for: identity) {
@@ -585,6 +603,62 @@ final class BrowserSpaceBrandingTests: XCTestCase {
         XCTAssertEqual(renderCount, 3, "Recently used artwork stays available.")
         request(changed)
         XCTAssertEqual(renderCount, 4, "Old slider appearances leave the bounded cache.")
+
+        var backgroundEdit = space.branding
+        backgroundEdit.bannerStrength = 0.2
+        backgroundEdit.readabilityFade = 0.8
+        backgroundEdit.folderColorIntensity = 0.7
+        backgroundEdit.bannerPattern = .checkered
+        backgroundEdit.themeMode = .gradient
+        backgroundEdit.gradientAngle = 135
+        backgroundEdit.showsTexture = true
+        backgroundEdit.textColorMode = .dark
+        backgroundEdit.hasCustomAppearance = true
+        backgroundEdit.symbolColor = .rose
+        backgroundEdit.crest.startingPresetID = "edited-starting-point"
+        request(original)
+        let beforeBackgroundEdit = renderCount
+        request(identity(branding: backgroundEdit))
+        XCTAssertEqual(renderCount, beforeBackgroundEdit, "Background edits reuse the unchanged native crest.")
+
+        var paletteEdit = space.branding
+        paletteEdit.crest.palette = [.rose, .gold]
+        for changedIdentity in [
+            changed,
+            identity(branding: paletteEdit),
+            identity(branding: space.branding, symbol: "leaf.fill"),
+            identity(branding: space.branding, access: .deviceOwnerAuthentication),
+            identity(branding: space.branding, size: 36),
+            identity(branding: space.branding, lockSize: 9),
+            identity(branding: space.branding, colorScheme: .light),
+        ] {
+            cache = BrowserSpaceSymbolArtworkCache(capacity: 2)
+            request(original)
+            let beforeChange = renderCount
+            request(changedIdentity)
+            XCTAssertEqual(
+                renderCount, beforeChange + 1, "Artwork, badge and environment changes need their own render.")
+        }
+
+        let ownPalette = identity(branding: paletteEdit)
+        request(ownPalette)
+        let beforeUnusedPaletteEdit = renderCount
+        paletteEdit.colors = [.ink, .sky]
+        request(identity(branding: paletteEdit))
+        XCTAssertEqual(
+            renderCount, beforeUnusedPaletteEdit, "A crest's own palette is independent of its Space background.")
+
+        var simple = space.branding
+        simple.iconStyle = .simpleSymbol
+        simple.symbolColor = .gold
+        request(identity(branding: simple))
+        let beforeHiddenCrestEdit = renderCount
+        simple.crest.edgeWidth = 0.75
+        request(identity(branding: simple))
+        XCTAssertEqual(renderCount, beforeHiddenCrestEdit, "A plain symbol does not render the hidden crest.")
+        simple.symbolColor = .rose
+        request(identity(branding: simple))
+        XCTAssertEqual(renderCount, beforeHiddenCrestEdit + 1, "A symbol's visible color changes its render.")
     }
 
     func testBrandingNormalizesPaletteAndLayerColorSelections() {

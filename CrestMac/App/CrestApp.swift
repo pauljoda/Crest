@@ -435,10 +435,16 @@ struct CrestApp: App {
             } else {
                 InMemoryBrowserWindowStatePersistence()
             }
-        let startupBehavior =
-            usesIsolatedLaunch
-            ? BrowserStartupBehavior.lastActiveTab
-            : BrowserStartupPreference.behavior()
+        let onboardingProgress = BrowserOnboardingProgressStore.launchStore(
+            isIsolated: usesIsolatedLaunch,
+            forceWelcome: launchEnvironment.forcesOnboardingWelcome,
+            forceSetup: launchEnvironment.forcesMacOnboardingSetup,
+            persistentIsolationID: launchEnvironment.persistentIsolationID
+        )
+        let startupBehavior = BrowserMacOnboardingPolicy.startupBehavior(
+            preferred: usesIsolatedLaunch ? .lastActiveTab : BrowserStartupPreference.behavior(),
+            hasActiveLaunchGate: onboardingProgress.isLaunchGateActive
+        )
         let mainWindowState = BrowserWindowStateStore(
             id: .main,
             session: browser.session,
@@ -446,17 +452,7 @@ struct CrestApp: App {
         )
         _browser = State(initialValue: browser)
         _cloudSync = State(initialValue: cloudSync)
-        _onboardingProgress = State(
-            initialValue: BrowserOnboardingProgressStore.launchStore(
-                isIsolated: usesIsolatedLaunch,
-                forceWelcome: launchEnvironment.forcesOnboardingWelcome,
-                // A machine that has already finished setup always answers the
-                // welcome step with "Open Crest", so the steps past it are only
-                // reachable when the launch is told to treat setup as unfinished.
-                forceSetup: launchEnvironment.forcesMacOnboardingSetup,
-                persistentIsolationID: launchEnvironment.persistentIsolationID
-            )
-        )
+        _onboardingProgress = State(initialValue: onboardingProgress)
         _onboardingCoordinator = State(initialValue: BrowserOnboardingCoordinator())
         _chrome = State(
             initialValue: BrowserChromeState(
@@ -746,7 +742,8 @@ struct CrestApp: App {
                     request: onboardingCoordinator.request,
                     browser: browser,
                     cloudSync: cloudSync,
-                    progress: onboardingProgress
+                    progress: onboardingProgress,
+                    spaceAccess: spaceAccess
                 )
                 .task { await cloudSync.start() }
             } else {

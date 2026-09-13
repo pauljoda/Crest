@@ -82,7 +82,7 @@ struct BrowserOnboardingImportPage: View {
             )
 
             HStack {
-                if entryPoint == .firstRun {
+                if entryPoint.isGuidedSetup {
                     Button("Back", action: back)
                         .buttonStyle(BrowserOnboardingSecondaryButtonStyle())
                         .disabled(isLocked)

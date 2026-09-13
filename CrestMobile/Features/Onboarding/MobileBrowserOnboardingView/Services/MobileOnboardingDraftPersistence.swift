@@ -18,6 +18,16 @@ struct MobileOnboardingDraftPersistence {
         loadPlan()
     }
 
+    func plan(for request: BrowserOnboardingRequest, existing: BrowserSession) -> BrowserManualSetupPlan {
+        var plan = (request.entryPoint == .rerun ? nil : load()) ?? BrowserManualSetupPlan(existing: existing)
+        plan.reconcile(with: existing)
+        plan.discardAddedTabs()
+        if plan.spaces.isEmpty, let spaceID = try? plan.addSpace() {
+            plan.setSpaceIdentity(name: "Personal", symbol: "person.fill", for: spaceID)
+        }
+        return plan
+    }
+
     func save(_ plan: BrowserManualSetupPlan) {
         savePlan(plan)
     }

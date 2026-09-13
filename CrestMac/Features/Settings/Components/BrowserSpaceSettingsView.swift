@@ -84,6 +84,7 @@ struct BrowserSpaceSettingsView: View {
         ViewThatFits(in: .horizontal) {
             toolbarContent(compact: false)
             toolbarContent(compact: true)
+            stackedToolbarContent
         }
         .padding(.horizontal, CrestSpacing.medium)
         .frame(minHeight: 54)
@@ -105,12 +106,26 @@ struct BrowserSpaceSettingsView: View {
             Spacer(minLength: compact ? 2 : 8)
             sectionPicker(compact: compact)
             Spacer(minLength: compact ? 2 : 8)
-            spaceActions(includesNewSpace: compact)
+            spaceOrderControls
+            addSpaceButton
+        }
+    }
 
-            if !compact {
+    private var stackedToolbarContent: some View {
+        VStack(spacing: CrestSpacing.small) {
+            HStack {
+                spacePageIdentity(compact: true)
+                Spacer(minLength: CrestSpacing.small)
+                spacePicker(compact: true)
                 addSpaceButton
             }
+            HStack {
+                sectionPicker(compact: true)
+                Spacer(minLength: CrestSpacing.small)
+                spaceOrderControls
+            }
         }
+        .padding(.vertical, CrestSpacing.small)
     }
 
     /// Spaces is the one pane whose identity lives inside its functional toolbar
@@ -179,28 +194,14 @@ struct BrowserSpaceSettingsView: View {
         .accessibilityIdentifier("space-settings-section-picker")
     }
 
-    private func spaceActions(includesNewSpace: Bool) -> some View {
-        Menu {
-            Group {
-                if let space {
-                    moveSpaceCommands(space.id)
-                }
-                if includesNewSpace {
-                    Divider()
-                    Button("New Space", systemImage: "plus", action: addSpace)
-                }
-            }
-            .crestMenuActionLabelStyle()
-        } label: {
-            Image(systemName: "ellipsis.circle")
-        }
-        .crestMenuActionLabelStyle()
-        .accessibilityLabel("Space Actions")
+    private var spaceOrderControls: some View {
+        BrowserSpaceOrderControls(browser: browser, spaceID: editedSpaceID)
     }
 
     private var addSpaceButton: some View {
         Button("New Space", systemImage: "plus", action: addSpace)
             .labelStyle(.iconOnly)
+            .fixedSize()
             .accessibilityIdentifier("space-settings-add")
     }
 
@@ -232,21 +233,6 @@ struct BrowserSpaceSettingsView: View {
             isDefault: browser.session.defaultSpaceID == space.id,
             accessController: spaceAccess
         )
-    }
-
-    @ViewBuilder
-    private func moveSpaceCommands(_ spaceID: SpaceID) -> some View {
-        if let index = browser.session.spaces.firstIndex(where: { $0.id == spaceID }) {
-            Button("Move Up", systemImage: "arrow.up") {
-                browser.moveSpaces(from: IndexSet(integer: index), to: index - 1)
-            }
-            .disabled(index == browser.session.spaces.startIndex)
-
-            Button("Move Down", systemImage: "arrow.down") {
-                browser.moveSpaces(from: IndexSet(integer: index), to: index + 2)
-            }
-            .disabled(index == browser.session.spaces.index(before: browser.session.spaces.endIndex))
-        }
     }
 
     private func applyRequestedSelection() {

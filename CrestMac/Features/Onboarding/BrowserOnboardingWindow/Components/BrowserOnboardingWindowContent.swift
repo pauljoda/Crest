@@ -43,7 +43,13 @@ struct BrowserOnboardingWindowContent: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                if let failure = flow.completionFailure {
+                    Text(failure)
+                        .foregroundStyle(.red)
+                        .padding()
+                }
             }
+            .disabled(flow.isCompletingSetup)
         }
         .ignoresSafeArea()
         .frame(minWidth: 980, minHeight: 660)

@@ -1,12 +1,5 @@
 import SwiftUI
 
-/// Touch's settings detail: the shared router's pane as it comes, with the
-/// sheet the password manager lives in hung off it.
-///
-/// Touch has no extensions surface, and its hardware-keyboard bindings read the
-/// shared shortcut store without offering an editor for it, so it hands the
-/// router neither an extension controller pool nor a shortcut store; those two
-/// destinations stay out of its list and resolve to nothing here.
 struct MobileBrowserSettingsDestinationPage: View {
     let destination: BrowserSettingsDestination
     let browser: BrowserStore
@@ -14,7 +7,6 @@ struct MobileBrowserSettingsDestinationPage: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(BrowserCloudSyncController.self) private var cloudSync
     @Environment(BrowserOnboardingCoordinator.self) private var onboardingCoordinator
 
@@ -47,20 +39,16 @@ struct MobileBrowserSettingsDestinationPage: View {
     private var setupActions: [BrowserAdvancedSetupAction] {
         [
             .init(
-                id: "replay-setup",
-                title: "Review Crest Setup",
-                symbol: "sparkles",
+                id: "rerun-onboarding",
+                title: "Rerun onboarding",
+                symbol: "arrow.counterclockwise",
                 identifier: "mobile-open-setup",
-                action: openSetup
+                action: rerunOnboarding
             )
         ]
     }
 
-    private func openSetup() {
-        dismiss()
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(250))
-            onboardingCoordinator.presentOnMobile(.manualSetup)
-        }
+    private func rerunOnboarding() {
+        onboardingCoordinator.presentOnMobile(.rerun)
     }
 }

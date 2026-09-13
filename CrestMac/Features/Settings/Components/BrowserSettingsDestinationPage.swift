@@ -1,12 +1,5 @@
 import SwiftUI
 
-/// The desktop's settings detail column: one page of chrome around whichever
-/// pane the shared router resolves.
-///
-/// Everything the desktop alone can offer is assembled here — the search field
-/// the passwords pane filters by, the shortcut store, the extension controller
-/// pool, and the setup actions that open the onboarding window — and handed to
-/// ``BrowserSettingsDestinationRouter`` as data.
 struct BrowserSettingsDestinationPage: View {
     @Environment(\.openWindow) private var openWindow
 
@@ -60,6 +53,14 @@ struct BrowserSettingsDestinationPage: View {
 
     private var setupActions: [BrowserAdvancedSetupAction] {
         [
+            .init(
+                id: "rerun-onboarding",
+                title: "Rerun onboarding",
+                symbol: "arrow.counterclockwise",
+                help: "Restart setup from the welcome screen"
+            ) {
+                presentSetup(.rerun)
+            },
             .init(
                 id: "manual-setup",
                 title: "Review & Customize Setup…",

@@ -7,6 +7,7 @@ struct BrowserOnboardingWindow: View {
     let request: BrowserOnboardingRequest
     let cloudSync: BrowserCloudSyncController
     let progress: BrowserOnboardingProgressStore
+    let spaceAccess: BrowserSpaceAccessController
 
     @State private var flow: BrowserOnboardingFlow
     @State private var selectedSourceSpaceID: SpaceID?
@@ -17,12 +18,14 @@ struct BrowserOnboardingWindow: View {
         request: BrowserOnboardingRequest,
         browser: BrowserStore,
         cloudSync: BrowserCloudSyncController,
-        progress: BrowserOnboardingProgressStore
+        progress: BrowserOnboardingProgressStore,
+        spaceAccess: BrowserSpaceAccessController
     ) {
         self.init(
             request: request,
             cloudSync: cloudSync,
             progress: progress,
+            spaceAccess: spaceAccess,
             flow: BrowserOnboardingFlow(request: request, browser: browser)
         )
     }
@@ -31,11 +34,13 @@ struct BrowserOnboardingWindow: View {
         request: BrowserOnboardingRequest,
         cloudSync: BrowserCloudSyncController,
         progress: BrowserOnboardingProgressStore,
+        spaceAccess: BrowserSpaceAccessController,
         flow: BrowserOnboardingFlow
     ) {
         self.request = request
         self.cloudSync = cloudSync
         self.progress = progress
+        self.spaceAccess = spaceAccess
         _flow = State(initialValue: flow)
         _selectedSourceSpaceID = State(initialValue: nil)
         _selectedManualSpaceID = State(
@@ -59,14 +64,12 @@ struct BrowserOnboardingWindow: View {
     }
 
     private func openCrest() {
-        if progress.completeSetup(for: request.entryPoint) {
-            flow.browser.openGettingStarted()
+        flow.completeSetup(progress: progress, spaceAccess: spaceAccess) {
+            // Restore the existing browser window before opening its scene.
+            BrowserOnboardingLaunchGateWindow.restore()
+            openWindow(id: BrowserSceneID.browser.rawValue)
+            dismiss()
         }
-        // The launch gate retired the existing browser window. Restore it
-        // before asking SwiftUI to open that scene so it can reuse the window.
-        BrowserOnboardingLaunchGateWindow.restore()
-        openWindow(id: BrowserSceneID.browser.rawValue)
-        dismiss()
     }
 }
 
@@ -76,6 +79,7 @@ struct BrowserOnboardingWindow: View {
         request: fixture.request,
         cloudSync: fixture.cloudSync,
         progress: fixture.progress,
+        spaceAccess: fixture.spaceAccess,
         flow: fixture.flow
     )
     .frame(width: 980, height: 660)

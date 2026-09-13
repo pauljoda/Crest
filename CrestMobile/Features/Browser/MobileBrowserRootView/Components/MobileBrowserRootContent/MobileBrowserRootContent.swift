@@ -351,6 +351,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             model.settings.reconcile()
             model.routeSelectedSettingsAction()
         }
+        .onChange(of: suspendsCompactPagePresentation) { _, isSuspended in
+            if isSuspended { model.settings.dismissSheet() }
+        }
         .onChange(of: model.lockedSpaceIDs) {
             model.settings.reconcile()
         }

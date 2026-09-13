@@ -8,13 +8,4 @@ extension Binding where Value == BrowserSpaceBranding {
         mutation(&updated)
         wrappedValue = updated.normalized()
     }
-
-    func editorPreview(
-        _ mutation: (inout BrowserSpaceBranding) -> Void
-    ) -> BrowserSpaceBranding {
-        var candidate = wrappedValue
-        candidate.iconStyle = .layeredCrest
-        mutation(&candidate)
-        return candidate.normalized()
-    }
 }

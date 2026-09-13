@@ -169,7 +169,7 @@ struct BrowserCrestStudioBackground: View {
                     }
                 } artwork: {
                     BrowserSpaceBannerBackground(
-                        branding: context.branding.editorPreview {
+                        branding: context.preview {
                             $0.themeMode = .banner
                             $0.bannerPattern = pattern
                         }
@@ -180,7 +180,7 @@ struct BrowserCrestStudioBackground: View {
             BrowserCrestStudioChoice(title: "Gradient", selected: context.value.themeMode == .gradient) {
                 context.setting(\.themeMode).binding.wrappedValue = .gradient
             } artwork: {
-                BrowserSpaceBannerBackground(branding: context.branding.editorPreview { $0.themeMode = .gradient })
+                BrowserSpaceBannerBackground(branding: context.preview { $0.themeMode = .gradient })
                     .frame(width: 56, height: 48).clipShape(.rect(cornerRadius: 8))
             }
         }

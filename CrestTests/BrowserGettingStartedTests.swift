@@ -108,6 +108,50 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertEqual(browser.selectedSpace?.branding.iconStyle, .layeredCrest)
     }
 
+    func testSetupDestinationSurvivesRootStartupWithoutChangingNormalStartPageLaunches() async throws {
+        for requiresSetup in [true, false] {
+            let browser = BrowserStore(
+                session: BrowserSession.freshInstallSeed,
+                persistence: InMemoryBrowserSessionPersistence())
+            let progress = BrowserOnboardingProgressStore(
+                persistence: InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: !requiresSetup))
+            let startupBehavior = BrowserMacOnboardingPolicy.startupBehavior(
+                preferred: .showStartPage, hasActiveLaunchGate: progress.isLaunchGateActive)
+            let access = BrowserSpaceAccessController()
+            if requiresSetup {
+                let result = await BrowserOnboardingCompletion.complete(
+                    request: .firstRun, browser: browser, progress: progress, spaceAccess: access)
+                guard case .completed(guide: .some(_)) = result else {
+                    return XCTFail("Setup must select its guide before opening the main window.")
+                }
+            } else {
+                _ = try XCTUnwrap(browser.openGettingStarted())
+            }
+            let guideID = try XCTUnwrap(browser.selectedTab?.id)
+            let pages = BrowserPagePool(
+                usesEphemeralWebsiteDataStores: true,
+                extensionControllerPool: BrowserExtensionControllerPool(
+                    registry: BrowserExtensionRegistry(persistence: InMemoryBrowserExtensionRegistryPersistence())))
+            defer { pages.reconcile(validTabIDs: []) }
+            let model = BrowserRootModel(
+                browser: browser, pages: pages, chrome: BrowserChromeState(),
+                spaceAccess: access, windowState: nil, startupBehavior: startupBehavior,
+                persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
+
+            await model.prepareBrowser()
+
+            if requiresSetup {
+                XCTAssertEqual(browser.selectedTab?.id, guideID)
+                XCTAssertEqual(pages.activeTabID, guideID)
+                XCTAssertEqual(browser.selectedTab?.nativeContent, .gettingStarted)
+                XCTAssertNil(pages.activePage)
+            } else {
+                XCTAssertTrue(browser.selectedTab?.isStartPage == true)
+                XCTAssertNotEqual(browser.selectedTab?.id, guideID)
+            }
+        }
+    }
+
     func testNativeGuideReusesItsTabAndNeverAllocatesWebKit() throws {
         let browser = BrowserStore.preview()
         let first = try XCTUnwrap(browser.openGettingStarted())

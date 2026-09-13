@@ -14,6 +14,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
                 spacePicker
                 Spacer(minLength: 0)
                 sectionPicker.frame(width: 220)
+                spaceOrderControls
                 addSpaceButton
             }
             VStack(spacing: 12) {
@@ -23,7 +24,11 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
                     spacePicker
                     addSpaceButton
                 }
-                sectionPicker
+                HStack {
+                    sectionPicker
+                    Spacer(minLength: CrestSpacing.small)
+                    spaceOrderControls
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -73,6 +78,11 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
             selectedSpaceID = browser.session.selectedSpaceID
         }
         .labelStyle(.iconOnly)
+        .fixedSize()
         .accessibilityIdentifier("space-settings-add")
+    }
+
+    private var spaceOrderControls: some View {
+        BrowserSpaceOrderControls(browser: browser, spaceID: selectedSpaceID)
     }
 }

@@ -1085,6 +1085,26 @@
     "regular-width-settings-canvas": {
       "category": "fixed",
       "message": "Open Settings in the browsing canvas on wider windows, using a sheet only in compact layouts"
+    },
+    "onboarding-guide-first-space": {
+      "category": "fixed",
+      "message": "Open Getting Started in the first Space when setup finishes"
+    },
+    "restart-onboarding-from-advanced": {
+      "category": "improved",
+      "message": "Rerun onboarding from the Welcome screen in Advanced settings"
+    },
+    "space-order-controls": {
+      "category": "improved",
+      "message": "Reorder Spaces directly in Settings with Up and Down controls"
+    },
+    "space-appearance-scroll-responsiveness": {
+      "category": "fixed",
+      "message": "Keep Space appearance settings responsive while scrolling"
+    },
+    "space-appearance-preview-reuse": {
+      "category": "improved",
+      "message": "Reduce unnecessary icon and thumbnail redraws while adjusting Space appearance"
     }
   }
 }

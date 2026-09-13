@@ -3,7 +3,7 @@ enum MobileBrowserOnboardingPolicy {
         for request: BrowserOnboardingRequest
     ) -> MobileBrowserOnboardingStep {
         switch request.entryPoint {
-        case .firstRun:
+        case .firstRun, .rerun:
             .welcome
         case .importBrowser:
             .macImport

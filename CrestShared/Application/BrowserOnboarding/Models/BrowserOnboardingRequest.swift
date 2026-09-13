@@ -13,4 +13,5 @@ struct BrowserOnboardingRequest: Codable, Hashable {
     static var firstRun: Self { Self(entryPoint: .firstRun) }
     static var importBrowser: Self { Self(entryPoint: .importBrowser) }
     static var manualSetup: Self { Self(entryPoint: .manualSetup) }
+    static var rerun: Self { Self(entryPoint: .rerun) }
 }

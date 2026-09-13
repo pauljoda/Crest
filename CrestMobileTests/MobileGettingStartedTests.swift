@@ -52,7 +52,7 @@ final class MobileGettingStartedTests: XCTestCase {
         XCTAssertEqual(browser.selectedTab?.nativeContent, .gettingStarted)
     }
 
-    func testSetupReplayAndForcedWelcomeDoNotReopenGuide() {
+    func testDirectCustomizationAndForcedWelcomeDoNotReopenGuide() {
         let persistence = InMemoryBrowserOnboardingProgressPersistence(hasCompletedSetup: true)
         let replay = BrowserOnboardingProgressStore(persistence: persistence, forceWelcome: true, forceSetup: true)
         XCTAssertFalse(replay.completeSetup(for: .manualSetup))
