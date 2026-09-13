@@ -61,6 +61,7 @@ the live status for each issue.
 - [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
 - [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
 - [ ] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
+- [ ] [Keep mobile webpage dialogs visible and responsive](https://github.com/pauljoda/Crest/issues/125)
 
 #### Completed
 
