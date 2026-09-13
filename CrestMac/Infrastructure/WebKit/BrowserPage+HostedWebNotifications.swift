@@ -4,6 +4,13 @@ import WebKit
 
 extension BrowserPage {
     func synchronizeHostedWebNotificationPermission() {
+        sitePermissionRequests.cancelAll()
+        if let url = webView.url, let origin = BrowserSiteOrigin(url: url) {
+            let decision = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID)
+            if decision != .grantPersistently && decision != .grantForSession {
+                removeHostedWebNotifications()
+            }
+        }
         guard let currentURL = displayURL ?? webView.url,
             let origin = BrowserSiteOrigin(url: currentURL)
         else {
@@ -31,6 +38,7 @@ extension BrowserPage {
             message.frameInfo.isMainFrame,
             let requestURL = message.frameInfo.request.url,
             let origin = BrowserSiteOrigin(url: requestURL),
+            BrowserSiteOrigin(message.frameInfo.securityOrigin) == origin,
             BrowserHostedWebNotificationOriginPolicy.allows(origin),
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
@@ -113,6 +121,7 @@ extension BrowserPage {
     }
 
     func beginHostedWebNotificationNavigation() {
+        sitePermissionRequests.cancelAll()
         removeHostedWebNotifications()
         hostedNotificationDocumentIdentifier = UUID().uuidString
     }
@@ -164,17 +173,35 @@ extension BrowserPage {
                 frame: frame
             )
         case .promptForSitePermission:
-            let response = await dialogPresenter.presentHostedNotificationPermission(
-                origin: origin,
-                spaceName: spaceName
-            )
+            let generation = sitePermissionRequests.generation
+            let response = await withCheckedContinuation { continuation in
+                sitePermissionRequests.request(
+                    .notifications, origin: origin, topLevelOrigin: origin,
+                    spaceName: spaceName
+                ) { response in
+                    continuation.resume(returning: response)
+                }
+            }
+            guard let response else {
+                sendHostedNotificationPermissionResponse(
+                    requestID: requestID, permission: "default",
+                    documentIdentifier: documentIdentifier, origin: origin, frame: frame
+                )
+                return
+            }
             guard
                 isCurrentHostedNotificationDocument(
                     documentIdentifier,
                     origin: origin
                 )
             else { return }
+            guard generation == sitePermissionRequests.generation else { return }
             switch response {
+            case .denyOnce:
+                sendHostedNotificationPermissionResponse(
+                    requestID: requestID, permission: "denied",
+                    documentIdentifier: documentIdentifier, origin: origin, frame: frame
+                )
             case .denyPersistently:
                 permissionCenter.setDecision(
                     .denyPersistently,
@@ -206,6 +233,22 @@ extension BrowserPage {
                         origin: origin
                     )
                 else { return }
+                guard generation == sitePermissionRequests.generation else {
+                    await sendHostedNotificationPermission(
+                        requestID: requestID, origin: origin,
+                        requestsSystemAuthorization: false,
+                        documentIdentifier: documentIdentifier, frame: frame
+                    )
+                    return
+                }
+                let latest = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID)
+                guard latest != .denyPersistently && latest != .denyForSession else {
+                    sendHostedNotificationPermissionResponse(
+                        requestID: requestID, permission: "denied",
+                        documentIdentifier: documentIdentifier, origin: origin, frame: frame
+                    )
+                    return
+                }
                 permissionCenter.setDecision(
                     response == .allowOnce
                         ? .grantForSession
@@ -322,7 +365,8 @@ extension BrowserPage {
             isCurrentHostedNotificationDocument(
                 documentIdentifier,
                 origin: origin
-            )
+            ),
+            allowsHostedNotificationDelivery(origin: origin)
         else { return }
         let systemIdentifier =
             "\(documentIdentifier).\(identifier)"
@@ -359,7 +403,8 @@ extension BrowserPage {
                 isCurrentHostedNotificationDocument(
                     documentIdentifier,
                     origin: origin
-                )
+                ),
+                allowsHostedNotificationDelivery(origin: origin)
             else {
                 await hostedNotificationCenter.remove(identifier: systemIdentifier)
                 return
@@ -396,6 +441,11 @@ extension BrowserPage {
             guard requestIfNeeded else { return false }
             return await hostedNotificationCenter.requestAuthorization() == .authorized
         }
+    }
+
+    private func allowsHostedNotificationDelivery(origin: BrowserSiteOrigin) -> Bool {
+        let decision = permissionCenter.decision(for: .notifications, origin: origin, in: spaceID)
+        return decision == .grantPersistently || decision == .grantForSession
     }
 
     private func hasActiveUserGesture(in frame: WKFrameInfo) async -> Bool {

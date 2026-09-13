@@ -961,6 +961,10 @@
     "extension-permission-prompts-and-install-consent": {
       "category": "fixed",
       "message": "Prevent repeated extension permission dialogs, remember access choices, and explain permission consent when adding extensions"
+    },
+    "website-camera-and-notification-permissions": {
+      "category": "fixed",
+      "message": "Request camera and notification access from compact site controls, remember choices per Space, and stop camera capture when access is revoked"
     }
   }
 }

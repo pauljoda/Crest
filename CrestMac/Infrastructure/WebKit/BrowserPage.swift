@@ -97,6 +97,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
+    let sitePermissionRequests = BrowserPagePermissionController()
+    @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
+        webView: webView, permissionCenter: permissionCenter, spaceID: spaceID
+    )
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
     @ObservationIgnored let recoverNotificationSystemAuthorization: @MainActor () async -> Void
@@ -759,6 +763,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        mediaCaptureSession.reset()
+        sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
         linkHover.detach()
         (webView as? BrowserDesktopWebView)?.linkHover = nil
@@ -1557,6 +1563,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        mediaCaptureSession.reset()
+        sitePermissionRequests.cancelAll()
         translation.reset()
         pictureInPicture.invalidate()
         linkHover.beginNavigation()

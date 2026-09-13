@@ -56,11 +56,6 @@ enum BrowserHostedWebNotificationContentBridge {
             static get maxActions() { return 0; }
 
             static requestPermission(callback) {
-              if (permission !== "default") {
-                const result = Promise.resolve(permission);
-                if (typeof callback === "function") result.then(callback);
-                return result;
-              }
               const requestID = `permission-${nextIdentifier++}`;
               const result = new Promise((resolve) => {
                 pendingPermissions.set(requestID, { resolve, callback });

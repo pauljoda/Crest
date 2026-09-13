@@ -11,6 +11,8 @@ extension BrowserPage: WKNavigationDelegate {
         translation.reset()
         linkHover.beginNavigation()
         focusRestoration.invalidate()
+        mediaCaptureSession.reset()
+        sitePermissionRequests.cancelAll()
         activeNavigation = navigation
         // Reloads and history traversal do not necessarily pass through the
         // app-level load path. Retire the old document's session as soon as

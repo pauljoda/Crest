@@ -120,43 +120,6 @@ final class BrowserDialogPresenter {
         }
     }
 
-    func presentMediaCapturePermission(
-        permission: BrowserMediaPermission,
-        origin: BrowserSiteOrigin,
-        topLevelURL: URL?,
-        spaceName: String,
-        completion:
-            @escaping @MainActor @Sendable (BrowserSitePermissionPromptResponse) -> Void
-    ) {
-        let alert = NSAlert()
-        alert.messageText = "Allow \(origin.host) to use your \(permission.displayName)?"
-        var message =
-            "This request belongs only to the \(spaceName) Space. "
-            + "Saved choices can be changed in Settings > Site Permissions."
-        if let topLevelURL,
-            let topLevelHost = topLevelURL.host(),
-            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
-        {
-            message += "\n\nThe request comes from \(origin.displayName) inside \(topLevelHost)."
-        }
-        alert.informativeText = message
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Allow Once")
-        alert.addButton(withTitle: "Always Allow in \(spaceName)")
-        alert.addButton(withTitle: "Block in \(spaceName)")
-
-        present(alert) { response in
-            switch response {
-            case .alertFirstButtonReturn:
-                completion(.allowOnce)
-            case .alertSecondButtonReturn:
-                completion(.grantPersistently)
-            default:
-                completion(.denyPersistently)
-            }
-        }
-    }
-
     func presentGeolocationPermission(
         origin: BrowserSiteOrigin,
         topLevelURL: URL?,
@@ -175,22 +138,6 @@ final class BrowserDialogPresenter {
             title: "Allow \(origin.host) to use your location?",
             message: message,
             allowOnceTitle: "Allow Once",
-            alwaysAllowTitle: "Always Allow in \(spaceName)",
-            blockTitle: "Block in \(spaceName)"
-        )
-    }
-
-    func presentHostedNotificationPermission(
-        origin: BrowserSiteOrigin,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        await presentSitePermission(
-            title: "Allow notifications from \(origin.host)?",
-            message:
-                "Notifications can appear outside Crest while this page is open. "
-                + "Background Web Push is not supported. "
-                + "The choice belongs only to the \(spaceName) Space.",
-            allowOnceTitle: "Allow for Session",
             alwaysAllowTitle: "Always Allow in \(spaceName)",
             blockTitle: "Block in \(spaceName)"
         )

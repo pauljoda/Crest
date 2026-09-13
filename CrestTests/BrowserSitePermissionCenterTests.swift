@@ -4,6 +4,21 @@ import XCTest
 
 @MainActor
 final class BrowserSitePermissionCenterTests: XCTestCase {
+    func testCombinedMediaRequestCannotBypassAnIndividualBlock() {
+        let center = BrowserSitePermissionCenter()
+        let origin = BrowserSiteOrigin(scheme: "https", host: "media.example", port: 443)
+        let spaceID = SpaceID()
+        center.setDecision(.grantPersistently, for: .cameraAndMicrophone, origin: origin, in: spaceID)
+        center.setDecision(.denyPersistently, for: .camera, origin: origin, in: spaceID)
+        XCTAssertEqual(center.mediaDecision(for: .cameraAndMicrophone, origin: origin, in: spaceID), .denyPersistently)
+        XCTAssertEqual(center.mediaDecision(for: .camera, origin: origin, in: spaceID), .denyPersistently)
+        XCTAssertEqual(center.mediaDecision(for: .microphone, origin: origin, in: spaceID), .grantPersistently)
+        center.setDecision(.ask, for: .cameraAndMicrophone, origin: origin, in: spaceID)
+        center.setDecision(.ask, for: .camera, origin: origin, in: spaceID)
+        center.setDecision(.grantPersistently, for: .camera, origin: origin, in: spaceID)
+        XCTAssertEqual(center.mediaDecision(for: .cameraAndMicrophone, origin: origin, in: spaceID), .ask)
+    }
+
     func testPermissionEnumCodableRawValuesRemainStable() throws {
         let mediaPermissions: [(BrowserMediaPermission, String)] = [
             (.camera, "camera"),

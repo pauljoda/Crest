@@ -35,6 +35,7 @@ final class BrowserSitePermissionCenter {
     }
 
     private(set) var persistentRecords: [BrowserSitePermissionRecord]
+    private(set) var revision: UInt64 = 0
 
     @ObservationIgnored private let persistence: any BrowserSitePermissionPersisting
     @ObservationIgnored private var sessionDecisions: [SpaceID: [Key: BrowserSitePermissionDecision]] = [:]
@@ -83,6 +84,7 @@ final class BrowserSitePermissionCenter {
         in spaceID: SpaceID,
         at date: Date = .now
     ) {
+        revision &+= 1
         let key = Key(origin: origin, permission: permission, detail: detail)
         switch decision {
         case .ask:
@@ -114,6 +116,7 @@ final class BrowserSitePermissionCenter {
     }
 
     func reset(recordID: BrowserSitePermissionRecord.ID) {
+        revision &+= 1
         let count = persistentRecords.count
         persistentRecords.removeAll { $0.id == recordID }
         if persistentRecords.count != count {
@@ -122,6 +125,7 @@ final class BrowserSitePermissionCenter {
     }
 
     func reset(spaceID: SpaceID) {
+        revision &+= 1
         sessionDecisions.removeValue(forKey: spaceID)
         let count = persistentRecords.count
         persistentRecords.removeAll { $0.spaceID == spaceID }
@@ -131,6 +135,7 @@ final class BrowserSitePermissionCenter {
     }
 
     func resetSession() {
+        revision &+= 1
         sessionDecisions.removeAll()
     }
 
@@ -144,5 +149,27 @@ final class BrowserSitePermissionCenter {
 
     private func persist() {
         persistence.save(persistentRecords)
+    }
+
+    /// Combined capture must respect a block on either device. Existing combined
+    /// grants remain a fallback for requests for just one of those devices.
+    func mediaDecision(
+        for media: BrowserMediaPermission,
+        origin: BrowserSiteOrigin,
+        in spaceID: SpaceID
+    ) -> BrowserSitePermissionDecision {
+        let combined = decision(for: .cameraAndMicrophone, origin: origin, in: spaceID)
+        let permissions: [BrowserSitePermission] =
+            media == .cameraAndMicrophone
+            ? [.camera, .microphone] : [media.sitePermission]
+        let decisions = permissions.map { decision(for: $0, origin: origin, in: spaceID) }
+        if ([combined] + decisions).contains(.denyPersistently) { return .denyPersistently }
+        if ([combined] + decisions).contains(.denyForSession) { return .denyForSession }
+        if combined == .grantPersistently || combined == .grantForSession { return combined }
+        if decisions.allSatisfy({ $0 == .grantPersistently }) { return .grantPersistently }
+        if decisions.allSatisfy({ $0 == .grantPersistently || $0 == .grantForSession }) {
+            return .grantForSession
+        }
+        return .ask
     }
 }

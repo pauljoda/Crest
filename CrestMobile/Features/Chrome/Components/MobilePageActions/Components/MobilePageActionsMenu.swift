@@ -52,6 +52,21 @@ struct MobilePageActionsMenu: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier("page-actions-menu")
+        .pagePermissionHost(pages.activePage?.sitePermissionRequests)
+        .popover(
+            item: Binding {
+                pages.activePage?.sitePermissionRequests.current
+            } set: { request in
+                if request == nil && pages.activePage?.sitePermissionRequests.current != nil {
+                    pages.activePage?.sitePermissionRequests.cancelAll()
+                }
+            }
+        ) { request in
+            if let controller = pages.activePage?.sitePermissionRequests {
+                BrowserPagePermissionPrompt(request: request, controller: controller)
+                    .presentationCompactAdaptation(.popover)
+            }
+        }
     }
 
     private var accessibilityLabel: String {

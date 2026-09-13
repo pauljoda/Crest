@@ -184,6 +184,11 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 reduceMotion: reduceMotion
             )
         }
+        .onChange(of: model.pages.activePage?.sitePermissionRequests.current?.id) {
+            if model.pages.activePage?.sitePermissionRequests.current != nil {
+                model.presentFloatingSidebar(reduceMotion: reduceMotion)
+            }
+        }
         .transaction { transaction in
             if reduceMotion {
                 transaction.disablesAnimations = true

@@ -68,6 +68,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: MobileBrowserPageStore.ModifiedLinkOpener
     @ObservationIgnored let downloadCenter: BrowserDownloadCenter
+    let sitePermissionRequests = BrowserPagePermissionController()
+    @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
+        webView: webView, permissionCenter: permissionCenter, spaceID: spaceID
+    )
     @ObservationIgnored let permissionCenter: BrowserSitePermissionCenter
     @ObservationIgnored let serverTrustOverrides: BrowserServerTrustOverrideStore
     @ObservationIgnored let navigationDecider: BrowserNavigationDecider
@@ -492,6 +496,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        mediaCaptureSession.reset()
+        sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
         mediaSessionCoordinator?.prepareForRemoval()
         linkPeekPressCoordinator.cancel()
@@ -1225,6 +1231,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        mediaCaptureSession.reset()
+        sitePermissionRequests.cancelAll()
         translation.reset()
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()

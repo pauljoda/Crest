@@ -173,48 +173,24 @@ extension BrowserPage: WKUIDelegate {
         type: WKMediaCaptureType,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        let permission = BrowserMediaPermission(type)
-        let sitePermission = permission.sitePermission
-        let siteOrigin =
-            frame.request.url.flatMap { BrowserSiteOrigin(url: $0) }
-            ?? BrowserSiteOrigin(origin)
-        switch permissionCenter.decision(
-            for: sitePermission,
-            origin: siteOrigin,
-            in: spaceID
-        ) {
-        case .grantForSession, .grantPersistently:
-            decisionHandler(.grant)
-        case .denyForSession, .denyPersistently:
+        guard webView === self.webView,
+            let topLevelOrigin = webView.url.flatMap(BrowserSiteOrigin.init(url:))
+        else {
             decisionHandler(.deny)
-        case .ask:
-            dialogPresenter.presentMediaCapturePermission(
-                permission: permission,
-                origin: siteOrigin,
-                topLevelURL: webView.url,
-                spaceName: spaceName
-            ) { response in
-                switch response {
-                case .allowOnce:
-                    decisionHandler(.grant)
-                case .grantPersistently:
-                    self.permissionCenter.setDecision(
-                        .grantPersistently,
-                        for: sitePermission,
-                        origin: siteOrigin,
-                        in: self.spaceID
-                    )
-                    decisionHandler(.grant)
-                case .denyPersistently:
-                    self.permissionCenter.setDecision(
-                        .denyPersistently,
-                        for: sitePermission,
-                        origin: siteOrigin,
-                        in: self.spaceID
-                    )
-                    decisionHandler(.deny)
-                }
+            return
+        }
+        BrowserMediaPermission(type).resolve(
+            origin: BrowserSiteOrigin(origin),
+            topLevelOrigin: topLevelOrigin,
+            spaceID: spaceID,
+            spaceName: spaceName,
+            permissionCenter: permissionCenter,
+            requests: sitePermissionRequests
+        ) { [weak self] decision in
+            if decision == .grant {
+                self?.mediaCaptureSession.recordGrant(BrowserMediaPermission(type), origin: BrowserSiteOrigin(origin))
             }
+            decisionHandler(decision)
         }
     }
 

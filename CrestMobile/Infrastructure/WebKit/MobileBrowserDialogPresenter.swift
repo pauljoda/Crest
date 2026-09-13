@@ -72,27 +72,6 @@ enum MobileBrowserDialogPresenter {
         present(picker) { completion(nil) }
     }
 
-    static func presentMediaCapturePermission(
-        permission: BrowserMediaPermission,
-        origin: BrowserSiteOrigin,
-        topLevelURL: URL?,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        var message = "This request belongs only to the \(spaceName) Space."
-        if let topLevelHost = topLevelURL?.host(),
-            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
-        {
-            message += " It comes from \(origin.displayName) inside \(topLevelHost)."
-        }
-        return await presentSitePermission(
-            title: "Allow \(origin.host) to use your \(permission.displayName)?",
-            message: message,
-            allowOnceTitle: "Allow Once",
-            alwaysAllowTitle: "Always Allow",
-            blockTitle: "Block"
-        )
-    }
-
     static func presentGeolocationPermission(
         origin: BrowserSiteOrigin,
         topLevelURL: URL?,
