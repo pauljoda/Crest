@@ -61,7 +61,7 @@ the live status for each issue.
 - [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
 - [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
 - [ ] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
-- [ ] [Restore the saved-tab icon picker on iPad](https://github.com/pauljoda/Crest/issues/123)
+- [ ] [Keep the pin icon picker visible beside a right-side iPad sidebar](https://github.com/pauljoda/Crest/issues/124)
 
 #### Completed
 
@@ -119,6 +119,7 @@ the live status for each issue.
 - [x] [Stop oversized site-icon and manifest downloads early](https://github.com/pauljoda/Crest/issues/114) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
 - [x] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116) — [`70567d0e`](https://github.com/pauljoda/Crest/commit/70567d0e3f8dab74e6899fc8d9234f90dd33744c)
 - [x] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
+- [x] [Restore the saved-tab icon picker on iPad](https://github.com/pauljoda/Crest/issues/123)
 
 #### Not planned
 
