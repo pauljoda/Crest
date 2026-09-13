@@ -31,11 +31,20 @@ Drop along a folder’s top or bottom edge to place a tab beside it, including b
 
 ## Context-menu actions
 
-Right-click on Mac or touch and hold on iPhone and iPad. Depending on the item, Crest offers rename, pin, save, move to Space, add to Split View, duplicate, unload, Keep Loaded, close, archive, reset saved location, or delete.
+Right-click on Mac or touch and hold on iPhone and iPad. Depending on the item, Crest offers rename, copy link, change icon, pin, save, move to Space, add to Split View, duplicate, unload, Keep Loaded, close, archive, reset saved location, or delete.
+
+## Organize several items at once
+
+Select tabs, Split View groups, and folders together to organize them in one step. On Mac, **Command-click** toggles individual items and **Shift-click** selects a range. Use the selected items’ context menu for the available batch actions, or drag the selection to its destination.
+
+On iPhone and iPad, use the selection actions in a tab or folder’s context menu. VoiceOver exposes selection actions too. A selected folder carries its nested contents with it.
+
+## Clear open tabs
+
+Use the archive control on the sidebar divider to clear open tabs while keeping pinned and saved tabs. Closed tabs remain recoverable in Archive, subject to the Space’s retention settings.
 
 ## Keep Loaded and unload
 
 **Keep Loaded** protects an important live page from ordinary unloading. It is useful for an unsaved editor, a live call, or a dashboard whose in-page state matters. Crest can still respond to genuine system memory pressure.
 
 Choose **Unload** when you want to release a page but retain its tab. On Mac, middle-clicking a current tab closes it; middle-clicking a pinned or saved item unloads its page while keeping the durable item.
-

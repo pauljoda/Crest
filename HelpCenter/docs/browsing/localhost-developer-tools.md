@@ -1,13 +1,21 @@
 ---
 title: Localhost and developer tools
-description: Use Crest’s automatic developer toolbar, capture tools, console, network panel, and Web Inspector on Mac.
+description: Preview phone, desktop, and custom viewport sizes, capture pages, and inspect websites with Crest’s Mac developer tools.
 slug: /localhost-developer-tools
-keywords: [localhost, developer mode, Web Inspector, console, network, capture]
+keywords: [localhost, developer mode, viewport, responsive, Web Inspector, console, network, capture]
 ---
 
 # Localhost and developer tools
 
 On Mac, Crest automatically shows its developer toolbar for local development addresses. This includes `localhost`, loopback and private-network addresses, single-label hosts, common local suffixes such as `.local` and `.test`, and file URLs.
+
+Use **Shift-Command-I** to show or hide the toolbar on any website.
+
+## Preview a different viewport
+
+Choose a phone or desktop preset, or enter a custom size, in the developer toolbar. The live page renders within that viewport so you can review responsive layouts without resizing your whole browser window. Return to the normal viewport when finished.
+
+This previews the page’s layout at the chosen dimensions; it does not reproduce another device’s hardware or browser engine.
 
 ## Toolbar controls
 
@@ -17,7 +25,7 @@ On Mac, Crest automatically shows its developer toolbar for local development ad
 - Use **Capture in Portrait Mode**, **Copy Full Page Capture**, or drag a region to copy it.
 - Toggle the Web Inspector Console, Network panel, or element inspection.
 
-The toolbar leaves when the focused page is no longer a local-development address, keeping ordinary browsing chrome quiet.
+Automatic localhost tools follow the focused address. The manual toolbar toggle lets you inspect other sites too.
 
 ## Open Web Inspector directly
 

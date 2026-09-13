@@ -17,6 +17,14 @@ In **Settings → Quick Window and Peek**, you can automatically open cross-site
 
 Peek remains attached to the source context. If the source is one card in Split View, promotion and page commands follow that focused card.
 
+### Pull a link into Peek on Mac
+
+Drag a webpage link to pull out a live preview that follows your gesture and fades in as the page loads. Release to keep the preview open, then close it or promote it into a tab using Peek’s controls.
+
+Choose this behavior in **Settings → General → Drag links to Peek**. Hold **Option** to drag the link normally; when the setting is off, Option-drag opens Peek instead.
+
+On iPhone and iPad, touch and hold webpage links for the native link preview and actions, including opening a link in another Space. Touch and hold an image for image actions such as saving it.
+
 ## Quick Window
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
@@ -28,4 +36,3 @@ Open a blank Quick Window with **Option-Command-N** on Mac. In **Settings → Qu
 Quick Window records can auto-archive after **1, 6, 12, or 24 hours**, or remain until you remove them. Enable **Remember the chosen Space for each site** when repeated links from the same domain should return to the destination you previously chose.
 
 Archived Quick Windows remain distinguishable in Archive so you can recover something you dismissed too quickly.
-

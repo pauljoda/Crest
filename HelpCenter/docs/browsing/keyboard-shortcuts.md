@@ -60,6 +60,7 @@ These are the current defaults. On Mac, open **Settings → Shortcuts** to searc
 | Action | Default |
 | --- | --- |
 | Show or Hide Reader | Unassigned |
+| Show or Hide Translation Toolbar | Shift-Command-L |
 | Toggle Content Blocking | Unassigned |
 | Find in Page | Command-F |
 | Zoom In | Command-+ |
@@ -81,6 +82,7 @@ These are the current defaults. On Mac, open **Settings → Shortcuts** to searc
 | Show Archive | Unassigned |
 | Show Downloads | Shift-Command-J |
 | Show Web Inspector | Option-Command-I |
+| Show or Hide Developer Toolbar (Mac) | Shift-Command-I |
 
 ## iPad hardware keyboards
 
@@ -93,4 +95,3 @@ Some temporary interfaces have their own local actions. In Peek, **Command-W** c
 ## Resolve a conflict on Mac
 
 Search for either command in **Settings → Shortcuts**, select the row, and record a different key combination. Crest shows collisions before the replacement becomes part of your command map. Clearing a shortcut makes the action unassigned; resetting restores the shipped default.
-

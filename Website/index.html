@@ -59,10 +59,10 @@
           "operatingSystem": ["macOS", "iOS", "iPadOS"],
           "image": "https://crestbrowser.com/assets/og-card-brand.jpg",
           "screenshot": [
-            "https://crestbrowser.com/assets/crest-work-mac-2026.png",
-            "https://crestbrowser.com/assets/crest-split-view-mac-2026.png",
-            "https://crestbrowser.com/assets/crest-work-ipad-2026.png",
-            "https://crestbrowser.com/assets/crest-work-iphone-2026.png",
+            "https://crestbrowser.com/assets/crest-work-mac.png",
+            "https://crestbrowser.com/assets/crest-split-view-mac.png",
+            "https://crestbrowser.com/assets/crest-work-ipad.png",
+            "https://crestbrowser.com/assets/crest-work-iphone-sidebar.png",
             "https://crestbrowser.com/assets/crest-import-browser-selection-mac-2026.png",
             "https://crestbrowser.com/assets/crest-import-space-review-mac-2026.png"
           ],
@@ -250,11 +250,12 @@ html:not(.noanim) .hero-stage .mac{animation:rise 1s cubic-bezier(.2,.7,.2,1) bo
 .pg.split .pill{display:inline-block;margin-top:calc(34*var(--u));background:#1c3b2f;color:#fff;border-radius:999px;padding:calc(13*var(--u)) calc(20*var(--u));font-size:calc(13*var(--u));font-weight:600}
 .pg.split .note{margin-top:calc(34*var(--u));padding:calc(18*var(--u)) calc(20*var(--u));border:1px solid #b9c5b7;border-radius:calc(14*var(--u));background:rgba(255,255,255,.6);font-size:calc(13.5*var(--u));max-width:36em}
 .pg .dim{position:absolute;inset:0;background:rgba(40,48,60,.42)}
-.pk-actions{position:absolute;right:calc(10*var(--u));top:calc(20*var(--u));display:flex;gap:calc(10*var(--u))}
-.pk-actions span{display:flex;align-items:center;gap:calc(8*var(--u));height:calc(40*var(--u));padding:0 calc(28*var(--u));border-radius:999px;background:#5b6472;color:#fff;font-size:calc(12*var(--u));font-weight:600;box-shadow:0 calc(6*var(--u)) calc(16*var(--u)) rgba(0,0,0,.3)}
-.pk-actions span.pri{background:#1a2438;padding-right:calc(18*var(--u))}
+.peek-assembly{position:absolute;left:50%;top:50%;width:80%;height:calc(80% + 58*var(--u));transform:translate(-50%,-50%);display:grid;grid-template-rows:calc(48*var(--u)) minmax(0,1fr);gap:calc(10*var(--u))}
+.pk-actions{justify-self:end;display:flex;gap:calc(10*var(--u))}
+.pk-actions span{display:flex;align-items:center;justify-content:center;gap:calc(8*var(--u));width:calc(206*var(--u));height:calc(48*var(--u));padding:0 calc(16*var(--u));border-radius:999px;background:#5b6472;color:#fff;font-size:calc(13*var(--u));font-weight:600;box-shadow:0 calc(6*var(--u)) calc(16*var(--u)) rgba(0,0,0,.3)}
+.pk-actions span.pri{background:#1a2438}
 .pk-actions span.pri img{width:calc(14*var(--u));height:calc(16*var(--u))}
-.peek{position:absolute;left:calc(96*var(--u));right:calc(10*var(--u));top:calc(92*var(--u));bottom:calc(-4*var(--u));background:#eef2e8;color:#20372d;border-radius:calc(13*var(--u)) calc(13*var(--u)) 0 0;box-shadow:0 calc(-10*var(--u)) calc(40*var(--u)) rgba(0,0,0,.35),0 0 0 calc(1*var(--u)) rgba(0,0,0,.25);overflow:hidden;transform:translateY(0);transition:transform .55s cubic-bezier(.2,.7,.2,1)}
+.peek{position:relative;min-height:0;background:#eef2e8;color:#20372d;border-radius:calc(15*var(--u));box-shadow:0 calc(14*var(--u)) calc(28*var(--u)) rgba(0,0,0,.34),0 0 0 calc(1*var(--u)) rgba(0,0,0,.16);overflow:hidden;transform:translateY(0);transition:transform .55s cubic-bezier(.2,.7,.2,1)}
 html:not(.noanim) .mac.is-hidden .peek{transform:translateY(105%)}
 .pbar{height:calc(40*var(--u));display:flex;align-items:center;gap:calc(10*var(--u));padding:0 calc(16*var(--u));color:#dfe3ea;font:calc(12*var(--u))/1 ui-monospace,SFMono-Regular,Menlo,monospace;
   background:repeating-linear-gradient(135deg,#2c3037 0 calc(6*var(--u)),#33373f calc(6*var(--u)) calc(12*var(--u)))}
@@ -266,6 +267,9 @@ html:not(.noanim) .mac.is-hidden .peek{transform:translateY(105%)}
 .pbody h4{font:500 calc(70*var(--u))/.92 var(--serif);letter-spacing:-.045em;margin:calc(46*var(--u)) 0 calc(22*var(--u));max-width:10ch}
 .pbody p{font-size:calc(15*var(--u));color:#56675e;max-width:34em;line-height:1.5}
 .pbody .note{margin-top:calc(42*var(--u));padding:calc(22*var(--u));border:1px solid #b9c5b7;border-radius:calc(16*var(--u));background:rgba(255,255,255,.6);font-size:calc(14*var(--u));max-width:40em}
+.peek .pbody{padding:calc(40*var(--u)) calc(64*var(--u))}
+.peek .pbody h4{font-size:calc(58*var(--u));margin:calc(30*var(--u)) 0 calc(18*var(--u));max-width:12ch}
+.peek .pbody .note{margin-top:calc(28*var(--u))}
 .cmd{position:absolute;left:50%;top:calc(70*var(--u));transform:translateX(-50%);width:calc(560*var(--u));background:rgba(250,250,252,.98);border-radius:calc(14*var(--u));box-shadow:0 calc(30*var(--u)) calc(70*var(--u)) rgba(0,0,0,.4),0 0 0 .5px rgba(0,0,0,.2);color:#1a2230;overflow:hidden}
 .cmd .in{display:flex;gap:calc(10*var(--u));align-items:center;height:calc(50*var(--u));padding:0 calc(18*var(--u));font-size:calc(17*var(--u));border-bottom:1px solid rgba(0,0,0,.08)}
 .cmd .in svg{width:calc(16*var(--u));height:calc(16*var(--u));fill:none;stroke:#667;stroke-width:2;stroke-linecap:round}
@@ -635,9 +639,11 @@ html.noanim .visual .vis,html.noanim .captions .cap{transition:none}
 @media (prefers-reduced-motion:reduce){.scrolly{height:auto}.scrolly .stage{position:static;height:auto}}
 /* =============================================================== device stack */
 .devstack{display:grid;gap:1.4rem;margin-top:clamp(1rem,3vw,2rem)}
+.devstack .segs{border-radius:999px}
 .ds-scene{position:relative;aspect-ratio:16/8.6;max-height:70vh}
 .ds-item{position:absolute;transition:transform .55s cubic-bezier(.2,.7,.2,1),filter .4s;cursor:pointer;filter:saturate(.85) brightness(.96)}
 .ds-mac{left:50%;top:0;width:76%;transform:translateX(-50%);z-index:1}
+.ds-mac>img{display:block;width:100%;height:auto;border-radius:1.5% / 2.3%;box-shadow:0 30px 70px -24px rgba(0,0,0,.55)}
 .ds-ipad{left:0;bottom:0;width:36%;z-index:2}
 .ds-phone{right:3%;bottom:0;width:13%;z-index:3}
 .devstack[data-dev=mac] .ds-mac{z-index:4;filter:none;transform:translateX(-50%) translateY(-2%)}
@@ -781,6 +787,23 @@ footer .links{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem}
 footer a{color:rgba(244,241,234,.88);text-decoration:none}
 footer a:hover{color:#fff}
 footer p{max-width:62rem}
+
+/* Personalization: real app captures, paired with the controls they explain. */
+#make-it-yours,#more,#devices,#get{scroll-margin-top:80px}
+.personalize{border-bottom:1px solid var(--rule)}
+.personalize .head{max-width:46rem}
+.personalize-row{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:clamp(2rem,5vw,4rem);align-items:center;margin-top:3rem}
+.personalize-row.reverse{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr)}
+.personalize-row.reverse figure{order:2}
+.product-shot img{width:100%;height:auto;border-radius:12px;box-shadow:0 18px 50px -24px rgba(15,28,44,.35)}
+.product-shot a{display:block;border-radius:12px}
+.product-shot figcaption{margin-top:.8rem;font-size:.82rem;color:var(--ink-3)}
+.personalize-copy h3{font-size:clamp(1.7rem,3vw,2.25rem);line-height:1.15;margin:.7rem 0 1rem}
+.personalize-copy p{color:var(--ink-2);margin-bottom:1rem}
+.text-link{font-size:.92rem;font-weight:600;text-underline-offset:4px}
+.personalize-foot{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--rule);color:var(--ink-2)}
+@media(max-width:760px){.personalize-row,.personalize-row.reverse{grid-template-columns:1fr;gap:1.5rem}.personalize-row.reverse figure{order:0}}
+
 </style>
 </head>
 <body>
@@ -825,12 +848,12 @@ footer p{max-width:62rem}
     </div>
     <p class="fine">Early Access, Security Not Audited Independently. MPL 2.0 · Not affiliated with Arc.</p>
   </div>
-  <div class="scrolly tour" id="tour" data-steps="11">
+  <div class="scrolly tour" id="tour" data-steps="10">
     <div class="stage">
       <div class="tour-in">
         <div class="mac" id="tour-mac" data-mac='{"id":"hero","space":"work","page":"northstar","picker":true}'></div>
         <div class="tour-cap" id="tour-cap" aria-live="polite"><span class="tc-step"></span><h3></h3><p></p></div>
-        <div class="tour-dots" id="tour-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="tour-dots" id="tour-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="segs tour-segs" role="tablist" aria-label="Features">
           <button role="tab" aria-selected="true" data-go="0">Crest</button>
           <button role="tab" aria-selected="false" data-go="1">Spaces</button>
@@ -840,11 +863,47 @@ footer p{max-width:62rem}
           <button role="tab" aria-selected="false" data-go="6">Quick Window</button>
           <button role="tab" aria-selected="false" data-go="7">Link Routing</button>
           <button role="tab" aria-selected="false" data-go="8">Command palette</button>
-          <button role="tab" aria-selected="false" data-go="9">Localhost</button>
-          <button role="tab" aria-selected="false" data-go="10">Space Forge</button>
+          <button role="tab" aria-selected="false" data-go="9">Developer tools</button>
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="section personalize" id="make-it-yours" aria-labelledby="personalize-title">
+  <div class="wrap">
+    <div class="head rv">
+      <p class="eyebrow">Make it yours</p>
+      <h2 class="h2" id="personalize-title">Crest Studio and Look and Feel.</h2>
+      <p class="lede">Start with a crest template, customize each Space’s appearance, and adjust the sidebar, tabs, and window controls.</p>
+    </div>
+    <div class="personalize-row rv">
+      <figure class="product-shot">
+        <a href="assets/crest-studio-mac.png" aria-label="View Crest Studio at full size"><img src="assets/crest-studio-mac.png" width="2800" height="1800" alt="Crest Studio on Mac with the Winter template, heraldic artwork, and live Space preview" loading="lazy" decoding="async"></a>
+        <figcaption>The Winter template in Crest Studio. Choose a starting point, then make it yours. <a href="assets/crest-studio-ipad.png">See it on iPad.</a></figcaption>
+      </figure>
+      <div class="personalize-copy">
+        <p class="eyebrow">Crest Studio</p>
+        <h3>Start with a crest template.</h3>
+        <p>Start with a template. Find your shape, heraldic artwork, pattern, and palette. Give every detail its own color, or choose an emoji, monogram, or SF Symbol.</p>
+        <p>Carry that identity through the sidebar and Space picker on Mac, iPad, and iPhone. A quiet gradient is an option, too.</p>
+        <a class="text-link" href="guides/customize-spaces/">Design your Space →</a>
+      </div>
+    </div>
+    <div class="personalize-row reverse rv">
+      <figure class="product-shot">
+        <a href="assets/crest-look-and-feel-mac.png" aria-label="View Look and Feel settings at full size"><img src="assets/crest-look-and-feel-mac.png" width="2800" height="1800" alt="Look and Feel settings on Mac with window, sidebar, tab shape, and pin layout controls" loading="lazy" decoding="async"></a>
+        <figcaption>Look and Feel, with your actual sidebar as the live preview.</figcaption>
+      </figure>
+      <div class="personalize-copy">
+        <p class="eyebrow">Look and Feel</p>
+        <h3>Customize the sidebar and tabs.</h3>
+        <p>Dock it on either side. Go borderless. Tune tab shape, size, pin layout, and address-field colors. Choose an app icon palette that feels at home on your device.</p>
+        <p>Start from a preset, adjust with a live preview, and reset any setting on its own. Folder colors and custom icons give each project a place.</p>
+        <a class="text-link" href="guides/settings-reference/">Look and Feel settings →</a>
+      </div>
+    </div>
+    <div class="personalize-foot rv"><p>Learning your way around? Practice tabs, pins, folders, and more in the interactive Getting Started tab.</p><a class="text-link" href="guides/">Explore the guides →</a></div>
   </div>
 </section>
 
@@ -892,20 +951,20 @@ footer p{max-width:62rem}
           <tr><td>Browser structure</td><td>Sidebar</td><td>Adaptive sidebar<small>Full on Mac and iPad; a dedicated, touch-native view on iPhone.</small></td></tr>
           <tr><td>Always-close sites</td><td>Favorites</td><td>Pinned sites<small>A fast icon grid scoped deliberately to each Space.</small></td></tr>
           <tr><td>Durable pages</td><td>Pinned Tabs</td><td>Saved tabs<small>Keep a home URL, wander away, then return to the saved location.</small></td></tr>
-          <tr><td>Projects and nesting</td><td>Folders</td><td>Saved folders<small>Nest, color, collapse, reorder, and move complete folder trees.</small></td></tr>
-          <tr><td>Fast navigation</td><td>Command Bar</td><td>Command palette<small>Search the web, tabs, history, other Spaces, and every Crest command.</small></td></tr>
+          <tr><td>Projects and nesting</td><td>Folders</td><td>Saved folders<small>Nest, color, and choose icons. Select tabs and folders together, then organize them in one move.</small></td></tr>
+          <tr><td>Fast navigation</td><td>Command Bar</td><td>Command palette<small>Search the web, current-Space tabs and history, and Crest commands.</small></td></tr>
           <tr><td>Automatic link routing</td><td>Air Traffic Control</td><td>Link Routing<small>Send exact URLs or matching domains to the right Space before the default route.</small></td></tr>
           <tr><td>Multiple pages at once</td><td>Split View</td><td>Split View<small>Two to four live cards, resizable on Mac and iPad and paged on iPhone.</small></td></tr>
-          <tr><td>Temporary link preview</td><td>Peek</td><td>Peek<small>Preview above the source page, then close it or promote it into any Space.</small></td></tr>
+          <tr><td>Temporary link preview</td><td>Peek</td><td>Peek<small>Preview above the source page, or drag a link into Peek on Mac. Close it or keep it as a tab.</small></td></tr>
           <tr><td>External-link triage</td><td>Little Arc</td><td>Quick Window<small>Open small, choose the right Space, and keep only what matters.</small></td></tr>
           <tr><td>Automatic cleanup</td><td>Auto Archive</td><td>Space cleanup + Archive<small>Choose 12 hours through 30 days, or turn cleanup off; every result stays recoverable.</small></td></tr>
           <tr><td>Recently used switching</td><td>Recent Tab Switcher</td><td>Most Recent Tab<small>Use Control-Tab to move straight back to the tab you just left.</small></td></tr>
           <tr><td>Personal key map</td><td>Custom Keyboard Shortcuts</td><td>Rebindable Shortcuts<small>Search, record, reset, and resolve conflicts for the complete Mac command set.</small></td></tr>
-          <tr><td>Developer context</td><td>Developer Mode</td><td>Localhost mode<small>Automatic address, capture, console, network, and Web Inspector controls.</small></td></tr>
+          <tr><td>Developer context</td><td>Developer Mode</td><td>Developer tools<small>Viewport previews, capture, console, network, and Web Inspector. Automatic on localhost, available on any site.</small></td></tr>
           <tr><td>Per-site control</td><td>Site Control Center</td><td>Site Controls<small>Reader, blocking, permissions, extension actions, and page tools in context.</small></td></tr>
-          <tr><td>Browser add-ons</td><td>Extensions</td><td>Per-Space extensions<small>Chrome Web Store, Firefox Add-ons, Safari Web Extensions, and unpacked packages on Mac.</small></td></tr>
+          <tr><td>Browser add-ons</td><td>Extensions</td><td>Per-Space extensions<small>Compatible Chrome, Firefox, and Safari Web Extensions on Mac, including popups and side panels.</small></td></tr>
           <tr><td>Private browsing</td><td>Incognito</td><td>Private Spaces<small>Non-persistent browsing with optional device authentication and foreground relocking.</small></td></tr>
-          <tr><td>Appearance</td><td>Space Themes</td><td>Space Forge + gradients<small>Build a full crest or keep the familiar blended-color atmosphere.</small></td></tr>
+          <tr><td>Appearance</td><td>Space Themes</td><td>Crest Studio + gradients<small>Build a full crest or keep the familiar blended-color atmosphere.</small></td></tr>
           <tr><td>Shared organization</td><td>Arc Sync</td><td>iCloud sync<small>Spaces, tabs, folders, split groups, appearance, and durable state across Apple devices.</small></td></tr>
           <tr><td>Browser library</td><td>Library</td><td>History, Archive + Downloads<small>Common lists remain easy to reach while their records stay scoped by Space.</small></td></tr>
           <tr><td>Move-in flow</td><td>Import from Another Browser</td><td>Review-first migration<small>Bring over supported data from Arc, Zen, Chrome, Safari, and Firefox on Mac.</small></td></tr>
@@ -920,13 +979,13 @@ footer p{max-width:62rem}
   <div class="wrap">
     <div class="head rv" style="text-align:center;margin-left:auto;margin-right:auto">
       <p class="eyebrow">Mac, iPad, iPhone</p>
-      <h2 class="h2">The full browser model on every Apple device.</h2>
+      <h2 class="h2">Your Spaces, at home on every Apple device.</h2>
     </div>
     <div class="devstack rv" id="devstack" data-dev="mac">
       <div class="ds-scene">
-        <div class="ds-item ds-mac" data-devitem="mac"><div class="mac" data-mac='{"id":"dev-mac","space":"work","page":"northstar","picker":true}'></div></div>
-        <div class="ds-item ds-ipad" data-devitem="ipad"><div class="bezel ipad-bz"><img src="assets/crest-work-ipad-2026.png" alt="Crest Work Space on iPad with the sidebar beside the page" width="2420" height="1668"></div></div>
-        <div class="ds-item ds-phone" data-devitem="iphone"><div class="bezel phone-bz"><img src="assets/crest-work-iphone-sidebar-2026.png" alt="Crest on iPhone showing the dedicated full-screen Work Space sidebar" width="1206" height="2622"></div></div>
+        <div class="ds-item ds-mac" data-devitem="mac"><img src="assets/crest-work-mac.png" alt="Crest on Mac with Winter Work first, Lion Personal second, and Audience research open beside the Launch Atlas folder" width="2800" height="1800" loading="lazy" decoding="async"></div>
+        <div class="ds-item ds-ipad" data-devitem="ipad"><div class="bezel ipad-bz"><img src="assets/crest-work-ipad.png" alt="The same Winter Work Space and Audience research page on iPad, with Lion Personal second in the picker" width="2752" height="2064" loading="lazy" decoding="async"></div></div>
+        <div class="ds-item ds-phone" data-devitem="iphone"><div class="bezel phone-bz"><img src="assets/crest-work-iphone-sidebar.png" alt="The same Winter Work Space, Launch Atlas folder, and selected Audience research tab in the iPhone sidebar, with Lion Personal second" width="1206" height="2622" loading="lazy" decoding="async"></div></div>
       </div>
       <div class="segs light" role="tablist" aria-label="Devices">
         <button role="tab" aria-selected="true" data-dev="mac">Mac</button>
@@ -934,9 +993,9 @@ footer p{max-width:62rem}
         <button role="tab" aria-selected="false" data-dev="iphone">iPhone</button>
       </div>
       <div class="captions center" aria-live="polite">
-        <p class="cap on" data-devcap="mac"><b>Mac.</b> A generous sidebar, two-to-four-card Split View, native windows and menus, Quick Window, Peek, rebindable shortcuts, extensions, and automatic localhost tools. Direct releases with Sparkle updates.</p>
-        <p class="cap" data-devcap="ipad"><b>iPad.</b> The full sidebar, resizable Split View columns, Space identity, and hardware-keyboard commands, without pretending your iPad is a large phone.</p>
-        <p class="cap" data-devcap="iphone"><b>iPhone.</b> Compact chrome keeps the page primary. The full sidebar becomes a dedicated view, Split View becomes a focused card pager, and every Space stays within thumb's reach.</p>
+        <p class="cap on" data-devcap="mac"><b>Mac.</b> A sidebar on either edge, two-to-four-card Split View, drag-to-Peek, Quick Window, extensions and side panels, and developer viewport previews. Direct releases with Sparkle updates.</p>
+        <p class="cap" data-devcap="ipad"><b>iPad.</b> A sidebar beside the page, resizable Split View columns, multi-selection, on-device translation, and hardware-keyboard commands. Customize your Spaces and browsing layout with the same appearance tools.</p>
+        <p class="cap" data-devcap="iphone"><b>iPhone.</b> Compact chrome keeps the page primary. Swipe in the sidebar from your chosen edge, organize tabs and folders, translate pages, and preview links with native touch menus. Split View becomes a focused card pager.</p>
       </div>
     </div>
     <p class="sync rv" style="margin-left:auto;margin-right:auto;text-align:center">Turn on Sync Crest with iCloud and Spaces, tabs, saved folders, Split View groups, appearance, Archive, and history follow you between devices. Password values never enter CloudKit.</p>
@@ -972,20 +1031,23 @@ footer p{max-width:62rem}
   <div class="wrap">
     <div class="head rv">
       <p class="eyebrow">The rest of the browser</p>
-      <h2 class="h2">A complete feature set, without a pile of chrome.</h2>
-      <p class="lede">Controls appear when they are relevant, and Space-scoped features keep the current boundary intact.</p>
+      <h2 class="h2">Good tools, right where you need them.</h2>
+      <p class="lede">Read, translate, organize, and build. Everyday tools stay close to the page, and each Space keeps its own browsing context.</p>
     </div>
     <div class="rest rv">
-      <div><b>Extensions<span class="tag">Mac</span></b><p>Install from the Chrome Web Store and Firefox Add-ons, or use compatible Safari Web Extensions from signed apps on your Mac. Each Space keeps its own set. Some extensions depend on a particular browser, so compatibility can vary.</p></div>
+      <div><b>Extensions<span class="tag">Mac</span></b><p>Install from the Chrome Web Store and Firefox Add-ons, or use compatible Safari Web Extensions from signed apps on your Mac. Use compatible popups, Chrome side panels, and Firefox sidebars. Each Space keeps its own installations, access choices, and sessions. <a href="guides/extension-compatibility/">Compatibility varies by extension.</a></p></div>
       <div><b>Crest Passwords</b><p>Origin- and Space-matched credentials in the Keychain, with device authentication around sensitive access.</p></div>
       <div><b>Private Spaces</b><p>Non-persistent website storage, no normal history, no sync trail. Require Touch ID, Face ID, or the passcode to open one, and relock it when Crest leaves the foreground.</p></div>
       <div><b>Content blocking</b><p>A small built-in ad and tracker list per Space, or a compatible blocking extension on Mac.</p></div>
       <div><b>Site permissions</b><p>Remember or reset decisions for protected capabilities, popups, downloads, and external-app handoff per site and Space.</p></div>
-      <div><b>Reader mode</b><p>Turn supported articles into a calm reading surface without leaving the tab or its Space.</p></div>
-      <div><b>Localhost mode<span class="tag">Mac</span></b><p>Open localhost and a toolbar appears with reload options, responsive capture, console, network, and Web Inspector. Leave, and it leaves with you.</p></div>
+      <div><b>On-device translation</b><p>Read webpages in your preferred language on Mac, iPad, and iPhone. Detect the source language, optionally translate automatically, and return to the original text. Supported languages may need an Apple download. <a href="guides/page-tools/">Translate and read.</a></p></div>
+      <div><b>Reader mode</b><p>Turn supported articles into a focused reading surface. Set a comfortable default page zoom from 25% to 500%.</p></div>
+      <div><b>Media controls</b><p>Control eligible active media from the sidebar’s Now Playing widget. On Mac, keep supported videos visible with Picture in Picture and optional automatic PiP.</p></div>
+      <div><b>Organize in one move</b><p>Select tabs, Split Views, and folders together. Move a project, tidy a group of pages, or give folders their own colors, symbols, and emoji. Available on Mac, iPad, and iPhone. <a href="guides/organize-tabs-and-folders/">Make room in the sidebar.</a></p></div>
+      <div><b>Developer tools<span class="tag">Mac</span></b><p>Preview phone, desktop, or custom viewport sizes. Capture a page, inspect elements, and open Console or Network. Automatic on localhost; Shift-Command-I brings the toolbar to any site. <a href="guides/localhost-developer-tools/">Explore developer tools.</a></p></div>
       <div><b>Custom shortcuts<span class="tag">Mac</span></b><p>Rebind the complete command map, search actions, spot conflicts, and return any command to its default.</p></div>
       <div><b>Space cleanup</b><p>Archive unpinned tabs after 12 hours, 24 hours, 7 days, or 30 days, or never. Cleanup moves tabs to the recoverable Archive; it does not erase them.</p></div>
-      <div><b>Page tools</b><p>Find, zoom, copy a normal or Markdown link, share, print, export PDF, save a web archive, and inspect.</p></div>
+      <div><b>Page tools</b><p>Find, zoom, copy a normal or Markdown link, share, print, export PDF, and save a web archive. On iPhone and iPad, use native image menus and upload from Photos, camera, or Files.</p></div>
       <div><b>Keep Loaded</b><p>Protect important live pages from ordinary unloading while Crest still responds to real memory pressure.</p></div>
       <div><b>Native where it matters</b><p>SwiftUI, WebKit, CloudKit, Keychain, native windows, menus, share sheets, and platform authentication.</p></div>
     </div>
@@ -1074,7 +1136,7 @@ footer p{max-width:62rem}
     northstar:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Northstar Studio · Monday overview</div><h3>Make space for the work that matters.</h3><p class="sub">A calm command center for launches, decisions, and the people moving them forward.</p><div class="cards"><div><small>01</small><b>Today</b><span>Three decisions, one clear priority</span></div><div><small>02</small><b>Atlas</b><span>Research is ready for review</span></div><div><small>03</small><b>Launch</b><span>Milestone check-in at 2:30</span></div><div><small>04</small><b>Notes</b><span>Seven ideas worth keeping</span></div></div></div></div>'},
     fieldnotes:function(){return '<div class="pg fieldnotes"><div class="demo"><div class="kk">Field notes · A slower Saturday</div><h3>A slower Saturday starts here.</h3><p class="sub">Plans for good food, open roads, a little dirt under your nails, and time to read.</p><div class="cards"><div><small>01</small><b>Weekend</b><span>Market, trail, then nowhere to be</span></div><div><small>02</small><b>Trips</b><span>Cabin map and quiet roads</span></div><div><small>03</small><b>Garden</b><span>What to plant before the rain</span></div><div><small>04</small><b>Reading</b><span>Four essays for Sunday morning</span></div></div></div></div>'},
     split:function(){return '<div class="pg split"><div class="card"><div class="demo"><div class="kk">Weekend plans · Field guide</div><h3>Follow a thought without losing your place.</h3><p>Open the trail note in Peek, decide if it deserves a tab, then return exactly where you were.</p><span class="pill">Peek at the trail note →</span></div></div><div class="card focus"><div class="demo"><div class="kk">Field note · Quick look</div><h3>The trail is clear after noon.</h3><p>A compact answer, held in the Personal Space—its cookies, history, and passwords stay right where they belong.</p><div class="note">Saturday · 64° · Pack lunch and the green thermos.</div></div></div></div>'},
-    peek:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Weekend plans · Field guide</div><h3 style="max-width:9ch">Follow a thought without losing your place.</h3></div><div class="dim"></div><div class="pk-actions"><span>✕ &nbsp;Close</span><span class="pri">'+img(CREST.work)+'Open In… <small>⌄</small></span></div><div class="peek"><div class="pbar"><span class="i">i</span><span>http://localhost:4321/demos/trail/</span><span class="ics">'+TOOLICONS+'</span></div><div class="pbody"><div class="kk">Field note · Quick look</div><h4>The trail is clear after noon.</h4><p>A compact answer, held in the Personal Space—its cookies, history, and passwords stay right where they belong.</p><div class="note">Saturday · 64° · Pack lunch and the green thermos.</div></div></div></div>'},
+    peek:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Weekend plans · Field guide</div><h3 style="max-width:9ch">Follow a thought without losing your place.</h3></div><div class="dim"></div><div class="peek-assembly"><div class="pk-actions"><span>✕ &nbsp;Close</span><span class="pri">'+img(CREST.work)+'Open In… <small>⌄</small></span></div><div class="peek"><div class="pbar"><span class="i">i</span><span>http://localhost:4321/demos/trail/</span><span class="ics">'+TOOLICONS+'</span></div><div class="pbody"><div class="kk">Field note · Quick look</div><h4>The trail is clear after noon.</h4><p>A compact answer, held in the Personal Space—its cookies, history, and passwords stay right where they belong.</p><div class="note">Saturday · 64° · Pack lunch and the green thermos.</div></div></div></div></div>'},
     palette:function(){return '<div class="pg northstar"><div class="demo"><div class="kk">Northstar Studio · Audience research</div><h3>Make space for the work that matters.</h3><p class="sub">A calm command center for launches, decisions, and the people moving them forward.</p><div class="cards"><div><small>01</small><b>Today</b><span>Three decisions, one clear priority</span></div><div><small>02</small><b>Atlas</b><span>Research is ready for review</span></div><div><small>03</small><b>Launch</b><span>Milestone check-in at 2:30</span></div><div><small>04</small><b>Notes</b><span>Seven ideas worth keeping</span></div></div></div><div class="dim" style="background:rgba(150,146,136,.62)"></div><div class="glass"><div class="g-in">'+I.search+'<span>Search or Enter URL…</span><i class="x">✕</i></div><div class="g-sec">Open Tabs</div>'+PAL_ROWS.map(function(r,i){return '<div class="g-row'+(i===0?' sel':'')+'"><i>'+r[0]+'</i><div><b>'+r[1]+'</b><small>data:text/html;charset=utf-8,%3C%21doctype%20html%3E%3Chtml%3E%3Chead%3E%3Cmet…</small></div><span class="g-act">Switch to Tab <b>→</b></span></div>'}).join('')+'<div class="g-sec">Actions</div><div class="g-row"><i>▢</i><div><b>New Window</b></div><span class="g-act"><kbd>⌘N</kbd> <b>→</b></span></div><span class="g-bar"></span></div></div>'}
   };
 
@@ -1158,16 +1220,15 @@ footer p{max-width:62rem}
     {space:'work',page:'northstar'},
     {space:'work',page:'desc',url:'crestbrowser.com/features/spaces',act:['◈','Spaces'],desc:{kk:'Spaces',h:'Each Space is a separate browser.',body:['A Space is not only a group of tabs. It is a separate browsing profile with its own organization, runtime, and privacy boundary.','This is Work. Its sessions, cookies, history, passwords, permissions, and extensions belong to Work alone.'],list:[['Sessions and site data','Signed-in sessions, cookies, caches, local storage, and other WebKit website data.'],['Tabs and folders','Current, pinned, saved, grouped, and archived tabs, plus nested folders.'],['History and Archive','History, Archive, download records, and their retention choices.'],['Passwords','Crest Passwords and optional iCloud Keychain participation.']],arc:'Spaces and Profiles'}},
     {space:'personal',page:'desc',url:'crestbrowser.com/features/spaces',act:['◈','Spaces'],desc:{kk:'Spaces · Personal',h:'Switch, and everything switches.',body:['Pick the other crest and the whole browser context changes: the visible tabs, history search, credentials, permissions, and the website process pool.','The same website can be signed into different accounts in Work and Personal, and those sessions never meet.'],list:[['Pick a Space','Select it in the sidebar or swipe through the picker.'],['Keyboard','Option-Command-Left and Right. Control-1 through Control-9 by position.'],['Move a tab','Send it to another Space. The tab moves; the cookies and session do not.'],['Identity','Name, crest or gradient, and the sidebar colors that come with it.']]}},
-    {space:'work',page:'desc',url:'crestbrowser.com/features/sidebar',act:['▤','Sidebar'],desc:{kk:'Sidebar',h:'Tabs on the side, one Space at a time.',body:['Pinned sites at the top, saved folders beneath, open tabs below the line, and the Space picker at the bottom.','Full on Mac and iPad. On iPhone the same sidebar becomes a dedicated view that slips away when you choose a tab.'],list:[['Pinned sites','Arc called them Favorites. An icon grid scoped to each Space.'],['Saved tabs','Arc called them Pinned Tabs. Keep a home URL, wander, come back.'],['Saved folders','Nest, color, collapse, reorder, and move whole trees.'],['Cleanup','Archive unpinned tabs after 12 hours to 30 days, or never. Nothing is erased.']],arc:'Sidebar, Favorites, Pinned Tabs, Folders'}},
+    {space:'work',page:'desc',url:'crestbrowser.com/features/sidebar',act:['▤','Sidebar'],desc:{kk:'Sidebar',h:'Tabs on the side, one Space at a time.',body:['Pinned sites at the top, saved folders beneath, open tabs below the line, and the Space picker at the bottom.','Choose the left or right edge, tune tab shape and size, and use custom folder icons. On iPhone, the sidebar slips away when you choose a tab.'],list:[['Pinned sites','Arc called them Favorites. An icon grid scoped to each Space.'],['Saved tabs','Arc called them Pinned Tabs. Keep a home URL, wander, come back.'],['Tabs and folders','Select several at once. Nest folders, choose icons and colors, and move whole trees.'],['Cleanup','Archive unpinned tabs after 12 hours to 30 days, or never. Nothing is erased.']],arc:'Sidebar, Favorites, Pinned Tabs, Folders'}},
     {space:'personal',page:'split',url:'crestbrowser.com<small>/demos/trail/</small>',group:true},
     {space:'work',page:'peek',url:'localhost:4321<small>/demos/source/</small>',act:['✨','Personal Field Guide']},
     {space:'personal',page:'desc',url:'crestbrowser.com/features/quick-window',act:['▢','Quick Window'],desc:{kk:'Quick Window',h:'A link from another app, without the commitment.',body:['It opens in a small window that uses the chosen Space\'s cookies and passwords, so it never has to become a durable tab.','When the page matters, move it into a normal window and choose the right Space. Option-Command-N opens a blank one.'],arc:'Little Arc',qw:true}},
     {space:'work',page:'desc',url:'crestbrowser.com/features/link-routing',act:['⇢','Link Routing'],desc:{kk:'Link Routing',h:'Links from other apps land where they belong.',body:['Give a URL pattern, choose Contains or Exact, and pick the Space. Matching links go there before the default destination is considered.','Routes run top to bottom, so put narrow rules first. If nothing matches, Crest uses the default for links from other apps: Quick Window, the most recent Space, or a Space you choose.'],routes:[['github.com','Contains','work'],['docs.northstar.studio/launch','Exact','work'],['allrecipes.com','Contains','personal']],arc:'Air Traffic Control'}},
     {space:'work',page:'palette',url:'data:text/html;cha…E%3C%2Fhtml%3E',act:['🔬','Audience research']},
-    {space:'work',page:'localhost',url:'localhost:4321<small>/demos/source/</small>',act:['✨','Personal Field Guide']},
-    {space:'work',page:'desc',url:'crestbrowser.com/features/space-forge',act:['◆','Space Forge'],desc:{kk:'Space Forge',h:'Build the crest that flies over each Space.',body:['Choose a shield, a field division, an ordinary, trim, and charges, then pair it with a shipped palette or your own. The result appears in the picker and the browser chrome on Mac, iPad, and iPhone.','Prefer the Arc look? Traditional Gradient blends one to three colors with direction, intensity, and optional texture.'],arc:'Space Themes',float:A+'crest-spaces-mac-2026.png'}}
+    {space:'work',page:'localhost',url:'localhost:4321<small>/demos/source/</small>',act:['✨','Personal Field Guide']}
   ];
-  var CAP={0:['Crest','A sidebar, Spaces, and the page. This is the Work Space.'],4:['Split View','Two to four live tabs in one saved group. The focused card owns the address field and page commands.'],5:['Peek','A link opens above the page you are on. Close it to return, or promote it into a tab.'],8:['Command palette','Search the web, open a tab in any Space, find history, or run any command from one field.'],9:['Localhost mode','Open localhost and a toolbar appears: reload options, capture, console, network, and Web Inspector.']};
+  var CAP={0:['Crest','A sidebar, Spaces, and the page. This is the Work Space.'],4:['Split View','Two to four live tabs in one saved group. The focused card owns the address field and page commands.'],5:['Peek','Preview a link above the page you are on. On Mac, pull a link into a live Peek with a drag. Close it to return, or keep it as a tab.'],8:['Command palette','Search the web, switch tabs, find history in the current Space, or run a command from one field.'],9:['Developer tools','Preview phone, desktop, or custom viewport sizes. Tools appear on localhost, or open them on any site with Shift-Command-I.']};
   var tourEl=document.getElementById('tour'), tourMac=document.getElementById('tour-mac'), tourCap=document.getElementById('tour-cap');
   function setTour(i){
     if(tourEl.dataset.cur===String(i))return; tourEl.dataset.cur=i;
@@ -1175,7 +1236,7 @@ footer p{max-width:62rem}
     document.getElementById('top').dataset.space=t.space;
     if(tourCap){var c=CAP[i]||(t.desc?[t.desc.h,t.desc.body[0]]:['','']);tourCap.querySelector('h3').textContent=c[0];tourCap.querySelector('p').textContent=c[1];tourCap.classList.remove('swap');void tourCap.offsetWidth;tourCap.classList.add('swap');}
     document.querySelectorAll('#tour-dots i').forEach(function(d,k){d.classList.toggle('on',k===i)});
-    var goIdx=[0,1,1,3,4,5,6,7,8,9,10][i];
+    var goIdx=[0,1,1,3,4,5,6,7,8,9][i];
     tourEl.querySelectorAll('[data-go]').forEach(function(b){b.setAttribute('aria-selected',String(Number(b.dataset.go)===goIdx))});
   }
   (function(){

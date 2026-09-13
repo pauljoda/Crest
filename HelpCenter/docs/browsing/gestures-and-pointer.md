@@ -13,7 +13,7 @@ Many Crest actions stay out of the permanent chrome. This is the practical map f
 
 - Swipe vertically on the address capsule to move between the page and tab viewer.
 - Swipe horizontally on the compact toolbar to page between cards in Split View. Outside a split, this gesture intentionally does nothing.
-- Swipe from the leading edge to reveal a collapsed sidebar.
+- Swipe from the sidebar’s chosen edge to reveal it. Set a left- or right-side sidebar in **Settings → Look and Feel**.
 - Swipe or scroll the Space picker to move between Spaces.
 - Touch and hold tabs, folders, links, and Space controls for context actions.
 
@@ -28,6 +28,8 @@ Many Crest actions stay out of the permanent chrome. This is the practical map f
 ## Mouse and trackpad details on Mac
 
 - Right-click a tab, folder, Space, or link for its contextual actions.
+- Command-click tabs and folders to select several items; Shift-click to select a range.
+- Drag a webpage link to pull out a live Peek. **Settings → General → Drag links to Peek** controls this gesture; hold Option to use the opposite behavior.
 - Middle-click a current tab to close it.
 - Middle-click a pinned or saved item to unload its live page while keeping the durable item.
 - Double-click the saved-location indicator on a saved tab, or its pinned tile when applicable, to return to the saved home URL.
@@ -35,5 +37,4 @@ Many Crest actions stay out of the permanent chrome. This is the practical map f
 
 ## Dragging without losing work
 
-Dragging changes organization, not the page’s identity. A tab moved into a folder becomes saved; a tab moved to another Space loads under that destination profile; a tab dropped onto a page joins its Split View. Watch the insertion target before releasing when folders are nested.
-
+Drag into a Saved folder to keep a page, or into a Current Tabs folder to group ongoing work. A tab moved to another Space loads under that destination profile; a tab dropped onto a page joins its Split View. Watch the insertion target before releasing when folders are nested.

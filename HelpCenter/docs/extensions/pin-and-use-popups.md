@@ -1,10 +1,10 @@
 ---
 title: Pin extensions and use extension popups
-description: Keep important extension actions under the address field and open their real WebExtension popups.
+description: Pin extension actions and use popups, side panels, and options pages in the right Space on Mac.
 slug: /pin-extensions-and-popups
 sidebar_label: Pinning & popups
 sidebar_position: 5
-keywords: [pin extension, extension popup, Site Controls, sidebar, toolbar action]
+keywords: [pin extension, extension popup, Site Controls, sidebar, side panel, Firefox sidebar, toolbar action]
 ---
 
 # Pin extensions and use extension popups
@@ -32,6 +32,14 @@ To remove it from the strip, point to the action and select **Unpin Extension**.
 ## Open an options page
 
 If the extension provides an options page, expand it in **Crest Settings → Extensions** and select **Open Options**. Crest presents the extension's own WebExtension settings UI in the Space that owns the installation.
+
+## Use extension side panels
+
+Crest supports compatible Chrome side panels and Firefox sidebars on Mac. Open the panel through the extension’s action or menu. A panel can belong to the Space or to a particular tab, depending on how the extension defines it.
+
+Tab-specific panels stay with their pages and return when you select that tab again. An extension badge on the tab’s favicon identifies a tab with its own panel. Switching Spaces keeps the panel and its signed-in session within the owning Space.
+
+Support still depends on the extension’s APIs. Check [compatibility and known limitations](../extension-compatibility/) if a panel does not behave as expected.
 
 :::note Space-local placement
 Pinning is independent per Space and per device. A Work toolbar can stay focused on work tools while Personal or another device uses a different set.
