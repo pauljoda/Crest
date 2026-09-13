@@ -278,10 +278,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webView.underPageBackgroundColor = .clear
 
         super.init()
-        if !BrowserPageZoomPolicy.levelsMatch(
-            normalizedDefaultPageZoom,
-            BrowserPageZoomPolicy.defaultLevel
-        ) {
+        if normalizedDefaultPageZoom != BrowserPageZoomPolicy.defaultLevel {
             webView.pageZoom = normalizedDefaultPageZoom
         }
         #if DEBUG
@@ -1222,7 +1219,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     private func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard !BrowserPageZoomPolicy.levelsMatch(zoom, pageZoom) else {
+        guard zoom != pageZoom else {
             return false
         }
         pageZoom = zoom

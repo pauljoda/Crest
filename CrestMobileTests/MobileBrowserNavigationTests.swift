@@ -2347,7 +2347,7 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
     func testMobileDefaultZoomFollowsResidentAndRecreatedPages() throws {
         let preferences = BrowserDefaultPageZoomStore(
-            persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.25)
+            persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.00001)
         )
         var space = makeSpace(index: 12)
         let backgroundTab = BrowserTab.startPage()
@@ -2363,15 +2363,22 @@ final class MobileBrowserNavigationTests: XCTestCase {
 
         pages.select(session: session)
         let page = try XCTUnwrap(pages.activePage)
-        XCTAssertEqual(page.pageZoom, 1.25, accuracy: 0.001)
-        XCTAssertEqual(page.webView.pageZoom, 1.25, accuracy: 0.001)
+        XCTAssertEqual(page.pageZoom, 1.00001)
+        XCTAssertEqual(page.webView.pageZoom, 1.00001)
 
         session.selectTab(backgroundTab.id)
         pages.select(session: session)
         let backgroundPage = try XCTUnwrap(pages.activePage)
-        XCTAssertEqual(backgroundPage.pageZoom, 1.25, accuracy: 0.001)
+        XCTAssertEqual(backgroundPage.pageZoom, 1.00001)
         session.selectTab(page.tabID)
         pages.select(session: session)
+
+        for zoom: CGFloat in [0.25, 5, 1.50001, 1.50002] {
+            preferences.defaultZoom = zoom
+            XCTAssertEqual(page.pageZoom, zoom)
+            XCTAssertEqual(page.webView.pageZoom, zoom)
+            XCTAssertEqual(backgroundPage.webView.pageZoom, zoom)
+        }
 
         preferences.defaultZoom = 1.5
         XCTAssertEqual(page.pageZoom, 1.5, accuracy: 0.001)

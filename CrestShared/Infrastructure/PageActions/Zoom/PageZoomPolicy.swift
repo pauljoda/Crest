@@ -7,37 +7,25 @@ enum BrowserPageZoomPolicy {
         0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3,
     ]
     static let defaultLevel: CGFloat = 1
-
-    /// The slider position of ``defaultLevel``.
-    static let defaultLevelIndex = Double(levels.firstIndex(of: defaultLevel) ?? 0)
-
-    /// The level a slider position stands for, clamped to the table.
-    static func level(atIndex index: Double) -> CGFloat {
-        guard index.isFinite else { return defaultLevel }
-        let clamped = min(max(Int(index.rounded()), levels.startIndex), levels.index(before: levels.endIndex))
-        return levels[clamped]
-    }
+    static let defaultRange: ClosedRange<CGFloat> = 0.25...5
 
     static func increased(from current: CGFloat) -> CGFloat {
-        levels.first(where: { $0 > current + tolerance }) ?? levels[levels.count - 1]
+        levels.first(where: { $0 > current + tolerance }) ?? max(current, levels[levels.count - 1])
     }
 
     static func decreased(from current: CGFloat) -> CGFloat {
-        levels.last(where: { $0 < current - tolerance }) ?? levels[0]
+        levels.last(where: { $0 < current - tolerance }) ?? min(current, levels[0])
     }
 
     static func percentageLabel(for zoom: CGFloat) -> String {
         "\(Int((zoom * 100).rounded()))%"
     }
 
-    /// Turns persisted or externally supplied values into one of the same levels
-    /// the page commands use. Finite values clamp to the nearest supported level;
-    /// corrupt non-finite values fall back to the familiar 100% default.
+    /// Preserve the continuous multiplier, bounding only out-of-range values.
+    /// Non-finite values fall back to the familiar 100% default.
     static func normalizedDefault(_ proposed: CGFloat) -> CGFloat {
         guard proposed.isFinite else { return defaultLevel }
-        return levels.min {
-            abs($0 - proposed) < abs($1 - proposed)
-        } ?? defaultLevel
+        return min(max(proposed, defaultRange.lowerBound), defaultRange.upperBound)
     }
 
     static func levelsMatch(_ lhs: CGFloat, _ rhs: CGFloat) -> Bool {
@@ -105,11 +93,20 @@ final class InMemoryBrowserDefaultPageZoomPersistence:
 @MainActor
 final class BrowserDefaultPageZoomStore {
     static let shared: BrowserDefaultPageZoomStore = {
-        let persistence: any BrowserDefaultPageZoomPersisting =
-            BrowserLaunchIsolationPolicy.requiresIsolation(.current)
-            ? InMemoryBrowserDefaultPageZoomPersistence()
-            : UserDefaultsBrowserDefaultPageZoomPersistence()
-        return BrowserDefaultPageZoomStore(persistence: persistence)
+        let environment = BrowserLaunchEnvironment.current
+        guard BrowserLaunchIsolationPolicy.requiresIsolation(environment) else {
+            return BrowserDefaultPageZoomStore(persistence: UserDefaultsBrowserDefaultPageZoomPersistence())
+        }
+        if let id = environment.persistentIsolationID,
+            let defaults = UserDefaults(
+                suiteName: BrowserLaunchIsolationPolicy.isolatedDefaultsSuiteName(isolationID: id)
+            )
+        {
+            return BrowserDefaultPageZoomStore(
+                persistence: UserDefaultsBrowserDefaultPageZoomPersistence(defaults: defaults)
+            )
+        }
+        return BrowserDefaultPageZoomStore(persistence: InMemoryBrowserDefaultPageZoomPersistence())
     }()
 
     private var storedDefaultZoom: CGFloat
@@ -122,27 +119,6 @@ final class BrowserDefaultPageZoomStore {
         set { setDefaultZoom(newValue) }
     }
 
-    /// The discrete slider position backed by ``BrowserPageZoomPolicy/levels``.
-    var defaultZoomLevelIndex: Double {
-        get {
-            Double(
-                BrowserPageZoomPolicy.levels.firstIndex(where: {
-                    BrowserPageZoomPolicy.levelsMatch($0, storedDefaultZoom)
-                }) ?? BrowserPageZoomPolicy.levels.firstIndex(
-                    of: BrowserPageZoomPolicy.defaultLevel
-                ) ?? 0
-            )
-        }
-        set {
-            let rounded = Int(newValue.rounded())
-            let index = min(
-                max(rounded, BrowserPageZoomPolicy.levels.startIndex),
-                BrowserPageZoomPolicy.levels.index(before: BrowserPageZoomPolicy.levels.endIndex)
-            )
-            setDefaultZoom(BrowserPageZoomPolicy.levels[index])
-        }
-    }
-
     init(persistence: any BrowserDefaultPageZoomPersisting) {
         self.persistence = persistence
         let persisted = persistence.load()
@@ -151,7 +127,7 @@ final class BrowserDefaultPageZoomStore {
         )
         storedDefaultZoom = normalized
         if let persisted,
-            !BrowserPageZoomPolicy.levelsMatch(persisted, normalized)
+            persisted != normalized
         {
             persistence.save(normalized)
         }
@@ -164,7 +140,7 @@ final class BrowserDefaultPageZoomStore {
 
     private func setDefaultZoom(_ proposed: CGFloat) {
         let normalized = BrowserPageZoomPolicy.normalizedDefault(proposed)
-        guard !BrowserPageZoomPolicy.levelsMatch(normalized, storedDefaultZoom) else {
+        guard normalized != storedDefaultZoom else {
             return
         }
         storedDefaultZoom = normalized

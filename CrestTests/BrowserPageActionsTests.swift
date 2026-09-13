@@ -179,15 +179,24 @@ final class BrowserPageZoomPolicyTests: XCTestCase {
         XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 3), 3)
         XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 1), 0.9)
         XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 0.5), 0.5)
+        XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 5), 5)
+        XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 0.25), 0.25)
+        XCTAssertEqual(BrowserPageZoomPolicy.increased(from: 0.25), 0.5)
+        XCTAssertEqual(BrowserPageZoomPolicy.decreased(from: 5), 3)
     }
 
-    func testDefaultZoomNormalizationUsesTheCommandLevels() {
+    func testDefaultZoomPreservesIntermediateValuesAndClampsToItsOwnBounds() {
         XCTAssertEqual(BrowserPageZoomPolicy.defaultLevel, 1)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.1), 0.5)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.7), 0.67)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(1.2), 1.25)
-        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(9), 3)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.1), 0.25)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(0.7), 0.7)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(1.23456), 1.23456)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(9), 5)
         XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(.nan), 1)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(.infinity), 1)
+        XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(-.infinity), 1)
+        for level in BrowserPageZoomPolicy.levels {
+            XCTAssertEqual(BrowserPageZoomPolicy.normalizedDefault(level), level)
+        }
     }
 
     func testPDFExportFilenameUsesTitleThenHostAndRemovesUnsafePathCharacters() {
@@ -251,28 +260,29 @@ final class BrowserDefaultPageZoomStoreTests: XCTestCase {
         )
         XCTAssertEqual(first.defaultZoom, 1)
 
-        first.defaultZoom = 1.25
+        first.defaultZoom = 1.23456
+        first.defaultZoom = 1.23457
 
         let restored = BrowserDefaultPageZoomStore(
             persistence: UserDefaultsBrowserDefaultPageZoomPersistence(
                 defaults: defaults
             )
         )
-        XCTAssertEqual(restored.defaultZoom, 1.25)
+        XCTAssertEqual(restored.defaultZoom, 1.23457)
     }
 
-    func testInvalidPersistedAndSliderValuesClampToSupportedLevels() {
-        let persistence = InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.2)
+    func testInvalidPersistedAndSliderValuesClampToSupportedRange() {
+        let persistence = InMemoryBrowserDefaultPageZoomPersistence(zoom: -1)
         let store = BrowserDefaultPageZoomStore(persistence: persistence)
 
-        XCTAssertEqual(store.defaultZoom, 1.25)
-        XCTAssertEqual(persistence.load(), 1.25)
+        XCTAssertEqual(store.defaultZoom, 0.25)
+        XCTAssertEqual(persistence.load(), 0.25)
 
-        store.defaultZoomLevelIndex = -100
-        XCTAssertEqual(store.defaultZoom, 0.5)
+        store.defaultZoom = -100
+        XCTAssertEqual(store.defaultZoom, 0.25)
 
-        store.defaultZoomLevelIndex = 100
-        XCTAssertEqual(store.defaultZoom, 3)
+        store.defaultZoom = 100
+        XCTAssertEqual(store.defaultZoom, 5)
 
         store.defaultZoom = .infinity
         XCTAssertEqual(store.defaultZoom, 1)
@@ -334,7 +344,7 @@ final class BrowserPageActionsTests: XCTestCase {
 
     func testDefaultZoomFollowsResidentAndRecreatedPageLifecycles() throws {
         let preferences = BrowserDefaultPageZoomStore(
-            persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.25)
+            persistence: InMemoryBrowserDefaultPageZoomPersistence(zoom: 1.00001)
         )
         let first = BrowserTab(
             title: "First",
@@ -354,13 +364,20 @@ final class BrowserPageActionsTests: XCTestCase {
 
         pool.select(tab: first, space: space)
         let firstPage = try XCTUnwrap(pool.activePage)
-        XCTAssertEqual(firstPage.pageZoom, 1.25)
-        XCTAssertEqual(firstPage.webView.pageZoom, 1.25)
+        XCTAssertEqual(firstPage.pageZoom, 1.00001)
+        XCTAssertEqual(firstPage.webView.pageZoom, 1.00001)
 
         pool.select(tab: second, space: space)
         let secondPage = try XCTUnwrap(pool.activePage)
-        XCTAssertEqual(secondPage.pageZoom, 1.25)
+        XCTAssertEqual(secondPage.pageZoom, 1.00001)
         pool.select(tab: first, space: space)
+
+        for zoom: CGFloat in [0.25, 5, 1.50001, 1.50002] {
+            preferences.defaultZoom = zoom
+            XCTAssertEqual(firstPage.pageZoom, zoom)
+            XCTAssertEqual(firstPage.webView.pageZoom, zoom)
+            XCTAssertEqual(secondPage.webView.pageZoom, zoom)
+        }
 
         preferences.defaultZoom = 1.5
         XCTAssertEqual(firstPage.pageZoom, 1.5)

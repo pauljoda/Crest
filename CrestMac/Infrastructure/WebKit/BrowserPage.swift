@@ -390,10 +390,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
         desktopWebView.menuHost = self
         desktopWebView.linkHover = linkHover
-        if !BrowserPageZoomPolicy.levelsMatch(
-            normalizedDefaultPageZoom,
-            BrowserPageZoomPolicy.defaultLevel
-        ) {
+        if normalizedDefaultPageZoom != BrowserPageZoomPolicy.defaultLevel {
             webView.pageZoom = normalizedDefaultPageZoom
         }
         webView.isInspectable = true
@@ -1554,7 +1551,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     private func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard !BrowserPageZoomPolicy.levelsMatch(zoom, pageZoom) else {
+        guard zoom != pageZoom else {
             return false
         }
         pageZoom = zoom

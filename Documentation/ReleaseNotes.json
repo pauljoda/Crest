@@ -993,6 +993,10 @@
     "mobile-native-upload-sources": {
       "category": "fixed",
       "message": "Choose Photos, camera, or Files when uploading to webpages on iPhone and iPad"
+    },
+    "continuous-default-page-zoom": {
+      "category": "improved",
+      "message": "Adjust default page zoom smoothly across a wider range from 25% to 500%"
     }
   }
 }
