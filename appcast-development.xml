@@ -6,46 +6,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.109</title>
-            <pubDate>Sat, 12 Sep 2026 22:52:58 +0000</pubDate>
+            <title>0.5.112</title>
+            <pubDate>Sun, 13 Sep 2026 03:25:10 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1089</sparkle:version>
-            <sparkle:shortVersionString>0.5.109</sparkle:shortVersionString>
+            <sparkle:version>1090</sparkle:version>
+            <sparkle:shortVersionString>0.5.112</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
-
-- Identify tabs with their own side panels by an extension badge on the favicon, including pinned tabs
-
 ### Fixed
 
-- Keep page addresses and sign-in cookies private when discovering site icons, and stop oversized icon downloads early
-- Extension regrouping no longer leaves empty current folders behind, and orange groups are easier to distinguish from yellow
-- Signed-in extension panels use isolated sessions with tighter cookie protections for other sites and Spaces
-- Prevent a crash when an idle extension wakes while its side panel remains open
-- Text replacement follows your Mac settings and keeps your choice when Crest restarts
-- Keep tab-specific extension panels with their own pages and restore each panel when returning to its tab
-- Extension screenshots capture the selected page correctly
-- Firefox sidebars follow the selected tab, and extension panels close reliably without affecting other tabs
-- Keep side-panel sign-in links in their original Space when you switch Spaces
-- Keep Space customization when edits overlap an iCloud sync, and preserve saved crest controls when switching designs
+- Preserve supported destination restrictions in extension header rules and reject unsupported conditions
+- Prevent repeated extension permission dialogs, remember access choices, and explain permission consent when adding extensions
+- Request camera and notification access from compact site controls, remember choices per Space, and stop camera capture when access is revoked
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/6f53535b0e9081a3bb42fd62495ed763a4bc4782...61fbc15c724c91faf382f2a5f5dbe904e7a07a59) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.109-2026-09-12-1089-r89.1/Installer-Crest-0.5.109-development-2026-09-12-61fbc15-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/61fbc15c724c91faf382f2a5f5dbe904e7a07a59...940dd40a4ade3d9c11a1a2fc6e70a466cca42e52) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.112-2026-09-13-1090-r90.1/Installer-Crest-0.5.112-development-2026-09-13-940dd40-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.109-2026-09-12-1089-r89.1/Installer-Crest-0.5.109-development-2026-09-12-61fbc15-arm64.dmg" length="25526069" type="application/octet-stream" sparkle:edSignature="/vH3qgn0dpnX9lQBC7X2wGhkogeGsiDxDl91gGgGLSeNDlprlW4su6S8NSEQoY3+Uj3HYc3CCkxsT23Ae+srAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.112-2026-09-13-1090-r90.1/Installer-Crest-0.5.112-development-2026-09-13-940dd40-arm64.dmg" length="25583924" type="application/octet-stream" sparkle:edSignature="qtVPJg9hcoJf64qcvCrqs1ei/pZQ4eMgba8/GfPFOaYXuExR7ayvEx2hyGlaYv64r4XL8Lq+tKTNOeTavqRGDQ=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: jZebr4GJfNilVU5uw+xulBVy9YKI48TqjSuBQIU49h0OxgPetNJ39gy/XxmCvqRj8R8nDYgFyC4+MfQXRcukBg==
-length: 3078
+edSignature: D5WmsS8g1vIu62p5zpdCGYGkAj6F+mu6JgK6nO8AhmNSIUmcO/WyKUSC+YfCQzUeQ8LpwvDKwSTDs5Oj/TBwAA==
+length: 2341
 -->
