@@ -55,7 +55,6 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [bug: "Change icon" (tab) doesn't work for pinned tabs](https://github.com/pauljoda/Crest/issues/56)
 - [ ] [feature: File upload options](https://github.com/pauljoda/Crest/issues/84)
 - [ ] [Keep extension request-header rules consistent](https://github.com/pauljoda/Crest/issues/115)
 - [ ] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
@@ -63,6 +62,7 @@ the live status for each issue.
 - [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
 - [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
 - [ ] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
+- [ ] [Restore the saved-tab icon picker on iPad](https://github.com/pauljoda/Crest/issues/123)
 
 #### Completed
 
@@ -71,7 +71,8 @@ the live status for each issue.
 - [x] [Add native page translation on iPhone and iPad](https://github.com/pauljoda/Crest/issues/43) — [`299ea325`](https://github.com/pauljoda/Crest/commit/299ea3256ce115cec2f56ca51f775912ba18172c)
 - [x] [Make new-link focus preferences consistent](https://github.com/pauljoda/Crest/issues/48) — [`143a9f0e`](https://github.com/pauljoda/Crest/commit/143a9f0ef4dfc35f2e4f774ba756f0952f799d87)
 - [x] [Support borderless browser chrome and right-side sidebar docking](https://github.com/pauljoda/Crest/issues/51) — [`a924c74c`](https://github.com/pauljoda/Crest/commit/a924c74caed2f4a9f85fdfe527a942f7302e3341), [`a0b8a0e3`](https://github.com/pauljoda/Crest/commit/a0b8a0e372f42d25fe8a87796f479972ec8e899c)
-- [x] [bug: Extension requesting websites](https://github.com/pauljoda/Crest/issues/55)
+- [x] [bug: Extension requesting websites](https://github.com/pauljoda/Crest/issues/55) — [`2eebbb29`](https://github.com/pauljoda/Crest/commit/2eebbb29ae1f675c6f2e70489c7fef2a41339de7)
+- [x] [bug: "Change icon" (tab) doesn't work for pinned tabs](https://github.com/pauljoda/Crest/issues/56)
 - [x] [bug: Collapsed sidebar overlay covers search field on iPhone](https://github.com/pauljoda/Crest/issues/60)
 - [x] [Keep tab dragging stable in long sidebar lists](https://github.com/pauljoda/Crest/issues/62) — [`5e6f4ca0`](https://github.com/pauljoda/Crest/commit/5e6f4ca04c373444d31ec886ecf98f8583f521f9)
 - [x] [Complete extension image conversion and downloads](https://github.com/pauljoda/Crest/issues/63) — [`4265c829`](https://github.com/pauljoda/Crest/commit/4265c829c1e2dd872fbc2b38b50a5faa77592597)
@@ -117,7 +118,7 @@ the live status for each issue.
 - [x] [Investigate scrolling, back-navigation and browser performance](https://github.com/pauljoda/Crest/issues/110) — [`88703808`](https://github.com/pauljoda/Crest/commit/8870380890e44f85290e7299b25f46111daae1ac)
 - [x] [Keep favicon discovery private](https://github.com/pauljoda/Crest/issues/113) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
 - [x] [Stop oversized site-icon and manifest downloads early](https://github.com/pauljoda/Crest/issues/114) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
-- [x] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116)
+- [x] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116) — [`70567d0e`](https://github.com/pauljoda/Crest/commit/70567d0e3f8dab74e6899fc8d9234f90dd33744c)
 
 #### Not planned
 
