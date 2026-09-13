@@ -51,11 +51,10 @@ struct BrowserSidebarNewTabRowMetrics: Equatable, Sendable {
         showsShortcutTooltip: true
     )
 
-    /// A touch shell: a row that grows with its label, drawn plain, with the
-    /// whole inset given to the label's own margin.
+    /// A touch shell uses the same content and surface margins as a tab row.
     static let touch = BrowserSidebarNewTabRowMetrics(
-        labelHorizontalInset: 0,
-        rowHorizontalInset: 18,
+        labelHorizontalInset: BrowserSidebarTabRowMetrics.touch.contentLeadingInset,
+        rowHorizontalInset: BrowserSidebarTabRowMetrics.touch.surfaceHorizontalInset,
         usesFixedHeight: false,
         showsHoverSurface: false,
         showsShortcutTooltip: false

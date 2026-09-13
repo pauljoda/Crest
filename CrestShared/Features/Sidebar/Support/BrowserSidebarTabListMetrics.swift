@@ -30,20 +30,24 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
     /// the seam between two rows that touch.
     let sectionEndBandHeight: CGFloat
 
+    /// The saved run's end band also supplies the space above the divider.
+    var savedSectionEndBandHeight: CGFloat {
+        min(sectionEndBandHeight, max(22, dividerVerticalInset))
+    }
+
     /// A pointer shell: a tight seam that carries the clear control, and a band
     /// only wide enough to hold an insertion line.
     static let pointer = BrowserSidebarTabListMetrics(
         dividerHorizontalInset: 12,
         dividerVerticalInset: 3,
-        clearActionOcclusionWidth: 52,
+        clearActionOcclusionWidth: 92,
         sectionEndBandHeight: CrestSpacing.medium
     )
 
-    /// A touch shell: room for the persistent clear icon and its hit target,
-    /// and a band a finger can land in.
+    /// The saved drop band supplies the upper half of the touch divider's spacing.
     static let touch = BrowserSidebarTabListMetrics(
         dividerHorizontalInset: 16,
-        dividerVerticalInset: 5,
+        dividerVerticalInset: 22,
         clearActionOcclusionWidth: 52,
         sectionEndBandHeight: 28
     )

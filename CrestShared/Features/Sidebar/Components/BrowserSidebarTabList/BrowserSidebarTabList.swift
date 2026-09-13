@@ -51,6 +51,8 @@ struct BrowserSidebarTabList: View {
 
         BrowserCurrentTabsDivider(
             capabilities: capabilities,
+            hasSavedTabsEndBand: isSavedTabsExpanded
+                && (capabilities.showsRowDropIndicators || tabSections.unfiledSavedTabs.isEmpty),
             showsClearAction: showsClearAction,
             canClear: !tabSections.sidebarCurrentTabs.isEmpty,
             clear: clearCurrentTabs

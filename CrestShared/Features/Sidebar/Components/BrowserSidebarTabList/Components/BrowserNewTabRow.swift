@@ -13,6 +13,13 @@ struct BrowserNewTabRow: View {
     let action: () -> Void
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults)
+    private var tabScale = 1.0
+    @ScaledMetric(relativeTo: .body) private var baseTextSize = BrowserSidebarDensityPolicy.bodySize
+
+    private var tabMetrics: BrowserSidebarTabRowMetrics {
+        BrowserSidebarInteractionPolicy.tabRowMetrics(capabilities)
+    }
 
     private var metrics: BrowserSidebarNewTabRowMetrics {
         BrowserSidebarInteractionPolicy.newTabRowMetrics(capabilities)
@@ -22,34 +29,53 @@ struct BrowserNewTabRow: View {
     /// both ends of the frame to it; a shell that lets the row grow pins only
     /// the floor.
     private var rowHeight: CGFloat {
-        BrowserSidebarInteractionPolicy.rowMinHeight(
+        let base = BrowserSidebarInteractionPolicy.rowMinHeight(
             capabilities,
             dynamicTypeSize: dynamicTypeSize
         )
+        return BrowserSidebarDensityPolicy.rowHeight(
+            base: base, scale: dynamicTypeSize.isAccessibilitySize ? max(1, tabScale) : tabScale,
+            touch: capabilities.supportsTouch)
     }
 
     var body: some View {
         Button(action: action) {
-            Label("New Tab", systemImage: "plus")
-                .labelStyle(.titleAndIcon)
-                .padding(.horizontal, metrics.labelHorizontalInset)
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: metrics.usesFixedHeight ? .infinity : nil,
-                    alignment: .leading
-                )
-                .contentShape(.rect)
+            Label {
+                Text("New Tab")
+                    .font(
+                        tabScale == 1 ? nil : .system(size: baseTextSize * BrowserSidebarDensityPolicy.scale(tabScale))
+                    )
+                    .lineLimit(1)
+            } icon: {
+                Image(systemName: "plus")
+                    .font(tabMetrics.faviconSlot.map { .system(size: $0.glyphSize, weight: $0.glyphWeight) })
+                    .frame(width: tabMetrics.faviconSlot?.width ?? 18)
+            }
+            .labelStyle(.titleAndIcon)
+            .padding(.horizontal, metrics.labelHorizontalInset)
+            .frame(minHeight: rowHeight, maxHeight: metrics.usesFixedHeight ? rowHeight : nil)
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: metrics.usesFixedHeight ? .infinity : nil,
+                alignment: .leading
+            )
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("New Tab")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
+        .accessibilityIdentifier("new-tab")
         .foregroundStyle(.secondary)
-        .frame(
-            minHeight: rowHeight,
-            maxHeight: metrics.usesFixedHeight ? rowHeight : nil
-        )
         .modifier(BrowserNewTabRowSurface(metrics: metrics))
+        .padding(
+            .vertical,
+            BrowserSidebarDensityPolicy.rowSeparation(
+                scale: tabScale, hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
+        )
         .padding(.horizontal, metrics.rowHorizontalInset)
         .modifier(BrowserNewTabRowTooltip(metrics: metrics))
-        .accessibilityIdentifier("new-tab")
     }
 }
 

@@ -39,7 +39,7 @@ struct BrowserSavedTabsEndDropTarget: View {
 
     private var bandHeight: CGFloat {
         BrowserSidebarInteractionPolicy.tabListMetrics(capabilities)
-            .sectionEndBandHeight
+            .savedSectionEndBandHeight
     }
 
     private var tabLocation: BrowserTabDropLocation {

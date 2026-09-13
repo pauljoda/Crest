@@ -51,7 +51,7 @@ struct BrowserSavedTabsDropSection: View {
                     // no way to take a tab that belongs outside the folders.
                     if unfiledItems.isEmpty {
                         Color.clear
-                            .frame(height: metrics.sectionEndBandHeight)
+                            .frame(height: metrics.savedSectionEndBandHeight)
                             .contentShape(.rect)
                             .accessibilityHidden(true)
                     }
