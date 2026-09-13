@@ -1,12 +1,6 @@
 import SwiftUI
 
-/// Makes a stacked split-group row draggable as one block.
-///
-/// Deliberately thinner than `BrowserTabDragSourceModifier`: a group has no
-/// pinned form to morph into, so it needs the in-view reorder source and
-/// whatever its platform uses to arm a lift, and nothing else. Member lines
-/// never carry a source of their own — tearing one out mid-drag would break the
-/// run's contiguity and dissolve the split under the pointer.
+/// The header starts a group drag using the enclosing container's measurements.
 struct BrowserSplitGroupDragSourceModifier: ViewModifier {
     let item: BrowserSplitGroupDragItem
     /// The run this row stands for. Only the platform that draws its own lift

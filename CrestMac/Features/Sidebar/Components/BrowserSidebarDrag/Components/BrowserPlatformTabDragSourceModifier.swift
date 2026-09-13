@@ -6,6 +6,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
     let spaceID: SpaceID
     let dragState: BrowserTabDragState
     var reorder: BrowserSidebarReorderContext?
+    var parentSplitGroupID: SplitGroupID?
     var isEnabled = true
 
     private var item: BrowserTabDragItem {
@@ -24,6 +25,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
                         folderID: tab.folderID
                     ),
                     reorder: reorder,
+                    parentItemID: parentSplitGroupID.map(BrowserSidebarReorderItemID.splitGroup),
                     isEnabled: isEnabled
                 )
         } else {

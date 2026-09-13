@@ -4,8 +4,7 @@
 enum BrowserSidebarReorderItem: Equatable, Sendable {
     case tab(BrowserTabDragItem)
     case folder(BrowserFolderDragItem)
-    /// A whole split group. Its members are not individual drag sources while
-    /// grouped, so the run can never be torn apart by a drop landing inside it.
+    /// The group header moves all members together.
     case splitGroup(BrowserSplitGroupDragItem)
 
     var id: BrowserSidebarReorderItemID {

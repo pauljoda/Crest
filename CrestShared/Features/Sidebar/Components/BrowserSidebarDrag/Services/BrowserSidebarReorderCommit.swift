@@ -93,6 +93,8 @@ struct BrowserSidebarReorderCommit {
             browser: browser,
             spaceAccess: spaceAccess
         )
+        let detachesFromSplit =
+            browser.space(matching: item.spaceAssignment)?.tabs.first { $0.id == item.tabID }?.splitGroupID != nil
 
         switch target.kind {
         case .createCurrentFolder(let targetID):
@@ -103,7 +105,9 @@ struct BrowserSidebarReorderCommit {
                 !target.isStartPage, target.splitGroupID == nil,
                 target.folderID == nil
             else { return false }
-            return browser.createTabFolder([targetID, item.tabID], in: item.spaceAssignment.spaceID) != nil
+            return browser.createTabFolder(
+                [targetID, item.tabID], in: item.spaceAssignment.spaceID, detachesSplitMembers: detachesFromSplit)
+                != nil
         case .space(let destination):
             return action.move(item, into: destination)
 
@@ -112,23 +116,25 @@ struct BrowserSidebarReorderCommit {
                 let folder = browser.space(matching: item.spaceAssignment)?.folders.first(where: { $0.id == folderID })
             else { return false }
             return browser.fileTabs(
-                [item.tabID], matching: item.spaceAssignment, into: folderID, location: folder.location)
+                [item.tabID], matching: item.spaceAssignment, into: folderID, location: folder.location,
+                detachesSplitMembers: detachesFromSplit)
 
         case .insert(let section, let beforeID, _):
             guard case .tabs(let placement, let folderID) = section else { return false }
-            if placement != .pinned,
-                let source = browser.space(matching: item.spaceAssignment)?.tabs.first(where: { $0.id == item.tabID }),
-                source.splitGroupID == nil || folderID != nil || source.folderID != nil || beforeID?.folderID != nil
-            {
+            if placement != .pinned {
                 guard action.canMove(item, into: item.spaceAssignment) else { return false }
                 return browser.fileTabs(
                     [item.tabID], matching: item.spaceAssignment, into: folderID,
                     location: placement == .current ? .current : .saved,
-                    before: anchorTabID(beforeID, in: item.spaceAssignment), beforeFolderID: beforeID?.folderID)
+                    before: anchorTabID(beforeID, in: item.spaceAssignment, excluding: item.tabID),
+                    beforeFolderID: beforeID?.folderID,
+                    detachesSplitMembers: detachesFromSplit)
             }
             return action.move(
                 item, to: placement, folderID: folderID,
-                before: anchorTabID(beforeID, in: item.spaceAssignment), matching: item.spaceAssignment)
+                before: anchorTabID(beforeID, in: item.spaceAssignment, excluding: item.tabID),
+                matching: item.spaceAssignment,
+                detachesFromSplit: detachesFromSplit)
 
         case .splitInsert(let assignment, let index):
             // The cards on show are the selected tab's group, so the selected
@@ -225,7 +231,8 @@ struct BrowserSidebarReorderCommit {
     /// group from silently appending to the end of the section instead.
     private func anchorTabID(
         _ beforeID: BrowserSidebarReorderItemID?,
-        in assignment: BrowserSpaceRuntimeAssignment
+        in assignment: BrowserSpaceRuntimeAssignment,
+        excluding movedTabID: TabID? = nil
     ) -> TabID? {
         switch beforeID {
         case .tab(let tabID):
@@ -233,7 +240,7 @@ struct BrowserSidebarReorderCommit {
         case .splitGroup(let groupID):
             return browser.space(matching: assignment)?
                 .splitGroupMembers(of: groupID)
-                .first?
+                .first { $0.id != movedTabID }?
                 .id
         case .folder(let folderID):
             guard let space = browser.space(matching: assignment) else { return nil }

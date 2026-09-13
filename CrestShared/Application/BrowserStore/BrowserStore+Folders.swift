@@ -4,9 +4,9 @@ extension BrowserStore {
     var extensionTabGroups: BrowserExtensionTabGroupStore { family.extensionTabGroups }
 
     @discardableResult
-    func createTabFolder(_ tabs: [TabID], in spaceID: SpaceID) -> FolderID? {
+    func createTabFolder(_ tabs: [TabID], in spaceID: SpaceID, detachesSplitMembers: Bool = false) -> FolderID? {
         guard !deletingSpaceIDs.contains(spaceID),
-            let id = session.createTabFolder(tabs, in: spaceID)
+            let id = session.createTabFolder(tabs, in: spaceID, detachesSplitMembers: detachesSplitMembers)
         else { return nil }
         persist(syncUrgency: .coalesced, scope: .core)
         return id
@@ -16,12 +16,12 @@ extension BrowserStore {
     func fileTabs(
         _ tabs: [TabID], matching assignment: BrowserSpaceRuntimeAssignment,
         into folderID: FolderID?, location: BrowserFolderLocation, before anchor: TabID? = nil,
-        beforeFolderID: FolderID? = nil
+        beforeFolderID: FolderID? = nil, detachesSplitMembers: Bool = false
     ) -> Bool {
         guard space(matching: assignment) != nil,
             session.fileTabs(
                 tabs, in: assignment.spaceID, into: folderID, location: location, before: anchor,
-                beforeFolderID: beforeFolderID)
+                beforeFolderID: beforeFolderID, detachesSplitMembers: detachesSplitMembers)
         else { return false }
         persist(syncUrgency: .coalesced, scope: .core)
         return true

@@ -6,6 +6,25 @@ import XCTest
 final class BrowserSplitGroupSessionTests: XCTestCase {
     private let mutationDate = Date(timeIntervalSince1970: 1_000)
 
+    func testMovingAMemberIntoAnEarlierSplitPreservesItsFormerSiblings() throws {
+        let oldGroup = SplitGroupID()
+        let target = makeTab("Target")
+        let bystander = makeTab("Bystander")
+        let siblings = [makeTab("Head", group: oldGroup), makeTab("Tail", group: oldGroup)]
+        let member = makeTab("Moved Member", group: oldGroup)
+        let space = makeSpace(tabs: [target, bystander] + siblings + [member], selectedTabID: target.id)
+        var session = BrowserSession(spaces: [space], selectedSpaceID: space.id)
+
+        XCTAssertTrue(session.addTabToSplit(member.id, joining: target.id, at: 0, in: space.id, at: mutationDate))
+
+        let updated = try XCTUnwrap(session.selectedSpace)
+        XCTAssertEqual(updated.splitGroupMembers(of: oldGroup), siblings)
+        let joinedGroup = try XCTUnwrap(updated.splitGroup(containing: target.id))
+        XCTAssertNotEqual(joinedGroup, oldGroup)
+        XCTAssertEqual(updated.splitGroupMembers(of: joinedGroup).map(\.id), [member.id, target.id])
+        XCTAssertEqual(updated.tabs.first { $0.id == bystander.id }, bystander)
+    }
+
     func testJoiningAnUngroupedTargetCreatesTheGroupAndFocusesTheJoiner() throws {
         let first = makeTab("First")
         let second = makeTab("Second")

@@ -128,7 +128,8 @@ extension BrowserStore {
         to placement: TabPlacement,
         folderID: FolderID? = nil,
         before destinationTabID: TabID? = nil,
-        matching destinationAssignment: BrowserSpaceRuntimeAssignment
+        matching destinationAssignment: BrowserSpaceRuntimeAssignment,
+        detachesFromSplit: Bool = false
     ) -> Bool {
         let sourceAssignment = item.spaceAssignment
         guard let source = space(matching: sourceAssignment),
@@ -151,7 +152,8 @@ extension BrowserStore {
                 item.tabID,
                 to: placement,
                 folderID: folderID,
-                before: destinationTabID
+                before: destinationTabID,
+                detachesFromSplit: detachesFromSplit
             )
         } else {
             moved = moveTabBetweenSpaces(

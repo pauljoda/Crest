@@ -95,9 +95,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                     spaceAccess: configuration.spaceAccess,
                     state: sidebarInteraction.sidebarReorderState
                 ),
-                // Disabled means no lift gesture *and* no registered reorder
-                // frame, so a grouped member neither drags out on its own nor
-                // offers a drop slot between two members of its own run.
+                parentSplitGroupID: configuration.isSplitGroupMember ? configuration.tab.splitGroupID : nil,
                 isEnabled: !interaction.isRenaming
                     && configuration.isAvailableForDisplay
                     && configuration.isReorderSource

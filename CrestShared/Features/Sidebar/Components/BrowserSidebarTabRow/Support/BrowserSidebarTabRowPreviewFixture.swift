@@ -58,7 +58,7 @@ enum BrowserSidebarTabRowPreviewFixture {
             restoreSavedLocation: {},
             promotionNamespace: nil,
             isSplitGroupMember: isSplitGroupMember,
-            isReorderSource: !isSplitGroupMember,
+            isReorderSource: true,
             followingTabID: nil,
             hasVisibleFollowingRow: false,
             select: { _ in }

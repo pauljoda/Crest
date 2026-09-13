@@ -24,12 +24,7 @@ struct BrowserSidebarTabRowConfiguration {
     /// gives up is the sidebar's edge inset, which the container already
     /// provides.
     let isSplitGroupMember: Bool
-    /// Whether the row registers itself as something a reorder can lift.
-    ///
-    /// A split group's members stand this down: while tabs are grouped the
-    /// group moves as one block, so a member that could be torn out mid-drag
-    /// would break the run's contiguity and dissolve the split under the
-    /// pointer.
+    /// Whether this row registers a lift source, including inside a split.
     let isReorderSource: Bool
     let followingTabID: TabID?
     let hasVisibleFollowingRow: Bool

@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// The grouped container a split's tab rows sit in: one surface, one drag
-/// source, one set of drop anchors, and one context menu for the whole run.
+/// Measures the split as one insertion slot; its header owns the group drag.
 struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
-    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
-
     let configuration: BrowserSidebarSplitGroupRowConfiguration
     let interaction: BrowserSidebarSplitGroupRowInteractionContext
 
@@ -39,20 +36,11 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
                     assignment: configuration.assignment,
                     isEnabled: configuration.isAvailableForDisplay && !interaction.isRenaming)
             )
-            // Registers the whole group as one reorder row and arms its lift.
-            // The registration is also what makes a tab dragged past the group
-            // step over the run as a single slot instead of landing between two
-            // members. `members` is only the run a shell that draws its own
-            // lift preview builds it from; a shell that lifts the row itself
-            // ignores it.
-            .browserSplitGroupDraggable(
-                item: configuration.dragItem,
-                members: configuration.members,
-                placement: configuration.placement,
-                folderID: configuration.folderID,
+            .browserSidebarReorderContainer(
+                item: .splitGroup(configuration.dragItem),
+                section: .tabs(placement: configuration.placement, folderID: configuration.folderID),
                 reorder: configuration.reorderContext,
-                isEnabled: configuration.isAvailableForDisplay && configuration.capabilities.supportsOrganization,
-                requiresSelectedSpace: true
+                isEnabled: configuration.isAvailableForDisplay && configuration.capabilities.supportsOrganization
             )
             .modifier(
                 BrowserSidebarSplitGroupRowDropIndicators(
@@ -64,22 +52,6 @@ struct BrowserSidebarSplitGroupRowSurface: ViewModifier {
             .accessibilityLabel(
                 "Split View with \(configuration.members.count) tabs"
             )
-            .contextMenu {
-                if configuration.capabilities.supportsOrganization {
-                    BrowserSidebarSplitGroupContextMenu(
-                        configuration: configuration,
-                        interaction: interaction
-                    )
-                    .tint(.primary)
-                    // A group lifts as one block through the same touch path its
-                    // rows do, and the menu that wins the press leaves no session
-                    // to report the lift ended. See `yieldToCompetingInteraction`.
-                    .onAppear {
-                        sidebarInteraction.sidebarReorderState
-                            .yieldToCompetingInteraction()
-                    }
-                }
-            }
     }
 
     /// The container's own tint, and deliberately the quietest of the three

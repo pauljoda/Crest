@@ -27,8 +27,7 @@ struct BrowserSidebarTabRow: View {
     /// Set by the container that nests this row inside a split group. See
     /// `BrowserSidebarTabRowConfiguration.isSplitGroupMember`.
     var isSplitGroupMember = false
-    /// Whether the row may be lifted out of the list on its own. A split
-    /// group's members hand this off to the container that drags the whole run.
+    /// Whether this row accepts its own drag gesture.
     var isReorderSource = true
     /// The row a drop below this one would land in front of. Only read where
     /// the shell draws its insertion line on the rows themselves.

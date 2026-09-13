@@ -38,7 +38,8 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
             .browserSidebarReorderSource(
                 item: .splitGroup(item),
                 section: section,
-                reorder: reorder
+                reorder: reorder,
+                registersContainer: false
             )
             .browserMobileDraggable {
                 reorder.state.stage(item: .splitGroup(item), section: section)

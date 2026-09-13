@@ -387,6 +387,7 @@ extension BrowserSession {
         to placement: TabPlacement,
         folderID requestedFolderID: FolderID? = nil,
         before destinationTabID: TabID? = nil,
+        detachesFromSplit: Bool = false,
         at date: Date = .now
     ) -> Bool {
         guard let spaceIndex = selectedSpaceIndex,
@@ -396,7 +397,8 @@ extension BrowserSession {
         }
         let originalTabs = spaces[spaceIndex].tabs
         var destinationTabs = originalTabs
-        let source = destinationTabs.remove(at: sourceIndex)
+        var source = destinationTabs.remove(at: sourceIndex)
+        if detachesFromSplit { source.splitGroupID = nil }
         guard
             let plan = BrowserTabPlacementPlan(
                 moving: source,
@@ -424,6 +426,7 @@ extension BrowserSession {
         // plain normalizer only clears membership, never reorders.
         preserveFolderOrder(in: spaceIndex, removing: [tabID])
         spaces[spaceIndex].tabs = BrowserSplitGroupNormalizer.normalized(destinationTabs)
+        if detachesFromSplit { normalizeSplitGroupsAfterUserMutation(in: spaces[spaceIndex].id, at: date) }
         return true
     }
 
@@ -764,11 +767,13 @@ extension BrowserSession {
             anchorTabID = tabs[runRange.upperBound...].first { $0.id != tabID }?.id
         }
 
+        let sourceGroupID = tabs.first { $0.id == tabID }?.splitGroupID
         moveTab(
             tabID,
             to: target.placement,
             folderID: target.folderID,
             before: anchorTabID,
+            detachesFromSplit: sourceGroupID != nil && sourceGroupID != target.splitGroupID,
             at: date
         )
         guard let joinerIndex = spaces[spaceIndex].tabs.firstIndex(where: { $0.id == tabID }),

@@ -43,7 +43,7 @@ final class BrowserSidebarReorderGeometry {
     }
 
     func registeredRows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderRow] {
-        rows.values.map(\.row).filter { $0.space == space }
+        rows.values.map(\.row).filter { $0.space == space && $0.parentItemID == nil }
     }
 
     /// Range selection includes offscreen rows of expanded lists.
@@ -89,7 +89,8 @@ final class BrowserSidebarReorderGeometry {
             guard var registration = rows[key] else { continue }
             registration.row = BrowserSidebarReorderRow(
                 id: registration.row.id, space: registration.row.space, section: registration.row.section,
-                frame: registration.row.frame.offsetBy(dx: 0, dy: offsetY))
+                frame: registration.row.frame.offsetBy(dx: 0, dy: offsetY),
+                parentItemID: registration.row.parentItemID)
             rows[key] = registration
         }
         for key in Array(zones.keys) where zones[key]?.scrollRegionID == id {

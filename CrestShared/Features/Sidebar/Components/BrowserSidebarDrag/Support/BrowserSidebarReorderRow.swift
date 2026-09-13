@@ -24,6 +24,8 @@ struct BrowserSidebarReorderRow: Equatable, Sendable {
 
     let section: BrowserSidebarReorderSection
     let frame: CGRect
+    /// Member frames can start a lift; their container remains the insertion slot.
+    var parentItemID: BrowserSidebarReorderItemID? = nil
 
     var usesGridOrdering: Bool {
         section.usesGridOrdering

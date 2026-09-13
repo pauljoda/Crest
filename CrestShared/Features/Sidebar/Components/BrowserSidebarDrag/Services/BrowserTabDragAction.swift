@@ -45,7 +45,8 @@ struct BrowserTabDragAction {
         to placement: TabPlacement,
         folderID: FolderID? = nil,
         before destinationTabID: TabID? = nil,
-        matching destination: BrowserSpaceRuntimeAssignment
+        matching destination: BrowserSpaceRuntimeAssignment,
+        detachesFromSplit: Bool = false
     ) -> Bool {
         guard canMove(item, into: destination) else { return false }
         return browser.moveTab(
@@ -53,7 +54,8 @@ struct BrowserTabDragAction {
             to: placement,
             folderID: folderID,
             before: destinationTabID,
-            matching: destination
+            matching: destination,
+            detachesFromSplit: detachesFromSplit
         )
     }
 

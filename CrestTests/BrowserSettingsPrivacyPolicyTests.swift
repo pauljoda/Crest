@@ -1,8 +1,94 @@
 import XCTest
+
 @testable import Crest
 
 @MainActor
 final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
+    func testLiveSpaceSelectionAcceptsAnUnfocusedSettingsSplitAndReusesTheDestinationTab() throws {
+        var session = BrowserSession.preview
+        let sourceIndex = 0
+        let destinationIndex = 1
+        let group = SplitGroupID()
+        let sourcePage = BrowserTab(
+            title: "Page", url: URL(string: "https://example.com"), placement: .current, splitGroupID: group)
+        let sourceSettings = BrowserTab(
+            title: "Settings", url: nil, nativeContent: .settings, placement: .current, splitGroupID: group)
+        let destinationSettings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+        session.spaces[sourceIndex].tabs.append(contentsOf: [sourcePage, sourceSettings])
+        session.spaces[sourceIndex].selectedTabID = sourcePage.id
+        session.spaces[destinationIndex].tabs.append(destinationSettings)
+        let source = session.spaces[sourceIndex]
+        let destination = session.spaces[destinationIndex]
+        session.selectedSpaceID = source.id
+        let persistence = InMemoryBrowserSessionPersistence()
+        let browser = BrowserStore(session: session, persistence: persistence)
+        let action = BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: BrowserSpaceAccessController())
+        let sourceAssignment = BrowserTabRuntimeAssignment(
+            tabID: sourceSettings.id, spaceID: source.id, profileID: source.profile.id)
+        XCTAssertNotEqual(browser.selectedTab?.id, sourceSettings.id)
+
+        let selected = action.select(destination.id, matching: sourceAssignment)
+
+        XCTAssertEqual(
+            selected,
+            BrowserTabRuntimeAssignment(
+                tabID: destinationSettings.id, spaceID: destination.id, profileID: destination.profile.id))
+        XCTAssertEqual(browser.session.selectedSpaceID, destination.id)
+        XCTAssertEqual(browser.selectedTab?.id, destinationSettings.id)
+        XCTAssertEqual(browser.selectedSpace?.tabs.filter { $0.nativeContent == .settings }.count, 1)
+        XCTAssertEqual(browser.session.space(id: source.id), source)
+        XCTAssertEqual(try XCTUnwrap(persistence.load()), browser.session)
+    }
+
+    func testLiveSpaceSelectionRejectsStaleSourcesAndUnavailableDestinationsWithoutMutation() {
+        for invalidation in SettingsSelectionInvalidation.allCases {
+            var session = BrowserSession.preview
+            let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+            session.spaces[0].tabs.append(settings)
+            let source = session.spaces[0]
+            let destination = session.spaces[1]
+            session.selectedSpaceID = source.id
+            let persistence = InMemoryBrowserSessionPersistence()
+            let browser = BrowserStore(session: session, persistence: persistence)
+            let action = BrowserSettingsSpaceSelectionAction(
+                browser: browser, spaceAccess: BrowserSpaceAccessController())
+            let assignment = BrowserTabRuntimeAssignment(
+                tabID: settings.id, spaceID: source.id, profileID: source.profile.id)
+            switch invalidation {
+            case .removedTab:
+                browser.session.spaces[0].tabs.removeAll { $0.id == settings.id }
+            case .replacedTabContent:
+                browser.session.spaces[0].tabs[browser.session.spaces[0].tabs.count - 1] = BrowserTab(
+                    id: settings.id, title: "Getting Started", url: nil, nativeContent: .gettingStarted,
+                    placement: .current)
+            case .replacedProfile:
+                browser.session.spaces[0] = BrowserSpace(
+                    id: source.id, profile: BrowsingProfile(id: UUID()), name: source.name,
+                    symbol: source.symbol, accent: source.accent, folders: source.folders,
+                    tabs: source.tabs, selectedTabID: source.selectedTabID)
+            case .lockedSource:
+                browser.session.spaces[0].accessPolicy = .deviceOwnerAuthentication
+            case .unselectedSource:
+                browser.session.selectedSpaceID = destination.id
+            case .deletingSource:
+                _ = browser.family.beginDeletingSpace(source.id)
+            case .lockedDestination:
+                browser.session.spaces[1].accessPolicy = .deviceOwnerAuthentication
+            case .deletingDestination:
+                _ = browser.family.beginDeletingSpace(destination.id)
+            case .missingDestination:
+                browser.session.spaces.removeLast()
+            }
+            let before = browser.session
+            let savedCount = persistence.savedScopes.count
+
+            XCTAssertNil(action.select(destination.id, matching: assignment), "\(invalidation)")
+
+            XCTAssertEqual(browser.session, before, "\(invalidation)")
+            XCTAssertEqual(persistence.savedScopes.count, savedCount, "\(invalidation)")
+        }
+    }
+
     func testPrivateSpaceSettingsStayProtectedUntilTheSpaceIsUnlocked() async throws {
         var space = try XCTUnwrap(BrowserSession.preview.spaces.first)
         space.accessPolicy = .deviceOwnerAuthentication
@@ -129,6 +215,11 @@ final class BrowserSettingsPrivacyPolicyTests: XCTestCase {
             [spaces[0].id, spaces[1].id]
         )
     }
+}
+
+private enum SettingsSelectionInvalidation: CaseIterable {
+    case removedTab, replacedTabContent, replacedProfile, lockedSource, unselectedSource, deletingSource
+    case lockedDestination, deletingDestination, missingDestination
 }
 
 @MainActor

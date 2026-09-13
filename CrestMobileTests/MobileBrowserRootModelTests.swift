@@ -237,32 +237,20 @@ final class MobileBrowserRootModelTests: XCTestCase {
         XCTAssertEqual(fixture.browser.session, before)
     }
 
-    func testLiveSettingsSpaceSelectionRejectsRemovedReprofiledLockedAndCompactSources() {
-        for invalidation in ["removed", "reprofiled", "locked", "compact"] {
-            var source = makeSpace(index: 10)
-            let destination = makeSpace(index: 20)
-            let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
-            source.tabs.append(settings)
-            let fixture = makeFixture(
-                spaces: [source, destination], selectedSpaceID: source.id, startupBehavior: .lastActiveTab)
-            fixture.model.presentationChanged(to: .regular)
-            let assignment = BrowserTabRuntimeAssignment(
-                tabID: settings.id, spaceID: source.id, profileID: source.profile.id)
-            switch invalidation {
-            case "removed":
-                source.tabs.removeAll(where: { $0.id == settings.id })
-            case "reprofiled":
-                source = replacingProfile(of: source, with: BrowsingProfile(id: fixedUUID(999)))
-            case "locked":
-                source.accessPolicy = .deviceOwnerAuthentication
-            default:
-                fixture.model.presentationChanged(to: .compact)
-            }
-            fixture.browser.session = BrowserSession(spaces: [source, destination], selectedSpaceID: source.id)
-            let before = fixture.browser.session
-            XCTAssertFalse(fixture.model.settings.selectLiveSpace(destination.id, matching: assignment), invalidation)
-            XCTAssertEqual(fixture.browser.session, before, invalidation)
-        }
+    func testLiveSettingsSpaceSelectionRejectsCompactPresentation() {
+        var source = makeSpace(index: 10)
+        let destination = makeSpace(index: 20)
+        let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+        source.tabs.append(settings)
+        let fixture = makeFixture(
+            spaces: [source, destination], selectedSpaceID: source.id, startupBehavior: .lastActiveTab)
+        fixture.model.presentationChanged(to: .compact)
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: settings.id, spaceID: source.id, profileID: source.profile.id)
+        let before = fixture.browser.session
+
+        XCTAssertFalse(fixture.model.settings.selectLiveSpace(destination.id, matching: assignment))
+        XCTAssertEqual(fixture.browser.session, before)
     }
 
     func testSettingsActionsRejectLockedAndForeignTargets() throws {

@@ -83,6 +83,25 @@ struct BrowserSidebarSplitGroupHeader: View {
         .frame(height: configuration.metrics.headerHeight)
         .padding(.horizontal, configuration.headerLeadingInset)
         .contentShape(.rect)
+        .browserSplitGroupDraggable(
+            item: configuration.dragItem,
+            members: configuration.members,
+            placement: configuration.placement,
+            folderID: configuration.folderID,
+            reorder: configuration.reorderContext,
+            isEnabled: configuration.isAvailableForDisplay && configuration.capabilities.supportsOrganization
+                && !interaction.isRenaming,
+            requiresSelectedSpace: true
+        )
+        .contextMenu {
+            if configuration.capabilities.supportsOrganization {
+                BrowserSidebarSplitGroupContextMenu(configuration: configuration, interaction: interaction)
+                    .tint(.primary)
+                    .onAppear {
+                        configuration.sidebarInteraction.sidebarReorderState.yieldToCompetingInteraction()
+                    }
+            }
+        }
         .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
             if !focused, interaction.isRenaming {
                 interaction.commitTitle()

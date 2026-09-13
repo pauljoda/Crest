@@ -6,6 +6,7 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
     let item: BrowserSidebarReorderItem
     let section: BrowserSidebarReorderSection
     let reorder: BrowserSidebarReorderContext
+    var parentItemID: BrowserSidebarReorderItemID?
     var isEnabled = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -54,7 +55,7 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                     guard isEnabled else { return nil }
                     return BrowserSidebarReorderRow(
                         id: item.id, space: item.spaceAssignment, section: section,
-                        frame: proxy.frame(in: BrowserSidebarReorderSpace.globalSpace))
+                        frame: proxy.frame(in: BrowserSidebarReorderSpace.globalSpace), parentItemID: parentItemID)
                 } action: { row in
                     guard let row else {
                         state.removeRow(item.id, owner: identity)
@@ -124,10 +125,11 @@ extension View {
         item: BrowserSidebarReorderItem,
         section: BrowserSidebarReorderSection,
         reorder: BrowserSidebarReorderContext,
+        parentItemID: BrowserSidebarReorderItemID? = nil,
         isEnabled: Bool = true
     ) -> some View {
         modifier(
             BrowserSidebarReorderContainerModifier(
-                item: item, section: section, reorder: reorder, isEnabled: isEnabled))
+                item: item, section: section, reorder: reorder, parentItemID: parentItemID, isEnabled: isEnabled))
     }
 }

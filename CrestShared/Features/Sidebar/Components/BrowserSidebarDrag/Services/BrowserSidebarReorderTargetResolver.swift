@@ -49,20 +49,26 @@ struct BrowserSidebarReorderTargetResolver {
     private func insertionTarget(in section: BrowserSidebarReorderSection)
         -> BrowserSidebarReorderTarget?
     {
+        if section == lift.section, let parentID = rows[lift.item.id]?.row.parentItemID,
+            let parent = rows[parentID]?.row, layout.frame(for: parent)?.contains(pointer) == true
+        {
+            return nil
+        }
         let ordered = BrowserSidebarReorderPolicy.rows(
             in: section,
-            from: rows.values.map(\.row).filter { $0.space == lift.item.spaceAssignment }.compactMap {
-                row in
-                let frame: CGRect?
-                if row.usesGridOrdering, let pinned {
-                    frame = pinned.layout.frame(for: .tab(row.id), in: pinned.frame)
-                } else {
-                    frame = layout.frame(for: row)
-                }
-                guard let frame else { return nil }
-                return BrowserSidebarReorderRow(
-                    id: row.id, space: row.space, section: row.section, frame: frame)
-            })
+            from: rows.values.map(\.row).filter { $0.space == lift.item.spaceAssignment && $0.parentItemID == nil }
+                .compactMap {
+                    row in
+                    let frame: CGRect?
+                    if row.usesGridOrdering, let pinned {
+                        frame = pinned.layout.frame(for: .tab(row.id), in: pinned.frame)
+                    } else {
+                        frame = layout.frame(for: row)
+                    }
+                    guard let frame else { return nil }
+                    return BrowserSidebarReorderRow(
+                        id: row.id, space: row.space, section: row.section, frame: frame)
+                })
         let candidates = ordered.filter { !lift.item.selectionRowIDs.contains($0.id) }
         guard
             lift.item.selection != nil

@@ -7,6 +7,7 @@ extension View {
         spaceID: SpaceID,
         dragState: BrowserTabDragState,
         reorder: BrowserSidebarReorderContext? = nil,
+        parentSplitGroupID: SplitGroupID? = nil,
         isEnabled: Bool = true,
         requiresSelectedSpace: Bool = false
     ) -> some View {
@@ -17,6 +18,7 @@ extension View {
                 spaceID: spaceID,
                 dragState: dragState,
                 reorder: reorder,
+                parentSplitGroupID: parentSplitGroupID,
                 isEnabled: isEnabled,
                 requiresSelectedSpace: requiresSelectedSpace
             )

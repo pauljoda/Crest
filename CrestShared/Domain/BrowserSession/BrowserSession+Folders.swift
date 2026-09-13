@@ -112,12 +112,12 @@ extension BrowserSession {
     }
 
     /// A common folder-membership transaction for menus, drops and extensions.
-    /// Split members travel together, in their existing page order.
+    /// Split members travel together unless an individual-tab drop detaches them.
     @discardableResult
     mutating func fileTabs(
         _ tabIDs: [TabID], in spaceID: SpaceID, into folderID: FolderID?,
         location: BrowserFolderLocation, before requestedAnchorID: TabID? = nil,
-        beforeFolderID: FolderID? = nil, at date: Date = .now
+        beforeFolderID: FolderID? = nil, detachesSplitMembers: Bool = false, at date: Date = .now
     ) -> Bool {
         guard !tabIDs.isEmpty, let index = spaces.firstIndex(where: { $0.id == spaceID }) else { return false }
         let space = spaces[index]
@@ -133,7 +133,7 @@ extension BrowserSession {
                 })
             else { return false }
         }
-        let splits = Set(tabIDs.compactMap { byID[$0]?.splitGroupID })
+        let splits = detachesSplitMembers ? [] : Set(tabIDs.compactMap { byID[$0]?.splitGroupID })
         let requested = Set(tabIDs)
         let members = space.tabs.filter { requested.contains($0.id) || $0.splitGroupID.map(splits.contains) == true }
         let memberIDs = Set(members.map(\.id))
@@ -148,7 +148,7 @@ extension BrowserSession {
                 !memberIDs.contains(id) && space.tabs.contains { $0.id == id && $0.placement == location.tabPlacement }
             }) ?? true
         else { return false }
-        let insertion: Int
+        var insertion: Int
         if let anchorID, let i = remaining.firstIndex(where: { $0.id == anchorID }) {
             insertion = i
         } else if let folderID, let last = remaining.lastIndex(where: { $0.folderID == folderID }) {
@@ -166,13 +166,16 @@ extension BrowserSession {
         if insertion > 0, insertion < remaining.count, let split = remaining[insertion].splitGroupID,
             remaining[insertion - 1].splitGroupID == split
         {
-            return false
+            guard detachesSplitMembers, anchorID == nil else { return false }
+            // An empty folder starts after the surviving split, never between its members.
+            while insertion < remaining.count, remaining[insertion].splitGroupID == split { insertion += 1 }
         }
         let moved = members.map { tab in
             var value = tab
             value.placement = location.tabPlacement
             value.folderID = folderID
             value.savedURL = location == .current ? nil : value.savedURL ?? value.url
+            if detachesSplitMembers { value.splitGroupID = nil }
             return value
         }
         remaining.insert(contentsOf: moved, at: insertion)
@@ -185,19 +188,22 @@ extension BrowserSession {
         }
         spaces[index].tabs = remaining
         spaces[index].folders = folders
+        if detachesSplitMembers { normalizeSplitGroupsAfterUserMutation(in: spaceID, at: date) }
         return true
     }
 
     @discardableResult
     mutating func createTabFolder(
         _ tabIDs: [TabID], in spaceID: SpaceID, location: BrowserFolderLocation = .current,
-        title: String = "New Folder", color: BrowserSpaceBrandColor = .folderDefault
+        title: String = "New Folder", color: BrowserSpaceBrandColor = .folderDefault,
+        detachesSplitMembers: Bool = false
     ) -> FolderID? {
         var next = self
         guard let space = space(id: spaceID), !tabIDs.isEmpty,
             tabIDs.allSatisfy({ id in space.tabs.contains { $0.id == id } }),
             let folderID = next.addFolder(title: title, color: color, location: location, in: spaceID),
-            next.fileTabs(tabIDs, in: spaceID, into: folderID, location: location)
+            next.fileTabs(
+                tabIDs, in: spaceID, into: folderID, location: location, detachesSplitMembers: detachesSplitMembers)
         else { return nil }
         self = next
         return folderID

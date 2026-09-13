@@ -88,9 +88,13 @@ structured Markdown in Sparkle's update interface.
 
 ## Publication order
 
-The production workflow intentionally publishes from the inside out:
+Before publication, run the affected retained app tests and release-script
+contract tests locally for the exact commit, following the
+[repository guardrails](RepositoryGuardrails.md). The production workflow follows
+these steps:
 
-1. regenerate the project and run the focused release tests;
+1. regenerate the project and check version metadata, product identity, and
+   cache hygiene;
 2. import the Developer ID identity into a temporary keychain and install the
    matching release provisioning profile;
 3. archive and export an arm64 Developer ID build with hardened runtime and
@@ -150,12 +154,13 @@ Before publishing a stable tag:
 
 1. confirm `CHANGELOG.md`, `Documentation/ReleaseNotes.json`, and the marketing
    version are ready;
-2. confirm the main-branch validation and Pages workflows are green;
-3. confirm the production environment contains all seven release secrets;
-4. create and push the exact version tag;
-5. inspect the workflow's signature, notarization, Gatekeeper, checksum, and
+2. complete local app and release-script tests for the commit being published;
+3. confirm the main-branch validation and Pages workflows are green;
+4. confirm the production environment contains all seven release secrets;
+5. create and push the exact version tag;
+6. inspect the workflow's signature, notarization, Gatekeeper, checksum, and
    attestation results;
-6. install the published disk image on a clean macOS account and exercise both
+7. install the published disk image on a clean macOS account and exercise both
    a manual update check and the normal relaunch path.
 
 Nightly and development builds use the same signing, notarization, and

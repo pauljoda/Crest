@@ -83,10 +83,12 @@ struct BrowserSettingsView: View {
         .environment(
             \.browserSettingsSelectLiveSpace,
             BrowserSettingsLiveSpaceSelection { id in
-                guard let space = browser.session.spaces.first(where: { $0.id == id }) else { return }
-                spaceSettingsPresentation.present(assignment: BrowserSpaceRuntimeAssignment(space: space))
-                browser.selectSpace(id)
-                browser.openSettings()
+                guard let tabAssignment,
+                    let selected = BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: spaceAccess)
+                        .select(id, matching: tabAssignment)
+                else { return }
+                spaceSettingsPresentation.present(
+                    assignment: BrowserSpaceRuntimeAssignment(spaceID: selected.spaceID, profileID: selected.profileID))
                 pages.select(session: browser.session)
             }
         )

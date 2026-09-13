@@ -864,6 +864,69 @@ final class BrowserTabDragSafetyTests: XCTestCase {
         XCTAssertEqual(space.tabs.map(\.title), ["Outsider", "Head", "Tail"])
     }
 
+    func testIndividualMemberDropsDetachWithoutMovingTheSurvivingSplit() throws {
+        for memberIndex in 0...1 {
+            for destination in SplitMemberDropDestination.allCases {
+                let context = makeSplitContext()
+                let member = Self.makeTab(
+                    id: Self.tabID(56), title: "Moved Member", placement: .current, splitGroupID: context.groupID)
+                context.browser.session.spaces[0].tabs.insert(member, at: memberIndex)
+                let folder = try XCTUnwrap(context.browser.session.addFolder(in: context.space.id))
+                let originalMembers = context.members
+                let item = BrowserTabDragItem(
+                    tabID: member.id, spaceID: context.space.id, profileID: context.space.profile.id)
+                let kind: BrowserSidebarReorderTarget.Kind =
+                    switch destination {
+                    case .beforeGroup:
+                        .insert(
+                            section: .tabs(placement: .current, folderID: nil), beforeID: .splitGroup(context.groupID),
+                            index: 0)
+                    case .beforeFolder:
+                        .insert(section: .tabs(placement: .saved, folderID: nil), beforeID: .folder(folder), index: 0)
+                    case .insideFolder: .intoFolder(folder)
+                    case .newFolder: .createCurrentFolder(context.outsider.id)
+                    case .pinned: .insert(section: .tabs(placement: .pinned, folderID: nil), beforeID: nil, index: 0)
+                    }
+
+                XCTAssertTrue(
+                    BrowserSidebarReorderCommit(browser: context.browser, spaceAccess: context.spaceAccess)
+                        .apply(BrowserSidebarReorderTarget(kind: kind), for: .tab(item)), "\(destination)")
+
+                let updated = try XCTUnwrap(context.browser.selectedSpace)
+                XCTAssertEqual(updated.splitGroupMembers(of: context.groupID), originalMembers, "\(destination)")
+                let moved = try XCTUnwrap(updated.tabs.first { $0.id == member.id })
+                XCTAssertNil(moved.splitGroupID, "\(destination)")
+                XCTAssertEqual(moved.url, member.url)
+                XCTAssertEqual(updated.tabs.count, context.space.tabs.count + 1)
+                switch destination {
+                case .beforeGroup: XCTAssertEqual(updated.tabs.first?.id, member.id)
+                case .beforeFolder: XCTAssertEqual(moved.placement, .saved)
+                case .insideFolder: XCTAssertEqual(moved.folderID, folder)
+                case .newFolder:
+                    XCTAssertNotNil(moved.folderID)
+                    XCTAssertEqual(updated.tabs.first { $0.id == context.outsider.id }?.folderID, moved.folderID)
+                case .pinned: XCTAssertEqual(moved.placement, .pinned)
+                }
+            }
+        }
+    }
+
+    func testRefusedMemberDropLeavesTheOriginalSplitIntact() {
+        let context = makeSplitContext()
+        let item = BrowserTabDragItem(
+            tabID: context.members[0].id, spaceID: context.space.id, profileID: context.space.profile.id)
+        let commit = BrowserSidebarReorderCommit(browser: context.browser, spaceAccess: context.spaceAccess)
+        let before = context.browser.session
+
+        XCTAssertFalse(commit.apply(BrowserSidebarReorderTarget(kind: .intoFolder(FolderID())), for: .tab(item)))
+        XCTAssertFalse(
+            commit.apply(
+                BrowserSidebarReorderTarget(
+                    kind: .insert(section: .tabs(placement: .saved, folderID: nil), beforeID: .tab(TabID()), index: 0)),
+                for: .tab(item)))
+        XCTAssertEqual(context.browser.session, before)
+    }
+
     /// Pinned tabs cannot be split members, and a group is not a folder or Space
     /// payload, so those targets commit nothing at all.
     func testSplitGroupDropsRefusePinnedFolderAndSpaceTargets() {
@@ -1357,6 +1420,10 @@ final class BrowserTabDragSafetyTests: XCTestCase {
             members: [head, tail],
             outsider: outsider
         )
+    }
+
+    private enum SplitMemberDropDestination: CaseIterable {
+        case beforeGroup, beforeFolder, insideFolder, newFolder, pinned
     }
 
     private func makeContext(

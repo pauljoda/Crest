@@ -1109,6 +1109,18 @@
     "space-actions-native-glass": {
       "category": "improved",
       "message": "Use Liquid Glass controls for reordering and adding Spaces"
+    },
+    "sidebar-default-row-separation": {
+      "category": "improved",
+      "message": "Keep a visible gap between tab highlights at the default spacing"
+    },
+    "settings-live-space-authorization": {
+      "category": "fixed",
+      "message": "Keep Settings actions within the current unlocked Space and protect locked destinations"
+    },
+    "sidebar-individual-split-tab-drag": {
+      "category": "improved",
+      "message": "Drag individual tabs out of a split, or move the whole split from its header"
     }
   }
 }

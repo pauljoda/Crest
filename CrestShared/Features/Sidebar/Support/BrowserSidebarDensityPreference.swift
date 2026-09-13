@@ -39,7 +39,7 @@ enum BrowserSidebarDensityPolicy {
     }
 
     static func rowSeparation(scale value: Double, hasBorders: Bool = false) -> Double {
-        value < 1 || hasBorders ? minimumSpacing : 0
+        value <= 1 || hasBorders ? minimumSpacing : 0
     }
 
     static func pinHeight(scale value: Double, touch: Bool) -> Double {

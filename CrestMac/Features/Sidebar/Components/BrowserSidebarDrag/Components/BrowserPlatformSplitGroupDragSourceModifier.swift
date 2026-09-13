@@ -22,6 +22,7 @@ struct BrowserPlatformSplitGroupDragSourceModifier: ViewModifier {
                 item: .splitGroup(item),
                 section: .tabs(placement: placement, folderID: folderID),
                 reorder: reorder,
+                registersContainer: false,
                 isEnabled: isEnabled
             )
     }

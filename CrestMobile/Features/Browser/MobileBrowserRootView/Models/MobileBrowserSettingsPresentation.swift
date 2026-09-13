@@ -103,15 +103,10 @@ final class MobileBrowserSettingsPresentation {
     @discardableResult
     func selectLiveSpace(_ id: SpaceID, matching source: BrowserTabRuntimeAssignment) -> Bool {
         guard presentation == .embedded,
-            let sourceSpace = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
-                in: browser, accessController: spaceAccess),
-            sourceSpace.tabs.contains(where: { $0.id == source.tabID && $0.nativeContent == .settings }),
-            let destination = BrowserSidebarAccessPolicy.availableSpaces(in: browser).first(where: { $0.id == id }),
-            !spaceAccess.isLocked(destination)
+            BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: spaceAccess)
+                .select(id, matching: source) != nil
         else { return false }
-        browser.selectSpace(id)
-        openEmbeddedSettings()
+        synchronizeEmbeddedSettings()
         state.selection = .spaces
         return true
     }
@@ -143,9 +138,12 @@ final class MobileBrowserSettingsPresentation {
     }
 
     private func openEmbeddedSettings(adopting sheetState: MobileBrowserSettingsState? = nil) {
-        guard let tabID = browser.openSettings(), let space = browser.selectedSpace,
-            let tab = space.tabs.first(where: { $0.id == tabID })
-        else { return }
+        guard browser.openSettings() != nil else { return }
+        synchronizeEmbeddedSettings(adopting: sheetState)
+    }
+
+    private func synchronizeEmbeddedSettings(adopting sheetState: MobileBrowserSettingsState? = nil) {
+        guard let space = browser.selectedSpace, let tab = browser.selectedTab else { return }
         guard let retained = retainedState(for: tab, in: space) else { return }
         state = retained
         if let sheetState, sheetState !== state {

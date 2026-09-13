@@ -7,6 +7,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
     let section: BrowserSidebarReorderSection
     let reorder: BrowserSidebarReorderContext
 
+    var parentItemID: BrowserSidebarReorderItemID?
     var registersContainer = true
     var isEnabled = true
 
@@ -26,7 +27,8 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
         Group {
             if registersContainer {
                 content.browserSidebarReorderContainer(
-                    item: item, section: section, reorder: reorder, isEnabled: acceptsInput)
+                    item: item, section: section, reorder: reorder, parentItemID: parentItemID,
+                    isEnabled: acceptsInput)
             } else {
                 content
             }
@@ -77,6 +79,14 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                     }
                     var lifted = item.selecting(request)
                     var liftedSection = section
+                    if let request, let parentItemID, case .splitGroup(let groupID) = parentItemID,
+                        lifted.selectionRowIDs.contains(parentItemID), let space = reorder.browser.selectedSpace
+                    {
+                        lifted = .splitGroup(
+                            BrowserSplitGroupDragItem(
+                                groupID: groupID, spaceID: space.id, profileID: space.profile.id,
+                                memberTabIDs: space.splitGroupMembers(of: groupID).map(\.id), selection: request))
+                    }
                     if let request, !lifted.selectionRowIDs.contains(item.id),
                         let space = reorder.browser.selectedSpace,
                         let root = request.rootItems.compactMap(\.folderID).first(where: { root in
@@ -136,8 +146,8 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
         else { return false }
         switch item {
         case .tab(let tabItem):
-            guard let tab = space.tabs.first(where: { $0.id == tabItem.tabID }),
-                space.splitGroup(containing: tab.id) == nil
+            guard let tab = space.tabs.first(where: { $0.id == tabItem.tabID }) else { return false }
+            guard space.splitGroup(containing: tab.id).map(BrowserSidebarReorderItemID.splitGroup) == parentItemID
             else {
                 return false
             }
@@ -159,6 +169,7 @@ extension View {
         item: BrowserSidebarReorderItem,
         section: BrowserSidebarReorderSection,
         reorder: BrowserSidebarReorderContext,
+        parentItemID: BrowserSidebarReorderItemID? = nil,
         registersContainer: Bool = true,
         isEnabled: Bool = true
     ) -> some View {
@@ -167,6 +178,7 @@ extension View {
                 item: item,
                 section: section,
                 reorder: reorder,
+                parentItemID: parentItemID,
                 registersContainer: registersContainer,
                 isEnabled: isEnabled
             )
