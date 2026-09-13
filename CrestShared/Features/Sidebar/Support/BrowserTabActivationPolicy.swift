@@ -6,6 +6,26 @@ import Foundation
 /// on screen is whichever one the session now points at. Splitting the pair
 /// across call sites is how a row ends up presenting the tab it just left.
 enum BrowserTabActivationPolicy {
+    enum Context {
+        case desktop
+        case mobileRegular
+        case mobileCompact
+    }
+
+    enum Destination {
+        case page
+        case settings
+    }
+
+    static func destination(for tab: BrowserTab, in context: Context) -> Destination {
+        switch context {
+        case .desktop:
+            .page
+        case .mobileRegular, .mobileCompact:
+            tab.nativeContent == .settings ? .settings : .page
+        }
+    }
+
     static func activate(
         _ tabID: TabID,
         selectTab: (TabID) -> Void,

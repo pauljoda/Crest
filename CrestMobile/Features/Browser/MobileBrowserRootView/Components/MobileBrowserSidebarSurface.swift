@@ -60,7 +60,6 @@ struct MobileBrowserSidebarSurface: View {
     let utilityPresentation: BrowserUtilityPresentationState
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
     @State private var showsPasswords = false
     @State private var showsSettings = false
     @State private var presentedSpaceSheet: MobileBrowserSidebarSpaceSheet?
@@ -193,12 +192,7 @@ struct MobileBrowserSidebarSurface: View {
     }
 
     private func presentSettings() {
-        if usesLiveSidebar {
-            if let id = browser.openSettings() { selectTab(id) }
-            pages.select(session: browser.session)
-        } else {
-            showsSettings = true
-        }
+        showsSettings = true
     }
 
     private var selectedSidebarColorScheme: ColorScheme {

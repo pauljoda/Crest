@@ -5,6 +5,103 @@ import XCTest
 
 @MainActor
 final class MobileBrowserRootModelTests: XCTestCase {
+    func testSettingsActivationPresentsWithoutChangingTheSelectedPage() throws {
+        for presentation in [MobileBrowserPresentation.compact, .regular] {
+            let space = makeSpace(index: 10)
+            let fixture = makeFixture(
+                spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
+            fixture.model.presentationChanged(to: presentation)
+            let selectedID = try XCTUnwrap(fixture.browser.selectedTab?.id)
+            let settingsID = try XCTUnwrap(fixture.browser.openSettings())
+            fixture.browser.selectTab(selectedID)
+            let before = fixture.browser.session
+
+            fixture.model.selectTab(settingsID)
+
+            XCTAssertEqual(fixture.browser.session, before)
+            XCTAssertTrue(fixture.model.showsSettings)
+        }
+    }
+
+    func testSplitSettingsActionPreservesBrowsingStateAndRejectsStaleAssignments() throws {
+        var space = makeSpace(index: 20)
+        let group = SplitGroupID()
+        space.tabs[0].splitGroupID = group
+        var settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+        settings.splitGroupID = group
+        space.tabs.append(settings)
+        let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
+        fixture.model.presentationChanged(to: .regular)
+        let before = fixture.browser.session
+        let assignment = BrowserTabRuntimeAssignment(
+            tabID: settings.id, spaceID: space.id, profileID: space.profile.id)
+        XCTAssertTrue(fixture.model.presentSettings(matching: assignment))
+        fixture.model.focusSplitCard(settings.id)
+        XCTAssertEqual(fixture.browser.session, before)
+        XCTAssertTrue(fixture.model.showsSettings)
+        fixture.model.showsSettings = false
+        fixture.model.focusSplitCard(settings.id)
+        XCTAssertEqual(fixture.browser.session, before)
+        XCTAssertTrue(fixture.model.showsSettings)
+        fixture.model.showsSettings = false
+        XCTAssertFalse(
+            fixture.model.presentSettings(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: settings.id, spaceID: space.id, profileID: UUID())))
+        XCTAssertFalse(
+            fixture.model.presentSettings(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: try XCTUnwrap(space.selectedTabID), spaceID: space.id, profileID: space.profile.id)))
+        XCTAssertFalse(fixture.model.showsSettings)
+        XCTAssertEqual(fixture.browser.session, before)
+    }
+
+    func testRestoredSettingsSelectionUsesThePresentationActionAndKeepsTheTab() throws {
+        let space = makeSpace(index: 10)
+        let fixture = makeFixture(spaces: [space], selectedSpaceID: space.id, startupBehavior: .lastActiveTab)
+        let settings = try XCTUnwrap(fixture.browser.openSettings())
+        XCTAssertTrue(fixture.model.routeSelectedSettingsAction())
+        XCTAssertTrue(fixture.model.showsSettings)
+        XCTAssertNotEqual(fixture.browser.selectedTab?.id, settings)
+        XCTAssertEqual(
+            fixture.browser.selectedSpace?.tabs.first(where: { $0.id == settings })?.nativeContent, .settings)
+        fixture.browser.selectTab(settings)
+        XCTAssertTrue(fixture.model.routeSelectedSettingsAction())
+        XCTAssertNotEqual(fixture.browser.selectedTab?.id, settings)
+    }
+
+    func testSettingsActionsRejectLockedAndForeignTargets() throws {
+        let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+        var protectedSpace = makeSpace(index: 80)
+        protectedSpace.accessPolicy = .deviceOwnerAuthentication
+        protectedSpace.tabs.append(settings)
+        let otherSpace = makeSpace(index: 81)
+        let access = BrowserSpaceAccessController()
+        let fixture = makeFixture(
+            spaces: [protectedSpace, otherSpace], selectedSpaceID: protectedSpace.id,
+            startupBehavior: .lastActiveTab, spaceAccess: access)
+        access.lock(protectedSpace.id)
+        let before = fixture.browser.session
+        fixture.model.selectTab(settings.id)
+        XCTAssertFalse(fixture.model.showsSettings)
+        XCTAssertEqual(fixture.browser.session, before)
+        fixture.browser.selectTab(settings.id)
+        XCTAssertFalse(fixture.model.routeSelectedSettingsAction())
+        XCTAssertFalse(fixture.model.showsSettings)
+        fixture.browser.selectSpace(otherSpace.id)
+        let foreignBefore = fixture.browser.session
+        fixture.model.selectTab(settings.id)
+        XCTAssertFalse(fixture.model.showsSettings)
+        XCTAssertEqual(fixture.browser.session, foreignBefore)
+        let source = BrowserTabRuntimeAssignment(
+            tabID: try XCTUnwrap(otherSpace.selectedTabID), spaceID: otherSpace.id, profileID: otherSpace.profile.id)
+        let target = BrowserTabRuntimeAssignment(
+            tabID: settings.id, spaceID: protectedSpace.id, profileID: protectedSpace.profile.id)
+        XCTAssertFalse(fixture.model.presentSettings(matching: target))
+        XCTAssertFalse(fixture.model.selectPaletteTab(from: source, to: target))
+        XCTAssertFalse(fixture.model.showsSettings)
+    }
+
     func testSelectionChangeClassifiesRevisionTabSpaceAndProfileTransitions() {
         let firstSpaceID = SpaceID(rawValue: fixedUUID(1))
         let secondSpaceID = SpaceID(rawValue: fixedUUID(2))

@@ -8,9 +8,9 @@ struct MobileBrowserSettingsContent: View {
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
 
-    @Environment(\.browserSettingsIsTab) private var isInTab
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.browserSettingsIsTab) private var isInTab
 
     var body: some View {
         Group {
@@ -21,7 +21,8 @@ struct MobileBrowserSettingsContent: View {
                     spaceAccess: spaceAccess,
                     dataDeleter: dataDeleter,
                     selection: $selection,
-                    searchText: $searchText
+                    searchText: $searchText,
+                    dismiss: isInTab ? nil : { dismiss() }
                 )
             } else {
                 MobileBrowserCompactSettingsLayout(
@@ -29,17 +30,23 @@ struct MobileBrowserSettingsContent: View {
                     pages: pages,
                     spaceAccess: spaceAccess,
                     dataDeleter: dataDeleter,
-                    searchText: $searchText
+                    searchText: $searchText,
+                    dismiss: isInTab ? nil : { dismiss() }
                 )
             }
         }
-        .toolbar {
-            if !isInTab {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: dismiss.callAsFunction)
-                }
+        .presentationSizing(.fitted)
+    }
+}
+
+struct MobileBrowserSettingsToolbar: ToolbarContent {
+    let dismiss: (() -> Void)?
+
+    var body: some ToolbarContent {
+        if let dismiss {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done", action: dismiss)
             }
         }
-        .presentationSizing(.fitted)
     }
 }

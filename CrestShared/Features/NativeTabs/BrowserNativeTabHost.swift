@@ -24,7 +24,14 @@ struct BrowserNativeTabHost: View {
                     #endif
                 case BrowserNativeTabContent.settings.kind:
                     if let settingsContent {
-                        settingsContent.makeView(assignment)
+                        #if os(macOS)
+                            settingsContent.makeView(assignment)
+                        #else
+                            Button("Open Settings", systemImage: "gearshape") {
+                                settingsContent.present(assignment)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        #endif
                     } else {
                         ContentUnavailableView("Settings unavailable", systemImage: "gearshape")
                     }

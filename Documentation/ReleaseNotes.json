@@ -985,6 +985,10 @@
     "2026-09-13-right-sidebar-pinned-icon-picker": {
       "category": "fixed",
       "message": "Keep pinned-tab icon choices visible when the iPad sidebar is on the right"
+    },
+    "mobile-settings-sheet-activation": {
+      "category": "fixed",
+      "message": "Open Settings as a dismissible sheet on iPhone and iPad while keeping your current page selected"
     }
   }
 }

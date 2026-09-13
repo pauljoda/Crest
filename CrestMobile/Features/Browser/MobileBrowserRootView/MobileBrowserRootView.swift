@@ -7,7 +7,6 @@ struct MobileBrowserRootView: View {
     private let togglePrivateBrowsing: () -> Void
     private let closePrivateBrowsing: () -> Void
 
-    @State private var nativeSettingsSelection = BrowserSettingsDestination.general
     @State private var model: MobileBrowserRootModel
 
     init(
@@ -60,18 +59,7 @@ struct MobileBrowserRootView: View {
         )
         .environment(
             \.browserSettingsTabContent,
-            BrowserSettingsTabContent { _ in
-                MobileBrowserSettingsView(
-                    browser: model.browser, pages: model.pages,
-                    spaceAccess: model.spaceAccess, dataDeleter: dataDeleter, tabSelection: $nativeSettingsSelection,
-                    liveSpaceSelection: BrowserSettingsLiveSpaceSelection { id in
-                        nativeSettingsSelection = .spaces
-                        model.browser.selectSpace(id)
-                        model.browser.openSettings()
-                        model.pages.select(session: model.browser.session)
-                    }
-                )
-            }
+            BrowserSettingsTabContent(present: { model.presentSettings(matching: $0) })
         )
         .environment(
             \.browserNativeTabActions,

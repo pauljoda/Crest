@@ -348,6 +348,16 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             \.mobileBrowserCommandContext,
             mobileBrowserCommandContext
         )
+        .sheet(isPresented: Binding(get: { model.showsSettings }, set: { model.showsSettings = $0 })) {
+            MobileBrowserSettingsView(
+                browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter)
+        }
+        .onChange(of: browser.selectedTab?.id, initial: true) { _, _ in
+            model.routeSelectedSettingsAction()
+        }
+        .onChange(of: browser.selectedTab?.nativeContent) { _, _ in
+            model.routeSelectedSettingsAction()
+        }
         .sheet(item: $historyAssignment) { assignment in
             MobileHistoryView(
                 browser: browser,

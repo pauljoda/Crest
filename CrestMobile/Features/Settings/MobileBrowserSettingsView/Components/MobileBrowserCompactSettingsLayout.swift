@@ -6,6 +6,7 @@ struct MobileBrowserCompactSettingsLayout: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
     @Binding var searchText: String
+    let dismiss: (() -> Void)?
 
     @Environment(\.locale) private var locale
 
@@ -18,6 +19,7 @@ struct MobileBrowserCompactSettingsLayout: View {
                 .accessibilityIdentifier("settings-\(destination.rawValue)")
             }
             .navigationTitle("Settings")
+            .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
             .searchable(text: $searchText, prompt: "Search settings")
             .navigationDestination(for: BrowserSettingsDestination.self) {
                 destination in
@@ -30,6 +32,7 @@ struct MobileBrowserCompactSettingsLayout: View {
                 )
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
             }
         }
     }

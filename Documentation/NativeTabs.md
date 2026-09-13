@@ -6,6 +6,8 @@ A native tab is a `BrowserTab` with a `BrowserNativeTabContent` descriptor. It u
 
 The Mac and mobile page stores recognize native selection without allocating a `WKWebView`, including mixed native/website splits, extension preparation, and session reconciliation. Only website members receive pages. Assigning a website URL to a native tab explicitly converts that tab into a website. Unloading a Saved native view dismisses its presentation and retains the tab. The sidebar uses a minus control for Saved and a close control for Current. Deleting a Saved tab, or closing a Current copy, uses normal tab lifecycle rules.
 
+Settings activation is a platform action: Mac opens the native Settings page, while both regular and compact mobile layouts present the Settings sheet without replacing the selected browsing page. An unfocused mobile Settings split card offers the same action, validated against its captured tab, Space and profile. A restored or synchronized selected Settings descriptor presents the sheet and uses the normal native-tab dismissal fallback while retaining the tab.
+
 ## Adding a content type
 
 1. Give it a stable `kind` string and register its view in `BrowserNativeTabHost`.

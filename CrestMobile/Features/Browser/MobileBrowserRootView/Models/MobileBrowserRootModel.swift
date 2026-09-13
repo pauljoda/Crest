@@ -14,6 +14,7 @@ final class MobileBrowserRootModel {
 
     var address = ""
     var hasPreparedBrowser = false
+    var showsSettings = false
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Live column fractions for the presented split, seeded from this window's
     /// stored layout whenever membership changes. Pointer-rate resizing lives in
@@ -170,6 +171,15 @@ extension MobileBrowserRootModel {
 
 extension MobileBrowserRootModel {
     func selectTab(_ id: TabID) {
+        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space),
+            let tab = space.tabs.first(where: { $0.id == id })
+        else { return }
+        let context: BrowserTabActivationPolicy.Context =
+            navigation.presentation == .compact ? .mobileCompact : .mobileRegular
+        if BrowserTabActivationPolicy.destination(for: tab, in: context) == .settings {
+            showsSettings = true
+            return
+        }
         browser.selectTab(id)
         pages.select(session: browser.session)
         address = browser.selectedTab?.url?.absoluteString ?? ""
@@ -214,9 +224,35 @@ extension MobileBrowserRootModel {
     }
 
     func activateSelectedTab() {
+        if routeSelectedSettingsAction() { return }
         pages.select(session: browser.session)
         address = browser.selectedTab?.url?.absoluteString ?? ""
         navigation.selectTab()
+    }
+
+    @discardableResult
+    func presentSettings(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
+        guard
+            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
+                matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
+                in: browser, accessController: spaceAccess),
+            space.tabs.first(where: { $0.id == assignment.tabID })?.nativeContent == .settings
+        else { return false }
+        showsSettings = true
+        return true
+    }
+
+    /// A restored or synchronized selection can bypass a sidebar click.
+    /// Present its action and use the normal native-tab dismissal fallback.
+    @discardableResult
+    func routeSelectedSettingsAction() -> Bool {
+        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space),
+            let tab = browser.selectedTab, tab.nativeContent == .settings
+        else { return false }
+        browser.dismissNativeTab(tab.id, matching: BrowserSpaceRuntimeAssignment(space: space))
+        pages.select(session: browser.session)
+        showsSettings = true
+        return true
     }
 
     func switchSpace(
@@ -495,8 +531,15 @@ extension MobileBrowserRootModel {
     /// every chrome surface follows without a second focus state anywhere.
     func focusSplitCard(_ tabID: TabID) {
         guard tabID != browser.selectedTab?.id,
-            presentedSplitMembers.contains(where: { $0.id == tabID })
+            let member = presentedSplitMembers.first(where: { $0.id == tabID }),
+            let space = browser.selectedSpace, !spaceAccess.isLocked(space)
         else { return }
+        if BrowserTabActivationPolicy.destination(for: member, in: .mobileRegular) == .settings {
+            presentSettings(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: tabID, spaceID: space.id, profileID: space.profile.id))
+            return
+        }
         browser.selectTab(tabID)
         pages.select(session: browser.session)
         address = browser.selectedTab?.url?.absoluteString ?? ""
@@ -576,6 +619,10 @@ extension MobileBrowserRootModel {
                 accessController: spaceAccess
             )
         else { return false }
+        if BrowserTabActivationPolicy.destination(for: destination.tab, in: .mobileRegular) == .settings {
+            showsSettings = true
+            return true
+        }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)
         pages.select(session: browser.session)

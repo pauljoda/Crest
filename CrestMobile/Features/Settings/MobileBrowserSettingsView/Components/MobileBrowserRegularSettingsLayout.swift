@@ -7,6 +7,7 @@ struct MobileBrowserRegularSettingsLayout: View {
     let dataDeleter: any BrowserSpaceDataDeleting
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
+    let dismiss: (() -> Void)?
 
     var body: some View {
         NavigationSplitView {
@@ -25,6 +26,7 @@ struct MobileBrowserRegularSettingsLayout: View {
             )
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
         }
         .navigationSplitViewStyle(.balanced)
     }
