@@ -1009,6 +1009,10 @@
     "folder-title-color-tint": {
       "category": "new",
       "message": "Optionally match folder title colors to their folder artwork"
+    },
+    "closed-tab-sidebar-live-state": {
+      "category": "fixed",
+      "message": "Keep the sidebar's tabs and selection up to date when closing a tab"
     }
   }
 }

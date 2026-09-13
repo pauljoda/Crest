@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowserSidebarSpacePage: View {
-    let space: BrowserSpace
+    private let assignment: BrowserSpaceRuntimeAssignment
     let isSelected: Bool
     let pages: BrowserPagePool
     let openNewTab: () -> Void
@@ -32,7 +32,7 @@ struct BrowserSidebarSpacePage: View {
         commandSurfaceNamespace: Namespace.ID,
         tabPromotionNamespace: Namespace.ID
     ) {
-        self.space = space
+        assignment = BrowserSpaceRuntimeAssignment(space: space)
         self.isSelected = isSelected
         self.pages = pages
         self.openNewTab = openNewTab
@@ -51,17 +51,23 @@ struct BrowserSidebarSpacePage: View {
         confirmClearHistory = context.confirmClearHistory
     }
 
-    private var isLocked: Bool {
-        spaceAccess.isLocked(space)
+    @ViewBuilder
+    var body: some View {
+        // AppKit retains this root between pager updates. Resolve its Space
+        // here so tab removal and selection cannot lag behind live residency.
+        if let space = browser.space(matching: assignment) {
+            content(for: space)
+        }
     }
 
-    var body: some View {
+    private func content(for space: BrowserSpace) -> some View {
+        let isLocked = spaceAccess.isLocked(space)
         // These callbacks use the page and their action owners, independently
         // of the selected role that changes on the surrounding native host.
         let pageSpace = space
         let actions = chromeActions
         let confirmClear = confirmClearHistory
-        SpaceSidebarContent(
+        return SpaceSidebarContent(
             space: space,
             browser: browser,
             pages: pages,

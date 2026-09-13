@@ -5950,6 +5950,9 @@
         }
       }
     },
+    "Deny" : {
+
+    },
     "Depth" : {
 
     },
@@ -6071,6 +6074,9 @@
       }
     },
     "Dismiss" : {
+
+    },
+    "Dismiss Permission Request" : {
 
     },
     "Dismiss Translation Bar" : {
@@ -8094,6 +8100,9 @@
     "Icon color" : {
 
     },
+    "Icon Only Folders" : {
+
+    },
     "Icon style" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8951,6 +8960,9 @@
       }
     },
     "Inserts any emoji through the system text input experience." : {
+
+    },
+    "Inside %@" : {
 
     },
     "Install an unpacked extension or ZIP in this Space" : {
@@ -10860,6 +10872,9 @@
         }
       }
     },
+    "Open Settings" : {
+
+    },
     "Open Space" : {
       "localizations" : {
         "ar" : {
@@ -12387,6 +12402,9 @@
         }
       }
     },
+    "Remember in %@" : {
+
+    },
     "Remember the chosen Space for each site" : {
       "localizations" : {
         "ar" : {
@@ -12757,6 +12775,9 @@
           }
         }
       }
+    },
+    "Requests permission" : {
+
     },
     "Require device authentication" : {
       "extractionState" : "stale",
@@ -13982,6 +14003,9 @@
         }
       }
     },
+    "Show a static custom icon or emoji instead of folder artwork." : {
+
+    },
     "Show Archive" : {
       "localizations" : {
         "ar" : {
@@ -14135,6 +14159,9 @@
 
     },
     "Shuffle" : {
+
+    },
+    "Side Panel" : {
 
     },
     "Sidebar background" : {
@@ -17206,6 +17233,18 @@
           }
         }
       }
+    },
+    "Wants to send notifications while this page is open" : {
+
+    },
+    "Wants to use your camera" : {
+
+    },
+    "Wants to use your camera and microphone" : {
+
+    },
+    "Wants to use your microphone" : {
+
     },
     "Warnings" : {
 
