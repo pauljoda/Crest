@@ -11,17 +11,17 @@ struct BrowserFolderOrganizationMenu: View {
     let changeIcon: () -> Void
     let deleteFolder: () -> Void
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         Group {
-            if let request = BrowserSidebarSelection.request(for: .folder(folder.id), browser: browser) {
+            if capabilities.allowsMultiSelection,
+                let request = BrowserSidebarSelection.request(for: .folder(folder.id), browser: browser)
+            {
                 BrowserTabBatchMenu(request: request, browser: browser, spaceAccess: spaceAccess)
             } else {
                 BrowserFolderOrganizationMenuContent(menu: self)
-                Divider()
-                Button("Add to Selection") {
-                    browser.tabMultiSelection.click(
-                        .folder(folder.id), units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
-                }
+                BrowserSidebarSelectionMenu(item: .folder(folder.id), browser: browser)
             }
         }
         .crestMenuActionLabelStyle()

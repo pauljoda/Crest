@@ -7,6 +7,7 @@ struct BrowserTabSelectionTarget: ViewModifier {
     let assignment: BrowserSpaceRuntimeAssignment
     var isEnabled = true
     var folderID: FolderID? = nil
+    @Environment(\.browserInteractionCapabilities) private var capabilities
 
     func body(content: Content) -> some View {
         content.modifier(
@@ -14,7 +15,7 @@ struct BrowserTabSelectionTarget: ViewModifier {
                 itemID: folderID.map(BrowserSelectionItemID.folder) ?? tabID.map(BrowserSelectionItemID.tab),
                 browser: browser,
                 assignment: assignment,
-                isEnabled: isEnabled
+                isEnabled: isEnabled && capabilities.allowsMultiSelection
             )
         )
     }
@@ -36,18 +37,7 @@ struct BrowserTabSelectionAccessibility: ViewModifier {
         content
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityValue(value)
-            #if os(macOS)
-                .accessibilityAction(named: selected ? "Remove from Selection" : "Add to Selection") {
-                    guard let browser else { return }
-                    browser.tabMultiSelection.click(
-                        tabID, units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
-                }
-                .accessibilityAction(named: "Select Range to Here") {
-                    guard let browser else { return }
-                    browser.tabMultiSelection.click(
-                        tabID, units: BrowserSidebarSelection.itemUnits(in: browser), command: true, shift: true)
-                }
-            #endif
+            .modifier(BrowserSidebarSelectionAccessibilityActions(item: .tab(tabID), browser: browser))
     }
 
     private var value: String {
@@ -66,16 +56,31 @@ struct BrowserFolderSelectionAccessibility: ViewModifier {
     private var selected: Bool { browser.tabMultiSelection.contains(.folder(folderID)) }
     func body(content: Content) -> some View {
         content.accessibilityAddTraits(selected ? .isSelected : [])
-            #if os(macOS)
-                .accessibilityAction(named: selected ? "Remove from Selection" : "Add to Selection") {
+            .modifier(BrowserSidebarSelectionAccessibilityActions(item: .folder(folderID), browser: browser))
+    }
+}
+
+private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
+    let item: BrowserSelectionItemID
+    let browser: BrowserStore?
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if capabilities.allowsMultiSelection, let browser {
+            content
+                .accessibilityAction(
+                    named: browser.tabMultiSelection.contains(item) ? "Remove from Selection" : "Add to Selection"
+                ) {
                     browser.tabMultiSelection.click(
-                        .folder(folderID), units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
+                        item, units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
                 }
                 .accessibilityAction(named: "Select Range to Here") {
                     browser.tabMultiSelection.click(
-                        .folder(folderID), units: BrowserSidebarSelection.itemUnits(in: browser), command: true,
-                        shift: true)
+                        item, units: BrowserSidebarSelection.itemUnits(in: browser), command: true, shift: true)
                 }
-            #endif
+        } else {
+            content
+        }
     }
 }

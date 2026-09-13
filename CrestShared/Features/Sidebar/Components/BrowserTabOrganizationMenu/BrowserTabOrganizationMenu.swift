@@ -12,22 +12,17 @@ struct BrowserTabOrganizationMenu: View {
     var renameTab: (() -> Void)? = nil
     var changeIcon: (() -> Void)? = nil
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         Group {
-            if let request = BrowserSidebarSelection.request(for: tab.id, browser: browser) {
+            if capabilities.allowsMultiSelection,
+                let request = BrowserSidebarSelection.request(for: tab.id, browser: browser)
+            {
                 BrowserTabBatchMenu(request: request, browser: browser, spaceAccess: spaceAccess, unload: unload)
             } else {
                 BrowserTabOrganizationMenuContent(menu: self)
-                #if os(macOS)
-                    Divider()
-                    Button("Add to Selection") {
-                        browser.tabMultiSelection.click(
-                            tab.id, units: BrowserSidebarSelection.itemUnits(in: browser), command: true)
-                    }
-                    Button("Select All Tabs") {
-                        browser.tabMultiSelection.selectAll(units: BrowserSidebarSelection.itemUnits(in: browser))
-                    }
-                #endif
+                BrowserSidebarSelectionMenu(item: .tab(tab.id), browser: browser)
             }
         }
         .crestMenuActionLabelStyle()

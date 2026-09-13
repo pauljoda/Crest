@@ -1041,6 +1041,10 @@
     "sidebar-capability-sizing-and-native-selection-adapters": {
       "category": "internal",
       "message": "Make shared sidebar sizing follow host input capabilities and isolate native selection adapters"
+    },
+    "mobile-shared-sidebar-multi-selection": {
+      "category": "improved",
+      "message": "Select multiple tabs and folders on iPhone and iPad using shared sidebar menus and VoiceOver actions"
     }
   }
 }

@@ -22,6 +22,11 @@ struct BrowserInteractionCapabilities: Equatable, Sendable {
 
     /// Allows drag, drop, and organization menus. Appearance previews disable this.
     var supportsOrganization = true
+
+    /// Allows selecting multiple sidebar items for shared batch actions.
+    var supportsMultiSelection = true
+
+    var allowsMultiSelection: Bool { supportsOrganization && supportsMultiSelection }
 }
 
 extension EnvironmentValues {

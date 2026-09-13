@@ -9,6 +9,47 @@ import XCTest
 /// reconcile after a tab-list mutation.
 @MainActor
 final class MobileBrowserSidebarTabActionsTests: XCTestCase {
+    func testRegisteredTabsAndFoldersFormAScopedSelectionForBatchActions() throws {
+        let context = makeContext()
+        let folder = BrowserFolder(title: "Research", location: .current)
+        context.browser.session.spaces[0].folders.append(folder)
+        let other = BrowserSession.makeBlankSpace(number: 2)
+        context.browser.session.spaces.append(other)
+        let assignment = BrowserSpaceRuntimeAssignment(space: context.space)
+        let state = context.browser.sidebarReorderState
+        state.register(
+            row: .init(
+                id: .folder(folder.id), space: assignment, section: .folders(parentID: nil),
+                frame: CGRect(x: 0, y: 0, width: 240, height: 44)), owner: UUID())
+        state.register(
+            row: .init(
+                id: .tab(context.tab.id), space: assignment, section: .tabs(placement: .current, folderID: nil),
+                frame: CGRect(x: 0, y: 44, width: 240, height: 44)), owner: UUID())
+        state.register(
+            row: .init(
+                id: .tab(TabID()), space: BrowserSpaceRuntimeAssignment(space: other),
+                section: .tabs(placement: .current, folderID: nil),
+                frame: CGRect(x: 0, y: 88, width: 240, height: 44)), owner: UUID())
+
+        let units = BrowserSidebarSelection.itemUnits(in: context.browser)
+        XCTAssertEqual(units, [[.folder(folder.id)], [.tab(context.tab.id)]])
+        context.browser.tabMultiSelection.click(.folder(folder.id), units: units, command: true)
+        context.browser.tabMultiSelection.click(.tab(context.tab.id), units: units, command: true, shift: true)
+        let request = try XCTUnwrap(BrowserSidebarSelection.request(for: context.tab.id, browser: context.browser))
+        XCTAssertEqual(request.rootItems, [.folder(folder.id), .tab(context.tab.id)])
+        let actions = BrowserTabBatchActions(browser: context.browser, spaceAccess: context.access)
+        context.browser.selectSpace(other.id)
+        let before = context.browser.session
+        XCTAssertFalse(actions.perform(request, action: .file(.saved)))
+        XCTAssertEqual(context.browser.session, before)
+
+        context.browser.selectSpace(context.space.id)
+        XCTAssertTrue(actions.perform(request, action: .file(.saved)))
+        XCTAssertEqual(context.browser.selectedSpace?.folders.first?.location, .saved)
+        XCTAssertEqual(context.browser.selectedSpace?.tabs.first(where: { $0.id == context.tab.id })?.placement, .saved)
+        XCTAssertEqual(context.browser.session.space(id: other.id), before.space(id: other.id))
+    }
+
     func testLinkMenuOpensInTheRequestedSpaceAndPreservesItsSource() throws {
         let context = makeContext()
         let otherSpace = BrowserSession.makeBlankSpace(number: 2)
