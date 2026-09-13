@@ -65,6 +65,7 @@ the live status for each issue.
 - [ ] [Offer a continuous, wider default page-zoom range](https://github.com/pauljoda/Crest/issues/118)
 - [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
 - [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
+- [ ] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
 
 #### Completed
 
