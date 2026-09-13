@@ -977,6 +977,10 @@
     "mobile-clear-open-tabs-button": {
       "category": "fixed",
       "message": "Clear open tabs with a dedicated button on iPhone and iPad while keeping pinned and saved tabs"
+    },
+    "ipad-saved-tab-icon-picker-placement": {
+      "category": "fixed",
+      "message": "Keep the saved tab icon picker visible on either side of the iPad screen without opening the tab"
     }
   }
 }

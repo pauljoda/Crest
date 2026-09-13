@@ -47,12 +47,22 @@ struct BrowserSidebarTabActivationButton: View {
                 .padding(.leading, leadingInset)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
-                .browserIconCustomizationPopover(iconCustomization)
+                .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
         }
         .accessibilityLabel(tab.displayTitle)
         .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: isLoaded))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier(BrowserTabAccessibilityID.row(tab.id))
+    }
+
+    private var iconPickerArrowEdge: Edge? {
+        #if os(macOS)
+            .trailing
+        #else
+            // Let the system use the available space on either side of the
+            // sidebar. A forced side arrow can clip the picker at the screen edge.
+            nil
+        #endif
     }
 
     /// A fixed-height row wants its activation area to fill the band; a row

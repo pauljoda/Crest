@@ -65,13 +65,14 @@ enum BrowserTabIconCustomizationPolicy {
 }
 
 enum BrowserIconPopoverPlacementPolicy {
-    /// Compact horizontal geometry needs the system's default vertical
-    /// placement so the popover can flip above or below its icon. A forced
+    /// Compact horizontal geometry needs the system's automatic
+    /// placement so the popover can fit around its icon. A forced
     /// side arrow can squeeze the picker into the narrow strip beside a phone
-    /// sidebar. Regular geometry keeps the caller's preferred side anchor.
+    /// sidebar. Regular geometry keeps the caller's preferred side anchor,
+    /// or automatic placement when the caller leaves the edge unspecified.
     static func preferredArrowEdge(
         horizontalSizeClass: UserInterfaceSizeClass?,
-        regularArrowEdge: Edge
+        regularArrowEdge: Edge?
     ) -> Edge? {
         horizontalSizeClass == .compact ? nil : regularArrowEdge
     }
@@ -80,7 +81,7 @@ enum BrowserIconPopoverPlacementPolicy {
 extension View {
     func browserIconCustomizationPopover(
         _ presentation: BrowserIconCustomizationPresentation,
-        arrowEdge: Edge = .trailing
+        arrowEdge: Edge? = .trailing
     ) -> some View {
         modifier(
             BrowserIconCustomizationPopoverModifier(
@@ -93,7 +94,7 @@ extension View {
 
 private struct BrowserIconCustomizationPopoverModifier: ViewModifier {
     let presentation: BrowserIconCustomizationPresentation
-    let arrowEdge: Edge
+    let arrowEdge: Edge?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
