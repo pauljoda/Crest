@@ -55,9 +55,6 @@ the live status for each issue.
 
 #### Planned and in progress
 
-- [ ] [feature: File upload options](https://github.com/pauljoda/Crest/issues/84)
-- [ ] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
-- [ ] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
 - [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
 - [ ] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
 
@@ -89,6 +86,7 @@ the live status for each issue.
 - [x] [Fix blurry Google Docs rendering on macOS 26](https://github.com/pauljoda/Crest/issues/80) — [`65e0d3cd`](https://github.com/pauljoda/Crest/commit/65e0d3cd309e64621c5c24331fad57d0001ed058)
 - [x] [Profile and eliminate Space-switching hitches](https://github.com/pauljoda/Crest/issues/81) — [`7b6b15f7`](https://github.com/pauljoda/Crest/commit/7b6b15f7ff329509276fd2472fcc9d233bb06193), [`7a7c3363`](https://github.com/pauljoda/Crest/commit/7a7c336320d471a77e8c3fe80c44fe77a37e98e6)
 - [x] [Improve onboarding and Space customization](https://github.com/pauljoda/Crest/issues/83) — [`d4a282de`](https://github.com/pauljoda/Crest/commit/d4a282de4ef0ec627621551d5ed0c01935639ced)
+- [x] [feature: File upload options](https://github.com/pauljoda/Crest/issues/84)
 - [x] [Make new downloads easier to notice](https://github.com/pauljoda/Crest/issues/85) — [`2d1306af`](https://github.com/pauljoda/Crest/commit/2d1306af056426f62031ff1e8cf43f328dac39b2)
 - [x] [Customize persistent folder colors and tab counts](https://github.com/pauljoda/Crest/issues/86) — [`302d699d`](https://github.com/pauljoda/Crest/commit/302d699dfeef5a42870947bb92554d8d7fef230d)
 - [x] [Review mobile drag preview alignment and responsiveness](https://github.com/pauljoda/Crest/issues/87)
@@ -117,7 +115,9 @@ the live status for each issue.
 - [x] [Stop oversized site-icon and manifest downloads early](https://github.com/pauljoda/Crest/issues/114) — [`47fbe82e`](https://github.com/pauljoda/Crest/commit/47fbe82e056b9372a85d1f12f2421135d1875b67), [`26fbe11f`](https://github.com/pauljoda/Crest/commit/26fbe11f38212830bf98e3b9d521099958bebdbd)
 - [x] [Keep extension request-header rules consistent](https://github.com/pauljoda/Crest/issues/115) — [`da734d90`](https://github.com/pauljoda/Crest/commit/da734d90c8363e4586391cde1b3def1594e4f101)
 - [x] [Restore website camera and notification permission prompts](https://github.com/pauljoda/Crest/issues/116) — [`70567d0e`](https://github.com/pauljoda/Crest/commit/70567d0e3f8dab74e6899fc8d9234f90dd33744c)
+- [x] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
 - [x] [Offer a continuous, wider default page-zoom range](https://github.com/pauljoda/Crest/issues/118)
+- [x] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
 - [x] [Restore the saved-tab icon picker on iPad](https://github.com/pauljoda/Crest/issues/123)
 - [x] [Keep the pin icon picker visible beside a right-side iPad sidebar](https://github.com/pauljoda/Crest/issues/124)
 - [x] [Investigate mobile webpage dialog stalls](https://github.com/pauljoda/Crest/issues/125)
