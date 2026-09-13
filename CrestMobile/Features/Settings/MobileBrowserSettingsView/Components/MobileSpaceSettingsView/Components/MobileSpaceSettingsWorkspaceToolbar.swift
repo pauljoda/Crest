@@ -73,13 +73,10 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
     }
 
     private var addSpaceButton: some View {
-        Button("New Space", systemImage: "plus") {
+        BrowserSpaceAddButton {
             browser.addSpace()
             selectedSpaceID = browser.session.selectedSpaceID
         }
-        .labelStyle(.iconOnly)
-        .fixedSize()
-        .accessibilityIdentifier("space-settings-add")
     }
 
     private var spaceOrderControls: some View {

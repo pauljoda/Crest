@@ -1105,6 +1105,10 @@
     "space-appearance-preview-reuse": {
       "category": "improved",
       "message": "Reduce unnecessary icon and thumbnail redraws while adjusting Space appearance"
+    },
+    "space-actions-native-glass": {
+      "category": "improved",
+      "message": "Use Liquid Glass controls for reordering and adding Spaces"
     }
   }
 }

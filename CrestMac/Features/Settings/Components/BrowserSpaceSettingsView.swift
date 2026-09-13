@@ -199,10 +199,7 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private var addSpaceButton: some View {
-        Button("New Space", systemImage: "plus", action: addSpace)
-            .labelStyle(.iconOnly)
-            .fixedSize()
-            .accessibilityIdentifier("space-settings-add")
+        BrowserSpaceAddButton(action: addSpace)
     }
 
     private func addSpace() {

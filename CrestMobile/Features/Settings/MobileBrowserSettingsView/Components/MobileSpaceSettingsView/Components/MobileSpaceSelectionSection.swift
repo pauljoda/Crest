@@ -17,13 +17,11 @@ struct MobileSpaceSelectionSection: View {
                 Text("Order")
                 Spacer()
                 BrowserSpaceOrderControls(browser: browser, spaceID: selectedSpaceID)
+                BrowserSpaceAddButton {
+                    browser.addSpace()
+                    selectedSpaceID = browser.session.selectedSpaceID
+                }
             }
-
-            Button("New Space", systemImage: "plus") {
-                browser.addSpace()
-                selectedSpaceID = browser.session.selectedSpaceID
-            }
-            .accessibilityIdentifier("space-settings-add")
         }
     }
 }
