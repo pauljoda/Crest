@@ -25,6 +25,11 @@ struct BrowserLookAndFeelSidebarCrop: View {
     /// The sidebar's natural height, measured before any scaling.
     @State private var sidebarContentHeight: CGFloat = 0
 
+    // Swift versions before 6.4 make the synthesized initializer private because of pageZoom.
+    init(space: BrowserSpace? = nil) {
+        self.space = space
+    }
+
     var body: some View {
         GeometryReader { geometry in
             let scale = Self.scale(fitting: sidebarContentHeight, in: geometry.size.height)

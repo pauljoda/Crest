@@ -1125,6 +1125,10 @@
     "sidebar-reorder-configuration-cleanup": {
       "category": "internal",
       "message": "Remove unused sidebar drag configuration and stale selection commentary"
+    },
+    "look-and-feel-preview-cloud-compiler-compatibility": {
+      "category": "internal",
+      "message": "Give the Look and Feel sidebar preview an explicit initializer for Xcode 26.6 archive compatibility"
     }
   }
 }
