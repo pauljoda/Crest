@@ -57,34 +57,26 @@ struct BrowserLocalExtensionInstallView: View {
     private func header(
         for phase: BrowserLocalExtensionInstallPhase
     ) -> some View {
-        HStack(alignment: .center, spacing: CrestSpacing.medium) {
-            BrowserExtensionIconView(
-                extensionID: phase.candidate?.id,
-                spaceID: session.space.id,
-                payload: phase.candidate?.iconPayload,
-                size: BrowserExtensionsMetrics.installReviewIconSize
-            )
-            VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-                Text(headerTitle(for: phase))
-                    .font(.title3.weight(.semibold))
-                if let candidate = phase.candidate {
-                    Label(
-                        verificationLabel(for: candidate),
-                        systemImage: verificationSymbol(for: candidate)
-                    )
-                    .font(.caption)
-                    .foregroundStyle(
-                        candidate.format == .chromeCRX3
-                            ? AnyShapeStyle(.green)
-                            : AnyShapeStyle(.secondary)
-                    )
-                } else {
-                    Text("Chrome CRX and Firefox XPI")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+        BrowserExtensionInstallHeader(
+            title: headerTitle(for: phase),
+            extensionID: phase.candidate?.id,
+            spaceID: session.space.id,
+            iconPayload: phase.candidate?.iconPayload
+        ) {
+            if let candidate = phase.candidate {
+                Label(
+                    verificationLabel(for: candidate),
+                    systemImage: verificationSymbol(for: candidate)
+                )
+                .foregroundStyle(
+                    candidate.format == .chromeCRX3
+                        ? AnyShapeStyle(.green)
+                        : AnyShapeStyle(.secondary)
+                )
+            } else {
+                Text("Chrome CRX and Firefox XPI")
+                    .foregroundStyle(.secondary)
             }
-            Spacer(minLength: CrestSpacing.medium)
         }
     }
 

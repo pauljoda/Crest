@@ -5,24 +5,17 @@ struct BrowserChromeWebStoreInstallHeader: View {
     let spaceID: SpaceID
 
     var body: some View {
-        HStack(alignment: .center, spacing: CrestSpacing.medium) {
-            BrowserExtensionIconView(
-                extensionID: phase.candidate?.id,
-                spaceID: spaceID,
-                payload: phase.candidate?.iconPayload,
-                size: BrowserExtensionsMetrics.installReviewIconSize
+        BrowserExtensionInstallHeader(
+            title: phase.headerTitle,
+            extensionID: phase.candidate?.id,
+            spaceID: spaceID,
+            iconPayload: phase.candidate?.iconPayload
+        ) {
+            Label(
+                "Verified Chrome Web Store package",
+                systemImage: "checkmark.seal.fill"
             )
-            VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-                Text(phase.headerTitle)
-                    .font(.title3.weight(.semibold))
-                Label(
-                    "Verified Chrome Web Store package",
-                    systemImage: "checkmark.seal.fill"
-                )
-                .font(.caption)
-                .foregroundStyle(.green)
-            }
-            Spacer(minLength: CrestSpacing.medium)
+            .foregroundStyle(.green)
         }
     }
 }

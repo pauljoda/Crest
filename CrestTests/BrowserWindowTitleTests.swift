@@ -125,6 +125,14 @@ final class BrowserWindowTitleTests: XCTestCase {
         model.browser.selectSpace(destination.id)
         XCTAssertEqual(model.pages.activeTabID, model.browser.session.spaces[0].tabs[0].id)
         XCTAssertEqual(model.windowTitle, "Beta")
+        let sessionBeforePageCallbacks = model.browser.session
+        model.address = "Destination address draft"
+
+        model.synchronizePageMetadata()
+        model.recordCompletedNavigation()
+
+        XCTAssertEqual(model.browser.session, sessionBeforePageCallbacks)
+        XCTAssertEqual(model.address, "Destination address draft")
     }
 
     func testLiveDocumentTitleAndEmptyTitleAreObservedWithoutStoredMetadata() async throws {
@@ -133,6 +141,10 @@ final class BrowserWindowTitleTests: XCTestCase {
         let page = try XCTUnwrap(model.pages.activePage)
         try await load("Live Alpha", into: page)
         XCTAssertEqual(model.windowTitle, "Live Alpha")
+        model.recordCompletedNavigation()
+        XCTAssertEqual(model.browser.selectedTab?.title, "Live Alpha")
+        XCTAssertEqual(model.browser.selectedSpace?.history.first?.url, page.url)
+        XCTAssertEqual(model.address, page.url?.absoluteString)
         let changed = expectation(description: "Window title observes document title")
         withObservationTracking {
             _ = model.windowTitle

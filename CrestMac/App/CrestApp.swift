@@ -698,6 +698,7 @@ struct CrestApp: App {
                     startupBehavior: .lastActiveTab,
                     shortcuts: shortcuts
                 )
+                .modifier(BrowserChromeAppearancePersistence())
                 .environment(windowTransparency)
                 .environment(splitFocus)
                 .environment(softwareUpdates)

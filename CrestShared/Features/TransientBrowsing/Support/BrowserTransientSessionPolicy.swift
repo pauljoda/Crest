@@ -1,18 +1,6 @@
 import Foundation
 
-/// Where a transient overlay's page stands relative to the request behind it.
-///
-/// The cases are the ladder both shells walk, in order. An overlay that is no
-/// longer the presented one answers for nothing. A request whose Space has
-/// gone answers for nothing more. A locked Space keeps its pages off screen.
-/// Only the last rung may hold a live page, and it carries the Space that page
-/// belongs to.
-///
-/// What each shell *does* about a rung is its own business, and differs even
-/// between two calls on one shell: a macOS Peek that loses its Space while
-/// preparing tears the request down, while the same loss noticed as the window
-/// resigns key only lets the page go. So the ladder is shared as a reading
-/// rather than as an action.
+/// Describes whether a transient request may retain a live page.
 enum BrowserTransientLeaseDisposition: Equatable, Sendable {
     case notPresented
     case sourceMissing
@@ -20,18 +8,13 @@ enum BrowserTransientLeaseDisposition: Equatable, Sendable {
     case usable(BrowserSpace)
 }
 
-/// The two Spaces a promotion has to line up before a transient page can
-/// become a real tab.
+/// The authorized source and destination of a transient promotion.
 struct BrowserTransientPromotionSpaces: Equatable, Sendable {
     let source: BrowserSpace
     let destination: BrowserSpace
 }
 
-/// The decisions every transient overlay's model makes about its page.
-///
-/// Both shells run these over different lease, page, and store types, so the
-/// reasoning lives here and each shell performs the outcome against its own
-/// types.
+/// Shared ownership and authorization rules for transient pages.
 enum BrowserTransientSessionPolicy {
     @MainActor
     static func disposition(
@@ -45,11 +28,7 @@ enum BrowserTransientSessionPolicy {
         return .usable(space)
     }
 
-    /// The Spaces a transient overlay may be promoted into.
-    ///
-    /// A Space being torn down is never a destination. Nor is a locked one —
-    /// except the request's own Space, which stays listed so the overlay can
-    /// keep naming where it came from even while that Space locks behind it.
+    /// Excludes deleting and locked destinations, retaining the named source Space.
     @MainActor
     static func availableSpaces(
         in spaces: [BrowserSpace],
@@ -63,9 +42,7 @@ enum BrowserTransientSessionPolicy {
         }
     }
 
-    /// Whether the lease already in hand still serves this request, rather
-    /// than being a leftover from a Space the request no longer names, or a
-    /// page that has been let go for good.
+    /// A reusable lease must still match the request’s runtime assignment.
     static func reusesLease(
         leaseAssignment: BrowserSpaceRuntimeAssignment,
         requestAssignment: BrowserSpaceRuntimeAssignment,
@@ -74,8 +51,7 @@ enum BrowserTransientSessionPolicy {
         leaseAssignment == requestAssignment && leaseCanBeReused
     }
 
-    /// The Spaces a promotion may run between, or `nil` where either end has
-    /// gone or locked.
+    /// Both Spaces must exist and remain unlocked before promotion.
     @MainActor
     static func promotionSpaces(
         source: BrowserSpace?,
@@ -93,11 +69,7 @@ enum BrowserTransientSessionPolicy {
         )
     }
 
-    /// Whether the live web view may move into the new tab as it stands.
-    ///
-    /// It may only when the lease is already held by the Space the tab was
-    /// opened in; anything else would hand a page to a Space that never owned
-    /// it, so the destination loads the URL fresh instead.
+    /// A page can be adopted only by the Space and profile that already own it.
     static func adoptsLivePage(
         leaseAssignment: BrowserSpaceRuntimeAssignment,
         destination: BrowserSpace

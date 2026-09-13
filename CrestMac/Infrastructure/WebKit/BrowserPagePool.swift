@@ -62,7 +62,7 @@ final class BrowserPagePool:
     /// `presentedPage(for:)` and has to re-render when membership changes.
     private(set) var presentedTabIDs: [TabID] = []
     private(set) var residencyRevision = 0
-    private(set) var contentBlockingErrorDescription: String?
+    var contentBlockingErrorDescription: String? { contentBlocking.errorDescription }
     let downloadCenter: BrowserDownloadCenter
     let extensionControllerPool: BrowserExtensionControllerPool
     /// Mirrors the runtime's console capture: web pages then report their
@@ -113,12 +113,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
     @ObservationIgnored private let websiteDataStoreRemover: any BrowserWebsiteDataStoreRemoving
-    @ObservationIgnored private let contentRuleListProvider: any BrowserContentRuleListProviding
-    @ObservationIgnored private var balancedContentRuleLists: [WKContentRuleList]?
-    /// What each Space's protection level was at the last reconciliation, so the
-    /// next one can tell a protection change the user made from a filter-list
-    /// update that changed no policy at all. Nil until the first reconciliation.
-    @ObservationIgnored private var reconciledContentBlockingPolicies: [SpaceID: BrowserContentBlockingPolicy]?
+    @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
@@ -205,7 +200,7 @@ final class BrowserPagePool:
         self.loadHTTPAuthenticationCredential = loadHTTPAuthenticationCredential
         self.saveHTTPAuthenticationCredential = saveHTTPAuthenticationCredential
         self.websiteDataStoreRemover = websiteDataStoreRemover
-        self.contentRuleListProvider = contentRuleListProvider
+        contentBlocking = BrowserContentBlockingController(provider: contentRuleListProvider)
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.backgroundPageDidUpdate = backgroundPageDidUpdate
@@ -866,95 +861,39 @@ final class BrowserPagePool:
     }
 
     func prepareContentBlocking() async {
-        guard balancedContentRuleLists == nil else { return }
-        do {
-            balancedContentRuleLists =
-                try await contentRuleListProvider
-                .balancedRuleLists()
-            contentBlockingErrorDescription = nil
-        } catch {
-            contentBlockingErrorDescription = error.localizedDescription
-        }
+        await contentBlocking.prepare()
     }
 
-    /// Brings every resident page in line with its Space's protection level.
-    ///
-    /// A rule-list change reaches a page as a swap on its `WKUserContentController`
-    /// and nothing more: WebKit picks the new lists up on that page's next
-    /// navigation, so a background filter-list refresh cannot reload a dozen tabs
-    /// out from under someone who is typing in one of them. The single exception
-    /// is a presented page — every card of a split, not only the focused one —
-    /// and only when the user just changed the protection level of the Space it
-    /// belongs to. That request came with an expectation of seeing the answer,
-    /// and seeing it on one of three visible cards would read as a bug.
+    /// Reloads presented pages only when their Space's protection level changes.
     func reconcileContentBlocking(in session: BrowserSession) async {
-        if balancedContentRuleLists == nil,
-            session.spaces.contains(where: {
-                $0.browsingPreferences.contentBlockingPolicy == .balanced
-            })
-        {
-            await prepareContentBlocking()
-        }
-        let policiesBySpaceID = Dictionary(
-            uniqueKeysWithValues: session.spaces.map { space in
-                (space.id, space.browsingPreferences.contentBlockingPolicy)
-            }
-        )
-        let userChangedSpaceIDs = spaceIDsWithUserChangedPolicy(policiesBySpaceID)
-        reconciledContentBlockingPolicies = policiesBySpaceID
+        let update = await contentBlocking.reconcile(in: session)
         for (tabID, page) in pages {
             let isPresentedPage = presentedTabIDs.contains(tabID)
             page.applyContentBlocking(
-                policy: policiesBySpaceID[page.spaceID] ?? .off,
-                balancedRuleLists: balancedContentRuleLists ?? [],
-                activation: isPresentedPage
-                    && userChangedSpaceIDs.contains(page.spaceID)
-                    ? .immediately
-                    : .onNextNavigation
+                policy: update.policy(for: page.spaceID),
+                balancedRuleLists: contentBlocking.balancedRuleLists ?? [],
+                activation: update.activation(for: page.spaceID, isPresented: isPresentedPage)
             )
         }
         for page in suspendedPagesByTabID.values.flatMap({ $0 }) {
             page.applyContentBlocking(
-                policy: policiesBySpaceID[page.spaceID] ?? .off,
-                balancedRuleLists: balancedContentRuleLists ?? [],
+                policy: update.policy(for: page.spaceID),
+                balancedRuleLists: contentBlocking.balancedRuleLists ?? [],
                 activation: .onNextNavigation
             )
         }
         pruneTransientLeases()
-        // A Peek is never a presented card, so its rules change under the same
-        // next-navigation rule every background page follows.
         for lease in transientLeases.values.compactMap(\.value) {
             lease.applyContentBlocking(
-                policy: policiesBySpaceID[lease.spaceID] ?? .off,
-                balancedRuleLists: balancedContentRuleLists ?? []
+                policy: update.policy(for: lease.spaceID),
+                balancedRuleLists: contentBlocking.balancedRuleLists ?? []
             )
         }
     }
 
-    /// The Spaces whose protection level changed since the last reconciliation.
-    ///
-    /// The first reconciliation adopts what it finds instead of calling every
-    /// Space changed, so opening a window — where pages can be built before the
-    /// rule lists finish compiling — never reloads the page it just opened.
-    private func spaceIDsWithUserChangedPolicy(
-        _ policiesBySpaceID: [SpaceID: BrowserContentBlockingPolicy]
-    ) -> Set<SpaceID> {
-        guard let reconciledContentBlockingPolicies else { return [] }
-        return Set(
-            policiesBySpaceID.compactMap { spaceID, policy in
-                guard let previous = reconciledContentBlockingPolicies[spaceID],
-                    previous != policy
-                else { return nil }
-                return spaceID
-            }
-        )
-    }
-
-    /// Recompiles from the provider and swaps the result into every resident page.
-    /// Reached from a filter-list update, which is not something the user asked
-    /// for right now, so no page is reloaded for it.
+    /// Refreshes rule lists without reloading unchanged documents.
     func reloadContentBlocking(in session: BrowserSession) async {
-        balancedContentRuleLists = nil
+        contentBlocking.invalidateRuleLists()
         await reconcileContentBlocking(in: session)
     }
 
@@ -1319,7 +1258,7 @@ final class BrowserPagePool:
             url: url,
             contentBlockingPolicy:
                 space.browsingPreferences.contentBlockingPolicy,
-            balancedContentRuleLists: balancedContentRuleLists ?? [],
+            balancedContentRuleLists: contentBlocking.balancedRuleLists ?? [],
             rebuild: makeTransientPage,
             userActivity: onUserActivity,
             onDownloadOnlyNavigation: onDownloadOnlyNavigation,
@@ -2155,10 +2094,7 @@ final class BrowserPagePool:
     }
 
     private func contentRuleLists(for space: BrowserSpace) -> [WKContentRuleList] {
-        guard space.browsingPreferences.contentBlockingPolicy == .balanced else {
-            return []
-        }
-        return balancedContentRuleLists ?? []
+        contentBlocking.ruleLists(for: space.browsingPreferences.contentBlockingPolicy)
     }
 
     private func websiteDataStore(for profile: BrowsingProfile) -> WKWebsiteDataStore? {

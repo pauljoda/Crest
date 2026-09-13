@@ -55,6 +55,7 @@ struct MobileBrowserWindowScene: View {
 
     var body: some View {
         sceneSurface
+            .modifier(BrowserChromeAppearancePersistence())
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(
                 BrowserWindowAccessibilityID.scene(model.windowState.id)

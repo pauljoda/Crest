@@ -1,9 +1,7 @@
 import SwiftUI
 
 extension View {
-    /// Places a saved folder header's content: indented to the folder's depth,
-    /// held off the trailing edge, and either a band of one exact height or a
-    /// row that grows with its title.
+    /// Applies folder indentation and density while allowing accessible text to grow.
     func browserSavedFolderHeaderLayout(
         configuration: BrowserFolderGroupConfiguration
     ) -> some View {

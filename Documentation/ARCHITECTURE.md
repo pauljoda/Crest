@@ -52,6 +52,12 @@ Shared infrastructure decides navigation, downloads, content blocking, reader mo
 
 macOS and iPad share the same structural model: persistent sidebar, page surface, Space switcher, pinned sites, saved tabs, current tabs, and archive. iPhone presents the same data through compact navigation and sheets rather than forcing desktop chrome into a narrow screen.
 
+Shared views read independent interaction capabilities from their environment. Touch, hover, organization, and navigation transitions describe what the hosting shell supports; they are not device identities. Container width and Dynamic Type remain environmental inputs. Shared components own common content and actions, with accessory slots or optional actions for native presentation differences.
+
+Platform roots compose scenes, supply persistence and system services, host WebKit, and translate native input. Shared handlers own interaction state, source validation, cancellation, and commitment. Content-blocking reconciliation decides reload policy once, while platform page stores apply that decision to their resident pages.
+
+Split large views at responsibilities such as a widget deck, media controls, or an import workflow. Keep related local helpers with their owner, reuse components wherever behavior repeats, and name interaction thresholds and design metrics where they are owned. Comments explain constraints and lifecycle decisions that the code cannot state directly.
+
 The application supports Apple silicon only.
 
 ## Validation

@@ -8,10 +8,7 @@ struct BrowserRootView: View {
 
     @Environment(BrowserWindowTransparencyStore.self)
     private var windowTransparency
-    @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
-    private var sidebarOnRight = false
-    @AppStorage(BrowserChromeAppearancePreference.borderWidthKey, store: BrowserChromeAppearancePreference.defaults)
-    private var borderWidth = BrowserChromeAppearance.defaultBorderWidth
+    @Environment(\.browserChromeAppearance) private var appearance
     @State private var model: BrowserRootModel
     @State private var storedSidebarWidth: Double
     @Namespace private var commandSurfaceNamespace
@@ -62,7 +59,7 @@ struct BrowserRootView: View {
             spaceSettingsPresentation: spaceSettingsPresentation,
             shortcuts: shortcuts,
             storedSidebarWidth: $storedSidebarWidth,
-            appearance: BrowserChromeAppearance(sidebarOnRight: sidebarOnRight, borderWidth: borderWidth),
+            appearance: appearance,
             windowTransparencyIsEnabled: windowTransparency.isEnabled,
             windowTransparencyStrength: windowTransparency.strength,
             commandSurfaceNamespace: commandSurfaceNamespace,

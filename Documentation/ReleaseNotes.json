@@ -1029,6 +1029,14 @@
     "pull-links-into-live-peek": {
       "category": "new",
       "message": "Drag links into Peek on Mac, with live previews that follow your gesture and fade in as they load"
+    },
+    "shared-interaction-and-presentation-ownership": {
+      "category": "internal",
+      "message": "Centralize shared interaction and content-blocking policy, isolate platform adapters, and separate reusable presentation components"
+    },
+    "space-switch-page-metadata-ownership": {
+      "category": "fixed",
+      "message": "Keep page titles and browsing history in the correct Space while switching tabs or Spaces"
     }
   }
 }

@@ -22,14 +22,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var storedRegularSidebarWidth: Double
     @State var availableRootSize = CGSize.zero
     @State var keyboardEndFrame = CGRect.null
-    @AppStorage(BrowserChromeAppearancePreference.sidebarOnRightKey, store: BrowserChromeAppearancePreference.defaults)
-    var sidebarOnRight = false
-    @AppStorage(BrowserChromeAppearancePreference.borderWidthKey, store: BrowserChromeAppearancePreference.defaults)
-    var borderWidth = BrowserChromeAppearance.defaultBorderWidth
-
-    var chromeAppearance: BrowserChromeAppearance {
-        .init(sidebarOnRight: sidebarOnRight, borderWidth: borderWidth)
-    }
+    @Environment(\.browserChromeAppearance) var chromeAppearance
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace
 
@@ -343,7 +336,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             }
         )
         .environment(\.spacePagerPresentation, spacePagerPresentation)
-        .environment(\.browserChromeAppearance, chromeAppearance)
         .focusedSceneValue(
             \.mobileBrowserCommandContext,
             mobileBrowserCommandContext

@@ -64,6 +64,7 @@ struct BrowserMacWindowScene: View {
             startupBehavior: startupBehavior,
             shortcuts: shortcuts
         )
+        .modifier(BrowserChromeAppearancePersistence())
         .frame(
             minWidth: BrowserMainWindowSizingPolicy.minimumContentSize.width,
             idealWidth: BrowserMainWindowSizingPolicy.idealContentSize.width,
