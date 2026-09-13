@@ -4,24 +4,16 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
-struct MobileLinkPeekPressEvent {
+struct MobileLinkActivationEvent {
 
-    let phase: MobileLinkPeekPressEventPhase
-    let pressID: String
     let destinationURL: URL?
     let label: String
     let normalizedSourceRect: CGRect?
     let normalizedTouchPoint: CGPoint?
 
     init?(body: Any) {
-        guard let values = body as? [String: Any],
-            let phaseValue = values["phase"] as? String,
-            let phase = MobileLinkPeekPressEventPhase(rawValue: phaseValue),
-            let pressID = values["pressID"] as? String
-        else { return nil }
+        guard let values = body as? [String: Any] else { return nil }
 
-        self.phase = phase
-        self.pressID = pressID
         destinationURL = (values["href"] as? String).flatMap(URL.init(string:))
         label = values["label"] as? String ?? ""
 

@@ -56,9 +56,37 @@ final class MobileBrowserPageConfigurationTests: XCTestCase {
             }
         )
         XCTAssertTrue(
-            page.hasActiveLinkPeekBridge,
-            "Routing through the shared factory must keep the link-peek bridge installed."
+            page.hasActiveLinkActivationBridge,
+            "Routing through the shared factory must keep the link-activation bridge installed."
         )
+    }
+
+    func testContextPreviewKeepsTheSourceProfileWithoutChangingItsPreferencesOrPage() throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        let source = WKWebView(frame: CGRect(x: 0, y: 0, width: 390, height: 800), configuration: configuration)
+        let url = try XCTUnwrap(URL(string: "https://preview.crest.test"))
+        let preview = MobileBrowserLinkPreviewController(url: url, source: source, isCurrent: { true })
+
+        XCTAssertTrue(preview.webView.configuration.websiteDataStore === source.configuration.websiteDataStore)
+        XCTAssertFalse(preview.webView.configuration.websiteDataStore.isPersistent)
+        XCTAssertTrue(
+            preview.webView.configuration.userContentController === source.configuration.userContentController)
+        XCTAssertFalse(preview.webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+        XCTAssertTrue(source.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+        XCTAssertNil(source.url)
+    }
+
+    func testContextPreviewDoesNotLoadAfterItsSourceBecomesUnavailable() throws {
+        let source = WKWebView(frame: .zero)
+        let preview = MobileBrowserLinkPreviewController(
+            url: try XCTUnwrap(URL(string: "https://preview.crest.test")), source: source, isCurrent: { false }
+        )
+        preview.loadViewIfNeeded()
+
+        XCTAssertNil(preview.webView.url)
+        XCTAssertFalse(preview.webView.isLoading)
     }
 
     func testMobileWebViewIsOnlyInspectableInADebugBuild() {

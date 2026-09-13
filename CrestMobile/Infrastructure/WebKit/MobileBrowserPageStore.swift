@@ -80,9 +80,6 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let openNewTab: (URL) -> Void
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
-    @ObservationIgnored private let stagePeek: ((BrowserPeekRequest) -> Void)?
-    @ObservationIgnored private let commitPeek: ((BrowserPeekRequest) -> Void)?
-    @ObservationIgnored private let cancelStagedPeek: ((UUID) -> Void)?
     @ObservationIgnored private let residencyDecisionProvider: ResidencyDecisionProvider
     @ObservationIgnored private var memoryPressureReleaseTask: Task<Void, Never>?
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
@@ -133,9 +130,6 @@ final class MobileBrowserPageStore:
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
         backgroundPageDidUpdate: @escaping (BrowserBackgroundPageUpdate) -> Void = { _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
-        stagePeek: ((BrowserPeekRequest) -> Void)? = nil,
-        commitPeek: ((BrowserPeekRequest) -> Void)? = nil,
-        cancelStagedPeek: ((UUID) -> Void)? = nil,
         residencyDecisionProvider: @escaping ResidencyDecisionProvider = {
             page,
             isSelected in
@@ -163,9 +157,6 @@ final class MobileBrowserPageStore:
         self.openModifiedLink = openModifiedLink
         self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
-        self.stagePeek = stagePeek
-        self.commitPeek = commitPeek
-        self.cancelStagedPeek = cancelStagedPeek
         let downloadRiskConfirmation = MobileDownloadRiskConfirmationCoordinator()
         self.downloadRiskConfirmation = downloadRiskConfirmation
         downloadCenter = BrowserDownloadCenter(
@@ -932,10 +923,7 @@ final class MobileBrowserPageStore:
             linkDestinationHost: linkDestinationHost,
             openNewTab: openNewTab,
             openModifiedLink: openModifiedLink,
-            openPeek: openPeek,
-            stagePeek: stagePeek,
-            commitPeek: commitPeek,
-            cancelStagedPeek: cancelStagedPeek
+            openPeek: openPeek
         )
         page.host = self
         return page
@@ -1425,10 +1413,7 @@ final class MobileBrowserPageStore:
             linkDestinationHost: linkDestinationHost,
             openNewTab: openNewTab,
             openModifiedLink: openModifiedLink,
-            openPeek: openPeek,
-            stagePeek: stagePeek,
-            commitPeek: commitPeek,
-            cancelStagedPeek: cancelStagedPeek
+            openPeek: openPeek
         )
         page.host = self
         // Anything WebKit will not take falls through to the plain load the page

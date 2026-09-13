@@ -10822,6 +10822,12 @@
     "Open in Space" : {
 
     },
+    "Open in Current Space" : {
+
+    },
+    "Open in Other Space" : {
+
+    },
     "Open Link in Another Space" : {
       "localizations" : {
         "ar" : {

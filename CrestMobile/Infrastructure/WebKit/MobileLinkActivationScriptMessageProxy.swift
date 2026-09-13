@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import WebKit
 
 @MainActor
-final class MobileLinkPeekScriptMessageProxy: NSObject, WKScriptMessageHandler {
+final class MobileLinkActivationScriptMessageProxy: NSObject, WKScriptMessageHandler {
     var receive: @MainActor (WKScriptMessage) -> Void = { _ in }
 
     func userContentController(

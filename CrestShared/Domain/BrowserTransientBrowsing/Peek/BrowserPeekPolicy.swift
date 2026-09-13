@@ -1,26 +1,6 @@
 import Foundation
 
 enum BrowserPeekPolicy {
-    static func longPressRequest(
-        destinationURL: URL?,
-        context: BrowserPageNavigationContext?,
-        sourcePresentation: BrowserPeekSourcePresentation? = nil
-    ) -> BrowserPeekRequest? {
-        guard let destinationURL,
-            BrowserExternalURLPolicy.accepts(destinationURL),
-            let context
-        else { return nil }
-
-        return BrowserPeekRequest(
-            url: destinationURL,
-            sourceTabID: context.tabID,
-            sourceTitle: context.title,
-            spaceAssignment: context.assignment,
-            trigger: .longPress,
-            sourcePresentation: sourcePresentation
-        )
-    }
-
     static func request(
         destinationURL: URL?,
         context: BrowserPageNavigationContext?,

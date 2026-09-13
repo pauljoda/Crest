@@ -108,10 +108,7 @@ struct CrestMobileApp: App {
                 return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
             },
             backgroundPageDidUpdate: { browser.updateBackgroundPage($0) },
-            openPeek: { request in transientBrowsing.presentPeek(request) },
-            stagePeek: { request in transientBrowsing.stagePeek(request) },
-            commitPeek: { request in transientBrowsing.commitPeek(request) },
-            cancelStagedPeek: { id in transientBrowsing.cancelStagedPeek(id: id) }
+            openPeek: { request in transientBrowsing.presentPeek(request) }
         )
 
         _browser = State(initialValue: browser)

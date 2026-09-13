@@ -233,50 +233,6 @@ final class MobileTransientBrowsingTests: XCTestCase {
         )
     }
 
-    func testMobileLinkLongPressBuildsASpaceIsolatedPeekRequest() throws {
-        let tab = BrowserTab(
-            title: "Long Press Source",
-            url: try XCTUnwrap(URL(string: "https://example.com/source")),
-            placement: .current
-        )
-        let spaceID = SpaceID()
-        let destination = try XCTUnwrap(URL(string: "https://webkit.org/peek"))
-
-        let sourcePresentation = BrowserPeekSourcePresentation(
-            normalizedMinX: 0.12,
-            normalizedMinY: 0.28,
-            normalizedWidth: 0.34,
-            normalizedHeight: 0.05,
-            label: "Peek destination"
-        )
-        let request = BrowserPeekPolicy.longPressRequest(
-            destinationURL: destination,
-            context: BrowserPageNavigationContext(
-                tab: tab,
-                spaceID: spaceID,
-                profileID: UUID()
-            ),
-            sourcePresentation: sourcePresentation
-        )
-
-        XCTAssertEqual(request?.url, destination)
-        XCTAssertEqual(request?.sourceTabID, tab.id)
-        XCTAssertEqual(request?.sourceTitle, tab.title)
-        XCTAssertEqual(request?.spaceID, spaceID)
-        XCTAssertEqual(request?.trigger, .longPress)
-        XCTAssertEqual(request?.sourcePresentation, sourcePresentation)
-        XCTAssertNil(
-            BrowserPeekPolicy.longPressRequest(
-                destinationURL: try XCTUnwrap(URL(string: "mailto:test@example.com")),
-                context: BrowserPageNavigationContext(
-                    tab: tab,
-                    spaceID: spaceID,
-                    profileID: UUID()
-                )
-            )
-        )
-    }
-
     func testEveryMobileTransientSurfaceResolvesAMissingOriginToBrowserCenter() throws {
         let spaceID = SpaceID()
         let url = try XCTUnwrap(URL(string: "https://example.com/transient"))
@@ -372,116 +328,7 @@ final class MobileTransientBrowsingTests: XCTestCase {
         )
     }
 
-    func testLinkPeekPressCommitsBeforeTheFingerIsReleased() async throws {
-        let request = BrowserPeekRequest(
-            url: try XCTUnwrap(URL(string: "https://webkit.org/peek")),
-            sourceTabID: TabID(),
-            sourceTitle: "Held link",
-            spaceAssignment: BrowserSpaceRuntimeAssignment(
-                spaceID: SpaceID(),
-                profileID: UUID()
-            ),
-            trigger: .longPress
-        )
-        let waits = LinkPeekPressWaits()
-        let coordinator = MobileLinkPeekPressCoordinator(
-            previewDelay: .milliseconds(10),
-            minimumDuration: .milliseconds(30),
-            wait: waits.wait
-        )
-        let opened = expectation(description: "Peek opens while the press remains active")
-        var stagedRequest: BrowserPeekRequest?
-        var openedRequest: BrowserPeekRequest?
-
-        coordinator.begin(
-            request: request,
-            stage: { stagedRequest = $0 },
-            commit: { request in
-                openedRequest = request
-                opened.fulfill()
-            },
-            cancelStaged: { _ in XCTFail("A committed press must not cancel") }
-        )
-
-        // The press asks for the lift wait before it stages anything, so the
-        // order this test claims is read off the press's own steps rather than
-        // off two timers a loaded machine can run down late: nothing is lifted
-        // while the first wait is held, and ending it leaves the press asking
-        // for the wait that would commit.
-        await waits.waitUntilRequestCount(1)
-        XCTAssertNil(stagedRequest)
-        waits.elapse(0)
-        await waits.waitUntilRequestCount(2)
-        XCTAssertEqual(
-            waits.requestedDurations,
-            [.milliseconds(10), .milliseconds(20)]
-        )
-        XCTAssertEqual(stagedRequest, request)
-        XCTAssertNil(openedRequest)
-        XCTAssertFalse(coordinator.hasCommittedPress)
-
-        // Committing is unreachable until the second wait ends, so the finger is
-        // still down when Peek opens no matter how long the step itself takes.
-        waits.elapse(1)
-        await fulfillment(of: [opened], timeout: 10)
-        XCTAssertEqual(openedRequest, request)
-        XCTAssertTrue(coordinator.hasCommittedPress)
-
-        coordinator.end()
-    }
-
-    func testLinkPeekPressReleaseAfterLiftButBeforeCommitSettlesTheLinkWithoutOpening() async throws {
-        let request = BrowserPeekRequest(
-            url: try XCTUnwrap(URL(string: "https://webkit.org/cancelled-peek")),
-            sourceTabID: TabID(),
-            sourceTitle: "Short press",
-            spaceAssignment: BrowserSpaceRuntimeAssignment(
-                spaceID: SpaceID(),
-                profileID: UUID()
-            ),
-            trigger: .longPress
-        )
-        let waits = LinkPeekPressWaits()
-        let coordinator = MobileLinkPeekPressCoordinator(
-            previewDelay: .milliseconds(10),
-            minimumDuration: .milliseconds(80),
-            wait: waits.wait
-        )
-        var stagedRequest: BrowserPeekRequest?
-        var openedRequest: BrowserPeekRequest?
-        var cancelledRequestID: UUID?
-
-        coordinator.begin(
-            request: request,
-            stage: { stagedRequest = $0 },
-            commit: { openedRequest = $0 },
-            cancelStaged: { cancelledRequestID = $0 }
-        )
-
-        // Ending the lift wait runs the stage step, and the press then asks for
-        // the wait that would commit it. That second request is what says the
-        // link is lifted and not yet open, so the release below lands between the
-        // two states without having to beat a timer to them.
-        await waits.waitUntilRequestCount(1)
-        waits.elapse(0)
-        await waits.waitUntilRequestCount(2)
-        XCTAssertEqual(stagedRequest, request)
-        XCTAssertEqual(
-            waits.requestedDurations,
-            [.milliseconds(10), .milliseconds(70)]
-        )
-
-        coordinator.end()
-
-        // Opening is unreachable while the commit wait is still held, so a
-        // released link that settled here can never open afterwards.
-        XCTAssertNil(openedRequest)
-        XCTAssertEqual(cancelledRequestID, request.id)
-        XCTAssertFalse(coordinator.hasCommittedPress)
-        waits.cancelHeldWaits()
-    }
-
-    func testPrivateLongPressPeekKeepsItsEphemeralSpaceWhenPromoted() throws {
+    func testPrivatePeekKeepsItsEphemeralSpaceWhenPromoted() throws {
         let browser = BrowserStore.privateBrowsing()
         let pages = MobileBrowserPageStore(
             browsingMode: .privateBrowsing,
@@ -490,15 +337,12 @@ final class MobileTransientBrowsingTests: XCTestCase {
         let privateSpace = try XCTUnwrap(browser.selectedSpace)
         let sourceTab = try XCTUnwrap(browser.selectedTab)
         let destination = try XCTUnwrap(URL(string: "https://webkit.org/private-peek"))
-        let request = try XCTUnwrap(
-            BrowserPeekPolicy.longPressRequest(
-                destinationURL: destination,
-                context: BrowserPageNavigationContext(
-                    tab: sourceTab,
-                    spaceID: privateSpace.id,
-                    profileID: privateSpace.profile.id
-                )
-            )
+        let request = BrowserPeekRequest(
+            url: destination,
+            sourceTabID: sourceTab.id,
+            sourceTitle: sourceTab.title,
+            spaceAssignment: BrowserSpaceRuntimeAssignment(space: privateSpace),
+            trigger: .modifierClick
         )
 
         let lease = try XCTUnwrap(
@@ -615,59 +459,5 @@ final class MobileTransientBrowsingTests: XCTestCase {
         coordinator.cancelStagedPeek(id: second.id)
         XCTAssertNil(coordinator.peekRequest)
         XCTAssertNil(coordinator.peekPresentationPhase)
-    }
-}
-
-/// The two waits one press performs, ended when the test says so.
-///
-/// The release used to race the press's own commit timer: the test had 70ms
-/// between the lift and the commit to call `end()`, and on a saturated machine it
-/// arrived after the commit it was meant to precede — the settle never happened,
-/// and the expectation waiting for it timed out. Holding the waits instead takes
-/// the clock out of the test: every step is signalled by the press itself.
-@MainActor
-private final class LinkPeekPressWaits {
-    private(set) var requestedDurations: [Duration] = []
-    private var heldWaits: [CheckedContinuation<Void, any Error>?] = []
-    private var requestWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
-
-    func wait(_ duration: Duration) async throws {
-        try await withCheckedThrowingContinuation { continuation in
-            requestedDurations.append(duration)
-            heldWaits.append(continuation)
-            announceRequest()
-        }
-    }
-
-    /// Suspends until the press has asked for its `count`-th wait.
-    func waitUntilRequestCount(_ count: Int) async {
-        guard requestedDurations.count < count else { return }
-        await withCheckedContinuation { continuation in
-            requestWaiters.append((count, continuation))
-        }
-    }
-
-    /// Ends the wait at `index`, as if its duration had run out.
-    func elapse(_ index: Int) {
-        heldWaits[index]?.resume()
-        heldWaits[index] = nil
-    }
-
-    /// Fails every wait still held the way a cancelled `Task.sleep` fails, so a
-    /// press the test released leaves no continuation behind.
-    func cancelHeldWaits() {
-        for index in heldWaits.indices {
-            heldWaits[index]?.resume(throwing: CancellationError())
-            heldWaits[index] = nil
-        }
-    }
-
-    private func announceRequest() {
-        let requestedCount = requestedDurations.count
-        let readyWaiters = requestWaiters.filter { $0.count <= requestedCount }
-        requestWaiters.removeAll { $0.count <= requestedCount }
-        for waiter in readyWaiters {
-            waiter.continuation.resume()
-        }
     }
 }

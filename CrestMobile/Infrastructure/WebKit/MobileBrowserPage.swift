@@ -60,7 +60,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     private(set) var needsWebContentRestore = false
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
-    var hasActiveLinkPeekBridge: Bool { linkPeekMessageProxy != nil }
+    var hasActiveLinkActivationBridge: Bool { linkActivationMessageProxy != nil }
 
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let pullToRefreshControl = UIRefreshControl()
@@ -82,9 +82,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var appInitiatedURL: URL?
     @ObservationIgnored private(set) var appInitiatedNavigationCount = 0
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
-    @ObservationIgnored private let stagePeek: ((BrowserPeekRequest) -> Void)?
-    @ObservationIgnored private let commitPeek: ((BrowserPeekRequest) -> Void)?
-    @ObservationIgnored private let cancelStagedPeek: ((UUID) -> Void)?
+    @ObservationIgnored var contextMenuPreviewCommit: (() -> Void)?
     @ObservationIgnored var navigationContext: BrowserPageNavigationContext?
     @ObservationIgnored var activeNavigation: WKNavigation?
     @ObservationIgnored let spaceName: String
@@ -94,8 +92,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var faviconGeneration = 0
     @ObservationIgnored let credentialState: BrowserCredentialPageState<CredentialFillTarget>
     @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
-    @ObservationIgnored private var linkPeekMessageProxy: MobileLinkPeekScriptMessageProxy?
-    @ObservationIgnored let linkPeekPressCoordinator = MobileLinkPeekPressCoordinator()
+    @ObservationIgnored private var linkActivationMessageProxy: MobileLinkActivationScriptMessageProxy?
     @ObservationIgnored var linkActivationSourceStore = MobileLinkActivationSourceStore()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
@@ -161,9 +158,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             _, _, _ in nil
         },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
-        stagePeek: ((BrowserPeekRequest) -> Void)? = nil,
-        commitPeek: ((BrowserPeekRequest) -> Void)? = nil,
-        cancelStagedPeek: ((UUID) -> Void)? = nil,
         opensExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         tabID = tab.id
@@ -178,9 +172,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
-        self.stagePeek = stagePeek
-        self.commitPeek = commitPeek
-        self.cancelStagedPeek = cancelStagedPeek
         appliedContentRuleLists = contentRuleLists
         if let contentRuleList,
             !appliedContentRuleLists.contains(where: { $0 === contentRuleList })
@@ -255,7 +246,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             // inactive scheduling policy above all, which is what lets WebKit
             // suspend a resident background tab on the platform that jetsams.
             // Only what is genuinely mobile is decorated on top of it.
-            var installedLinkPeekProxy: MobileLinkPeekScriptMessageProxy?
+            var installedLinkActivationProxy: MobileLinkActivationScriptMessageProxy?
             configuration = BrowserPageConfiguration.make(
                 for: space.profile,
                 websiteDataStore: websiteDataStore,
@@ -268,11 +259,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 configuration.userContentController.addUserScript(
                     MobileMediaPlaybackPolicy.inlineVideoScript
                 )
-                installedLinkPeekProxy = MobileLinkPeekContentBridge.install(
+                installedLinkActivationProxy = MobileLinkActivationContentBridge.install(
                     in: configuration.userContentController
                 )
             }
-            linkPeekMessageProxy = installedLinkPeekProxy
+            linkActivationMessageProxy = installedLinkActivationProxy
         }
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.underPageBackgroundColor = .clear
@@ -290,7 +281,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
-        webView.allowsLinkPreview = false
+        webView.allowsLinkPreview = true
         if let mediaSessionStore {
             let coordinator = BrowserMediaSessionPageCoordinator(
                 webView: webView,
@@ -321,8 +312,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                     }
             }
         }
-        linkPeekMessageProxy?.receive = { [weak self] message in
-            self?.receiveLinkPeekPressMessage(message)
+        linkActivationMessageProxy?.receive = { [weak self] message in
+            self?.receiveLinkActivationMessage(message)
         }
         geolocationCoordinator = BrowserGeolocationCoordinator(
             webView: webView,
@@ -497,7 +488,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
         mediaSessionCoordinator?.prepareForRemoval()
-        linkPeekPressCoordinator.cancel()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
@@ -512,7 +502,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             // A popup shares its opener's content controller. Removing handlers
             // here would silence them for the opener too.
             credentialMessageProxy = nil
-            linkPeekMessageProxy = nil
+            linkActivationMessageProxy = nil
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
             blockedPopupMessageProxy = nil
@@ -530,15 +520,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
         }
         credentialMessageProxy = nil
-        if linkPeekMessageProxy != nil {
+        if linkActivationMessageProxy != nil {
             webView.configuration.userContentController
                 .removeScriptMessageHandler(
-                    forName: MobileLinkPeekContentBridge.messageHandlerName,
-                    contentWorld: MobileLinkPeekContentBridge.contentWorld
+                    forName: MobileLinkActivationContentBridge.messageHandlerName,
+                    contentWorld: MobileLinkActivationContentBridge.contentWorld
                 )
         }
-        linkPeekMessageProxy?.receive = { _ in }
-        linkPeekMessageProxy = nil
+        linkActivationMessageProxy?.receive = { _ in }
+        linkActivationMessageProxy = nil
         if userActivityMessageProxy != nil {
             webView.configuration.userContentController
                 .removeScriptMessageHandler(
@@ -1407,78 +1397,45 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         )
     }
 
-    private func receiveLinkPeekPressMessage(_ message: WKScriptMessage) {
+    private func receiveLinkActivationMessage(_ message: WKScriptMessage) {
         guard isOwnScriptMessage(message),
-            message.name == MobileLinkPeekContentBridge.messageHandlerName,
-            let event = MobileLinkPeekPressEvent(body: message.body)
+            message.name == MobileLinkActivationContentBridge.messageHandlerName,
+            let event = MobileLinkActivationEvent(body: message.body)
         else { return }
 
-        switch event.phase {
-        case .began:
-            if message.frameInfo.isMainFrame,
-                let destinationURL = event.destinationURL,
-                let normalizedSourceRect = event.normalizedSourceRect
-            {
-                downloadSourceStore.record(
-                    BrowserDownloadSourceCapture(
-                        destinationURL: destinationURL,
-                        normalizedSourceRect: normalizedSourceRect,
-                        normalizedTouchPoint:
-                            event.normalizedTouchPoint
-                            ?? CGPoint(
-                                x: normalizedSourceRect.midX,
-                                y: normalizedSourceRect.midY
-                            )
-                    )
-                )
-            }
-            let sourcePresentation =
-                message.frameInfo.isMainFrame
-                ? sourcePresentation(for: event)
-                : nil
-            if let destinationURL = event.destinationURL,
-                let sourcePresentation
-            {
-                linkActivationSourceStore.record(
+        if message.frameInfo.isMainFrame,
+            let destinationURL = event.destinationURL,
+            let normalizedSourceRect = event.normalizedSourceRect
+        {
+            downloadSourceStore.record(
+                BrowserDownloadSourceCapture(
                     destinationURL: destinationURL,
-                    sourcePresentation: sourcePresentation
+                    normalizedSourceRect: normalizedSourceRect,
+                    normalizedTouchPoint:
+                        event.normalizedTouchPoint
+                        ?? CGPoint(
+                            x: normalizedSourceRect.midX,
+                            y: normalizedSourceRect.midY
+                        )
                 )
-            }
-            guard
-                let request = BrowserPeekPolicy.longPressRequest(
-                    destinationURL: event.destinationURL,
-                    context: navigationContext,
-                    sourcePresentation: sourcePresentation
-                )
-            else { return }
-            linkPeekPressCoordinator.begin(
-                pressID: event.pressID,
-                request: request,
-                stage: { [weak self] request in
-                    guard request.sourcePresentation != nil else { return }
-                    self?.stagePeek?(request)
-                },
-                commit: { [weak self] request in
-                    let feedback = UIImpactFeedbackGenerator(style: .soft)
-                    feedback.prepare()
-                    feedback.impactOccurred(intensity: 0.82)
-                    if let commitPeek = self?.commitPeek {
-                        commitPeek(request)
-                    } else {
-                        self?.openPeek(request)
-                    }
-                },
-                cancelStaged: { [weak self] requestID in
-                    self?.cancelStagedPeek?(requestID)
-                }
             )
-        case .ended, .cancelled:
-            linkPeekPressCoordinator.end(pressID: event.pressID)
+        }
+        let sourcePresentation =
+            message.frameInfo.isMainFrame
+            ? sourcePresentation(for: event)
+            : nil
+        if let destinationURL = event.destinationURL,
+            let sourcePresentation
+        {
+            linkActivationSourceStore.record(
+                destinationURL: destinationURL,
+                sourcePresentation: sourcePresentation
+            )
         }
     }
 
     func sourcePresentation(
-        for event: MobileLinkPeekPressEvent
+        for event: MobileLinkActivationEvent
     ) -> BrowserPeekSourcePresentation? {
         guard let normalizedSourceRect = event.normalizedSourceRect else { return nil }
 

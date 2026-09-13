@@ -48,7 +48,6 @@ extension MobileBrowserPage: WKNavigationDelegate {
         consumeAppInitiatedURL()
         clearNavigationFailure(preservingPendingURL: true)
         pendingServerTrustIdentity = nil
-        linkPeekPressCoordinator.cancel()
         linkActivationSourceStore.removeAll()
         credentialState.didStartNavigation()
         readerModeGeneration &+= 1

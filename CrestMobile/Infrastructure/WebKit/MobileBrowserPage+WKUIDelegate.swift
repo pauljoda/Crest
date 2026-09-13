@@ -1,5 +1,6 @@
 import Dispatch
 import Observation
+import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 import WebKit
@@ -10,42 +11,89 @@ extension MobileBrowserPage: WKUIDelegate {
         contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo,
         completionHandler: @escaping @MainActor (UIContextMenuConfiguration?) -> Void
     ) {
-        let source = navigationContext.map {
-            BrowserTabRuntimeAssignment(
-                tabID: $0.tabID, spaceID: $0.spaceID, profileID: $0.assignment.profileID
-            )
+        contextMenuPreviewCommit = nil
+        guard webView === self.webView,
+            let context = navigationContext,
+            let url = elementInfo.linkURL,
+            BrowserExternalURLPolicy.accepts(url),
+            let window = webView.window
+        else {
+            // WebKit supplies image and detected-data previews and their actions.
+            completionHandler(nil)
+            return
         }
-        let window = webView.window
+        let source = BrowserTabRuntimeAssignment(
+            tabID: context.tabID, spaceID: context.spaceID, profileID: context.assignment.profileID
+        )
+        let generation = committedNavigationCount
+        let isCurrent: () -> Bool = { [weak self, weak window] in
+            guard let self, let window else { return false }
+            return self.webView.window === window
+                && self.committedNavigationCount == generation
+                && self.navigationContext?.tabID == source.tabID
+                && self.navigationContext?.assignment
+                    == BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID)
+                && self.linkDestinationHost.browser?.selectedTab?.id == source.tabID
+                && self.linkDestinationHost.canOpenLink(from: source)
+        }
+        let open: (BrowserSpaceRuntimeAssignment) -> Void = { [weak self] destination in
+            guard isCurrent(), let self else { return }
+            self.linkDestinationHost.openLink(url, from: source, in: destination)
+        }
+        let currentSpace = BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID)
+        contextMenuPreviewCommit = { open(currentSpace) }
         completionHandler(
-            UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self, weak window] suggested in
-                guard let self, let source, let url = elementInfo.linkURL,
-                    BrowserExternalURLPolicy.accepts(url),
-                    linkDestinationHost.canOpenLink(from: source)
-                else { return UIMenu(children: suggested) }
-                let open: (BrowserSpaceRuntimeAssignment) -> Void = { [weak self, weak window] destination in
-                    guard let self, let window, self.webView.window === window,
-                        self.navigationContext?.tabID == source.tabID
-                    else { return }
-                    self.linkDestinationHost.openLink(url, from: source, in: destination)
+            UIContextMenuConfiguration(
+                identifier: nil,
+                previewProvider: { [weak self] in
+                    guard isCurrent(), let self else { return nil }
+                    return MobileBrowserLinkPreviewController(
+                        url: url, source: self.webView, isCurrent: isCurrent
+                    )
                 }
-                let current = UIAction(title: String(localized: "Open Link in This Space")) { _ in
-                    open(BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID))
+            ) { [weak self] suggested in
+                guard let self, isCurrent(),
+                    let space = linkDestinationHost.browser?.session.space(id: source.spaceID)
+                else { return UIMenu(children: suggested) }
+                @MainActor func icon(for space: BrowserSpace) -> UIImage? {
+                    let renderer = ImageRenderer(content: BrowserSpaceIdentityIcon(space: space))
+                    renderer.scale = window.traitCollection.displayScale
+                    return renderer.uiImage?.withRenderingMode(.alwaysOriginal)
+                }
+                let current = UIAction(
+                    title: String(localized: "Open in Current Space"), image: icon(for: space)
+                ) { _ in
+                    open(currentSpace)
                 }
                 var actions: [UIMenuElement] = [current]
                 let spaces = linkDestinationHost.otherSpaces(from: source)
                 if !spaces.isEmpty {
                     actions.append(
                         UIMenu(
-                            title: String(localized: "Open Link in Another Space"),
+                            title: String(localized: "Open in Other Space"),
+                            image: UIImage(systemName: "square.stack"),
                             children: spaces.map { space in
-                                UIAction(title: space.name) { _ in
+                                UIAction(title: space.name, image: icon(for: space)) { _ in
                                     open(BrowserSpaceRuntimeAssignment(space: space))
                                 }
                             }
                         ))
                 }
-                return UIMenu(children: suggested + [UIMenu(options: .displayInline, children: actions)])
+                return UIMenu(children: [UIMenu(options: .displayInline, children: actions)] + suggested)
             })
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        contextMenuForElement elementInfo: WKContextMenuElementInfo,
+        willCommitWithAnimator animator: any UIContextMenuInteractionCommitAnimating
+    ) {
+        guard webView === self.webView, let commit = contextMenuPreviewCommit else { return }
+        animator.addCompletion(commit)
+    }
+
+    func webView(_ webView: WKWebView, contextMenuDidEndForElement elementInfo: WKContextMenuElementInfo) {
+        contextMenuPreviewCommit = nil
     }
 
     /// Returns the popup's web view built from WebKit's own configuration, which

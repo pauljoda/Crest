@@ -1021,6 +1021,10 @@
     "shared-full-width-appearance-sliders": {
       "category": "improved",
       "message": "Adjust appearance with consistent full-width sliders in Look and Feel and Space customization on every platform"
+    },
+    "mobile-native-link-and-image-menus": {
+      "category": "fixed",
+      "message": "Save images and preview links with native menus on iPhone and iPad, with quick actions to open links in any Space"
     }
   }
 }
