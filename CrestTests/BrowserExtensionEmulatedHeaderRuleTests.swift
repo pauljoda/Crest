@@ -7,6 +7,45 @@ import XCTest
 /// `modifyHeaders` emulation. The compatibility runtime mirrors both in
 /// JavaScript; these are the cases that say what "mirror" means.
 final class BrowserExtensionEmulatedHeaderRuleTests: XCTestCase {
+    func testDestinationRestrictionsSurviveWireCodingAndMatching() throws {
+        let rule = try BrowserExtensionEmulatedHeaderRule(payload: [
+            "id": 339,
+            "condition": [
+                "requestDomains": ["example.test"],
+                "excludedRequestDomains": ["excluded.example.test"],
+            ],
+            "requestHeaders": [["header": "x-synthetic", "operation": "set", "value": "fixture"]],
+        ])
+        let restored = try BrowserExtensionEmulatedHeaderRule(payload: rule.payload)
+        XCTAssertEqual(restored.condition.payload["requestDomains"] as? [String], ["example.test"])
+        XCTAssertTrue(matches(restored.condition, "https://api.example.test/"))
+        for url in [
+            "https://excluded.example.test/", "https://sub.excluded.example.test/",
+            "https://example.test.evil.test/", "https://elsewhere.test/?example.test",
+        ] {
+            XCTAssertFalse(matches(restored.condition, url), url)
+        }
+    }
+
+    func testUnsupportedOrMalformedRestrictionsAreRejectedInsteadOfDiscarded() {
+        let conditions: [[String: Any]] = [
+            ["domainType": "firstParty"], ["initiatorDomains": ["example.test"]],
+            ["excludedInitiatorDomains": ["example.test"]], ["domains": ["example.test"]],
+            ["excludedDomains": ["example.test"]], ["tabIds": [-1]], ["excludedTabIds": [-1]],
+            ["responseHeaders": []], ["topDomains": ["example.test"]],
+            ["requestDomains": []], ["requestDomains": "example.test"],
+            ["excludedRequestDomains": ["example.test", 7]],
+            ["resourceTypes": []], ["isUrlFilterCaseSensitive": "true"],
+        ]
+        for condition in conditions {
+            XCTAssertThrowsError(
+                try BrowserExtensionEmulatedHeaderRule(payload: [
+                    "id": 339, "condition": condition,
+                    "requestHeaders": [["header": "x-synthetic", "operation": "set", "value": "fixture"]],
+                ]), "\(condition)")
+        }
+    }
+
     private func rule(
         id: Int = 1,
         priority: Int = 1,
@@ -70,7 +109,7 @@ final class BrowserExtensionEmulatedHeaderRuleTests: XCTestCase {
 
     func testResourceTypesAndMethodsDecideWhetherAnExtensionRequestQualifies() {
         XCTAssertTrue(matches(.init(resourceTypes: ["xmlhttprequest", "other"]), "https://a.test/"))
-        XCTAssertTrue(matches(.init(resourceTypes: ["other"]), "https://a.test/"))
+        XCTAssertFalse(matches(.init(resourceTypes: ["other"]), "https://a.test/"))
         XCTAssertFalse(matches(.init(resourceTypes: ["image", "media"]), "https://a.test/"))
         XCTAssertFalse(
             matches(.init(excludedResourceTypes: ["xmlhttprequest"]), "https://a.test/"))

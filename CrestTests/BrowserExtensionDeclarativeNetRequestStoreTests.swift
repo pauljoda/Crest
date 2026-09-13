@@ -5,6 +5,29 @@ import XCTest
 
 @MainActor
 final class BrowserExtensionDeclarativeNetRequestStoreTests: XCTestCase {
+    func testLegacyRulesWithPotentiallyLostConditionsAreNotRestored() throws {
+        let suite = "APP339.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let legacy = [rule(id: 339).payload]
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: legacy),
+            forKey: "extension.declarativeNetRequest.dynamic-header-rules.\(claude.rawValue)")
+        let persistence = UserDefaultsBrowserExtensionDeclarativeNetRequestStore(defaults: defaults)
+        XCTAssertTrue(persistence.loadDynamicRules(for: claude).isEmpty)
+        let restricted = try BrowserExtensionEmulatedHeaderRule(payload: [
+            "id": 339,
+            "condition": [
+                "requestDomains": ["example.test"],
+                "excludedRequestDomains": ["excluded.example.test"],
+            ],
+            "requestHeaders": [["header": "x-synthetic", "operation": "set", "value": "fixture"]],
+        ])
+        persistence.saveDynamicRules([restricted], for: claude)
+        let relaunched = UserDefaultsBrowserExtensionDeclarativeNetRequestStore(defaults: defaults)
+        XCTAssertEqual(relaunched.loadDynamicRules(for: claude), [restricted])
+    }
+
     private let claude = BrowserExtensionServiceClientID("claude.space.personal")!
     private let chatgpt = BrowserExtensionServiceClientID("chatgpt.space.personal")!
 

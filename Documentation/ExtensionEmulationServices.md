@@ -626,9 +626,11 @@ reads the table once at start through `dnr.emulatedHeaderRules` and subscribes
 to `dnr.watch`; a request issued before the first table arrives is not modified,
 which is safe because the worker sets its rules long before a panel exists.
 
-A request is treated as resource type `xmlhttprequest`. A rule whose
-`resourceTypes` names neither `xmlhttprequest` nor `other` does not apply, and
-`excludedResourceTypes` and `requestMethods` are honoured.
+A request is treated as resource type `xmlhttprequest`; `other` alone does not
+match fetch or XHR. Resource-type and method inclusions and exclusions are
+honoured. `requestDomains` and `excludedRequestDomains` match the destination
+hostname and its subdomains, with exclusions taking precedence. Domain values
+must use canonical lowercase ASCII hostnames, including punycode for IDNs.
 `urlFilter` implements Chrome's grammar — `||` host anchor, `|` start/end
 anchors, `*` wildcard, `^` separator (any character outside
 `[A-Za-z0-9_\-.%]`, or the end of the URL), case-insensitive unless
@@ -638,6 +640,25 @@ comma-separated per HTTP, `remove` deletes; one operation wins per header name,
 the highest `priority` first and the lowest rule id among ties.
 `BrowserExtensionEmulatedHeaderRuleMatcher` is the reference implementation of
 that grammar and the two are pinned by the same cases.
+
+The emulated condition vocabulary is closed. Conditions requiring engine-owned
+initiator, first/third-party, tab, top-frame or response-header information are
+rejected for rules containing custom request headers, including the legacy
+`domains` and `excludedDomains` initiator aliases. Unknown fields and malformed
+supported fields also reject the complete update before either partition
+changes. Native-only rules still go to WebKit unchanged. Both promise and
+callback callers receive the rejection. This follows the distinction between
+destination and initiator domains in the
+[Chrome condition contract](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest#type-RuleCondition)
+and [Firefox condition contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/declarativeNetRequest/RuleCondition).
+Those contracts restrict tab filters to session rules; Crest does not infer a
+request's tab from the selected tab or an extension panel's owning tab.
+
+Accepted conditions retain their arrays through readback, broker events and
+dynamic-rule persistence. Legacy dynamic header tables are not restored because
+their original conditions cannot be recovered; the extension must register them
+again. Newly stored dynamic rules survive relaunch, while session rules retain
+their existing context lifetime.
 
 **Scope.** Only requests the extension itself makes are covered. A content
 script's `fetch` runs on the page's origin and is untouched, as is anything a

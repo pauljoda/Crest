@@ -14,12 +14,15 @@ enum BrowserExtensionEmulatedHeaderRuleset: String, CaseIterable, Sendable {
 /// Failures the `declarativeNetRequest` header broker reports to an extension.
 enum BrowserExtensionEmulatedHeaderRuleError: LocalizedError, Equatable {
     case invalidRequest
+    case unsupportedCondition(String)
     case unavailable
 
     var errorDescription: String? {
         switch self {
         case .invalidRequest:
             "The extension supplied an invalid declarativeNetRequest header rule request."
+        case .unsupportedCondition(let name):
+            "Crest cannot emulate the declarativeNetRequest condition \(name)."
         case .unavailable:
             "Crest's declarativeNetRequest header emulation is unavailable."
         }
@@ -66,11 +69,9 @@ struct BrowserExtensionEmulatedHeaderRule: Equatable, Sendable {
 
     /// The subset of Chrome's `RuleCondition` this emulation can honour.
     ///
-    /// `domainType`, `initiatorDomains`, and the tab filters are deliberately
-    /// absent: every request this emulation can reach is made by the extension
-    /// itself, so there is no third party and no initiating page to compare
-    /// against. A rule that names them still matches on the fields below
-    /// rather than being silently dropped.
+    /// Conditions requiring engine-owned initiator, party, tab or response
+    /// information are rejected at admission. They must never be discarded
+    /// while keeping the remaining condition as a broader rule.
     struct Condition: Equatable, Sendable {
         var urlFilter: String?
         var regexFilter: String?
@@ -79,6 +80,8 @@ struct BrowserExtensionEmulatedHeaderRule: Equatable, Sendable {
         var excludedResourceTypes: [String]?
         var requestMethods: [String]?
         var excludedRequestMethods: [String]?
+        var requestDomains: [String]?
+        var excludedRequestDomains: [String]?
 
         init(
             urlFilter: String? = nil,
@@ -87,7 +90,9 @@ struct BrowserExtensionEmulatedHeaderRule: Equatable, Sendable {
             resourceTypes: [String]? = nil,
             excludedResourceTypes: [String]? = nil,
             requestMethods: [String]? = nil,
-            excludedRequestMethods: [String]? = nil
+            excludedRequestMethods: [String]? = nil,
+            requestDomains: [String]? = nil,
+            excludedRequestDomains: [String]? = nil
         ) {
             self.urlFilter = urlFilter
             self.regexFilter = regexFilter
@@ -96,6 +101,8 @@ struct BrowserExtensionEmulatedHeaderRule: Equatable, Sendable {
             self.excludedResourceTypes = excludedResourceTypes
             self.requestMethods = requestMethods
             self.excludedRequestMethods = excludedRequestMethods
+            self.requestDomains = requestDomains
+            self.excludedRequestDomains = excludedRequestDomains
         }
     }
 
@@ -128,7 +135,10 @@ extension BrowserExtensionEmulatedHeaderRule {
     /// an empty rule would match requests and change nothing, which is
     /// indistinguishable from a bug at the point someone debugs it.
     init(payload: [String: Any]) throws {
-        guard let id = Self.integer(payload["id"]) else {
+        guard let id = Self.integer(payload["id"]), id > 0,
+            payload["priority"] == nil || (Self.integer(payload["priority"]) ?? 0) > 0,
+            let rawCondition = payload["condition"] as? [String: Any]
+        else {
             throw BrowserExtensionEmulatedHeaderRuleError.invalidRequest
         }
         guard let rawHeaders = payload["requestHeaders"] as? [[String: Any]], !rawHeaders.isEmpty
@@ -139,7 +149,7 @@ extension BrowserExtensionEmulatedHeaderRule {
         self.init(
             id: id,
             priority: Self.integer(payload["priority"]) ?? 1,
-            condition: Condition(payload: payload["condition"] as? [String: Any] ?? [:]),
+            condition: try Condition(payload: rawCondition),
             requestHeaders: headers
         )
     }
@@ -164,11 +174,6 @@ extension BrowserExtensionEmulatedHeaderRule {
         return number.intValue
     }
 
-    static func stringList(_ value: Any?) -> [String]? {
-        guard let raw = value as? [Any] else { return nil }
-        let values = raw.compactMap { $0 as? String }
-        return values.isEmpty ? nil : values
-    }
 }
 
 extension BrowserExtensionEmulatedHeaderRule.HeaderModification {
@@ -202,20 +207,85 @@ extension BrowserExtensionEmulatedHeaderRule.HeaderModification {
 }
 
 extension BrowserExtensionEmulatedHeaderRule.Condition {
-    init(payload: [String: Any]) {
+    static let supportedKeys: Set<String> = [
+        "urlFilter", "regexFilter", "isUrlFilterCaseSensitive", "resourceTypes",
+        "excludedResourceTypes", "requestMethods", "excludedRequestMethods",
+        "requestDomains", "excludedRequestDomains",
+    ]
+
+    init(payload: [String: Any]) throws {
+        for key in payload.keys where !Self.supportedKeys.contains(key) {
+            throw BrowserExtensionEmulatedHeaderRuleError.unsupportedCondition(key)
+        }
+        for key in ["urlFilter", "regexFilter"] where payload[key] != nil {
+            guard let value = payload[key] as? String, !value.isEmpty,
+                value.utf8.allSatisfy({ $0 < 128 })
+            else { throw BrowserExtensionEmulatedHeaderRuleError.invalidRequest }
+        }
+        if let value = payload["isUrlFilterCaseSensitive"] {
+            guard let number = value as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID()
+            else { throw BrowserExtensionEmulatedHeaderRuleError.invalidRequest }
+        }
+        for (include, exclude) in [
+            ("urlFilter", "regexFilter"),
+            ("resourceTypes", "excludedResourceTypes"),
+            ("requestMethods", "excludedRequestMethods"),
+        ] {
+            guard payload[include] == nil || payload[exclude] == nil
+            else { throw BrowserExtensionEmulatedHeaderRuleError.invalidRequest }
+        }
+        let lists = try Self.validatedLists(payload)
         self.init(
             urlFilter: payload["urlFilter"] as? String,
             regexFilter: payload["regexFilter"] as? String,
             isURLFilterCaseSensitive: (payload["isUrlFilterCaseSensitive"] as? NSNumber)?.boolValue
                 ?? false,
-            resourceTypes: BrowserExtensionEmulatedHeaderRule.stringList(payload["resourceTypes"]),
-            excludedResourceTypes: BrowserExtensionEmulatedHeaderRule.stringList(
-                payload["excludedResourceTypes"]),
-            requestMethods: BrowserExtensionEmulatedHeaderRule.stringList(
-                payload["requestMethods"]),
-            excludedRequestMethods: BrowserExtensionEmulatedHeaderRule.stringList(
-                payload["excludedRequestMethods"])
+            resourceTypes: lists["resourceTypes"],
+            excludedResourceTypes: lists["excludedResourceTypes"],
+            requestMethods: lists["requestMethods"],
+            excludedRequestMethods: lists["excludedRequestMethods"],
+            requestDomains: lists["requestDomains"],
+            excludedRequestDomains: lists["excludedRequestDomains"]
         )
+    }
+
+    private static func validatedLists(_ payload: [String: Any]) throws -> [String: [String]] {
+        let resourceTypes: Set<String> = [
+            "main_frame", "sub_frame", "stylesheet", "script", "image", "font", "object",
+            "xmlhttprequest", "ping", "csp_report", "media", "websocket", "webtransport", "webbundle", "other",
+        ]
+        let methods: Set<String> = ["connect", "delete", "get", "head", "options", "patch", "post", "put", "other"]
+        var result: [String: [String]] = [:]
+        for key in [
+            "resourceTypes", "excludedResourceTypes", "requestMethods",
+            "excludedRequestMethods", "requestDomains", "excludedRequestDomains",
+        ] {
+            guard let raw = payload[key] else { continue }
+            guard let values = raw as? [String], key.hasPrefix("excluded") || !values.isEmpty
+            else { throw BrowserExtensionEmulatedHeaderRuleError.invalidRequest }
+            for value in values {
+                let valid: Bool
+                if key.hasSuffix("Domains") {
+                    valid = isCanonicalDomain(value)
+                } else if key.hasSuffix("Methods") {
+                    valid = methods.contains(value)
+                } else {
+                    valid = resourceTypes.contains(value)
+                }
+                guard valid else { throw BrowserExtensionEmulatedHeaderRuleError.invalidRequest }
+            }
+            result[key] = values
+        }
+        return result
+    }
+
+    private static func isCanonicalDomain(_ value: String) -> Bool {
+        guard !value.isEmpty, value == value.lowercased(),
+            value.utf8.allSatisfy({ $0 < 128 }),
+            !value.contains(where: { "/?#@%\\ ".contains($0) }),
+            let url = URL(string: "http://\(value)/"), url.host == value, url.port == nil
+        else { return false }
+        return true
     }
 
     var payload: [String: Any] {
@@ -228,6 +298,8 @@ extension BrowserExtensionEmulatedHeaderRule.Condition {
         if let excludedRequestMethods {
             result["excludedRequestMethods"] = excludedRequestMethods
         }
+        if let requestDomains { result["requestDomains"] = requestDomains }
+        if let excludedRequestDomains { result["excludedRequestDomains"] = excludedRequestDomains }
         return result
     }
 }

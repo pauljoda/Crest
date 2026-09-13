@@ -12,11 +12,6 @@ enum BrowserExtensionEmulatedHeaderRuleMatcher {
     /// The resource type Crest reports for `fetch` and `XMLHttpRequest`.
     static let scriptRequestResourceType = "xmlhttprequest"
 
-    /// Chrome treats a request whose type it cannot classify as `other`, and
-    /// packages routinely list both. A rule that names neither is not about
-    /// the traffic this emulation can reach.
-    static let acceptedResourceTypes: Set<String> = [scriptRequestResourceType, "other"]
-
     /// Whether one rule's condition matches a request the extension is making.
     static func matches(
         _ condition: BrowserExtensionEmulatedHeaderRule.Condition,
@@ -24,14 +19,34 @@ enum BrowserExtensionEmulatedHeaderRuleMatcher {
         method: String
     ) -> Bool {
         if let resourceTypes = condition.resourceTypes {
-            guard !acceptedResourceTypes.isDisjoint(with: resourceTypes) else { return false }
+            guard resourceTypes.contains(scriptRequestResourceType) else { return false }
         }
         if let excluded = condition.excludedResourceTypes,
             excluded.contains(scriptRequestResourceType)
         {
             return false
         }
-        let normalizedMethod = method.lowercased()
+        if condition.requestDomains != nil || condition.excludedRequestDomains != nil {
+            guard let host = URL(string: url)?.host?.lowercased() else { return false }
+            if let included = condition.requestDomains,
+                !included.contains(where: { domainMatches(host, $0) })
+            {
+                return false
+            }
+            if let excluded = condition.excludedRequestDomains,
+                excluded.contains(where: { domainMatches(host, $0) })
+            {
+                return false
+            }
+        }
+        let httpMethods: Set<String> = ["connect", "delete", "get", "head", "options", "patch", "post", "put"]
+        let loweredMethod = method.lowercased()
+        let normalizedMethod = httpMethods.contains(loweredMethod) ? loweredMethod : "other"
+        if condition.requestMethods != nil,
+            !["http", "https"].contains(URL(string: url)?.scheme?.lowercased() ?? "")
+        {
+            return false
+        }
         if let methods = condition.requestMethods, !methods.contains(normalizedMethod) {
             return false
         }
@@ -52,6 +67,10 @@ enum BrowserExtensionEmulatedHeaderRuleMatcher {
             else { return false }
         }
         return true
+    }
+
+    private static func domainMatches(_ host: String, _ domain: String) -> Bool {
+        host == domain || host.hasSuffix(".\(domain)")
     }
 
     /// The header operations that survive when every matching rule has had its

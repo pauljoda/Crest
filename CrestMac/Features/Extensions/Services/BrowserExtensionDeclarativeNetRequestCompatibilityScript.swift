@@ -159,49 +159,96 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             );
         };
 
+        // A closed condition vocabulary prevents a newer or malformed restriction
+        // from disappearing when an all-custom rule bypasses native validation.
+        const declarativeNetRequestConditionKeys = new Set([
+            "urlFilter", "regexFilter", "isUrlFilterCaseSensitive", "resourceTypes",
+            "excludedResourceTypes", "requestMethods", "excludedRequestMethods",
+            "requestDomains", "excludedRequestDomains"
+        ]);
+        const declarativeNetRequestConditionError = (key) => new TypeError(
+            `Crest cannot emulate the declarativeNetRequest condition ${key}.`
+        );
         const declarativeNetRequestCondition = (value) => {
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+                throw declarativeNetRequestConditionError("object");
+            }
+            for (const key of Object.keys(value)) {
+                if (!declarativeNetRequestConditionKeys.has(key)) {
+                    throw declarativeNetRequestConditionError(key);
+                }
+            }
             const condition = {};
-            if (!value || typeof value !== "object") return condition;
             for (const key of ["urlFilter", "regexFilter"]) {
-                if (typeof value[key] === "string") condition[key] = value[key];
+                if (!Object.hasOwn(value, key)) continue;
+                if (typeof value[key] !== "string" || !value[key]
+                    || /[^\x00-\x7f]/.test(value[key])) {
+                    throw declarativeNetRequestConditionError(key);
+                }
+                condition[key] = value[key];
+            }
+            if (Object.hasOwn(value, "isUrlFilterCaseSensitive")
+                && typeof value.isUrlFilterCaseSensitive !== "boolean") {
+                throw declarativeNetRequestConditionError("isUrlFilterCaseSensitive");
             }
             condition.isUrlFilterCaseSensitive = value.isUrlFilterCaseSensitive === true;
-            for (const key of [
-                "resourceTypes",
-                "excludedResourceTypes",
-                "requestMethods",
-                "excludedRequestMethods"
-            ]) {
-                if (!Array.isArray(value[key])) continue;
-                const entries = value[key].filter((entry) => typeof entry === "string");
-                if (entries.length > 0) condition[key] = entries;
+            for (const [first, second] of [["urlFilter", "regexFilter"],
+                ["resourceTypes", "excludedResourceTypes"],
+                ["requestMethods", "excludedRequestMethods"]]) {
+                if (Object.hasOwn(value, first) && Object.hasOwn(value, second)) {
+                    throw declarativeNetRequestConditionError(`${first}/${second}`);
+                }
+            }
+            for (const key of ["resourceTypes", "excludedResourceTypes", "requestMethods",
+                "excludedRequestMethods", "requestDomains", "excludedRequestDomains"]) {
+                if (!Object.hasOwn(value, key)) continue;
+                const entries = value[key];
+                if (!Array.isArray(entries) || (!key.startsWith("excluded") && entries.length === 0)) {
+                    throw declarativeNetRequestConditionError(key);
+                }
+                // Array.from also exposes holes instead of silently skipping them.
+                const copied = Array.from(entries);
+                for (const entry of copied) {
+                    let valid = typeof entry === "string";
+                    if (valid && key.endsWith("Domains")) {
+                        valid = entry.length > 0 && entry === entry.toLowerCase()
+                            && !/[^\x21-\x7e]|[/?#@%\\]/.test(entry);
+                        try {
+                            const parsed = new URL(`http://${entry}/`);
+                            valid = valid && parsed.hostname === entry && parsed.port === "";
+                        } catch { valid = false; }
+                    } else if (valid) {
+                        const values = key.endsWith("Methods")
+                            ? declarativeNetRequest.RequestMethod : declarativeNetRequest.ResourceType;
+                        valid = Object.values(values).includes(entry);
+                    }
+                    if (!valid) throw declarativeNetRequestConditionError(key);
+                }
+                condition[key] = copied;
             }
             return condition;
         };
         const declarativeNetRequestRule = (value) => {
-            if (!value || typeof value !== "object" || !Number.isInteger(value.id)) {
-                return undefined;
+            if (!value || typeof value !== "object"
+                || !Number.isInteger(value.id) || value.id <= 0 || value.id > 2147483647
+                || (value.priority !== undefined && (!Number.isInteger(value.priority)
+                    || value.priority <= 0 || value.priority > 2147483647))
+                || !Array.isArray(value.requestHeaders) || value.requestHeaders.length === 0) {
+                throw new TypeError("Invalid declarativeNetRequest header rule.");
             }
-            const headers = (Array.isArray(value.requestHeaders) ? value.requestHeaders : [])
-                .filter((entry) =>
-                    entry
-                    && typeof entry.header === "string"
-                    && entry.header.length > 0
-                    && (entry.operation === "set"
-                        || entry.operation === "append"
-                        || entry.operation === "remove")
-                )
-                .map((entry) => entry.operation === "remove"
+            const headers = Array.from(value.requestHeaders, (entry) => {
+                if (!entry || typeof entry.header !== "string" || !entry.header
+                    || !["set", "append", "remove"].includes(entry.operation)
+                    || (entry.operation !== "remove" && typeof entry.value !== "string")) {
+                    throw new TypeError("Invalid declarativeNetRequest header operation.");
+                }
+                return entry.operation === "remove"
                     ? {header: entry.header, operation: "remove"}
-                    : {
-                        header: entry.header,
-                        operation: entry.operation,
-                        value: String(entry.value ?? "")
-                    });
-            if (headers.length === 0) return undefined;
+                    : {header: entry.header, operation: entry.operation, value: entry.value};
+            });
             return {
                 id: value.id,
-                priority: Number.isInteger(value.priority) ? value.priority : 1,
+                priority: value.priority ?? 1,
                 condition: declarativeNetRequestCondition(value.condition),
                 requestHeaders: headers
             };
@@ -220,7 +267,7 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             const accepted = [];
             const rejected = [];
             for (const entry of action.requestHeaders) {
-                if (declarativeNetRequestHeaderIsNative(entry?.header)) accepted.push(entry);
+                if (declarativeNetRequestHeaderIsNative(entry?.header)) accepted.push({...entry});
                 else rejected.push(entry);
             }
             if (rejected.length === 0) return {nativeRule: rule, emulatedRule: undefined};
@@ -242,7 +289,8 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             if (accepted.length === 0 && !modifiesResponse) {
                 return {nativeRule: undefined, emulatedRule};
             }
-            return {nativeRule: {...rule, action: nativeAction}, emulatedRule};
+            return {nativeRule: {...rule, condition: declarativeNetRequestCondition(emulatedRule.condition),
+                action: nativeAction}, emulatedRule};
         };
 
         const declarativeNetRequestApplyRulesets = (payload) => {
@@ -250,8 +298,12 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             const next = {session: [], dynamic: []};
             for (const name of declarativeNetRequestRulesetNames) {
                 next[name] = (Array.isArray(payload[name]) ? payload[name] : [])
-                    .map(declarativeNetRequestRule)
-                    .filter((rule) => rule !== undefined);
+                    .flatMap((value) => {
+                        try {
+                            const rule = declarativeNetRequestRule(value);
+                            return rule === undefined ? [] : [rule];
+                        } catch { return []; }
+                    });
             }
             declarativeNetRequestEmulatedRules = next;
             return true;
@@ -284,9 +336,6 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
         // implementation of this grammar and the two are pinned by the same
         // cases; the decision has to be made here because this is the context
         // that issues the request.
-        const declarativeNetRequestAcceptedResourceTypes = new Set([
-            "xmlhttprequest", "other"
-        ]);
         const declarativeNetRequestExpressions = new Map();
         const declarativeNetRequestExpression = (pattern, isCaseSensitive) => {
             const key = `${isCaseSensitive ? "s" : "i"} ${pattern}`;
@@ -344,9 +393,7 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             const condition = rule.condition ?? {};
             if (
                 Array.isArray(condition.resourceTypes)
-                && !condition.resourceTypes.some(
-                    (type) => declarativeNetRequestAcceptedResourceTypes.has(type)
-                )
+                && !condition.resourceTypes.includes("xmlhttprequest")
             ) {
                 return false;
             }
@@ -356,7 +403,17 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             ) {
                 return false;
             }
-            const normalizedMethod = String(method ?? "get").toLowerCase();
+            if (condition.requestDomains || condition.excludedRequestDomains) {
+                let host;
+                try { host = new URL(url).hostname.toLowerCase(); } catch { return false; }
+                const matchesDomain = (domain) => host === domain || host.endsWith(`.${domain}`);
+                if (condition.requestDomains && !condition.requestDomains.some(matchesDomain)) return false;
+                if (condition.excludedRequestDomains?.some(matchesDomain)) return false;
+            }
+            const loweredMethod = String(method ?? "get").toLowerCase();
+            const normalizedMethod = ["connect", "delete", "get", "head", "options", "patch", "post", "put"]
+                .includes(loweredMethod) ? loweredMethod : "other";
+            if (condition.requestMethods && !/^https?:/i.test(url)) return false;
             if (
                 Array.isArray(condition.requestMethods)
                 && !condition.requestMethods.includes(normalizedMethod)
@@ -611,34 +668,33 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
             return promise;
         };
         const declarativeNetRequestUpdate = (ruleset, nativeMethod, owner, args) => {
-            const options = args[0];
-            const removeRuleIds = Array.isArray(options?.removeRuleIds)
-                ? options.removeRuleIds.filter(Number.isInteger)
-                : [];
-            const addRules = Array.isArray(options?.addRules) ? options.addRules : [];
-            const emulatedAdditions = [];
-            let nativeOptions = options;
-            if (addRules.length > 0) {
-                const nativeAddRules = [];
-                let partitioned = false;
-                for (const rule of addRules) {
-                    const {nativeRule, emulatedRule} = declarativeNetRequestPartition(rule);
-                    if (nativeRule !== undefined) nativeAddRules.push(nativeRule);
-                    if (emulatedRule !== undefined) {
-                        emulatedAdditions.push(emulatedRule);
-                        partitioned = true;
-                    }
-                }
-                if (partitioned) nativeOptions = {...options, addRules: nativeAddRules};
-            }
             return declarativeNetRequestSettle(args, (async () => {
+                const options = args[0];
+                const removeRuleIds = Array.isArray(options?.removeRuleIds)
+                    ? options.removeRuleIds.filter(Number.isInteger)
+                    : [];
+                const addRules = Array.isArray(options?.addRules) ? options.addRules : [];
+                const emulatedAdditions = [];
+                let nativeOptions = options;
+                if (addRules.length > 0) {
+                    const nativeAddRules = [];
+                    let partitioned = false;
+                    for (const rule of addRules) {
+                        const {nativeRule, emulatedRule} = declarativeNetRequestPartition(rule);
+                        if (nativeRule !== undefined) nativeAddRules.push(nativeRule);
+                        if (emulatedRule !== undefined) {
+                            emulatedAdditions.push(emulatedRule);
+                            partitioned = true;
+                        }
+                    }
+                    if (partitioned) nativeOptions = {...options, addRules: nativeAddRules};
+                }
                 // WebKit answers first. If it refuses for a reason Crest did
                 // not cause, that error reaches the extension unchanged and
                 // Crest records nothing the browser did not accept.
+                const removed = new Set([...removeRuleIds, ...addRules.map(rule => rule.id)]);
                 const result = await Reflect.apply(nativeMethod, owner, [nativeOptions]);
                 const previous = declarativeNetRequestEmulatedRules[ruleset];
-                const removed = new Set(removeRuleIds);
-                for (const rule of emulatedAdditions) removed.add(rule.id);
                 const next = previous
                     .filter((rule) => !removed.has(rule.id))
                     .concat(emulatedAdditions);
@@ -689,7 +745,7 @@ enum BrowserExtensionDeclarativeNetRequestCompatibilityScript {
                 merged.push({
                     id: rule.id,
                     priority: rule.priority,
-                    condition: {...rule.condition},
+                    condition: declarativeNetRequestCondition(rule.condition),
                     action: {
                         type: "modifyHeaders",
                         requestHeaders: rule.requestHeaders.map((entry) => ({...entry}))

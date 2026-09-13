@@ -953,6 +953,10 @@
     "2026-09-12-preserve-space-customization-during-sync": {
       "category": "fixed",
       "message": "Keep Space customization when edits overlap an iCloud sync, and preserve saved crest controls when switching designs"
+    },
+    "2026-09-12-preserve-extension-header-rule-restrictions": {
+      "category": "fixed",
+      "message": "Preserve supported destination restrictions in extension header rules and reject unsupported conditions"
     }
   }
 }

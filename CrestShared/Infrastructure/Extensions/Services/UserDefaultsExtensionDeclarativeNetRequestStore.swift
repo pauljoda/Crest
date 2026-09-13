@@ -17,8 +17,13 @@ final class UserDefaultsBrowserExtensionDeclarativeNetRequestStore:
     func loadDynamicRules(for client: BrowserExtensionServiceClientID)
         -> [BrowserExtensionEmulatedHeaderRule]
     {
+        // The legacy array format may already have lost restrictions. Those
+        // cannot be reconstructed, so only restore rules admitted by the
+        // complete-condition schema. Extensions can re-register their rules.
         guard let data = defaults.data(forKey: key(for: client)),
-            let payloads = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            envelope["conditionSchemaVersion"] as? Int == 2,
+            let payloads = envelope["rules"] as? [[String: Any]]
         else { return [] }
         // A rule that no longer decodes is dropped rather than failing the
         // load: the rest of the ruleset is still what the extension set.
@@ -32,7 +37,7 @@ final class UserDefaultsBrowserExtensionDeclarativeNetRequestStore:
             defaults.removeObject(forKey: key(for: client))
             return
         }
-        let payloads = rules.map(\.payload)
+        let payloads: [String: Any] = ["conditionSchemaVersion": 2, "rules": rules.map(\.payload)]
         guard JSONSerialization.isValidJSONObject(payloads),
             let data = try? JSONSerialization.data(withJSONObject: payloads)
         else { return }
