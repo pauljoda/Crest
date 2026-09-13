@@ -1,7 +1,6 @@
 import Foundation
 import Network
 import UIKit
-import UniformTypeIdentifiers
 import WebKit
 import XCTest
 
@@ -290,11 +289,6 @@ final class MobileBrowserInteropTests: XCTestCase {
         XCTAssertEqual(loadCount, 0)
         XCTAssertEqual(saveCount, 0)
         await Self.removeDataStore(profile.id)
-    }
-
-    func testFileSelectionPolicyAddsFoldersOnlyForDirectoryInputs() {
-        XCTAssertEqual(MobileBrowserFileSelectionPolicy.contentTypes(allowsDirectories: false), [.item])
-        XCTAssertEqual(MobileBrowserFileSelectionPolicy.contentTypes(allowsDirectories: true), [.item, .folder])
     }
 
     func testDisplayableInlineDirectVideoUsesMobilePlaybackDocument() throws {

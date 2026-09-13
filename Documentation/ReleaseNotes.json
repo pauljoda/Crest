@@ -989,6 +989,10 @@
     "mobile-settings-sheet-activation": {
       "category": "fixed",
       "message": "Open Settings as a dismissible sheet on iPhone and iPad while keeping your current page selected"
+    },
+    "mobile-native-upload-sources": {
+      "category": "fixed",
+      "message": "Choose Photos, camera, or Files when uploading to webpages on iPhone and iPad"
     }
   }
 }

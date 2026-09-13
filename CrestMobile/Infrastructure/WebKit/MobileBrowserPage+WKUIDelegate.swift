@@ -125,18 +125,10 @@ extension MobileBrowserPage: WKUIDelegate {
         )
     }
 
-    func webView(
-        _ webView: WKWebView,
-        runOpenPanelWith parameters: WKOpenPanelParameters,
-        initiatedByFrame frame: WKFrameInfo,
-        completionHandler: @escaping @MainActor @Sendable ([URL]?) -> Void
-    ) {
-        MobileBrowserDialogPresenter.presentFileInput(
-            parameters: parameters,
-            request: frame.request,
-            completion: completionHandler
-        )
-    }
+    // Leave runOpenPanelWith unimplemented on iOS. WebKit's native upload flow
+    // offers Photos, camera and Files using the input's accept/capture/multiple
+    // attributes, owns presentation for this web view, and retains upload copies
+    // for the content view's lifetime. A custom delegate replaces that entire flow.
 
     func webView(
         _ webView: WKWebView,

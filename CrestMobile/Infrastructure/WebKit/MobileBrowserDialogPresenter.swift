@@ -55,23 +55,6 @@ enum MobileBrowserDialogPresenter {
         present(alert) { completion(nil) }
     }
 
-    static func presentFileInput(
-        parameters: WKOpenPanelParameters,
-        request: URLRequest,
-        completion: @escaping @MainActor @Sendable ([URL]?) -> Void
-    ) {
-        let contentTypes = MobileBrowserFileSelectionPolicy.contentTypes(
-            allowsDirectories: parameters.allowsDirectories
-        )
-        let picker = MobileBrowserFilePickerController(
-            contentTypes: contentTypes,
-            allowsMultipleSelection: parameters.allowsMultipleSelection,
-            completion: completion
-        )
-        picker.title = "Choose Files for \(sourceLabel(for: request))"
-        present(picker) { completion(nil) }
-    }
-
     static func presentGeolocationPermission(
         origin: BrowserSiteOrigin,
         topLevelURL: URL?,
