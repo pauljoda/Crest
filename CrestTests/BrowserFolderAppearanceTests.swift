@@ -81,21 +81,28 @@ final class BrowserFolderAppearanceTests: XCTestCase {
         let iconOnly = AppStorage(
             wrappedValue: BrowserLookAndFeelDefaults.foldersIconOnly,
             BrowserFolderAppearancePreference.iconOnlyKey, store: defaults)
+        let tintsTitle = AppStorage(
+            wrappedValue: BrowserLookAndFeelDefaults.foldersTintTitle,
+            BrowserFolderAppearancePreference.tintsTitleKey, store: defaults)
         XCTAssertFalse(visible.wrappedValue)
         XCTAssertTrue(counts.wrappedValue)
         XCTAssertTrue(borders.wrappedValue)
         XCTAssertFalse(iconOnly.wrappedValue)
+        XCTAssertFalse(tintsTitle.wrappedValue)
         let session = BrowserSession.preview
         let before = try JSONEncoder().encode(session)
         visible.wrappedValue = true
         counts.wrappedValue = false
         borders.wrappedValue = false
         iconOnly.wrappedValue = true
+        XCTAssertFalse(tintsTitle.wrappedValue)
+        tintsTitle.wrappedValue = true
         let reopened = try XCTUnwrap(UserDefaults(suiteName: suite))
         XCTAssertTrue(reopened.bool(forKey: BrowserFolderAppearancePreference.alwaysVisibleKey))
         XCTAssertFalse(reopened.bool(forKey: BrowserFolderAppearancePreference.showsTabCountsKey))
         XCTAssertFalse(reopened.bool(forKey: BrowserFolderAppearancePreference.showsBordersKey))
         XCTAssertTrue(reopened.bool(forKey: BrowserFolderAppearancePreference.iconOnlyKey))
+        XCTAssertTrue(reopened.bool(forKey: BrowserFolderAppearancePreference.tintsTitleKey))
         XCTAssertEqual(try JSONDecoder().decode(BrowserSession.self, from: before), session)
     }
 

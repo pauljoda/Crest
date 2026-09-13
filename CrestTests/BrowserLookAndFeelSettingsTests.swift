@@ -95,6 +95,7 @@ final class BrowserLookAndFeelSettingsTests: XCTestCase {
         defaults.set(false, forKey: BrowserFolderAppearancePreference.showsTabCountsKey)
         defaults.set(false, forKey: BrowserFolderAppearancePreference.showsBordersKey)
         defaults.set(true, forKey: BrowserFolderAppearancePreference.iconOnlyKey)
+        defaults.set(true, forKey: BrowserFolderAppearancePreference.tintsTitleKey)
 
         BrowserLookAndFeelDefaults.resetAll(
             appearance: store, chrome: defaults, density: defaults, folders: defaults)
@@ -124,5 +125,6 @@ final class BrowserLookAndFeelSettingsTests: XCTestCase {
             defaults.bool(forKey: BrowserFolderAppearancePreference.showsBordersKey),
             BrowserLookAndFeelDefaults.foldersShowBorders)
         XCTAssertFalse(defaults.bool(forKey: BrowserFolderAppearancePreference.iconOnlyKey))
+        XCTAssertFalse(defaults.bool(forKey: BrowserFolderAppearancePreference.tintsTitleKey))
     }
 }

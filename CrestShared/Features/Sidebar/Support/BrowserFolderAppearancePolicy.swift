@@ -2,6 +2,19 @@ import Foundation
 
 enum BrowserFolderAppearancePolicy {
     static let regionInset = BrowserFolderLayout.contentsInset / 2
+    static let frontHighlightOpacity = 0.12
+
+    /// The artwork's white highlight composited over its front face, including
+    /// translucent custom colors. Titles use the same resolved shade.
+    static func frontColor(_ color: BrowserSpaceBrandColor) -> BrowserSpaceBrandColor {
+        let baseAlpha = color.alpha * (1 - frontHighlightOpacity)
+        let alpha = baseAlpha + frontHighlightOpacity
+        return BrowserSpaceBrandColor(
+            red: (color.red * baseAlpha + frontHighlightOpacity) / alpha,
+            green: (color.green * baseAlpha + frontHighlightOpacity) / alpha,
+            blue: (color.blue * baseAlpha + frontHighlightOpacity) / alpha,
+            alpha: alpha)
+    }
 
     static func compositedColor(_ color: BrowserSpaceBrandColor, opacity: Double, background: BrowserSpaceBrandColor)
         -> BrowserSpaceBrandColor

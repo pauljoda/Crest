@@ -14,12 +14,14 @@ struct BrowserFolderAppearanceGroup: View {
     private var showsBorders = BrowserLookAndFeelDefaults.foldersShowBorders
     @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
     private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
+    @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
+    private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
 
     var body: some View {
         CrestSettingsGroup(
             "Folders",
             settings: settings,
-            footnote: "Folder color intensity and text color are part of each Space's appearance."
+            footnote: "Adjust folder color intensity and Space text color in each Space's appearance."
         ) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .folders)
@@ -30,6 +32,11 @@ struct BrowserFolderAppearanceGroup: View {
                     .labelsHidden()
                     .accessibilityIdentifier("folder-icon-only")
                     .help("Show a static custom icon or emoji instead of folder artwork.")
+            }
+            CrestSettingRow("Tint Folder Title", setting: titles.resettable("Tint Folder Title")) {
+                Toggle("Tint Folder Title", isOn: titles.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("folder-tint-title")
             }
             CrestSettingRow(
                 "Always show folder highlights", setting: highlights.resettable("Always show folder highlights")
@@ -66,6 +73,7 @@ struct BrowserFolderAppearanceGroup: View {
     private var settings: [CrestResettableSetting] {
         [
             icons.resettable("Icon Only Folders"),
+            titles.resettable("Tint Folder Title"),
             highlights.resettable("Always show folder highlights"),
             counts.resettable("Show folder tab counts"),
             borders.resettable("Show folder color borders"),
@@ -76,4 +84,7 @@ struct BrowserFolderAppearanceGroup: View {
         CrestSettingValue($iconOnly, default: BrowserLookAndFeelDefaults.foldersIconOnly)
     }
 
+    private var titles: CrestSettingValue<Bool> {
+        CrestSettingValue($tintsTitle, default: BrowserLookAndFeelDefaults.foldersTintTitle)
+    }
 }

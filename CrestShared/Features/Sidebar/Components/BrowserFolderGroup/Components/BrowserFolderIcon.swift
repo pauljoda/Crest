@@ -140,7 +140,7 @@ private struct BrowserFolderFaces: View {
                             cornerRadius: max(0, radius - edgeInset))
                         context.fill(path, with: .color(faceColor))
                         var tint = context
-                        tint.opacity = 0.12
+                        tint.opacity = BrowserFolderAppearancePolicy.frontHighlightOpacity
                         tint.fill(path, with: .color(.white))
                         if let glyph {
                             context.draw(

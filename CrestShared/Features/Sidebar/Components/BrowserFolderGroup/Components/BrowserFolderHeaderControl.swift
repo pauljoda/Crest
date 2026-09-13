@@ -16,6 +16,8 @@ struct BrowserFolderHeaderControl: View {
     private var showsTabCounts = true
     @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
     private var alwaysVisible = false
+    @AppStorage(BrowserFolderAppearancePreference.tintsTitleKey, store: BrowserFolderAppearancePreference.defaults)
+    private var tintsTitle = BrowserLookAndFeelDefaults.foldersTintTitle
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var textScale = 1.0
     @ScaledMetric(relativeTo: .body) private var baseTextSize = BrowserSidebarDensityPolicy.bodySize
@@ -63,7 +65,9 @@ struct BrowserFolderHeaderControl: View {
                         )
 
                         Text(folder.title.isEmpty ? String(localized: "Folder") : folder.title)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(
+                                tintsTitle ? BrowserFolderAppearancePolicy.frontColor(folder.color).color : .primary
+                            )
                             .fontWeight(containsCurrentTab ? .semibold : .regular)
                             .lineLimit(1)
                             .modifier(BrowserFolderTitlePressFeedback())
