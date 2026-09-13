@@ -981,6 +981,10 @@
     "ipad-saved-tab-icon-picker-placement": {
       "category": "fixed",
       "message": "Keep the saved tab icon picker visible on either side of the iPad screen without opening the tab"
+    },
+    "2026-09-13-right-sidebar-pinned-icon-picker": {
+      "category": "fixed",
+      "message": "Keep pinned-tab icon choices visible when the iPad sidebar is on the right"
     }
   }
 }

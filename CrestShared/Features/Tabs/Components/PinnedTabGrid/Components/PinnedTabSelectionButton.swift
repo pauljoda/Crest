@@ -21,7 +21,7 @@ struct PinnedTabSelectionButton: View {
             TabFaviconView(tab: tab, profileID: profileID, size: 19 * BrowserSidebarDensityPolicy.scale(iconScale))
                 .font(.system(size: 17 * BrowserSidebarDensityPolicy.scale(iconScale), weight: .medium))
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
-                .browserIconCustomizationPopover(iconCustomization, arrowEdge: .leading)
+                .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
                 .overlay(alignment: .bottomTrailing) {
                     BrowserTabSidePanelBadge(
                         tabID: tab.id, spaceID: spaceID,
@@ -43,5 +43,15 @@ struct PinnedTabSelectionButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+    }
+
+    private var iconPickerArrowEdge: Edge? {
+        #if os(macOS)
+            .leading
+        #else
+            // Let the native popover fit around the pin on either sidebar side.
+            // A forced leading arrow clips the picker beside a right-docked sidebar.
+            nil
+        #endif
     }
 }
