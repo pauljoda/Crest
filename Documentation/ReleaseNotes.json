@@ -965,6 +965,10 @@
     "website-camera-and-notification-permissions": {
       "category": "fixed",
       "message": "Request camera and notification access from compact site controls, remember choices per Space, and stop camera capture when access is revoked"
+    },
+    "iphone-floating-sidebar-search-editing": {
+      "category": "fixed",
+      "message": "Keep new-tab search visible on iPhone and prevent the floating sidebar from closing while you edit an address"
     }
   }
 }

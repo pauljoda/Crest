@@ -19,7 +19,7 @@ struct MobileBrowserSidebarContentConfiguration {
     let showsPageBackdrop: Bool
     let reservesBottomChromeInset: Bool
     let sidebarToggleUndocks: Bool
-    let activateAddress: () -> Void
+    let activateAddress: (() -> Void)?
     let selectTab: (TabID) -> Void
     let submitAddress: () -> Void
     let openNewTab: () -> Void

@@ -42,7 +42,7 @@ struct MobileBrowserSidebarSurface: View {
     let tabPromotionNamespace: Namespace.ID
     @Binding var address: String
     @Binding var isAddressEditing: Bool
-    let activateAddress: () -> Void
+    let activateAddress: (() -> Void)?
     let selectTab: (TabID) -> Void
     let submitAddress: () -> Void
     let openURL: (URL) -> Void

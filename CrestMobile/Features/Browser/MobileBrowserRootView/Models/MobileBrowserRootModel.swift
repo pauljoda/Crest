@@ -204,6 +204,9 @@ extension MobileBrowserRootModel {
         pages.select(session: browser.session)
         address = ""
         navigation.selectTab()
+        if navigation.regularSidebarPresentation == .floating {
+            navigation.hideRegularSidebar()
+        }
     }
 
     func showTabViewer() {

@@ -547,6 +547,57 @@ final class MobileBrowserNavigationTests: XCTestCase {
         XCTAssertTrue(navigation.compactShowsPage)
     }
 
+    func testNewTabExposesSearchWithoutChangingThePhoneSidebarMode() throws {
+        for floating in [false, true] {
+            let space = makeSpace(index: 334)
+            let browser = BrowserStore(
+                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                persistence: InMemoryBrowserSessionPersistence()
+            )
+            let pages = MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true)
+            let model = makeModel(browser: browser, pages: pages)
+            model.navigation.adapt(to: .compact)
+            if floating {
+                model.navigation.selectTab()
+                model.navigation.showRegularSidebar()
+            }
+            model.address = "unfinished address"
+
+            model.beginCompactNewTab()
+
+            XCTAssertEqual(browser.session.selectedSpaceID, space.id)
+            XCTAssertTrue(try XCTUnwrap(browser.selectedTab).isStartPage)
+            XCTAssertEqual(model.address, "")
+            XCTAssertTrue(model.navigation.compactShowsPage)
+            XCTAssertEqual(
+                model.navigation.regularSidebarPresentation,
+                floating ? .collapsed : .docked
+            )
+        }
+    }
+
+    func testSidebarEditingPauseAllowsExplicitDismissalAndResumesTheTimer() async throws {
+        let navigation = MobileBrowserNavigationState(
+            transientSidebarDismissalDelay: .milliseconds(60)
+        )
+        navigation.adapt(to: .compact)
+        navigation.selectTab()
+        navigation.showRegularSidebar()
+        navigation.setTransientSidebarDismissalPaused(true)
+        navigation.handleRegularSidebarInteraction()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(navigation.regularSidebarPresentation, .floating)
+
+        navigation.handleRegularPageInteraction()
+        XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
+
+        navigation.showRegularSidebar()
+        navigation.setTransientSidebarDismissalPaused(true)
+        navigation.setTransientSidebarDismissalPaused(false)
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(navigation.regularSidebarPresentation, .collapsed)
+    }
+
     func testLegacyMobileBorderPreferenceMigratesOnceWithoutOverwritingNewChoice() {
         let suite = "app270-migration-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

@@ -85,6 +85,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     model.selectedPage?.completedNavigationCount ?? 0,
                 hasSelectedSpace: browser.selectedSpace != nil,
                 showSidebar: showRegularSidebar,
+                handlePageInteraction: navigation.handleRegularPageInteraction,
                 commitSidebarWidth: commitRegularSidebarWidth,
                 dockedSidebar: MobileBrowserSidebarSurface(
                     browser: browser,
@@ -136,7 +137,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     tabPromotionNamespace: tabPromotionNamespace,
                     address: model.addressBinding,
                     isAddressEditing: $isAddressEditing,
-                    activateAddress: openLocation,
+                    activateAddress: nil,
                     selectTab: selectTab,
                     submitAddress: submitAddress,
                     openURL: openURL,
@@ -374,9 +375,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 storedSidebarWidth: $storedRegularSidebarWidth
             )
         )
-        .onChange(of: browser.sidebarReorderState.isDragging, initial: true) {
-            _, isDragging in
-            navigation.setTransientSidebarDismissalPaused(isDragging)
+        .onChange(
+            of: isAddressEditing || browser.sidebarReorderState.isDragging,
+            initial: true
+        ) { _, keepsSidebarVisible in
+            navigation.setTransientSidebarDismissalPaused(keepsSidebarVisible)
         }
         .onGeometryChange(for: CGSize.self) { proxy in
             proxy.size

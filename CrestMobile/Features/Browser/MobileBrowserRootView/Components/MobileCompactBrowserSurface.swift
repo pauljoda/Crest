@@ -21,6 +21,7 @@ struct MobileCompactBrowserSurface<
     let completedNavigationCount: Int
     let hasSelectedSpace: Bool
     let showSidebar: () -> Void
+    let handlePageInteraction: () -> Void
     let commitSidebarWidth: (CGFloat) -> Void
     let dockedSidebar: DockedSidebar
     let floatingSidebar: FloatingSidebar
@@ -76,7 +77,7 @@ struct MobileCompactBrowserSurface<
             hasActivePage: hasActivePage,
             completedNavigationCount: completedNavigationCount,
             hasSelectedSpace: hasSelectedSpace,
-            handleWebContentInteraction: {},
+            handleWebContentInteraction: handlePageInteraction,
             content: page
         )
     }
