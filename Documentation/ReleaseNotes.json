@@ -957,6 +957,10 @@
     "2026-09-12-preserve-extension-header-rule-restrictions": {
       "category": "fixed",
       "message": "Preserve supported destination restrictions in extension header rules and reject unsupported conditions"
+    },
+    "extension-permission-prompts-and-install-consent": {
+      "category": "fixed",
+      "message": "Prevent repeated extension permission dialogs, remember access choices, and explain permission consent when adding extensions"
     }
   }
 }

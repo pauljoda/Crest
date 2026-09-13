@@ -38,6 +38,8 @@ struct BrowserMozillaAddonsReviewContent: View {
                 .foregroundStyle(.orange)
             }
 
+            BrowserExtensionInstallConsentText()
+
             DisclosureGroup(isExpanded: $isAccessExpanded) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: CrestSpacing.medium) {

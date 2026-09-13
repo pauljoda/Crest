@@ -414,10 +414,13 @@ final class BrowserExtensionPersistenceController {
             displayName: context.webExtension.displayName ?? extensionID,
             version: context.webExtension.displayVersion
                 ?? context.webExtension.version,
-            requestedPermissions: requestedPermissions,
-            requestedHosts: context.webExtension.allRequestedMatchPatterns
-                .map(\.string)
-                .sorted(),
+            requestedPermissions: Set(requestedPermissions)
+                .union(permissionSnapshot.grantedPermissions.keys)
+                .union(permissionSnapshot.deniedPermissions.keys)
+                .subtracting(excludedPermissions).sorted(),
+            requestedHosts: Set(context.webExtension.allRequestedMatchPatterns.map(\.string))
+                .union(permissionSnapshot.grantedHosts.keys)
+                .union(permissionSnapshot.deniedHosts.keys).sorted(),
             unsupportedAPIs: context.unsupportedAPIs
                 .subtracting(platformUnsupportedAPIs)
                 .sorted(),

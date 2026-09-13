@@ -60,6 +60,29 @@ Do not publish a blanket claim that all Chrome or all Firefox extensions work.
   Extensions settings, and replace the green success treatment with **added
   with limited compatibility** after installation.
 
+## Permission consent
+
+Adding a reviewed store, local package, or installed-app extension grants the
+required browser permissions and website access listed in its review for that
+Space. Optional access still requires a later request. System authorization,
+`activeTab` user gestures, and native-companion eligibility keep their own gates.
+Unpacked developer folders have no install review and receive no new automatic
+website grants.
+
+Replacing or updating an installation preserves its saved decisions. It does not
+approve newly introduced permissions or restore access the user removed. Users
+can change access in Extensions settings, including optional access they have
+allowed or blocked.
+
+Runtime requests for the same extension, tab, and access share one prompt.
+Distinct concurrent requests wait in a bounded queue. Excess callbacks and
+expired requests fail without changing saved access. Leaving the requesting
+Space, closing or navigating its tab, or unloading its context cancels a pending
+prompt. Allow and Don't Allow persist for the requesting extension in its Space.
+A saved block is changed in Extensions settings before access can be requested
+again. Requests outside the extension's declared access fail without a prompt.
+Website prompts show origins rather than page paths or query strings.
+
 ## Updates
 
 Crest records where every installation came from, and that recorded source is

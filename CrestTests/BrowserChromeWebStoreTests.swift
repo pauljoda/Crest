@@ -1978,6 +1978,8 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             """
             let nativeContainsCalls = 0;
             let nativeRemoveCalls = 0;
+            let requestGrant = false;
+            let nativeRequestCalls = 0;
             Object.defineProperty(globalThis, "chrome", {
                 configurable: true,
                 value: {
@@ -1985,13 +1987,23 @@ final class BrowserChromeWebStoreTests: XCTestCase {
                         getManifest() { return { manifest_version: 3 }; }
                     },
                     permissions: {
-                        contains() {
+                        contains(request) {
                             nativeContainsCalls += 1;
+                            if (request?.origins?.includes("https://request.crest.test/*")) {
+                                return Promise.resolve(requestGrant);
+                            }
                             return new Promise(() => {});
                         },
                         remove() {
                             nativeRemoveCalls += 1;
                             return new Promise(() => {});
+                        },
+                        request(request, callback) {
+                            nativeRequestCalls += 1;
+                            return new Promise(resolve => setTimeout(() => {
+                                callback(true);
+                                resolve(true);
+                            }, 300));
                         }
                     }
                 }
@@ -2020,7 +2032,20 @@ final class BrowserChromeWebStoreTests: XCTestCase {
             const requiredRemoved = await browser.permissions.remove({
                 origins: ["*://api.example.test/*"]
             });
+            const request = {origins: ["https://request.crest.test/*"]};
+            const blockedRequest = await browser.permissions.request(request);
+            let callbackRequestCount = 0;
+            const blockedCallbackRequest = await new Promise(resolve => {
+                browser.permissions.request(request, value => {
+                    callbackRequestCount += 1;
+                    resolve(value);
+                });
+            });
+            requestGrant = true;
+            const grantedRequest = await browser.permissions.request(request);
             return JSON.stringify({
+                blockedRequest, blockedCallbackRequest, grantedRequest,
+                callbackRequestCount, nativeRequestCalls,
                 callbackContains,
                 optionalContains,
                 optionalRemoved,
@@ -2049,7 +2074,13 @@ final class BrowserChromeWebStoreTests: XCTestCase {
         // Removing `*://api.example.test/*` asks nothing: the manifest lists
         // it under `host_permissions`, so it is required access and is refused
         // from the manifest alone. Neither removal reaches native `remove`.
-        XCTAssertEqual(result["nativeContainsCalls"] as? Int, 3)
+        XCTAssertEqual(result["blockedRequest"] as? Bool, false)
+        XCTAssertEqual(result["blockedCallbackRequest"] as? Bool, false)
+        XCTAssertEqual(result["grantedRequest"] as? Bool, true)
+        XCTAssertEqual(result["callbackRequestCount"] as? Int, 1)
+        XCTAssertEqual(result["nativeRequestCalls"] as? Int, 3)
+        // Each claimed native approval also checks the actual native grant.
+        XCTAssertEqual(result["nativeContainsCalls"] as? Int, 6)
         XCTAssertEqual(result["nativeRemoveCalls"] as? Int, 0)
     }
 

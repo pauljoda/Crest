@@ -393,83 +393,163 @@ extension BrowserExtensionTabWindowCoordinator:
     func webExtensionController(
         _ controller: WKWebExtensionController,
         promptForPermissions permissions: Set<WKWebExtension.Permission>,
-        in tab: (any WKWebExtensionTab)?,
-        for context: WKWebExtensionContext,
-        completionHandler:
-            @escaping (
-                Set<WKWebExtension.Permission>, Date?
-            ) -> Void
+        in tab: (any WKWebExtensionTab)?, for context: WKWebExtensionContext,
+        completionHandler: @escaping (Set<WKWebExtension.Permission>, Date?) -> Void
     ) {
-        guard
-            verifiedEntry(
-                controller: controller,
-                context: context
-            ) != nil
-        else {
-            completionHandler([], nil)
-            return
-        }
-        presentPermissionPrompt(
-            extensionName: context.webExtension.displayName ?? "Extension",
-            accessKind: "permissions",
-            values: permissions.map(\.rawValue).sorted()
-        ) { allowed in
-            completionHandler(allowed ? permissions : [], nil)
-        }
+        let declared = context.webExtension.requestedPermissions.union(context.webExtension.optionalPermissions)
+        requestAccess(
+            permissions, declared: { declared.contains($0) },
+            status: { context.permissionStatus(for: $0, in: tab) },
+            label: { "permission:" + $0.rawValue }, display: { $0.rawValue },
+            save: { context.setPermissionStatus($1, for: $0) },
+            controller: controller, tab: tab, context: context, completion: completionHandler)
     }
 
     func webExtensionController(
         _ controller: WKWebExtensionController,
         promptForPermissionToAccess urls: Set<URL>,
-        in tab: (any WKWebExtensionTab)?,
-        for context: WKWebExtensionContext,
+        in tab: (any WKWebExtensionTab)?, for context: WKWebExtensionContext,
         completionHandler: @escaping (Set<URL>, Date?) -> Void
     ) {
-        guard
-            verifiedEntry(
-                controller: controller,
-                context: context
-            ) != nil
-        else {
-            completionHandler([], nil)
-            return
-        }
-        presentPermissionPrompt(
-            extensionName: context.webExtension.displayName ?? "Extension",
-            accessKind: "websites",
-            values: urls.map(\.absoluteString).sorted()
-        ) { allowed in
-            completionHandler(allowed ? urls : [], nil)
-        }
+        let declared = context.webExtension.allRequestedMatchPatterns.union(
+            context.webExtension.optionalPermissionMatchPatterns)
+        requestAccess(
+            urls, declared: { url in declared.contains { $0.matches(url) } },
+            status: { context.permissionStatus(for: $0, in: tab) },
+            label: { "url:" + $0.absoluteString },
+            display: { url in
+                // Show the origin, never a conversation path, query, or fragment.
+                var origin = URLComponents()
+                origin.scheme = url.scheme
+                origin.host = url.host
+                origin.port = url.port
+                return origin.string ?? "Website"
+            }, save: { context.setPermissionStatus($1, for: $0) },
+            controller: controller, tab: tab, context: context, completion: completionHandler)
     }
 
     func webExtensionController(
         _ controller: WKWebExtensionController,
-        promptForPermissionMatchPatterns patterns:
-            Set<WKWebExtension.MatchPattern>,
-        in tab: (any WKWebExtensionTab)?,
-        for context: WKWebExtensionContext,
-        completionHandler:
-            @escaping (
-                Set<WKWebExtension.MatchPattern>, Date?
-            ) -> Void
+        promptForPermissionMatchPatterns patterns: Set<WKWebExtension.MatchPattern>,
+        in tab: (any WKWebExtensionTab)?, for context: WKWebExtensionContext,
+        completionHandler: @escaping (Set<WKWebExtension.MatchPattern>, Date?) -> Void
     ) {
-        guard
-            verifiedEntry(
-                controller: controller,
-                context: context
-            ) != nil
+        let declared = context.webExtension.allRequestedMatchPatterns.union(
+            context.webExtension.optionalPermissionMatchPatterns)
+        requestAccess(
+            patterns, declared: { pattern in declared.contains { $0.matches(pattern) } },
+            status: { context.permissionStatus(for: $0, in: tab) },
+            label: { "pattern:" + $0.string }, display: { $0.string },
+            save: { context.setPermissionStatus($1, for: $0) },
+            controller: controller, tab: tab, context: context, completion: completionHandler)
+    }
+
+    private func requestAccess<Value: Hashable>(
+        _ values: Set<Value>, declared: (Value) -> Bool,
+        status: @escaping (Value) -> WKWebExtensionContext.PermissionStatus,
+        label: (Value) -> String, display: (Value) -> String,
+        save: @escaping (Value, WKWebExtensionContext.PermissionStatus) -> Void,
+        controller: WKWebExtensionController, tab: (any WKWebExtensionTab)?, context: WKWebExtensionContext,
+        completion: @escaping (Set<Value>, Date?) -> Void
+    ) {
+        guard let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: context),
+            validates(tab, for: spaceID)
         else {
-            completionHandler([], nil)
+            completion([], nil)
             return
         }
-        presentPermissionPrompt(
-            extensionName: context.webExtension.displayName ?? "Extension",
-            accessKind: "website patterns",
-            values: patterns.map(\.string).sorted()
-        ) { allowed in
-            completionHandler(allowed ? patterns : [], nil)
+        if let adapter = tab as? BrowserExtensionTabAdapter {
+            guard self.tab(for: adapter.tabID, in: spaceID) === adapter else {
+                completion([], nil)
+                return
+            }
         }
+        let eligible = values.filter { declared($0) && !Self.isDenied(status($0)) }
+        let granted = eligible.filter { Self.isGranted(status($0)) }
+        let requested = eligible.subtracting(granted)
+        guard !requested.isEmpty else {
+            completion(granted, nil)
+            return
+        }
+        let adapter = tab as? BrowserExtensionTabAdapter
+        let initialURL = adapter.flatMap { state(for: $0.tabID, in: spaceID, context: context)?.url }
+        let initialStatuses = Dictionary(uniqueKeysWithValues: requested.map { ($0, status($0)) })
+        let selectedID = currentState?.space(spaceID)?.selectedTabID
+        let window =
+            adapter?.webView(for: context)?.window
+            ?? selectedID.flatMap { pageProvider?.extensionWebView(for: $0, in: spaceID)?.window }
+            ?? currentState?.space(spaceID)?.tabs.lazy.compactMap {
+                self.pageProvider?.extensionWebView(for: $0.id, in: spaceID)?.window
+            }.first
+        guard let window, window.isVisible, currentState?.selectedSpaceID == spaceID else {
+            completion(granted, nil)
+            return
+        }
+        let key = BrowserExtensionPermissionPromptController.Key(
+            context: ObjectIdentifier(context), tab: adapter?.tabID, access: requested.map(label).sorted())
+        let displayedAccess = Set(requested.map(display)).sorted().joined(separator: "\n")
+        permissionPrompts.request(
+            key: key,
+            isValid: { [weak self, weak context, weak window] in
+                guard let self, let context, let window, window.isVisible,
+                    self.owns(context: context, spaceID: spaceID),
+                    self.currentState?.selectedSpaceID == spaceID,
+                    requested.allSatisfy({ status($0) == initialStatuses[$0] })
+                else { return false }
+                guard let adapter else { return true }
+                guard let current = self.state(for: adapter.tabID, in: spaceID, context: context),
+                    current.url == initialURL
+                else { return false }
+                return self.tab(for: adapter.tabID, in: spaceID) === adapter
+            },
+            completion: { decision in
+                switch decision {
+                case .allow:
+                    let allowed = requested.filter { !Self.isDenied(status($0)) }
+                    // WebKit commits grants after combining permission and host
+                    // delegates. Saving here would approve half of a rejected
+                    // permissions.request() operation.
+                    completion(granted.union(allowed), nil)
+                case .deny:
+                    for value in requested { save(value, .deniedExplicitly) }
+                    completion(granted, nil)
+                case .cancel:
+                    completion(granted.filter { Self.isGranted(status($0)) }, nil)
+                }
+            },
+            present: { [weak self, weak context, weak window] finish in
+                guard let self, let context, let window, window.attachedSheet == nil else {
+                    finish(.cancel)
+                    return {}
+                }
+                let alert = NSAlert()
+                alert.alertStyle = .informational
+                alert.messageText = "Allow \(context.webExtension.displayName ?? "Extension")?"
+                let spaceName = self.browser?.session.space(id: spaceID)?.name ?? "this Space"
+                alert.informativeText =
+                    "This extension is requesting access in \(spaceName):\n\n"
+                    + displayedAccess
+                    + "\n\nYour choice is saved for this extension in this Space. Change it later in Extensions settings."
+                alert.addButton(withTitle: "Allow")
+                alert.addButton(withTitle: "Don’t Allow").keyEquivalent = "\u{1b}"
+                alert.beginSheetModal(for: window) { response in
+                    finish(response == .alertFirstButtonReturn ? .allow : .deny)
+                }
+                return {
+                    if alert.window.sheetParent != nil {
+                        window.endSheet(alert.window, returnCode: .abort)
+                    }
+                    alert.window.orderOut(nil)
+                }
+            })
+    }
+
+    private static func isDenied(_ status: WKWebExtensionContext.PermissionStatus) -> Bool {
+        status == .deniedExplicitly || status == .deniedImplicitly
+    }
+
+    private static func isGranted(_ status: WKWebExtensionContext.PermissionStatus) -> Bool {
+        status == .grantedExplicitly || status == .grantedImplicitly
     }
 
     func webExtensionController(
@@ -489,24 +569,4 @@ extension BrowserExtensionTabWindowCoordinator:
         presentOptionsPage(for: context, completionHandler: completionHandler)
     }
 
-    private func presentPermissionPrompt(
-        extensionName: String,
-        accessKind: String,
-        values: [String],
-        completion: @escaping (Bool) -> Void
-    ) {
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = "Allow \(extensionName)?"
-        alert.informativeText = "This extension is requesting \(accessKind):\n\n\(values.joined(separator: "\n"))"
-        alert.addButton(withTitle: "Allow")
-        alert.addButton(withTitle: "Don’t Allow")
-        if let window = NSApp.keyWindow {
-            alert.beginSheetModal(for: window) { response in
-                completion(response == .alertFirstButtonReturn)
-            }
-        } else {
-            completion(alert.runModal() == .alertFirstButtonReturn)
-        }
-    }
 }

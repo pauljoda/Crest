@@ -3886,7 +3886,8 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                     nativePermissions,
                     nativeMethod,
                     request,
-                    failure
+                    failure,
+                    timeoutMilliseconds = 250
                 ) => new Promise((resolve) => {
                     let settled = false;
                     const settle = (value) => {
@@ -3911,7 +3912,7 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                             }
                             settle(false);
                         },
-                        250
+                        timeoutMilliseconds
                     );
                     if (typeof nativeMethod !== "function") {
                         settle(false);
@@ -3982,10 +3983,12 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                     let nativeContains;
                     let nativeGetAll;
                     let nativeRemove;
+                    let nativeRequest;
                     try {
                         nativeContains = nativePermissions.contains;
                         nativeGetAll = nativePermissions.getAll;
                         nativeRemove = nativePermissions.remove;
+                        nativeRequest = nativePermissions.request;
                     } catch {}
                     if (
                         typeof nativeContains !== "function"
@@ -4130,6 +4133,26 @@ struct BrowserWebExtensionCompatibilityPackagePreparer: @unchecked Sendable {
                         ["contains", contains],
                         ["remove", remove]
                     ]);
+                    if (typeof nativeRequest === "function") {
+                        overlays.set("request", (...args) => {
+                            const failure = {};
+                            const request = args[0];
+                            // Invoke synchronously to preserve the native user gesture.
+                            // A permission prompt can outlive a local-state query.
+                            const operation = nativePermissionBoolean(
+                                nativePermissions, nativeRequest, request, failure, 300000
+                            ).then(accepted => {
+                                if (!accepted) return false;
+                                // WebKit can report success after filtering blocked
+                                // access out of the request. Confirm actual native
+                                // grants, without consulting manifest-derived access.
+                                return nativePermissionBoolean(
+                                    nativePermissions, nativeContains, request, failure
+                                );
+                            });
+                            return permissionCallbackOrPromise(args, operation, failure);
+                        });
+                    }
                     if (typeof nativeGetAll === "function") {
                         overlays.set("getAll", getAll);
                     }

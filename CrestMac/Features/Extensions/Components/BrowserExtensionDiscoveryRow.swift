@@ -61,6 +61,8 @@ struct BrowserExtensionDiscoveryRow: View {
                 .disabled(isDisabled)
             }
 
+            BrowserExtensionInstallConsentText()
+
             DisclosureGroup("Review Access and Compatibility") {
                 VStack(alignment: .leading, spacing: CrestSpacing.medium) {
                     sourceReview

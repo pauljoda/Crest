@@ -615,6 +615,7 @@ final class BrowserExtensionRuntimeContextController {
         do {
             try controller(for: space).load(context)
         } catch {
+            tabWindowCoordinator.permissionPrompts.cancel(context: ObjectIdentifier(context))
             permissions.releaseContext(context)
             tabWindowCoordinator.unregisterNativeMessagingIdentity(
                 for: context,
@@ -800,6 +801,7 @@ final class BrowserExtensionRuntimeContextController {
             for: context,
             in: spaceID
         )
+        tabWindowCoordinator.permissionPrompts.cancel(context: ObjectIdentifier(context))
         permissions.releaseContext(context)
         contextObserver.stopObserving(context)
         if contextsBySpace[spaceID]?.isEmpty == true {

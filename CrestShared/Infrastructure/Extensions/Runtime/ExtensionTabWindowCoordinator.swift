@@ -10,6 +10,7 @@ struct BrowserExtensionControllerEntry {
 final class BrowserExtensionTabWindowCoordinator: NSObject {
 
     private let reportWindowFocus: (WKWebExtensionController, BrowserExtensionWindowAdapter?) -> Void
+    let permissionPrompts = BrowserExtensionPermissionPromptController()
     let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
 
     var controllers: [SpaceID: BrowserExtensionControllerEntry] = [:]
@@ -204,6 +205,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
 
         lastState = newState
         reconcileWindowFocus(selectedSpaceID: newState.selectedSpaceID)
+        permissionPrompts.reconcile()
     }
 
     /// Keeps WebKit's extension-window focus aligned with the real host window.
