@@ -22,7 +22,7 @@ actor BrowserFaviconFallbackLoader {
     }
 
     func data(for pageURL: URL, profileID: UUID) async -> Data? {
-        guard let iconURL = Self.defaultIconURL(for: pageURL) else { return nil }
+        guard !Task.isCancelled, let iconURL = Self.defaultIconURL(for: pageURL) else { return nil }
         let key = BrowserFaviconFallbackCacheKey(
             profileID: profileID,
             iconURL: iconURL

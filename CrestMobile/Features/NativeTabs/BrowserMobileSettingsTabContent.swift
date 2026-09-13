@@ -1,12 +1,31 @@
+import Observation
 import SwiftUI
 
 struct BrowserSettingsTabContent {
-    let present: @MainActor (BrowserTabRuntimeAssignment) -> Void
+    let makeView: @MainActor (BrowserNativeTabRuntime) -> MobileBrowserSettingsView
+}
 
-    func makeView(_ runtime: BrowserNativeTabRuntime) -> some View {
-        Button("Open Settings", systemImage: "gearshape") {
-            present(runtime.assignment)
+@Observable @MainActor
+final class MobileBrowserSettingsState {
+    var selection = BrowserSettingsDestination.general {
+        didSet { showsDestinationList = false }
+    }
+    private var showsDestinationList = true
+    var searchText = ""
+    var path: [BrowserSettingsDestination] = [] {
+        didSet {
+            if let destination = path.last {
+                selection = destination
+            } else {
+                showsDestinationList = true
+            }
         }
-        .buttonStyle(.borderedProminent)
+    }
+    func prepareForEmbeddedPresentation() {
+        showsDestinationList = false
+    }
+
+    func prepareForSheetPresentation() {
+        path = showsDestinationList ? [] : [selection]
     }
 }

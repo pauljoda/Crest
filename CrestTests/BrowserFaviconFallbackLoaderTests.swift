@@ -281,15 +281,20 @@ final class BrowserFaviconFallbackLoaderTests: XCTestCase {
         XCTAssertEqual(requestCount, 2)
     }
 
-    /// A download that starts and finishes only when the test says so.
-    ///
-    /// Both directions are signalled rather than polled. Waiting for a start by
-    /// yielding a fixed number of times made this test depend on how much CPU the
-    /// machine had spare: under a concurrent build the loader's detached, utility
-    /// priority download had not begun within the budget and the test failed on a
-    /// machine where nothing was wrong. A continuation resumed by the download
-    /// itself has no budget to run out of — if the download never starts, the test
-    /// hangs and XCTest reports that instead of blaming the wrong thing.
+    func testCancelledCallerCannotStartAFallbackRequest() async {
+        let loader = BrowserFaviconFallbackLoader { _ in
+            XCTFail("A cancelled caller must not start a network request")
+            return nil
+        }
+        let request = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await loader.data(for: URL(string: "https://cancelled.crest.test/")!, profileID: UUID())
+        }
+        let data = await request.value
+        XCTAssertNil(data)
+    }
+
+    /// Signals request starts and lets each test release completions explicitly.
     private actor ControlledDownloader {
         private var continuations: [CheckedContinuation<Data?, Never>] = []
         private var startWaiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []

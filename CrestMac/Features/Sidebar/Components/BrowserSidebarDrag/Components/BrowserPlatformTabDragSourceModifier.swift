@@ -15,12 +15,7 @@ struct BrowserPlatformTabDragSourceModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let reorder {
-            // Reordering happens in our own view tree: the row's slot opens, its
-            // neighbours step aside, and the preview that chases the pointer —
-            // morphing toward the tile or the card the drop would make of it — is
-            // drawn above the window. See `BrowserSidebarReorderState` for why
-            // AppKit's dragging session is not used, and `floatingLift` there for
-            // why the preview does not live in this view tree.
+            // The shared session moves rows; the window hosts the pointer preview.
             content
                 .browserSidebarReorderSource(
                     item: .tab(item),

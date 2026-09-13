@@ -46,14 +46,6 @@ struct MobileBrowserSidebarPresentation<Content: View>: View {
                     spaceAccess: configuration.spaceAccess
                 )
             }
-            .sheet(isPresented: configuration.showsSettings) {
-                MobileBrowserSettingsView(
-                    browser: configuration.browser,
-                    pages: configuration.pages,
-                    spaceAccess: configuration.spaceAccess,
-                    dataDeleter: configuration.dataDeleter
-                )
-            }
             .onChange(of: configuration.selectedSpaceAssignment) {
                 _,
                 assignment in

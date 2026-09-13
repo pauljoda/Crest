@@ -133,7 +133,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
         document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
     )
-    @ObservationIgnored var faviconGeneration = 0
+    @ObservationIgnored lazy var faviconSession = BrowserFaviconSession(
+        document: BrowserWebKitFaviconDocument(webView: webView, profileID: profileID),
+        policy: .delayedDocumentIcons,
+        receive: { [weak self] in self?.faviconData = $0 }
+    )
     @ObservationIgnored var sharingPicker: NSSharingServicePicker?
     @ObservationIgnored private var printOperation: NSPrintOperation?
     @ObservationIgnored private var credentialMessageProxy: BrowserCredentialScriptMessageProxy?
@@ -626,8 +630,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             && !tab.hasCurrentAutomaticFavicon
             && webView.url != nil
             && !webView.isLoading
-        if faviconData != tab.displayFaviconData {
-            faviconGeneration += 1
+        if faviconData != tab.displayFaviconData
+            || navigationContext?.iconMode != tab.iconMode
+            || navigationContext?.tabID != tab.id
+        {
+            faviconSession.invalidate()
             faviconData = tab.displayFaviconData
         }
         navigationContext = BrowserPageNavigationContext(
@@ -775,6 +782,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        faviconSession.stop()
         mediaCaptureSession.reset()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
@@ -1473,13 +1481,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
-        if navigationContext?.iconMode == .automatic {
-            let current = webView.url.flatMap(BrowserHistoryURL.normalized) ?? webView.url
-            let destination = url.flatMap(BrowserHistoryURL.normalized) ?? url
-            if current != destination {
-                faviconGeneration &+= 1
-            }
-        }
+        faviconSession.invalidate()
         pendingNavigationURL = url
         // A capture describes one document's DOM. A right-click whose menu
         // never opened — a page that cancelled the event to draw its own —
@@ -1688,37 +1690,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         guard navigationContext?.iconMode == .automatic,
             webView.url != nil
         else { return }
-        Task { [weak self] in
-            _ = await self?.pullFavicon()
-        }
+        faviconSession.refresh()
     }
 
     func pullFavicon() async -> Data? {
-        faviconGeneration &+= 1
-        let generation = faviconGeneration
-        let navigationURL = webView.url
-        var data = await BrowserFaviconCapture.capture(from: webView)
-        if data == nil, let navigationURL {
-            data = await BrowserFaviconFallbackLoader.shared.data(
-                for: navigationURL,
-                profileID: profileID
-            )
-        }
-        if data == nil {
-            for delay in [Duration.milliseconds(500), .seconds(2)] {
-                try? await Task.sleep(for: delay)
-                guard generation == faviconGeneration,
-                    navigationURL == webView.url
-                else { return nil }
-                data = await BrowserFaviconCapture.capture(from: webView)
-                if data != nil { break }
-            }
-        }
-        guard generation == faviconGeneration, navigationURL == webView.url else { return nil }
-        if let data {
-            faviconData = data
-        }
-        return data
+        await faviconSession.pull()
     }
 
     var siteThemeIconAccent: BrowserTabIconAccent? {

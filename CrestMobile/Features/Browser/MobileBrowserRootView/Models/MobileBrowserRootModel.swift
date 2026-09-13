@@ -17,7 +17,12 @@ final class MobileBrowserRootModel {
 
     var address = ""
     var hasPreparedBrowser = false
-    var showsSettings = false
+    let settings: MobileBrowserSettingsPresentation
+
+    var showsSettings: Bool {
+        get { settings.showsSheet }
+        set { if !newValue { settings.dismissSheet() } }
+    }
     var sidebarWidthTransaction: BrowserSidebarWidthTransaction
     /// Live widths stay local until the divider drag commits.
     var splitWidthTransaction = BrowserSplitWidthTransaction(
@@ -37,6 +42,8 @@ final class MobileBrowserRootModel {
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
         self.pages = pages
         self.navigation = navigation
+        settings = MobileBrowserSettingsPresentation(
+            browser: browser, pages: pages, navigation: navigation, spaceAccess: spaceAccess)
         self.spaceAccess = spaceAccess
         pageSession = BrowserPageSessionSynchronizer(browser: browser, spaceAccess: spaceAccess)
         self.windowState = windowState
@@ -53,6 +60,7 @@ final class MobileBrowserRootModel {
 extension MobileBrowserRootModel {
     func presentationChanged(to presentation: MobileBrowserPresentation) {
         navigation.adapt(to: presentation)
+        settings.adapt(to: presentation)
         guard presentation == .regular else { return }
         windowState?.captureSidebar(
             width: Double(sidebarWidth),
@@ -164,10 +172,10 @@ extension MobileBrowserRootModel {
         guard let space = browser.selectedSpace, !spaceAccess.isLocked(space),
             let tab = space.tabs.first(where: { $0.id == id })
         else { return }
-        let context: BrowserTabActivationPolicy.Context =
-            navigation.presentation == .compact ? .mobileCompact : .mobileRegular
-        if BrowserTabActivationPolicy.destination(for: tab, in: context) == .settings {
-            showsSettings = true
+        if settings.destination(for: tab) == .settings {
+            presentSettings(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: tab.id, spaceID: space.id, profileID: space.profile.id))
             return
         }
         browser.selectTab(id)
@@ -220,29 +228,18 @@ extension MobileBrowserRootModel {
         navigation.selectTab()
     }
 
-    @discardableResult
-    func presentSettings(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
-        guard
-            let space = BrowserSidebarAccessPolicy.selectedUnlockedSpace(
-                matching: BrowserSpaceRuntimeAssignment(spaceID: assignment.spaceID, profileID: assignment.profileID),
-                in: browser, accessController: spaceAccess),
-            space.tabs.first(where: { $0.id == assignment.tabID })?.nativeContent == .settings
-        else { return false }
-        showsSettings = true
-        return true
+    func openSettings() {
+        settings.open()
     }
 
-    /// A restored or synchronized selection can bypass a sidebar click.
-    /// Present its action and use the normal native-tab dismissal fallback.
+    @discardableResult
+    func presentSettings(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
+        settings.present(matching: assignment)
+    }
+
     @discardableResult
     func routeSelectedSettingsAction() -> Bool {
-        guard let space = browser.selectedSpace, !spaceAccess.isLocked(space),
-            let tab = browser.selectedTab, tab.nativeContent == .settings
-        else { return false }
-        browser.dismissNativeTab(tab.id, matching: BrowserSpaceRuntimeAssignment(space: space))
-        pages.select(session: browser.session)
-        showsSettings = true
-        return true
+        settings.routeSelectedSettingsAction()
     }
 
     func switchSpace(
@@ -493,7 +490,7 @@ extension MobileBrowserRootModel {
             let member = presentedSplitMembers.first(where: { $0.id == tabID }),
             let space = browser.selectedSpace, !spaceAccess.isLocked(space)
         else { return }
-        if BrowserTabActivationPolicy.destination(for: member, in: .mobileRegular) == .settings {
+        if settings.destination(for: member) == .settings {
             presentSettings(
                 matching: BrowserTabRuntimeAssignment(
                     tabID: tabID, spaceID: space.id, profileID: space.profile.id))
@@ -578,9 +575,9 @@ extension MobileBrowserRootModel {
                 accessController: spaceAccess
             )
         else { return false }
-        if BrowserTabActivationPolicy.destination(for: destination.tab, in: .mobileRegular) == .settings {
-            showsSettings = true
-            return true
+        if settings.destination(for: destination.tab) == .settings {
+            browser.selectSpace(destination.space.id)
+            return presentSettings(matching: target)
         }
         browser.selectSpace(destination.space.id)
         browser.selectTab(destination.tab.id)

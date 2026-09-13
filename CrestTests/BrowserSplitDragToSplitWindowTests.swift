@@ -6,27 +6,14 @@ import XCTest
 
 @testable import Crest
 
-/// Drag-to-split from end to end, through the real shell in a real window.
-///
-/// Every other test in this area proves one link: the insertion arithmetic, what
-/// the zone accepts, what the commit does. None of them prove the links are
-/// joined — that the content area actually registers itself where the pointer
-/// will be, that the lone tab on show actually registers as a card, that a
-/// `DragGesture` armed on a sidebar row keeps streaming once the pointer is over
-/// the page, and that the columns layout really does open around a single tab
-/// mid-drag. Those are exactly the joins that a drag-to-split bug report lands
-/// on, so this drives the whole gesture with synthesised AppKit mouse events
-/// against a hosted `BrowserRootShell` and checks the seams between them.
-///
-/// The fixture is entirely in memory: its own session store, its own private
-/// ephemeral page pool, and its own window, so nothing here can see or touch an
-/// installed profile.
+/// Native sidebar input must resolve a page target and commit the same split.
+/// Each case owns an in-memory session, ephemeral pages, and its window.
 @MainActor
 final class BrowserSplitDragToSplitWindowTests: XCTestCase {
 
     func testAPointerDragFromTheSidebarIntoThePageOpensAndCommitsASplit() throws {
         let fixture = try makeHostedWindow()
-        defer { fixture.window.close() }
+        defer { fixture.input.close() }
         let state = fixture.model.sidebarInteraction.sidebarReorderState
 
         let contentCard = try XCTUnwrap(state.orderedSplitCardFrames.first)
@@ -72,7 +59,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             "The lift morphs toward what the drop would make of it."
         )
         XCTAssertEqual(
-            state.floatingLift?.tabID,
+            state.liftPreview?.tabID,
             fixture.joiner.id,
             "The lift is drawn by the window host, not by the row."
         )
@@ -85,6 +72,20 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         )
 
         fixture.send(.leftMouseUp, at: overPage)
+        let space = try XCTUnwrap(
+            fixture.model.browser.session.space(id: fixture.assignment.spaceID)
+        )
+        let groupID = try XCTUnwrap(
+            space.splitGroup(containing: fixture.joiner.id),
+            "Releasing over the page has to commit the split."
+        )
+        XCTAssertEqual(
+            space.splitGroupMembers(of: groupID).map(\.title),
+            ["Presented", "Joiner"]
+        )
+        XCTAssertEqual(space.selectedTabID, fixture.joiner.id)
+        XCTAssertFalse(state.isDragging)
+        XCTAssertNil(state.liftPreview)
         pump(0.4)
 
         // The drop column is not a hint about where a card would go, it is that
@@ -93,6 +94,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         // lands in the placeholder's frame at the same width: half the row.
         let landed = state.orderedSplitCardFrames
         XCTAssertEqual(landed.count, 2)
+        guard landed.count == 2 else { return }
         XCTAssertEqual(
             landed[0].minX,
             shrunkCard.minX,
@@ -114,20 +116,6 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             "The two columns are separated by one inter-card gap, no more."
         )
 
-        let space = try XCTUnwrap(
-            fixture.model.browser.session.space(id: fixture.assignment.spaceID)
-        )
-        let groupID = try XCTUnwrap(
-            space.splitGroup(containing: fixture.joiner.id),
-            "Releasing over the page has to commit the split."
-        )
-        XCTAssertEqual(
-            space.splitGroupMembers(of: groupID).map(\.title),
-            ["Presented", "Joiner"]
-        )
-        XCTAssertEqual(space.selectedTabID, fixture.joiner.id)
-        XCTAssertFalse(state.isDragging)
-        XCTAssertNil(state.floatingLift)
     }
 
     /// The other half of the same gesture: a tab that is already the card on show
@@ -136,7 +124,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
     /// commit declines.
     func testDraggingThePresentedTabOntoItsOwnPageResolvesNothing() throws {
         let fixture = try makeHostedWindow()
-        defer { fixture.window.close() }
+        defer { fixture.input.close() }
         let state = fixture.model.sidebarInteraction.sidebarReorderState
 
         let contentCard = try XCTUnwrap(state.orderedSplitCardFrames.first)
@@ -167,7 +155,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
             "A refused drag must not move the cards it is refused by."
         )
         XCTAssertNotNil(
-            state.floatingLift,
+            state.liftPreview,
             "A refused lift is still over the page, and still has to be seen."
         )
 
@@ -184,44 +172,14 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
     /// A window showing one tab, with a second tab in the sidebar to drag.
     @MainActor
     private struct HostedWindow {
-        let window: NSWindow
+        let input: BrowserNativeMouseInput
         let model: BrowserRootModel
         let assignment: BrowserSpaceRuntimeAssignment
         let presented: BrowserTab
         let joiner: BrowserTab
-        private let eventNumber = Counter()
 
-        /// Sends one mouse event the way the window server would, then lets
-        /// SwiftUI answer it. The gesture that arms a lift is an ordinary
-        /// `DragGesture`, so these are the real inputs it recognises.
         func send(_ type: NSEvent.EventType, at global: CGPoint) {
-            let height = window.contentView?.bounds.height ?? 0
-            guard
-                let event = NSEvent.mouseEvent(
-                    with: type,
-                    location: CGPoint(x: global.x, y: height - global.y),
-                    modifierFlags: [],
-                    timestamp: ProcessInfo.processInfo.systemUptime,
-                    windowNumber: window.windowNumber,
-                    context: nil,
-                    eventNumber: eventNumber.next(),
-                    clickCount: 1,
-                    pressure: type == .leftMouseUp ? 0 : 1
-                )
-            else { return }
-            window.sendEvent(event)
-            pump(0.03)
-        }
-    }
-
-    /// A mutable counter a `struct` can hand out without becoming mutating.
-    @MainActor
-    private final class Counter {
-        private var value = 0
-
-        func next() -> Int {
-            value += 1
-            return value
+            input.send(type, at: global)
         }
     }
 
@@ -292,7 +250,7 @@ final class BrowserSplitDragToSplitWindowTests: XCTestCase {
         pump(0.6)
 
         return HostedWindow(
-            window: window,
+            input: BrowserNativeMouseInput(window: window),
             model: model,
             assignment: BrowserSpaceRuntimeAssignment(space: space),
             presented: presented,

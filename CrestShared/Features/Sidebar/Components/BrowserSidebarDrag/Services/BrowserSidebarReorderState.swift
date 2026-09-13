@@ -536,11 +536,6 @@ final class BrowserSidebarReorderState {
         }
     }
 
-    var floatingLift: BrowserSidebarFloatingLift? {
-        guard BrowserSidebarReorderPolicy.drawsOwnLift else { return nil }
-        return liftPreview
-    }
-
     var liftPreview: BrowserSidebarFloatingLift? {
         if let landingPreview { return landingPreview }
         guard let lift else { return nil }

@@ -1,15 +1,10 @@
 import Foundation
 
-/// The two halves of opening a tab from the sidebar, kept in one order.
-///
-/// Selection has to land before presentation, because the page a shell brings
-/// on screen is whichever one the session now points at. Splitting the pair
-/// across call sites is how a row ends up presenting the tab it just left.
+/// Selects the tab before presenting its destination.
 enum BrowserTabActivationPolicy {
-    enum Context {
-        case desktop
-        case mobileRegular
-        case mobileCompact
+    enum SettingsPresentation {
+        case embedded
+        case sheet
     }
 
     enum Destination {
@@ -17,11 +12,11 @@ enum BrowserTabActivationPolicy {
         case settings
     }
 
-    static func destination(for tab: BrowserTab, in context: Context) -> Destination {
-        switch context {
-        case .desktop:
+    static func destination(for tab: BrowserTab, settingsPresentation: SettingsPresentation) -> Destination {
+        switch settingsPresentation {
+        case .embedded:
             .page
-        case .mobileRegular, .mobileCompact:
+        case .sheet:
             tab.nativeContent == .settings ? .settings : .page
         }
     }

@@ -1,20 +1,7 @@
 import SwiftUI
 
-/// The shell's seat for anything travelling on the pointer.
-///
-/// Draws nothing itself. A travelling preview cannot be drawn reliably by the
-/// view tree at all — the page is an AppKit view and paints above every SwiftUI
-/// sibling in the same host, and the chrome, insets, and transitions it passes
-/// through clip it everywhere else — so this layer hands it to a window ordered
-/// above the whole browser window and lets that draw it, for the whole gesture.
-///
-/// It resolves what the gesture states name and passes it down, which is the only
-/// thing the window cannot work out for itself: a drag carries identifiers, and a
-/// preview shows a real row or a real card.
-///
-/// The two gestures are mutually exclusive by construction — both own the pointer
-/// outright — so the carried card is asked first and the sidebar lift answers when
-/// there is none.
+/// Resolves lifted items for the inert preview window above browser content.
+/// A carried split card takes precedence over a sidebar lift.
 struct BrowserRootDragPreviewLayer: View {
     let model: BrowserRootModel
     let reduceMotion: Bool
@@ -64,7 +51,7 @@ struct BrowserRootDragPreviewLayer: View {
     /// the selected Space's rows as drag sources, so a lift that reaches this
     /// point is one of these by construction.
     private var sidebarLiftContent: BrowserSidebarLiftPreviewContent? {
-        guard let lift = model.sidebarInteraction.sidebarReorderState.floatingLift,
+        guard let lift = model.sidebarInteraction.sidebarReorderState.liftPreview,
             let space = model.browser.selectedSpace,
             let subject = subject(for: lift.item, in: space)
         else { return nil }
@@ -81,7 +68,7 @@ struct BrowserRootDragPreviewLayer: View {
         for item: BrowserSidebarReorderItem,
         in space: BrowserSpace
     ) -> BrowserSidebarLiftPreviewSubject? {
-        if item.selection != nil, let lift = model.sidebarInteraction.sidebarReorderState.floatingLift {
+        if item.selection != nil, let lift = model.sidebarInteraction.sidebarReorderState.liftPreview {
             let rows = BrowserSidebarSelectionPreviewRow.resolve(lift.previewRows, in: space) { folderID in
                 model.sidebarInteraction.sidebarReorderState.folderPreviewRows(
                     for: .folder(
@@ -96,7 +83,7 @@ struct BrowserRootDragPreviewLayer: View {
                 .map(BrowserSidebarLiftPreviewSubject.tab)
         case .folder(let folder):
             let rows = BrowserFolderDragPreviewRow.resolve(
-                model.sidebarInteraction.sidebarReorderState.floatingLift?.previewRows ?? [],
+                model.sidebarInteraction.sidebarReorderState.liftPreview?.previewRows ?? [],
                 in: space, rootFolderID: folder.folderID)
 
             return space.folders.first { $0.id == folder.folderID }

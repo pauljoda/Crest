@@ -51,7 +51,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         linkActivationSourceStore.removeAll()
         credentialState.didStartNavigation()
         readerModeSession.invalidate()
-        faviconGeneration &+= 1
+        faviconSession.invalidate()
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
@@ -292,6 +292,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        faviconSession.invalidate()
         translation.reset()
         readerModeSession.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()

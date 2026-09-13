@@ -85,7 +85,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 dockedSidebar: MobileBrowserSidebarSurface(
                     browser: browser,
                     pages: pages,
-                    dataDeleter: dataDeleter,
                     spaceAccess: spaceAccess,
                     utilityPresentationStyle: .sheet,
                     showsPageBackdrop: true,
@@ -99,6 +98,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     isAddressEditing: $isAddressEditing,
                     activateAddress: openLocation,
                     selectTab: selectTab,
+                    presentSettings: model.openSettings,
                     submitAddress: submitAddress,
                     openURL: openURL,
                     openNewTab: beginNewTab,
@@ -120,7 +120,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 floatingSidebar: MobileBrowserSidebarSurface(
                     browser: browser,
                     pages: pages,
-                    dataDeleter: dataDeleter,
                     spaceAccess: spaceAccess,
                     utilityPresentationStyle: .inline,
                     showsPageBackdrop: false,
@@ -134,6 +133,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     isAddressEditing: $isAddressEditing,
                     activateAddress: nil,
                     selectTab: selectTab,
+                    presentSettings: model.openSettings,
                     submitAddress: submitAddress,
                     openURL: openURL,
                     openNewTab: beginNewTab,
@@ -236,7 +236,6 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     sidebar: MobileBrowserSidebarSurface(
                         browser: browser,
                         pages: pages,
-                        dataDeleter: dataDeleter,
                         spaceAccess: spaceAccess,
                         utilityPresentationStyle: .inline,
                         showsPageBackdrop: false,
@@ -250,6 +249,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         isAddressEditing: $isAddressEditing,
                         activateAddress: openLocation,
                         selectTab: selectTab,
+                        presentSettings: model.openSettings,
                         submitAddress: submitAddress,
                         openURL: openURL,
                         openNewTab: beginNewTab,
@@ -344,13 +344,15 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         )
         .sheet(isPresented: Binding(get: { model.showsSettings }, set: { model.showsSettings = $0 })) {
             MobileBrowserSettingsView(
-                browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter)
+                browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
+                state: model.settings.state)
         }
-        .onChange(of: browser.selectedTab?.id, initial: true) { _, _ in
+        .onChange(of: model.selectionSnapshot, initial: true) { _, _ in
+            model.settings.reconcile()
             model.routeSelectedSettingsAction()
         }
-        .onChange(of: browser.selectedTab?.nativeContent) { _, _ in
-            model.routeSelectedSettingsAction()
+        .onChange(of: model.lockedSpaceIDs) {
+            model.settings.reconcile()
         }
         .sheet(item: $historyAssignment) { assignment in
             MobileHistoryView(
@@ -389,6 +391,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             proxy.size
         } action: { size in
             availableRootSize = size
+            guard size.width > 0 else { return }
+            model.presentationChanged(to: MobileBrowserPresentationPolicy.resolve(availableWidth: size.width))
         }
         .ignoresSafeArea(
             .keyboard,

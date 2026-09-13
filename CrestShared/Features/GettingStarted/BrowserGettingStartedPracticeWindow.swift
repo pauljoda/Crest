@@ -181,7 +181,7 @@
             }
 
             private var liftContent: BrowserDragPreviewWindowContent? {
-                guard let lift = practice.sidebarInteraction.sidebarReorderState.floatingLift else { return nil }
+                guard let lift = practice.sidebarInteraction.sidebarReorderState.liftPreview else { return nil }
                 let subject: BrowserSidebarLiftPreviewSubject?
                 switch lift.item {
                 case .tab(let item):

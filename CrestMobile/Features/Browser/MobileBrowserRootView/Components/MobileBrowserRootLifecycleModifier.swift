@@ -36,9 +36,6 @@ struct MobileBrowserRootLifecycleModifier: ViewModifier {
     func body(content: Content) -> some View {
         let preparedContent =
             content
-            .onChange(of: presentation, initial: true) { _, current in
-                model.presentationChanged(to: current)
-            }
             .task {
                 await model.prepareBrowser()
             }

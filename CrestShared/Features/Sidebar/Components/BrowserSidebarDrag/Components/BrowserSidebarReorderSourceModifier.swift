@@ -1,15 +1,7 @@
 import SwiftUI
 
-/// Makes a sidebar row draggable in place: it lifts under the pointer, and its
-/// neighbours step aside to show where it will land.
-///
-/// Uses SwiftUI's own `DragGesture` rather than an AppKit dragging session. The
-/// AppKit path never rendered a drag image on macOS 27 and its pan recognizer
-/// received only a single sample at mouse-up, so there was nothing to animate.
-///
-/// Ordinary rows also register their container here. Folder headers only arm
-/// the gesture: their enclosing section owns measurement and displacement via
-/// `BrowserSidebarReorderContainerModifier`.
+/// Validates and commits a row's reorder session from native input phases.
+/// Folder headers use their enclosing section for measurement and displacement.
 struct BrowserSidebarReorderSourceModifier: ViewModifier {
     let item: BrowserSidebarReorderItem
     let section: BrowserSidebarReorderSection
@@ -39,11 +31,10 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 content
             }
         }
-        .modifier(BrowserSidebarReorderLiftGesture(isEnabled: acceptsInput, apply: applyLift))
+        .modifier(BrowserPlatformSidebarReorderLiftGesture(isEnabled: acceptsInput, apply: applyLift))
     }
 
-    /// Feeds a lift's pointer samples into the state. Shared by both platforms so
-    /// only the gesture that arms the lift differs.
+    /// Keeps captured selection and live source authorization with the shared session.
     private var applyLift: (BrowserSidebarReorderLiftPhase) -> Void {
         { phase in
             if rejectedGesture {
@@ -114,7 +105,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                     liftSessionToken = state.sessionToken
                     state.update(pointer: location)
                 }
-            case .released:
+            case .released(let previewOwner):
                 guard continuingLift else { return }
                 self.liftSessionToken = nil
                 // Replace the temporary gap with its real row in one layout
@@ -122,7 +113,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 var transaction = Transaction(animation: nil)
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    guard let drop = state.end(retainingPreview: BrowserSidebarReorderPolicy.drawsOwnLift) else {
+                    guard let drop = state.end(retainingPreview: previewOwner == .application) else {
                         return
                     }
                     reorder.commit(drop.target, for: drop.item)

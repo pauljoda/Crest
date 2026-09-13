@@ -25,7 +25,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
 
     func testDraggingACurrentTabOntoThePinnedGridPinsIt() throws {
         let fixture = try makeHostedWindow()
-        defer { fixture.window.close() }
+        defer { fixture.input.close() }
         let state = fixture.model.sidebarInteraction.sidebarReorderState
 
         let tileFrame = try XCTUnwrap(
@@ -82,7 +82,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
     /// reached, so it has to reach this one too.
     func testPinningWorksWithTheSidebarFloatingOverThePage() throws {
         let fixture = try makeHostedWindow()
-        defer { fixture.window.close() }
+        defer { fixture.input.close() }
         let state = fixture.model.sidebarInteraction.sidebarReorderState
         fixture.model.chrome.columnVisibility = .detailOnly
         fixture.model.isFloatingSidebarPresented = true
@@ -124,13 +124,12 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
     /// tab in the sidebar to drag onto the grid.
     @MainActor
     private struct HostedWindow {
-        let window: NSWindow
+        let input: BrowserNativeMouseInput
         let model: BrowserRootModel
         let assignment: BrowserSpaceRuntimeAssignment
         let pinned: BrowserTab
         let presented: BrowserTab
         let joiner: BrowserTab
-        private let eventNumber = Counter()
 
         /// Presses inside `origin` and pulls to `destination`, leaving the
         /// button down so the resolved target can be read mid-drag.
@@ -149,37 +148,8 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
             }
         }
 
-        /// Sends one mouse event the way the window server would, then lets
-        /// SwiftUI answer it. The gesture that arms a lift is an ordinary
-        /// `DragGesture`, so these are the real inputs it recognises.
         func send(_ type: NSEvent.EventType, at global: CGPoint) {
-            let height = window.contentView?.bounds.height ?? 0
-            guard
-                let event = NSEvent.mouseEvent(
-                    with: type,
-                    location: CGPoint(x: global.x, y: height - global.y),
-                    modifierFlags: [],
-                    timestamp: ProcessInfo.processInfo.systemUptime,
-                    windowNumber: window.windowNumber,
-                    context: nil,
-                    eventNumber: eventNumber.next(),
-                    clickCount: 1,
-                    pressure: type == .leftMouseUp ? 0 : 1
-                )
-            else { return }
-            window.sendEvent(event)
-            pump(0.03)
-        }
-    }
-
-    /// A mutable counter a `struct` can hand out without becoming mutating.
-    @MainActor
-    private final class Counter {
-        private var value = 0
-
-        func next() -> Int {
-            value += 1
-            return value
+            input.send(type, at: global)
         }
     }
 
@@ -249,7 +219,7 @@ final class BrowserSidebarPinByDragWindowTests: XCTestCase {
         pump(0.6)
 
         return HostedWindow(
-            window: window,
+            input: BrowserNativeMouseInput(window: window),
             model: model,
             assignment: BrowserSpaceRuntimeAssignment(space: space),
             pinned: pinned,

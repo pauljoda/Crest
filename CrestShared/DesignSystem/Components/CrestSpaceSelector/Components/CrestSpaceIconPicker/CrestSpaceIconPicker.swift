@@ -104,7 +104,7 @@ struct CrestSpaceIconPicker<SegmentContent: View>: View {
                     value: reorder.targetID
                 )
                 .modifier(
-                    BrowserSidebarReorderLiftGesture { phase in
+                    BrowserPlatformSidebarReorderLiftGesture { phase in
                         switch phase {
                         case .moved(let start, let pointer):
                             reorder.update(

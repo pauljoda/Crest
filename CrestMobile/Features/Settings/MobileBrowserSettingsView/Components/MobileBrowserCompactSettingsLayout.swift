@@ -6,12 +6,13 @@ struct MobileBrowserCompactSettingsLayout: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
     @Binding var searchText: String
+    @Binding var path: [BrowserSettingsDestination]
     let dismiss: (() -> Void)?
 
     @Environment(\.locale) private var locale
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List(filteredDestinations) { destination in
                 NavigationLink(value: destination) {
                     MobileSettingsDestinationRow(destination: destination)

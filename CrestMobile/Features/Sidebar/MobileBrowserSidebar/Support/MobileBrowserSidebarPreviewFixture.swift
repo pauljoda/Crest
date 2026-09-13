@@ -54,6 +54,7 @@ struct MobileBrowserSidebarPreviewFixture {
             name: "Work",
             symbol: "briefcase.fill",
             accent: .indigo,
+            branding: .house(.lion, symbol: "briefcase.fill"),
             folders: [folder],
             tabs: [pinnedTab, savedTab, unfiledSavedTab, currentTab],
             history: [
@@ -74,6 +75,7 @@ struct MobileBrowserSidebarPreviewFixture {
             name: "Personal",
             symbol: "lock.fill",
             accent: .orange,
+            branding: .house(.winter, symbol: "lock.fill"),
             folders: [],
             tabs: [],
             accessPolicy: .deviceOwnerAuthentication,

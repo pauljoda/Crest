@@ -91,7 +91,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
         document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
     )
-    @ObservationIgnored var faviconGeneration = 0
+    @ObservationIgnored lazy var faviconSession = BrowserFaviconSession(
+        document: BrowserWebKitFaviconDocument(webView: webView, profileID: profileID),
+        policy: .immediate,
+        receive: { [weak self] in self?.faviconData = $0 }
+    )
     @ObservationIgnored private let credentialSession: BrowserWebKitCredentialSession
     var credentialState: BrowserCredentialPageState<BrowserWebKitCredentialSession.FillTarget> {
         credentialSession.state
@@ -467,8 +471,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             && !tab.hasCurrentAutomaticFavicon
             && webView.url != nil
             && !webView.isLoading
-        if faviconData != tab.displayFaviconData {
-            faviconGeneration &+= 1
+        if faviconData != tab.displayFaviconData
+            || navigationContext?.iconMode != tab.iconMode
+            || navigationContext?.tabID != tab.id
+        {
+            faviconSession.invalidate()
             faviconData = tab.displayFaviconData
         }
         navigationContext = BrowserPageNavigationContext(
@@ -486,6 +493,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForSpaceDeletion() {
+        faviconSession.stop()
         mediaCaptureSession.reset()
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
@@ -1007,27 +1015,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         guard navigationContext?.iconMode == .automatic,
             webView.url != nil
         else { return }
-        Task { [weak self] in
-            _ = await self?.pullFavicon()
-        }
+        faviconSession.refresh()
     }
 
     func pullFavicon() async -> Data? {
-        faviconGeneration &+= 1
-        let generation = faviconGeneration
-        let navigationURL = webView.url
-        var data = await BrowserFaviconCapture.capture(from: webView)
-        if data == nil, let navigationURL {
-            data = await BrowserFaviconFallbackLoader.shared.data(
-                for: navigationURL,
-                profileID: profileID
-            )
-        }
-        guard generation == faviconGeneration, navigationURL == webView.url else { return nil }
-        if let data {
-            faviconData = data
-        }
-        return data
+        await faviconSession.pull()
     }
 
     var siteThemeIconAccent: BrowserTabIconAccent? {
@@ -1109,13 +1101,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         mediaSessionCoordinator?.prepareForNavigation()
         beginBlockedPopupNavigation()
         synchronizePopupPermission(for: url)
-        if navigationContext?.iconMode == .automatic {
-            let current = webView.url.flatMap(BrowserHistoryURL.normalized) ?? webView.url
-            let destination = url.flatMap(BrowserHistoryURL.normalized) ?? url
-            if current != destination {
-                faviconGeneration &+= 1
-            }
-        }
+        faviconSession.invalidate()
         pendingNavigationURL = url
         clearNavigationFailure(preservingPendingURL: true)
     }

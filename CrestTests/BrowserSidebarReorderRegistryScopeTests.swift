@@ -114,8 +114,8 @@ final class BrowserSidebarReorderRegistryScopeTests: XCTestCase {
             row: BrowserSidebarReorderRow(
                 id: .tab(tabID), space: assignment,
                 section: .tabs(placement: .saved, folderID: childID), frame: .zero), owner: UUID())
-        XCTAssertEqual(state.floatingLift?.sourceSize.height, 160)
-        XCTAssertEqual(state.floatingLift?.previewRows.count, 2)
+        XCTAssertEqual(state.liftPreview?.sourceSize.height, 160)
+        XCTAssertEqual(state.liftPreview?.previewRows.count, 2)
         _ = state.end()
     }
 

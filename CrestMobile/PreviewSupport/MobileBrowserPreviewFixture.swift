@@ -33,6 +33,7 @@ struct MobileBrowserPreviewFixture {
             name: "Work",
             symbol: "briefcase.fill",
             accent: .indigo,
+            branding: .house(.lion, symbol: "briefcase.fill"),
             folders: [],
             tabs: [],
             selectedTabID: nil
@@ -57,6 +58,7 @@ struct MobileBrowserPreviewFixture {
             name: "Personal",
             symbol: "house.fill",
             accent: .orange,
+            branding: .house(.winter, symbol: "house.fill"),
             folders: [],
             tabs: [],
             selectedTabID: nil

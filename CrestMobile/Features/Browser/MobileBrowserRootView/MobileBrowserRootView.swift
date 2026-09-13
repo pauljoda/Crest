@@ -61,7 +61,16 @@ struct MobileBrowserRootView: View {
         .environment(\.browserNativeTabs, model.pages.nativeTabs)
         .environment(
             \.browserSettingsTabContent,
-            BrowserSettingsTabContent(present: { model.presentSettings(matching: $0) })
+            BrowserSettingsTabContent { runtime in
+                MobileBrowserSettingsView(
+                    browser: model.browser, pages: model.pages, spaceAccess: model.spaceAccess,
+                    dataDeleter: dataDeleter,
+                    state: runtime.model(MobileBrowserSettingsState.self, make: MobileBrowserSettingsState.init),
+                    isInTab: true,
+                    liveSpaceSelection: BrowserSettingsLiveSpaceSelection { id in
+                        model.settings.selectLiveSpace(id, matching: runtime.assignment)
+                    })
+            }
         )
         .environment(
             \.browserNativeTabActions,

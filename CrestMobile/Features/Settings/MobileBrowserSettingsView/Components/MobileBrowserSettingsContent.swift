@@ -7,6 +7,7 @@ struct MobileBrowserSettingsContent: View {
     let dataDeleter: any BrowserSpaceDataDeleting
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
+    @Binding var path: [BrowserSettingsDestination]
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
@@ -31,6 +32,7 @@ struct MobileBrowserSettingsContent: View {
                     spaceAccess: spaceAccess,
                     dataDeleter: dataDeleter,
                     searchText: $searchText,
+                    path: $path,
                     dismiss: isInTab ? nil : { dismiss() }
                 )
             }

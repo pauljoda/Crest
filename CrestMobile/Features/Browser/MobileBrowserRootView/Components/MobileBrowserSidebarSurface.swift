@@ -13,7 +13,6 @@ import SwiftUI
 struct MobileBrowserSidebarSurface: View {
     let browser: BrowserStore
     let pages: MobileBrowserPageStore
-    let dataDeleter: any BrowserSpaceDataDeleting
     let spaceAccess: BrowserSpaceAccessController
 
     /// Where the archive, history, and downloads lists come up.
@@ -44,6 +43,7 @@ struct MobileBrowserSidebarSurface: View {
     @Binding var isAddressEditing: Bool
     let activateAddress: (() -> Void)?
     let selectTab: (TabID) -> Void
+    let presentSettings: () -> Void
     let submitAddress: () -> Void
     let openURL: (URL) -> Void
     let openNewTab: () -> Void
@@ -61,7 +61,6 @@ struct MobileBrowserSidebarSurface: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var showsPasswords = false
-    @State private var showsSettings = false
     @State private var presentedSpaceSheet: MobileBrowserSidebarSpaceSheet?
 
     var body: some View {
@@ -133,11 +132,9 @@ struct MobileBrowserSidebarSurface: View {
         MobileBrowserSidebarPresentationConfiguration(
             browser: browser,
             pages: pages,
-            dataDeleter: dataDeleter,
             spaceAccess: spaceAccess,
             selectedColorScheme: selectedSidebarColorScheme,
             showsPasswords: $showsPasswords,
-            showsSettings: $showsSettings,
             presentedSpaceSheet: $presentedSpaceSheet,
             selectedSpaceAssignment: selectedSpaceAssignment,
             selectTab: selectTab,
@@ -189,10 +186,6 @@ struct MobileBrowserSidebarSurface: View {
                 utilityPresentation.recordTriggerFrame,
             togglePrivateBrowsing: togglePrivateBrowsing
         )
-    }
-
-    private func presentSettings() {
-        showsSettings = true
     }
 
     private var selectedSidebarColorScheme: ColorScheme {
@@ -261,7 +254,6 @@ struct MobileBrowserSidebarSurface: View {
     MobileBrowserSidebarSurface(
         browser: fixture.browser,
         pages: fixture.pages,
-        dataDeleter: fixture.pages,
         spaceAccess: fixture.spaceAccess,
         utilityPresentationStyle: .inline,
         showsPageBackdrop: false,
@@ -275,6 +267,7 @@ struct MobileBrowserSidebarSurface: View {
         isAddressEditing: $isAddressEditing,
         activateAddress: {},
         selectTab: { _ in },
+        presentSettings: {},
         submitAddress: {},
         openURL: { _ in },
         openNewTab: {},

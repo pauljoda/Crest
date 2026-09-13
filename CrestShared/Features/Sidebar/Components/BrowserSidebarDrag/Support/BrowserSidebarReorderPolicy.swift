@@ -44,22 +44,6 @@ enum BrowserSidebarReorderPolicy {
         return 0
     }
 
-    /// Whether the lifted row's pointer-chasing preview is Crest's to draw.
-    ///
-    /// macOS draws it, in a window-level host ordered above the browser window —
-    /// see `BrowserSidebarReorderState.floatingLift` — because anything drawn in
-    /// the view tree is clipped by the page, by window chrome, and by every
-    /// inset between them. iOS lifts through drag-and-drop, which composites its
-    /// own preview under the finger, so there is nothing here to draw and the
-    /// row would otherwise appear twice.
-    static var drawsOwnLift: Bool {
-        #if os(macOS)
-            true
-        #else
-            false
-        #endif
-    }
-
     /// How long a row ignores its own activation after being dropped.
     static let activationSuppression: Duration = .milliseconds(250)
 

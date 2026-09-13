@@ -6,20 +6,21 @@ struct MobileBrowserSettingsView: View {
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
 
-    var tabSelection: Binding<BrowserSettingsDestination>?
+    let isInTab: Bool
+    @Bindable var state: MobileBrowserSettingsState
     var liveSpaceSelection: BrowserSettingsLiveSpaceSelection?
-    @State private var selection = BrowserSettingsDestination.general
-    @State private var searchText = ""
 
     init(
         browser: BrowserStore,
         pages: MobileBrowserPageStore,
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController(),
         dataDeleter: (any BrowserSpaceDataDeleting)? = nil,
-        tabSelection: Binding<BrowserSettingsDestination>? = nil,
+        state: MobileBrowserSettingsState = MobileBrowserSettingsState(),
+        isInTab: Bool = false,
         liveSpaceSelection: BrowserSettingsLiveSpaceSelection? = nil
     ) {
-        self.tabSelection = tabSelection
+        self.state = state
+        self.isInTab = isInTab
         self.liveSpaceSelection = liveSpaceSelection
         self.browser = browser
         self.pages = pages
@@ -33,10 +34,14 @@ struct MobileBrowserSettingsView: View {
             pages: pages,
             spaceAccess: spaceAccess,
             dataDeleter: dataDeleter,
-            selection: tabSelection ?? $selection,
-            searchText: $searchText
+            selection: $state.selection,
+            searchText: $state.searchText,
+            path: $state.path
         )
-        .environment(\.browserSettingsIsTab, tabSelection != nil)
+        .onAppear {
+            if isInTab { state.prepareForEmbeddedPresentation() }
+        }
+        .environment(\.browserSettingsIsTab, isInTab)
         .environment(\.browserSettingsSelectLiveSpace, liveSpaceSelection)
     }
 }

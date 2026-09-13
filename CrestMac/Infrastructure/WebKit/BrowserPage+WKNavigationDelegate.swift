@@ -31,7 +31,7 @@ extension BrowserPage: WKNavigationDelegate {
         pendingServerTrustIdentity = nil
         credentialState.didStartNavigation()
         readerModeSession.invalidate()
-        faviconGeneration &+= 1
+        faviconSession.invalidate()
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
@@ -306,6 +306,7 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        faviconSession.invalidate()
         translation.reset()
         readerModeSession.invalidate()
         linkHover.beginNavigation()

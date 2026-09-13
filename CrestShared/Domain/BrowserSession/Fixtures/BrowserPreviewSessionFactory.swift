@@ -16,7 +16,7 @@ enum BrowserPreviewSessionFactory {
             name: "Work",
             symbol: "briefcase.fill",
             accent: .indigo,
-            branding: .initial(accent: .indigo, symbol: "briefcase.fill"),
+            branding: .house(.lion, symbol: "briefcase.fill"),
             folders: [folder],
             tabs: tabs,
             selectedTabID: tabs.last?.id
@@ -76,7 +76,7 @@ enum BrowserPreviewSessionFactory {
             name: "Personal",
             symbol: "house.fill",
             accent: .orange,
-            branding: .initial(accent: .orange, symbol: "house.fill"),
+            branding: .house(.winter, symbol: "house.fill"),
             folders: [folder],
             tabs: tabs,
             selectedTabID: tabs.last?.id

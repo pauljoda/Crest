@@ -6,7 +6,7 @@ enum BrowserFaviconCapture {
     nonisolated static let maximumByteCount = 128 * 1_024
 
     static func capture(from webView: WKWebView) async -> Data? {
-        guard let pageURL = webView.url, isHTTPFamily(pageURL) else { return nil }
+        guard let pageURL = webView.url, isHTTPFamily(pageURL), !Task.isCancelled else { return nil }
 
         let value = try? await webView.callAsyncJavaScript(
             script,
@@ -28,6 +28,7 @@ enum BrowserFaviconCapture {
                     accept: BrowserFaviconResourceLoader.manifestAccept
                 )
             else { continue }
+            guard webView.url == pageURL, !Task.isCancelled else { return nil }
             manifestIcons.append(
                 contentsOf: manifestIconURLs(
                     from: manifest.data,
@@ -45,17 +46,18 @@ enum BrowserFaviconCapture {
 
         var visited: Set<URL> = []
         for candidate in candidates where visited.insert(candidate).inserted {
+            guard webView.url == pageURL, !Task.isCancelled else { return nil }
             if let data = decodeDataURL(candidate.absoluteString) {
                 if let renderableData = await renderableCandidateData(
                     data,
                     mimeType: dataURLMIMEType(candidate.absoluteString),
                     in: webView
                 ) {
+                    guard webView.url == pageURL, !Task.isCancelled else { return nil }
                     return renderableData
                 }
                 continue
             }
-            guard webView.url == pageURL, !Task.isCancelled else { return nil }
             if let downloadedCandidate = await downloadResource(
                 candidate,
                 in: webView,
@@ -64,11 +66,13 @@ enum BrowserFaviconCapture {
                 maximumByteCount: maximumByteCount,
                 accept: BrowserFaviconResourceLoader.iconAccept
             ), downloadedCandidate.isImage {
+                guard webView.url == pageURL, !Task.isCancelled else { return nil }
                 if let renderableData = await renderableCandidateData(
                     downloadedCandidate.data,
                     mimeType: downloadedCandidate.mimeType,
                     in: webView
                 ) {
+                    guard webView.url == pageURL, !Task.isCancelled else { return nil }
                     return renderableData
                 }
             }
