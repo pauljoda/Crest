@@ -56,7 +56,6 @@ the live status for each issue.
 #### Planned and in progress
 
 - [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
-- [ ] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
 
 #### Completed
 
@@ -118,6 +117,7 @@ the live status for each issue.
 - [x] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
 - [x] [Offer a continuous, wider default page-zoom range](https://github.com/pauljoda/Crest/issues/118)
 - [x] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
+- [x] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
 - [x] [Restore the saved-tab icon picker on iPad](https://github.com/pauljoda/Crest/issues/123)
 - [x] [Keep the pin icon picker visible beside a right-side iPad sidebar](https://github.com/pauljoda/Crest/issues/124)
 - [x] [Investigate mobile webpage dialog stalls](https://github.com/pauljoda/Crest/issues/125)
