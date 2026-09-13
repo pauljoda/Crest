@@ -6,6 +6,100 @@ import XCTest
 
 @MainActor
 final class BrowserGettingStartedTests: XCTestCase {
+    func testNativeStateSurvivesSelectionAndEndsAtExplicitUnload() throws {
+        let browser = BrowserStore.preview()
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        let id = try XCTUnwrap(browser.openGettingStarted())
+        pages.select(session: browser.session)
+        let space = try XCTUnwrap(browser.selectedSpace)
+        let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: space.profile.id)
+        let runtime = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
+        let state = runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
+        state.chapter = 1
+        state.practice.makeSplit()
+        let members = state.practice.members.map(\.id)
+        browser.openNewTab()
+        pages.select(session: browser.session)
+        browser.selectTab(id)
+        pages.select(session: browser.session)
+        XCTAssertTrue(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted) === runtime)
+        XCTAssertEqual(state.chapter, 1)
+        XCTAssertEqual(state.practice.members.map(\.id), members)
+        XCTAssertFalse(
+            pages.closeDurablePage(
+                BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: UUID()), discardState: false))
+        XCTAssertTrue(pages.nativeTabs.contains(assignment))
+        XCTAssertTrue(
+            BrowserDurableTabCloseAction(
+                browser: browser, spaceAccess: BrowserSpaceAccessController(),
+                closePage: { pages.closeDurablePage($0, discardState: $1) }
+            ).perform(assignment))
+        XCTAssertTrue(browser.selectedSpace?.tabs.contains(where: { $0.id == id }) == true)
+        XCTAssertNil(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
+        browser.selectTab(id)
+        pages.select(session: browser.session)
+        let reopened = try XCTUnwrap(pages.nativeTabs.runtime(matching: assignment, content: .gettingStarted))
+        XCTAssertFalse(reopened === runtime)
+        XCTAssertEqual(reopened.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }.chapter, 0)
+    }
+
+    func testNativeStateIsScopedToWindowAssignmentAndDescriptor() throws {
+        let browser = BrowserStore.preview()
+        let id = try XCTUnwrap(browser.openGettingStarted())
+        let space = try XCTUnwrap(browser.selectedSpace)
+        var tab = try XCTUnwrap(browser.selectedTab)
+        let assignment = BrowserTabRuntimeAssignment(tabID: id, spaceID: space.id, profileID: space.profile.id)
+        let first = BrowserNativeTabStore()
+        let second = BrowserNativeTabStore()
+        first.load(tab: tab, space: space)
+        second.load(tab: tab, space: space)
+        let runtime = try XCTUnwrap(first.runtime(matching: assignment, content: .gettingStarted))
+        XCTAssertFalse(second.runtime(matching: assignment, content: .gettingStarted) === runtime)
+        let stale = BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: BrowsingProfile().id)
+        XCTAssertFalse(first.remove(tabID: id, matching: stale))
+        tab = BrowserTab(id: id, title: "Settings", url: nil, nativeContent: .settings, placement: .saved)
+        first.load(tab: tab, space: space)
+        XCTAssertNil(first.runtime(matching: assignment, content: .gettingStarted))
+        XCTAssertNotNil(first.runtime(matching: assignment, content: .settings))
+        let replacement = BrowserSpace(
+            id: space.id, profile: BrowsingProfile(), name: space.name, symbol: space.symbol,
+            accent: space.accent, folders: [], tabs: [tab], selectedTabID: tab.id)
+        first.reconcile(session: BrowserSession(spaces: [replacement], selectedSpaceID: replacement.id))
+        XCTAssertTrue(first.tabIDs.isEmpty)
+        first.load(tab: tab, space: replacement)
+        first.reconcile(validTabIDs: [])
+        XCTAssertTrue(first.tabIDs.isEmpty)
+    }
+
+    func testNativePressurePreservesPresentedCardsAndWindowTeardownReleasesState() async throws {
+        let browser = BrowserStore.preview()
+        let pages = BrowserPagePool(usesEphemeralWebsiteDataStores: true)
+        defer { pages.reconcile(validTabIDs: []) }
+        let guide = try XCTUnwrap(browser.openGettingStarted())
+        pages.select(session: browser.session)
+        let settings = try XCTUnwrap(browser.openSettings())
+        pages.select(session: browser.session)
+        pages.handleMemoryPressure(.critical)
+        await pages.waitForPendingMemoryPressureResponse()
+        XCTAssertFalse(pages.nativeTabs.tabIDs.contains(guide))
+        XCTAssertTrue(pages.nativeTabs.tabIDs.contains(settings))
+        await pages.releaseWindowRuntime(for: try XCTUnwrap(browser.selectedSpace))
+        XCTAssertTrue(pages.nativeTabs.tabIDs.isEmpty)
+    }
+
+    func testSettingsExternalRouteDoesNotReplayOverLaterNavigation() {
+        let state = BrowserSettingsTabState()
+        state.applyExternalRoute(.spaces, revision: 1)
+        state.navigation.selection = .privacy
+        state.navigation.searchText = "site"
+        state.applyExternalRoute(.spaces, revision: 1)
+        XCTAssertEqual(state.navigation.selection, .privacy)
+        XCTAssertEqual(state.navigation.searchText, "site")
+        state.applyExternalRoute(.shortcuts, revision: 2)
+        XCTAssertEqual(state.navigation.selection, .shortcuts)
+    }
+
     func testOnboardingIsolationStartsWithTheRealFreshInstallSeed() {
         let environment = BrowserLaunchEnvironment(values: ["CREST_SHOW_ONBOARDING": "1"], isXCTestRuntime: false)
         let browser = BrowserStore.isolatedLaunch(launchEnvironment: environment)

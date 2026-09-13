@@ -9,23 +9,30 @@ struct BrowserNativeTabHost: View {
     var bottomChromeHeight: CGFloat = 0
     @Environment(\.browserSettingsTabContent) private var settingsContent
     @Environment(\.browserNativeTabActions) private var actions
+    @Environment(\.browserNativeTabs) private var nativeTabs
 
     var body: some View {
         Group {
-            if let content = tab.nativeContent {
+            if let content = tab.nativeContent,
+                let runtime = nativeTabs?.runtime(matching: assignment, content: content)
+            {
                 switch content.kind {
                 case BrowserNativeTabContent.gettingStarted.kind:
                     #if os(macOS)
-                        BrowserGettingStartedView { url in
+                        BrowserGettingStartedView(
+                            state: runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() }
+                        ) { url in
                             actions.openURL(assignment, content, url)
                         }
                     #else
-                        BrowserMobileGettingStartedView(showsCompactNavigation: bottomChromeHeight > 0)
+                        BrowserMobileGettingStartedView(
+                            showsCompactNavigation: bottomChromeHeight > 0,
+                            state: runtime.model(BrowserGettingStartedState.self) { BrowserGettingStartedState() })
                     #endif
                 case BrowserNativeTabContent.settings.kind:
                     if let settingsContent {
                         #if os(macOS)
-                            settingsContent.makeView(assignment)
+                            settingsContent.makeView(runtime)
                         #else
                             Button("Open Settings", systemImage: "gearshape") {
                                 settingsContent.present(assignment)
@@ -43,7 +50,7 @@ struct BrowserNativeTabHost: View {
                 }
             }
         }
-        .id(assignment)
+        .id(tab.nativeContent.flatMap { nativeTabs?.runtime(matching: assignment, content: $0)?.id })
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .safeAreaPadding(.bottom, bottomChromeHeight)
     }

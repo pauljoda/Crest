@@ -8,13 +8,23 @@ struct BrowserPrivacySettingsPane: View {
     let permissionCenter: BrowserSitePermissionCenter
     let contentBlockingErrorDescription: String?
 
-    @State private var selectedSpaceID: SpaceID?
+    @Environment(\.browserSettingsSelections) private var selections
+    @State private var localSelectedSpaceID: SpaceID?
+    private var selectedSpaceID: SpaceID? {
+        get { if let selections { selections.privacySpaceID } else { localSelectedSpaceID } }
+        nonmutating set {
+            if let selections { selections.privacySpaceID = newValue } else { localSelectedSpaceID = newValue }
+        }
+    }
+    private var selectedSpaceBinding: Binding<SpaceID?> {
+        Binding(get: { selectedSpaceID }, set: { selectedSpaceID = $0 })
+    }
     @State private var confirmsReset = false
 
     var body: some View {
         BrowserSettingsPane(.privacy) {
             BrowserPrivacySpaceSection(
-                selectedSpaceID: $selectedSpaceID,
+                selectedSpaceID: selectedSpaceBinding,
                 spaces: browser.session.spaces
             )
 
@@ -51,7 +61,7 @@ struct BrowserPrivacySettingsPane: View {
                 )
             }
         }
-        .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)
         .onChange(of: canRevealSelectedSpaceData) { _, canReveal in
             if !canReveal {
                 confirmsReset = false

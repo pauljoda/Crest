@@ -6,6 +6,8 @@ struct BrowserCrestStudioWorkspace: View {
     @Binding var branding: BrowserSpaceBranding
     @Binding var symbol: String
     @Binding var name: String
+    var scrollState: BrowserNativeScrollState? = nil
+    @State private var standaloneScroll = BrowserNativeScrollState()
 
     var body: some View {
         GeometryReader { geometry in
@@ -20,6 +22,7 @@ struct BrowserCrestStudioWorkspace: View {
                         )
                         .padding(24)
                     }
+                    .browserNativeScrollState(scrollState ?? standaloneScroll)
                     .scrollDismissesKeyboard(.interactively)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

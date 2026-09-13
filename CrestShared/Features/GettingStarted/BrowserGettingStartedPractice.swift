@@ -12,6 +12,9 @@ final class BrowserGettingStartedPractice {
     let mailID: TabID
     let trailID: TabID
     let packingID: TabID
+    let sidebarScroll = BrowserNativeScrollState()
+    var splitWidths = BrowserSplitWidthTransaction(persistedFractions: [1])
+    private var splitWidthMembers: [TabID] = []
     private let seed: BrowserSession
 
     init() {
@@ -48,9 +51,18 @@ final class BrowserGettingStartedPractice {
     var assignment: BrowserSpaceRuntimeAssignment { BrowserSpaceRuntimeAssignment(space: space) }
     var members: [BrowserTab] { space.presentedSplitMembers(for: space.selectedTabID) }
 
+    func reconcileSplitWidths() {
+        let ids = members.map(\.id)
+        guard ids != splitWidthMembers else { return }
+        splitWidthMembers = ids
+        splitWidths.begin(fractions: Array(repeating: 1, count: max(1, ids.count)))
+    }
+
     func reset() {
         _ = browser.sidebarReorderState.end()
         browser.session = seed
+        splitWidthMembers = []
+        reconcileSplitWidths()
     }
 
     func addFolder(nested: Bool) {

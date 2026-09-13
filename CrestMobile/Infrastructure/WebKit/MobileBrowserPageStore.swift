@@ -60,6 +60,7 @@ final class MobileBrowserPageStore:
     /// through `residentPage(matching:)` and have to re-render when membership
     /// changes.
     private(set) var presentedTabIDs: [TabID] = []
+    let nativeTabs = BrowserNativeTabStore()
     private(set) var residencyRevision = 0
     private(set) var urlCopyFeedbackRevision = 0
     private(set) var pageZoomFeedbackLabel = "100%"
@@ -492,6 +493,7 @@ final class MobileBrowserPageStore:
         // four-member group to focused ±1 live web views on a phone.
         let presented = presentedMemberIDs(for: tab, in: space)
         if tab.nativeContent != nil {
+            nativeTabs.load(tab: tab, space: space, at: time)
             deactivatePagePresentation(at: time)
             presentedTabIDs = presented
             return true
@@ -560,11 +562,14 @@ final class MobileBrowserPageStore:
     ) -> MobileBrowserPage? {
         guard let space = session.selectedSpace,
             let tab = space.tabs.first(where: { $0.id == tabID }),
-            tab.nativeContent == nil,
             !spacesReleasingData.contains(space.id),
             !spacesDeletingData.contains(space.id)
         else { return nil }
 
+        if tab.nativeContent != nil {
+            nativeTabs.load(tab: tab, space: space, at: time)
+            return nil
+        }
         if let existing = pagesByTabID[tabID],
             existing.spaceID == space.id,
             existing.profileID == space.profile.id
@@ -657,6 +662,7 @@ final class MobileBrowserPageStore:
     }
 
     func reconcile(validTabIDs: Set<TabID>) {
+        nativeTabs.reconcile(validTabIDs: validTabIDs)
         pendingTabCopyStates = pendingTabCopyStates.filter { validTabIDs.contains($0.key.tabID) }
         let removedTabIDs = Set(pagesByTabID.keys).subtracting(validTabIDs)
         for tabID in removedTabIDs {
@@ -677,6 +683,7 @@ final class MobileBrowserPageStore:
     }
 
     func reconcile(session: BrowserSession) {
+        nativeTabs.reconcile(session: session)
         let validCopyAssignments = Set(session.tabRuntimeAssignments)
         pendingTabCopyStates = pendingTabCopyStates.filter { validCopyAssignments.contains($0.key) }
         let tabsByID = Dictionary(
@@ -802,6 +809,7 @@ final class MobileBrowserPageStore:
     }
 
     func releaseWindowRuntime(for space: BrowserSpace) async {
+        nativeTabs.remove(in: space.id)
         guard spacesReleasingData.insert(space.id).inserted else { return }
         defer { spacesReleasingData.remove(space.id) }
 
@@ -825,6 +833,7 @@ final class MobileBrowserPageStore:
 
     func closePrivateBrowsingSession(_ session: BrowserSession) {
         guard browsingMode.isPrivate else { return }
+        nativeTabs.reconcile(validTabIDs: [])
         for page in pagesByTabID.values {
             page.prepareForSpaceDeletion()
         }
@@ -1075,6 +1084,7 @@ final class MobileBrowserPageStore:
     /// Explicit durable close differs from residency eviction only when the
     /// person chose to return to the saved URL on the next open.
     func closeDurablePage(_ assignment: BrowserTabRuntimeAssignment, discardState: Bool) -> Bool {
+        guard !nativeTabs.tabIDs.contains(assignment.tabID) || nativeTabs.contains(assignment) else { return false }
         guard
             pagesByTabID[assignment.tabID].map({
                 $0.spaceID == assignment.spaceID && $0.profileID == assignment.profileID
@@ -1095,6 +1105,10 @@ final class MobileBrowserPageStore:
     }
 
     private func unloadPage(for tabID: TabID, preservingTabState: Bool) {
+        if nativeTabs.tabIDs.contains(tabID) {
+            nativeTabs.remove(tabID)
+            presentedTabIDs.removeAll { $0 == tabID }
+        }
         forgetBackgroundPageObservation(for: tabID)
         // Archived before the page is torn down: a tab closed by hand can be
         // reopened, and a tab unloaded by hand is expected to come back where it
@@ -1116,6 +1130,13 @@ final class MobileBrowserPageStore:
         for tabID: TabID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
+        if nativeTabs.contains(
+            BrowserTabRuntimeAssignment(
+                tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID))
+        {
+            unloadPage(for: tabID)
+            return true
+        }
         guard let page = pagesByTabID[tabID],
             page.spaceID == assignment.spaceID,
             page.profileID == assignment.profileID
@@ -1127,12 +1148,14 @@ final class MobileBrowserPageStore:
     /// Releases a Space's resident pages without archiving them. Normal Space
     /// switching and locking preserve residency and do not call this teardown.
     func unloadPages(in spaceID: SpaceID) {
+        let nativeTabIDs = nativeTabs.tabIDs(in: spaceID)
+        nativeTabs.remove(in: spaceID)
         let tabIDs = Set(
             pagesByTabID.compactMap { tabID, page in
                 page.spaceID == spaceID ? tabID : nil
             }
         )
-        _ = releasePages(for: tabIDs)
+        _ = releasePages(for: tabIDs.union(nativeTabIDs))
         _ = releaseTransientPages(in: spaceID)
     }
 
@@ -1519,6 +1542,7 @@ final class MobileBrowserPageStore:
         let candidates = idleCandidatesByLeastRecentlyUsed()
         let offScreen = candidates.filter { !presentedTabIDs.contains($0.tabID) }
         var eligibleTabIDs = await releasableTabIDs(among: offScreen)
+        eligibleTabIDs += nativeTabs.inactiveTabIDs(excluding: presentedTabIDs)
 
         if eligibleTabIDs.isEmpty {
             let fallbackTabIDs = Set(
@@ -1587,6 +1611,7 @@ final class MobileBrowserPageStore:
     }
 
     private func evictPage(_ tabID: TabID, preservingTabState: Bool = true) {
+        nativeTabs.remove(tabID)
         forgetBackgroundPageObservation(for: tabID)
         if preservingTabState {
             archiveTabState(for: tabID)

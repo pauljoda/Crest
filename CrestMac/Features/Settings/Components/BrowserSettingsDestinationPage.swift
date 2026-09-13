@@ -11,6 +11,7 @@ struct BrowserSettingsDestinationPage: View {
     @Environment(\.openWindow) private var openWindow
 
     let destination: BrowserSettingsDestination
+    var tabAssignment: BrowserTabRuntimeAssignment? = nil
     let browser: BrowserStore
     let pages: BrowserPagePool
     let cloudSync: BrowserCloudSyncController
@@ -40,14 +41,21 @@ struct BrowserSettingsDestinationPage: View {
                 shortcuts: shortcuts,
                 requestedSpaceID: requestedSpaceID,
                 requestedExtensionCommand:
-                    spaceSettingsPresentation.requestedExtensionCommand,
-                requestRevision: spaceSettingsPresentation.revision
+                    acceptsExternalRoute ? spaceSettingsPresentation.requestedExtensionCommand : nil,
+                requestRevision: acceptsExternalRoute ? spaceSettingsPresentation.revision : 0
             )
         }
     }
 
+    private var acceptsExternalRoute: Bool {
+        guard let tabAssignment else { return true }
+        return spaceSettingsPresentation.requestedAssignment
+            == BrowserSpaceRuntimeAssignment(
+                spaceID: tabAssignment.spaceID, profileID: tabAssignment.profileID)
+    }
+
     private var requestedSpaceID: SpaceID? {
-        spaceSettingsPresentation.requestedSpaceID(in: browser)
+        acceptsExternalRoute ? spaceSettingsPresentation.requestedSpaceID(in: browser) : nil
     }
 
     private var setupActions: [BrowserAdvancedSetupAction] {

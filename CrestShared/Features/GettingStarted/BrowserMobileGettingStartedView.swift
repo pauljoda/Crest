@@ -4,8 +4,17 @@
     /// A touch tour backed by the same isolated store and real sidebar as the Mac guide.
     struct BrowserMobileGettingStartedView: View {
         var showsCompactNavigation = false
-        @State private var practice = BrowserGettingStartedPractice()
-        @State private var lesson = 0
+        @Bindable var state: BrowserGettingStartedState
+        private var practice: BrowserGettingStartedPractice { state.practice }
+        private var lesson: Int {
+            get { state.lesson }
+            nonmutating set { state.lesson = newValue }
+        }
+
+        init(showsCompactNavigation: Bool = false, state: BrowserGettingStartedState = BrowserGettingStartedState()) {
+            self.showsCompactNavigation = showsCompactNavigation
+            self.state = state
+        }
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         var body: some View {
@@ -62,8 +71,10 @@
                     .frame(maxWidth: .infinity)
                     .id("mobile-guide-top")
                 }
+                .browserNativeScrollState(state.scroll)
                 .background(CrestBrandTheme.canvas)
             }
+            .onDisappear { _ = practice.browser.sidebarReorderState.end() }
             .animation(reduceMotion ? nil : CrestMotion.collection, value: practice.space.tabs)
 
         }

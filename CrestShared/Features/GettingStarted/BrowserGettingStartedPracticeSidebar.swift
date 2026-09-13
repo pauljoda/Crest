@@ -49,6 +49,7 @@ struct BrowserGettingStartedPracticeSidebar: View {
                     editingFolderRequest: $editingFolder)
             }.padding(8)
         }
+        .browserNativeScrollState(practice.sidebarScroll)
         .scrollIndicators(.automatic)
         .background(CrestBrandTheme.surface)
     }

@@ -2,9 +2,8 @@
     import SwiftUI
 
     struct BrowserGettingStartedPracticeWindow: View {
-        let practice: BrowserGettingStartedPractice
+        @Bindable var practice: BrowserGettingStartedPractice
         let showsSplit: Bool
-        @State private var widths = BrowserSplitWidthTransaction(persistedFractions: [1])
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         private var capabilities: BrowserInteractionCapabilities {
@@ -44,8 +43,8 @@
                     .background { liftPreview }
                 #endif
             }
-            .onChange(of: practice.members.map(\.id), initial: true) { _, members in
-                widths.begin(fractions: Array(repeating: 1, count: max(1, members.count)))
+            .onChange(of: practice.members.map(\.id), initial: true) { _, _ in
+                practice.reconcileSplitWidths()
             }
             .animation(reduceMotion ? nil : CrestMotion.collection, value: practice.space.tabs)
         }
@@ -66,7 +65,7 @@
                         members: members, focusedTabID: practice.space.selectedTabID,
                         frameInsets: EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10),
                         accent: CrestBrandPalette.coral,
-                        placeholderIndex: nil, liftedTabID: nil, widthTransaction: $widths,
+                        placeholderIndex: nil, liftedTabID: nil, widthTransaction: $practice.splitWidths,
                         onResizeCommit: { _ in }, onFocus: practice.browser.selectTab,
                         usesTransparentInnerSurface: { _ in false }
                     ) { tab, _ in

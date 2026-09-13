@@ -3,6 +3,12 @@ import SwiftUI
 
 struct BrowserSpaceEditorView: View {
     @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
+    @Environment(\.browserSettingsTabState) private var tabState
+    @State private var standaloneScroll = BrowserNativeScrollState()
+
+    private var scrollState: BrowserNativeScrollState {
+        tabState?.scroll(for: space.id, section: section) ?? standaloneScroll
+    }
 
     let browser: BrowserStore
     let space: BrowserSpace
@@ -18,8 +24,10 @@ struct BrowserSpaceEditorView: View {
             switch section {
             case .appearance:
                 if usesLiveSidebar {
-                    BrowserCrestStudioWorkspace(branding: branding, symbol: symbol, name: name)
-                        .accessibilityIdentifier("space-customization-controls")
+                    BrowserCrestStudioWorkspace(
+                        branding: branding, symbol: symbol, name: name, scrollState: scrollState
+                    )
+                    .accessibilityIdentifier("space-customization-controls")
                 } else {
                     appearanceEditor
                 }
@@ -64,6 +72,7 @@ struct BrowserSpaceEditorView: View {
                     .frame(maxWidth: 680, alignment: .leading)
                     .frame(maxWidth: .infinity)
                 }
+                .browserNativeScrollState(scrollState)
                 .contentMargins(.trailing, 12, for: .scrollContent)
                 .defaultScrollAnchor(.top, for: .initialOffset)
             }
@@ -84,6 +93,7 @@ struct BrowserSpaceEditorView: View {
                 )
             )
         }
+        .browserNativeScrollState(scrollState)
         .crestSettingsForm(maxWidth: .infinity)
         .padding(.horizontal, CrestSpacing.section)
         .task(id: space.id) {

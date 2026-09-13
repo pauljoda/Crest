@@ -20,7 +20,17 @@ struct BrowserPasswordSettingsPane: View {
     var manage: (() -> Void)?
 
     @State private var credentials: BrowserCredentialSpaceStore
-    @State private var selectedSpaceID: SpaceID?
+    @Environment(\.browserSettingsSelections) private var selections
+    @State private var localSelectedSpaceID: SpaceID?
+    private var selectedSpaceID: SpaceID? {
+        get { if let selections { selections.passwordSpaceID } else { localSelectedSpaceID } }
+        nonmutating set {
+            if let selections { selections.passwordSpaceID = newValue } else { localSelectedSpaceID = newValue }
+        }
+    }
+    private var selectedSpaceBinding: Binding<SpaceID?> {
+        Binding(get: { selectedSpaceID }, set: { selectedSpaceID = $0 })
+    }
     @State private var credentialPendingDeletion: CredentialDescriptor?
     @State private var credentialDetailRequest: BrowserCredentialDetailRequest?
     @State private var confirmsPlaintextExport = false
@@ -51,7 +61,7 @@ struct BrowserPasswordSettingsPane: View {
         BrowserSettingsPane(.passwords) {
             settingsSections
         }
-        .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)
         .task(id: credentialLoadRequest) {
             await credentials.load(
                 in: selectedSpaceID,
@@ -163,7 +173,7 @@ struct BrowserPasswordSettingsPane: View {
         Section("Space") {
             CrestSpaceMenuPicker(
                 "Passwords for",
-                selection: $selectedSpaceID,
+                selection: selectedSpaceBinding,
                 spaces: CrestSpaceIdentity.list(browser.session.spaces)
             )
         }

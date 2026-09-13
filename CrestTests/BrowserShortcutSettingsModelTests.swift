@@ -217,6 +217,10 @@ final class BrowserShortcutSettingsModelTests: XCTestCase {
             fixture.model.scrollRequest?.targetID.rawValue,
             "reader.extension.capture"
         )
+        fixture.model.searchText = "Split"
+        fixture.model.applyDeepLink(
+            requestedSpaceID: requestedSpace.id, extensionID: "reader.extension", commandID: "capture", revision: 7)
+        XCTAssertEqual(fixture.model.searchText, "Split", "Remounting must not replay a consumed route")
     }
 
     func testDeepLinkCannotSelectAnUnknownSpaceID() throws {

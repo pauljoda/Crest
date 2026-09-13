@@ -10,9 +10,21 @@ struct BrowserSpaceSettingsView: View {
     let requestedSpaceID: SpaceID?
     let requestRevision: Int
 
-    @State private var selectedSpaceID: SpaceID?
-    @State private var editorSection =
-        BrowserSpaceEditorSection.appearance
+    @Environment(\.browserSettingsTabState) private var tabState
+    @State private var localSelectedSpaceID: SpaceID?
+    @State private var localEditorSection = BrowserSpaceEditorSection.appearance
+    private var selectedSpaceID: SpaceID? {
+        get { if let tabState { tabState.selectedSpaceID } else { localSelectedSpaceID } }
+        nonmutating set {
+            if let tabState { tabState.selectedSpaceID = newValue } else { localSelectedSpaceID = newValue }
+        }
+    }
+    private var editorSection: BrowserSpaceEditorSection {
+        get { tabState?.spaceEditorSection ?? localEditorSection }
+        nonmutating set {
+            if let tabState { tabState.spaceEditorSection = newValue } else { localEditorSection = newValue }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,7 +69,7 @@ struct BrowserSpaceSettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .crestRepairsSpaceSelection($selectedSpaceID, in: browser)
+        .crestRepairsSpaceSelection(Binding(get: { selectedSpaceID }, set: { selectedSpaceID = $0 }), in: browser)
         .onChange(of: requestRevision, initial: true) {
             applyRequestedSelection()
         }
@@ -151,7 +163,7 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private func sectionPicker(compact: Bool) -> some View {
-        Picker("Space settings section", selection: $editorSection) {
+        Picker("Space settings section", selection: Binding(get: { editorSection }, set: { editorSection = $0 })) {
             ForEach(BrowserSpaceEditorSection.allCases) { section in
                 Label(section.title, systemImage: section.symbol)
                     .tag(section)
@@ -238,10 +250,11 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private func applyRequestedSelection() {
-        guard requestRevision > 0,
+        guard requestRevision > (tabState?.spaceRouteRevision ?? 0),
             let requestedSpaceID,
             browser.session.space(id: requestedSpaceID) != nil
         else { return }
+        tabState?.spaceRouteRevision = requestRevision
         selectedSpaceID = requestedSpaceID
     }
 }

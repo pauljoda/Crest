@@ -6,15 +6,23 @@ A native tab is a `BrowserTab` with a `BrowserNativeTabContent` descriptor. It u
 
 The Mac and mobile page stores recognize native selection without allocating a `WKWebView`, including mixed native/website splits, extension preparation, and session reconciliation. Only website members receive pages. Assigning a website URL to a native tab explicitly converts that tab into a website. Unloading a Saved native view dismisses its presentation and retains the tab. The sidebar uses a minus control for Saved and a close control for Current. Deleting a Saved tab, or closing a Current copy, uses normal tab lifecycle rules.
 
+## Loaded state
+
+Each window's page store owns a `BrowserNativeTabStore`. Presenting a native card loads a runtime identified by its tab, Space, profile, and complete content descriptor. The runtime owns typed content models, independent of whether SwiftUI currently mounts the card. Switching tabs or Spaces preserves those models; it does not retain hidden view hierarchies or add another presentation layer.
+
+Explicit unload, tab removal, assignment or descriptor replacement, and window runtime teardown end that lifetime. Memory pressure may unload an offscreen native runtime under the platform's existing release limits. Presented native cards are excluded. Locking a Space preserves its loaded state behind the existing access boundary. Runtime state stays in memory and is neither synchronized nor written into session archives.
+
+Content chooses what belongs in its model: navigation, practice edits, filters, and scroll positions can survive remounting. Focus, active gestures, authorization, and confirmation dialogs belong to the current presentation. A model must not retain a hosting controller, running task, or callback that keeps an inactive view operating. Persistent document data belongs in its own Space/profile store and outlives this runtime only according to that store's policy.
+
 Settings activation is a platform action: Mac opens the native Settings page, while both regular and compact mobile layouts present the Settings sheet without replacing the selected browsing page. An unfocused mobile Settings split card offers the same action, validated against its captured tab, Space and profile. A restored or synchronized selected Settings descriptor presents the sheet and uses the normal native-tab dismissal fallback while retaining the tab.
 
 ## Adding a content type
 
 1. Give it a stable `kind` string and register its view in `BrowserNativeTabHost`.
 2. For content with its own data, use `resourceID` to address a document store scoped to the owning Space/profile. Keep document data and its lifecycle out of the tab descriptor. A duplicate tab currently points to the same resource; cloning a document should be an explicit action.
-3. Use the existing layout's assignment and selection. Do not introduce a page pool, browser controller, or global selected-tab lookup inside the content view.
+3. Use the existing layout's assignment and selection. Obtain a typed content model from the host's loaded runtime and pass it to the view. Do not introduce a page pool, browser controller, or global selected-tab lookup inside the content view.
 4. Add only the capabilities the content needs to the native action port, with assignment and access checks at the boundary.
-5. Cover persistence, unknown-kind round trips, native-only and mixed-split presentation, and stale-assignment rejection.
+5. Cover persistence, unknown-kind round trips, native-only and mixed-split presentation, stale-assignment rejection, and release of runtime state when its loaded lifetime ends. Review visible state restoration through the real interface.
 
 Notes and Widgets are not implemented by this change. The descriptor and host provide their integration point; document persistence, per-content state restoration, and platform availability belong to each future content type.
 
@@ -28,6 +36,6 @@ Both shells render native guides. Mac teaches tabs, Split View, and extensions; 
 
 Automatic presentation is an install-local completion action. `completeSetup(for:)` reads and consumes the persisted completion record before either shell opens a Saved guide. Repeated completion callbacks, forced welcome/setup, manual replay, and later launches cannot reopen it automatically. Explicit Help actions remain available. Named isolated review sessions persist the same completion decision in their own defaults suite.
 
-The practice window has its own store family and in-memory session, credentials, and site permissions. It reuses the real sidebar rows, pinned grid, folder tree, drag/drop paths, and split columns. Website examples are SwiftUI documents with bundled logos, and never load their URLs. Practice edits cannot reach the person's browser session. The guide's chapter and exercise state are local to its current SwiftUI presentation.
+The practice window has its own store family and in-memory session, credentials, and site permissions. It reuses the real sidebar rows, pinned grid, folder tree, drag/drop paths, and split columns. Website examples are SwiftUI documents with bundled logos, and never load their URLs. Practice edits cannot reach the person's browser session. The guide's chapter, exercise state, scroll positions, and practice split widths belong to its loaded native runtime.
 
 The same practice window changes its frame and position between the sidebar lesson and the full Split View lesson. Reduce Motion removes this transition. Split instructions are rendered inside the practice cards.

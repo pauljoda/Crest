@@ -9,7 +9,7 @@ struct BrowserSidebarTabTrailingControl: View {
     @ViewBuilder
     var body: some View {
         if configuration.tab.placement == .saved {
-            if configuration.unload != nil || configuration.tab.nativeContent != nil {
+            if configuration.unload != nil {
                 BrowserSidebarTabUnloadButton(
                     configuration: configuration,
                     isVisible: configuration.isLoaded && isRevealed
@@ -73,11 +73,7 @@ private struct BrowserSidebarTabUnloadButton: View {
     var body: some View {
         Button {
             guard configuration.isCurrentAndUnlocked else { return }
-            if configuration.tab.nativeContent != nil {
-                configuration.browser.dismissNativeTab(configuration.tab.id, matching: configuration.assignment)
-            } else {
-                configuration.unload?(configuration.tab.id)
-            }
+            configuration.unload?(configuration.tab.id)
         } label: {
             BrowserSidebarTabTrailingControlLabel(
                 systemName: "minus",

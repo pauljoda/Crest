@@ -12,6 +12,7 @@ final class BrowserShortcutSettingsModel {
     private(set) var validationIssue: BrowserShortcutValidationIssue?
     private(set) var pendingConflict: BrowserShortcutPendingConflict?
     private(set) var scrollRequest: BrowserShortcutScrollRequest?
+    private var consumedRouteRevision = 0
 
     @ObservationIgnored
     private let extensionCommands: any BrowserShortcutExtensionCommandManaging
@@ -220,7 +221,8 @@ final class BrowserShortcutSettingsModel {
         commandID: String?,
         revision: Int
     ) {
-        guard revision > 0 else { return }
+        guard revision > consumedRouteRevision else { return }
+        consumedRouteRevision = revision
         if let requestedSpaceID,
             browser.session.space(id: requestedSpaceID) != nil
         {

@@ -8,14 +8,24 @@ struct BrowserExtensionSettingsPane: View {
     var requestedSpaceID: SpaceID? = nil
     var requestRevision = 0
 
-    @State private var selectedSpaceID: SpaceID?
+    @Environment(\.browserSettingsSelections) private var selections
+    @State private var localSelectedSpaceID: SpaceID?
+    private var selectedSpaceID: SpaceID? {
+        get { if let selections { selections.extensionSpaceID } else { localSelectedSpaceID } }
+        nonmutating set {
+            if let selections { selections.extensionSpaceID = newValue } else { localSelectedSpaceID = newValue }
+        }
+    }
+    private var selectedSpaceBinding: Binding<SpaceID?> {
+        Binding(get: { selectedSpaceID }, set: { selectedSpaceID = $0 })
+    }
 
     var body: some View {
         BrowserSettingsPane(.extensions) {
             Section("Space") {
                 CrestSpaceMenuPicker(
                     "Manage extensions for",
-                    selection: $selectedSpaceID,
+                    selection: selectedSpaceBinding,
                     spaces: CrestSpaceIdentity.list(browser.session.spaces)
                 )
             }
@@ -39,12 +49,13 @@ struct BrowserExtensionSettingsPane: View {
             repairSelection()
         }
         .onChange(of: requestRevision, initial: true) { _, revision in
-            guard revision > 0,
+            guard revision > (selections?.extensionRouteRevision ?? 0),
                 let requestedSpaceID,
                 browser.session.space(id: requestedSpaceID) != nil
             else {
                 return
             }
+            selections?.extensionRouteRevision = revision
             selectedSpaceID = requestedSpaceID
         }
     }

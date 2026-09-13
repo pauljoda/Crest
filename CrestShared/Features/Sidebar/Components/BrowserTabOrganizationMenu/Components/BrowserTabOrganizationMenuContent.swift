@@ -261,21 +261,15 @@ struct BrowserTabOrganizationMenuContent: View {
                 }
             }
 
-            if let unload, isLoaded {
-                Button(
-                    tab.placement == .current ? "Unload Tab" : "Close Tab",
-                    systemImage: tab.placement == .current ? "minus" : "xmark"
-                ) {
-                    performIfCurrent { liveTab in
-                        unload(liveTab.id)
-                    }
-                }
-            }
+        }
 
-        } else if tab.placement != .current, browser.selectedTab?.id == tab.id {
-            Button("Close Tab", systemImage: "xmark") {
+        if let unload, isLoaded, tab.nativeContent == nil || tab.placement != .current {
+            Button(
+                tab.placement == .current ? "Unload Tab" : "Close Tab",
+                systemImage: tab.placement == .current ? "minus" : "xmark"
+            ) {
                 performIfCurrent { liveTab in
-                    browser.dismissNativeTab(liveTab.id, matching: sourceAssignment)
+                    unload(liveTab.id)
                 }
             }
         }

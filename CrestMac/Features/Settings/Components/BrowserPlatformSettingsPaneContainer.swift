@@ -2,6 +2,8 @@ import SwiftUI
 
 /// The native macOS form container for a shared settings pane.
 struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
+    @Environment(\.browserSettingsTabState) private var tabState
+    @State private var standaloneScroll = BrowserNativeScrollState()
     let destination: BrowserSettingsDestination
     @ViewBuilder let content: Content
 
@@ -20,6 +22,7 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
             }
             .padding(24)
         }
+        .browserNativeScrollState(tabState?.scroll(for: destination) ?? standaloneScroll)
         .accessibilityIdentifier("settings-form-\(destination.rawValue)")
     }
 }

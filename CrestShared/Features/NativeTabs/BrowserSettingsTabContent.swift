@@ -4,7 +4,7 @@ import SwiftUI
 /// belongs in the saved tab, which contains only the stable content kind.
 struct BrowserSettingsTabContent {
     #if os(macOS)
-        let makeView: @MainActor (BrowserTabRuntimeAssignment) -> BrowserSettingsView
+        let makeView: @MainActor (BrowserNativeTabRuntime) -> BrowserSettingsView
     #else
         let present: @MainActor (BrowserTabRuntimeAssignment) -> Void
     #endif

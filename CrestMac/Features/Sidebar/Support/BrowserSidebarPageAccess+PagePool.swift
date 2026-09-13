@@ -9,15 +9,15 @@ extension BrowserSidebarPageAccess {
     init(pages: BrowserPagePool, browser: BrowserStore, spaceAccess: BrowserSpaceAccessController) {
         self.init(
             containsResidentPage: { tabID in
-                pages.containsResidentPage(for: tabID)
+                pages.containsResidentPage(for: tabID) || pages.nativeTabs.tabIDs.contains(tabID)
             },
             containsResidentPageMatching: { assignment in
-                pages.containsResidentPage(matching: assignment)
+                pages.containsResidentPage(matching: assignment) || pages.nativeTabs.contains(assignment)
             },
             siteThemeIconAccent: { assignment in
                 pages.siteThemeIconAccent(matching: assignment)
             },
-            residencyRevision: { pages.residencyRevision },
+            residencyRevision: { pages.residencyRevision &+ pages.nativeTabs.residencyRevision },
             selectPages: { pages.selectSpace(in: browser) },
             deactivatePagePresentation: { pages.deactivatePagePresentation() },
             unloadPage: { tabID, assignment in

@@ -3,7 +3,14 @@ import SwiftUI
 struct BrowserWebKitFeatureFlagSettingsPane: View {
     let store: BrowserWebKitFeatureFlagStore
 
-    @State private var filter = BrowserWebKitFeatureFlagFilter()
+    @Environment(\.browserSettingsTabState) private var tabState
+    @State private var localFilter = BrowserWebKitFeatureFlagFilter()
+    private var filter: BrowserWebKitFeatureFlagFilter {
+        get { tabState?.featureFilter ?? localFilter }
+        nonmutating set {
+            if let tabState { tabState.featureFilter = newValue } else { localFilter = newValue }
+        }
+    }
     @State private var showsResetConfirmation = false
 
     var body: some View {
@@ -54,7 +61,7 @@ struct BrowserWebKitFeatureFlagSettingsPane: View {
             }
 
             BrowserWebKitFeatureFlagControls(
-                filter: $filter,
+                filter: Binding(get: { filter }, set: { filter = $0 }),
                 statuses: store.availableStatuses,
                 categories: store.availableCategories,
                 canReset: store.hasOverrides,

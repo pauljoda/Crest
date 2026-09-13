@@ -249,6 +249,8 @@ final class BrowserPagePool:
         memoryPressureSource?.cancel()
     }
 
+    let nativeTabs = BrowserNativeTabStore()
+
     var retainedTabIDs: Set<TabID> {
         _ = residencyRevision
         return Set(pages.keys)
@@ -666,6 +668,7 @@ final class BrowserPagePool:
         // each one is built and started here. A card the person can see must
         // never wait for focus to load: lazy loading is for tabs off screen.
         let members = presentedMembers(for: tab, in: space)
+        for member in members { nativeTabs.load(tab: member, space: space, at: time) }
         let memberPages = members.filter { $0.nativeContent == nil }.map {
             (tab: $0, page: page(for: $0, space: space))
         }
@@ -953,6 +956,7 @@ final class BrowserPagePool:
     }
 
     func reconcile(validTabIDs: Set<TabID>) {
+        nativeTabs.reconcile(validTabIDs: validTabIDs)
         pendingTabCopyStates = pendingTabCopyStates.filter { validTabIDs.contains($0.key.tabID) }
         let removedTabIDs = Set(pages.keys).subtracting(validTabIDs)
         for tabID in removedTabIDs {
@@ -978,6 +982,7 @@ final class BrowserPagePool:
     }
 
     func reconcile(session: BrowserSession) {
+        nativeTabs.reconcile(session: session)
         let validCopyAssignments = Set(session.tabRuntimeAssignments)
         pendingTabCopyStates = pendingTabCopyStates.filter { validCopyAssignments.contains($0.key) }
         let tabsByID = Dictionary(
@@ -1196,6 +1201,7 @@ final class BrowserPagePool:
     }
 
     func releaseWindowRuntime(for space: BrowserSpace) async {
+        nativeTabs.remove(in: space.id)
         guard spacesReleasingData.insert(space.id).inserted else { return }
         defer { spacesReleasingData.remove(space.id) }
 
@@ -1220,7 +1226,8 @@ final class BrowserPagePool:
 
     func closePrivateBrowsingSession(_ session: BrowserSession) {
         guard browsingMode.isPrivate else { return }
-        releasePages(for: Set(pages.keys))
+        releasePages(for: Set(pages.keys).union(nativeTabs.tabIDs))
+        nativeTabs.reconcile(validTabIDs: [])
         releaseAllTransientPages()
         releaseAllExtensionOffscreenDocuments()
         for space in session.spaces {
@@ -1607,6 +1614,7 @@ final class BrowserPagePool:
     /// Explicit durable close differs from residency eviction only when the
     /// person chose to return to the saved URL on the next open.
     func closeDurablePage(_ assignment: BrowserTabRuntimeAssignment, discardState: Bool) -> Bool {
+        guard !nativeTabs.tabIDs.contains(assignment.tabID) || nativeTabs.contains(assignment) else { return false }
         guard
             pages[assignment.tabID].map({
                 $0.spaceID == assignment.spaceID && $0.profileID == assignment.profileID
@@ -1627,6 +1635,11 @@ final class BrowserPagePool:
     }
 
     private func unloadPage(for tabID: TabID, preservingTabState: Bool) {
+        if nativeTabs.tabIDs.contains(tabID) {
+            nativeTabs.remove(tabID)
+            if activeTabID == tabID { activeTabID = nil }
+            presentedTabIDs.removeAll { $0 == tabID }
+        }
         // Archived before the page is torn down: a tab closed by hand can be
         // reopened, and a tab unloaded by hand is expected to come back where it
         // was left.
@@ -1646,6 +1659,13 @@ final class BrowserPagePool:
         for tabID: TabID,
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
+        if nativeTabs.contains(
+            BrowserTabRuntimeAssignment(
+                tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID))
+        {
+            unloadPage(for: tabID)
+            return true
+        }
         guard let page = pages[tabID],
             page.spaceID == assignment.spaceID,
             page.profileID == assignment.profileID
@@ -1657,12 +1677,14 @@ final class BrowserPagePool:
     /// Releases a Space's resident pages without archiving them. Normal Space
     /// switching and locking preserve residency and do not call this teardown.
     func unloadPages(in spaceID: SpaceID) {
+        let nativeTabIDs = nativeTabs.tabIDs(in: spaceID)
+        nativeTabs.remove(in: spaceID)
         let tabIDs = Set(
             pages.compactMap { tabID, page in
                 page.spaceID == spaceID ? tabID : nil
             }
         )
-        _ = releasePages(for: tabIDs)
+        _ = releasePages(for: tabIDs.union(nativeTabIDs))
         _ = releaseTransientPages(in: spaceID)
     }
 
@@ -2342,6 +2364,7 @@ final class BrowserPagePool:
             else { continue }
             eligibleTabIDs.append(candidate.tabID)
         }
+        eligibleTabIDs += nativeTabs.inactiveTabIDs(excluding: presentedTabIDs)
         let releaseLimit = BrowserMemoryPressureReleasePolicy.releaseLimit(
             for: level,
             eligiblePageCount: eligibleTabIDs.count,
@@ -2353,6 +2376,7 @@ final class BrowserPagePool:
     }
 
     private func evictPage(_ tabID: TabID, preservingTabState: Bool = true) {
+        nativeTabs.remove(tabID)
         if preservingTabState {
             archiveTabState(for: tabID)
         }

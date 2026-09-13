@@ -22,6 +22,7 @@ struct BrowserDetailContent: View {
         case .nativeContent:
             if let tab, let space {
                 BrowserNativeTabHost(tab: tab, space: space)
+                    .environment(\.browserNativeTabs, pages.nativeTabs)
                     .environment(
                         \.browserNativeTabActions,
                         BrowserNativeTabActions(

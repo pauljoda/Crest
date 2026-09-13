@@ -3,9 +3,21 @@
 
     struct BrowserGettingStartedView: View {
         let openURL: (URL) -> Void
-        @State private var practice = BrowserGettingStartedPractice()
-        @State private var chapter = 0
-        @State private var lesson = 0
+        @Bindable var state: BrowserGettingStartedState
+        private var practice: BrowserGettingStartedPractice { state.practice }
+        private var chapter: Int {
+            get { state.chapter }
+            nonmutating set { state.chapter = newValue }
+        }
+        private var lesson: Int {
+            get { state.lesson }
+            nonmutating set { state.lesson = newValue }
+        }
+
+        init(state: BrowserGettingStartedState = BrowserGettingStartedState(), openURL: @escaping (URL) -> Void) {
+            self.state = state
+            self.openURL = openURL
+        }
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         var body: some View {
@@ -27,9 +39,11 @@
                     .frame(maxWidth: 1240)
                     .frame(maxWidth: .infinity)
                 }
+                .browserNativeScrollState(state.scroll)
                 .contentMargins(.trailing, 8, for: .scrollContent)
                 .background(CrestBrandTheme.canvas)
             }
+            .onDisappear { _ = practice.browser.sidebarReorderState.end() }
             .font(CrestTypography.sans(14))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: chapter)
         }

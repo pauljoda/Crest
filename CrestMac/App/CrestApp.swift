@@ -562,11 +562,13 @@ struct CrestApp: App {
     }
 
     private func settingsTabContent(browser: BrowserStore, pages: BrowserPagePool) -> BrowserSettingsTabContent {
-        BrowserSettingsTabContent { _ in
+        BrowserSettingsTabContent { runtime in
             BrowserSettingsView(
                 browser: browser, pages: pages, cloudSync: cloudSync,
                 spaceAccess: spaceAccess, dataDeleter: pagePoolRegistry, shortcuts: shortcuts,
-                onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: spaceSettingsPresentation
+                onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: spaceSettingsPresentation,
+                tabState: runtime.model(BrowserSettingsTabState.self) { BrowserSettingsTabState() },
+                tabAssignment: runtime.assignment
             )
         }
     }

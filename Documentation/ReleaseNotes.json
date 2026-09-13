@@ -1013,6 +1013,10 @@
     "closed-tab-sidebar-live-state": {
       "category": "fixed",
       "message": "Keep the sidebar's tabs and selection up to date when closing a tab"
+    },
+    "native-tab-loaded-state": {
+      "category": "fixed",
+      "message": "Keep Settings and Getting Started where you left them when switching tabs or Spaces"
     }
   }
 }

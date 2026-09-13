@@ -2,6 +2,8 @@ import SwiftUI
 
 struct BrowserSettingsSidebar: View {
     @Environment(\.locale) private var locale
+    @Environment(\.browserSettingsTabState) private var tabState
+    @State private var standaloneScroll = BrowserNativeScrollState()
     @Binding var navigation: BrowserSettingsNavigationState
     @FocusState private var isSearchFocused: Bool
     @FocusState private var focusedDestination: BrowserSettingsDestination?
@@ -47,6 +49,7 @@ struct BrowserSettingsSidebar: View {
                     }
                 }.padding(10)
             }
+            .browserNativeScrollState(tabState?.sidebarScroll ?? standaloneScroll)
             .onMoveCommand { direction in
                 guard focusedDestination != nil else { return }
                 let choices = navigation.visibleDestinations(locale: locale)

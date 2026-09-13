@@ -2,6 +2,8 @@ import SwiftUI
 
 struct BrowserShortcutList: View {
     let model: BrowserShortcutSettingsModel
+    @Environment(\.browserSettingsTabState) private var tabState
+    @State private var standaloneScroll = BrowserNativeScrollState()
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -52,6 +54,7 @@ struct BrowserShortcutList: View {
                     }
                 }
             }
+            .browserNativeListScrollState(tabState?.scroll(for: .shortcuts) ?? standaloneScroll)
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
             .background(BrowserSettingsCanvas.card, in: .rect(cornerRadius: 12))
@@ -76,7 +79,10 @@ struct BrowserShortcutList: View {
         to request: BrowserShortcutScrollRequest?,
         using proxy: ScrollViewProxy
     ) {
-        guard let request else { return }
+        guard let request,
+            tabState?.shortcutScrollRevision != request.revision
+        else { return }
+        tabState?.shortcutScrollRevision = request.revision
         Task { @MainActor in
             await Task.yield()
             proxy.scrollTo(request.targetID, anchor: .center)

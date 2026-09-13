@@ -57,6 +57,7 @@ struct MobileBrowserRootView: View {
             togglePrivateBrowsing: togglePrivateBrowsing,
             closePrivateBrowsing: closePrivateBrowsing
         )
+        .environment(\.browserNativeTabs, model.pages.nativeTabs)
         .environment(
             \.browserSettingsTabContent,
             BrowserSettingsTabContent(present: { model.presentSettings(matching: $0) })

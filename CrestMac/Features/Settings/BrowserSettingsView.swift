@@ -12,7 +12,8 @@ struct BrowserSettingsView: View {
     let onboardingCoordinator: BrowserOnboardingCoordinator
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
 
-    @State private var navigation = BrowserSettingsNavigationState()
+    @Bindable var tabState: BrowserSettingsTabState
+    let tabAssignment: BrowserTabRuntimeAssignment?
 
     init(
         browser: BrowserStore,
@@ -23,8 +24,12 @@ struct BrowserSettingsView: View {
         shortcuts: BrowserShortcutStore,
         onboardingCoordinator: BrowserOnboardingCoordinator,
         spaceSettingsPresentation: BrowserSpaceSettingsPresentationState =
-            BrowserSpaceSettingsPresentationState()
+            BrowserSpaceSettingsPresentationState(),
+        tabState: BrowserSettingsTabState = BrowserSettingsTabState(),
+        tabAssignment: BrowserTabRuntimeAssignment? = nil
     ) {
+        self.tabState = tabState
+        self.tabAssignment = tabAssignment
         self.browser = browser
         self.pages = pages
         self.cloudSync = cloudSync
@@ -37,7 +42,7 @@ struct BrowserSettingsView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            BrowserSettingsSidebar(navigation: $navigation)
+            BrowserSettingsSidebar(navigation: $tabState.navigation)
                 .frame(width: 224)
             Divider()
 
@@ -46,7 +51,8 @@ struct BrowserSettingsView: View {
                 // out an offscreen form for every live appearance update.
                 if isActiveSpace {
                     BrowserSettingsDestinationPage(
-                        destination: navigation.selection,
+                        destination: tabState.navigation.selection,
+                        tabAssignment: tabAssignment,
                         browser: browser,
                         pages: pages,
                         cloudSync: cloudSync,
@@ -55,9 +61,9 @@ struct BrowserSettingsView: View {
                         shortcuts: shortcuts,
                         onboardingCoordinator: onboardingCoordinator,
                         spaceSettingsPresentation: spaceSettingsPresentation,
-                        searchText: $navigation.searchText
+                        searchText: $tabState.navigation.searchText
                     )
-                    .id(navigation.selection)
+                    .id(tabState.navigation.selection)
                 }
             }
             .frame(
@@ -70,6 +76,8 @@ struct BrowserSettingsView: View {
         .background(BrowserSettingsCanvas.background)
         .tint(CrestBrandTheme.accent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .environment(\.browserSettingsTabState, tabState)
+        .environment(\.browserSettingsSelections, tabState.selections)
         .environment(\.browserSettingsIsTab, true)
         .environment(\.browserSettingsUsesLiveSidebar, true)
         .environment(
@@ -87,7 +95,14 @@ struct BrowserSettingsView: View {
         }
         .onChange(of: spaceSettingsPresentation.revision, initial: true) {
             _, revision in
-            navigation.applyExternalRoute(
+            if let tabAssignment,
+                spaceSettingsPresentation.requestedAssignment
+                    != BrowserSpaceRuntimeAssignment(
+                        spaceID: tabAssignment.spaceID, profileID: tabAssignment.profileID)
+            {
+                return
+            }
+            tabState.applyExternalRoute(
                 spaceSettingsPresentation.requestedDestination,
                 revision: revision
             )

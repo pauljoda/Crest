@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct BrowserShortcutSettingsView: View {
+    @Environment(\.browserSettingsTabState) private var tabState
     @State private var model: BrowserShortcutSettingsModel
 
     private let requestedSpaceID: SpaceID?
@@ -46,7 +47,7 @@ struct BrowserShortcutSettingsView: View {
 
     var body: some View {
         BrowserShortcutSettingsContent(
-            model: model,
+            model: tabState?.retainShortcuts(model) ?? model,
             requestedSpaceID: requestedSpaceID,
             requestedExtensionCommand: requestedExtensionCommand,
             requestRevision: requestRevision
@@ -128,6 +129,7 @@ private struct BrowserShortcutSettingsContent: View {
         } message: {
             Text(BrowserShortcutSettingsPresentation.resetAllDetail)
         }
+        .onDisappear { model.cancelPendingConflict() }
         .onChange(of: locale.identifier, initial: true) {
             model.updateSearchProvider(
                 BrowserShortcutPresentationCatalog(locale: locale)
