@@ -82,9 +82,8 @@ enum BrowserSidebarInteractionPolicy {
     /// between the saved and current runs, and the band an empty run keeps for
     /// a drop.
     ///
-    /// Touch decides this too. The seam carries a control that only a pointer
-    /// can reveal, and the band has to be big enough for the least precise
-    /// input the shell accepts to land in.
+    /// Touch decides this too. The seam's clear control and the drop band must
+    /// accommodate the least precise input the shell accepts.
     static func tabListMetrics(
         _ capabilities: BrowserInteractionCapabilities
     ) -> BrowserSidebarTabListMetrics {

@@ -19,14 +19,6 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
     /// underneath.
     let clearActionOcclusionWidth: CGFloat
 
-    /// Whether the seam carries the clear-current-tabs control at all.
-    ///
-    /// The control waits for a pointer to arrive over the list before it
-    /// appears, which is a reveal a finger cannot ask for. Where it can never
-    /// be revealed the seam is a plain divider, and clearing lives in the Space
-    /// header's menu instead.
-    let carriesClearAction: Bool
-
     /// The height of the band a run keeps for the drop it cannot otherwise
     /// show.
     ///
@@ -44,17 +36,15 @@ struct BrowserSidebarTabListMetrics: Equatable, Sendable {
         dividerHorizontalInset: 12,
         dividerVerticalInset: 3,
         clearActionOcclusionWidth: 52,
-        carriesClearAction: true,
         sectionEndBandHeight: CrestSpacing.medium
     )
 
-    /// A touch shell: a plain seam with more air around it, and a band a finger
-    /// can land in.
+    /// A touch shell: room for the persistent clear icon and its hit target,
+    /// and a band a finger can land in.
     static let touch = BrowserSidebarTabListMetrics(
         dividerHorizontalInset: 16,
         dividerVerticalInset: 5,
-        clearActionOcclusionWidth: 0,
-        carriesClearAction: false,
+        clearActionOcclusionWidth: 52,
         sectionEndBandHeight: 28
     )
 }

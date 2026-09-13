@@ -973,6 +973,10 @@
     "pinned-tab-change-icon-presentation": {
       "category": "fixed",
       "message": "Change pinned tab icons on Mac and iPad without opening the tab, and restore the website icon when needed"
+    },
+    "mobile-clear-open-tabs-button": {
+      "category": "fixed",
+      "message": "Clear open tabs with a dedicated button on iPhone and iPad while keeping pinned and saved tabs"
     }
   }
 }

@@ -2,11 +2,9 @@ import SwiftUI
 
 /// The seam between the saved run and the current one, on every shell.
 ///
-/// Where a pointer can reveal it, the seam also carries the control that
-/// archives every current tab at once: the divider gives up its trailing end
-/// while the control is showing, so the two never overlap. A shell that cannot
-/// reveal a control on hover draws the seam alone and leaves clearing to the
-/// Space header's menu, which a finger can reach.
+/// Pointer-only shells reveal Clear on hover. Touch and non-hover shells keep
+/// an icon mounted so clearing never requires a pointer. The divider reserves
+/// room for the control whenever it is visible.
 struct BrowserCurrentTabsDivider: View {
     let capabilities: BrowserInteractionCapabilities
     /// Whether the shell is currently in the state that reveals the control —
@@ -28,23 +26,34 @@ struct BrowserCurrentTabsDivider: View {
                     showsClearButton ? metrics.clearActionOcclusionWidth : 0
                 )
 
-            if metrics.carriesClearAction {
-                Button("Clear", systemImage: "arrow.down", action: clear)
-                    .labelStyle(.titleAndIcon)
-                    .buttonStyle(.plain)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .opacity(showsClearButton ? 1 : 0)
-                    .disabled(!showsClearButton)
-                    .accessibilityHidden(!showsClearButton)
-                    .accessibilityHint("Moves all current tabs to Archive")
+            Button(action: clear) {
+                if revealsOnHoverOnly {
+                    Label("Clear", systemImage: "arrow.down")
+                        .labelStyle(.titleAndIcon)
+                } else {
+                    Label("Clear Open Tabs", systemImage: "arrow.down")
+                        .labelStyle(.iconOnly)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(.rect)
+                }
             }
+            .buttonStyle(.plain)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .opacity(showsClearButton ? 1 : 0)
+            .disabled(!canClear || !showsClearButton)
+            .accessibilityHidden(!showsClearButton)
+            .accessibilityHint("Moves all current tabs to Archive")
         }
         .padding(.horizontal, metrics.dividerHorizontalInset)
         .padding(.vertical, metrics.dividerVerticalInset)
     }
 
     private var showsClearButton: Bool {
-        metrics.carriesClearAction && showsClearAction && canClear
+        !revealsOnHoverOnly || (showsClearAction && canClear)
+    }
+
+    private var revealsOnHoverOnly: Bool {
+        BrowserSidebarInteractionPolicy.revealsRowControlsOnHoverOnly(capabilities)
     }
 }
