@@ -12,6 +12,8 @@ struct BrowserFolderAppearanceGroup: View {
     private var showsTabCounts = BrowserLookAndFeelDefaults.foldersShowTabCounts
     @AppStorage(BrowserFolderAppearancePreference.showsBordersKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsBorders = BrowserLookAndFeelDefaults.foldersShowBorders
+    @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
+    private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
 
     var body: some View {
         CrestSettingsGroup(
@@ -23,6 +25,12 @@ struct BrowserFolderAppearanceGroup: View {
                 BrowserLookAndFeelPreview(space: space, focus: .folders)
             }
         } content: {
+            CrestSettingRow("Icon Only Folders", setting: icons.resettable("Icon Only Folders")) {
+                Toggle("Icon Only Folders", isOn: icons.binding)
+                    .labelsHidden()
+                    .accessibilityIdentifier("folder-icon-only")
+                    .help("Show a static custom icon or emoji instead of folder artwork.")
+            }
             CrestSettingRow(
                 "Always show folder highlights", setting: highlights.resettable("Always show folder highlights")
             ) {
@@ -57,9 +65,15 @@ struct BrowserFolderAppearanceGroup: View {
 
     private var settings: [CrestResettableSetting] {
         [
+            icons.resettable("Icon Only Folders"),
             highlights.resettable("Always show folder highlights"),
             counts.resettable("Show folder tab counts"),
             borders.resettable("Show folder color borders"),
         ]
     }
+
+    private var icons: CrestSettingValue<Bool> {
+        CrestSettingValue($iconOnly, default: BrowserLookAndFeelDefaults.foldersIconOnly)
+    }
+
 }

@@ -7,6 +7,7 @@ enum BrowserFolderAppearancePreference {
     static let alwaysVisibleKey = "crest.folders.alwaysShowHighlights"
     static let showsTabCountsKey = "crest.folders.showsTabCounts"
     static let showsBordersKey = "crest.folders.showsBorders"
+    static let iconOnlyKey = "crest.folders.iconOnly"
 
     static let defaults: UserDefaults = {
         let environment = BrowserLaunchEnvironment.current

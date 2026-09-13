@@ -5,10 +5,17 @@ struct BrowserFolderIcon: View {
     let folder: BrowserFolder
     let isExpanded: Bool
     let metrics: BrowserFolderHeaderMetrics
+    @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
+    private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
 
     var body: some View {
         BrowserFolderArtwork(symbol: folder.symbol, color: folder.color, isExpanded: isExpanded)
-            .modifier(BrowserFolderIconColumn(metrics: metrics, isExpanded: isExpanded))
+            .modifier(
+                BrowserFolderIconColumn(
+                    metrics: metrics,
+                    isExpanded: isExpanded && !(iconOnly && BrowserFolderArtwork.customGlyph(for: folder.symbol) != nil)
+                )
+            )
             .accessibilityHidden(true)
     }
 }
@@ -18,10 +25,18 @@ struct BrowserFolderArtwork: View {
     let symbol: String
     let color: BrowserSpaceBrandColor
     var isExpanded = false
+    @AppStorage(BrowserFolderAppearancePreference.iconOnlyKey, store: BrowserFolderAppearancePreference.defaults)
+    private var iconOnly = BrowserLookAndFeelDefaults.foldersIconOnly
 
     var body: some View {
-        BrowserFolderFaces(glyph: faceSymbol, color: color, isExpanded: isExpanded)
-            .foregroundStyle(faceForeground)
+        if iconOnly, let glyph = Self.customGlyph(for: symbol) {
+            glyph
+                .foregroundStyle(.primary)
+                .transaction { $0.animation = nil }
+        } else {
+            BrowserFolderFaces(glyph: Self.customGlyph(for: symbol), color: color, isExpanded: isExpanded)
+                .foregroundStyle(faceForeground)
+        }
     }
 
     private var faceForeground: Color {
@@ -30,7 +45,7 @@ struct BrowserFolderArtwork: View {
         return scheme == .dark ? .white : .black
     }
 
-    private var faceSymbol: Text? {
+    static func customGlyph(for symbol: String) -> Text? {
         if let emoji = BrowserIconSymbol.emoji(from: symbol) { return Text(emoji) }
         guard symbol != "folder", symbol != "folder.fill" else { return nil }
         return Text(Image(systemName: symbol))

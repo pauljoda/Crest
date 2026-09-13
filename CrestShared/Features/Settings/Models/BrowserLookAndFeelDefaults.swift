@@ -16,6 +16,7 @@ enum BrowserLookAndFeelDefaults {
     static let foldersAlwaysVisible = false
     static let foldersShowTabCounts = true
     static let foldersShowBorders = true
+    static let foldersIconOnly = false
 
     /// Puts every device-wide appearance choice this pane owns back.
     ///
@@ -42,5 +43,6 @@ enum BrowserLookAndFeelDefaults {
         folders.set(foldersAlwaysVisible, forKey: BrowserFolderAppearancePreference.alwaysVisibleKey)
         folders.set(foldersShowTabCounts, forKey: BrowserFolderAppearancePreference.showsTabCountsKey)
         folders.set(foldersShowBorders, forKey: BrowserFolderAppearancePreference.showsBordersKey)
+        folders.set(foldersIconOnly, forKey: BrowserFolderAppearancePreference.iconOnlyKey)
     }
 }
