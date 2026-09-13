@@ -104,6 +104,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let backgroundPageDidUpdate: BackgroundPageUpdateHandler
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
+    @ObservationIgnored private let handleLinkDrag: (BrowserPeekInteractionEvent) -> Void
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
@@ -168,6 +169,7 @@ final class BrowserPagePool:
         openModifiedLink: @escaping ModifiedLinkOpener = { _, _, _ in nil },
         backgroundPageDidUpdate: @escaping BackgroundPageUpdateHandler = { _ in nil },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
+        handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         activateHostedNotificationSource:
@@ -208,6 +210,7 @@ final class BrowserPagePool:
         self.openModifiedLink = openModifiedLink
         self.backgroundPageDidUpdate = backgroundPageDidUpdate
         self.openPeek = openPeek
+        self.handleLinkDrag = handleLinkDrag
         self.splitLinkHost = splitLinkHost
         self.linkDestinationHost = linkDestinationHost
         self.activateHostedNotificationSource = activateHostedNotificationSource
@@ -2043,6 +2046,7 @@ final class BrowserPagePool:
                 self?.openModifiedLink(url, in: spaceID, selecting: selecting)
             },
             openPeek: openPeek,
+            handleLinkDrag: handleLinkDrag,
             splitLinkHost: splitLinkHost,
             linkDestinationHost: linkDestinationHost,
             extensionWebpageMenuItems: {

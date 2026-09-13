@@ -4,6 +4,106 @@ import XCTest
 
 @MainActor
 final class BrowserTransientBrowsingTests: XCTestCase {
+    func testLinkPullCancelsWhenTheSourceRuntimeAssignmentChanges() throws {
+        let tab = BrowserTab(
+            title: "Source", url: try XCTUnwrap(URL(string: "https://example.com/source")), placement: .current)
+        let spaceID = SpaceID()
+        var source: BrowserPageNavigationContext? = BrowserPageNavigationContext(
+            tab: tab, spaceID: spaceID, profileID: UUID())
+        let coordinator = BrowserTransientBrowsingCoordinator()
+        let handler = BrowserLinkPullHandler(context: { source }, handle: coordinator.handleLinkDrag)
+        let sample = BrowserLinkPullSample(
+            location: CGPoint(x: 0.4, y: 0.4), size: CGSize(width: 800, height: 600), time: 1)
+        XCTAssertTrue(
+            handler.begin(
+                url: try XCTUnwrap(URL(string: "https://example.com/destination")), label: nil,
+                origin: CGPoint(x: 0.2, y: 0.2), sample: sample))
+        XCTAssertEqual(coordinator.peekPresentationPhase, .staged)
+
+        source = BrowserPageNavigationContext(tab: tab, spaceID: spaceID, profileID: UUID())
+
+        XCTAssertFalse(handler.validateSource())
+        XCTAssertFalse(handler.isActive)
+        XCTAssertNil(coordinator.peekRequest)
+        handler.end(sample)
+        XCTAssertNil(coordinator.peekRequest)
+    }
+
+    func testLinkPullReleaseCommitsOnlyInsideItsSourceWindow() throws {
+        let source = BrowserPageNavigationContext(
+            tab: BrowserTab(
+                title: "Source", url: try XCTUnwrap(URL(string: "https://example.com/source")), placement: .current),
+            spaceID: SpaceID(), profileID: UUID())
+        let coordinator = BrowserTransientBrowsingCoordinator()
+        let handler = BrowserLinkPullHandler(context: { source }, handle: coordinator.handleLinkDrag)
+        let url = try XCTUnwrap(URL(string: "https://example.com/destination"))
+        let origin = CGPoint(x: 0.2, y: 0.2)
+        let sample = BrowserLinkPullSample(
+            location: CGPoint(x: 0.4, y: 0.4), size: CGSize(width: 800, height: 600), time: 1)
+        XCTAssertTrue(handler.begin(url: url, label: nil, origin: origin, sample: sample))
+        let request = try XCTUnwrap(coordinator.peekRequest)
+
+        handler.end(BrowserLinkPullSample(location: sample.location, size: sample.size, time: 2))
+
+        XCTAssertEqual(coordinator.peekRequest, request)
+        XCTAssertEqual(coordinator.peekPresentationPhase, .committed)
+        XCTAssertFalse(handler.isActive)
+        handler.cancel()
+        XCTAssertEqual(coordinator.peekRequest, request)
+
+        XCTAssertTrue(handler.begin(url: url, label: nil, origin: origin, sample: sample))
+        handler.end(
+            BrowserLinkPullSample(
+                location: CGPoint(x: 1.1, y: 0.4), size: sample.size, time: 2))
+
+        XCTAssertNil(coordinator.peekRequest)
+        XCTAssertFalse(handler.isActive)
+    }
+
+    func testPullReleaseRequiresDistanceAndRejectsVelocityBackTowardTheLink() {
+        for translation in [CGSize(width: 80, height: 0), CGSize(width: -60, height: 80)] {
+            XCTAssertTrue(BrowserLinkDragReleasePolicy.opensPeek(translation: translation, velocity: translation))
+            XCTAssertFalse(
+                BrowserLinkDragReleasePolicy.opensPeek(
+                    translation: translation,
+                    velocity: CGSize(width: -translation.width, height: -translation.height)))
+            XCTAssertTrue(BrowserLinkDragReleasePolicy.opensPeek(translation: translation, velocity: .zero))
+        }
+        XCTAssertFalse(
+            BrowserLinkDragReleasePolicy.opensPeek(
+                translation: CGSize(width: 4, height: 3), velocity: CGSize(width: 900, height: 900)))
+    }
+
+    func testReturningPullStaysStagedAndLateUpdatesCannotReplaceAnotherPeek() throws {
+        let request = BrowserPeekRequest(
+            url: try XCTUnwrap(URL(string: "https://example.com/pull")),
+            sourceTabID: TabID(), sourceTitle: "Source",
+            spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: SpaceID(), profileID: UUID()),
+            trigger: .linkDrag)
+        let coordinator = BrowserTransientBrowsingCoordinator()
+        var state = BrowserPeekMotionState(
+            origin: CGPoint(x: 0.2, y: 0.2),
+            location: CGPoint(x: 0.4, y: 0.4), scale: 0.4)
+        coordinator.beginPeekDrag(request, state: state)
+        state.releasedAt = Date()
+        state.returnsToSource = true
+        coordinator.updatePeekDrag(id: request.id, state: state)
+        XCTAssertEqual(coordinator.peekPresentationPhase, .staged)
+        XCTAssertEqual(coordinator.peekRequest?.id, request.id)
+        coordinator.cancelStagedPeek(id: request.id)
+        XCTAssertNil(coordinator.peekMotionState)
+
+        coordinator.beginPeekDrag(request, state: state)
+        coordinator.presentPeek(request)
+        let clickMotion = coordinator.peekMotionState
+        coordinator.updatePeekDrag(id: request.id, state: state)
+        XCTAssertNotNil(clickMotion?.releasedAt)
+        XCTAssertEqual(coordinator.peekMotionState, clickMotion)
+        XCTAssertEqual(coordinator.peekPresentationPhase, .committed)
+        coordinator.cancelStagedPeek(id: request.id)
+        XCTAssertEqual(coordinator.peekRequest?.id, request.id)
+    }
+
     func testExternalURLsPreferAnExistingBrowserAndOtherwiseCreateOnlyAQuickWindow() {
         XCTAssertEqual(BrowserExternalLinkScenePolicy.existingBrowserPreference, ["*"])
         XCTAssertEqual(BrowserExternalLinkScenePolicy.primarySceneActivation, [])

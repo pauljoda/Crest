@@ -17,6 +17,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored let pictureInPicture: BrowserPictureInPicturePageController
     @ObservationIgnored lazy var linkHover = BrowserLinkHoverController(webView: webView)
+    @ObservationIgnored lazy var linkDrag = BrowserLinkDragController(
+        webView: webView,
+        context: { [weak self] in self?.navigationContext },
+        handle: { [weak self] event in self?.handleLinkDrag(event) }
+    )
     @ObservationIgnored lazy var focusRestoration: BrowserWebFocusRestorationController = {
         let controller = BrowserWebFocusRestorationController(webView: webView)
         (webView as? BrowserDesktopWebView)?.focusRestoration = controller
@@ -120,6 +125,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var appInitiatedURL: URL?
     @ObservationIgnored let openModifiedLink: (URLRequest, SpaceID, Bool) -> Void
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
+    @ObservationIgnored let handleLinkDrag: (BrowserPeekInteractionEvent) -> Void
     @ObservationIgnored var navigationContext: BrowserPageNavigationContext?
     @ObservationIgnored var activeNavigation: WKNavigation?
     @ObservationIgnored private var observations: Set<AnyCancellable> = []
@@ -271,6 +277,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         openNewTab: @escaping (URL) -> Void,
         openModifiedLink: @escaping (URLRequest, SpaceID, Bool) -> Void = { _, _, _ in },
         openPeek: @escaping (BrowserPeekRequest) -> Void = { _ in },
+        handleLinkDrag: @escaping (BrowserPeekInteractionEvent) -> Void = { _ in },
         splitLinkHost: BrowserSplitLinkHost = .unavailable,
         linkDestinationHost: BrowserLinkDestinationHost = .unavailable,
         extensionWebpageMenuItems:
@@ -333,6 +340,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         isContentBlockingActive = !appliedContentRuleLists.isEmpty
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
+        self.handleLinkDrag = handleLinkDrag
         self.splitLinkHost = splitLinkHost
         self.linkDestinationHost = linkDestinationHost
         self.extensionWebpageMenuItems = extensionWebpageMenuItems
@@ -390,6 +398,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
         desktopWebView.menuHost = self
         desktopWebView.linkHover = linkHover
+        desktopWebView.linkDrag = linkDrag
         if normalizedDefaultPageZoom != BrowserPageZoomPolicy.defaultLevel {
             webView.pageZoom = normalizedDefaultPageZoom
         }
@@ -444,6 +453,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // its opener's scripts against its opener's handlers.
         if ownsUserContentController {
             BrowserLinkHoverContentBridge.install(in: webView.configuration.userContentController)
+            BrowserLinkDragContentBridge.install(in: webView.configuration.userContentController)
             linkContextMessageProxy = BrowserLinkContextContentBridge.install(
                 in: webView.configuration.userContentController
             ) { [weak self] message in
@@ -622,6 +632,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             profileID: profileID,
             automaticallyOpensPeek: automaticallyOpensPeek
         )
+        linkDrag.contextDidChange()
         if previousTitle != navigationContext?.title {
             mediaSessionCoordinator?.ownerTitleDidChange()
         }
@@ -764,7 +775,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         sitePermissionRequests.setPresentationAvailable(false)
         translation.reset()
         linkHover.detach()
+        linkDrag.detach()
         (webView as? BrowserDesktopWebView)?.linkHover = nil
+        (webView as? BrowserDesktopWebView)?.linkDrag = nil
         focusRestoration.invalidate()
         extensionBackgroundActivityLease?.cancel()
         extensionBackgroundActivityLease = nil
@@ -1560,6 +1573,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
+        linkDrag.beginNavigation()
         mediaCaptureSession.reset()
         sitePermissionRequests.cancelAll()
         translation.reset()

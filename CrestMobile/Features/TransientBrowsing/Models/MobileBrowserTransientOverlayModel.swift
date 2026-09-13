@@ -65,6 +65,11 @@ final class MobileBrowserTransientOverlayModel {
         pageLease?.page
     }
 
+    var motionState: BrowserPeekMotionState? {
+        guard case .peek = request, isCurrentRequest else { return nil }
+        return coordinator.peekMotionState
+    }
+
     var availableSpaces: [BrowserSpace] {
         BrowserTransientSessionPolicy.availableSpaces(
             in: browser.session.spaces,
@@ -217,43 +222,27 @@ final class MobileBrowserTransientOverlayModel {
             isCurrentRequest,
             let pageLease,
             let page = pageLease.page,
-            pageLease.assignment == request.spaceAssignment,
-            let promotion = BrowserTransientSessionPolicy.promotionSpaces(
-                source: browser.space(matching: request.spaceAssignment),
-                destination: browser.space(matching: destinationAssignment),
-                isLocked: spaceAccess.isLocked
-            ),
-            let url = page.url ?? Optional(request.url),
-            let tabID = browser.openNewTab(
-                url: url,
-                matching: BrowserSpaceRuntimeAssignment(
-                    space: promotion.destination
-                )
-            ),
-            let currentDestination = browser.space(
-                matching: BrowserSpaceRuntimeAssignment(
-                    space: promotion.destination
-                )
+            let outcome = BrowserTransientPagePromotion(
+                url: page.url ?? request.url,
+                sourceAssignment: request.spaceAssignment,
+                leaseAssignment: pageLease.assignment,
+                destinationAssignment: destinationAssignment
+            ).perform(
+                in: browser,
+                isLocked: spaceAccess.isLocked,
+                adoptPage: { tabID, destination in
+                    pages.adoptTransientPage(pageLease, as: tabID, in: destination)
+                }
             )
         else { return false }
 
-        let adoptedLivePage =
-            BrowserTransientSessionPolicy.adoptsLivePage(
-                leaseAssignment: pageLease.assignment,
-                destination: currentDestination
-            )
-            && pages.adoptTransientPage(
-                pageLease,
-                as: tabID,
-                in: currentDestination
-            )
         if request.isQuickWindow,
             destinationAssignment != request.spaceAssignment
         {
-            preferences.rememberSpace(destinationAssignment.spaceID, for: url)
+            preferences.rememberSpace(destinationAssignment.spaceID, for: page.url ?? request.url)
         }
         wasPromoted = true
-        if !adoptedLivePage {
+        if outcome == .openedNewPage {
             pageLease.release()
             pages.select(session: browser.session)
         }

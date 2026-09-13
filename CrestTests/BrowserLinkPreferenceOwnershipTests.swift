@@ -28,7 +28,8 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
                 )
             ],
             rememberedQuickWindowSpacesBySite: ["example.com": destinationSpaceID],
-            followsTabsMovedToAnotherSpace: false
+            followsTabsMovedToAnotherSpace: false,
+            dragsLinksToPeek: false
         )
         let persistence = UserDefaultsBrowserLinkPreferencesPersistence(
             defaults: context.defaults
@@ -51,6 +52,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
                 "followsTabsMovedToAnotherSpace",
                 "automaticallyOpensPeek",
                 "peekClickModifier",
+                "dragsLinksToPeek",
                 "quickWindowArchivePolicy",
                 "remembersQuickWindowSpaceBySite",
                 "routes",
@@ -85,6 +87,7 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
         XCTAssertTrue(restored.followsTabsMovedToAnotherSpace)
         XCTAssertFalse(restored.automaticallyOpensPeek)
         XCTAssertEqual(restored.peekClickModifier, .option)
+        XCTAssertTrue(restored.dragsLinksToPeek)
         XCTAssertEqual(restored.quickWindowArchivePolicy, .after6Hours)
         XCTAssertTrue(restored.remembersQuickWindowSpaceBySite)
         XCTAssertEqual(restored.routes, [])
@@ -100,13 +103,15 @@ final class BrowserLinkPreferenceOwnershipTests: XCTestCase {
         store.addRoute(destinationSpaceID: destinationSpaceID)
         let routeID = store.preferences.routes[0].id
         store.moveRoute(routeID, by: 1)
+        store.dragsLinksToPeek = false
 
-        XCTAssertEqual(persistence.savedPreferences.count, 2)
+        XCTAssertEqual(persistence.savedPreferences.count, 3)
         XCTAssertEqual(persistence.savedPreferences.last, store.preferences)
 
         store.reset()
 
         XCTAssertEqual(store.preferences, .default)
+        XCTAssertTrue(store.dragsLinksToPeek)
         XCTAssertEqual(persistence.removeCallCount, 1)
     }
 

@@ -47,6 +47,20 @@ final class BrowserPeekModel {
         pageLease?.page
     }
 
+    var motionState: BrowserPeekMotionState? {
+        isCurrentRequest ? coordinator.peekMotionState : nil
+    }
+
+    var isPullStaged: Bool {
+        motionState != nil && coordinator.peekPresentationPhase == .staged
+    }
+
+    func finishReturningPull() {
+        guard motionState?.returnsToSource == true else { return }
+        releaseLease()
+        coordinator.cancelStagedPeek(id: request.id)
+    }
+
     var availableSpaces: [BrowserSpace] {
         BrowserTransientSessionPolicy.availableSpaces(
             in: browser.session.spaces,
@@ -136,38 +150,22 @@ final class BrowserPeekModel {
             isCurrentRequest,
             let pageLease,
             let page = pageLease.page,
-            pageLease.assignment == request.assignment,
-            let promotion = BrowserTransientSessionPolicy.promotionSpaces(
-                source: browser.space(matching: request.assignment),
-                destination: browser.space(matching: destinationAssignment),
-                isLocked: spaceAccess.isLocked
-            ),
-            let url = page.url ?? Optional(request.url),
-            let tabID = browser.openNewTab(
-                url: url,
-                matching: BrowserSpaceRuntimeAssignment(
-                    space: promotion.destination
-                )
-            ),
-            let currentDestination = browser.space(
-                matching: BrowserSpaceRuntimeAssignment(
-                    space: promotion.destination
-                )
+            let outcome = BrowserTransientPagePromotion(
+                url: page.url ?? request.url,
+                sourceAssignment: request.assignment,
+                leaseAssignment: pageLease.assignment,
+                destinationAssignment: destinationAssignment
+            ).perform(
+                in: browser,
+                isLocked: spaceAccess.isLocked,
+                adoptPage: { tabID, destination in
+                    pages.adoptTransientPage(pageLease, as: tabID, in: destination)
+                }
             )
         else { return false }
 
-        let adoptedLivePage =
-            BrowserTransientSessionPolicy.adoptsLivePage(
-                leaseAssignment: pageLease.assignment,
-                destination: currentDestination
-            )
-            && pages.adoptTransientPage(
-                pageLease,
-                as: tabID,
-                in: currentDestination
-            )
         wasPromoted = true
-        if !adoptedLivePage {
+        if outcome == .openedNewPage {
             pageLease.release()
         }
         pages.select(session: browser.session)
@@ -195,9 +193,7 @@ final class BrowserPeekModel {
     func setActive(_ isActive: Bool) {
         switch sourceDisposition {
         case .notPresented, .sourceMissing, .sourceLocked:
-            // A window that is no longer showing this Peek, or is showing it
-            // over a Space that has gone or locked, keeps no page alive. Only
-            // the lease goes: the overlay itself is the window's business.
+            // Release inaccessible content without changing the window's presentation.
             releaseLease()
         case .usable:
             pageLease?.setActive(isActive)

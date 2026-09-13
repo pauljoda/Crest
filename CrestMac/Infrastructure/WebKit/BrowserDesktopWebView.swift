@@ -8,15 +8,27 @@ final class BrowserDesktopWebView: WKWebView {
     /// The page-owned record of this view's public AppKit editing responder.
     weak var focusRestoration: BrowserWebFocusRestorationController?
     weak var linkHover: BrowserLinkHoverController?
+    weak var linkDrag: BrowserLinkDragController?
+
+    override func mouseDown(with event: NSEvent) {
+        linkDrag?.mouseDown(event)
+        super.mouseDown(with: event)
+    }
 
     override func viewWillMove(toSuperview newSuperview: NSView?) {
-        if superview !== newSuperview { linkHover?.detach() }
+        if superview !== newSuperview {
+            linkHover?.detach()
+            linkDrag?.detach()
+        }
         super.viewWillMove(toSuperview: newSuperview)
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window == nil { linkHover?.invalidate() }
+        if window == nil {
+            linkHover?.invalidate()
+            linkDrag?.detach()
+        }
     }
 
     override func becomeFirstResponder() -> Bool {

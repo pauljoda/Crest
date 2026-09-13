@@ -59,9 +59,4 @@ enum BrowserPeekPresentationPolicy {
         )
     }
 
-    static func revealsInitialWebContent(
-        committedNavigationCount: Int
-    ) -> Bool {
-        committedNavigationCount > 0
-    }
 }

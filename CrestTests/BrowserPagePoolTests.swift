@@ -1679,15 +1679,12 @@ final class BrowserPagePoolTests: XCTestCase {
             [
                 BrowserPictureInPictureScript.source,
                 BrowserLinkHoverContentBridge.source,
+                BrowserLinkDragContentBridge.source,
                 BrowserLinkContextContentBridge.source,
                 BrowserBlockedPopupContentBridge.source,
                 BrowserGeolocationContentBridge.source,
             ],
-            """
-            A private page carries only nonpersistent browsing bridges for link \
-            hover, link context, blocked popups, geolocation and Picture in Picture, with no \
-            credential or extension script.
-            """
+            "Private pages allow browsing bridges, including link pulls, without credential or extension scripts."
         )
 
         pool.select(tab: secondTab, space: secondSpace)

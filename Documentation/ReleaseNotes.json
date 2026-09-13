@@ -1025,6 +1025,10 @@
     "mobile-native-link-and-image-menus": {
       "category": "fixed",
       "message": "Save images and preview links with native menus on iPhone and iPad, with quick actions to open links in any Space"
+    },
+    "pull-links-into-live-peek": {
+      "category": "new",
+      "message": "Drag links into Peek on Mac, with live previews that follow your gesture and fade in as they load"
     }
   }
 }

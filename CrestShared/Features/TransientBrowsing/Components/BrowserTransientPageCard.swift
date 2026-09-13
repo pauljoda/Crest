@@ -13,18 +13,39 @@ struct BrowserTransientPageCard<WebContent: View>: View {
     let reduceTransparency: Bool
     let restore: () -> Void
     @ViewBuilder let webContent: () -> WebContent
+    @State private var isWebContentVisible = false
 
     var body: some View {
         ZStack {
             pageContent
+                // Keep the native page mounted and loading, but hide its
+                // unpainted backing surface until content is ready to reveal.
+                .opacity(isWebContentVisible ? 1 : 0)
             if let coverLabel = pageStatus.initialLoadingCoverLabel {
                 BrowserTransientInitialLoadingCover(
                     accessibilityLabel: coverLabel
                 )
             }
         }
-        .animation(revealAnimation, value: coversUnpaintedPage)
-        .background(.background)
+        .animation(revealAnimation, value: isWebContentVisible)
+        .task(id: coversUnpaintedPage) {
+            guard !coversUnpaintedPage else {
+                isWebContentVisible = false
+                return
+            }
+            // Give WebKit its first display frames after committing content,
+            // without waiting for images or other subresources to finish.
+            try? await Task.sleep(for: .milliseconds(34))
+            guard !Task.isCancelled else { return }
+            isWebContentVisible = true
+        }
+        .background {
+            if reduceTransparency {
+                Rectangle().fill(.background)
+            } else {
+                Rectangle().fill(.regularMaterial)
+            }
+        }
         .modifier(
             BrowserTransientPageCardStyle(
                 arrangement: arrangement,
@@ -37,6 +58,7 @@ struct BrowserTransientPageCard<WebContent: View>: View {
     private var pageContent: some View {
         if pageStatus.hasPage {
             webContent()
+                .background(.background)
         } else if pageStatus.wasReleasedForMemoryPressure {
             BrowserTransientReleasedPageView(
                 vocabulary: vocabulary,
@@ -67,13 +89,9 @@ private struct BrowserTransientInitialLoadingCover: View {
     let accessibilityLabel: LocalizedStringKey
 
     var body: some View {
-        Rectangle()
-            .fill(.regularMaterial)
-            .overlay {
-                ProgressView()
-                    .controlSize(.small)
-                    .accessibilityLabel(accessibilityLabel)
-            }
+        Color.clear
+            .accessibilityElement()
+            .accessibilityLabel(accessibilityLabel)
             .allowsHitTesting(false)
             .transition(.opacity)
     }
@@ -83,9 +101,10 @@ private struct BrowserTransientLoadingPageView: View {
     let title: LocalizedStringKey
 
     var body: some View {
-        ProgressView(title)
+        Color.clear
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.background)
+            .accessibilityElement()
+            .accessibilityLabel(title)
     }
 }
 

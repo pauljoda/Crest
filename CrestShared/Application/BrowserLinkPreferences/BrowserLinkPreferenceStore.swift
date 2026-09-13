@@ -23,6 +23,11 @@ final class BrowserLinkPreferenceStore {
         set { update { $0.followsTabsMovedToAnotherSpace = newValue } }
     }
 
+    var dragsLinksToPeek: Bool {
+        get { preferences.dragsLinksToPeek }
+        set { update { $0.dragsLinksToPeek = newValue } }
+    }
+
     func update(_ update: (inout BrowserLinkPreferences) -> Void) {
         var revised = preferences
         update(&revised)

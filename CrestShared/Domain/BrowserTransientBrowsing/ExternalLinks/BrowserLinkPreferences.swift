@@ -30,6 +30,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
     var followsTabsMovedToAnotherSpace: Bool
     var automaticallyOpensPeek: Bool
     var peekClickModifier: BrowserLinkClickModifier
+    var dragsLinksToPeek: Bool
     var quickWindowArchivePolicy: BrowserQuickWindowArchivePolicy
     var remembersQuickWindowSpaceBySite: Bool
     var routes: [BrowserLinkRoute]
@@ -54,6 +55,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         case followsTabsMovedToAnotherSpace
         case automaticallyOpensPeek
         case peekClickModifier
+        case dragsLinksToPeek
         case quickWindowArchivePolicy
         case remembersQuickWindowSpaceBySite
         case routes
@@ -70,7 +72,8 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         remembersQuickWindowSpaceBySite: Bool,
         routes: [BrowserLinkRoute],
         rememberedQuickWindowSpacesBySite: [String: SpaceID],
-        followsTabsMovedToAnotherSpace: Bool = true
+        followsTabsMovedToAnotherSpace: Bool = true,
+        dragsLinksToPeek: Bool = true
     ) {
         self.externalLinkDestination = externalLinkDestination
         self.externalLinkSpaceID = externalLinkSpaceID
@@ -78,6 +81,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
         self.followsTabsMovedToAnotherSpace = followsTabsMovedToAnotherSpace
         self.automaticallyOpensPeek = automaticallyOpensPeek
         self.peekClickModifier = peekClickModifier
+        self.dragsLinksToPeek = dragsLinksToPeek
         self.quickWindowArchivePolicy = quickWindowArchivePolicy
         self.remembersQuickWindowSpaceBySite = remembersQuickWindowSpaceBySite
         self.routes = routes
@@ -112,6 +116,7 @@ struct BrowserLinkPreferences: Codable, Equatable, Sendable {
                 BrowserLinkClickModifier.self,
                 forKey: .peekClickModifier
             ) ?? .option
+        dragsLinksToPeek = try container.decodeIfPresent(Bool.self, forKey: .dragsLinksToPeek) ?? true
         quickWindowArchivePolicy =
             try container.decodeIfPresent(
                 BrowserQuickWindowArchivePolicy.self,

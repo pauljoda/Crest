@@ -361,6 +361,7 @@ struct CrestApp: App {
                 return browser.session
             },
             openPeek: { request in transientBrowsing.presentPeek(request) },
+            handleLinkDrag: { transientBrowsing.handleLinkDrag($0) },
             splitLinkHost: browser.splitLinkHost,
             linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
             activateHostedNotificationSource: { spaceID, tabID in
@@ -415,6 +416,7 @@ struct CrestApp: App {
                 return privateBrowser.session
             },
             openPeek: { request in privateTransientBrowsing.presentPeek(request) },
+            handleLinkDrag: { privateTransientBrowsing.handleLinkDrag($0) },
             splitLinkHost: privateBrowser.splitLinkHost,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess)
         )

@@ -10,6 +10,7 @@ extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
         translation.reset()
         linkHover.beginNavigation()
+        linkDrag.beginNavigation()
         focusRestoration.invalidate()
         mediaCaptureSession.reset()
         sitePermissionRequests.cancelAll()
@@ -37,6 +38,7 @@ extension BrowserPage: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
         linkHover.didCommitNavigation()
+        linkDrag.didFinishNavigation()
         mediaSessionCoordinator?.didCommitNavigation()
         pictureInPicture.navigationDidCommit()
         committedNavigationCount += 1
@@ -171,15 +173,15 @@ extension BrowserPage: WKNavigationDelegate {
         for destinationURL: URL?,
         in webView: WKWebView
     ) -> BrowserPeekSourcePresentation? {
-        guard let window = webView.window else { return nil }
+        guard let window = webView.window, let content = window.contentView else { return nil }
         let pointInWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)
         let pointInWebView = webView.convert(pointInWindow, from: nil)
         guard webView.bounds.contains(pointInWebView) else { return nil }
 
         return BrowserPeekPresentationPolicy.sourcePresentation(
-            touchPoint: pointInWebView,
-            in: webView.bounds.size,
-            hasTopLeadingOrigin: webView.isFlipped,
+            touchPoint: content.convert(pointInWindow, from: nil),
+            in: content.bounds.size,
+            hasTopLeadingOrigin: content.isFlipped,
             label: destinationURL?.host ?? "Link"
         )
     }
@@ -307,6 +309,7 @@ extension BrowserPage: WKNavigationDelegate {
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         translation.reset()
         linkHover.beginNavigation()
+        linkDrag.beginNavigation()
         focusRestoration.invalidate()
         mediaSessionCoordinator?.webContentProcessDidTerminate()
         pictureInPicture.invalidate()
@@ -384,7 +387,10 @@ extension BrowserPage: WKNavigationDelegate {
         didFail navigation: WKNavigation?,
         withError error: any Error
     ) {
-        if isCurrentNavigation(navigation) { linkHover.didFailNavigation() }
+        if isCurrentNavigation(navigation) {
+            linkHover.didFailNavigation()
+            linkDrag.didFinishNavigation()
+        }
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
@@ -398,7 +404,10 @@ extension BrowserPage: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation?,
         withError error: any Error
     ) {
-        if isCurrentNavigation(navigation) { linkHover.didFailNavigation() }
+        if isCurrentNavigation(navigation) {
+            linkHover.didFailNavigation()
+            linkDrag.didFinishNavigation()
+        }
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,

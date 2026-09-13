@@ -16,14 +16,13 @@ struct BrowserPeekUnlockedContent: View {
         self.reservedLeadingWidth = reservedLeadingWidth
         self.layoutDirection = layoutDirection
         self.installsKeyboardMonitor = installsKeyboardMonitor
+        _retainedMotionState = State(initialValue: model.motionState)
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
-    @State private var isCardVisible = false
-    @State private var isCardExpanded = false
-    @State private var isInitialWebContentRevealed = false
+    @State private var retainedMotionState: BrowserPeekMotionState?
 
     var body: some View {
         BrowserTransientSurface(
@@ -37,6 +36,16 @@ struct BrowserPeekUnlockedContent: View {
             webContent
         }
         .modifier(taskLifecycle)
+        .allowsHitTesting(!model.isPullStaged)
+        .onChange(of: model.motionState) { _, state in
+            if let state { retainedMotionState = state }
+        }
+        .task(id: model.motionState?.releasedAt) {
+            guard model.motionState?.returnsToSource == true else { return }
+            try? await Task.sleep(for: .seconds(reduceMotion ? 0 : 1.2))
+            guard !Task.isCancelled else { return }
+            model.finishReturningPull()
+        }
         .modifier(
             BrowserPeekInputLifecycleModifier(
                 model: model,
@@ -67,11 +76,15 @@ struct BrowserPeekUnlockedContent: View {
             arrangement: .pointer,
             reservedLeadingWidth: reservedLeadingWidth,
             layoutDirection: layoutDirection,
-            isCardVisible: isCardVisible,
-            isCardExpanded: isCardExpanded,
+            isCardVisible: true,
+            isCardExpanded: !model.isPullStaged,
             reduceMotion: reduceMotion,
             reduceTransparency: reduceTransparency,
-            sourcePresentation: .resolved(model.request.sourcePresentation)
+            presentationPhase: model.isPullStaged ? .staged : .committed,
+            sourcePresentation: .resolved(model.request.sourcePresentation),
+            // Keep the outgoing card and its presentation intact while
+            // the coordinator removes the request and SwiftUI fades it out.
+            motionState: model.motionState ?? retainedMotionState
         )
     }
 
@@ -98,7 +111,7 @@ struct BrowserPeekUnlockedContent: View {
     /// but has painted nothing. A page that failed has its own thing to say.
     private var showsInitialLoadingSurface: Bool {
         guard let page = model.page else { return false }
-        return !isInitialWebContentRevealed
+        return page.committedNavigationCount == 0
             && page.navigationFailure == nil
             && page.webContentFailureMessage == nil
     }
@@ -106,44 +119,14 @@ struct BrowserPeekUnlockedContent: View {
     private var taskLifecycle: BrowserPeekTaskLifecycleModifier {
         BrowserPeekTaskLifecycleModifier(
             requestID: model.request.id,
-            committedNavigationCount: model.page?.committedNavigationCount,
             completedNavigationCount: model.page?.completedNavigationCount,
             present: presentCard,
-            reveal: revealInitialWebContentIfReady,
             recordCompletedNavigation: model.recordCompletedNavigation
         )
     }
 
     private func presentCard() async {
-        guard model.preparePage(isActive: scenePhase == .active) else { return }
-        await Task.yield()
-        guard !Task.isCancelled else { return }
-        guard !reduceMotion else {
-            isCardVisible = true
-            isCardExpanded = true
-            return
-        }
-        withAnimation(
-            BrowserVisualAccessibilityPolicy.animation(
-                BrowserPeekPresentationPolicy.entranceAnimation,
-                reduceMotion: reduceMotion
-            )
-        ) {
-            isCardVisible = true
-            isCardExpanded = true
-        }
-    }
-
-    private func revealInitialWebContentIfReady() async {
-        guard let page = model.page,
-            BrowserPeekPresentationPolicy.revealsInitialWebContent(
-                committedNavigationCount: page.committedNavigationCount
-            ),
-            !isInitialWebContentRevealed
-        else { return }
-        try? await Task.sleep(for: .milliseconds(34))
-        guard !Task.isCancelled else { return }
-        isInitialWebContentRevealed = true
+        _ = model.preparePage(isActive: scenePhase == .active)
     }
 
     private func dismiss() {

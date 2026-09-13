@@ -5,6 +5,47 @@ import XCTest
 
 @MainActor
 final class BrowserPeekModelTests: XCTestCase {
+    func testPullLoadsWhileHeldAndCommitKeepsTheSameLivePage() async throws {
+        let context = try makeContext()
+        var state = BrowserPeekMotionState(
+            origin: CGPoint(x: 0.2, y: 0.2),
+            location: CGPoint(x: 0.4, y: 0.4), scale: 0.4)
+        context.coordinator.beginPeekDrag(context.request, state: state)
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let lease = try XCTUnwrap(context.model.pageLease)
+        let page = try XCTUnwrap(lease.page)
+        try await waitUntil { page.completedNavigationCount > 0 }
+        XCTAssertTrue(context.model.isPullStaged)
+
+        state.releasedAt = Date()
+        context.coordinator.updatePeekDrag(id: context.request.id, state: state)
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        XCTAssertTrue(context.model.pageLease === lease)
+        XCTAssertTrue(context.model.page === page)
+        XCTAssertFalse(context.model.isPullStaged)
+        context.model.releaseForDisappearance()
+    }
+
+    func testReturningPullReleasesItsLoadedPageWithoutCreatingATab() throws {
+        let context = try makeContext()
+        var state = BrowserPeekMotionState(
+            origin: CGPoint(x: 0.2, y: 0.2),
+            location: CGPoint(x: 0.4, y: 0.4), scale: 0.4)
+        context.coordinator.beginPeekDrag(context.request, state: state)
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let lease = try XCTUnwrap(context.model.pageLease)
+        state.releasedAt = Date()
+        state.returnsToSource = true
+        context.coordinator.updatePeekDrag(id: context.request.id, state: state)
+        XCTAssertNotNil(lease.page)
+        context.model.finishReturningPull()
+        XCTAssertNil(context.coordinator.peekRequest)
+        XCTAssertNil(context.model.pageLease)
+        XCTAssertNil(lease.page)
+        XCTAssertEqual(context.pages.retainedTransientPageCount, 0)
+        XCTAssertEqual(context.browser.selectedSpace?.tabs.map(\.id), context.source.tabs.map(\.id))
+    }
+
     func testTargetBlankNavigationStaysInTheExactPeekLease() throws {
         let context = try makeContext()
         XCTAssertTrue(context.model.preparePage(isActive: true))

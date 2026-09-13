@@ -69,6 +69,10 @@ struct BrowserTransientCardStack<WebContent: View>: View {
             anchor: state.sourceTransform.anchor
         )
         .opacity(state.opacity(for: .pageCard))
+        .modifier(
+            BrowserTransientMotionTransform(
+                state: state.motionState, containerSize: availableSize, reduceMotion: state.reduceMotion
+            ))
     }
 
     /// The region the stack is laid out inside, once the shell's own leading

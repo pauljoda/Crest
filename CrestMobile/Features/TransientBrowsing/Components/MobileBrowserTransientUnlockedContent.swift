@@ -4,11 +4,18 @@ struct MobileBrowserTransientUnlockedContent: View {
     let model: MobileBrowserTransientOverlayModel
     let presentationPhase: BrowserPeekPresentationPhase
 
+    init(model: MobileBrowserTransientOverlayModel, presentationPhase: BrowserPeekPresentationPhase) {
+        self.model = model
+        self.presentationPhase = presentationPhase
+        _retainedMotionState = State(initialValue: model.motionState)
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
     @State private var isCardVisible = false
     @State private var isCardExpanded = false
+    @State private var retainedMotionState: BrowserPeekMotionState?
 
     var body: some View {
         BrowserTransientSurface(
@@ -23,6 +30,9 @@ struct MobileBrowserTransientUnlockedContent: View {
         }
         .task(id: presentationPhase) {
             await updatePresentation()
+        }
+        .onChange(of: model.motionState) { _, state in
+            if let state { retainedMotionState = state }
         }
         .task(id: model.activityRevision) {
             await model.autoArchiveAfterInactivity()
@@ -66,12 +76,13 @@ struct MobileBrowserTransientUnlockedContent: View {
     private var presentationState: BrowserTransientPresentationState {
         BrowserTransientPresentationState(
             arrangement: .current,
-            isCardVisible: isCardVisible,
-            isCardExpanded: isCardExpanded,
+            isCardVisible: !model.request.isQuickWindow || isCardVisible,
+            isCardExpanded: model.request.isQuickWindow ? isCardExpanded : presentationPhase == .committed,
             reduceMotion: reduceMotion,
             reduceTransparency: reduceTransparency,
             presentationPhase: presentationPhase,
-            sourcePresentation: model.request.sourcePresentation
+            sourcePresentation: model.request.sourcePresentation,
+            motionState: model.motionState ?? retainedMotionState
         )
     }
 
@@ -79,8 +90,15 @@ struct MobileBrowserTransientUnlockedContent: View {
         BrowserTransientPageStatus(
             hasPage: model.page != nil,
             wasReleasedForMemoryPressure:
-                model.pageLease?.wasReleasedForMemoryPressure == true
+                model.pageLease?.wasReleasedForMemoryPressure == true,
+            initialLoadingCoverLabel: showsInitialLoadingSurface
+                ? model.request.overlayVocabulary.loadingTitle : nil
         )
+    }
+
+    private var showsInitialLoadingSurface: Bool {
+        guard let page = model.page, !model.request.isQuickWindow else { return false }
+        return page.committedNavigationCount == 0 && page.navigationFailure == nil
     }
 
     private var actions: BrowserTransientCardActions {
@@ -106,18 +124,17 @@ struct MobileBrowserTransientUnlockedContent: View {
             )
         }
         guard presentationPhase == .committed else { return }
+        // All Peek inputs use the shared motion state; only Quick Window has
+        // its independent scene entrance.
+        guard model.request.isQuickWindow else { return }
         guard !reduceMotion else {
             isCardVisible = true
             isCardExpanded = true
             return
         }
-        let animation =
-            model.request.isQuickWindow
-            ? CrestMotion.quickPeekEntrance
-            : BrowserPeekPresentationPolicy.entranceAnimation
         withAnimation(
             BrowserVisualAccessibilityPolicy.animation(
-                animation,
+                CrestMotion.quickPeekEntrance,
                 reduceMotion: reduceMotion
             )
         ) {

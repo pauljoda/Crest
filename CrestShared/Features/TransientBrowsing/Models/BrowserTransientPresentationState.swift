@@ -21,6 +21,7 @@ struct BrowserTransientPresentationState {
     /// it. A shell without that gesture is always committed.
     var presentationPhase: BrowserPeekPresentationPhase = .committed
     let sourcePresentation: BrowserPeekSourcePresentation
+    var motionState: BrowserPeekMotionState? = nil
 
     var sourceTransform: BrowserTransientSourceTransform {
         BrowserTransientCardLayout.sourceCardTransform(for: sourcePresentation)
@@ -31,6 +32,7 @@ struct BrowserTransientPresentationState {
     /// The entrance scale, applied to whichever layer the arrangement grows.
     /// The other layer is handed identity, so both shells run the same chain.
     func scale(for target: BrowserTransientEntranceTarget) -> CGSize {
+        if motionState != nil { return CGSize(width: 1, height: 1) }
         guard arrangement.entranceTarget == target else {
             return CGSize(width: 1, height: 1)
         }
@@ -50,6 +52,8 @@ struct BrowserTransientPresentationState {
     /// The scrim rests dimmer while the overlay is only staged behind a press,
     /// and is absent until the card itself is on screen.
     var scrimOpacity: Double {
+        // Pulling the card provides the emphasis without dimming the source.
+        guard motionState == nil else { return 0 }
         let restingOpacity = presentationPhase == .staged ? 0.08 : 0.34
         return BrowserVisualAccessibilityPolicy.scrimOpacity(
             restingOpacity * (isCardVisible ? 1 : 0),

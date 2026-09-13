@@ -60,6 +60,13 @@ struct BrowserGeneralSettingsPane: View {
 
             #if os(macOS)
                 BrowserSplitFocusSettingsSection()
+                Section("Link dragging") {
+                    Toggle("Drag links to Peek", isOn: $linkPreferences.dragsLinksToPeek)
+                        .accessibilityIdentifier("drag-links-to-peek-toggle")
+                    CrestFormFootnote(
+                        "Drag a link to pull out Peek. Hold Option to drag the link normally. Turn off to reverse these gestures."
+                    )
+                }
             #endif
 
             Section("Page Translation") {

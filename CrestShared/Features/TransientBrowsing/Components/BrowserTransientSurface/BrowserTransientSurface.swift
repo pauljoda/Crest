@@ -18,6 +18,13 @@ struct BrowserTransientSurface<WebContent: View>: View {
     @ViewBuilder let webContent: () -> WebContent
 
     var body: some View {
+        GeometryReader { safeAreaProxy in
+            surface(safeAreaInsets: safeAreaProxy.safeAreaInsets)
+                .ignoresSafeArea(edges: state.motionState != nil ? .all : state.arrangement.ignoredSafeAreaEdges)
+        }
+    }
+
+    private func surface(safeAreaInsets: EdgeInsets) -> some View {
         GeometryReader { proxy in
             ZStack {
                 BrowserTransientScrim(
@@ -32,7 +39,7 @@ struct BrowserTransientSurface<WebContent: View>: View {
                     selectedSpaceID: selectedSpaceID,
                     vocabulary: vocabulary,
                     availableSize: proxy.size,
-                    safeAreaInsets: proxy.safeAreaInsets,
+                    safeAreaInsets: safeAreaInsets,
                     actions: actions,
                     webContent: webContent
                 )
@@ -43,8 +50,8 @@ struct BrowserTransientSurface<WebContent: View>: View {
                 )
                 .opacity(state.opacity(for: .assembly))
             }
+            .coordinateSpace(name: BrowserTransientMotion.coordinateSpaceName)
         }
-        .ignoresSafeArea(edges: state.arrangement.ignoredSafeAreaEdges)
     }
 
     private var assemblyScale: CGSize {
