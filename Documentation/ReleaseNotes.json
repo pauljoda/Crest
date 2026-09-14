@@ -1225,6 +1225,10 @@
     "pinned-outline-color-transitions": {
       "category": "improved",
       "message": "Fade smoothly between pinned-tab outline colors as website colors become available"
+    },
+    "pinned-outlines-preserve-monochrome-favicons": {
+      "category": "fixed",
+      "message": "Keep black, white, and gray favicon colors in pinned-tab outlines"
     }
   }
 }
