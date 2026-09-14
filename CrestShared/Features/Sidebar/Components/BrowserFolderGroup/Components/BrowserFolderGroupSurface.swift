@@ -86,9 +86,6 @@ struct BrowserFolderGroupSurface: View {
                 title: "Folder Icon",
                 currentEmoji: BrowserIconSymbol.emoji(from: folder.symbol),
                 currentSystemSymbol: BrowserIconSymbol.emoji(from: folder.symbol) == nil ? folder.symbol : nil,
-                systemSymbols: BrowserSpaceSimpleSymbol.allCases.map {
-                    BrowserIconSystemChoice(symbol: $0.rawValue, title: $0.titleKey)
-                },
                 showsReset: folder.symbol != "folder" && folder.symbol != "folder.fill",
                 resetTitle: "Use Folder Icon",
                 setEmoji: { interaction.folderSymbol.wrappedValue = BrowserIconSymbol.symbol(forEmoji: $0) },

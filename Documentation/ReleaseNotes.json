@@ -1201,6 +1201,22 @@
     "system-dark-app-icon-background": {
       "category": "fixed",
       "message": "Match the system dark background across Crest's app icon color palettes"
+    },
+    "folder-full-sf-symbol-picker": {
+      "category": "improved",
+      "message": "Choose folder icons from the full searchable SF Symbols catalog"
+    },
+    "folder-tinted-title-contrast": {
+      "category": "improved",
+      "message": "Read tinted folder titles more easily with semibold text and stronger contrast"
+    },
+    "folder-symbols-fit-icon-column": {
+      "category": "fixed",
+      "message": "Keep wide folder symbols fully visible in Icon only mode"
+    },
+    "pinned-tab-website-color-consistency": {
+      "category": "fixed",
+      "message": "Keep pinned-tab colors consistent when pages unload and use more representative website colors"
     }
   }
 }

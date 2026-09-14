@@ -30,9 +30,19 @@ struct BrowserFolderArtwork: View {
 
     var body: some View {
         if iconOnly, let glyph = Self.customGlyph(for: symbol) {
-            glyph
-                .foregroundStyle(.primary)
-                .transaction { $0.animation = nil }
+            Group {
+                if BrowserIconSymbol.emoji(from: symbol) != nil {
+                    glyph
+                } else {
+                    // Use the folder's font-relative footprint. Text attachments
+                    // can truncate wider symbols inside the fixed icon column.
+                    Image(systemName: "folder").hidden().overlay {
+                        Image(systemName: symbol).resizable().scaledToFit()
+                    }
+                }
+            }
+            .foregroundStyle(.primary)
+            .transaction { $0.animation = nil }
         } else {
             BrowserFolderFaces(glyph: Self.customGlyph(for: symbol), color: color, isExpanded: isExpanded)
                 .foregroundStyle(faceForeground)

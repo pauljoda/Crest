@@ -5,7 +5,6 @@ struct BrowserIconCustomizationPresentation {
     let title: LocalizedStringKey
     let currentEmoji: String?
     var currentSystemSymbol: String? = nil
-    var systemSymbols: [BrowserIconSystemChoice] = []
     var showsReset = false
     var resetTitle: LocalizedStringKey? = nil
     let setEmoji: (String) -> Void

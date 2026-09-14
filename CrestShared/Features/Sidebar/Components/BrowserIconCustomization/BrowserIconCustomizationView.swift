@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Shared icon selection and emoji insertion for tabs, Spaces, and split groups.
+/// Shared icon selection and emoji insertion for tabs, folders, Spaces, and split groups.
 struct BrowserIconCustomizationView: View {
     let title: LocalizedStringKey
     let currentEmoji: String?
     var currentSystemSymbol: String? = nil
-    var systemSymbols: [BrowserIconSystemChoice] = []
     var showsReset = false
     var resetTitle: LocalizedStringKey? = nil
     let setEmoji: (String) -> Void
@@ -20,7 +19,7 @@ struct BrowserIconCustomizationView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             BrowserIconPickerHeader(
-                title: title, showsSystemSymbols: !systemSymbols.isEmpty,
+                title: title, showsSystemSymbols: setSystemSymbol != nil,
                 mode: $mode, showsReset: showsReset, resetTitle: resetTitle,
                 reset: reset.map { action in
                     {
@@ -29,12 +28,15 @@ struct BrowserIconCustomizationView: View {
                     }
                 })
             BrowserIconSearchField(mode: mode, query: $query, commitEmoji: commitInsertedEmoji)
-            BrowserIconSelectionGrid(
-                mode: mode,
-                emojiChoices: mode == .emoji ? visibleEmojiChoices : [],
-                systemSymbols: mode == .systemSymbol ? visibleSystemSymbols : [],
-                currentEmoji: currentEmoji, currentSystemSymbol: currentSystemSymbol,
-                selectEmoji: selectEmoji, selectSystemSymbol: selectSystemSymbol)
+            if mode == .systemSymbol {
+                BrowserSystemSymbolCatalogGrid(
+                    selection: currentSystemSymbol, query: query, select: selectSystemSymbol
+                )
+                .frame(height: 330)
+            } else {
+                BrowserIconSelectionGrid(
+                    emojiChoices: visibleEmojiChoices, currentEmoji: currentEmoji, selectEmoji: selectEmoji)
+            }
             if mode == .emoji, query.isEmpty {
                 BrowserEmojiCategoryBar(category: $category, contentWidth: BrowserIconPickerLayout.contentWidth)
             }
@@ -55,20 +57,12 @@ struct BrowserIconCustomizationView: View {
             : BrowserTabEmojiChoices.matching(query)
     }
 
-    private var visibleSystemSymbols: [BrowserIconSystemChoice] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return systemSymbols }
-        return systemSymbols.filter {
-            $0.symbol.localizedStandardContains(trimmed)
-        }
-    }
-
     private var resetAnimation: Animation? {
         BrowserVisualAccessibilityPolicy.animation(CrestMotion.collection, reduceMotion: reduceMotion)
     }
 
     private func repairMode() {
-        guard !systemSymbols.isEmpty else {
+        guard setSystemSymbol != nil else {
             mode = .emoji
             return
         }

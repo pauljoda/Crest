@@ -25,15 +25,8 @@ struct BrowserSystemSymbolPicker: View {
 private struct BrowserSystemSymbolCatalogPicker: View {
     @Binding var selection: String
     @State private var query = ""
-    @State private var names: [String] = []
-    @State private var isLoading = true
     @Environment(\.dismiss) private var dismiss
     @FocusState private var searchFocused: Bool
-
-    private var matches: [String] {
-        let words = query.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == "." })
-        return words.isEmpty ? names : names.filter { name in words.allSatisfy { name.contains($0) } }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -54,15 +47,45 @@ private struct BrowserSystemSymbolCatalogPicker: View {
             }
             .padding(12)
             .background(.primary.opacity(0.05), in: .rect(cornerRadius: 10))
+            BrowserSystemSymbolCatalogGrid(selection: selection, query: query) { name in
+                selection = name
+                dismiss()
+            }
+        }
+        .padding(20)
+        .frame(idealWidth: 480, maxWidth: 520, idealHeight: 500, maxHeight: 600)
+        .task {
+            searchFocused = true
+        }
+    }
+}
+
+/// Shared searchable catalog for Space artwork and sidebar folder icons.
+struct BrowserSystemSymbolCatalogGrid: View {
+    let selection: String?
+    let query: String
+    let select: (String) -> Void
+    @State private var names: [String] = []
+    @State private var isLoading = true
+
+    private var matches: [String] {
+        let words = query.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == "." })
+        return words.isEmpty ? names : names.filter { name in words.allSatisfy { name.contains($0) } }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
                     ForEach(matches, id: \.self) { name in
                         Button {
-                            selection = name
-                            dismiss()
+                            select(name)
                         } label: {
                             VStack(spacing: 8) {
-                                Image(systemName: name).font(.system(size: 26)).frame(height: 36)
+                                Image(systemName: name)
+                                    .resizable().scaledToFit()
+                                    .frame(width: 32, height: 32)
+                                    .frame(height: 36)
                                 Text(name.replacingOccurrences(of: ".", with: " "))
                                     .font(.caption2).lineLimit(2).frame(height: 30)
                             }
@@ -93,10 +116,7 @@ private struct BrowserSystemSymbolCatalogPicker: View {
             }
             Text("\(matches.count) symbols").font(.caption).foregroundStyle(.secondary)
         }
-        .padding(20)
-        .frame(idealWidth: 480, maxWidth: 520, idealHeight: 500, maxHeight: 600)
         .task {
-            searchFocused = true
             names = await BrowserSystemSymbolCatalog.availableNames()
             isLoading = false
         }

@@ -5,7 +5,7 @@ enum BrowserFolderAppearancePolicy {
     static let frontHighlightOpacity = 0.12
 
     /// The artwork's white highlight composited over its front face, including
-    /// translucent custom colors. Titles use the same resolved shade.
+    /// translucent custom colors.
     static func frontColor(_ color: BrowserSpaceBrandColor) -> BrowserSpaceBrandColor {
         let baseAlpha = color.alpha * (1 - frontHighlightOpacity)
         let alpha = baseAlpha + frontHighlightOpacity
@@ -14,6 +14,18 @@ enum BrowserFolderAppearancePolicy {
             green: (color.green * baseAlpha + frontHighlightOpacity) / alpha,
             blue: (color.blue * baseAlpha + frontHighlightOpacity) / alpha,
             alpha: alpha)
+    }
+
+    /// Keep the folder hue while separating its title from the tinted surface.
+    static func titleColor(_ color: BrowserSpaceBrandColor, onDarkBackground: Bool) -> BrowserSpaceBrandColor {
+        let face = frontColor(color)
+        let contrast = onDarkBackground ? 0.27 : 0.32
+        let lift = onDarkBackground ? contrast : 0
+        return BrowserSpaceBrandColor(
+            red: face.red * (1 - contrast) + lift,
+            green: face.green * (1 - contrast) + lift,
+            blue: face.blue * (1 - contrast) + lift,
+            alpha: face.alpha)
     }
 
     static func compositedColor(_ color: BrowserSpaceBrandColor, opacity: Double, background: BrowserSpaceBrandColor)

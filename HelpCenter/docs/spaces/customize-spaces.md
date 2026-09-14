@@ -22,7 +22,7 @@ The editor keeps a preview visible as you work. Adjust the background and colors
 
 ## Customize folders
 
-Choose folder color intensity and text color in the Space’s appearance editor. Individual folder menus let you set colors, symbols, and emoji. You can show a custom icon on its own instead of the animated folder artwork, and optionally match folder titles to their artwork color.
+Choose folder color intensity and text color in the Space’s appearance editor. Individual folder menus let you set colors, search the full SF Symbols catalog, or choose emoji. You can show a custom icon on its own instead of the animated folder artwork. Enable **Tint Folder Title** to use semibold titles in the folder’s color, adjusted for stronger contrast against light or dark sidebars.
 
 ## Customize the browser around your Spaces
 

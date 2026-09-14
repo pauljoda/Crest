@@ -18,8 +18,8 @@ struct PinnedTabInteractionSurface: ViewModifier {
                 BrowserTabAppearanceSurface(
                     appearance: appearance,
                     accent: appearance.usesWebsitePinColor
-                        ? accent.color
-                        : (appearance.color ?? (presentation?.branding ?? branding)?.primaryColor ?? .indigo).color,
+                        ? (accent?.color ?? selectionAccent)
+                        : selectionAccent,
                     isPinned: true, isSelected: isSelected, isHovering: isHovering,
                     selectionEmphasis: isMultiSelected)
             )
@@ -35,17 +35,21 @@ struct PinnedTabInteractionSurface: ViewModifier {
                     palette = nil
                     return
                 }
-                palette = await BrowserFaviconPaletteLoader.shared.palette(
-                    for: faviconData
-                )
+                let extracted = await BrowserFaviconPaletteLoader.shared.palette(for: faviconData)
+                guard !Task.isCancelled else { return }
+                palette = extracted
             }
     }
 
-    private var accent: BrowserTabIconAccent {
+    private var accent: BrowserTabIconAccent? {
         BrowserTabIconAccentResolver.resolve(
             siteTheme: siteTheme,
             extracted: palette?.primary.iconAccent
         )
+    }
+
+    private var selectionAccent: Color {
+        (appearance.color ?? (presentation?.branding ?? branding)?.primaryColor ?? .indigo).color
     }
 
     private var appearance: BrowserTabAppearance { BrowserDeviceAppearanceStore.shared.tabs }

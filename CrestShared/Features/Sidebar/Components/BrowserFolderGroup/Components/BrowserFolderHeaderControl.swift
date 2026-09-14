@@ -9,6 +9,7 @@ struct BrowserFolderHeaderControl: View {
 
     private var folder: BrowserFolder { configuration.folder }
     @Environment(\.browserInteractionCapabilities) private var capabilities
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(BrowserFolderAppearancePreference.showsTabCountsKey, store: BrowserFolderAppearancePreference.defaults)
     private var showsTabCounts = true
     @AppStorage(BrowserFolderAppearancePreference.alwaysVisibleKey, store: BrowserFolderAppearancePreference.defaults)
@@ -64,9 +65,13 @@ struct BrowserFolderHeaderControl: View {
 
                         Text(folder.title.isEmpty ? String(localized: "Folder") : folder.title)
                             .foregroundStyle(
-                                tintsTitle ? BrowserFolderAppearancePolicy.frontColor(folder.color).color : .primary
+                                tintsTitle
+                                    ? BrowserFolderAppearancePolicy.titleColor(
+                                        folder.color, onDarkBackground: colorScheme == .dark
+                                    ).color
+                                    : .primary
                             )
-                            .fontWeight(containsCurrentTab ? .semibold : .regular)
+                            .fontWeight(tintsTitle || containsCurrentTab ? .semibold : .regular)
                             .lineLimit(1)
                             .modifier(BrowserFolderTitlePressFeedback())
 

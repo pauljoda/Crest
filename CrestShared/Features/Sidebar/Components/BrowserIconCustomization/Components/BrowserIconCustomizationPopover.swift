@@ -60,7 +60,6 @@ private struct BrowserIconCustomizationPopoverModifier: ViewModifier {
             title: presentation.title,
             currentEmoji: presentation.currentEmoji,
             currentSystemSymbol: presentation.currentSystemSymbol,
-            systemSymbols: presentation.systemSymbols,
             showsReset: presentation.showsReset,
             resetTitle: presentation.resetTitle,
             setEmoji: presentation.setEmoji,

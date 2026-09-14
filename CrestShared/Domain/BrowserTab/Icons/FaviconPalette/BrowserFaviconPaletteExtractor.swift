@@ -182,9 +182,17 @@ struct BrowserFaviconPaletteExtractor: Sendable {
                         totalEdgeWeight: totalEdgeWeight
                     )
             } ?? 0
+        // A site's brand color may cover the icon's background. Excluding that
+        // cluster unconditionally turns a white or black logo into the accent.
+        let chromaticIndices = colors.indices.filter {
+            weights[$0] / totalWeight >= 0.02 && hypot(colors[$0].y, colors[$0].z) >= 0.04
+        }
+        let candidates =
+            chromaticIndices.isEmpty
+            ? colors.indices.filter { $0 != backgroundIndex && weights[$0] / totalWeight >= 0.02 }
+            : chromaticIndices
         let primaryIndex =
-            colors.indices
-            .filter { $0 != backgroundIndex && weights[$0] / totalWeight >= 0.02 }
+            candidates
             .max { left, right in
                 accentScore(
                     index: left,

@@ -75,7 +75,9 @@ struct PinnedTabGridContent: View {
                     profileID: assignment.profileID,
                     isSelected: tab.id == selectedTabID,
                     isLoaded: loaded,
-                    siteTheme: siteThemeAccent(runtimeAssignment),
+                    siteTheme: tab.iconMode == .automatic
+                        ? (siteThemeAccent(runtimeAssignment) ?? tab.iconAccent)
+                        : tab.iconAccent,
                     select: {
                         guard isCurrentAndUnlocked(runtimeAssignment) else { return }
                         // The touch-up that ends a lift also reaches this button;
