@@ -1169,6 +1169,14 @@
     "temporary-blank-windows": {
       "category": "new",
       "message": "Open disposable blank windows with your Space’s cookies and extensions, or create one by dragging a tab outside the window"
+    },
+    "window-titles-and-drag-previews": {
+      "category": "fixed",
+      "message": "Keep dragged tabs visible outside the window and give blank windows the normal browser appearance"
+    },
+    "blank-and-quick-window-shortcuts": {
+      "category": "improved",
+      "message": "Open blank windows with Command-Option-N and Quick Windows with Command-Option-Shift-N"
     }
   }
 }

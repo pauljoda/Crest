@@ -12,6 +12,14 @@ struct BrowserDragPreviewWindowFloatingContent: View {
     let presentation: BrowserDragPreviewWindowPresentation
 
     var body: some View {
+        preview
+            .frame(width: presentation.canvasFrame.width, height: presentation.canvasFrame.height)
+            .offset(x: presentation.canvasFrame.minX, y: presentation.canvasFrame.minY)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private var preview: some View {
         switch presentation.content {
         case .sidebarLift(let sidebar):
             BrowserSidebarLiftFloatingPreview(

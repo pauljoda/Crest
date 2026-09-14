@@ -15,8 +15,7 @@ struct BrowserSplitCardLiftPreviewContent: Equatable {
     let profileID: UUID
     /// The page as it was rendered at pickup, once WebKit has handed it over.
     let snapshot: NSImage?
-    /// Top-left of the card, in the window-global space the preview window is
-    /// pinned to.
+    /// Top-left of the card in the source browser window's global space.
     let origin: CGPoint
     let size: CGSize
     /// Where inside the card the pointer took hold. The rise is scaled about

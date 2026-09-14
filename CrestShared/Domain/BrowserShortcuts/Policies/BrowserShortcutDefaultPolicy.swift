@@ -2,6 +2,13 @@ enum BrowserShortcutDefaultPolicy {
     static func shortcut(
         for command: BrowserShortcutCommand
     ) -> BrowserShortcut? {
+        #if os(macOS)
+            switch command {
+            case .newBlankWindow: return character("n", [.command, .option])
+            case .newQuickWindow: return character("n", [.command, .option, .shift])
+            default: break
+            }
+        #endif
         if let number = BrowserShortcutNumberedSelectionPolicy.tabNumber(
             for: command
         ) {

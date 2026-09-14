@@ -21,9 +21,9 @@ import SwiftUI
 /// through at that moment. One owner for the whole lift has no such seam.
 ///
 /// The window is inert. It ignores mouse events, never becomes key, casts no
-/// shadow, and is pinned to the parent's content rect so that a point in the
-/// drag's global coordinates is the same point inside it. Clicks, scrolls, and
-/// hovers reach the page underneath as if it were not there.
+/// shadow, and grows beyond the parent to contain a preview carried outside
+/// it. The drawing canvas keeps the parent's coordinates. Clicks, scrolls,
+/// and hovers reach the page underneath as if it were not there.
 ///
 /// This view is the drag's presentation and nothing else: it holds no drag state
 /// and makes no decisions about when a lift floats. The reorder state answers
@@ -72,11 +72,22 @@ final class BrowserDragPreviewWindowHostView: NSView {
             teardownPreviewOnly()
             return
         }
+        let sourceFrame = parent.convertToScreen(contentRect(of: parent))
+        let drawingBounds = content.drawingBounds
+        let previewFrame = CGRect(
+            x: sourceFrame.minX + drawingBounds.minX,
+            y: sourceFrame.maxY - drawingBounds.maxY,
+            width: drawingBounds.width, height: drawingBounds.height)
+        let frame = sourceFrame.union(previewFrame)
+        let canvasFrame = CGRect(
+            x: sourceFrame.minX - frame.minX, y: frame.maxY - sourceFrame.maxY,
+            width: sourceFrame.width, height: sourceFrame.height)
         let panel = panel ?? makePanel(for: parent)
         if let presentation {
             presentation.content = content
+            presentation.canvasFrame = canvasFrame
         } else {
-            let presentation = BrowserDragPreviewWindowPresentation(content: content)
+            let presentation = BrowserDragPreviewWindowPresentation(content: content, canvasFrame: canvasFrame)
             presentation.onSidebarLandingComplete = { [weak self] id in self?.onSidebarLandingComplete(id) }
             presentation.onSidebarLandingArrived = { [weak self] id in self?.onSidebarLandingArrived(id) }
             self.presentation = presentation
@@ -87,7 +98,6 @@ final class BrowserDragPreviewWindowHostView: NSView {
             self.hostingView = hostingView
         }
         panel.appearance = parent.effectiveAppearance
-        let frame = parent.convertToScreen(contentRect(of: parent))
         if panel.frame != frame {
             panel.setFrame(frame, display: false)
         }

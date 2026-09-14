@@ -653,7 +653,7 @@ struct CrestApp: App {
             )
         }
 
-        WindowGroup("Blank Window", id: BrowserSceneID.blankWindow.rawValue, for: BrowserMacWindowRequest.self) {
+        WindowGroup(ProductIdentity.name, id: BrowserSceneID.blankWindow.rawValue, for: BrowserMacWindowRequest.self) {
             $request in
             if presentsInstalledApplicationUI, let request {
                 browserWindowContent(request)
@@ -664,6 +664,7 @@ struct CrestApp: App {
             height: BrowserMainWindowSizingPolicy.idealContentSize.height
         )
         .windowResizability(.contentMinSize)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .restorationBehavior(.disabled)
 
         WindowGroup(

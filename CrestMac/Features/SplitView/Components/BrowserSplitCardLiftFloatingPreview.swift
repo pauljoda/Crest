@@ -2,11 +2,9 @@ import SwiftUI
 
 /// The card somebody is carrying, drawn at the pointer over everything.
 ///
-/// A full-bleed layer rather than a view sized to the card, because its host is
-/// a window pinned to the browser window's own bounds: placing the card by its
-/// top-left inside that layer puts it exactly where the same card would have been
-/// drawn in the row, in the same window-global coordinates the carry already
-/// reports.
+/// A full-bleed layer in the source browser window's coordinates. The host moves
+/// this canvas within its expanded preview window, so the card can follow the
+/// pointer outside without changing the coordinates the carry already reports.
 ///
 /// It is the card at its own size, risen by the house lift scale — not a token
 /// standing in for one. A split card is half a window or more, so shrinking it

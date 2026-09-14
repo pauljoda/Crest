@@ -199,11 +199,6 @@ extension BrowserRootModel {
     }
 
     var windowTitle: String {
-        let title = pageWindowTitle
-        return browser.isTemporaryWorkspace ? String(localized: "Blank Window") + " — " + title : title
-    }
-
-    private var pageWindowTitle: String {
         guard let space = browser.selectedSpace,
             !spaceAccess.isLocked(space),
             let tab = browser.selectedTab

@@ -81,6 +81,31 @@ final class BrowserShortcutTests: XCTestCase {
         XCTAssertNil(persistence.overrides)
     }
 
+    @MainActor
+    func testNewWindowDefaultsYieldToPersistedCustomBindingsWithoutRewritingThem() {
+        let cases: [(owner: BrowserShortcutCommand, displaced: BrowserShortcutCommand, chord: BrowserShortcut)] = [
+            (.newQuickWindow, .newBlankWindow, shortcut("n", [.command, .option])),
+            (.newTab, .newQuickWindow, shortcut("n", [.command, .option, .shift])),
+        ]
+        for item in cases {
+            let saved: [String: BrowserShortcutOverride] = [
+                item.owner.rawValue: .custom(item.chord), BrowserShortcutCommand.showHistory.rawValue: .unassigned,
+            ]
+            let persistence = InMemoryBrowserShortcutPersistence(overrides: saved)
+            let store = BrowserShortcutStore(persistence: persistence)
+
+            XCTAssertEqual(store.shortcut(for: item.owner), item.chord)
+            XCTAssertEqual(store.commands(assignedTo: item.chord), [item.owner])
+            XCTAssertNil(store.shortcut(for: item.displaced))
+            XCTAssertFalse(store.isCustomized(item.displaced))
+            XCTAssertEqual(persistence.overrides, saved)
+
+            store.reset(item.owner)
+            XCTAssertEqual(store.shortcut(for: item.displaced), item.displaced.defaultShortcut)
+            XCTAssertNil(store.shortcut(for: .showHistory))
+        }
+    }
+
     func testShortcutCatalogSearchMatchesFeatureNamesAndSpokenChords() {
         XCTAssertTrue(BrowserShortcutCommand.copyPageLink.matches(search: "copy url"))
         XCTAssertTrue(BrowserShortcutCommand.copyPageLink.matches(search: "command shift c"))
@@ -162,9 +187,9 @@ final class BrowserShortcutTests: XCTestCase {
             },
             [
                 "newWindow=character:n:1",
-                "newBlankWindow=unassigned",
+                "newBlankWindow=character:n:3",
                 "newTab=character:t:1",
-                "newQuickWindow=character:n:3",
+                "newQuickWindow=character:n:11",
                 "newPrivateWindow=character:n:9",
                 "closeTabOrWindow=character:w:1",
                 "closeWindow=character:w:9",

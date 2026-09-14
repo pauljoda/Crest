@@ -3,11 +3,9 @@ import SwiftUI
 /// The whole of what the drag preview window shows: one lifted row, drawn at the
 /// pointer, over nothing.
 ///
-/// A full-bleed layer rather than a view sized to the preview, because its host
-/// is a window pinned to the browser window's own bounds: placing the preview by
-/// its top-left inside that layer puts it exactly where the same lift would have
-/// been drawn in the view tree, in the same global coordinates the drag already
-/// reports.
+/// A full-bleed layer in the source browser window's coordinates. The host moves
+/// this canvas within its expanded preview window, so the art can follow the
+/// pointer outside without changing the coordinates the drag already reports.
 ///
 /// The art is the sidebar's own drag art — a tab morphing between its row, the
 /// pinned tile, and the page-shaped card; a folder row; a stack of split-group

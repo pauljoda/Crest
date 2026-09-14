@@ -23,10 +23,22 @@ final class BrowserShortcutStore {
 
     func shortcut(for command: BrowserShortcutCommand) -> BrowserShortcut? {
         switch overrides[command.rawValue] {
-        case .custom(let shortcut): shortcut
-        case .unassigned: nil
-        case nil: command.defaultShortcut
+        case .custom(let shortcut): return shortcut
+        case .unassigned: return nil
+        case nil: break
         }
+        guard let shortcut = command.defaultShortcut else { return nil }
+        #if os(macOS)
+            // The new window defaults must not take a chord a user previously
+            // assigned elsewhere. Preserve that override; resetting it restores
+            // the default without leaving an artificial unassigned record.
+            if command == .newBlankWindow || command == .newQuickWindow,
+                BrowserShortcutCommand.userFacingCases.contains(where: { overrides[$0.rawValue] == .custom(shortcut) })
+            {
+                return nil
+            }
+        #endif
+        return shortcut
     }
 
     func isCustomized(_ command: BrowserShortcutCommand) -> Bool {
