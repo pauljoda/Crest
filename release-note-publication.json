@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "sidebar-reorder-configuration-cleanup",
+    "development": "icloud-full-pull-and-merge-recovery",
     "nightly": "website-camera-and-notification-permissions"
   }
 }

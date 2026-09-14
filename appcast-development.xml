@@ -6,49 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.137</title>
-            <pubDate>Sun, 13 Sep 2026 23:26:43 +0000</pubDate>
+            <title>0.5.139</title>
+            <pubDate>Mon, 14 Sep 2026 00:28:58 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1092</sparkle:version>
-            <sparkle:shortVersionString>0.5.137</sparkle:shortVersionString>
+            <sparkle:version>1093</sparkle:version>
+            <sparkle:shortVersionString>0.5.139</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 34 user-facing changes.
-
-### Improved
-
-- Rerun onboarding from the Welcome screen in Advanced settings
-- Reorder Spaces directly in Settings with Up and Down controls
-- Reduce unnecessary icon and thumbnail redraws while adjusting Space appearance
-- Use Liquid Glass controls for reordering and adding Spaces
-- Keep a visible gap between tab highlights at the default spacing
-- Drag individual tabs out of a split, or move the whole split from its header
-
 ### Fixed
 
-- Avoid unexpected keyboard dismissals while editing search engines
-- Keep favicon updates tied to the current page and icon choice
-- Open Settings in the browsing canvas on wider windows, using a sheet only in compact layouts
-- Open Getting Started in the first Space when setup finishes
-- Keep Space appearance settings responsive while scrolling
-- Keep Settings actions within the current unlocked Space and protect locked destinations
+- Recover missing iCloud changes with a confirmed Pull from iCloud action, and keep blank tabs from blocking Space and tab updates
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/940dd40a4ade3d9c11a1a2fc6e70a466cca42e52...8f41e7400a2c43546be3535ccac0ff4b5ac7ed63) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.137-2026-09-13-1092-r92.1/Installer-Crest-0.5.137-development-2026-09-13-8f41e74-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/8f41e7400a2c43546be3535ccac0ff4b5ac7ed63...e3c54bf8af45acc5e3942452333e1818df0352e8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.139-2026-09-14-1093-r93.1/Installer-Crest-0.5.139-development-2026-09-14-e3c54bf-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.137-2026-09-13-1092-r92.1/Installer-Crest-0.5.137-development-2026-09-13-8f41e74-arm64.dmg" length="25845046" type="application/octet-stream" sparkle:edSignature="y77NZesCzxvsAO9TtpfPz5X3oJk/fszpgAfwZXb/lLhybLBgufKuc5J5za23k3BPLl/B0f6whXye5N/KzNp0Aw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.139-2026-09-14-1093-r93.1/Installer-Crest-0.5.139-development-2026-09-14-e3c54bf-arm64.dmg" length="25858358" type="application/octet-stream" sparkle:edSignature="XpQQ1vIJRt7BH/jP9IRpYxnAemcr5eWV39C1cmvZCvarsYG7WK2CpFrVomrq699J/m3ZtPpE2LmImD/yxfTzBQ=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: cPUtOjxdDnc2Slso+wn3q3k9oBjEm8lpxdo2kK9yKP5DnGj2OSGxBos9vqxB0tTsxZMDUE7q+dhJwWfwXNPEBA==
-length: 2901
+edSignature: Ke1q/Jf3yH0EDyMzyxzvRpV2VKMYA90G7tjWPKh+fply/To3NMxkiOYJowxs4NTvvqauykmtawstuUuj9YW+DQ==
+length: 2094
 -->
