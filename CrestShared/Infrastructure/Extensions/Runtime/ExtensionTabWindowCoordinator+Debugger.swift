@@ -222,9 +222,9 @@ extension BrowserExtensionTabWindowCoordinator {
 
     /// Resolves the caller's tab index and URL against live session state.
     ///
-    /// This runs once per attachment. The index is a claim about the primary
-    /// window's ordering that Crest re-checks here; after this point the
-    /// session is addressed by the token bound to the resulting `TabID`.
+    /// This runs once per attachment. Crest resolves the owning window's
+    /// descriptor, then re-checks its tab index and URL. Later commands address
+    /// the session token bound to the resulting `TabID`.
     private func debuggerTarget(
         _ request: BrowserExtensionDebuggerBrokerRequest, in spaceID: SpaceID
     ) throws -> BrowserExtensionDebuggerTarget {

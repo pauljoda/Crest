@@ -109,6 +109,72 @@ final class MobileBrowserWindowSceneModelTests: XCTestCase {
         XCTAssertNil(store.identifier)
     }
 
+    func testScenesShareBrowsingEditsButKeepSelectionPagesAndPrivateSessionsIndependent() throws {
+        let url = try XCTUnwrap(URL(string: "about:blank"))
+        let sharedTab = BrowserTab(title: "Shared", url: url, placement: .current)
+        let otherTab = BrowserTab(title: "Other", url: url, placement: .current)
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Windows", symbol: "globe", accent: .indigo,
+            folders: [], tabs: [sharedTab, otherTab], selectedTabID: sharedTab.id)
+        let root = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence())
+        let registry = MobileBrowserPageStoreRegistry(
+            primary: MobileBrowserPageStore(usesEphemeralWebsiteDataStores: true))
+        let permissionCenter = BrowserSitePermissionCenter()
+        let spaceAccess = BrowserSpaceAccessController()
+        let windowPersistence = InMemoryBrowserWindowStatePersistence()
+        func makeScene() -> MobileBrowserWindowSceneModel {
+            MobileBrowserWindowSceneModel(
+                id: BrowserWindowID(), rootBrowser: root, permissionCenter: permissionCenter,
+                pageStoreRegistry: registry, spaceAccess: spaceAccess, tabStateArchive: nil,
+                windowStatePersistence: windowPersistence, startupBehavior: .lastActiveTab,
+                monitorsMemoryPressure: false, usesEphemeralWebsiteDataStores: true)
+        }
+        let first = makeScene()
+        let second = makeScene()
+        defer {
+            first.pages.reconcile(validTabIDs: [])
+            second.pages.reconcile(validTabIDs: [])
+        }
+        first.browser.selectTab(sharedTab.id)
+        second.browser.selectTab(otherTab.id)
+
+        first.browser.pinTab(sharedTab.id)
+
+        XCTAssertTrue(first.browser.family === second.browser.family)
+        XCTAssertEqual(second.browser.selectedSpace?.pinnedTabs.map(\.id), [sharedTab.id])
+        XCTAssertEqual(first.browser.selectedTab?.id, sharedTab.id)
+        XCTAssertEqual(second.browser.selectedTab?.id, otherTab.id)
+
+        first.pages.select(session: first.browser.session)
+        second.browser.selectTab(sharedTab.id)
+        second.pages.select(session: second.browser.session)
+        let firstPage = try XCTUnwrap(first.pages.activePage)
+        let secondPage = try XCTUnwrap(second.pages.activePage)
+        XCTAssertFalse(first.pages === second.pages)
+        XCTAssertFalse(firstPage === secondPage)
+        XCTAssertFalse(firstPage.webView === secondPage.webView)
+        XCTAssertEqual(firstPage.tabID, secondPage.tabID)
+        XCTAssertEqual(firstPage.profileID, secondPage.profileID)
+        XCTAssertFalse(firstPage.webView.configuration.websiteDataStore.isPersistent)
+        XCTAssertFalse(secondPage.webView.configuration.websiteDataStore.isPersistent)
+        first.pages.reconcile(validTabIDs: [])
+        XCTAssertNil(first.pages.activePage)
+        XCTAssertTrue(second.pages.activePage === secondPage)
+        XCTAssertNotNil(second.browser.selectedTab)
+
+        XCTAssertFalse(first.privateBrowser.family === second.privateBrowser.family)
+        XCTAssertFalse(first.privateBrowser.family === root.family)
+        XCTAssertFalse(second.privateBrowser.family === root.family)
+        let secondPrivateSession = second.privateBrowser.session
+        let normalSession = root.session
+        let privateTabID = try XCTUnwrap(first.privateBrowser.openNewTab(url: url))
+        XCTAssertTrue(first.privateBrowser.session.tabIDs.contains(privateTabID))
+        XCTAssertEqual(second.privateBrowser.session, secondPrivateSession)
+        XCTAssertEqual(root.session, normalSession)
+    }
+
     func testQuickWindowDecisionResolvesToTheRequestedSpace() throws {
         let session = BrowserSession.preview
         let spaceID = try XCTUnwrap(session.spaces.first?.id)

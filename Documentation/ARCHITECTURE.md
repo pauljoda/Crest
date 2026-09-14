@@ -52,6 +52,12 @@ Dragging one tab between workspaces moves its existing identity and runtime, inc
 
 The torn-off window appears with the grabbed point on its measured sidebar row aligned to the release location, constrained to that display's usable frame. Placement is applied once before revealing the window; later sidebar layout changes do not move it. If the row cannot be measured promptly, the committed window appears at the drop location without discarding its tab.
 
+## Scenes on iPhone and iPad
+
+The mobile app declares a `WindowGroup` keyed by `BrowserWindowID` and supports multiple scenes on iPad. Each scene projects its own selections over the shared `BrowserStoreFamily`, so tab and Space edits reach other scenes immediately. Each scene owns a separate `MobileBrowserPageStore`, live WebKit views, native tab runtimes, and private browsing session. Sharing tab records does not share a live page or its form state between mobile scenes.
+
+The macOS window coordinator, live-page handoff and mirrored preview, Blank Window commands, and tab tear-off placement are composed only by the Mac app. Mobile keeps its existing scene lifecycle and keyboard shortcuts; it uses the shared data and persistence safeguards without adopting those Mac presentation features.
+
 ## Credentials and privacy
 
 Crest Passwords are stored in the Keychain and matched by origin. Each Space can disable Crest-owned suggestions, generation, save prompts, and HTTP-auth reuse without deleting its stored credentials. Sensitive reveals and exports require device authentication. Page-to-app credential messages are schema-checked and origin-bound.

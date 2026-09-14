@@ -15,10 +15,10 @@ extension BrowserExtensionTabWindowCoordinator {
     /// inside WebKit's own page lifecycle, which publishes no enumeration
     /// Crest can read, so they are absent rather than guessed at.
     ///
-    /// Tabs and windows leave here as a Space-relative tab index plus that
-    /// tab's URL, exactly as the sidebar event channel reports them: WebKit
-    /// owns the numeric IDs an extension sees, and the page-side wrapper
-    /// resolves these back through `tabs.query`.
+    /// Windows leave here with their public host descriptor; tab-scoped
+    /// documents also carry the owning window's tab index and URL. WebKit owns
+    /// the numeric IDs an extension sees, and the page-side wrapper resolves
+    /// them through native window metadata and `tabs.query`.
     func handleCapabilityBrokerRuntimeContexts(
         _ message: Any,
         applicationIdentifier: String?,

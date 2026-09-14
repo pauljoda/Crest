@@ -463,12 +463,6 @@ extension BrowserExtensionTabWindowCoordinator {
         }
     }
 
-    private func tabIDs(in spaceID: SpaceID) -> [TabID]? {
-        guard let browser else { return lastState?.space(spaceID)?.tabs.map(\.id) }
-        guard let space = browser.session.space(id: spaceID) else { return nil }
-        return space.tabs.map(\.id) + (transientTabsBySpace[spaceID]?.map(\.id) ?? [])
-    }
-
     func selectedTabID(in spaceID: SpaceID) -> TabID? {
         guard let browser = preferredHost(in: spaceID)?.browser ?? browser else {
             return lastState?.space(spaceID)?.selectedTabID

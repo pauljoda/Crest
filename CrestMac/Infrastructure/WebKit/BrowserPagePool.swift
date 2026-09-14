@@ -2447,7 +2447,7 @@ final class BrowserPagePool:
             return $0.tabID.rawValue.uuidString < $1.tabID.rawValue.uuidString
         }
 
-        var eligibleTabIDs: [TabID] = []
+        var eligiblePages: [(tabID: TabID, page: BrowserPage?)] = []
         for candidate in candidates {
             guard !Task.isCancelled else { return }
             // `BrowserPageResidencyDecision.isSelected` now means "is
@@ -2471,16 +2471,25 @@ final class BrowserPagePool:
                 !runtimeStore.presentedTabIDs.contains(candidate.tabID),
                 allRuntimesAllowAutomaticUnload
             else { continue }
-            eligibleTabIDs.append(candidate.tabID)
+            eligiblePages.append((candidate.tabID, candidate.page))
         }
-        eligibleTabIDs += nativeTabs.inactiveTabIDs(excluding: Array(runtimeStore.presentedTabIDs))
+        eligiblePages += nativeTabs.inactiveTabIDs(excluding: Array(runtimeStore.presentedTabIDs)).map { ($0, nil) }
         let releaseLimit = BrowserMemoryPressureReleasePolicy.releaseLimit(
             for: level,
-            eligiblePageCount: eligibleTabIDs.count,
+            eligiblePageCount: eligiblePages.count,
             platform: .desktop
         )
-        for tabID in eligibleTabIDs.prefix(releaseLimit) {
-            evictPage(tabID)
+        var releasedCount = 0
+        for candidate in eligiblePages {
+            guard !Task.isCancelled else { return }
+            guard releasedCount < releaseLimit else { break }
+            // Later decisions also await WebKit. An earlier candidate may have
+            // become visible in any window or acquired a different runtime.
+            guard !runtimeStore.presentedTabIDs.contains(candidate.tabID),
+                tabRuntimes[candidate.tabID]?.page === candidate.page
+            else { continue }
+            evictPage(candidate.tabID)
+            releasedCount += 1
         }
     }
 

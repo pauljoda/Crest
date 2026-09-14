@@ -554,10 +554,10 @@ Three context types are covered:
 those documents live inside WebKit's page lifecycle, which publishes no
 enumeration Crest can read. `documentId` is likewise never reported, so a
 filter on `documentIds` matches nothing. `incognito` is always false — a
-private Space loads no extension controller. Tabs and windows cross the broker
-as a Space-relative tab index plus that tab's URL, exactly as the sidebar event
-channel reports them, and the page-side wrapper resolves them back to WebKit's
-numeric IDs through `tabs.query` before applying the complete `ContextFilter`.
+private Space loads no extension controller. Windows cross the broker with their
+public host descriptor; tab-scoped documents also carry the owning window's tab
+index and URL. The page-side wrapper resolves WebKit's numeric IDs through native
+window metadata and `tabs.query` before applying the complete `ContextFilter`.
 
 ## Badge color and toolbar settings — `chrome.action`
 

@@ -42,8 +42,6 @@ enum BrowserExtensionDebuggerCompatibilityScript {
             return {tabIndex: tab.index, window: await sidebarWindowDescriptor(tab.windowId), ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
         };
         const debuggerTabsByIndex = async () => {
-            let windowId;
-            try { windowId = await sidebarPrimaryWindowId(); } catch {}
             let tabs = [];
             try { tabs = await sidebarNative("tabs", "query", {}); } catch {}
             const byIndex = new Map();

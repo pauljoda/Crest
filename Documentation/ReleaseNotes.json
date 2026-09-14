@@ -1181,6 +1181,10 @@
     "tab-tear-off-window-placement": {
       "category": "improved",
       "message": "Position torn-off windows where you drop the tab, keeping the window within the display"
+    },
+    "keep-newly-visible-pages-loaded": {
+      "category": "fixed",
+      "message": "Keep pages loaded when you switch to them in another window during memory cleanup"
     }
   }
 }
