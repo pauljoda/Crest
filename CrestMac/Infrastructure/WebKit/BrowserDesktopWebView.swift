@@ -46,7 +46,7 @@ final class BrowserDesktopWebView: WKWebView {
         true
     }
 
-    /// Adds Crest's Space destinations to the menu WebKit just built.
+    /// Routes search and Space destinations through Crest in WebKit's native menu.
     ///
     /// AppKit calls this with the finished menu, which is the one moment a
     /// link-aware item can be added: WebKit's items stay exactly as WebKit
@@ -58,7 +58,9 @@ final class BrowserDesktopWebView: WKWebView {
         if menuHost?.opensLinksInCurrentSpace == true {
             BrowserDesktopWebViewMenuPolicy.relabelLinkDestination(in: menu)
         }
-        guard let context = menuHost?.takeMenuContext() else { return }
+        let context = menuHost?.takeMenuContext()
+        replaceSelectionSearch(in: menu, with: context?.selectionSearch)
+        guard let context else { return }
         if let destinations = context.linkDestinations {
             addSpaceDestinations(destinations, to: menu)
         }
@@ -102,6 +104,30 @@ final class BrowserDesktopWebView: WKWebView {
         menuHost?.downloadImage(from: url)
     }
 
+    private func replaceSelectionSearch(in menu: NSMenu, with destination: BrowserSelectionSearchDestination?) {
+        guard
+            let item = menu.items.first(where: {
+                $0.identifier == BrowserDesktopWebViewMenuPolicy.searchWebIdentifier
+            })
+        else { return }
+        // Never leave the macOS service action behind when this menu has no
+        // fresh selection or its source Space is no longer available.
+        guard let destination, let window else {
+            menu.removeItem(item)
+            return
+        }
+        item.title = String(localized: "Search with \(destination.provider.title)")
+        item.target = self
+        item.action = #selector(openLinkInSpace(_:))
+        item.representedObject = LinkSpaceAction(
+            url: destination.url, source: destination.source,
+            destination: BrowserSpaceRuntimeAssignment(
+                spaceID: destination.source.spaceID, profileID: destination.source.profileID
+            ),
+            windowNumber: window.windowNumber
+        )
+    }
+
     private func addSpaceDestinations(_ destinations: BrowserDesktopLinkDestinations, to menu: NSMenu) {
         guard !destinations.spaces.isEmpty, let window else { return }
         let item = NSMenuItem(
@@ -139,6 +165,7 @@ final class BrowserDesktopWebView: WKWebView {
 }
 
 enum BrowserDesktopWebViewMenuPolicy {
+    static let searchWebIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierSearchWeb")
     static let openLinkIdentifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierOpenLinkInNewWindow")
 
     static func relabelLinkDestination(in menu: NSMenu) {

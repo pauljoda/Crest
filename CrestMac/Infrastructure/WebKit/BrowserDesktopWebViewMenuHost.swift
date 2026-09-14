@@ -41,6 +41,7 @@ struct BrowserDesktopWebViewMenuContext: Equatable, Sendable {
     let imageDownloadURL: URL?
     let extensionContext: BrowserExtensionWebpageMenuContext?
     var linkDestinations: BrowserDesktopLinkDestinations? = nil
+    var selectionSearch: BrowserSelectionSearchDestination? = nil
 }
 
 struct BrowserDesktopLinkDestinations: Equatable, Sendable {

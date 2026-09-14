@@ -27,6 +27,15 @@ extension BrowserPage: BrowserDesktopWebViewMenuHost {
             imageDownloadURL: captured.imageURL,
             extensionContext: extensionMenuContext(from: captured)
         )
+        if let text = captured.selectionText, let context = navigationContext {
+            menuContext.selectionSearch = linkDestinationHost.selectionSearch(
+                for: text,
+                from: BrowserTabRuntimeAssignment(
+                    tabID: context.tabID, spaceID: context.spaceID,
+                    profileID: context.assignment.profileID
+                )
+            )
+        }
         if let url = captured.linkURL, let context = navigationContext {
             let source = BrowserTabRuntimeAssignment(
                 tabID: context.tabID, spaceID: context.spaceID,

@@ -32,6 +32,20 @@ struct BrowserLinkDestinationHost {
         )
     }
 
+    func selectionSearch(
+        for text: String,
+        from source: BrowserTabRuntimeAssignment
+    ) -> BrowserSelectionSearchDestination? {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty,
+            canOpenLink(from: source),
+            let provider = browser?.session.space(id: source.spaceID)?.browsingPreferences.searchProvider,
+            let url = provider.searchURL(for: query),
+            BrowserExternalURLPolicy.accepts(url)
+        else { return nil }
+        return BrowserSelectionSearchDestination(url: url, provider: provider, source: source)
+    }
+
     @discardableResult
     func openLink(
         _ url: URL,
@@ -48,4 +62,10 @@ struct BrowserLinkDestinationHost {
         else { return false }
         return browser.openNewTab(url: url, matching: destination) != nil
     }
+}
+
+struct BrowserSelectionSearchDestination: Equatable, Sendable {
+    let url: URL
+    let provider: BrowserSearchProvider
+    let source: BrowserTabRuntimeAssignment
 }

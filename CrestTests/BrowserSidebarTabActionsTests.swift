@@ -142,6 +142,57 @@ final class BrowserSidebarTabActionsTests: XCTestCase {
         XCTAssertEqual(context.browser.session.space(id: destination.spaceID)?.tabs.count, 0)
     }
 
+    func testSelectionSearchUsesTheSpacesProviderAndOpensANewTabWithoutNavigatingTheSource() throws {
+        let context = makeContext()
+        context.browser.session.spaces[0].browsingPreferences.searchProvider = .duckDuckGo
+        let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)
+        let source = BrowserTabRuntimeAssignment(
+            tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id
+        )
+        // A URL-shaped selection is still a search, including its punctuation.
+        let text = "https://example.com/?q=café&lang=en"
+        let search = try XCTUnwrap(host.selectionSearch(for: " \n" + text + "\n\n", from: source))
+        XCTAssertEqual(search.provider, .duckDuckGo)
+        let components = try XCTUnwrap(URLComponents(url: search.url, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(components.host, "duckduckgo.com")
+        XCTAssertEqual(components.queryItems, [URLQueryItem(name: "q", value: text)])
+
+        XCTAssertTrue(
+            host.openLink(search.url, from: search.source, in: BrowserSpaceRuntimeAssignment(space: context.space)))
+
+        XCTAssertEqual(context.browser.selectedSpace?.id, context.space.id)
+        XCTAssertEqual(context.browser.selectedSpace?.tabs.count, context.space.tabs.count + 1)
+        XCTAssertEqual(context.browser.selectedTab?.url, search.url)
+        XCTAssertNotEqual(context.browser.selectedTab?.id, context.tab.id)
+        XCTAssertEqual(context.browser.selectedSpace?.tabs.first { $0.id == context.tab.id }, context.tab)
+        XCTAssertEqual(context.browser.session.space(id: context.otherSpace.id), context.otherSpace)
+    }
+
+    func testSelectionSearchRejectsEmptyOrInvalidatedSources() throws {
+        let invalidations: [(Context) -> Void] = [
+            { $0.browser.selectSpace($0.otherSpace.id) },
+            { $0.browser.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: $0.space.id) },
+            { $0.browser.session.spaces[0] = self.replacingProfile(in: $0.space) },
+            { $0.browser.session.spaces[0].tabs.removeAll() },
+        ]
+        for invalidate in invalidations {
+            let context = makeContext()
+            let host = BrowserLinkDestinationHost(browser: context.browser, spaceAccess: context.access)
+            let source = BrowserTabRuntimeAssignment(
+                tabID: context.tab.id, spaceID: context.space.id, profileID: context.space.profile.id
+            )
+            XCTAssertNil(host.selectionSearch(for: " \n ", from: source))
+            let search = try XCTUnwrap(host.selectionSearch(for: "selected words", from: source))
+            invalidate(context)
+            let before = context.browser.session
+
+            XCTAssertNil(host.selectionSearch(for: "selected words", from: source))
+            XCTAssertFalse(
+                host.openLink(search.url, from: search.source, in: BrowserSpaceRuntimeAssignment(space: context.space)))
+            XCTAssertEqual(context.browser.session, before)
+        }
+    }
+
     func testNewTabInvokesTheExistingCommandOnceWithoutEditingTheSession() {
         let context = makeContext()
         let action = makeActions(context, pullFavicon: { _, _ in nil })
