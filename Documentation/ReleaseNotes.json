@@ -1133,6 +1133,10 @@
     "icloud-full-pull-and-merge-recovery": {
       "category": "fixed",
       "message": "Recover missing iCloud changes with a confirmed Pull from iCloud action, and keep blank tabs from blocking Space and tab updates"
+    },
+    "space-picker-cloud-compiler-compatibility": {
+      "category": "internal",
+      "message": "Avoid a Swift 6.3 compiler crash when archiving the Space settings pickers"
     }
   }
 }

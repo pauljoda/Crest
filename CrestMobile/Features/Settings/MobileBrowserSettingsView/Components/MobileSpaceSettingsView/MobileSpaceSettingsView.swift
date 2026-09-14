@@ -44,7 +44,7 @@ struct MobileSpaceSettingsView: View {
         BrowserSettingsPane(.spaces) {
             MobileSpaceSelectionSection(
                 browser: browser,
-                selectedSpaceID: Binding(get: { editedSpaceID }, set: selectEditedSpace)
+                selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) })
             )
 
             if let space, canReveal(space) {
@@ -69,7 +69,7 @@ struct MobileSpaceSettingsView: View {
         VStack(spacing: 0) {
             MobileSpaceSettingsWorkspaceToolbar(
                 browser: browser,
-                selectedSpaceID: Binding(get: { editedSpaceID }, set: selectEditedSpace),
+                selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) }),
                 section: $editorSection)
             Divider()
             if let space {

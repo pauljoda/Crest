@@ -160,7 +160,7 @@ struct BrowserSpaceSettingsView: View {
     }
 
     private func spacePicker(compact: Bool) -> some View {
-        Picker("Space", selection: Binding(get: { editedSpaceID }, set: selectEditedSpace)) {
+        Picker("Space", selection: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) })) {
             ForEach(browser.session.spaces) { space in
                 BrowserSpaceIdentityLabel(space: space)
                     .accessibilityLabel("\(space.name), \(spaceSummary(space))")
