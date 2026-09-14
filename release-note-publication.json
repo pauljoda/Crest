@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "pinned-outlines-preserve-monochrome-favicons",
-    "development": "web-pages-only-icloud-sync",
+    "development": "pinned-outlines-preserve-monochrome-favicons",
     "nightly": "simulator-cloudkit-startup-guard"
   }
 }

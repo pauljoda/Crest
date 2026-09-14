@@ -6,45 +6,44 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.148</title>
-            <pubDate>Mon, 14 Sep 2026 18:46:06 +0000</pubDate>
+            <title>0.6.3</title>
+            <pubDate>Mon, 14 Sep 2026 20:36:39 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1097</sparkle:version>
-            <sparkle:shortVersionString>0.5.148</sparkle:shortVersionString>
+            <sparkle:version>1100</sparkle:version>
+            <sparkle:shortVersionString>0.6.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Open multiple windows with shared Spaces and tabs, keeping your place in each window
-- Open disposable blank windows with your Space’s cookies and extensions, or create one by dragging a tab outside the window
-
 ### Improved
 
-- Open blank windows with Command-Option-N and Quick Windows with Command-Option-Shift-N
-- Position torn-off windows where you drop the tab, keeping the window within the display
+- Choose folder icons from the full searchable SF Symbols catalog
+- Read tinted folder titles more easily with semibold text and stronger contrast
+- Fade smoothly between pinned-tab outline colors as website colors become available
 
 ### Fixed
 
-- Keep dragged tabs visible outside the window and give blank windows the normal browser appearance
-- Keep pages loaded when you switch to them in another window during memory cleanup
-- Keep extension and built-in pages on their own device so they cannot block iCloud sync
+- Keep the Mac sidebar collapsed when opening the address editor with Command-L
+- Match the system dark background across Crest's app icon color palettes
+- Keep wide folder symbols fully visible in Icon only mode
+- Keep pinned-tab colors consistent when pages unload and use more representative website colors
+- Use favicon colors for pinned outlines when websites declare black, white, or neutral theme colors
+- Keep black, white, and gray favicon colors in pinned-tab outlines
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/c13a1a6d8ed718401b1de11e8bd47b37dace83a0...ec2540db692c3addf57b3ae57093696b6732f554) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.148-2026-09-14-1097-r97.1/Installer-Crest-0.5.148-development-2026-09-14-ec2540d-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/ec2540db692c3addf57b3ae57093696b6732f554...dec7187c890d6729bec1b62b9322761dfc315daa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.3-2026-09-14-1100-r100.1/Installer-Crest-0.6.3-development-2026-09-14-dec7187-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.148-2026-09-14-1097-r97.1/Installer-Crest-0.5.148-development-2026-09-14-ec2540d-arm64.dmg" length="26047285" type="application/octet-stream" sparkle:edSignature="u/wWKY2/6vXARFaGeeQahUq0mC8VTBB3miJ9n+fnyvMulSejtJfujBkpGwCizuyNMrex4BG6QkRVrI3Uy9z6Bw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.3-2026-09-14-1100-r100.1/Installer-Crest-0.6.3-development-2026-09-14-dec7187-arm64.dmg" length="26805043" type="application/octet-stream" sparkle:edSignature="yHjEDkG0sFJcfmOX1Y9oyEkFsEojpikWJZk7JKIUKRqp3jMZblzrLVVwHibiTn9AMY29/OQGkcHxjhxvGglGCw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Ac5kBrF/img83j0ZVpTq+INepFg6fvz73BjtAkn+d7OsI9pLaIXmHccjVveJ5CB3qeV4pDPvX929VtKcTiDPCw==
-length: 2654
+edSignature: TpmVxgUV+pPlYD1OVwcIDSyZUtxa7rPnDPuQ556ptPB23SCmfgrKhArUrOk2T/rbfuW3OHrB97ig65QH9ieFBQ==
+length: 2679
 -->
