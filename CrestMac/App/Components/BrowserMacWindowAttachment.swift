@@ -2,12 +2,14 @@ import AppKit
 import SwiftUI
 
 struct BrowserMacWindowAttachment: NSViewRepresentable {
+    var prepare: (NSWindow) -> Void = { _ in }
     let attach: (NSWindow) -> Void
     let focusChanged: (Bool) -> Void
     let close: () -> Void
 
     func makeNSView(context: Context) -> AttachmentView {
         let view = AttachmentView()
+        view.prepare = prepare
         view.attach = attach
         view.focusChanged = focusChanged
         view.close = close
@@ -17,6 +19,7 @@ struct BrowserMacWindowAttachment: NSViewRepresentable {
     func updateNSView(_ view: AttachmentView, context: Context) {}
 
     final class AttachmentView: NSView {
+        var prepare: ((NSWindow) -> Void)?
         var attach: ((NSWindow) -> Void)?
         var focusChanged: ((Bool) -> Void)?
         var close: (() -> Void)?
@@ -25,6 +28,7 @@ struct BrowserMacWindowAttachment: NSViewRepresentable {
             super.viewDidMoveToWindow()
             NotificationCenter.default.removeObserver(self)
             guard let window else { return }
+            prepare?(window)
             NotificationCenter.default.addObserver(
                 self, selector: #selector(becameKey), name: NSWindow.didBecomeKeyNotification, object: window)
             NotificationCenter.default.addObserver(

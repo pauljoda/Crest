@@ -12,6 +12,7 @@ final class BrowserMacWindowModel {
     let spaceSettingsPresentation = BrowserSpaceSettingsPresentationState()
     let windowState: BrowserWindowStateStore
     @ObservationIgnored weak var window: NSWindow?
+    @ObservationIgnored var tearOffPlacement: BrowserMacTabTearOffPlacement?
 
     var id: BrowserWindowID { request.id }
     var isTemporary: Bool { request.kind == .temporary }

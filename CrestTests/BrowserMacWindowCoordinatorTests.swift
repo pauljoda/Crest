@@ -70,6 +70,68 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         XCTAssertTrue(fixture.browser.session.spaces.contains { $0.tabs.contains { $0.id == tabID } })
     }
 
+    func testCancelingAPreparedNativeTearOffClosesItsShellAndRejectsLateAttachment() throws {
+        let fixture = makeFixture()
+        let source = try XCTUnwrap(fixture.coordinator.model(for: .initial))
+        let tab = try XCTUnwrap(source.browser.selectedTab)
+        let space = try XCTUnwrap(source.browser.selectedSpace)
+        let request = try XCTUnwrap(
+            fixture.coordinator.prepareTearOff(
+                BrowserTabDragItem(tabID: tab.id, spaceID: space.id, profileID: space.profile.id),
+                from: source.id, at: CGPoint(x: 500, y: 500)))
+        let window = NSWindow(
+            contentRect: CGRect(x: 100, y: 100, width: 900, height: 600),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        fixture.coordinator.preparePresentation(window, for: request.id)
+        window.orderFront(nil)
+
+        fixture.coordinator.cancelPendingTransfer(to: request.id)
+
+        XCTAssertFalse(window.isVisible)
+        XCTAssertNil(fixture.coordinator.existingModel(for: request.id))
+        XCTAssertFalse(fixture.coordinator.attach(window, to: request.id))
+        XCTAssertFalse(window.isVisible)
+        XCTAssertEqual(source.browser.selectedTab?.id, tab.id)
+    }
+
+    func testACommittedTearOffRemainsAvailableWhenItsRowCannotBeMeasured() async throws {
+        let fixture = makeFixture()
+        let source = try XCTUnwrap(fixture.coordinator.model(for: .initial))
+        let tab = try XCTUnwrap(source.browser.selectedTab)
+        let space = try XCTUnwrap(source.browser.selectedSpace)
+        let request = try XCTUnwrap(
+            fixture.coordinator.prepareTearOff(
+                BrowserTabDragItem(tabID: tab.id, spaceID: space.id, profileID: space.profile.id),
+                from: source.id, at: CGPoint(x: 500, y: 500)))
+        let destination = try XCTUnwrap(fixture.coordinator.existingModel(for: request.id))
+        let placement = try XCTUnwrap(destination.tearOffPlacement)
+        let window = NSWindow(
+            contentRect: CGRect(x: 100, y: 100, width: 900, height: 600),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer {
+            fixture.coordinator.closeWindow(destination.id)
+            fixture.coordinator.closeWindow(source.id)
+            window.close()
+        }
+        fixture.coordinator.preparePresentation(window, for: request.id)
+        XCTAssertTrue(window.ignoresMouseEvents)
+        XCTAssertTrue(fixture.coordinator.attach(window, to: request.id))
+        XCTAssertEqual(destination.browser.selectedTab?.id, tab.id)
+
+        for _ in 0..<80 where placement.isPending {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertFalse(placement.isPending)
+        XCTAssertTrue(window.isVisible)
+        XCTAssertFalse(window.ignoresMouseEvents)
+        XCTAssertEqual(destination.browser.selectedTab?.id, tab.id)
+        XCTAssertTrue(source.browser.selectedSpace?.tabs.isEmpty == true)
+    }
+
     private func makeFixture() -> (browser: BrowserStore, coordinator: BrowserMacWindowCoordinator) {
         let tab = BrowserTab(title: "Window lifecycle", url: URL(string: "about:blank"), placement: .current)
         let space = BrowserSpace(

@@ -11,6 +11,7 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
+    @Environment(\.browserSidebarWindowDrop) private var windowDrop
 
     /// Identity for this row's registration. A row that changes section keeps
     /// its item identity but is a different view on either side of the move, and
@@ -70,6 +71,7 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
                         owner: identity,
                         scrollRegionID: scrollRegionID
                     )
+                    windowDrop?.didMeasureRow(row)
                 }
                 .onDisappear {
                     state.removeRow(item.id, owner: identity)

@@ -9,8 +9,11 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
     func testNativeDragOutsideOnlyWindowWaitsForBlankWindowThenMovesTab() throws {
         let fixture = try Fixture()
         defer { fixture.close() }
+        fixture.source.pages.select(session: fixture.source.browser.session)
+        let page = try XCTUnwrap(fixture.source.pages.activePage)
         let row = try XCTUnwrap(fixture.root.sidebarInteraction.sidebarReorderState.frame(ofRow: .tab(fixture.tabID)))
-        fixture.drag(from: row)
+        let grabFraction = CGPoint(x: 0.25, y: 0.75)
+        fixture.drag(from: row, grabFraction: grabFraction)
         // Drag decorations are separate native windows but cannot accept a drop.
         let sourceWindow = try XCTUnwrap(fixture.source.window)
         let point = sourceWindow.convertPoint(
@@ -31,12 +34,60 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
         XCTAssertEqual(fixture.source.browser.selectedTab?.id, fixture.tabID)
         let destination = try XCTUnwrap(fixture.coordinator.existingModel(for: request.id))
         XCTAssertTrue(destination.browser.selectedSpace?.tabs.isEmpty == true)
+        let placement = try XCTUnwrap(destination.tearOffPlacement)
+        XCTAssertEqual(placement.assignment.tabID, fixture.tabID)
+        XCTAssertEqual(fixture.capturedDropPoint, point)
+        XCTAssertEqual(placement.dropPoint, point)
+        let capturedGrab = try XCTUnwrap(fixture.capturedGrabFraction)
+        XCTAssertEqual(capturedGrab.x, grabFraction.x, accuracy: 0.001)
+        XCTAssertEqual(capturedGrab.y, grabFraction.y, accuracy: 0.001)
+        XCTAssertEqual(placement.grabFraction, capturedGrab)
+        XCTAssertTrue(placement.isPending)
+
+        fixture.hostDestination(destination)
+        fixture.coordinator.preparePresentation(fixture.destinationWindow, for: request.id)
+        XCTAssertEqual(fixture.destinationWindow.alphaValue, 0)
+        let sourceRow = BrowserSidebarReorderRow(
+            id: .tab(fixture.tabID),
+            space: .init(spaceID: placement.assignment.spaceID, profileID: placement.assignment.profileID),
+            section: .tabs(placement: .current, folderID: nil), frame: row)
+        fixture.coordinator.didMeasureRow(sourceRow, in: request.id)
+        XCTAssertTrue(placement.isPending, "A row still owned by the source cannot reveal an empty destination")
+        XCTAssertEqual(fixture.destinationWindow.alphaValue, 0)
+        fixture.destinationWindow.orderFront(nil)
         fixture.coordinator.attach(fixture.destinationWindow, to: request.id)
+        fixture.pump()
 
         XCTAssertEqual(destination.browser.selectedTab?.id, fixture.tabID)
+        XCTAssertTrue(destination.pages.activePage === page)
+        XCTAssertTrue(page.host === destination.pages)
+        XCTAssertNil(fixture.source.pages.residentPage(matching: placement.assignment))
         XCTAssertTrue(fixture.source.browser.selectedSpace?.tabs.isEmpty == true)
         XCTAssertNotNil(fixture.coordinator.existingModel(for: fixture.source.id))
         XCTAssertTrue(fixture.source.window?.isVisible == true)
+        XCTAssertTrue(fixture.completedPlacementFromRow, "The destination's measured row must finish placement")
+        XCTAssertFalse(placement.isPending)
+        XCTAssertTrue(fixture.destinationWindow.isVisible)
+        XCTAssertEqual(fixture.destinationWindow.alphaValue, 1)
+
+        let measuredRow = try XCTUnwrap(fixture.measuredDestinationRow)
+        let lateRow = BrowserSidebarReorderRow(
+            id: measuredRow.id, space: measuredRow.space, section: measuredRow.section,
+            frame: measuredRow.frame.offsetBy(dx: 33, dy: 22))
+        let unrelatedRow = BrowserSidebarReorderRow(
+            id: .tab(TabID()), space: measuredRow.space, section: measuredRow.section, frame: lateRow.frame)
+        let destinationFrame = fixture.destinationWindow.frame
+        let sourceFrame = sourceWindow.frame
+        fixture.destinationWindow.orderOut(nil)
+        sourceWindow.orderOut(nil)
+        fixture.coordinator.didMeasureRow(lateRow, in: request.id)
+        fixture.coordinator.didMeasureRow(unrelatedRow, in: request.id)
+        fixture.coordinator.didMeasureRow(lateRow, in: fixture.source.id)
+        fixture.pump()
+        XCTAssertEqual(fixture.destinationWindow.frame, destinationFrame)
+        XCTAssertEqual(sourceWindow.frame, sourceFrame)
+        XCTAssertFalse(fixture.destinationWindow.isVisible, "Completed placement must not reveal the window again")
+        XCTAssertFalse(sourceWindow.isVisible, "A destination row must not reveal another window")
     }
 
     func testEscapeCancelsSingleTabTearOffUntilMouseRelease() throws {
@@ -70,6 +121,10 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
         let destinationWindow: NSWindow
         let outside = CGPoint(x: 1_320, y: -120)
         var request: BrowserMacWindowRequest?
+        var capturedDropPoint: CGPoint?
+        var capturedGrabFraction: CGPoint?
+        var measuredDestinationRow: BrowserSidebarReorderRow?
+        var completedPlacementFromRow = false
 
         init() throws {
             let tab = BrowserTab(title: "Tear off", url: URL(string: "about:blank"), placement: .current)
@@ -105,20 +160,48 @@ final class BrowserTabTearOffWindowTests: XCTestCase {
                     .environment(root.sidebarInteraction)
                     .environment(
                         \.browserSidebarWindowDrop,
-                        BrowserSidebarWindowDrop { [weak self, weak window] item in
+                        BrowserSidebarWindowDrop(perform: { [weak self, weak window] lift in
                             guard let self, let window, let event = NSApp.currentEvent else { return false }
+                            let point = window.convertPoint(toScreen: event.locationInWindow)
+                            self.capturedDropPoint = point
+                            self.capturedGrabFraction = lift.anchorFraction
                             return BrowserMacWindowDropAction(
                                 coordinator: self.coordinator, sourceWindowID: self.source.id,
                                 open: { [weak self] in self?.request = $0 }
-                            ).perform(item, at: window.convertPoint(toScreen: event.locationInWindow))
-                        }))
+                            ).perform(lift.item, at: point, grabFraction: lift.anchorFraction)
+                        })))
             coordinator.attach(window, to: source.id)
             window.makeKeyAndOrderFront(nil)
             pump()
         }
 
-        func drag(from row: CGRect) {
-            let start = CGPoint(x: row.midX, y: row.midY)
+        func hostDestination(_ model: BrowserMacWindowModel) {
+            let root = BrowserRootModel(
+                browser: model.browser, pages: model.pages, chrome: model.chrome, spaceAccess: coordinator.spaceAccess,
+                windowState: model.windowState, startupBehavior: .lastActiveTab,
+                persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
+            destinationWindow.contentView = NSHostingView(
+                rootView:
+                    TearOffTestSurface(model: root)
+                    .environment(root.sidebarInteraction)
+                    .environment(
+                        \.browserSidebarWindowDrop,
+                        BrowserSidebarWindowDrop(
+                            perform: { _ in false },
+                            didMeasureRow: { [weak self, weak model] row in
+                                guard let self, let model else { return }
+                                if row.id == .tab(self.tabID) { self.measuredDestinationRow = row }
+                                let wasPending = model.tearOffPlacement?.isPending == true
+                                self.coordinator.didMeasureRow(row, in: model.id)
+                                if wasPending, model.tearOffPlacement?.isPending == false {
+                                    self.completedPlacementFromRow = true
+                                }
+                            })))
+        }
+
+        func drag(from row: CGRect, grabFraction: CGPoint = CGPoint(x: 0.5, y: 0.5)) {
+            let start = CGPoint(
+                x: row.minX + row.width * grabFraction.x, y: row.minY + row.height * grabFraction.y)
             input.send(.leftMouseDown, at: start)
             for step in 1...16 {
                 let fraction = CGFloat(step) / 16

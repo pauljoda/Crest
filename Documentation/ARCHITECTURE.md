@@ -50,6 +50,8 @@ Normal windows share a `BrowserPageRuntimeStore`. Each tab has one `BrowserTabRu
 
 Dragging one tab between workspaces moves its existing identity and runtime, including native content models and retained navigation state. The destination receives a Current tab without source folder or split membership, and the transfer does not archive the source tab. An empty source window stays open. A tear-off prepares a destination first and commits only after the native window attaches and both model and runtime assignments pass validation. Cancellation or a stale assignment leaves the source tab in place.
 
+The torn-off window appears with the grabbed point on its measured sidebar row aligned to the release location, constrained to that display's usable frame. Placement is applied once before revealing the window; later sidebar layout changes do not move it. If the row cannot be measured promptly, the committed window appears at the drop location without discarding its tab.
+
 ## Credentials and privacy
 
 Crest Passwords are stored in the Keychain and matched by origin. Each Space can disable Crest-owned suggestions, generation, save prompts, and HTTP-auth reuse without deleting its stored credentials. Sensitive reveals and exports require device authentication. Page-to-app credential messages are schema-checked and origin-bound.

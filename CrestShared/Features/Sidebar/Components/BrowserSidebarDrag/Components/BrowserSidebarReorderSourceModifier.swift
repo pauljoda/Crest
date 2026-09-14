@@ -123,7 +123,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 }
             case .released(let previewOwner):
                 guard continuingLift else { return }
-                if let item = state.lift?.item, windowDrop?.perform(item) == true {
+                if let lift = state.liftPreview, windowDrop?.perform(lift) == true {
                     cancelLift()
                     state.suppressActivation()
                     return

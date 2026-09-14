@@ -4390,6 +4390,7 @@
 		FCEE60E2D5B9AE7B7E1AAE7D /* BrowserSplitFocusPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0C4A6B831C5F2811E4F323 /* BrowserSplitFocusPolicy.swift */; };
 		FCFE5CD3EEECEE00AAB12807 /* BrowserSpaceSettingsCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F29CAA9C359D469EFEAA06F /* BrowserSpaceSettingsCapabilities.swift */; };
 		FD15387F0812F189ED6936E5 /* BrowserSitePermissionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C8286F6C1BDD0FFD46C674A /* BrowserSitePermissionRecord.swift */; };
+		FD19E13F0ABF9A486C5ED9D3 /* BrowserMacTabTearOffPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33AE4C6177133E932946447 /* BrowserMacTabTearOffPlacement.swift */; };
 		FD19E592B514E5DC11A8E813 /* BrowserWindowLayoutPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D6824FD2D1F99EB104F62F /* BrowserWindowLayoutPersistence.swift */; };
 		FD312F53A4DD6E0C6E3FA74D /* MobileBrowserCommandContext+Commands.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28A7A0938A4662188F3F886 /* MobileBrowserCommandContext+Commands.swift */; };
 		FD34623612627A58D3826871 /* BrowserSpaceSwitcherCompactStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E1F1C21D164CE6B3CDD366 /* BrowserSpaceSwitcherCompactStrip.swift */; };
@@ -6824,6 +6825,7 @@
 		D32761A4FA5C3CBC09B38CDD /* CrestSpaceChipAddAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrestSpaceChipAddAction.swift; sourceTree = "<group>"; };
 		D32F5A14B8C3397732C029A1 /* BrowserSidebarTabLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSidebarTabLabel.swift; sourceTree = "<group>"; };
 		D33AC0179E94640B63E44BE9 /* CrestButtonSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrestButtonSurface.swift; sourceTree = "<group>"; };
+		D33AE4C6177133E932946447 /* BrowserMacTabTearOffPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserMacTabTearOffPlacement.swift; sourceTree = "<group>"; };
 		D344E933A53B0C783D28A6EE /* BrowserHistorySQLiteDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserHistorySQLiteDatabase.swift; sourceTree = "<group>"; };
 		D3550FABE898DF5AF01F99DB /* BrowserSplitFocusPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserSplitFocusPreferenceStore.swift; sourceTree = "<group>"; };
 		D35A2601361B0169C9B8322B /* CrestSelectableCardSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrestSelectableCardSurface.swift; sourceTree = "<group>"; };
@@ -9054,6 +9056,7 @@
 		27350D6590B687A4E471F7C3 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				D33AE4C6177133E932946447 /* BrowserMacTabTearOffPlacement.swift */,
 				8F5FD6E6BF502F61D1F945E7 /* BrowserMacWindowCoordinator.swift */,
 				83394BA48982092DA48365E2 /* BrowserMacWindowDropAction.swift */,
 			);
@@ -17670,7 +17673,7 @@
 			path = MobileBrowserSettingsView;
 			sourceTree = "<group>";
 		};
-		"TEMP_79111794-F8AE-409A-AD31-558DB7FD5AF2" /* Crest */ = {
+		"TEMP_E2BD8A4A-E695-4C43-8354-5D2D55D9818A" /* Crest */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -20771,6 +20774,7 @@
 				0CB6E02D565F3D9A1D632F2D /* BrowserMacOnboardingTutorialFeature.swift in Sources */,
 				2C493D9F9A78623A216559CE /* BrowserMacOnboardingTutorialPage.swift in Sources */,
 				74251FD8E86664799F3C509E /* BrowserMacSettingsTabContent.swift in Sources */,
+				FD19E13F0ABF9A486C5ED9D3 /* BrowserMacTabTearOffPlacement.swift in Sources */,
 				A7B72E89EF6464116C11C038 /* BrowserMacWindowAttachment.swift in Sources */,
 				B9896173FAF85540AFD751C7 /* BrowserMacWindowCoordinator.swift in Sources */,
 				18C386725A9CEF21275FD9A7 /* BrowserMacWindowDropAction.swift in Sources */,

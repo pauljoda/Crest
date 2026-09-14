@@ -87,11 +87,17 @@ struct BrowserMacWindowScene: View {
             )
         )
         .environment(\.browserPagePresentationWindowID, id)
-        .environment(\.browserSidebarWindowDrop, BrowserSidebarWindowDrop(perform: handleWindowDrop))
+        .environment(
+            \.browserSidebarWindowDrop,
+            BrowserSidebarWindowDrop(
+                perform: handleWindowDrop,
+                didMeasureRow: { coordinator.didMeasureRow($0, in: id) })
+        )
         .background(
             BrowserMacWindowAttachment(
+                prepare: { coordinator.preparePresentation($0, for: id) },
                 attach: { window in
-                    coordinator.attach(window, to: id)
+                    guard coordinator.attach(window, to: id) else { return }
                     activateWindow()
                     pages.setWindowFocused(window.isKeyWindow)
                     extensionControllerPool.setHostWindowFocused(window.isKeyWindow, windowID: id)
@@ -196,7 +202,7 @@ struct BrowserMacWindowScene: View {
         coordinator.closeWindow(id)
     }
 
-    private func handleWindowDrop(_ item: BrowserSidebarReorderItem) -> Bool {
+    private func handleWindowDrop(_ lift: BrowserSidebarFloatingLift) -> Bool {
         let event = NSApp.currentEvent
         let point =
             event.flatMap { event in
@@ -205,7 +211,7 @@ struct BrowserMacWindowScene: View {
         return BrowserMacWindowDropAction(
             coordinator: coordinator, sourceWindowID: id,
             open: { openWindow(id: BrowserSceneID.blankWindow.rawValue, value: $0) }
-        ).perform(item, at: point)
+        ).perform(lift.item, at: point, grabFraction: lift.anchorFraction)
     }
 
     private func flushPendingPersistence() {

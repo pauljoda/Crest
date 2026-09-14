@@ -32,6 +32,19 @@ final class BrowserMacWindowCoordinator {
 
     func existingModel(for id: BrowserWindowID) -> BrowserMacWindowModel? { windows[id] }
 
+    func preparePresentation(_ window: NSWindow, for id: BrowserWindowID) {
+        guard let model = windows[id] else { return }
+        model.window = window
+        model.tearOffPlacement?.prepare(window)
+    }
+
+    func didMeasureRow(_ row: BrowserSidebarReorderRow, in id: BrowserWindowID) {
+        guard let model = windows[id], let placement = model.tearOffPlacement, placement.isPending,
+            model.browser.space(matching: row.space)?.tabs.contains(where: { .tab($0.id) == row.id }) == true
+        else { return }
+        placement.place(at: row)
+    }
+
     func model(for request: BrowserMacWindowRequest) -> BrowserMacWindowModel? {
         guard !canceledTransfers.contains(request.id) else { return nil }
         if let existing = windows[request.id] { return existing }
@@ -61,9 +74,16 @@ final class BrowserMacWindowCoordinator {
         return model
     }
 
-    func attach(_ window: NSWindow, to id: BrowserWindowID) {
-        guard let model = windows[id] else { return }
+    @discardableResult
+    func attach(_ window: NSWindow, to id: BrowserWindowID) -> Bool {
+        guard let model = windows[id] else {
+            window.close()
+            return false
+        }
         model.window = window
+        model.tearOffPlacement?.attach(window) { [weak model] in
+            model?.pages.setWindowFocused(true)
+        }
         window.tabbingMode = .disallowed
         model.pages.bindNativeWindow(window)
         if model.isTemporary {
@@ -71,10 +91,12 @@ final class BrowserMacWindowCoordinator {
             window.setFrameAutosaveName("")
         }
         _ = completePendingTransfer(to: id)
+        return windows[id] === model
     }
 
     func closeWindow(_ id: BrowserWindowID) {
         guard let model = windows.removeValue(forKey: id) else { return }
+        model.tearOffPlacement?.cancel()
         cancelPendingTransfer(to: id)
         for destination in pendingTransfers.keys.filter({ pendingTransfers[$0]?.sourceWindowID == id }) {
             cancelPendingTransfer(to: destination)
@@ -100,13 +122,20 @@ final class BrowserMacWindowCoordinator {
 
     /// Preparing a destination is reversible. The shared workspace changes only
     /// after the new scene has a native window and has accepted the transfer.
-    func prepareTearOff(_ item: BrowserTabDragItem, from sourceID: BrowserWindowID) -> BrowserMacWindowRequest? {
+    func prepareTearOff(
+        _ item: BrowserTabDragItem, from sourceID: BrowserWindowID,
+        at point: CGPoint? = nil, grabFraction: CGPoint = CGPoint(x: 0.5, y: 0.5)
+    ) -> BrowserMacWindowRequest? {
         guard let source = windows[sourceID], isAvailable(item, in: source),
             item.selection.map({ $0.ids == [item.tabID] }) ?? true
         else { return nil }
         let request = BrowserMacWindowRequest.temporary(
             sourceWindowID: sourceID, assignment: item.spaceAssignment)
-        guard model(for: request) != nil else { return nil }
+        guard let destination = model(for: request) else { return nil }
+        if let point {
+            destination.tearOffPlacement = BrowserMacTabTearOffPlacement(
+                assignment: item.runtimeAssignment, dropPoint: point, grabFraction: grabFraction)
+        }
         pendingTransfers[request.id] = PendingTransfer(sourceWindowID: sourceID, item: item)
         transferExpirations[request.id] = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(10))
@@ -135,6 +164,7 @@ final class BrowserMacWindowCoordinator {
         guard pendingTransfers.removeValue(forKey: id) != nil else { return }
         canceledTransfers.insert(id)
         guard let destination = windows.removeValue(forKey: id) else { return }
+        destination.tearOffPlacement?.cancel()
         destination.pages.closeWindowWorkspace()
         destination.window?.close()
     }
@@ -208,8 +238,10 @@ final class BrowserMacWindowCoordinator {
         source.pages.select(session: source.browser.session)
         destination.pages.reconcile(session: destination.browser.session)
         destination.pages.select(session: destination.browser.session)
-        destination.pages.setWindowFocused(true)
-        destination.window?.makeKeyAndOrderFront(nil)
+        if destination.tearOffPlacement?.isPending != true {
+            destination.pages.setWindowFocused(true)
+            destination.window?.makeKeyAndOrderFront(nil)
+        }
         return true
     }
 }
