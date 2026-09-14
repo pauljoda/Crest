@@ -6,33 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.5.139</title>
-            <pubDate>Mon, 14 Sep 2026 00:28:58 +0000</pubDate>
+            <title>0.5.141</title>
+            <pubDate>Mon, 14 Sep 2026 04:09:43 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1093</sparkle:version>
-            <sparkle:shortVersionString>0.5.139</sparkle:shortVersionString>
+            <sparkle:version>1094</sparkle:version>
+            <sparkle:shortVersionString>0.5.141</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Recover missing iCloud changes with a confirmed Pull from iCloud action, and keep blank tabs from blocking Space and tab updates
+- Search selected text in a new Crest tab using the current Space’s search engine
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/8f41e7400a2c43546be3535ccac0ff4b5ac7ed63...e3c54bf8af45acc5e3942452333e1818df0352e8) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.139-2026-09-14-1093-r93.1/Installer-Crest-0.5.139-development-2026-09-14-e3c54bf-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/e3c54bf8af45acc5e3942452333e1818df0352e8...a6f227ba93a0ac5048abc2298b4dbdfd4e7d586e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.5.141-2026-09-14-1094-r94.1/Installer-Crest-0.5.141-development-2026-09-14-a6f227b-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.139-2026-09-14-1093-r93.1/Installer-Crest-0.5.139-development-2026-09-14-e3c54bf-arm64.dmg" length="25858358" type="application/octet-stream" sparkle:edSignature="XpQQ1vIJRt7BH/jP9IRpYxnAemcr5eWV39C1cmvZCvarsYG7WK2CpFrVomrq699J/m3ZtPpE2LmImD/yxfTzBQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.5.141-2026-09-14-1094-r94.1/Installer-Crest-0.5.141-development-2026-09-14-a6f227b-arm64.dmg" length="25875766" type="application/octet-stream" sparkle:edSignature="A06XzPdllAWnqpZVb5rD5Vfh6hLQKMDcwLSfPRpymqW5zWnmIUQ/6jw5gT//8V+TImjYQv1diTKhceueSl31BA=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Ke1q/Jf3yH0EDyMzyxzvRpV2VKMYA90G7tjWPKh+fply/To3NMxkiOYJowxs4NTvvqauykmtawstuUuj9YW+DQ==
-length: 2094
+edSignature: 0a8dFyV7QGCSA1mqZlGd71n4mKPBIjS2ZqRW5bNJxxQQX5DyTx+asy6ggsRXWXQy00Skm8LL2izGEzX7J1srCA==
+length: 2047
 -->

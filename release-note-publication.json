@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "2026-08-27-newest-eligible-software-update",
-    "development": "icloud-full-pull-and-merge-recovery",
+    "development": "selected-text-search-in-crest",
     "nightly": "website-camera-and-notification-permissions"
   }
 }
