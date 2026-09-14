@@ -6,6 +6,49 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.6.0</title>
+            <pubDate>Mon, 14 Sep 2026 19:20:15 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1098</sparkle:version>
+            <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 202 user-facing changes.
+
+### New
+
+- Open multiple windows with shared Spaces and tabs, keeping your place in each window
+- Open disposable blank windows with your Space’s cookies and extensions, or create one by dragging a tab outside the window
+
+### Improved
+
+- Keep Peeks with their tabs while opening new tabs, switching Spaces, and browsing inside the Peek
+- Blend address bar colors with the background when switching Spaces
+- Open blank windows with Command-Option-N and Quick Windows with Command-Option-Shift-N
+- Position torn-off windows where you drop the tab, keeping the window within the display
+
+### Fixed
+
+- Prevent a crash when displaying sidebar previews during setup
+- Keep dragged tabs visible outside the window and give blank windows the normal browser appearance
+- Keep pages loaded when you switch to them in another window during memory cleanup
+- Keep extension and built-in pages on their own device so they cannot block iCloud sync
+- Keep the Mac sidebar collapsed when opening the address editor with Command-L
+- Match the system dark background across Crest's app icon color palettes
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85...258115049e99968c5ab7906561ed18aa9fe259eb) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.0/Installer-Crest-0.6.0-arm64.dmg)
+
+[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.0/Installer-Crest-0.6.0-arm64.dmg" length="26814708" type="application/octet-stream" sparkle:edSignature="hSAwYdFTlSOkOpq6/VJVeuAt7ehv1F2kMT7UAIEhgEwsujxhjJwBUknFsXOOEFgjtDVDSPQQVP+0gdqQlNUDDg=="/>
+        </item>
+        <item>
             <title>0.5.142</title>
             <pubDate>Mon, 14 Sep 2026 15:12:16 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -90,6 +133,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 2SB3Nf5ORNon3bDyoDyTb6Mo+yQEiuvUmCkMwktkJ7DeneAkPl0wXtZGLwH7YB2jL/H4q1eCFPiZHXPZlCPADg==
-length: 5278
+edSignature: gwotelL4gEtC+OaKwTRt/3ILmss2qKyir6Rc87qOaeTNyfevl6RiGCq7IFrezTlPnBruuwSVcU43iAXrLcInDw==
+length: 7705
 -->
