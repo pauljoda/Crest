@@ -16,6 +16,7 @@ struct BrowserPeekInputLifecycleModifier: ViewModifier {
     }
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.browserWebFocusRestorationGate) private var focusGate
 
     func body(content: Content) -> some View {
         content
@@ -23,14 +24,18 @@ struct BrowserPeekInputLifecycleModifier: ViewModifier {
             .onChange(of: scenePhase) { _, phase in
                 model.setActive(phase == .active)
             }
+            .onChange(of: model.isSelected) {
+                model.setActive(scenePhase == .active)
+            }
             .onKeyPress(.escape) {
+                guard model.isSelected && !focusGate.browserChromeOwnsFocus else { return .ignored }
                 dismiss()
                 return .handled
             }
             .background {
                 BrowserPeekKeyboardMonitor(
                     dismiss: dismiss,
-                    installsMonitor: installsKeyboardMonitor
+                    installsMonitor: installsKeyboardMonitor && model.isSelected && !focusGate.browserChromeOwnsFocus
                 )
                 .frame(width: 0, height: 0)
             }

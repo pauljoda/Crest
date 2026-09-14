@@ -17,16 +17,19 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
+    @Environment(\.spaceChromeAccent) private var spaceAccent
+    @Environment(\.spaceChromeForeground) private var spaceForeground
+
     func body(content: Content) -> some View {
         band(content.padding(.horizontal, metrics.horizontalPadding))
             .background {
                 ZStack(alignment: .leading) {
-                    fieldShape.fill(CrestColor.chromeSurface)
+                    fieldShape.fill((spaceForeground ?? .primary).opacity(CrestOpacity.chromeSurface))
                     if !reduceTransparency {
                         fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
                     }
                     fieldShape
-                        .fill(.tint.opacity(isLoading ? 0.2 : 0))
+                        .fill(accent.opacity(isLoading ? 0.2 : 0))
                         .scaleEffect(x: loadingProgress, anchor: .leading)
                         .mask(fieldShape)
                         .animation(
@@ -68,7 +71,9 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     }
 
     private var appearance: BrowserAddressAppearance { BrowserDeviceAppearanceStore.shared.address }
-    private var accent: Color { (appearance.color ?? branding?.primaryColor ?? .indigo).color }
+    private var accent: Color {
+        appearance.color?.color ?? spaceAccent ?? (branding?.primaryColor ?? .indigo).color
+    }
 
     private var fieldShape: RoundedRectangle {
         RoundedRectangle(

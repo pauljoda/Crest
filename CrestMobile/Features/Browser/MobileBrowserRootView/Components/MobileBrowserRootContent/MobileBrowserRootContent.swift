@@ -166,15 +166,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     }
                 ),
                 page: MobileCompactPageSurface(
-                    browser: browser,
-                    pages: pages,
-                    transientBrowsing: transientBrowsing,
-                    spaceAccess: spaceAccess,
                     selectedTab: browser.selectedTab,
                     isURLCopiedFeedbackVisible: isURLCopiedFeedbackVisible,
                     pageZoomFeedbackLabel: visiblePageZoomFeedbackLabel,
                     reduceMotion: reduceMotion,
-                    didPromoteTransientPage: model.activateSelectedTab,
                     tabPromotionNamespace: tabPromotionNamespace,
                     completePagePresentation:
                         navigation.completePagePresentation,
@@ -217,7 +212,9 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.showCompactToolbar,
                         handleToolbarSwipe: handleToolbarSwipe,
                         selectSplitCard: selectSplitCard,
-                        compactTransitionEnded: finishCompactTransition
+                        compactTransitionEnded: finishCompactTransition,
+                        transientBrowsing: transientBrowsing,
+                        didPromoteTransientPage: model.activateSelectedTab
                     )
                 )
             ),
@@ -293,6 +290,12 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                             navigation.regularSidebarIsDocked
                             && layout.reservesSidebarWidth
                     )
+                    .overlay {
+                        MobileTransientBrowsingOverlay(
+                            browser: browser, pages: pages, coordinator: transientBrowsing,
+                            spaceAccess: spaceAccess, didPromote: model.activateSelectedTab)
+                    }
+                    .clipped()
                     .environment(
                         \.browserSettingsUsesLiveSidebar,
                         navigation.regularSidebarIsDocked && layout.reservesSidebarWidth)

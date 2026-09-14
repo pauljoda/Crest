@@ -9,6 +9,7 @@ import os
 @Observable
 @MainActor
 final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
+    var opensModifiedLinksInForeground = false
     @ObservationIgnored private static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
         category: "WebKitLifecycle"

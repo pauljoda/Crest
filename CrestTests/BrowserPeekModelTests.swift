@@ -5,6 +5,67 @@ import XCTest
 
 @MainActor
 final class BrowserPeekModelTests: XCTestCase {
+    func testSwitchingTabsRetainsThePeekDocumentAcrossHostRecreation() async throws {
+        let context = try makeContext()
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let lease = try XCTUnwrap(context.model.pageLease)
+        let page = try XCTUnwrap(context.model.page)
+        try await waitUntil { page.completedNavigationCount > 0 }
+        _ = try await page.webView.evaluateJavaScript(
+            "document.body.innerHTML = '<input id=notes>'; document.querySelector('#notes').value = 'retained notes'")
+
+        context.browser.selectSpace(context.destination.id)
+        context.model.setActive(true)
+        context.model.releaseForDisappearance()
+        XCTAssertFalse(context.model.isSelected)
+        XCTAssertFalse(lease.isActive)
+        XCTAssertTrue(lease.page === page)
+        XCTAssertTrue(context.coordinator.isPresentingPeek(context.request))
+
+        context.browser.selectSpace(context.source.id)
+        context.browser.selectTab(context.request.sourceTabID)
+        let restored = BrowserPeekModel(
+            request: context.request, browser: context.browser, pages: context.pages,
+            spaceAccess: context.spaceAccess, coordinator: context.coordinator)
+        XCTAssertTrue(restored.preparePage(isActive: true))
+        XCTAssertTrue(restored.page === page)
+        XCTAssertTrue(lease.isActive)
+        let notes = try await page.webView.evaluateJavaScript("document.querySelector('#notes').value") as? String
+        XCTAssertEqual(notes, "retained notes")
+
+        restored.dismiss()
+        context.pages.retainPeekPages(for: context.coordinator.peekRequests)
+        XCTAssertNil(lease.page)
+    }
+
+    func testEachSourceTabOwnsItsPeekAndClosingOneReleasesOnlyItsPage() throws {
+        let context = try makeContext()
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let firstLease = try XCTUnwrap(context.model.pageLease)
+        let secondRequest = BrowserPeekRequest(
+            url: context.request.url, sourceTabID: try XCTUnwrap(context.destination.selectedTabID),
+            sourceTitle: "Second", spaceAssignment: BrowserSpaceRuntimeAssignment(space: context.destination),
+            trigger: .modifierClick)
+        context.coordinator.presentPeek(secondRequest)
+        let second = BrowserPeekModel(
+            request: secondRequest, browser: context.browser, pages: context.pages,
+            spaceAccess: context.spaceAccess, coordinator: context.coordinator)
+        XCTAssertTrue(second.preparePage(isActive: false))
+        let secondPage = try XCTUnwrap(second.page)
+        XCTAssertEqual(context.coordinator.peekRequests.count, 2)
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        XCTAssertTrue(context.model.pageLease === firstLease)
+
+        context.browser.session.spaces[0].tabs.removeAll { $0.id == context.request.sourceTabID }
+        context.coordinator.reconcilePeeks(in: context.browser.session)
+        context.pages.retainPeekPages(for: context.coordinator.peekRequests)
+        XCTAssertEqual(context.coordinator.peekRequests, [secondRequest])
+        XCTAssertNil(firstLease.page)
+        XCTAssertTrue(second.page === secondPage)
+        second.dismiss()
+        context.pages.retainPeekPages(for: context.coordinator.peekRequests)
+    }
+
     func testPullLoadsWhileHeldAndCommitKeepsTheSameLivePage() async throws {
         let context = try makeContext()
         var state = BrowserPeekMotionState(

@@ -32,6 +32,7 @@ struct BrowserPeekKeyboardMonitor: NSViewRepresentable {
         _ view: BrowserPeekWindowTrackingView,
         context: Context
     ) {
+        context.coordinator.installsMonitor = installsMonitor
         context.coordinator.dismiss = dismiss
         context.coordinator.windowNumber = view.window?.windowNumber
     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserSpacePageSurface: NSViewRepresentable {
     let model: BrowserRootModel
+    let transientBrowsing: BrowserTransientBrowsingCoordinator
     let tabPromotionNamespace: Namespace.ID
     var appearance = BrowserChromeAppearance()
 
@@ -24,6 +25,7 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
             SpacePageRoot(
                 content: BrowserRootPageSurface(
                     model: model, space: space, isSelectedSpace: isSelected,
+                    transientBrowsing: transientBrowsing,
                     tabPromotionNamespace: tabPromotionNamespace,
                     appearance: appearance,
                     layoutDirection: context.environment.layoutDirection),

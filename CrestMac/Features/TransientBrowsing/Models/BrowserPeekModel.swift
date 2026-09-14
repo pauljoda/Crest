@@ -48,11 +48,11 @@ final class BrowserPeekModel {
     }
 
     var motionState: BrowserPeekMotionState? {
-        isCurrentRequest ? coordinator.peekMotionState : nil
+        coordinator.motionState(for: request)
     }
 
     var isPullStaged: Bool {
-        motionState != nil && coordinator.peekPresentationPhase == .staged
+        motionState != nil && coordinator.presentationPhase(for: request) == .staged
     }
 
     func finishReturningPull() {
@@ -93,13 +93,13 @@ final class BrowserPeekModel {
                 leaseCanBeReused: pageLease.canBeReused
             )
         {
-            pageLease.setActive(isActive)
+            pageLease.setActive(isActive && isSelected)
             return true
         }
         pageLease?.release()
         guard let pages else { return true }
-        pageLease = pages.makeTransientPageLease(
-            url: request.url,
+        pageLease = pages.makePeekPageLease(
+            request: request,
             in: space,
             onDownloadOnlyNavigation: { [weak coordinator, request = self.request] in
                 coordinator?.dismissPeek(request)
@@ -109,7 +109,7 @@ final class BrowserPeekModel {
             dismissUnavailableRequest()
             return false
         }
-        pageLease.setActive(isActive)
+        pageLease.setActive(isActive && isSelected)
         return true
     }
 
@@ -196,7 +196,7 @@ final class BrowserPeekModel {
             // Release inaccessible content without changing the window's presentation.
             releaseLease()
         case .usable:
-            pageLease?.setActive(isActive)
+            pageLease?.setActive(isActive && isSelected)
         }
     }
 
@@ -212,8 +212,14 @@ final class BrowserPeekModel {
 
     func releaseForDisappearance() {
         guard !wasPromoted else { return }
-        releaseLease()
+        if isCurrentRequest {
+            pageLease?.setActive(false)
+        } else {
+            releaseLease()
+        }
     }
+
+    var isSelected: Bool { request.isSelected(in: browser.session) }
 
     private var isCurrentRequest: Bool {
         coordinator.isPresentingPeek(request)
@@ -228,7 +234,7 @@ final class BrowserPeekModel {
     ) -> BrowserTransientLeaseDisposition {
         BrowserTransientSessionPolicy.disposition(
             isPresentingRequest: isCurrentRequest,
-            space: browser.space(matching: assignment),
+            space: request.hasSource(in: browser.session) ? browser.space(matching: assignment) : nil,
             isLocked: spaceAccess.isLocked
         )
     }

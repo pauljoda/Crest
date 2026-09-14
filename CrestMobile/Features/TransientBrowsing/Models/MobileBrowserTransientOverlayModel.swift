@@ -66,8 +66,18 @@ final class MobileBrowserTransientOverlayModel {
     }
 
     var motionState: BrowserPeekMotionState? {
-        guard case .peek = request, isCurrentRequest else { return nil }
-        return coordinator.peekMotionState
+        guard case .peek(let peek) = request else { return nil }
+        return coordinator.motionState(for: peek)
+    }
+
+    var isSelected: Bool {
+        guard case .peek(let peek) = request else { return true }
+        return peek.isSelected(in: browser.session)
+    }
+
+    var hasSource: Bool {
+        guard case .peek(let peek) = request else { return space != nil }
+        return peek.hasSource(in: browser.session)
     }
 
     var availableSpaces: [BrowserSpace] {
@@ -111,26 +121,34 @@ final class MobileBrowserTransientOverlayModel {
                     || pageLease.wasReleasedForMemoryPressure
             )
         {
-            pageLease.setActive(isActive)
+            pageLease.setActive(isActive && isSelected)
             return true
         }
         pageLease?.release()
         resetNavigationRecording()
         guard let pages else { return true }
-        pageLease = pages.makeTransientPageLease(
-            url: releasedPageSnapshot?.url ?? request.url,
-            in: space,
-            onUserActivity: recordUserActivity,
-            onDownloadOnlyNavigation: { [weak self] in
-                self?.dismissDownloadOnlyNavigation()
-            }
-        )
+        if case .peek(let peek) = request {
+            pageLease = pages.makePeekPageLease(
+                request: peek, in: space,
+                onDownloadOnlyNavigation: { [weak coordinator] in
+                    coordinator?.dismissPeek(peek)
+                })
+        } else {
+            pageLease = pages.makeTransientPageLease(
+                url: releasedPageSnapshot?.url ?? request.url,
+                in: space,
+                onUserActivity: recordUserActivity,
+                onDownloadOnlyNavigation: { [weak self] in
+                    self?.dismissDownloadOnlyNavigation()
+                }
+            )
+        }
         guard let pageLease else {
             dismissUnavailableRequest()
             return false
         }
         releasedPageSnapshot = nil
-        pageLease.setActive(isActive)
+        pageLease.setActive(isActive && isSelected)
         return true
     }
 
@@ -148,7 +166,7 @@ final class MobileBrowserTransientOverlayModel {
         case .usable:
             break
         }
-        pageLease?.setActive(isActive)
+        pageLease?.setActive(isActive && isSelected)
         guard isActive else { return }
         activityClock.recordActivity(restartsTimerImmediately: true)
     }
@@ -286,7 +304,11 @@ final class MobileBrowserTransientOverlayModel {
     func handleDisappearance() {
         guard !wasPromoted else { return }
         archiveQuickWindowIfNeeded()
-        pageLease?.release()
+        if !request.isQuickWindow && isCurrentRequest {
+            pageLease?.setActive(false)
+        } else {
+            pageLease?.release()
+        }
         pageLease = nil
         resetNavigationRecording()
         releasedPageSnapshot = nil
@@ -378,7 +400,7 @@ final class MobileBrowserTransientOverlayModel {
     ) -> BrowserTransientLeaseDisposition {
         BrowserTransientSessionPolicy.disposition(
             isPresentingRequest: isCurrentRequest,
-            space: browser.space(matching: assignment),
+            space: hasSource ? browser.space(matching: assignment) : nil,
             isLocked: spaceAccess.isLocked
         )
     }

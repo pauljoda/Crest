@@ -91,6 +91,8 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
+    @ObservationIgnored private var peekPageLeases:
+        [UUID: (request: BrowserPeekRequest, lease: MobileBrowserTransientPageLease)] = [:]
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
     @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
@@ -798,9 +800,36 @@ final class MobileBrowserPageStore:
         await activePage?.styleVisitedLinks(history: space.history)
     }
 
+    func makePeekPageLease(
+        request: BrowserPeekRequest,
+        in space: BrowserSpace,
+        onDownloadOnlyNavigation: @escaping () -> Void
+    ) -> MobileBrowserTransientPageLease? {
+        guard request.assignment == BrowserSpaceRuntimeAssignment(space: space) else { return nil }
+        if let entry = peekPageLeases[request.id], entry.request == request,
+            case let lease = entry.lease, lease.assignment == request.assignment,
+            lease.page != nil || lease.wasReleasedForMemoryPressure
+        {
+            return lease
+        }
+        peekPageLeases.removeValue(forKey: request.id)?.lease.release()
+        let lease = makeTransientPageLease(
+            url: request.url, in: space, opensModifiedLinksInForeground: true,
+            onDownloadOnlyNavigation: onDownloadOnlyNavigation)
+        if let lease { peekPageLeases[request.id] = (request, lease) }
+        return lease
+    }
+
+    func retainPeekPages(for requests: [BrowserPeekRequest]) {
+        for (id, entry) in peekPageLeases where !requests.contains(entry.request) {
+            peekPageLeases.removeValue(forKey: id)?.lease.release()
+        }
+    }
+
     func makeTransientPageLease(
         url: URL,
         in space: BrowserSpace,
+        opensModifiedLinksInForeground: Bool = false,
         onUserActivity: @escaping () -> Void = {},
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> MobileBrowserTransientPageLease? {
@@ -815,11 +844,14 @@ final class MobileBrowserPageStore:
             tab: transientTab,
             in: space
         )
+        initialPage.opensModifiedLinksInForeground = opensModifiedLinksInForeground
         let rebuild: () -> MobileBrowserPage? = { [weak self] in
             guard let self,
                 canHostTransientPage(matching: assignment)
             else { return nil }
-            return makeTransientPage(tab: transientTab, in: space)
+            let page = makeTransientPage(tab: transientTab, in: space)
+            page.opensModifiedLinksInForeground = opensModifiedLinksInForeground
+            return page
         }
         let lease = MobileBrowserTransientPageLease(
             page: initialPage,
@@ -883,6 +915,7 @@ final class MobileBrowserPageStore:
             let tab = space.tabs.first(where: { $0.id == tabID })
         else { return false }
         guard lease.relinquishPage() === page else { return false }
+        page.opensModifiedLinksInForeground = false
         transientLeases.removeValue(forKey: lease.id)
         page.adopt(tabID: tabID, tab: tab)
         pagesByTabID[tabID] = page
@@ -1661,6 +1694,7 @@ final class MobileBrowserPageStore:
             lease.release()
         }
         transientLeases.removeAll()
+        peekPageLeases.removeAll()
     }
 
     private func pruneTransientLeases() {

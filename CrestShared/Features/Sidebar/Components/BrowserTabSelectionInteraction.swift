@@ -61,7 +61,7 @@ struct BrowserFolderSelectionAccessibility: ViewModifier {
 }
 
 private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
-    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
 
     let item: BrowserSelectionItemID
     let browser: BrowserStore?
@@ -69,7 +69,7 @@ private struct BrowserSidebarSelectionAccessibilityActions: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if capabilities.allowsMultiSelection, let browser {
+        if capabilities.allowsMultiSelection, let browser, let sidebarInteraction {
             content
                 .accessibilityAction(
                     named: browser.tabMultiSelection.contains(item) ? "Remove from Selection" : "Add to Selection"

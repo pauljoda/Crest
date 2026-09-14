@@ -116,6 +116,8 @@ final class BrowserPagePool:
     @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
     @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
+    @ObservationIgnored private var peekPageLeases:
+        [UUID: (request: BrowserPeekRequest, lease: BrowserTransientPageLease)] = [:]
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
     /// Pages announced to extensions that no tab in the session owns, resolved
     /// for the adapters WebKit asks about them.
@@ -1217,9 +1219,36 @@ final class BrowserPagePool:
         }
     }
 
+    func makePeekPageLease(
+        request: BrowserPeekRequest,
+        in space: BrowserSpace,
+        onDownloadOnlyNavigation: @escaping () -> Void
+    ) -> BrowserTransientPageLease? {
+        guard request.assignment == BrowserSpaceRuntimeAssignment(space: space) else { return nil }
+        if let entry = peekPageLeases[request.id], entry.request == request,
+            case let lease = entry.lease, lease.assignment == request.assignment,
+            lease.page != nil || lease.wasReleasedForMemoryPressure
+        {
+            return lease
+        }
+        peekPageLeases.removeValue(forKey: request.id)?.lease.release()
+        let lease = makeTransientPageLease(
+            url: request.url, in: space, opensModifiedLinksInForeground: true,
+            onDownloadOnlyNavigation: onDownloadOnlyNavigation)
+        if let lease { peekPageLeases[request.id] = (request, lease) }
+        return lease
+    }
+
+    func retainPeekPages(for requests: [BrowserPeekRequest]) {
+        for (id, entry) in peekPageLeases where !requests.contains(entry.request) {
+            peekPageLeases.removeValue(forKey: id)?.lease.release()
+        }
+    }
+
     func makeTransientPageLease(
         url: URL,
         in space: BrowserSpace,
+        opensModifiedLinksInForeground: Bool = false,
         onUserActivity: @escaping () -> Void = {},
         onDownloadOnlyNavigation: (() -> Void)? = nil
     ) -> BrowserTransientPageLease? {
@@ -1230,7 +1259,7 @@ final class BrowserPagePool:
             guard let self,
                 canHostTransientPage(matching: assignment)
             else { return nil }
-            return makePage(
+            let page = makePage(
                 space: space,
                 extensionConfiguration:
                     extensionControllerPool.extensionPageConfiguration(
@@ -1238,6 +1267,8 @@ final class BrowserPagePool:
                         in: space.id
                     )
             )
+            page.opensModifiedLinksInForeground = opensModifiedLinksInForeground
+            return page
         }
         guard let initialPage = makeTransientPage() else { return nil }
         // Announce the page before the lease's initializer navigates it. WebKit
@@ -1327,6 +1358,7 @@ final class BrowserPagePool:
             page.profileID == assignment.profileID
         else { return false }
         guard lease.relinquishPage() === page else { return false }
+        page.opensModifiedLinksInForeground = false
         transientLeases.removeValue(forKey: lease.id)
         pages[tabID] = page
         residencyRevision &+= 1
@@ -2358,6 +2390,7 @@ final class BrowserPagePool:
             lease.release()
         }
         transientLeases.removeAll()
+        peekPageLeases.removeAll()
     }
 
     private func releaseExtensionOffscreenDocuments(in spaceID: SpaceID) {

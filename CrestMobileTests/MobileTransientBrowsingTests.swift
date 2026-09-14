@@ -457,7 +457,9 @@ final class MobileTransientBrowsingTests: XCTestCase {
 
         coordinator.stagePeek(second)
         coordinator.cancelStagedPeek(id: second.id)
-        XCTAssertNil(coordinator.peekRequest)
-        XCTAssertNil(coordinator.peekPresentationPhase)
+        XCTAssertEqual(coordinator.peekRequests, [first])
+        XCTAssertEqual(coordinator.presentationPhase(for: first), .committed)
+        XCTAssertTrue(coordinator.dismissPeek(first))
+        XCTAssertTrue(coordinator.peekRequests.isEmpty)
     }
 }

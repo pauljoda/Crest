@@ -72,6 +72,6 @@ struct BrowserPeekOverlay: View {
     }
 
     private var sourceIsAvailable: Bool {
-        model.space != nil
+        model.request.hasSource(in: model.browser.session) && model.space != nil
     }
 }

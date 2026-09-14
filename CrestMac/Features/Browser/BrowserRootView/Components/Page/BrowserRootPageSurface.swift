@@ -11,6 +11,7 @@ struct BrowserRootPageSurface: View {
     let model: BrowserRootModel
     let space: BrowserSpace
     let isSelectedSpace: Bool
+    let transientBrowsing: BrowserTransientBrowsingCoordinator
     let tabPromotionNamespace: Namespace.ID
     var appearance = BrowserChromeAppearance()
     var layoutDirection = LayoutDirection.leftToRight
@@ -46,6 +47,9 @@ struct BrowserRootPageSurface: View {
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
+            .overlay {
+                BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
+            }
             .environment(\.spaceContentIsInteractive, isSelectedSpace)
             .allowsHitTesting(isSelectedSpace)
             .accessibilityHidden(!isSelectedSpace)

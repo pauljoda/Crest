@@ -38,7 +38,10 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 isApproachingDock: model.isSidebarApproachingDock
             ) {
                 BrowserSpacePageSurface(
-                    model: model, tabPromotionNamespace: tabPromotionNamespace, appearance: appearance)
+                    model: model, transientBrowsing: transientBrowsing,
+                    tabPromotionNamespace: tabPromotionNamespace, appearance: appearance
+                )
+                .clipped()
             } sidebar: {
                 BrowserRootSidebarSurfaceLayer(
                     presentation: model.sidebarPresentation,
@@ -105,11 +108,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             .frame(width: 0, height: 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
-
-            BrowserRootPeekLayer(
-                model: model,
-                transientBrowsing: transientBrowsing
-            )
 
             if model.isURLCopiedFeedbackVisible {
                 BrowserURLCopyFeedbackView()
@@ -197,6 +195,12 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onAppear { model.configureExtensionSidebar(extensionSidebar) }
+        .onChange(of: model.browser.session, initial: true) {
+            transientBrowsing.reconcilePeeks(in: model.browser.session)
+        }
+        .onChange(of: transientBrowsing.peekRequests, initial: true) {
+            model.pages.retainPeekPages(for: transientBrowsing.peekRequests)
+        }
         .onChange(of: model.extensionSidebar?.panel) { model.extensionSidebar?.reconcile() }
         .onDisappear { model.extensionSidebar?.release() }
     }

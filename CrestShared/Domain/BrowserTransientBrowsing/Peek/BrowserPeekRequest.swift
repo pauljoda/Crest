@@ -13,6 +13,18 @@ struct BrowserPeekRequest: Identifiable, Equatable, Sendable {
 
     var assignment: BrowserSpaceRuntimeAssignment { spaceAssignment }
 
+    func hasSource(in session: BrowserSession) -> Bool {
+        guard let space = session.space(id: spaceID),
+            BrowserSpaceRuntimeAssignment(space: space) == assignment
+        else { return false }
+        return space.tabs.contains { $0.id == sourceTabID }
+    }
+
+    func isSelected(in session: BrowserSession) -> Bool {
+        hasSource(in: session) && session.selectedSpaceID == spaceID
+            && session.selectedSpace?.selectedTabID == sourceTabID
+    }
+
     init(
         id: UUID = UUID(),
         url: URL,

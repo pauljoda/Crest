@@ -55,13 +55,14 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
             }
         }
         .overlay {
-            if presentation == .regular || !navigation.compactShowsPage {
+            if presentation == .compact && !navigation.compactShowsPage {
                 MobileTransientBrowsingOverlay(
                     browser: browser,
                     pages: pages,
                     coordinator: transientBrowsing,
                     spaceAccess: spaceAccess,
-                    didPromote: didPromoteTransientPage
+                    didPromote: didPromoteTransientPage,
+                    showsPeeks: false
                 )
             }
         }
@@ -82,6 +83,12 @@ struct MobileBrowserRootSurface<Compact: View, Regular: View, Palette: View>:
                     )
                 }
             }
+        }
+        .onChange(of: browser.session, initial: true) {
+            transientBrowsing.reconcilePeeks(in: browser.session)
+        }
+        .onChange(of: transientBrowsing.peekRequests, initial: true) {
+            pages.retainPeekPages(for: transientBrowsing.peekRequests)
         }
         .transaction { transaction in
             if reduceMotion {

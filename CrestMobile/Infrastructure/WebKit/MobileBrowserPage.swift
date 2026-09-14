@@ -13,6 +13,7 @@ import WebKit
 @Observable
 @MainActor
 final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
+    var opensModifiedLinksInForeground = false
     private(set) var tabID: TabID
     let spaceID: SpaceID
     let profileID: UUID

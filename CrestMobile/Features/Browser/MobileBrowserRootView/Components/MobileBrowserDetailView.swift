@@ -21,6 +21,8 @@ struct MobileBrowserDetailView: View {
     let handleToolbarSwipe: (BrowserSpaceSwipeDirection) -> Void
     let selectSplitCard: (TabID) -> Void
     let compactTransitionEnded: (CGSize) -> Void
+    var transientBrowsing: BrowserTransientBrowsingCoordinator?
+    var didPromoteTransientPage: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
@@ -133,6 +135,16 @@ struct MobileBrowserDetailView: View {
                             restoreSelectedTab()
                         }
                 }
+            }
+        }
+        .overlay {
+            if isCompact, let transientBrowsing {
+                MobileTransientBrowsingOverlay(
+                    browser: browser, pages: pages, coordinator: transientBrowsing,
+                    spaceAccess: spaceAccess, didPromote: didPromoteTransientPage
+                )
+                .clipped()
+                .padding(.bottom, viewport.bottomChromeHeight)
             }
         }
         .background(safeAreaProbe)

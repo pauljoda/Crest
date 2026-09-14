@@ -4,6 +4,14 @@ import XCTest
 
 @MainActor
 final class MobileBrowserColdStartTests: XCTestCase {
+    func testSimulatorRejectsAContainerAbsentFromItsEntitlements() {
+        #if targetEnvironment(simulator)
+            XCTAssertFalse(
+                BrowserPlatformCloudContainerEntitlementPolicy.currentProcessContainsContainer(
+                    "iCloud.invalid.crest-startup-test"))
+        #endif
+    }
+
     func testFloatingColdLaunchPreservesSplitMembershipAndWarmUserSelection() throws {
         var session = BrowserSession.preview
         let group = SplitGroupID()

@@ -3,25 +3,33 @@ import SwiftUI
 struct BrowserRootPeekLayer: View {
     let model: BrowserRootModel
     let transientBrowsing: BrowserTransientBrowsingCoordinator
+    let space: BrowserSpace
 
     @Environment(\.layoutDirection) private var layoutDirection
 
     @ViewBuilder
     var body: some View {
-        if let request = transientBrowsing.peekRequest {
+        ForEach(
+            transientBrowsing.peekRequests.filter {
+                $0.assignment == BrowserSpaceRuntimeAssignment(space: space) && $0.sourceTabID == space.selectedTabID
+            }
+        ) { request in
             BrowserPeekOverlay(
                 request: request,
                 browser: model.browser,
                 pages: model.pages,
                 coordinator: transientBrowsing,
-                reservedLeadingWidth:
-                    model.sidebarPresentation.reservesSidebarWidth
-                    ? model.sidebarWidth
-                    : 0,
+                reservedLeadingWidth: 0,
                 layoutDirection: layoutDirection,
                 spaceAccess: model.spaceAccess
             )
-            .id(request.id)
+            .environment(
+                \.browserWebFocusRestorationGate,
+                BrowserWebFocusRestorationGate(
+                    browserChromeOwnsFocus: !request.isSelected(in: model.browser.session)
+                        || !model.isWindowFocused || model.isAddressEditing || model.chrome.isCommandPalettePresented,
+                    pageChromeOwnsFocus: false)
+            )
             .zIndex(BrowserRootMetrics.peekZIndex)
         }
     }

@@ -4,6 +4,27 @@ import XCTest
 
 @MainActor
 final class MobileBrowserTransientOverlayModelTests: XCTestCase {
+    func testReturningFromTheTabPickerReusesThePeekPage() throws {
+        let context = try makeContext()
+        XCTAssertTrue(context.model.preparePage(isActive: true))
+        let lease = try XCTUnwrap(context.model.pageLease)
+        let page = try XCTUnwrap(context.model.page)
+        context.browser.selectSpace(context.destination.id)
+        context.model.handleDisappearance()
+        XCTAssertTrue(lease.page === page)
+
+        context.browser.selectSpace(context.source.id)
+        context.browser.selectTab(context.request.sourceTabID)
+        let restored = MobileBrowserTransientOverlayModel(
+            request: .peek(context.request), browser: context.browser, pages: context.pages,
+            coordinator: context.coordinator, spaceAccess: context.spaceAccess, preferences: .isolated)
+        XCTAssertTrue(restored.preparePage(isActive: true))
+        XCTAssertTrue(restored.page === page)
+        restored.dismiss()
+        context.pages.retainPeekPages(for: context.coordinator.peekRequests)
+        XCTAssertNil(lease.page)
+    }
+
     func testReplacementProfileInvalidatesTheExactTransientRuntime() throws {
         let context = try makeContext()
         context.model.preparePage(isActive: true)
@@ -506,6 +527,7 @@ final class MobileBrowserTransientOverlayModelTests: XCTestCase {
         context.model.recordCompletedNavigation(1, during: .committed)
         XCTAssertEqual(context.model.lastRecordedCompletedNavigationCount, 1)
 
+        context.model.dismiss()
         context.model.handleDisappearance()
         XCTAssertNil(lease.page)
         XCTAssertNil(context.model.pageLease)

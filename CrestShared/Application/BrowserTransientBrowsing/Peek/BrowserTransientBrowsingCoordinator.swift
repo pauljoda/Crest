@@ -4,10 +4,26 @@ import Observation
 @Observable
 @MainActor
 final class BrowserTransientBrowsingCoordinator {
-    private(set) var peekRequest: BrowserPeekRequest?
-    private(set) var peekPresentationPhase: BrowserPeekPresentationPhase?
-    private(set) var peekMotionState: BrowserPeekMotionState?
+    private struct PeekPresentation {
+        let request: BrowserPeekRequest
+        var phase: BrowserPeekPresentationPhase
+        var motion: BrowserPeekMotionState?
+    }
+
+    private var peeks: [PeekPresentation] = []
+    var peekRequests: [BrowserPeekRequest] { peeks.map(\.request) }
+    var peekRequest: BrowserPeekRequest? { peeks.last?.request }
+    var peekPresentationPhase: BrowserPeekPresentationPhase? { peeks.last?.phase }
+    var peekMotionState: BrowserPeekMotionState? { peeks.last?.motion }
     private(set) var quickWindowRequest: BrowserQuickWindowRequest?
+
+    func presentationPhase(for request: BrowserPeekRequest) -> BrowserPeekPresentationPhase? {
+        peeks.first { $0.request == request }?.phase
+    }
+
+    func motionState(for request: BrowserPeekRequest) -> BrowserPeekMotionState? {
+        peeks.first { $0.request == request }?.motion
+    }
 
     func handleLinkDrag(_ event: BrowserPeekInteractionEvent) {
         switch event {
@@ -23,62 +39,57 @@ final class BrowserTransientBrowsingCoordinator {
     }
 
     func stagePeek(_ request: BrowserPeekRequest) {
-        peekMotionState = nil
-        peekRequest = request
-        peekPresentationPhase = .staged
+        peeks.removeAll {
+            $0.phase == .staged || $0.request.sourceTabID == request.sourceTabID || $0.request.id == request.id
+        }
+        peeks.append(PeekPresentation(request: request, phase: .staged))
         quickWindowRequest = nil
     }
 
     func commitPeek(_ request: BrowserPeekRequest) {
-        guard
-            peekRequest == request,
-            peekPresentationPhase == .staged
-        else { return }
-        peekPresentationPhase = .committed
+        guard let index = peeks.firstIndex(where: { $0.request == request && $0.phase == .staged }) else { return }
+        peeks[index].phase = .committed
     }
 
     func cancelStagedPeek(id: UUID) {
-        guard peekRequest?.id == id, peekPresentationPhase == .staged else { return }
-        peekRequest = nil
-        peekPresentationPhase = nil
-        peekMotionState = nil
+        peeks.removeAll { $0.request.id == id && $0.phase == .staged }
     }
 
     func dismissPeek() {
-        peekRequest = nil
-        peekPresentationPhase = nil
-        peekMotionState = nil
+        peeks.removeAll()
     }
 
     func beginPeekDrag(_ request: BrowserPeekRequest, state: BrowserPeekMotionState) {
         stagePeek(request)
-        peekMotionState = state
+        peeks[peeks.count - 1].motion = state
     }
 
     func updatePeekDrag(id: UUID, state: BrowserPeekMotionState) {
-        guard peekRequest?.id == id, peekPresentationPhase == .staged,
-            peekMotionState != nil
+        guard let index = peeks.firstIndex(where: { $0.request.id == id && $0.phase == .staged }),
+            peeks[index].motion != nil
         else { return }
-        peekMotionState = state
-        if state.releasedAt != nil && !state.returnsToSource { peekPresentationPhase = .committed }
+        peeks[index].motion = state
+        if state.releasedAt != nil && !state.returnsToSource { peeks[index].phase = .committed }
     }
 
     func isPresentingPeek(_ request: BrowserPeekRequest) -> Bool {
-        peekRequest == request
+        peeks.contains { $0.request == request }
     }
 
     @discardableResult
     func dismissPeek(_ request: BrowserPeekRequest) -> Bool {
         guard isPresentingPeek(request) else { return false }
-        dismissPeek()
+        peeks.removeAll { $0.request == request }
         return true
+    }
+
+    func reconcilePeeks(in session: BrowserSession) {
+        peeks.removeAll { !$0.request.hasSource(in: session) }
     }
 
     func presentQuickWindow(_ request: BrowserQuickWindowRequest) {
         quickWindowRequest = request
-        peekRequest = nil
-        peekPresentationPhase = nil
-        peekMotionState = nil
+        dismissPeek()
     }
 
     func dismissQuickWindow() {

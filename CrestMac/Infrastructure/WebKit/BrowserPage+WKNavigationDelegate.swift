@@ -137,7 +137,8 @@ extension BrowserPage: WKNavigationDelegate {
             isCommandModified: clickIntent == .newTab,
             isShiftModified: isShiftModified,
             isMiddleClick: isMiddleClick,
-            focusesNewTabs: BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks
+            focusesNewTabs: opensModifiedLinksInForeground
+                || BrowserLinkPreferenceStore.shared.preferences.focusesNewTabsOpenedFromLinks
         ) {
         case .navigate:
             break

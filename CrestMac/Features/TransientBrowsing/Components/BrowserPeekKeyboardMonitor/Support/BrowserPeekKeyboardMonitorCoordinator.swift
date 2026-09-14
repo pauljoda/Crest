@@ -4,7 +4,7 @@
 final class BrowserPeekKeyboardMonitorCoordinator: NSObject {
     var dismiss: () -> Void
     var windowNumber: Int?
-    private let installsMonitor: Bool
+    var installsMonitor: Bool
     private var monitor: Any?
 
     init(
@@ -16,10 +16,10 @@ final class BrowserPeekKeyboardMonitorCoordinator: NSObject {
     }
 
     func install() {
-        guard installsMonitor else { return }
+        guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
             [weak self] event in
-            guard let self,
+            guard let self, self.installsMonitor,
                 event.windowNumber == self.windowNumber,
                 let action = BrowserPeekKeyboardPolicy.action(
                     forKeyCode: event.keyCode,

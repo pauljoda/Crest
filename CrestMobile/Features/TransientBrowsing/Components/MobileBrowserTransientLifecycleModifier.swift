@@ -21,6 +21,6 @@ struct MobileBrowserTransientLifecycleModifier: ViewModifier {
     }
 
     private var sourceIsAvailable: Bool {
-        model.space != nil
+        model.hasSource
     }
 }

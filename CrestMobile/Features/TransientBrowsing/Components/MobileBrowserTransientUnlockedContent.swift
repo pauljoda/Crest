@@ -51,7 +51,11 @@ struct MobileBrowserTransientUnlockedContent: View {
         .onChange(of: scenePhase) { _, phase in
             model.setActive(phase == .active)
         }
+        .onChange(of: model.isSelected) {
+            model.setActive(scenePhase == .active)
+        }
         .onKeyPress(.escape) {
+            guard model.isSelected else { return .ignored }
             dismiss()
             return .handled
         }

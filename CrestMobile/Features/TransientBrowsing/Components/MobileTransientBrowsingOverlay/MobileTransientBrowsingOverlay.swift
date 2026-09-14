@@ -7,7 +7,25 @@ struct MobileTransientBrowsingOverlay: View {
     let spaceAccess: BrowserSpaceAccessController
     let didPromote: () -> Void
 
+    var showsPeeks = true
+
     var body: some View {
+        ZStack {
+            if showsPeeks {
+                ForEach(coordinator.peekRequests.filter { $0.isSelected(in: browser.session) }) { request in
+                    overlay(
+                        MobileTransientBrowsingPresentation(
+                            request: .peek(request), phase: coordinator.presentationPhase(for: request) ?? .committed)
+                    )
+                }
+            }
+            if let request = coordinator.quickWindowRequest {
+                overlay(MobileTransientBrowsingPresentation(request: .quickWindow(request), phase: .committed))
+            }
+        }
+    }
+
+    private func overlay(_ presentation: MobileTransientBrowsingPresentation) -> some View {
         MobileTransientBrowsingRequestOverlay(
             presentation: presentation,
             browser: browser,
@@ -15,20 +33,6 @@ struct MobileTransientBrowsingOverlay: View {
             coordinator: coordinator,
             spaceAccess: spaceAccess,
             didPromote: didPromote
-        )
-    }
-
-    private var presentation: MobileTransientBrowsingPresentation? {
-        if let request = coordinator.quickWindowRequest {
-            return MobileTransientBrowsingPresentation(
-                request: .quickWindow(request),
-                phase: .committed
-            )
-        }
-        guard let request = coordinator.peekRequest else { return nil }
-        return MobileTransientBrowsingPresentation(
-            request: .peek(request),
-            phase: coordinator.peekPresentationPhase ?? .committed
         )
     }
 }

@@ -1,15 +1,10 @@
 import SwiftUI
 
 struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
-    let browser: BrowserStore
-    let pages: MobileBrowserPageStore
-    let transientBrowsing: BrowserTransientBrowsingCoordinator
-    let spaceAccess: BrowserSpaceAccessController
     let selectedTab: BrowserTab?
     let isURLCopiedFeedbackVisible: Bool
     let pageZoomFeedbackLabel: String?
     let reduceMotion: Bool
-    let didPromoteTransientPage: () -> Void
     let tabPromotionNamespace: Namespace.ID
     let completePagePresentation: () -> Void
     let backdrop: Backdrop
@@ -25,15 +20,6 @@ struct MobileCompactPageSurface<Backdrop: View, Detail: View>: View {
             !MobileFullTabPresentationPolicy.allowsInteractiveDismissal
         )
         .onAppear(perform: completePagePresentation)
-        .overlay {
-            MobileTransientBrowsingOverlay(
-                browser: browser,
-                pages: pages,
-                coordinator: transientBrowsing,
-                spaceAccess: spaceAccess,
-                didPromote: didPromoteTransientPage
-            )
-        }
         .overlay(alignment: .top) {
             MobileURLCopyFeedback(
                 isVisible: isURLCopiedFeedbackVisible,

@@ -1,8 +1,14 @@
 import SwiftUI
 
+extension EnvironmentValues {
+    @Entry var spaceChromeAccent: Color? = nil
+    @Entry var spaceChromeForeground: Color? = nil
+}
+
 /// Fixed chrome follows visible Space progress without observing it in tab rows.
 struct SpaceForegroundBlend: ViewModifier {
     let tones: [SpaceForegroundPresentation.Tone]
+    let accents: [Color]
     let selectedSpaceID: SpaceID?
 
     @Environment(\.spacePagerPresentation) private var presentation
@@ -14,6 +20,7 @@ struct SpaceForegroundBlend: ViewModifier {
                 id: $0.id,
                 white: BrowserSpaceForegroundPolicy.tone(for: $0.branding) == .light ? 1 : 0)
         }
+        accents = spaces.map { $0.branding.primaryColor.color }
         self.selectedSpaceID = selectedSpaceID
     }
 
@@ -22,7 +29,7 @@ struct SpaceForegroundBlend: ViewModifier {
             .modifier(
                 SpaceForegroundTone(
                     position: foreground.position ?? CGFloat(tones.firstIndex { $0.id == selectedSpaceID } ?? 0),
-                    tones: tones)
+                    tones: tones, accents: accents)
             )
             .onAppear { foreground.connect(presentation, tones: tones, selectedSpaceID: selectedSpaceID) }
             .onChange(of: tones) { _, _ in
@@ -41,6 +48,7 @@ struct SpaceForegroundBlend: ViewModifier {
 private struct SpaceForegroundTone: ViewModifier, Animatable {
     nonisolated var position: CGFloat
     let tones: [SpaceForegroundPresentation.Tone]
+    let accents: [Color]
 
     nonisolated var animatableData: CGFloat {
         get { position }
@@ -48,6 +56,15 @@ private struct SpaceForegroundTone: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
-        content.foregroundStyle(Color(white: SpaceForegroundPresentation.white(at: position, tones: tones)))
+        let foreground = Color(white: SpaceForegroundPresentation.white(at: position, tones: tones))
+        content
+            .foregroundStyle(foreground)
+            .environment(\.spaceChromeForeground, foreground)
+            .environment(\.spaceChromeAccent, accent)
+    }
+
+    private var accent: Color? {
+        guard let sample = SpacePagerInterpolation(position: position, count: accents.count) else { return nil }
+        return accents[sample.lower].mix(with: accents[sample.upper], by: Double(sample.fraction), in: .device)
     }
 }

@@ -1141,6 +1141,22 @@
     "selected-text-search-in-crest": {
       "category": "fixed",
       "message": "Search selected text in a new Crest tab using the current Space’s search engine"
+    },
+    "tab-owned-peeks": {
+      "category": "improved",
+      "message": "Keep Peeks with their tabs while opening new tabs, switching Spaces, and browsing inside the Peek"
+    },
+    "space-transition-address-colors": {
+      "category": "improved",
+      "message": "Blend address bar colors with the background when switching Spaces"
+    },
+    "onboarding-preview-startup-crash": {
+      "category": "fixed",
+      "message": "Prevent a crash when displaying sidebar previews during setup"
+    },
+    "simulator-cloudkit-startup-guard": {
+      "category": "internal",
+      "message": "Check simulator CloudKit entitlements before starting sync to avoid startup crashes"
     }
   }
 }
