@@ -7,7 +7,7 @@ status; release milestones hold the actionable issue descriptions.
 
 ## Published releases
 
-- [Crest 0.6.0](https://github.com/pauljoda/Crest/releases/tag/v0.6.0) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/2?closed=1).
+- [Crest 0.6.3](https://github.com/pauljoda/Crest/releases/tag/v0.6.3) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/2?closed=1).
 - [Crest 0.5.7](https://github.com/pauljoda/Crest/releases/tag/v0.5.7) — [release scope and completed work](https://github.com/pauljoda/Crest/milestone/1?closed=1).
 
 <!-- crest-roadmap-sync:start -->

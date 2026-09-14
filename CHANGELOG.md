@@ -7,7 +7,7 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-09-14
+## [0.6.3] - 2026-09-14
 
 Crest 0.6 brings more ways to organize, personalize, and work across pages on
 Mac, iPhone, and iPad.
@@ -27,7 +27,7 @@ Mac, iPhone, and iPad.
 - Select tabs, Split Views, and folders together to move and organize them on every platform, including touch menus and VoiceOver actions on iPhone and iPad.
 - Drag individual tabs out of a Split View, or move the whole group from its header. Return pinned and saved tabs to their home URL with a double-click or an optional reset when closing.
 - Open Settings in the browsing canvas on wider layouts and in a dismissible sheet on compact layouts. Keep Settings and Getting Started where you left them when switching tabs or Spaces.
-- Customize folder icons, emoji, colors, title tint, and tab counts. Reorder Spaces directly in Settings.
+- Choose folder icons from the full searchable SF Symbols catalog or use emoji. Customize folder colors and tab counts, with semibold tinted titles that adjust for stronger contrast. Reorder Spaces directly in Settings.
 - Preview link destinations on hover, complete addresses from the current Space, and copy a tab's link from its menu. Search selected text in a new Crest tab.
 - Use native link and image menus and choose Photos, camera, or Files for webpage uploads on iPhone and iPad. Clear current tabs with a dedicated control while retaining pinned and saved tabs.
 - Open Getting Started in the first Space after setup, and rerun onboarding from Advanced settings.
@@ -37,6 +37,8 @@ Mac, iPhone, and iPad.
 
 - Keep a collapsed Mac sidebar collapsed when opening the address editor with Command-L.
 - Use the system dark background for Crest's app icon and every color palette.
+- Keep wide folder symbols fully visible in Icon only mode.
+- Keep pinned-tab outline colors consistent when pages unload. Prefer favicon colors when site themes are neutral, preserve black and white logos, and fade smoothly between color changes.
 - Recover missing iCloud changes with a confirmed Pull from iCloud action. Preserve Space customization during overlapping sync, and keep blank, built-in, and extension pages from blocking web-tab synchronization.
 - Keep page titles, history, Reader requests, favicons, extension panels, and sign-in links attached to their owning page and Space.
 - Keep visible pages loaded when switching windows during memory cleanup, and reduce unnecessary background work while preserving loaded browsing state.
@@ -324,8 +326,8 @@ Mac, iPhone, and iPad.
 
 Crest releases before 0.3.0 predate this changelog. Their development history remains available in Git.
 
-[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/pauljoda/Crest/compare/v0.5.7...v0.6.0
+[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/pauljoda/Crest/compare/v0.5.7...v0.6.3
 [0.5.7]: https://github.com/pauljoda/Crest/releases/tag/v0.5.7
 [0.4.0]: https://github.com/pauljoda/Crest/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pauljoda/Crest/releases/tag/v0.3.0

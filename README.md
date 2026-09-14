@@ -126,7 +126,7 @@ open Crest.xcodeproj
 
 ## Releases and updates
 
-Read the [Crest 0.6 release notes](CHANGELOG.md#060---2026-09-14) for the
+Read the [Crest 0.6 release notes](CHANGELOG.md#063---2026-09-14) for the
 changes since 0.5.7, including Crest Studio, Look and Feel, translation,
 extension side panels, and shared Mac windows.
 
