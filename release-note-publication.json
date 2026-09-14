@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channels": {
-    "stable": "2026-08-27-newest-eligible-software-update",
+    "stable": "pinned-outlines-preserve-monochrome-favicons",
     "development": "web-pages-only-icloud-sync",
     "nightly": "simulator-cloudkit-startup-guard"
   }
