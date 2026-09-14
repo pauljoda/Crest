@@ -74,6 +74,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     /// The pool that owns this page. Weak because the pool owns the page.
     @ObservationIgnored weak var host: (any BrowserPageHosting)?
+    @ObservationIgnored var windowRouting: BrowserPageWindowRouting?
 
     /// Set while a debugger session is attached to this page and has enabled
     /// the protocol's Page domain. It answers the page's JavaScript dialogs in
@@ -101,7 +102,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var viewportFitGeneration = 0
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
-    @ObservationIgnored let downloadCenter: BrowserDownloadCenter
+    @ObservationIgnored var downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
     @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
         webView: webView, permissionCenter: permissionCenter, spaceID: spaceID
@@ -147,8 +148,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// by this page's `BrowserDesktopWebViewMenuHost` conformance.
     @ObservationIgnored var linkContextCapture = BrowserLinkContextCapturePolicy()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
-    @ObservationIgnored let splitLinkHost: BrowserSplitLinkHost
-    @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
+    @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
+    @ObservationIgnored var linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored let extensionWebpageMenuItems: @MainActor (BrowserExtensionWebpageMenuContext) -> [NSMenuItem]
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?

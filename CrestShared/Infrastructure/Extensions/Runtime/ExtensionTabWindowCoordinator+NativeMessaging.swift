@@ -81,11 +81,10 @@ extension BrowserExtensionTabWindowCoordinator {
             resolvedSpaceID = nil
         }
         if let resolvedSpaceID {
-            pageProvider?.closeExtensionSidebars(extensionBaseURL: context.baseURL, in: resolvedSpaceID)
-            pageProvider?.closeExtensionOffscreenDocument(
-                extensionBaseURL: context.baseURL,
-                in: resolvedSpaceID
-            )
+            for provider in pageProviders(in: resolvedSpaceID) {
+                provider.closeExtensionSidebars(extensionBaseURL: context.baseURL, in: resolvedSpaceID)
+                provider.closeExtensionOffscreenDocument(extensionBaseURL: context.baseURL, in: resolvedSpaceID)
+            }
         }
         verifiedNativeMessagingIdentities[key] = nil
         verifiedNativeMessagingAuthorizations[key] = nil
@@ -502,7 +501,9 @@ extension BrowserExtensionTabWindowCoordinator {
                 controller: controller,
                 context: extensionContext
             ),
-            let pageProvider
+            let pageProvider = pageProviders(in: spaceID).first(where: {
+                $0.hasExtensionOffscreenDocument(extensionBaseURL: extensionContext.baseURL, in: spaceID)
+            }) ?? pageProvider ?? preferredHost(in: spaceID)?.pageProvider
         else {
             replyHandler(nil, BrowserExtensionOffscreenDocumentError.unavailable)
             return true
@@ -602,8 +603,7 @@ extension BrowserExtensionTabWindowCoordinator {
             let (spaceID, _) = verifiedSpaceAndEntry(
                 controller: controller,
                 context: extensionContext
-            ),
-            let pageProvider
+            )
         else {
             replyHandler(
                 nil,
@@ -646,6 +646,10 @@ extension BrowserExtensionTabWindowCoordinator {
                 return true
             }
             targetTabID = selectedTabID
+        }
+        guard let pageProvider = pageProvider(for: targetTabID, in: spaceID) else {
+            replyHandler(nil, BrowserExtensionDownloadExecutionError.unavailable)
+            return true
         }
         Task { @MainActor in
             do {

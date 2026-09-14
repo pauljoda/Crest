@@ -385,6 +385,25 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(panelsOnly.count, 1)
         XCTAssertEqual(panelsOnly[0]["contextId"] as? String, "panel-context")
 
+        let second = browser.makeWindowStore()
+        let secondPages = PageProviderSpy()
+        let secondWindowID = BrowserWindowID()
+        secondPages.windowGeometry = .init(
+            frame: .init(x: 900, y: 0, width: 800, height: 600), screenFrame: .zero, state: .normal)
+        secondPages.sidebarDocuments = [
+            .init(contextID: "global-panel", url: panelURL, tabID: nil, windowID: secondWindowID)
+        ]
+        pool.registerWindow(id: BrowserWindowID(), browser: browser, pageProvider: pages, focus: {}, close: {})
+        pool.registerWindow(id: secondWindowID, browser: second, pageProvider: secondPages, focus: {}, close: {})
+        let hostedPanels = try XCTUnwrap(
+            try send(["api": "runtime.getContexts", "filter": ["contextTypes": ["SIDE_PANEL"]]])["contexts"]
+                as? [[String: Any]])
+        let globalPanel = try XCTUnwrap(hostedPanels.first { $0["contextId"] as? String == "global-panel" })
+        let globalWindow = try XCTUnwrap(globalPanel["window"] as? [String: Any])
+        XCTAssertEqual(try XCTUnwrap(globalWindow["left"] as? NSNumber).doubleValue, 900)
+        XCTAssertNil(globalPanel["tabIndex"])
+        pool.unregisterWindow(id: secondWindowID)
+
         pages.sidebarDocuments = []
         pages.offscreenDocument = nil
         let backgroundOnly = try XCTUnwrap(
@@ -2409,6 +2428,165 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertTrue(first === repeatedFirst)
     }
 
+    func testSharedTabHasOneExtensionWindowOwnerAndUsesThatWindowsSelectionAndGeometry() async throws {
+        let browser = BrowserStore.preview()
+        let second = browser.makeWindowStore()
+        let firstPages = PageProviderSpy()
+        let secondPages = PageProviderSpy()
+        let pool = BrowserExtensionControllerPool()
+        let firstID = BrowserWindowID()
+        let secondID = BrowserWindowID()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        let tabID = try XCTUnwrap(space.selectedTabID)
+        firstPages.windowGeometry = .init(
+            frame: CGRect(x: 10, y: 20, width: 800, height: 600), screenFrame: .zero, state: .normal)
+        secondPages.windowGeometry = .init(
+            frame: CGRect(x: 100, y: 200, width: 900, height: 700), screenFrame: .zero, state: .normal)
+        pool.registerWindow(id: firstID, browser: browser, pageProvider: firstPages, focus: {}, close: {})
+        pool.registerWindow(id: secondID, browser: second, pageProvider: secondPages, focus: {}, close: {})
+        let context = try await pool.loadExtension(at: fixtureURL, extensionID: extensionID, in: space)
+        let firstWindow = try XCTUnwrap(pool.extensionWindow(in: space.id, windowID: firstID))
+        let secondWindow = try XCTUnwrap(pool.extensionWindow(in: space.id, windowID: secondID))
+        let adapter = try XCTUnwrap(pool.extensionTab(tabID, in: space.id))
+
+        pool.setExtensionTabOwner(tabID, in: space.id, windowID: secondID)
+        pool.setHostWindowFocused(true, windowID: secondID)
+
+        XCTAssertTrue(adapter.window(for: context) === secondWindow)
+        XCTAssertFalse(firstWindow.tabs(for: context).contains { ($0 as? BrowserExtensionTabAdapter)?.tabID == tabID })
+        XCTAssertEqual(secondWindow.tabs(for: context).count, 1)
+        XCTAssertNil(firstWindow.activeTab(for: context))
+        XCTAssertTrue(secondWindow.activeTab(for: context) === adapter)
+        XCTAssertEqual(secondWindow.frame(for: context), secondPages.windowGeometry.frame)
+        let windows = pool.tabWindowCoordinator.webExtensionController(
+            try XCTUnwrap(context.webExtensionController), openWindowsFor: context)
+        XCTAssertEqual(windows.count, 2)
+
+        pool.unregisterWindow(id: secondID)
+
+        XCTAssertTrue(adapter.window(for: context) === firstWindow)
+        XCTAssertNotNil(pool.extensionTab(tabID, in: space.id))
+        XCTAssertEqual(browser.session.space(id: space.id)?.tabs.count, space.tabs.count)
+    }
+
+    func testTemporaryWindowExtensionCreationAndMutationStayInItsLocalSession() async throws {
+        let browser = BrowserStore.preview()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        var temporarySession = browser.session
+        temporarySession.spaces = [space]
+        temporarySession.spaces[0].tabs = []
+        temporarySession.spaces[0].folders = []
+        temporarySession.spaces[0].selectedTabID = nil
+        let temporary = BrowserStore(session: temporarySession, persistence: InMemoryBrowserSessionPersistence())
+        let pages = PageProviderSpy()
+        let temporaryPages = PageProviderSpy()
+        let pool = BrowserExtensionControllerPool()
+        let normalID = BrowserWindowID()
+        let temporaryID = BrowserWindowID()
+        pool.registerWindow(id: normalID, browser: browser, pageProvider: pages, focus: {}, close: {})
+        pool.registerWindow(id: temporaryID, browser: temporary, pageProvider: temporaryPages, focus: {}, close: {})
+        let context = try await pool.loadExtension(at: fixtureURL, extensionID: extensionID, in: space)
+        let temporaryWindow = try XCTUnwrap(pool.extensionWindow(in: space.id, windowID: temporaryID))
+        var opened: (any WKWebExtensionTab)?
+        pool.tabWindowCoordinator.openTab(
+            url: URL(string: "https://example.com/temporary"), spaceID: space.id,
+            pinned: false, index: nil, selected: true, window: temporaryWindow
+        ) { tab, error in
+            XCTAssertNil(error)
+            opened = tab
+        }
+        let tab = try XCTUnwrap(opened as? BrowserExtensionTabAdapter)
+        XCTAssertTrue(tab.window(for: context) === temporaryWindow)
+        XCTAssertEqual(temporary.session.selectedTab?.id, tab.tabID)
+        XCTAssertFalse(browser.session.spaces.flatMap(\.tabs).contains { $0.id == tab.tabID })
+        tab.setPinned(true, for: context) { XCTAssertNil($0) }
+        XCTAssertEqual(temporary.session.selectedTab?.placement, .pinned)
+        XCTAssertEqual(browser.session.space(id: space.id)?.tabs, space.tabs)
+        pool.unregisterWindow(id: temporaryID)
+        XCTAssertNil(pool.extensionTab(tab.tabID, in: space.id))
+        XCTAssertEqual(browser.session.space(id: space.id)?.tabs, space.tabs)
+
+        pool.registerWindow(id: temporaryID, browser: temporary, pageProvider: temporaryPages, focus: {}, close: {})
+        let restoredTemporaryWindow = try XCTUnwrap(pool.extensionWindow(in: space.id, windowID: temporaryID))
+        let normalTab = try XCTUnwrap(pool.extensionTab(try XCTUnwrap(space.selectedTabID), in: space.id))
+        pool.unregisterWindow(id: normalID)
+        XCTAssertFalse(normalTab.window(for: context) === restoredTemporaryWindow)
+        XCTAssertEqual(
+            pool.tabWindowCoordinator.brokerWindowDescriptor(
+                normalTab.window(for: context) as? BrowserExtensionWindowAdapter)?["unavailable"] as? Bool,
+            true)
+        XCTAssertEqual(restoredTemporaryWindow.tabs(for: context).count, 1)
+        pool.registerWindow(id: normalID, browser: browser, pageProvider: pages, focus: {}, close: {})
+        XCTAssertTrue(normalTab.window(for: context) === pool.extensionWindow(in: space.id, windowID: normalID))
+        XCTAssertEqual(browser.session.space(id: space.id)?.tabs, space.tabs)
+    }
+
+    func testBrokerWindowBoundsDisambiguateIdenticalTabIndicesAndRefuseAmbiguousWindows() throws {
+        let browser = BrowserStore.preview()
+        let second = browser.makeWindowStore()
+        let pages = PageProviderSpy()
+        let otherPages = PageProviderSpy()
+        let pool = BrowserExtensionControllerPool()
+        let firstID = BrowserWindowID()
+        let secondID = BrowserWindowID()
+        let space = try XCTUnwrap(browser.session.selectedSpace)
+        pages.windowGeometry = .init(
+            frame: .init(x: 0, y: 0, width: 800, height: 600), screenFrame: .zero, state: .normal)
+        otherPages.windowGeometry = .init(
+            frame: .init(x: 900, y: 0, width: 800, height: 600), screenFrame: .zero, state: .normal)
+        pool.registerWindow(id: firstID, browser: browser, pageProvider: pages, focus: {}, close: {})
+        pool.registerWindow(id: secondID, browser: second, pageProvider: otherPages, focus: {}, close: {})
+        _ = pool.controller(for: space)
+        let coordinator = pool.tabWindowCoordinator
+        let secondWindow = try XCTUnwrap(pool.extensionWindow(in: space.id, windowID: secondID))
+        let descriptor = try XCTUnwrap(coordinator.brokerWindowDescriptor(secondWindow))
+        XCTAssertTrue(try coordinator.brokerWindow(in: space.id, message: ["window": descriptor]) === secondWindow)
+        otherPages.windowGeometry = pages.windowGeometry
+        let ambiguous = try XCTUnwrap(coordinator.brokerWindowDescriptor(secondWindow))
+        XCTAssertThrowsError(try coordinator.brokerWindow(in: space.id, message: ["window": ambiguous]))
+        pool.setHostWindowFocused(true, windowID: secondID)
+        let focused = try XCTUnwrap(coordinator.brokerWindowDescriptor(secondWindow))
+        XCTAssertThrowsError(try coordinator.brokerWindow(in: space.id, message: ["window": focused]))
+        let firstTab = try XCTUnwrap(space.tabs.first)
+        let uniqueTarget: [String: Any] = [
+            "window": focused, "tabIndex": 0, "url": firstTab.url?.absoluteString as Any,
+        ]
+        XCTAssertTrue(
+            try coordinator.brokerWindow(in: space.id, message: uniqueTarget)
+                === pool.extensionWindow(in: space.id, windowID: firstID))
+    }
+
+    func testTemporaryTabGroupsRouteToTheirFamilyAndHaveDistinctIdentifiers() throws {
+        let browser = BrowserStore.preview()
+        let source = try XCTUnwrap(browser.session.selectedSpace)
+        let normalTab = try XCTUnwrap(source.tabs.first { $0.placement != .pinned })
+        var temporarySession = browser.session
+        temporarySession.spaces = [source]
+        temporarySession.spaces[0].tabs = []
+        temporarySession.spaces[0].folders = []
+        temporarySession.spaces[0].selectedTabID = nil
+        let temporary = BrowserStore(session: temporarySession, persistence: InMemoryBrowserSessionPersistence())
+        let temporaryTab = try XCTUnwrap(
+            temporary.openExtensionTab(
+                url: URL(string: "https://example.com/local"), in: source.id, pinned: false, requestedIndex: nil,
+                shouldSelect: true))
+        let normalGroup = try browser.extensionTabGroups.group([normalTab.id], in: source.id, into: nil)
+        let baseline = browser.session
+        let pool = BrowserExtensionControllerPool()
+        let pages = PageProviderSpy()
+        let localPages = PageProviderSpy()
+        pool.setTabGroupService(browser.extensionTabGroups)
+        pool.registerWindow(id: BrowserWindowID(), browser: browser, pageProvider: pages, focus: {}, close: {})
+        pool.registerWindow(id: BrowserWindowID(), browser: temporary, pageProvider: localPages, focus: {}, close: {})
+        let service = try XCTUnwrap(pool.extensionTabGroupService)
+        let localGroup = try service.group([temporaryTab], in: source.id, into: nil)
+        XCTAssertNotEqual(normalGroup.id, localGroup.id)
+        XCTAssertEqual(browser.session, baseline)
+        XCTAssertEqual(temporary.session.selectedTab?.folderID, localGroup.folderID)
+        XCTAssertThrowsError(try service.group([temporaryTab, normalTab.id], in: source.id, into: nil))
+        XCTAssertThrowsError(try service.group([temporaryTab], in: source.id, into: normalGroup.id))
+    }
+
     /// Every Space owns a `BrowsingProfile`, and a Space's extension
     /// controller is built on `WKWebsiteDataStore(forIdentifier: profile.id)`,
     /// so the service-worker registration a hashed host used to protect is
@@ -2952,8 +3130,13 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                     space: space,
                     session: browser.session
                 )
+            },
+            backgroundPageDidUpdate: { update in
+                browser.updateBackgroundPage(update)
+                return browser.session
             }
         )
+        pages.runtimeStore.publishesPageMetadataCentrally = true
         pool.connect(browser: browser, pageProvider: pages)
         let context = try await pool.loadExtension(
             at: fixtureURL,
@@ -2988,18 +3171,6 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertTrue(pages.canGoBack)
         XCTAssertEqual(pages.backHistory.first?.url, secondURL)
 
-        pages.goBack()
-
-        XCTAssertTrue(pages.activePage === standardPage)
-        XCTAssertEqual(pages.activePage?.webView.url, secondURL)
-        XCTAssertTrue(pages.canGoForward)
-
-        pages.goForward()
-
-        XCTAssertTrue(pages.activePage === extensionPage)
-        let destinationURL = try XCTUnwrap(
-            URL(string: "https://example.com/crest-extension-location")
-        )
         var runtimeReady = false
         for _ in 0..<200 where !runtimeReady {
             runtimeReady =
@@ -3010,6 +3181,25 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         }
         XCTAssertTrue(runtimeReady)
 
+        let visitCount = browser.selectedSpace?.history.count
+        pages.goBack()
+
+        XCTAssertTrue(pages.activePage === standardPage)
+        XCTAssertEqual(pages.activePage?.webView.url, secondURL)
+        XCTAssertEqual(
+            browser.selectedTab?.url, secondURL,
+            "A retained runtime switch must publish its metadata without waiting for another navigation.")
+        XCTAssertTrue(pages.canGoForward)
+
+        pages.goForward()
+
+        XCTAssertTrue(pages.activePage === extensionPage)
+        XCTAssertEqual(browser.selectedTab?.url, extensionURL)
+        XCTAssertEqual(
+            browser.selectedSpace?.history.count, visitCount, "Runtime traversal must not record a new visit.")
+        let destinationURL = try XCTUnwrap(
+            URL(string: "https://example.com/crest-extension-location")
+        )
         _ = try await extensionPage.webView.callAsyncJavaScript(
             """
             window.location.replace(destinationURL);

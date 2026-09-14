@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserSidebarBackgroundInteractionView: View {
     let editSpace: () -> Void
-    let createSpace: () -> Void
+    let createSpace: (() -> Void)?
 
     var body: some View {
         Color.clear
@@ -10,7 +10,7 @@ struct BrowserSidebarBackgroundInteractionView: View {
             .gesture(WindowDragGesture())
             .contextMenu {
                 ForEach(
-                    BrowserSidebarBackgroundInteractionPolicy.actions,
+                    BrowserSidebarBackgroundInteractionPolicy.actions.filter { $0 != .newSpace || createSpace != nil },
                     id: \.self
                 ) { action in
                     Button(action.title, systemImage: action.systemImage) {
@@ -28,7 +28,7 @@ struct BrowserSidebarBackgroundInteractionView: View {
         case .editSpace:
             editSpace()
         case .newSpace:
-            createSpace()
+            createSpace?()
         }
     }
 }

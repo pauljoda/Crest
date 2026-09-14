@@ -52,7 +52,7 @@ struct BrowserSplitCardLifecycleModifier: ViewModifier {
     /// True only while some other card holds focus. A card that gains focus stops
     /// reporting here in the same frame the root observers take it over.
     private var isUnfocusedCard: Bool {
-        pages.activeTabID != tab.id
+        !pages.publishesPageMetadataCentrally && pages.activeTabID != tab.id
     }
 
     private func synchronizePageMetadata() {

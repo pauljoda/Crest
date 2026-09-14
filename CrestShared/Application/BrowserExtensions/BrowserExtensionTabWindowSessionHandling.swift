@@ -4,7 +4,7 @@ import Foundation
 protocol BrowserExtensionTabWindowSessionHandling: AnyObject {
     var session: BrowserSession { get }
 
-    func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int) -> Bool
+    func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int, among windowTabs: Set<TabID>?) -> Bool
 
     func activateExtensionTab(_ id: TabID, in spaceID: SpaceID) -> Bool
     func closeExtensionTab(_ id: TabID, in spaceID: SpaceID) -> Bool

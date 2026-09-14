@@ -122,6 +122,7 @@ extension BrowserShortcutCommand {
         }
 
         return switch self {
+        case .newBlankWindow: "New Blank Window"
         case .newWindow: "New Window"
         case .newTab: "New Tab"
         case .newQuickWindow: "New Quick Window"
@@ -220,6 +221,7 @@ extension BrowserShortcutCommand {
             "switch cycle spaces left right arrow"
         case .toggleSelectedTabPinned: "favorite bookmark pin unpin"
         case .newPrivateWindow: "incognito private browsing"
+        case .newBlankWindow: "temporary disposable unsynced window"
         case .newQuickWindow: "little arc quick lookup"
         case .showHistory: "visited pages history"
         case .toggleExtensionSidePanel: "extension sidepanel sidebar panel toggle"

@@ -1,0 +1,215 @@
+import AppKit
+import Observation
+
+/// Normal windows present the app's workspace. Temporary windows own disposable
+/// workspaces and borrow the source Space's website profile.
+@Observable
+@MainActor
+final class BrowserMacWindowCoordinator {
+    private struct PendingTransfer {
+        let sourceWindowID: BrowserWindowID
+        let item: BrowserTabDragItem
+    }
+
+    let browser: BrowserStore
+    private let pages: BrowserPagePool
+    let spaceAccess: BrowserSpaceAccessController
+    private let windowStatePersistence: any BrowserWindowStatePersisting
+    @ObservationIgnored private var windows: [BrowserWindowID: BrowserMacWindowModel] = [:]
+    @ObservationIgnored private var canceledTransfers: Set<BrowserWindowID> = []
+    @ObservationIgnored private var pendingTransfers: [BrowserWindowID: PendingTransfer] = [:]
+    @ObservationIgnored private var transferExpirations: [BrowserWindowID: Task<Void, Never>] = [:]
+
+    init(
+        browser: BrowserStore, pages: BrowserPagePool, spaceAccess: BrowserSpaceAccessController,
+        windowStatePersistence: any BrowserWindowStatePersisting
+    ) {
+        self.browser = browser
+        self.pages = pages
+        self.spaceAccess = spaceAccess
+        self.windowStatePersistence = windowStatePersistence
+    }
+
+    func existingModel(for id: BrowserWindowID) -> BrowserMacWindowModel? { windows[id] }
+
+    func model(for request: BrowserMacWindowRequest) -> BrowserMacWindowModel? {
+        guard !canceledTransfers.contains(request.id) else { return nil }
+        if let existing = windows[request.id] { return existing }
+        let source = request.sourceWindowID.flatMap { windows[$0]?.browser } ?? browser
+        let windowBrowser: BrowserStore
+        let state: BrowserWindowStateStore
+        if request.kind == .temporary {
+            guard let assignment = request.sourceAssignment,
+                let temporary = browser.makeTemporaryWindowStore(in: assignment)
+            else { return nil }
+            windowBrowser = temporary
+            state = BrowserWindowStateStore(
+                id: request.id, session: temporary.session, persistence: InMemoryBrowserWindowStatePersistence())
+        } else {
+            state = BrowserWindowStateStore(
+                id: request.id, session: source.session, persistence: windowStatePersistence)
+            windowBrowser = browser.makeWindowStore(restoring: state.state)
+        }
+        let transient = BrowserTransientBrowsingCoordinator()
+        let windowPages = pages.makeWindowPool(
+            browser: windowBrowser, windowID: request.id, sharesRuntimes: request.kind == .normal,
+            transientBrowsing: transient, spaceAccess: spaceAccess)
+        let model = BrowserMacWindowModel(
+            request: request, browser: windowBrowser, pages: windowPages,
+            transientBrowsing: transient, windowState: state)
+        windows[request.id] = model
+        return model
+    }
+
+    func attach(_ window: NSWindow, to id: BrowserWindowID) {
+        guard let model = windows[id] else { return }
+        model.window = window
+        window.tabbingMode = .disallowed
+        model.pages.bindNativeWindow(window)
+        if model.isTemporary {
+            window.isRestorable = false
+            window.setFrameAutosaveName("")
+        }
+        _ = completePendingTransfer(to: id)
+    }
+
+    func closeWindow(_ id: BrowserWindowID) {
+        guard let model = windows.removeValue(forKey: id) else { return }
+        cancelPendingTransfer(to: id)
+        for destination in pendingTransfers.keys.filter({ pendingTransfers[$0]?.sourceWindowID == id }) {
+            cancelPendingTransfer(to: destination)
+        }
+        if model.isTemporary {
+            model.pages.closeWindowWorkspace()
+            model.windowState.removePersistedState()
+        } else {
+            model.pages.releaseWindowPresentation()
+        }
+    }
+
+    func reconcileTemporaryWorkspaces() {
+        let invalid = windows.values.filter {
+            $0.isTemporary && !$0.browser.reconcileTemporarySource(from: browser.session)
+        }
+        for model in invalid {
+            model.pages.closeWindowWorkspace()
+            model.window?.close()
+            closeWindow(model.id)
+        }
+    }
+
+    /// Preparing a destination is reversible. The shared workspace changes only
+    /// after the new scene has a native window and has accepted the transfer.
+    func prepareTearOff(_ item: BrowserTabDragItem, from sourceID: BrowserWindowID) -> BrowserMacWindowRequest? {
+        guard let source = windows[sourceID], isAvailable(item, in: source),
+            item.selection.map({ $0.ids == [item.tabID] }) ?? true
+        else { return nil }
+        let request = BrowserMacWindowRequest.temporary(
+            sourceWindowID: sourceID, assignment: item.spaceAssignment)
+        guard model(for: request) != nil else { return nil }
+        pendingTransfers[request.id] = PendingTransfer(sourceWindowID: sourceID, item: item)
+        transferExpirations[request.id] = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled else { return }
+            self?.cancelPendingTransfer(to: request.id)
+        }
+        return request
+    }
+
+    @discardableResult
+    func completePendingTransfer(to destinationID: BrowserWindowID) -> Bool {
+        guard let pending = pendingTransfers[destinationID],
+            let source = windows[pending.sourceWindowID], let destination = windows[destinationID],
+            transfer(pending.item, from: source, to: destination)
+        else {
+            if pendingTransfers[destinationID] != nil { cancelPendingTransfer(to: destinationID) }
+            return false
+        }
+        pendingTransfers.removeValue(forKey: destinationID)
+        transferExpirations.removeValue(forKey: destinationID)?.cancel()
+        return true
+    }
+
+    func cancelPendingTransfer(to id: BrowserWindowID) {
+        transferExpirations.removeValue(forKey: id)?.cancel()
+        guard pendingTransfers.removeValue(forKey: id) != nil else { return }
+        canceledTransfers.insert(id)
+        guard let destination = windows.removeValue(forKey: id) else { return }
+        destination.pages.closeWindowWorkspace()
+        destination.window?.close()
+    }
+
+    @discardableResult
+    func move(_ item: BrowserTabDragItem, from sourceID: BrowserWindowID, to destinationID: BrowserWindowID) -> Bool {
+        guard sourceID != destinationID, let source = windows[sourceID], let destination = windows[destinationID]
+        else { return false }
+        return transfer(item, from: source, to: destination)
+    }
+
+    func windowID(at screenPoint: CGPoint, excluding sourceID: BrowserWindowID) -> BrowserWindowID? {
+        guard
+            let window = NSApp.orderedWindows.first(where: {
+                $0.isVisible && !$0.ignoresMouseEvents && $0.frame.contains(screenPoint)
+            })
+        else {
+            return nil
+        }
+        return windows.values.first(where: { $0.window === window && $0.id != sourceID })?.id
+    }
+
+    func isInsideAnyWindow(screenPoint: CGPoint) -> Bool {
+        NSApp.orderedWindows.contains { $0.isVisible && !$0.ignoresMouseEvents && $0.frame.contains(screenPoint) }
+    }
+
+    func isInsideWindow(_ id: BrowserWindowID, screenPoint: CGPoint) -> Bool {
+        windows[id]?.window?.frame.contains(screenPoint) == true
+    }
+
+    private func isAvailable(_ item: BrowserTabDragItem, in model: BrowserMacWindowModel) -> Bool {
+        guard let space = model.browser.space(matching: item.spaceAssignment),
+            !spaceAccess.isLocked(space), space.tabs.contains(where: { $0.id == item.tabID })
+        else { return false }
+        return true
+    }
+
+    private func transfer(
+        _ item: BrowserTabDragItem, from source: BrowserMacWindowModel, to destination: BrowserMacWindowModel
+    ) -> Bool {
+        guard isAvailable(item, in: source), item.selection.map({ $0.ids == [item.tabID] }) ?? true,
+            let targetSpace = destination.browser.space(matching: item.spaceAssignment),
+            !spaceAccess.isLocked(targetSpace),
+            source.browser.canTransferTab(
+                item.tabID, matching: item.spaceAssignment,
+                to: destination.browser, in: item.spaceAssignment)
+        else { return false }
+        if let page = source.pages.residentPage(matching: item.runtimeAssignment) {
+            source.browser.updateTabFromPage(
+                url: page.metadata.displayURL, title: page.metadata.displayTitle,
+                faviconData: page.metadata.faviconData, iconAccent: page.metadata.iconAccent,
+                for: item.tabID, matching: item.spaceAssignment)
+        }
+        guard
+            let tab = source.browser.space(matching: item.spaceAssignment)?.tabs.first(where: { $0.id == item.tabID }),
+            destination.pages.canTransferTabRuntime(
+                from: source.pages,
+                matching: item.runtimeAssignment, as: tab, in: targetSpace)
+        else { return false }
+        guard
+            source.browser.transferTab(
+                item.tabID, matching: item.spaceAssignment, to: destination.browser, in: item.spaceAssignment)
+        else { return false }
+        // Both moves have been validated above. There is no actor suspension
+        // between committing the workspace graphs and relocating the runtime.
+        let movedTab = destination.browser.space(matching: item.spaceAssignment)?.tabs.first { $0.id == tab.id } ?? tab
+        let transferred = destination.pages.transferTabRuntime(
+            from: source.pages, matching: item.runtimeAssignment, as: movedTab, in: targetSpace)
+        assert(transferred)
+        source.pages.reconcile(session: source.browser.session)
+        source.pages.select(session: source.browser.session)
+        destination.pages.reconcile(session: destination.browser.session)
+        destination.pages.select(session: destination.browser.session)
+        destination.pages.setWindowFocused(true)
+        destination.window?.makeKeyAndOrderFront(nil)
+        return true
+    }
+}

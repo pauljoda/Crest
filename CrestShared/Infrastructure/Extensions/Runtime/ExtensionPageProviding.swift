@@ -90,6 +90,7 @@ struct BrowserExtensionHostedDocument: Equatable, Sendable {
     let url: URL
     /// The tab the document is scoped to, or nil for a Space-wide document.
     let tabID: TabID?
+    var windowID: BrowserWindowID? = nil
 }
 
 struct BrowserExtensionDownloadRequest: Equatable, Sendable {

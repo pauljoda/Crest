@@ -58,6 +58,27 @@ final class BrowserPageTranslationTests: XCTestCase {
         XCTAssertNil(translation.configuration)
     }
 
+    func testDisappearingPreviousHostCannotCancelTheCurrentHostsTranslation() throws {
+        let web = WKWebView()
+        let translation = BrowserPageTranslation()
+        let previousHost = UUID()
+        let currentHost = UUID()
+        translation.setActive(true, in: web, hostID: previousHost)
+        translation.sourceID = "es"
+        translation.targetID = "en"
+        translation.start()
+        let configuration = try XCTUnwrap(translation.configuration)
+
+        translation.setActive(true, in: web, hostID: currentHost)
+        translation.setActive(false, in: web, hostID: previousHost)
+
+        XCTAssertTrue(translation.isWorking)
+        XCTAssertEqual(translation.configuration, configuration)
+        translation.setActive(false, in: web, hostID: currentHost)
+        XCTAssertFalse(translation.isWorking)
+        XCTAssertNil(translation.configuration)
+    }
+
     func testTranslationPreservesEditableContentAndWebsiteChangesOnRestore() async throws {
         let web = try await fixture()
         let capture = try await BrowserTranslationDocument.capture(in: web, token: "first")

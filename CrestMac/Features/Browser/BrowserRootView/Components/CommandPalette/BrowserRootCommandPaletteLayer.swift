@@ -52,7 +52,7 @@ struct BrowserRootCommandPaletteLayer: View {
             chrome: model.chrome,
             openWindow: openWindow,
             spaceAccess: model.spaceAccess,
-            targetWindowID: nil,
+            targetWindowID: model.windowState?.id,
             layoutDirection: layoutDirection,
             extensionSidebar: model.extensionSidebar
         )

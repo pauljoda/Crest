@@ -8,6 +8,9 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
     let id: BrowserWindowID
     private(set) var selectedSpaceID: SpaceID
     private(set) var selectedTabIDsBySpace: [SpaceID: TabID]
+    /// A captured Space without an entry above intentionally has no selected
+    /// tab. Missing in older records, which retain their legacy fallback.
+    private(set) var capturedSpaceIDs: Set<SpaceID>?
     private(set) var sidebarWidth: Double?
     private(set) var sidebarIsPresented: Bool?
 
@@ -56,6 +59,7 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
                 }
             )
         )
+        capturedSpaceIDs = Set(session.spaces.map(\.id))
         repair(using: session)
     }
 
@@ -80,6 +84,7 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
         guard let space = session.space(id: spaceID), space.contains(tabID) else { return }
         selectedSpaceID = spaceID
         selectedTabIDsBySpace[spaceID] = tabID
+        capturedSpaceIDs?.insert(spaceID)
     }
 
     mutating func captureSelection(from session: BrowserSession) {
@@ -90,6 +95,7 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
                 return (space.id, tabID)
             }
         )
+        capturedSpaceIDs = Set(session.spaces.map(\.id))
         repair(using: session)
     }
 
@@ -145,6 +151,7 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
     mutating func repair(using session: BrowserSession) {
         repairSplitLayout(using: session)
         let spaceIDs = Set(session.spaces.map(\.id))
+        capturedSpaceIDs = capturedSpaceIDs.map { $0.intersection(spaceIDs) }
         if let states = extensionSidebarBySpace {
             let live = states.filter { spaceIDs.contains($0.key) }
             extensionSidebarBySpace = live.isEmpty ? nil : live
@@ -155,6 +162,7 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
         for space in session.spaces {
             ensureTabSelection(in: space)
         }
+        if capturedSpaceIDs != nil { capturedSpaceIDs = spaceIDs }
         guard !spaceIDs.contains(selectedSpaceID) else { return }
         if spaceIDs.contains(session.selectedSpaceID) {
             selectedSpaceID = session.selectedSpaceID
@@ -188,6 +196,10 @@ struct BrowserWindowState: Codable, Equatable, Identifiable, Sendable {
 
     private mutating func ensureTabSelection(in space: BrowserSpace) {
         guard selectedTabIDsBySpace[space.id].map(space.contains) != true else { return }
+        if capturedSpaceIDs?.contains(space.id) == true {
+            selectedTabIDsBySpace[space.id] = nil
+            return
+        }
         if let selectedTabID = space.selectedTabID, space.contains(selectedTabID) {
             selectedTabIDsBySpace[space.id] = selectedTabID
         } else if let firstTabID = space.tabs.first?.id {

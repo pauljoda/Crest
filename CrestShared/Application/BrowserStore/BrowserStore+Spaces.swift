@@ -4,6 +4,7 @@ import Foundation
 
 extension BrowserStore {
     func addSpace() {
+        guard !isTemporaryWorkspace else { return }
         session.addSpace()
         if isPrivateBrowsing, let spaceID = session.selectedSpace?.id {
             session.updateSpaceIdentity(
@@ -39,6 +40,9 @@ extension BrowserStore {
         _ id: SpaceID,
         dataDeleter: any BrowserSpaceDataDeleting
     ) async throws {
+        guard !isTemporaryWorkspace else {
+            throw BrowserSpaceDeletionError.borrowedProfile
+        }
         guard session.spaces.count > 1 else {
             throw BrowserSpaceDeletionError.cannotDeleteLastSpace
         }
@@ -113,6 +117,11 @@ extension BrowserStore {
         symbol: String,
         accent: SpaceAccent
     ) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.updateSpaceIdentity(
+                spaceID, name: name, symbol: symbol, accent: accent)
+            return
+        }
         guard session.space(id: spaceID) != nil else { return }
         session.updateSpaceIdentity(
             spaceID,
@@ -127,12 +136,20 @@ extension BrowserStore {
         _ branding: BrowserSpaceBranding,
         in spaceID: SpaceID
     ) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.updateSpaceBranding(branding, in: spaceID)
+            return
+        }
         guard session.space(id: spaceID) != nil else { return }
         session.updateSpaceBranding(branding, in: spaceID)
         persist(syncUrgency: .coalesced, scope: .core)
     }
 
     func setDefaultSpace(_ spaceID: SpaceID) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.setDefaultSpace(spaceID)
+            return
+        }
         guard session.space(id: spaceID) != nil else { return }
         session.setDefaultSpace(spaceID)
         persist(syncUrgency: .coalesced, scope: .core)
@@ -142,6 +159,10 @@ extension BrowserStore {
         _ accessPolicy: BrowserSpaceAccessPolicy,
         in spaceID: SpaceID
     ) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.updateSpaceAccessPolicy(accessPolicy, in: spaceID)
+            return
+        }
         guard session.space(id: spaceID) != nil else { return }
         session.updateSpaceAccessPolicy(accessPolicy, in: spaceID)
         persist(syncUrgency: .immediate, scope: .core)
@@ -156,6 +177,10 @@ extension BrowserStore {
         _ preferences: BrowserSpaceBrowsingPreferences,
         in spaceID: SpaceID
     ) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.updateBrowsingPreferences(preferences, in: spaceID)
+            return
+        }
         guard session.space(id: spaceID) != nil else { return }
         session.updateBrowsingPreferences(preferences, in: spaceID)
         persist(syncUrgency: .coalesced, scope: .core)

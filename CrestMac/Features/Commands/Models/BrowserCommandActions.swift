@@ -30,6 +30,7 @@ struct BrowserCommandActions {
     /// tabs themselves.
     static let paletteCommands: [BrowserShortcutCommand] = [
         .newWindow,
+        .newBlankWindow,
         .newQuickWindow,
         .newPrivateWindow,
         .closeTabOrWindow,
@@ -91,6 +92,7 @@ struct BrowserCommandActions {
     func perform(_ command: BrowserShortcutCommand) {
         switch command {
         case .newWindow: openNewWindow()
+        case .newBlankWindow: openBlankWindow()
         case .newTab: openNewTab()
         case .openLocation: openLocation()
         case .newQuickWindow: openQuickWindow()
@@ -170,7 +172,19 @@ struct BrowserCommandActions {
     }
 
     func openNewWindow() {
-        openWindow(id: BrowserSceneID.browser.rawValue)
+        openWindow(
+            id: BrowserSceneID.browser.rawValue, value: BrowserMacWindowRequest.normal(sourceWindowID: targetWindowID))
+    }
+
+    func openBlankWindow() {
+        guard !browser.isPrivateBrowsing, let space = browser.selectedSpace, !spaceAccess.isLocked(space) else {
+            return
+        }
+        openWindow(
+            id: BrowserSceneID.blankWindow.rawValue,
+            value: BrowserMacWindowRequest.temporary(
+                sourceWindowID: targetWindowID,
+                assignment: BrowserSpaceRuntimeAssignment(space: space)))
     }
 
     func openPrivateWindow() {

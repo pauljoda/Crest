@@ -12,8 +12,10 @@ extension BrowserExtensionTabWindowCoordinator {
         guard let client = sidebarClientsByContext[ObjectIdentifier(context)], let service = sidebarService,
             let controller = context.webExtensionController,
             let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: context),
-            service.hostWindow(for: spaceID) != nil,
-            let options = try? service.resolvedOptions(for: selectedTabID(in: spaceID), client: client)
+            (preferredHost(in: spaceID)?.id ?? service.hostWindow(for: spaceID)) != nil,
+            let options = try? service.resolvedOptions(
+                at: selectedTabID(in: spaceID).map(BrowserExtensionSidebarScope.tab) ?? .window,
+                client: client, windowID: preferredHost(in: spaceID)?.id ?? service.hostWindow(for: spaceID))
         else { return false }
         return options.presentsPanel
     }
@@ -22,7 +24,7 @@ extension BrowserExtensionTabWindowCoordinator {
         guard let client = sidebarClientsByContext[ObjectIdentifier(context)], let service = sidebarService,
             let controller = context.webExtensionController,
             let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: context),
-            let window = service.hostWindow(for: spaceID)
+            let window = preferredHost(in: spaceID)?.id ?? service.hostWindow(for: spaceID)
         else { return false }
         return service.isOpen(for: client, in: window)
     }
@@ -33,7 +35,7 @@ extension BrowserExtensionTabWindowCoordinator {
         guard let client = sidebarClientsByContext[ObjectIdentifier(context)], let service = sidebarService,
             let flavor = service.flavor(for: client), let controller = context.webExtensionController,
             let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: context),
-            let window = service.hostWindow(for: spaceID),
+            let window = preferredHost(in: spaceID)?.id ?? service.hostWindow(for: spaceID),
             BrowserExtensionSidebarActionPolicy.intercepts(
                 invocation, flavor: flavor,
                 opensOnAction: (try? service.behavior(for: client).openPanelOnActionClick) == true,
@@ -64,13 +66,15 @@ extension BrowserExtensionTabWindowCoordinator {
             "api": "sidebar.event", "kind": event.kind.rawValue,
             "windowKind": "primary", "path": event.path,
         ]
+        message["window"] = brokerWindowDescriptor(windowsBySpace[event.spaceID]?[event.windowID])
         if let tabID = event.tabID {
             guard let tab = currentState?.space(event.spaceID)?.tab(tabID) else {
                 browserExtensionSidebarLog.info(
                     "sidebar.event \(event.kind.rawValue, privacy: .public) dropped: tab no longer in Space")
                 return nil
             }
-            message["tabIndex"] = tab.index
+            message["tabIndex"] =
+                ownedTabIDs(in: windowsBySpace[event.spaceID]?[event.windowID]).firstIndex(of: tabID) ?? tab.index
             message["url"] = tab.url?.absoluteString
         }
         browserExtensionSidebarLog.info(
@@ -97,14 +101,16 @@ extension BrowserExtensionTabWindowCoordinator {
             }
             guard let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: extensionContext),
                 let client = sidebarClientsByContext[ObjectIdentifier(extensionContext)],
-                let service = sidebarService, let state = currentState?.space(spaceID)
+                let service = sidebarService
             else {
                 throw BrowserExtensionSidebarError.unavailable
             }
+            let window = try brokerWindow(in: spaceID, message: payload["scope"] as? [String: Any] ?? payload)
+            let state = brokerState(in: spaceID, window: window)
             let liveTabs = Set(state.tabs.map(\.id)).subtracting(
                 (transientTabsBySpace[spaceID] ?? []).map(\.id)
             )
-            let scope: BrowserExtensionSidebarScope
+            var scope: BrowserExtensionSidebarScope
             do {
                 scope = try request.resolveScope(in: state, liveTabs: liveTabs)
             } catch BrowserExtensionSidebarBrokerError.staleTab {
@@ -118,13 +124,16 @@ extension BrowserExtensionTabWindowCoordinator {
                 }
                 throw BrowserExtensionSidebarBrokerError.staleTab
             }
+            if scope == .window, let windowID = window?.hostWindowID { scope = .hostWindow(windowID) }
             if request.requiresUserGesture, !request.userActivation,
                 !sidebarUserGestures.hasRecentGesture(for: client, now: ProcessInfo.processInfo.systemUptime)
             {
                 throw BrowserExtensionSidebarBrokerError.userGesture(api)
             }
             let response = try sidebarResponse(
-                request, scope: scope, service: service, client: client, space: state, baseURL: extensionContext.baseURL
+                request, scope: scope, service: service, client: client, space: state,
+                baseURL: extensionContext.baseURL,
+                windowID: window?.hostWindowID
             )
             browserExtensionSidebarLog.info(
                 "\(extensionContext.webExtension.displayName ?? "extension", privacy: .public) \(api, privacy: .public) ok"
@@ -142,7 +151,7 @@ extension BrowserExtensionTabWindowCoordinator {
     private func sidebarResponse(
         _ request: BrowserExtensionSidebarBrokerRequest, scope: BrowserExtensionSidebarScope,
         service: any BrowserExtensionSidebarHandling, client: BrowserExtensionServiceClientID,
-        space: BrowserExtensionSpaceState, baseURL: URL
+        space: BrowserExtensionSpaceState, baseURL: URL, windowID: BrowserWindowID?
     ) throws -> [String: Any] {
         let tab: TabID? = if case .tab(let tab) = scope { tab } else { nil }
         switch request.operation {
@@ -171,7 +180,7 @@ extension BrowserExtensionTabWindowCoordinator {
         case .setPanel:
             try service.setOptions(.init(path: request.path), scope: scope, from: client)
         case .getPanel:
-            let options = try service.resolvedOptions(at: scope, client: client)
+            let options = try service.resolvedOptions(at: scope, client: client, windowID: windowID)
             return [
                 "panel": options.path.isEmpty
                     ? ""
@@ -186,7 +195,7 @@ extension BrowserExtensionTabWindowCoordinator {
                 try service.setOptions(.init(title: request.title), scope: scope, from: client)
             }
         case .getTitle:
-            return ["title": try service.resolvedOptions(at: scope, client: client).title]
+            return ["title": try service.resolvedOptions(at: scope, client: client, windowID: windowID).title]
         case .setIcon:
             if request.clearsIcon {
                 try service.clearIcon(scope: scope, from: client)
@@ -196,7 +205,9 @@ extension BrowserExtensionTabWindowCoordinator {
         case .layout:
             return ["side": sidebarLayoutSide()]
         case .open, .close, .sidebarOpen, .sidebarClose, .sidebarToggle, .isOpen:
-            guard let window = service.hostWindow(for: space.id) else { throw BrowserExtensionSidebarError.unavailable }
+            guard let window = windowID ?? service.hostWindow(for: space.id) else {
+                throw BrowserExtensionSidebarError.unavailable
+            }
             switch request.operation {
             case .open: try service.open(for: client, in: window, tab: tab)
             case .close: try service.closeChromePanel(for: client, in: window, tab: tab)

@@ -82,6 +82,23 @@ final class BrowserExtensionTabMovingTests: XCTestCase {
         XCTAssertEqual(session, before)
     }
 
+    func testWindowIndicesSkipTabsHostedElsewhereAndPublishNoPartialMove() {
+        var session = makeSession()
+        let spaceID = session.spaces[0].id
+        let ids = session.spaces[0].tabs.map(\.id)
+        let owned = Set([ids[0], ids[2], ids[3]])
+
+        XCTAssertTrue(session.moveExtensionTabs([ids[0]], in: spaceID, to: 1, among: owned))
+        XCTAssertEqual(session.spaces[0].tabs.map(\.id), [ids[1], ids[2], ids[0], ids[3]])
+        XCTAssertEqual(session.spaces[0].selectedTabID, ids[0])
+
+        XCTAssertTrue(session.moveExtensionTabs([ids[3], ids[0]], in: spaceID, to: 0, among: owned))
+        XCTAssertEqual(session.spaces[0].tabs.map(\.id), [ids[1], ids[3], ids[0], ids[2]])
+        let before = session
+        XCTAssertFalse(session.moveExtensionTabs([ids[2], ids[1]], in: spaceID, to: 0, among: owned))
+        XCTAssertEqual(session, before, "A tab owned by another window must reject the entire transaction")
+    }
+
     func testPinnedMovesStayPinnedAndBackgroundSpaceDoesNotBecomeSelected() {
         var session = makeSession()
         let spaceID = session.spaces[0].id

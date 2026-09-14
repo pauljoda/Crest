@@ -12,6 +12,27 @@ final class BrowserExtensionSidebarStoreTests: XCTestCase {
     private let other = BrowserExtensionServiceClientID("other")!
     private let baseURL = URL(string: "webkit-extension://chatgpt/")!
 
+    func testFirefoxWindowOverridesRemainLocalAndAreReleasedWithTheirHost() throws {
+        let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
+        let second = BrowserWindowID()
+        store.register(
+            client: client, spaceID: space, defaults: .init(flavor: .sidebarAction, path: "manifest.html"),
+            displayName: "Firefox", baseURL: baseURL)
+        try store.setOptions(.init(path: "first.html", title: "First"), scope: .hostWindow(window), from: client)
+        try store.setOptions(.init(path: "second.html", title: "Second"), scope: .hostWindow(second), from: client)
+        try store.open(for: client, in: window, tab: tab)
+        try store.open(for: client, in: second, tab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, "first.html")
+        XCTAssertEqual(store.panel(in: second, spaceID: space, activeTab: tab)?.path, "second.html")
+        try store.clearTitle(scope: .hostWindow(window), from: client)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.title, "Firefox")
+        XCTAssertEqual(store.panel(in: second, spaceID: space, activeTab: tab)?.title, "Second")
+        store.release(window: window)
+        try store.open(for: client, in: window, tab: tab)
+        XCTAssertEqual(store.panel(in: window, spaceID: space, activeTab: tab)?.path, "manifest.html")
+        XCTAssertEqual(store.panel(in: second, spaceID: space, activeTab: tab)?.path, "second.html")
+    }
+
     func testFirefoxSidebarFollowsActiveTabOverridesAndResetsToInheritedResources() throws {
         let store = BrowserExtensionSidebarStore(behaviorPersistence: InMemoryBrowserExtensionSidebarBehaviorStore())
         store.register(

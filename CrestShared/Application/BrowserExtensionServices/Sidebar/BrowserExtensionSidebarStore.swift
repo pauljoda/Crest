@@ -145,6 +145,14 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         try registration(for: client).registry.resolved(at: scope)
     }
 
+    func resolvedOptions(
+        at scope: BrowserExtensionSidebarScope, client: BrowserExtensionServiceClientID, windowID: BrowserWindowID?
+    ) throws
+        -> BrowserExtensionSidebarResolvedOptions
+    {
+        try registration(for: client).registry.resolved(at: scope, in: windowID)
+    }
+
     func setBehavior(_ behavior: BrowserExtensionSidebarBehavior, from client: BrowserExtensionServiceClientID) throws {
         try update(client) { $0.behavior = behavior }
         behaviorPersistence.save(behavior, for: client)
@@ -163,7 +171,7 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
 
     func open(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID, tab: TabID?) throws {
         let registration = try registration(for: client)
-        let options = registration.registry.resolved(for: tab)
+        let options = registration.registry.resolved(for: tab, in: window)
         guard options.presentsPanel,
             BrowserExtensionSidebarResourcePolicy.documentURL(path: options.path, baseURL: registration.baseURL) != nil
         else { throw BrowserExtensionSidebarError.noActivePanel }
@@ -244,10 +252,10 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         guard let presentations = presentationsByWindow[window]?[spaceID],
             let intent = activeTab.flatMap({ presentations[.tab($0)] }) ?? presentations[.default],
             let registration = registrations[intent.clientID],
-            registration.registry.resolved(for: activeTab).presentsPanel
+            registration.registry.resolved(for: activeTab, in: window).presentsPanel
         else { return nil }
         return makePanel(
-            client: intent.clientID, options: presentationOptions(intent, activeTab: activeTab),
+            client: intent.clientID, options: presentationOptions(intent, activeTab: activeTab, window: window),
             isAvailable: visibility[window]?[spaceID]?.isAvailable ?? true)
     }
 
@@ -257,11 +265,14 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         (presentationsByWindow[window]?[spaceID] ?? [:]).values.compactMap {
             makePanel(
                 client: $0.clientID,
-                options: presentationOptions($0, activeTab: visibility[window]?[spaceID]?.tabID), isAvailable: true)
+                options: presentationOptions($0, activeTab: visibility[window]?[spaceID]?.tabID, window: window),
+                isAvailable: true)
         }
     }
 
-    private func presentationOptions(_ intent: BrowserExtensionSidebarPresentation, activeTab: TabID?)
+    private func presentationOptions(
+        _ intent: BrowserExtensionSidebarPresentation, activeTab: TabID?, window: BrowserWindowID
+    )
         -> BrowserExtensionSidebarResolvedOptions
     {
         guard let registration = registrations[intent.clientID],
@@ -269,7 +280,7 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         else { return intent.options }
         // Firefox keeps one window sidebar and resolves its resource from
         // the selected tab. Chrome retains each explicitly opened scope.
-        return registration.registry.resolved(for: activeTab)
+        return registration.registry.resolved(for: activeTab, in: window)
     }
 
     func availablePanels(in window: BrowserWindowID, spaceID: SpaceID, activeTab: TabID?)
@@ -278,7 +289,7 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         _ = optionsRevision
         guard visibility[window]?[spaceID]?.isAvailable != false else { return [] }
         return registrations.filter { $0.value.spaceID == spaceID }.keys.compactMap {
-            makePanel(client: $0, activeTab: activeTab, isAvailable: true)
+            makePanel(client: $0, activeTab: activeTab, window: window, isAvailable: true)
         }.filter { $0.documentURL != nil }.sorted {
             if $0.title == $1.title { return $0.clientID < $1.clientID }
             return $0.title.localizedStandardCompare($1.title) == .orderedAscending
@@ -311,6 +322,7 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     }
 
     func release(window: BrowserWindowID) {
+        for client in Array(registrations.keys) { registrations[client]?.registry.release(windowID: window) }
         hostWindowsBySpace = hostWindowsBySpace.filter { $0.value != window }
         let spaces = Array(visiblePanels[window]?.keys ?? [:].keys)
         presentationsByWindow[window] = nil
@@ -383,11 +395,13 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
         consumeInstallOpen(for: client)
     }
 
-    private func makePanel(client: BrowserExtensionServiceClientID, activeTab: TabID?, isAvailable: Bool)
+    private func makePanel(
+        client: BrowserExtensionServiceClientID, activeTab: TabID?, window: BrowserWindowID, isAvailable: Bool
+    )
         -> BrowserExtensionSidebarPanel?
     {
         guard let registration = registrations[client] else { return nil }
-        let options = registration.registry.resolved(for: activeTab)
+        let options = registration.registry.resolved(for: activeTab, in: window)
         guard options.presentsPanel else { return nil }
         return makePanel(client: client, options: options, isAvailable: isAvailable)
     }

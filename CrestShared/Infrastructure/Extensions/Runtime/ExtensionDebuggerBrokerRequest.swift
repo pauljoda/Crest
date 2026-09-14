@@ -64,12 +64,14 @@ struct BrowserExtensionDebuggerBrokerRequest {
     let sessionToken: String?
     let method: String?
     let parameters: Data
+    let windowDescriptor: [String: Any]?
 
     init(message: [String: Any]) throws {
         guard let api = message["api"] as? String, let operation = Operation(rawValue: api) else {
             throw BrowserExtensionDebuggerBrokerError.invalidRequest
         }
         self.operation = operation
+        windowDescriptor = message["window"] as? [String: Any]
         tabID = (message["tabId"] as? NSNumber)?.intValue ?? -1
         switch operation {
         case .attach:

@@ -26,8 +26,8 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
         // not own. Crest presents one extension window per Space, so the only
         // acceptable answers are that Space's window and -2.
         const tabGroupsResolveWindow = async (id) => {
-            const current = await sidebarPrimaryWindowId();
-            if (id !== undefined && id !== -2 && id !== current) throw new Error(`No window with id: ${id}.`);
+            const current = id === undefined || id === -2 ? await sidebarPrimaryWindowId() : id;
+            await sidebarResolveWindow(current);
             return current;
         };
         // The broker names the window by kind, never by number: JavaScript
@@ -51,11 +51,11 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
         let tabGroupsMembership = new Map();
         let tabGroupsMembershipRequest;
         let tabGroupsPrimaryWindow;
-        const tabGroupsApplyMembership = (entries) => {
-            const membership = new Map();
+        const tabGroupsApplyMembership = (entries, windowId = tabGroupsPrimaryWindow, merge = false) => {
+            const membership = merge ? new Map(tabGroupsMembership) : new Map();
             for (const entry of Array.isArray(entries) ? entries : []) {
                 if (Number.isInteger(entry?.tabIndex) && Number.isInteger(entry?.groupId)) {
-                    membership.set(entry.tabIndex, entry.groupId);
+                    membership.set(`${windowId}:${entry.tabIndex}`, entry.groupId);
                 }
             }
             tabGroupsMembership = membership;
@@ -65,12 +65,14 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
             if (tabGroupsMembershipRequest) return tabGroupsMembershipRequest;
             tabGroupsMembershipRequest = Promise.resolve()
                 .then(async () => {
-                    const [response, windowId] = await Promise.all([
-                        requestCapability("tabGroups.membership", {}, []),
-                        tabGroupsPrimaryWindow ?? sidebarPrimaryWindowId()
-                    ]);
-                    tabGroupsPrimaryWindow = windowId;
-                    tabGroupsApplyMembership(response?.membership);
+                    tabGroupsPrimaryWindow = await sidebarPrimaryWindowId();
+                    const windows = await sidebarWindows();
+                    let merge = false;
+                    for (const window of windows.filter(window => !window.type || window.type === "normal")) {
+                        const response = await requestCapability("tabGroups.membership", {window: await sidebarWindowDescriptor(window.id)}, []);
+                        tabGroupsApplyMembership(response?.membership, window.id, merge);
+                        merge = true;
+                    }
                 })
                 .catch(() => {})
                 .finally(() => { tabGroupsMembershipRequest = undefined; });
@@ -78,8 +80,7 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
         };
         const tabGroupsProjectTab = (tab) => {
             if (!Number.isInteger(tab?.index)) return tabGroupsIdNone;
-            if (Number.isInteger(tab.windowId) && tab.windowId !== tabGroupsPrimaryWindow) return tabGroupsIdNone;
-            const groupId = tabGroupsMembership.get(tab.index);
+            const groupId = tabGroupsMembership.get(`${tab.windowId ?? tabGroupsPrimaryWindow}:${tab.index}`);
             return Number.isInteger(groupId) ? groupId : tabGroupsIdNone;
         };
         // Runs the native tab read once the Space's membership is current.
@@ -109,12 +110,10 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
             let tab;
             try { tab = await sidebarNative("tabs", "get", id); } catch { throw new Error(`No tab with id: ${id}.`); }
             if (!Number.isInteger(tab?.index) || tab.index < 0) throw new Error(`No tab with id: ${id}.`);
-            if (Number.isInteger(tab.windowId) && tab.windowId !== await sidebarPrimaryWindowId()) {
-                throw new Error(`No tab with id: ${id}.`);
-            }
+            await sidebarResolveWindow(tab.windowId);
             // WebKit returns an empty string when the URL is withheld, including
             // browser-owned new tabs. There is no URL identity to compare then.
-            return {tabIndex: tab.index, ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
+            return {tabIndex: tab.index, window: await sidebarWindowDescriptor(tab.windowId), ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
         };
         const tabGroupsTabTargets = async (value) => {
             const ids = Array.isArray(value) ? value : [value];
@@ -184,18 +183,24 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                 queue = result.catch(() => {});
                 return result;
             };
-            const snapshot = () => requestCapability("tabGroups.membership", {}, []);
+            const snapshot = async windowId => requestCapability("tabGroups.membership", {window: await sidebarWindowDescriptor(windowId ?? await sidebarPrimaryWindowId())}, []);
             const identityKey = value => JSON.stringify([
                 value?.revision,
                 (value?.tabs ?? []).map(tab => [tab.tabToken, tab.tabIndex])
             ]);
             const resolveIdentity = async () => {
-                const windowId = await sidebarPrimaryWindowId();
-                tabGroupsPrimaryWindow = windowId;
+                tabGroupsPrimaryWindow = await sidebarPrimaryWindowId();
+                const windows = (await sidebarWindows()).filter(window => !window.type || window.type === "normal");
+                idsByToken.clear();
+                tokensById.clear();
+                tabGroupsMembership = new Map();
+                for (const window of windows) {
+                const windowId = window.id;
+                let resolved = false;
                 for (let attempt = 0; attempt < 4; attempt++) {
-                    const before = await snapshot();
+                    const before = await snapshot(windowId);
                     const tabs = await Reflect.apply(nativeQuery, nativeTabs, [{windowId}]);
-                    const after = await snapshot();
+                    const after = await snapshot(windowId);
                     if (identityKey(before) !== identityKey(after)) continue;
                     if (!Array.isArray(after?.tabs) || !Array.isArray(tabs)) return false;
                     const native = tabs.filter(tab => tab.windowId === windowId);
@@ -205,17 +210,18 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                             || !Number.isInteger(indexed.get(tab.tabIndex)?.id))) continue;
                     // Bound correlation to currently live tabs. Queued events
                     // for a closed tab can no longer deliver a native Tab.
-                    idsByToken.clear();
-                    tokensById.clear();
                     for (const tab of after.tabs) {
                         const id = indexed.get(tab.tabIndex).id;
                         idsByToken.set(tab.tabToken, id);
                         tokensById.set(id, tab.tabToken);
                     }
-                    tabGroupsApplyMembership(after.membership);
-                    return true;
+                    tabGroupsApplyMembership(after.membership, windowId, true);
+                    resolved = true;
+                    break;
                 }
-                throw new Error("Tab order changed while resolving extension event identities.");
+                if (!resolved) throw new Error("Tab order changed while resolving extension event identities.");
+                }
+                return true;
             };
             const updatedListeners = new Set();
             const watch = capabilityWatch({
@@ -234,7 +240,7 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                             if (!Number.isInteger(id)) continue;
                             let tab;
                             try { tab = await Reflect.apply(nativeGet, nativeTabs, [id]); } catch { continue; }
-                            if (!tab || tab.windowId !== tabGroupsPrimaryWindow) continue;
+                            if (!tab) continue;
                             const projected = normalizeTab({...tab, groupId: change.groupId});
                             for (const listener of listeners) {
                                 if (!updatedListeners.has(listener)) continue;
@@ -248,8 +254,8 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                 if (!tab || typeof tab !== "object") return tab;
                 if (!tokensById.has(tab.id)) await resolveIdentity();
                 const token = tokensById.get(tab.id);
-                const current = await snapshot();
-                tabGroupsApplyMembership(current?.membership);
+                const current = await snapshot(tab.windowId);
+                tabGroupsApplyMembership(current?.membership, tab.windowId, true);
                 const identity = current?.tabs?.find(value => value.tabToken === token);
                 const groupId = identity ? tabGroupsProjectTab({index: identity.tabIndex, windowId: tab.windowId}) : -1;
                 return normalizeTab({...tab, groupId});
@@ -314,7 +320,7 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                 tabGroupsEventQueue = tabGroupsEventQueue.then(async () => {
                     if (message?.api !== "tabGroups.event" || message.windowKind !== "primary") return;
                     if (!tabGroupsListeners[message.kind]) return;
-                    const group = tabGroupsProject(message.group, await sidebarPrimaryWindowId());
+                    const group = tabGroupsProject(message.group, await sidebarWindowIdFor(message.window));
                     if (!group) return;
                     // The registry moved, so whatever the mirror holds is old.
                     tabGroupsMembership = new Map();
@@ -345,14 +351,14 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                     const groupId = tabGroupsGroupId(args[0]);
                     windowId = await sidebarPrimaryWindowId();
                     return {groupId};
-                }, (response) => tabGroupsProject(response?.group, windowId));
+                }, async (response) => tabGroupsProject(response?.group, response?.group?.window ? await sidebarWindowIdFor(response.group.window) : windowId));
             },
             query(...args) {
                 let windowId;
                 return sidebarCall("tabGroups.query", args, async () => {
                     const options = sidebarDetails(args);
                     windowId = await tabGroupsResolveWindow(options.windowId);
-                    const payload = {};
+                    const payload = {window: await sidebarWindowDescriptor(windowId)};
                     const collapsed = sidebarProperty(options, "collapsed", "boolean");
                     if (collapsed !== undefined) payload.collapsed = collapsed;
                     const shared = sidebarProperty(options, "shared", "boolean");
@@ -385,7 +391,7 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                     }
                     windowId = await sidebarPrimaryWindowId();
                     return payload;
-                }, (response) => tabGroupsProject(response?.group, windowId));
+                }, async (response) => tabGroupsProject(response?.group, response?.group?.window ? await sidebarWindowIdFor(response.group.window) : windowId));
             },
             move(...args) {
                 let windowId;
@@ -397,8 +403,8 @@ enum BrowserExtensionTabGroupsCompatibilityScript {
                     if (index < -1) throw new Error("Invalid tab group index.");
                     if (options.windowId !== undefined) await tabGroupsResolveWindow(options.windowId);
                     windowId = await sidebarPrimaryWindowId();
-                    return {groupId, index};
-                }, (response) => tabGroupsProject(response?.group, windowId));
+                    return {groupId, index, window: await sidebarWindowDescriptor(windowId)};
+                }, async (response) => tabGroupsProject(response?.group, response?.group?.window ? await sidebarWindowIdFor(response.group.window) : windowId));
             },
             onCreated: tabGroupsEvent("created"),
             onUpdated: tabGroupsEvent("updated"),

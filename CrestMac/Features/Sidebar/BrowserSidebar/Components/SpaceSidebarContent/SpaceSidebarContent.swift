@@ -12,7 +12,7 @@ struct SpaceSidebarContent: View {
     let commandSurfaceNamespace: Namespace.ID
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
-    let createSpace: () -> Void
+    let createSpace: (() -> Void)?
     let utilitySurface: BrowserUtilitySurface?
     @Binding var utilitySearchText: String
     @Binding var utilityFilter: BrowserUtilityListFilter

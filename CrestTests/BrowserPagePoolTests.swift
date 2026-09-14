@@ -1752,24 +1752,39 @@ final class BrowserPagePoolTests: XCTestCase {
     func testDeletingSpaceThroughRegistryReleasesEveryWindowBeforeRemovingSharedDataOnce() async throws {
         let tab = BrowserTab.startPage()
         let space = makeSpace(tabs: [tab], selectedTabID: tab.id)
+        let temporaryTab = BrowserTab.startPage()
+        var temporarySpace = space
+        temporarySpace.tabs = [temporaryTab]
+        temporarySpace.selectedTabID = temporaryTab.id
         let remover = RecordingWebsiteDataStoreRemover()
+        let sharedRuntime = BrowserPageRuntimeStore()
         let primaryPool = BrowserPagePool(
+            runtimeStore: sharedRuntime,
             usesEphemeralWebsiteDataStores: false,
             websiteDataStoreRemover: remover
         )
         let secondaryPool = BrowserPagePool(
+            runtimeStore: sharedRuntime,
             usesEphemeralWebsiteDataStores: false,
             websiteDataStoreRemover: remover
         )
+        let temporaryPool = BrowserPagePool(usesEphemeralWebsiteDataStores: false, websiteDataStoreRemover: remover)
         let registry = BrowserPagePoolRegistry(primary: primaryPool)
         registry.register(secondaryPool)
+        registry.register(temporaryPool)
         primaryPool.select(tab: tab, space: space)
         secondaryPool.select(tab: tab, space: space)
+        temporaryPool.select(tab: temporaryTab, space: temporarySpace)
 
         try await registry.deleteData(for: space)
 
         XCTAssertFalse(primaryPool.retainedTabIDs.contains(tab.id))
         XCTAssertFalse(secondaryPool.retainedTabIDs.contains(tab.id))
+        XCTAssertFalse(
+            temporaryPool.retainedTabIDs.contains(temporaryTab.id),
+            "Deleting source profile data also releases tabs that exist only in its temporary workspace.")
+        XCTAssertNil(secondaryPool.activeTabID)
+        XCTAssertNil(temporaryPool.activeTabID)
         XCTAssertEqual(remover.removedProfileIDs, [space.profile.id])
     }
 

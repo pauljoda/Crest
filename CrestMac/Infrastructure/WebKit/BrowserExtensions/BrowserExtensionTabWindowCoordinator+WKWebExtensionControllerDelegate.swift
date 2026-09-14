@@ -477,9 +477,9 @@ extension BrowserExtensionTabWindowCoordinator:
         let selectedID = currentState?.space(spaceID)?.selectedTabID
         let window =
             adapter?.webView(for: context)?.window
-            ?? selectedID.flatMap { pageProvider?.extensionWebView(for: $0, in: spaceID)?.window }
+            ?? selectedID.flatMap { pageProvider(for: $0, in: spaceID)?.extensionWebView(for: $0, in: spaceID)?.window }
             ?? currentState?.space(spaceID)?.tabs.lazy.compactMap {
-                self.pageProvider?.extensionWebView(for: $0.id, in: spaceID)?.window
+                self.pageProvider(for: $0.id, in: spaceID)?.extensionWebView(for: $0.id, in: spaceID)?.window
             }.first
         guard let window, window.isVisible, currentState?.selectedSpaceID == spaceID else {
             completion(granted, nil)

@@ -79,7 +79,7 @@ struct BrowserSidebarSpacePage: View {
             commandSurfaceNamespace: commandSurfaceNamespace,
             tabPromotionNamespace: tabPromotionNamespace,
             editSpace: { actions.presentSpaceSettings(pageSpace) },
-            createSpace: { actions.createSpace?() },
+            createSpace: actions.createSpace,
             utilitySurface: utilityPresentation.surface,
             utilitySearchText: utilitySearchText,
             utilityFilter: utilityFilter,

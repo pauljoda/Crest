@@ -37,6 +37,12 @@ struct BrowserCommands: Commands {
             )
             .keyboardShortcut(shortcut(.newWindow))
             Button(
+                "New Blank Window", systemImage: BrowserShortcutCommand.newBlankWindow.paletteSymbol,
+                action: actions.openBlankWindow
+            )
+            .keyboardShortcut(shortcut(.newBlankWindow))
+            .disabled(commandBrowser.isPrivateBrowsing)
+            Button(
                 "New Tab",
                 systemImage: BrowserShortcutCommand.newTab.paletteSymbol,
                 action: actions.openNewTab

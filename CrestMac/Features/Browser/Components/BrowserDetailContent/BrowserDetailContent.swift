@@ -16,6 +16,15 @@ struct BrowserDetailContent: View {
     let isCommandPalettePresented: Bool
 
     var body: some View {
+        if let tab, let space, !spaceAccess.isLocked(space), pages.isMirroringPage(for: tab.id) {
+            BrowserMirroredPageContent(tabID: tab.id, pages: pages)
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch pagePresentation {
         case .noSelection:
             Color.clear

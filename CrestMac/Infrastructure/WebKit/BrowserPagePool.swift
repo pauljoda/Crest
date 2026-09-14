@@ -47,7 +47,14 @@ final class BrowserPagePool:
     /// zoom, sharing, and every lifecycle observer speak for. Split View adds
     /// cards beside it without adding a second focus.
     private(set) var activeTabID: TabID? {
-        willSet { if activeTabID != newValue { activePage?.translation.suspend() } }
+        willSet {
+            if let activeTabID, activeTabID != newValue,
+                tabRuntimes[activeTabID]?.presentationWindowID == windowID,
+                !runtimeStore.isPresented(activeTabID, outside: windowID)
+            {
+                activePage?.translation.suspend()
+            }
+        }
     }
 
     /// Every card the content area is presenting, in session member order.
@@ -60,8 +67,18 @@ final class BrowserPagePool:
     ///
     /// Deliberately observable: a card mount reads it through
     /// `presentedPage(for:)` and has to re-render when membership changes.
-    private(set) var presentedTabIDs: [TabID] = []
-    private(set) var residencyRevision = 0
+    private(set) var presentedTabIDs: [TabID] = [] {
+        didSet { runtimeStore.updatePresentation(of: self) }
+    }
+    private(set) var residencyRevision: Int {
+        get { runtimeStore.revision }
+        set { runtimeStore.revision = newValue }
+    }
+    let runtimeStore: BrowserPageRuntimeStore
+    let windowID: BrowserWindowID
+    @ObservationIgnored private weak var presentationWindow: NSWindow?
+    private(set) var isWindowFocused = true
+    var publishesPageMetadataCentrally: Bool { runtimeStore.publishesPageMetadataCentrally }
     var contentBlockingErrorDescription: String? { contentBlocking.errorDescription }
     let downloadCenter: BrowserDownloadCenter
     let extensionControllerPool: BrowserExtensionControllerPool
@@ -70,15 +87,30 @@ final class BrowserPagePool:
     let capturesExtensionConsole: Bool
     @ObservationIgnored private let extensionWebpageMenuProvider: BrowserExtensionWebpageMenuProvider
     let permissionCenter: BrowserSitePermissionCenter
-    let serverTrustOverrides = BrowserServerTrustOverrideStore()
+    var serverTrustOverrides: BrowserServerTrustOverrideStore { profileDataStores.serverTrustOverrides }
 
     /// Each tab owns its current and suspended configurations, including the
     /// history links that bridge ordinary pages and extension origins.
-    @ObservationIgnored private var tabRuntimes: [TabID: BrowserTabRuntime] = [:]
-    @ObservationIgnored private var inactiveSinceByTabID: [TabID: Date] = [:]
-    @ObservationIgnored private var ephemeralDataStores: [UUID: WKWebsiteDataStore] = [:]
+    private var tabRuntimes: [TabID: BrowserTabRuntime] {
+        get { runtimeStore.runtimes }
+        set { runtimeStore.runtimes = newValue }
+    }
+    private var inactiveSinceByTabID: [TabID: Date] {
+        get { runtimeStore.inactiveSinceByTabID }
+        set { runtimeStore.inactiveSinceByTabID = newValue }
+    }
+    @ObservationIgnored private let profileDataStores: BrowserPageProfileDataStores
+    private var ephemeralDataStores: [UUID: WKWebsiteDataStore] {
+        get { profileDataStores.ephemeral }
+        set { profileDataStores.ephemeral = newValue }
+    }
     @ObservationIgnored private let residencyDecisionProvider: ResidencyDecisionProvider
-    @ObservationIgnored private var memoryPressureReleaseTask: Task<Void, Never>?
+    private var memoryPressureReleaseTask: Task<Void, Never>? {
+        get { runtimeStore.memoryPressureTask }
+        set { runtimeStore.memoryPressureTask = newValue }
+    }
+    @ObservationIgnored private let monitorsMemoryPressure: Bool
+    @ObservationIgnored private let contentRuleListProvider: any BrowserContentRuleListProviding
     @ObservationIgnored private let browsingMode: BrowserBrowsingMode
     @ObservationIgnored private let usesEphemeralWebsiteDataStores: Bool
     @ObservationIgnored private let pageZoomPreferences: BrowserDefaultPageZoomStore
@@ -107,7 +139,10 @@ final class BrowserPagePool:
     @ObservationIgnored private let websiteDataStoreRemover: any BrowserWebsiteDataStoreRemoving
     @ObservationIgnored private let contentBlocking: BrowserContentBlockingController
     @ObservationIgnored private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
-    @ObservationIgnored private var memoryPressureCoalescer = BrowserMemoryPressureCoalescer()
+    private var memoryPressureCoalescer: BrowserMemoryPressureCoalescer {
+        get { runtimeStore.memoryPressureCoalescer }
+        set { runtimeStore.memoryPressureCoalescer = newValue }
+    }
     @ObservationIgnored private var peekPageLeases:
         [UUID: (request: BrowserPeekRequest, lease: BrowserTransientPageLease)] = [:]
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
@@ -116,8 +151,14 @@ final class BrowserPagePool:
     @ObservationIgnored private var transientExtensionPages: [TabID: BrowserPage] = [:]
     @ObservationIgnored private var extensionOffscreenDocuments:
         [ExtensionOffscreenDocumentKey: BrowserExtensionOffscreenDocument] = [:]
-    @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
-    @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
+    private var spacesReleasingData: Set<SpaceID> {
+        get { runtimeStore.spacesReleasingData }
+        set { runtimeStore.spacesReleasingData = newValue }
+    }
+    private var spacesDeletingData: Set<SpaceID> {
+        get { runtimeStore.spacesDeletingData }
+        set { runtimeStore.spacesDeletingData = newValue }
+    }
     /// Where unloaded tabs leave their WebKit session state. Its archive is nil
     /// for a private pool, even if an archive is handed in.
     @ObservationIgnored private let tabState: BrowserTabStateCoordinator
@@ -125,6 +166,9 @@ final class BrowserPagePool:
     @ObservationIgnored private var backgroundPageAssignments: [TabID: BrowserSpaceRuntimeAssignment] = [:]
 
     init(
+        runtimeStore: BrowserPageRuntimeStore? = nil,
+        windowID: BrowserWindowID = BrowserWindowID(),
+        profileDataStores: BrowserPageProfileDataStores? = nil,
         monitorsMemoryPressure: Bool = false,
         browsingMode: BrowserBrowsingMode = .standard,
         usesEphemeralWebsiteDataStores: Bool =
@@ -140,6 +184,7 @@ final class BrowserPagePool:
         hostedNotificationCenter:
             (any BrowserHostedWebNotificationCentering)? = nil,
         mediaSessionStore: BrowserMediaSessionStore? = nil,
+        downloadCenter: BrowserDownloadCenter? = nil,
         downloadLedger: BrowserDownloadLedger = BrowserDownloadLedger(),
         loadHTTPAuthenticationCredential:
             @escaping HTTPAuthenticationCredentialLoader = { _, _ in nil },
@@ -172,9 +217,17 @@ final class BrowserPagePool:
         self.usesEphemeralWebsiteDataStores =
             usesEphemeralWebsiteDataStores || browsingMode.isPrivate
         self.pageZoomPreferences = pageZoomPreferences
-        tabState = BrowserTabStateCoordinator(
-            archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive
-        )
+        let owner =
+            runtimeStore
+            ?? BrowserPageRuntimeStore(
+                archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive
+            )
+        self.runtimeStore = owner
+        self.windowID = windowID
+        self.profileDataStores = profileDataStores ?? BrowserPageProfileDataStores()
+        self.monitorsMemoryPressure = monitorsMemoryPressure
+        self.contentRuleListProvider = contentRuleListProvider
+        tabState = owner.tabState
         self.extensionControllerPool = extensionControllerPool
         self.capturesExtensionConsole = capturesExtensionConsole
         extensionWebpageMenuProvider = BrowserExtensionWebpageMenuProvider(
@@ -199,45 +252,256 @@ final class BrowserPagePool:
         self.splitLinkHost = splitLinkHost
         self.linkDestinationHost = linkDestinationHost
         self.activateHostedNotificationSource = activateHostedNotificationSource
-        downloadCenter = BrowserDownloadCenter(
-            ledger: downloadLedger,
-            promptForCredentials: { prompt, spaceName in
-                await dialogPresenter.presentHTTPAuthentication(
-                    prompt: prompt,
-                    spaceName: spaceName
-                )
-            },
-            allowsCredentialSaving: !browsingMode.isPrivate,
-            loadCredential: loadHTTPAuthenticationCredential,
-            saveCredential: saveHTTPAuthenticationCredential,
-            approveRiskyDownload: { assessment, sourceURL, spaceName in
-                await dialogPresenter.approveRiskyDownload(
-                    assessment: assessment,
-                    sourceURL: sourceURL,
-                    spaceName: spaceName
-                )
-            },
-            permissionCenter: permissionCenter,
-            approveAutomaticDownload: { filename, origin, spaceName in
-                await dialogPresenter.presentAutomaticDownloadPermission(
-                    filename: filename,
-                    origin: origin,
-                    spaceName: spaceName
-                )
-            }
-        )
+        self.downloadCenter =
+            downloadCenter
+            ?? BrowserDownloadCenter(
+                ledger: downloadLedger,
+                promptForCredentials: { prompt, spaceName in
+                    await dialogPresenter.presentHTTPAuthentication(
+                        prompt: prompt,
+                        spaceName: spaceName
+                    )
+                },
+                allowsCredentialSaving: !browsingMode.isPrivate,
+                loadCredential: loadHTTPAuthenticationCredential,
+                saveCredential: saveHTTPAuthenticationCredential,
+                approveRiskyDownload: { assessment, sourceURL, spaceName in
+                    await dialogPresenter.approveRiskyDownload(
+                        assessment: assessment,
+                        sourceURL: sourceURL,
+                        spaceName: spaceName
+                    )
+                },
+                permissionCenter: permissionCenter,
+                approveAutomaticDownload: { filename, origin, spaceName in
+                    await dialogPresenter.presentAutomaticDownloadPermission(
+                        filename: filename,
+                        origin: origin,
+                        spaceName: spaceName
+                    )
+                }
+            )
         if monitorsMemoryPressure {
             installMemoryPressureSource()
         }
         pageZoomPreferences.register(self)
+        self.runtimeStore.register(self)
     }
 
     deinit {
-        memoryPressureReleaseTask?.cancel()
         memoryPressureSource?.cancel()
     }
 
-    let nativeTabs = BrowserNativeTabStore()
+    var nativeTabs: BrowserNativeTabStore { runtimeStore.nativeTabs }
+
+    func bindNativeWindow(_ window: NSWindow?) {
+        presentationWindow = window
+    }
+
+    func setWindowFocused(_ focused: Bool) {
+        isWindowFocused = focused
+        if focused { runtimeStore.focus(self) }
+    }
+
+    func releaseWindowPresentation() {
+        presentationWindow = nil
+        activeTabID = nil
+        presentedTabIDs = []
+        runtimeStore.unregister(self)
+    }
+
+    func isMirroringPage(for tabID: TabID) -> Bool {
+        _ = residencyRevision
+        guard presentedTabIDs.contains(tabID), let runtime = tabRuntimes[tabID] else { return false }
+        return runtime.presentationWindowID != nil && runtime.presentationWindowID != windowID
+    }
+
+    func mirroredPageSnapshot(for tabID: TabID) -> NSImage? {
+        _ = residencyRevision
+        return tabRuntimes[tabID]?.snapshot
+    }
+
+    func claimPresentedPage(for tabID: TabID) {
+        runtimeStore.claim(tabID, for: self)
+    }
+
+    func removeTransferredPresentation(_ tabID: TabID) {
+        presentedTabIDs.removeAll { $0 == tabID }
+        if activeTabID == tabID { activeTabID = nil }
+        forgetBackgroundPageObservation(for: tabID)
+    }
+
+    /// The caller commits the matching model move in the same main-actor turn.
+    /// No load, teardown or archive may occur while transferring the runtime.
+    func transferTabRuntime(
+        from source: BrowserPagePool,
+        matching assignment: BrowserTabRuntimeAssignment,
+        as tab: BrowserTab,
+        in space: BrowserSpace
+    ) -> Bool {
+        guard canTransferTabRuntime(from: source, matching: assignment, as: tab, in: space) else { return false }
+        guard source.runtimeStore !== runtimeStore else { return true }
+        if source.nativeTabs.contains(assignment) {
+            guard source.nativeTabs.transfer(matching: assignment, to: nativeTabs) else { return false }
+            source.runtimeStore.removePresentation(of: tab.id)
+            return true
+        }
+        guard let runtime = source.tabRuntimes[tab.id] else {
+            if let url = tab.url,
+                let state = source.archivedInteractionState(
+                    for: tab, spaceID: space.id, profileID: space.profile.id, expecting: url)
+            {
+                tabState.prepareCopy(state, url: url, for: assignment)
+            }
+            source.tabState.discardState(matching: assignment)
+            source.runtimeStore.removePresentation(of: tab.id)
+            return true
+        }
+        source.tabRuntimes.removeValue(forKey: tab.id)
+        source.inactiveSinceByTabID[tab.id] = nil
+        source.tabState.discardState(matching: assignment)
+        source.runtimeStore.removePresentation(of: tab.id)
+        source.residencyRevision &+= 1
+        runtime.presentationWindowID = nil
+        runtimeStore.install(runtime, for: tab.id, from: self)
+        for page in runtime.allPages {
+            page.updateNavigationContext(
+                tab: tab,
+                automaticallyOpensPeek: BrowserLinkPreferenceStore.shared.preferences.automaticallyOpensPeek)
+        }
+        extensionControllerPool.setExtensionTabOwner(tab.id, in: space.id, windowID: windowID)
+        residencyRevision &+= 1
+        return true
+    }
+
+    func canTransferTabRuntime(
+        from source: BrowserPagePool,
+        matching assignment: BrowserTabRuntimeAssignment,
+        as tab: BrowserTab,
+        in space: BrowserSpace
+    ) -> Bool {
+        guard assignment.tabID == tab.id, assignment.spaceID == space.id,
+            assignment.profileID == space.profile.id,
+            !isRuntimeCreationBlocked(in: space.id),
+            !source.isRuntimeCreationBlocked(in: space.id)
+        else { return false }
+        guard source.runtimeStore !== runtimeStore else { return true }
+        guard tabRuntimes[tab.id] == nil, !nativeTabs.tabIDs.contains(tab.id) else { return false }
+        if source.nativeTabs.tabIDs.contains(tab.id) { return source.nativeTabs.contains(assignment) }
+        guard let runtime = source.tabRuntimes[tab.id] else { return true }
+        return runtime.page.spaceID == space.id && runtime.page.profileID == space.profile.id
+    }
+
+    /// Temporary windows end the lifetime of their own workspace. Normal
+    /// windows only call releaseWindowPresentation and retain shared pages.
+    func closeWindowWorkspace() {
+        releaseWindowPresentation()
+        reconcile(validTabIDs: [])
+        releaseAllTransientPages()
+        releaseAllExtensionOffscreenDocuments()
+        closeExtensionSidebars()
+    }
+
+    func setRuntimeCreationBlocked(_ blocked: Bool, in spaceID: SpaceID) {
+        if blocked {
+            runtimeStore.blockedSpaces.insert(spaceID)
+            profileDataStores.blockedSpaces.insert(spaceID)
+        } else {
+            runtimeStore.blockedSpaces.remove(spaceID)
+            profileDataStores.blockedSpaces.remove(spaceID)
+        }
+    }
+
+    private func isRuntimeCreationBlocked(in spaceID: SpaceID) -> Bool {
+        spacesReleasingData.contains(spaceID) || spacesDeletingData.contains(spaceID)
+            || runtimeStore.blockedSpaces.contains(spaceID) || profileDataStores.blockedSpaces.contains(spaceID)
+    }
+
+    func bindRuntimeRouting(_ runtime: BrowserTabRuntime, tabID: TabID) {
+        for page in runtime.allPages {
+            page.host = self
+            page.windowRouting?.pool = self
+            page.downloadCenter = downloadCenter
+            page.splitLinkHost = splitLinkHost
+            page.linkDestinationHost = linkDestinationHost
+        }
+    }
+
+    func publishRuntimePageUpdate(
+        _ runtime: BrowserTabRuntime, tabID: TabID,
+        previous: BrowserBackgroundPageSnapshot?, current: BrowserBackgroundPageSnapshot
+    ) {
+        let page = runtime.page
+        let completedURL = current.completedNavigationCount > (previous?.completedNavigationCount ?? 0) ? page.url : nil
+        let update = BrowserBackgroundPageUpdate(
+            tabID: tabID,
+            assignment: BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID),
+            url: current.url, title: current.title, faviconData: current.faviconData, iconAccent: current.iconAccent,
+            estimatedProgress: current.estimatedProgress, isLoading: current.isLoading,
+            readerModeState: current.readerModeState, completedNavigationURL: completedURL,
+            processTerminationCount: current.processTerminationCount)
+        guard let session = backgroundPageDidUpdate(update) else { return }
+        extensionControllerPool.reconcileExtensionState(in: session)
+        if completedURL != nil, let space = session.space(id: page.spaceID), space.profile.id == page.profileID {
+            Task { @MainActor [weak self] in await self?.styleVisitedLinks(in: space) }
+        }
+    }
+
+    func makeWindowPool(
+        browser: BrowserStore,
+        windowID: BrowserWindowID,
+        sharesRuntimes: Bool,
+        transientBrowsing: BrowserTransientBrowsingCoordinator,
+        spaceAccess: BrowserSpaceAccessController
+    ) -> BrowserPagePool {
+        let owner = sharesRuntimes ? runtimeStore : BrowserPageRuntimeStore()
+        owner.publishesPageMetadataCentrally = true
+        let pool = BrowserPagePool(
+            runtimeStore: owner, windowID: windowID, profileDataStores: profileDataStores,
+            monitorsMemoryPressure: monitorsMemoryPressure, browsingMode: browsingMode,
+            usesEphemeralWebsiteDataStores: usesEphemeralWebsiteDataStores,
+            pageZoomPreferences: pageZoomPreferences, extensionControllerPool: extensionControllerPool,
+            capturesExtensionConsole: capturesExtensionConsole, chromeWebStoreProvider: chromeWebStoreProvider,
+            mozillaAddonsProvider: mozillaAddonsProvider, permissionCenter: permissionCenter,
+            hostedNotificationCenter: hostedNotificationCenter, mediaSessionStore: mediaSessionStore,
+            downloadCenter: downloadCenter,
+            loadHTTPAuthenticationCredential: { [weak browser] protectionSpace, spaceID in
+                try await browser?.httpAuthenticationCredential(for: protectionSpace, in: spaceID)
+            },
+            saveHTTPAuthenticationCredential: { [weak browser] request, spaceID in
+                try await browser?.saveHTTPAuthenticationCredential(
+                    username: request.username, password: request.password, protectionSpace: request.protectionSpace,
+                    in: spaceID, replacing: request.replacing)
+            },
+            websiteDataStoreRemover: websiteDataStoreRemover, contentRuleListProvider: contentRuleListProvider,
+            popupTabHost: browser.popupTabHost,
+            openNewTab: { [weak browser] url in browser?.openNewTab(url: url) },
+            openModifiedLink: { [weak browser] url, spaceID, selecting in
+                guard let browser, let tabID = browser.openNewTab(url: url, in: spaceID, selecting: selecting),
+                    let space = browser.session.space(id: spaceID),
+                    let tab = space.tabs.first(where: { $0.id == tabID })
+                else { return nil }
+                return BrowserModifiedLinkRegistration(tab: tab, space: space, session: browser.session)
+            },
+            backgroundPageDidUpdate: { [weak browser] update in
+                guard let browser else { return nil }
+                browser.updateBackgroundPage(update)
+                return browser.session
+            },
+            openPeek: { [weak transientBrowsing] in transientBrowsing?.presentPeek($0) },
+            handleLinkDrag: { [weak transientBrowsing] in transientBrowsing?.handleLinkDrag($0) },
+            splitLinkHost: browser.splitLinkHost,
+            linkDestinationHost: BrowserLinkDestinationHost(browser: browser, spaceAccess: spaceAccess),
+            activateHostedNotificationSource: { [weak browser] spaceID, tabID in
+                browser?.selectSpace(spaceID)
+                browser?.selectTab(tabID)
+            },
+            residencyDecisionProvider: residencyDecisionProvider)
+        browser.tabLinkProvider = pool
+        browser.tabCopying = pool
+        pool.setWindowFocused(false)
+        return pool
+    }
 
     var retainedTabIDs: Set<TabID> {
         _ = residencyRevision
@@ -299,8 +563,11 @@ final class BrowserPagePool:
     /// card would put a second host on a web view that already has one.
     func presentedPage(for tabID: TabID) -> BrowserPage? {
         _ = residencyRevision
-        guard presentedTabIDs.contains(tabID) else { return nil }
-        return tabRuntimes[tabID]?.page
+        guard presentedTabIDs.contains(tabID),
+            let runtime = tabRuntimes[tabID],
+            runtime.presentationWindowID == windowID
+        else { return nil }
+        return runtime.page
     }
 
     func extensionWebView(
@@ -514,10 +781,11 @@ final class BrowserPagePool:
         )
     }
 
-    /// The window presenting a Space. Spaces share one browser window, so this
-    /// prefers the active page and otherwise accepts any resident page of the
-    /// Space that is currently in a window.
+    /// A registered shell is authoritative even when its workspace is empty
+    /// or another window owns the selected tab's WebKit view.
     private func hostingWindow(for spaceID: SpaceID) -> NSWindow? {
+        if let presentationWindow { return presentationWindow }
+        guard !publishesPageMetadataCentrally else { return nil }
         if let activePage, activePage.spaceID == spaceID,
             let window = activePage.webView.window
         {
@@ -542,7 +810,7 @@ final class BrowserPagePool:
 
     func prepareExtensionTab(for tabID: TabID, in spaceID: SpaceID, session: BrowserSession) {
         guard let space = session.space(id: spaceID), let tab = space.tabs.first(where: { $0.id == tabID }),
-            !spacesReleasingData.contains(spaceID), !spacesDeletingData.contains(spaceID), tab.nativeContent == nil
+            !isRuntimeCreationBlocked(in: spaceID), tab.nativeContent == nil
         else { return }
         let page = page(for: tab, space: space)
         if !presentedTabIDs.contains(tabID) {
@@ -560,8 +828,7 @@ final class BrowserPagePool:
     func prepareExtensionSelection(session: BrowserSession) {
         guard let tab = session.selectedTab, tab.nativeContent == nil,
             let space = session.selectedSpace,
-            !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id)
+            !isRuntimeCreationBlocked(in: space.id)
         else {
             return
         }
@@ -646,8 +913,7 @@ final class BrowserPagePool:
         }
 
         guard let tab, let space,
-            !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id)
+            !isRuntimeCreationBlocked(in: space.id)
         else {
             deactivatePagePresentation(at: time)
             return []
@@ -699,6 +965,7 @@ final class BrowserPagePool:
         for tabID: TabID,
         in space: BrowserSpace
     ) {
+        guard !publishesPageMetadataCentrally else { return }
         backgroundPageAssignments[tabID] = BrowserSpaceRuntimeAssignment(space: space)
         backgroundPageSnapshots[tabID] = BrowserBackgroundPageSnapshot(page: page)
         trackBackgroundPageChanges(page, for: tabID)
@@ -738,7 +1005,9 @@ final class BrowserPagePool:
             inactiveSinceByTabID[tabID] = .now
         }
 
-        guard previous != current, !presentedTabIDs.contains(tabID) else {
+        guard !publishesPageMetadataCentrally,
+            previous != current, !presentedTabIDs.contains(tabID)
+        else {
             return
         }
         let completedNavigationURL: URL? =
@@ -821,20 +1090,21 @@ final class BrowserPagePool:
     /// a split open has to take every card away, and half a split left on
     /// screen would be the privacy failure the gate exists to prevent.
     func deactivatePagePresentation(at time: Date = .now) {
-        for page in tabRuntimes.values.lazy.map(\.page) { page.pictureInPicture.invalidate() }
+        for runtime in tabRuntimes.values where runtime.presentationWindowID == windowID {
+            runtime.page.pictureInPicture.invalidate()
+        }
         guard activeTabID != nil || !presentedTabIDs.isEmpty else { return }
-        for tabID in presentedTabIDs {
+        for tabID in presentedTabIDs where tabRuntimes[tabID]?.presentationWindowID == windowID {
             tabRuntimes[tabID]?.page.focusRestoration.invalidate()
         }
-        activePage?.focusRestoration.invalidate()
         for tabID in presentedTabIDs {
             inactiveSinceByTabID[tabID] = time
         }
         if let activeTabID, !presentedTabIDs.contains(activeTabID) {
             inactiveSinceByTabID[activeTabID] = time
         }
-        presentedTabIDs = []
         activeTabID = nil
+        presentedTabIDs = []
     }
 
     func restoreExtensions(in session: BrowserSession) async {
@@ -859,7 +1129,7 @@ final class BrowserPagePool:
         let update = await contentBlocking.reconcile(in: session)
         for (tabID, runtime) in tabRuntimes {
             let page = runtime.page
-            let isPresentedPage = presentedTabIDs.contains(tabID)
+            let isPresentedPage = runtimeStore.presentedTabIDs.contains(tabID)
             page.applyContentBlocking(
                 policy: update.policy(for: page.spaceID),
                 balancedRuleLists: contentBlocking.balancedRuleLists ?? [],
@@ -970,7 +1240,8 @@ final class BrowserPagePool:
     /// inactive page reaches its idle deadline.
     func archiveResidentTabStates() {
         guard tabState.archivesResidentPages else { return }
-        for tabID in tabRuntimes.keys {
+        for (tabID, runtime) in tabRuntimes
+        where runtime.routingWindowID == windowID || !publishesPageMetadataCentrally {
             archiveTabState(for: tabID)
         }
     }
@@ -1045,13 +1316,16 @@ final class BrowserPagePool:
     }
 
     func releaseWindowRuntime(for space: BrowserSpace) async {
+        let nativeTabIDs = nativeTabs.tabIDs(in: space.id)
         nativeTabs.remove(in: space.id)
         guard spacesReleasingData.insert(space.id).inserted else { return }
         defer { spacesReleasingData.remove(space.id) }
 
         let tabIDs = Set(
-            space.tabs.map(\.id) + space.archivedTabs.map(\.id)
-        )
+            tabRuntimes.compactMap { tabID, runtime in
+                runtime.page.spaceID == space.id || runtime.page.profileID == space.profile.id ? tabID : nil
+            }
+        ).union(nativeTabIDs)
         releaseExtensionOffscreenDocuments(in: space.id)
         let pageReleaseProbes =
             releasePages(for: tabIDs)
@@ -1225,7 +1499,8 @@ final class BrowserPagePool:
         transientExtensionPages[tabID] = page
         extensionControllerPool.registerTransientExtensionTab(
             BrowserExtensionTransientTab(id: tabID, url: url),
-            in: spaceID
+            in: spaceID,
+            windowID: windowID
         )
     }
 
@@ -1248,8 +1523,7 @@ final class BrowserPagePool:
         as tabID: TabID,
         in space: BrowserSpace
     ) -> Bool {
-        guard !spacesReleasingData.contains(space.id),
-            !spacesDeletingData.contains(space.id),
+        guard !isRuntimeCreationBlocked(in: space.id),
             let page = lease.page
         else { return false }
         let assignment = BrowserSpaceRuntimeAssignment(space: space)
@@ -1276,8 +1550,7 @@ final class BrowserPagePool:
     private func canHostTransientPage(
         matching assignment: BrowserSpaceRuntimeAssignment
     ) -> Bool {
-        !spacesReleasingData.contains(assignment.spaceID)
-            && !spacesDeletingData.contains(assignment.spaceID)
+        !isRuntimeCreationBlocked(in: assignment.spaceID)
     }
 
     func navigatePopupInCurrentPage(
@@ -1285,8 +1558,7 @@ final class BrowserPagePool:
         opener: BrowserPage
     ) -> Bool {
         guard request.url != nil,
-            !spacesReleasingData.contains(opener.spaceID),
-            !spacesDeletingData.contains(opener.spaceID),
+            !isRuntimeCreationBlocked(in: opener.spaceID),
             transientLeases.values.contains(where: {
                 $0.value?.page === opener
             })
@@ -1314,8 +1586,7 @@ final class BrowserPagePool:
         selecting: Bool = true
     ) -> WKWebView? {
         guard tabID(for: opener) != nil,
-            !spacesReleasingData.contains(opener.spaceID),
-            !spacesDeletingData.contains(opener.spaceID),
+            !isRuntimeCreationBlocked(in: opener.spaceID),
             let registration = popupTabHost.openTab(requestedURL, opener.spaceID, selecting),
             registration.space.id == opener.spaceID,
             registration.space.profile.id == opener.profileID
@@ -1506,8 +1777,7 @@ final class BrowserPagePool:
     private func unloadPage(for tabID: TabID, preservingTabState: Bool) {
         if nativeTabs.tabIDs.contains(tabID) {
             nativeTabs.remove(tabID)
-            if activeTabID == tabID { activeTabID = nil }
-            presentedTabIDs.removeAll { $0 == tabID }
+            runtimeStore.removePresentation(of: tabID)
         }
         // Archived before the page is torn down: a tab closed by hand can be
         // reopened, and a tab unloaded by hand is expected to come back where it
@@ -1517,8 +1787,7 @@ final class BrowserPagePool:
         forgetBackgroundPageObservation(for: tabID)
         runtime.prepareForRelease()
         inactiveSinceByTabID[tabID] = nil
-        if activeTabID == tabID { activeTabID = nil }
-        presentedTabIDs.removeAll { $0 == tabID }
+        runtimeStore.removePresentation(of: tabID)
         residencyRevision &+= 1
     }
 
@@ -1710,7 +1979,7 @@ final class BrowserPagePool:
         at time: Date = .now
     ) {
         guard memoryPressureCoalescer.shouldHandle(level, at: time) else { return }
-        releaseTransientPages(for: level)
+        for pool in runtimeStore.registeredPools { pool.releaseTransientPages(for: level) }
         memoryPressureReleaseTask?.cancel()
         memoryPressureReleaseTask = Task { @MainActor [weak self] in
             await self?.releaseInactivePages(for: level)
@@ -1799,6 +2068,11 @@ final class BrowserPagePool:
             runtime.suspendedPages.first { $0.matches(extensionConfiguration) }
             ?? makePage(space: space, tabID: tabID, extensionConfiguration: extensionConfiguration)
         runtime.replaceCurrentPage(with: replacement)
+        if let owner = runtime.routingWindowID,
+            let pool = runtimeStore.registeredPools.first(where: { $0.windowID == owner })
+        {
+            pool.bindRuntimeRouting(runtime, tabID: tabID)
+        }
         residencyRevision &+= 1
         return replacement
     }
@@ -1817,6 +2091,7 @@ final class BrowserPagePool:
         }
 
         let contentRuleLists = contentRuleLists(for: space)
+        let routing = BrowserPageWindowRouting(pool: self)
         let page = BrowserPage(
             configuration: adoptedConfiguration
                 ?? extensionConfiguration?.webViewConfiguration
@@ -1874,18 +2149,18 @@ final class BrowserPagePool:
                 try await extensionControllerPool
                     .installMozillaAddonsExtension(candidate, in: space)
             },
-            loadHTTPAuthenticationCredential: { [loadHTTPAuthenticationCredential] protectionSpace in
-                try await loadHTTPAuthenticationCredential(protectionSpace, space.id)
+            loadHTTPAuthenticationCredential: { [weak routing] protectionSpace in
+                try await routing?.pool?.loadHTTPAuthenticationCredential(protectionSpace, space.id)
             },
-            saveHTTPAuthenticationCredential: { [saveHTTPAuthenticationCredential] request in
-                try await saveHTTPAuthenticationCredential(request, space.id)
+            saveHTTPAuthenticationCredential: { [weak routing] request in
+                try await routing?.pool?.saveHTTPAuthenticationCredential(request, space.id)
             },
-            openNewTab: openNewTab,
-            openModifiedLink: { [weak self] url, spaceID, selecting in
-                self?.openModifiedLink(url, in: spaceID, selecting: selecting)
+            openNewTab: { [weak routing] url in routing?.pool?.openNewTab(url) },
+            openModifiedLink: { [weak routing] url, spaceID, selecting in
+                routing?.pool?.openModifiedLink(url, in: spaceID, selecting: selecting)
             },
-            openPeek: openPeek,
-            handleLinkDrag: handleLinkDrag,
+            openPeek: { [weak routing] in routing?.pool?.openPeek($0) },
+            handleLinkDrag: { [weak routing] in routing?.pool?.handleLinkDrag($0) },
             splitLinkHost: splitLinkHost,
             linkDestinationHost: linkDestinationHost,
             extensionWebpageMenuItems: {
@@ -1899,6 +2174,7 @@ final class BrowserPagePool:
             }
         )
         page.host = self
+        page.windowRouting = routing
         return page
     }
 
@@ -1909,8 +2185,9 @@ final class BrowserPagePool:
     private func retainResidentPage(_ page: BrowserPage, for tabID: TabID) {
         if let runtime = tabRuntimes[tabID] {
             runtime.page = page
+            runtime.observeCurrentPage()
         } else {
-            tabRuntimes[tabID] = BrowserTabRuntime(page: page)
+            runtimeStore.install(BrowserTabRuntime(page: page), for: tabID, from: self)
         }
     }
 
@@ -2075,7 +2352,10 @@ final class BrowserPagePool:
         let departures = ([activeTabID].compactMap { $0 } + self.presentedTabIDs)
             .filter { departed.contains($0) }
         var requested: Set<TabID> = []
-        for departedTabID in departures where requested.insert(departedTabID).inserted {
+        for departedTabID in departures
+        where requested.insert(departedTabID).inserted
+            && !runtimeStore.isPresented(departedTabID, outside: windowID)
+        {
             tabRuntimes[departedTabID]?.page.pictureInPicture.leaveTab()
         }
         for arrivingTabID in presentedTabIDs where !self.presentedTabIDs.contains(arrivingTabID) {
@@ -2092,13 +2372,23 @@ final class BrowserPagePool:
         for presentedTabID in presentedTabIDs {
             inactiveSinceByTabID[presentedTabID] = nil
         }
-        self.presentedTabIDs = presentedTabIDs
         activeTabID = tabID
+        self.presentedTabIDs = presentedTabIDs
     }
 
     private func prepareFocusTransition(to destination: BrowserPage?) {
         let source = activePage
         guard source !== destination else { return }
+        if let destination, !isWindowFocused,
+            let runtime = tabRuntimes.values.first(where: { $0.page === destination }),
+            let owner = runtime.presentationWindowID, owner != windowID
+        {
+            return
+        }
+        guard
+            activeTabID.flatMap({ tabRuntimes[$0]?.presentationWindowID }) == windowID
+                || source == nil
+        else { return }
         guard let source, let destination else {
             source?.focusRestoration.invalidate()
             destination?.focusRestoration.invalidate()
@@ -2121,7 +2411,9 @@ final class BrowserPagePool:
         var releasedAnyPage = false
         var probes: [BrowserSpaceDataReleaseProbe] = []
         for tabID in tabIDs {
-            guard let runtime = tabRuntimes.removeValue(forKey: tabID) else { continue }
+            let runtime = tabRuntimes.removeValue(forKey: tabID)
+            runtimeStore.removePresentation(of: tabID)
+            guard let runtime else { continue }
             forgetBackgroundPageObservation(for: tabID)
             probes.append(contentsOf: runtime.allPages.map { BrowserSpaceDataReleaseProbe($0) })
             runtime.prepareForRelease()
@@ -2144,7 +2436,7 @@ final class BrowserPagePool:
         let candidates = inactiveSinceByTabID.compactMap {
             tabID,
             inactiveSince -> (tabID: TabID, inactiveSince: Date, page: BrowserPage)? in
-            guard !presentedTabIDs.contains(tabID), let page = tabRuntimes[tabID]?.page else {
+            guard !runtimeStore.presentedTabIDs.contains(tabID), let page = tabRuntimes[tabID]?.page else {
                 return nil
             }
             return (tabID: tabID, inactiveSince: inactiveSince, page: page)
@@ -2176,12 +2468,12 @@ final class BrowserPagePool:
             // Re-checked after the await: a page can be selected back onto the
             // screen while WebKit is answering for it.
             guard tabRuntimes[candidate.tabID]?.page === candidate.page,
-                !presentedTabIDs.contains(candidate.tabID),
+                !runtimeStore.presentedTabIDs.contains(candidate.tabID),
                 allRuntimesAllowAutomaticUnload
             else { continue }
             eligibleTabIDs.append(candidate.tabID)
         }
-        eligibleTabIDs += nativeTabs.inactiveTabIDs(excluding: presentedTabIDs)
+        eligibleTabIDs += nativeTabs.inactiveTabIDs(excluding: Array(runtimeStore.presentedTabIDs))
         let releaseLimit = BrowserMemoryPressureReleasePolicy.releaseLimit(
             for: level,
             eligiblePageCount: eligibleTabIDs.count,
@@ -2194,6 +2486,7 @@ final class BrowserPagePool:
 
     private func evictPage(_ tabID: TabID, preservingTabState: Bool = true) {
         nativeTabs.remove(tabID)
+        runtimeStore.removePresentation(of: tabID)
         if preservingTabState {
             archiveTabState(for: tabID)
         }

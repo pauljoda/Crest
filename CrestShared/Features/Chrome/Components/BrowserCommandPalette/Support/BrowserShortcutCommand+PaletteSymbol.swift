@@ -1,7 +1,7 @@
 extension BrowserShortcutCommand {
     var paletteSymbol: String {
         switch self {
-        case .newWindow, .newQuickWindow: "macwindow.badge.plus"
+        case .newBlankWindow, .newWindow, .newQuickWindow: "macwindow.badge.plus"
         case .newTab: "plus.square"
         case .newPrivateWindow: "eyeglasses"
         case .closeTabOrWindow, .closeWindow: "xmark.square"

@@ -5,24 +5,12 @@ import Observation
 @MainActor
 final class BrowserStore {
     var session: BrowserSession {
-        didSet {
-            if oldValue.selectedSpaceID != session.selectedSpaceID
-                || oldValue.selectedSpace?.profile.id != session.selectedSpace?.profile.id
-                || oldValue.selectedSpace?.accessPolicy != session.selectedSpace?.accessPolicy
-            {
-                tabMultiSelection.clear()
-            }
-            if let activation = pendingMovedTabActivation,
-                session.selectedSpaceID != activation.spaceID
-                    || session.selectedTab?.id != activation.tabID
-                    || session.selectedSpace?.profile.id != activation.profileID
-            {
-                pendingMovedTabActivation = nil
-            }
-            sessionRevision &+= 1
-            tabSelectionHistory.reconcile(session: session)
+        get { selection.applying(to: family.currentSession) }
+        set {
+            family.replaceSession(newValue, from: self)
         }
     }
+    private var selection: BrowserStoreSelection
     private(set) var sessionRevision = 0
     var localSyncErrorDescription: String?
     let browsingMode: BrowserBrowsingMode
@@ -42,20 +30,21 @@ final class BrowserStore {
     @ObservationIgnored weak var interactionObserver: (any BrowserStoreInteractionObserving)?
     @ObservationIgnored weak var tabLinkProvider: (any BrowserTabLinkProviding)?
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
-    @ObservationIgnored private var preservesEmptyWindowSelection = false
 
     var deletingSpaceIDs: Set<SpaceID> { family.deletingSpaceIDs }
     var selectedSpace: BrowserSpace? {
-        guard !deletingSpaceIDs.contains(session.selectedSpaceID) else {
+        guard !deletingSpaceIDs.contains(selection.selectedSpaceID) else {
             return nil
         }
-        return session.selectedSpace
+        return selection.selectedSpace(in: family.currentSession)
     }
     var selectedTab: BrowserTab? {
-        guard selectedSpace != nil else { return nil }
-        return session.selectedTab
+        guard let space = selectedSpace, let tabID = space.selectedTabID else { return nil }
+        return space.tabs.first { $0.id == tabID }
     }
     var isPrivateBrowsing: Bool { browsingMode.isPrivate }
+    var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
+    var temporarySourceAssignment: BrowserSpaceRuntimeAssignment? { family.temporarySourceAssignment }
     var pendingSyncRecordCount: Int {
         guard !session.hasDisposableSeedState else { return 0 }
         return syncCoordinator?.journal.pendingRecordIDs.count ?? 0
@@ -94,7 +83,7 @@ final class BrowserStore {
         cloudSyncChangeHandler: (@Sendable () -> Void)? = nil,
         linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
-        self.session = session
+        selection = BrowserStoreSelection(session: session)
         self.linkPreferences = linkPreferences
         tabSelectionHistory = BrowserTabSelectionHistory(session: session)
         self.persistence = persistence
@@ -129,22 +118,23 @@ extension BrowserStore {
 
     func makeWindowStore(
         restoring savedState: BrowserWindowState? = nil,
-        restoresTabSelection: Bool = true
+        restoresTabSelection: Bool = true,
+        selectingSpaceID: SpaceID? = nil
     ) -> BrowserStore {
-        var windowSession = family.authoritativeSession
+        var windowSession = family.currentSession
         if var savedState {
             savedState.repair(using: windowSession)
             windowSession.selectedSpaceID = savedState.selectedSpaceID
             for index in windowSession.spaces.indices {
                 let spaceID = windowSession.spaces[index].id
-                guard let tabID = savedState.selectedTabIDsBySpace[spaceID],
-                    windowSession.spaces[index].contains(tabID)
-                else { continue }
-                windowSession.spaces[index].selectedTabID = tabID
+                windowSession.spaces[index].selectedTabID = savedState.selectedTabIDsBySpace[spaceID]
             }
+        } else {
+            windowSession.selectDefaultSpaceForLaunch()
         }
-        windowSession.selectDefaultSpaceForLaunch()
-        windowSession.repairRuntimeIntegrity()
+        if let selectingSpaceID, windowSession.space(id: selectingSpaceID) != nil {
+            windowSession.selectedSpaceID = selectingSpaceID
+        }
         if !restoresTabSelection {
             for index in windowSession.spaces.indices {
                 windowSession.spaces[index].selectedTabID = nil
@@ -162,7 +152,6 @@ extension BrowserStore {
             linkPreferences: linkPreferences
         )
         store.localSyncErrorDescription = localSyncErrorDescription
-        store.preservesEmptyWindowSelection = !restoresTabSelection
         return store
     }
 }
@@ -252,7 +241,7 @@ extension BrowserStore {
         }
     }
 
-    /// Publishes to every window, stores the session, and stages sync.
+    /// Stores the shared session and stages sync after a model mutation.
     ///
     /// `scope` is what the mutation changed. It reaches storage only: the
     /// published session, the staged sync records, and the coalescing window are
@@ -299,40 +288,32 @@ extension BrowserStore {
         }
     }
 
-    func receiveSharedSession(_ sharedSession: BrowserSession) {
-        let selectedSpaceID = session.selectedSpaceID
-        // An empty mobile window is an intentional local selection. A delayed
-        // family/sync publication must not activate the root store's fallback.
-        let unselectedSpaceIDs = Set(
-            session.spaces.compactMap { space in
-                space.selectedTabID == nil ? space.id : nil
-            })
-        let selectedTabIDs: [SpaceID: TabID] = Dictionary(
-            uniqueKeysWithValues: session.spaces.compactMap { space in
-                guard let tabID = space.selectedTabID else { return nil }
-                return (space.id, tabID)
-            }
-        )
-        session = sharedSession
-        if session.space(id: selectedSpaceID) != nil,
-            !deletingSpaceIDs.contains(selectedSpaceID)
+    func receiveFamilySessionChange(
+        from previous: BrowserSession, to shared: BrowserSession, adoptingSelection: Bool
+    ) {
+        let previousSelection = selection
+        let previousSpace = previous.space(id: previousSelection.selectedSpaceID)
+        if adoptingSelection {
+            selection = BrowserStoreSelection(session: shared)
+        } else {
+            selection.reconcile(using: shared, excluding: deletingSpaceIDs)
+        }
+        let selectedSpace = shared.space(id: selection.selectedSpaceID)
+        if previousSelection.selectedSpaceID != selection.selectedSpaceID
+            || previousSpace?.profile.id != selectedSpace?.profile.id
+            || previousSpace?.accessPolicy != selectedSpace?.accessPolicy
         {
-            session.selectedSpaceID = selectedSpaceID
+            tabMultiSelection.clear()
         }
-        for index in session.spaces.indices {
-            let spaceID = session.spaces[index].id
-            guard let tabID = selectedTabIDs[spaceID],
-                session.spaces[index].contains(tabID)
-            else { continue }
-            session.spaces[index].selectedTabID = tabID
+        if let activation = pendingMovedTabActivation,
+            selection.selectedSpaceID != activation.spaceID
+                || session.selectedTab?.id != activation.tabID
+                || selectedSpace?.profile.id != activation.profileID
+        {
+            pendingMovedTabActivation = nil
         }
-        session.repairRuntimeIntegrity()
-        if preservesEmptyWindowSelection {
-            for index in session.spaces.indices
-            where unselectedSpaceIDs.contains(session.spaces[index].id) {
-                session.spaces[index].selectedTabID = nil
-            }
-        }
+        sessionRevision &+= 1
+        tabSelectionHistory.reconcile(session: session)
     }
 
     func invalidatePendingSyncStage() {

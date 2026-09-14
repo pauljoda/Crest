@@ -14,6 +14,7 @@ enum BrowserShortcutDefaultPolicy {
         }
 
         return switch command {
+        case .newBlankWindow: nil
         case .newWindow: character("n", [.command])
         case .newTab: character("t", [.command])
         case .newQuickWindow: character("n", [.command, .option])

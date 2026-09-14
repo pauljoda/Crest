@@ -40,12 +40,13 @@ enum BrowserExtensionSidebarCompatibilityScript {
             }
             throw new Error(`Crest cannot resolve the sidebar's ${namespace} target.`);
         };
-        // Crest presents exactly one normal window per Space, so that window is
-        // the primary one whatever currently has focus. `windows.getCurrent`
-        // answers a background context with the focused window, which can be
-        // an extension-created popup (Claude's sign-in window, for one); an
-        // extension grouping tabs "in their own window" must not fail because
-        // of that, so the normal window is found directly first.
+        const sidebarWindows = async () => {
+            try { const windows = await sidebarNative("windows", "getAll"); if (Array.isArray(windows)) return windows; } catch {}
+            return [await sidebarNative("windows", "getCurrent")];
+        };
+        // A sole normal window remains the default when an auxiliary popup
+        // has focus. With several normal windows, WebKit supplies the current
+        // one; explicit requests keep their requested window.
         const sidebarPrimaryWindowId = async () => {
             let windows;
             try { windows = await sidebarNative("windows", "getAll"); } catch {}
@@ -58,9 +59,27 @@ enum BrowserExtensionSidebarCompatibilityScript {
         };
         const sidebarResolveWindow = async (id) => {
             if (id !== undefined && (!Number.isInteger(id) || (id < 0 && id !== -2))) throw new Error(`Invalid window ID: ${id}`);
-            const current = await sidebarPrimaryWindowId();
-            if (id !== undefined && id !== -2 && id !== current) throw new Error(`Invalid window ID: ${id}`);
-            return {windowKind: "primary"};
+            const current = id === undefined || id === -2 ? await sidebarPrimaryWindowId() : id;
+            const windows = await sidebarWindows();
+            if (!windows.some(window => window.id === current && (!window.type || window.type === "normal"))) throw new Error(`Invalid window ID: ${id}`);
+            return {windowKind: "primary", window: await sidebarWindowDescriptor(current)};
+        };
+        const sidebarWindowDescriptor = async (id) => {
+            const windows = await sidebarWindows();
+            const window = windows.find(window => window.id === id);
+            if (![window?.left, window?.top, window?.width, window?.height].every(Number.isFinite)) {
+                if (windows.filter(window => !window.type || window.type === "normal").length > 1) throw new Error("The requested extension window is unavailable.");
+                return undefined;
+            }
+            return {left: window.left, top: window.top, width: window.width, height: window.height, focused: window.focused === true};
+        };
+        const sidebarWindowIdFor = async (descriptor) => {
+            if (!descriptor) return sidebarPrimaryWindowId();
+            const windows = await sidebarWindows();
+            const matching = windows.filter(window => (!window.type || window.type === "normal") && ["left", "width", "height"].every(key => Math.abs(window[key] - descriptor[key]) < 1)
+                && [descriptor.top, descriptor.alternateTop].some(top => Number.isFinite(top) && Math.abs(window.top - top) < 1));
+            if (matching.length !== 1) throw new Error("The requested extension window is ambiguous or unavailable.");
+            return matching[0].id;
         };
         const sidebarResolveTab = async (id, windowId) => {
             if (!Number.isInteger(id) || id < 0) throw new Error(`Invalid tab ID: ${id}`);
@@ -68,9 +87,9 @@ enum BrowserExtensionSidebarCompatibilityScript {
             try { tab = await sidebarNative("tabs", "get", id); }
             catch { throw new Error(`Invalid tab ID: ${id}`); }
             if (windowId !== undefined && windowId !== -2 && windowId !== tab?.windowId) throw new Error("The specified tab does not belong to the specified window.");
-            await sidebarResolveWindow(windowId ?? tab?.windowId);
+            const targetWindow = await sidebarResolveWindow(windowId ?? tab?.windowId);
             if (!Number.isInteger(tab?.index) || tab.index < 0) throw new Error(`Invalid tab ID: ${id}`);
-            return {windowKind: "primary", tabIndex: tab.index, ...(typeof tab.url === "string" ? {url: tab.url} : {})};
+            return {...targetWindow, tabIndex: tab.index, ...(typeof tab.url === "string" ? {url: tab.url} : {})};
         };
         const sidebarScope = async (options, firefox = false) => {
             if (firefox && options.tabId !== undefined && options.windowId !== undefined) throw new Error("Only one of tabId and windowId can be specified.");
@@ -119,7 +138,7 @@ enum BrowserExtensionSidebarCompatibilityScript {
                 sidebarTrace("sidePanel.event", {kind: message?.kind, tabIndex: message?.tabIndex, listeners: sidebarListenerCount()});
                 sidebarEventQueue = sidebarEventQueue.then(async () => {
                     if (message?.api !== "sidebar.event" || message.windowKind !== "primary" || typeof message.path !== "string" || !sidebarListeners[message.kind]) return;
-                    const windowId = await sidebarPrimaryWindowId();
+                    const windowId = await sidebarWindowIdFor(message.window);
                     const info = {windowId, path: message.path};
                     if (message.tabIndex !== undefined) info.tabId = await sidebarTabIdFor(windowId, message.tabIndex, message.url);
                     for (const listener of sidebarListeners[message.kind]) { try { listener(info); } catch {} }

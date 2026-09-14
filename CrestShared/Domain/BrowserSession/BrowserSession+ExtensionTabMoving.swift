@@ -3,18 +3,41 @@ import Foundation
 extension BrowserSession {
     /// Resolves Chrome's flat indices onto the existing folder/placement model.
     /// The caller publishes one transaction, including a multi-tab move.
-    mutating func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int, at date: Date = .now) -> Bool {
+    mutating func moveExtensionTabs(
+        _ ids: [TabID], in spaceID: SpaceID, to index: Int, among windowTabs: Set<TabID>? = nil, at date: Date = .now
+    ) -> Bool {
         guard index >= -1, !ids.isEmpty, let space = space(id: spaceID),
-            ids.allSatisfy({ id in space.tabs.contains { $0.id == id } })
+            ids.allSatisfy({ id in space.tabs.contains { $0.id == id } && windowTabs?.contains(id) != false })
         else { return false }
         var next = self
         var insertion = index
         for id in ids {
-            guard let actual = next.moveExtensionTab(id, in: spaceID, to: insertion, at: date) else { return false }
-            insertion = actual + 1
+            let destination: Int
+            if let windowTabs, let tabs = next.space(id: spaceID)?.tabs {
+                destination = Self.extensionTabInsertionIndex(insertion, in: tabs, among: windowTabs, excluding: [id])
+            } else {
+                destination = insertion
+            }
+            guard let actual = next.moveExtensionTab(id, in: spaceID, to: destination, at: date) else { return false }
+            if let windowTabs, let tabs = next.space(id: spaceID)?.tabs {
+                insertion = tabs.prefix(actual + 1).filter { windowTabs.contains($0.id) }.count
+            } else {
+                insertion = actual + 1
+            }
         }
         self = next
         return true
+    }
+
+    static func extensionTabInsertionIndex(
+        _ index: Int, in tabs: [BrowserTab], among windowTabs: Set<TabID>, excluding excluded: Set<TabID> = []
+    ) -> Int {
+        let remaining = tabs.filter { !excluded.contains($0.id) }
+        let visible = remaining.filter { windowTabs.contains($0.id) }
+        let anchor = index < 0 || index >= visible.count ? nil : visible[index].id
+        return anchor.flatMap { anchor in remaining.firstIndex { $0.id == anchor } }
+            ?? visible.last.flatMap { last in remaining.firstIndex { $0.id == last.id }.map { $0 + 1 } }
+            ?? remaining.count
     }
 
     private mutating func moveExtensionTab(_ id: TabID, in spaceID: SpaceID, to index: Int, at date: Date) -> Int? {

@@ -103,7 +103,9 @@ enum BrowserExtensionDebuggerInstallation {
             // on the ability to evaluate expressions inside its page.
             context.hasAccess(to: url, in: adapter)
         else { return .restricted }
-        guard let page = coordinator.pageProvider?.extensionWebView(for: target.tabID, in: target.spaceID)
+        guard
+            let page = coordinator.pageProvider(for: target.tabID, in: target.spaceID)?
+                .extensionWebView(for: target.tabID, in: target.spaceID)
         else { return .closed }
         return .available(page)
     }

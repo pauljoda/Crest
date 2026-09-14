@@ -6,17 +6,20 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
     let spaceID: SpaceID
     let windowType: WKWebExtension.WindowType
     let isPrimary: Bool
+    var hostWindowID: BrowserWindowID?
     private weak var coordinator: BrowserExtensionTabWindowCoordinator?
 
     init(
         spaceID: SpaceID,
         windowType: WKWebExtension.WindowType = .normal,
         isPrimary: Bool = true,
+        hostWindowID: BrowserWindowID? = nil,
         coordinator: BrowserExtensionTabWindowCoordinator
     ) {
         self.spaceID = spaceID
         self.windowType = windowType
         self.isPrimary = isPrimary
+        self.hostWindowID = hostWindowID
         self.coordinator = coordinator
     }
 
@@ -61,7 +64,8 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
         completionHandler: @escaping (Error?) -> Void
     ) {
         guard let coordinator,
-            coordinator.owns(context: context, spaceID: spaceID)
+            coordinator.owns(context: context, spaceID: spaceID),
+            coordinator.validates(self, for: spaceID)
         else {
             completionHandler(coordinator?.adapterError(.windowUnavailable))
             return
@@ -77,7 +81,8 @@ final class BrowserExtensionWindowAdapter: NSObject, WKWebExtensionWindow {
         completionHandler: @escaping (Error?) -> Void
     ) {
         guard let coordinator,
-            coordinator.owns(context: context, spaceID: spaceID)
+            coordinator.owns(context: context, spaceID: spaceID),
+            coordinator.validates(self, for: spaceID)
         else {
             completionHandler(coordinator?.adapterError(.windowUnavailable))
             return

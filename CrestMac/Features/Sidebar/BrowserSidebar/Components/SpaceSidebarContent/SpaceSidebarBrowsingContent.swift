@@ -24,7 +24,7 @@ struct SpaceSidebarBrowsingContent: View {
     @Binding var editingFolderRequest: BrowserFolderRuntimeAssignment?
     let tabPromotionNamespace: Namespace.ID
     let editSpace: () -> Void
-    let createSpace: () -> Void
+    let createSpace: (() -> Void)?
 
     /// The clear-current-tabs control appears while a pointer rests anywhere
     /// over the list, so the state belongs to the whole scrolling region rather

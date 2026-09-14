@@ -7,6 +7,7 @@ enum BrowserShortcutCommand:
     Sendable
 {
     case newWindow
+    case newBlankWindow
     case newTab
     case newQuickWindow
     case newPrivateWindow

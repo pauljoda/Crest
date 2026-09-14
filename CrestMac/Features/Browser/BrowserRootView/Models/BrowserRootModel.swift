@@ -118,7 +118,15 @@ extension BrowserRootModel {
     }
 
     func extensionHostWindowFocusChanged(_ isFocused: Bool) {
-        pages.extensionControllerPool.setHostWindowFocused(isFocused)
+        // Window scenes route native key-window notifications directly. A new
+        // root's initial SwiftUI focus value must not claim a shared page.
+        guard !pages.publishesPageMetadataCentrally else { return }
+        pages.setWindowFocused(isFocused)
+        if let id = windowState?.id {
+            pages.extensionControllerPool.setHostWindowFocused(isFocused, windowID: id)
+        } else {
+            pages.extensionControllerPool.setHostWindowFocused(isFocused)
+        }
     }
 
     /// Republishes tab state that lives on the page rather than in the session,
@@ -191,6 +199,11 @@ extension BrowserRootModel {
     }
 
     var windowTitle: String {
+        let title = pageWindowTitle
+        return browser.isTemporaryWorkspace ? String(localized: "Blank Window") + " — " + title : title
+    }
+
+    private var pageWindowTitle: String {
         guard let space = browser.selectedSpace,
             !spaceAccess.isLocked(space),
             let tab = browser.selectedTab
@@ -201,16 +214,23 @@ extension BrowserRootModel {
     }
 
     func synchronizePageMetadata() {
-        guard let page = selectedPage, let source = selectedTabAssignment,
+        guard !isAddressEditing else { return }
+        if pages.publishesPageMetadataCentrally {
+            address = (selectedPage?.metadata.displayURL ?? browser.selectedTab?.url)?.absoluteString ?? ""
+        } else if let page = selectedPage, let source = selectedTabAssignment,
             let updatedAddress = pageSession.synchronize(page.metadata, matching: source)
-        else { return }
-        if !isAddressEditing { address = updatedAddress }
+        {
+            address = updatedAddress
+        }
     }
 
     func recordCompletedNavigation() {
         guard let page = selectedPage, page.url != nil, let source = selectedTabAssignment else { return }
         synchronizePageMetadata()
-        guard let space = pageSession.recordCompletedNavigation(page.metadata, matching: source) else { return }
+        let space =
+            pages.publishesPageMetadataCentrally
+            ? browser.selectedSpace : pageSession.recordCompletedNavigation(page.metadata, matching: source)
+        guard let space else { return }
         Task { await pages.styleVisitedLinks(in: space) }
     }
 

@@ -10,7 +10,7 @@ struct CrestApp: App {
     @State private var pages: BrowserPagePool
     @State private var chrome: BrowserChromeState
     @State private var transientBrowsing: BrowserTransientBrowsingCoordinator
-    @State private var mainWindowState: BrowserWindowStateStore
+    @State private var windowCoordinator: BrowserMacWindowCoordinator
     @State private var privateBrowser: BrowserStore
     @State private var privatePages: BrowserPagePool
     @State private var privateChrome: BrowserChromeState
@@ -175,7 +175,7 @@ struct CrestApp: App {
                     sidebarEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.sidebarEventMessage(event)
                     },
-                    tabGroupService: extensionTabGroups,
+                    tabGroupService: extensionControllerPool.extensionTabGroupService,
                     tabGroupEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
                     },
@@ -205,7 +205,7 @@ struct CrestApp: App {
                     sidebarEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.sidebarEventMessage(event)
                     },
-                    tabGroupService: extensionTabGroups,
+                    tabGroupService: extensionControllerPool.extensionTabGroupService,
                     tabGroupEventMessage: { [weak extensionControllerPool] event in
                         extensionControllerPool?.tabGroupEventMessage(event) ?? [:]
                     },
@@ -463,7 +463,10 @@ struct CrestApp: App {
             )
         )
         _transientBrowsing = State(initialValue: transientBrowsing)
-        _mainWindowState = State(initialValue: mainWindowState)
+        _windowCoordinator = State(
+            initialValue: BrowserMacWindowCoordinator(
+                browser: browser, pages: pages, spaceAccess: spaceAccess,
+                windowStatePersistence: windowStatePersistence))
         _privateBrowser = State(initialValue: privateBrowser)
         _privateChrome = State(
             initialValue: BrowserChromeState(
@@ -559,25 +562,59 @@ struct CrestApp: App {
         return .showcase(profileID: profileID)
     }
 
-    private func settingsTabContent(browser: BrowserStore, pages: BrowserPagePool) -> BrowserSettingsTabContent {
+    private func settingsTabContent(
+        browser: BrowserStore, pages: BrowserPagePool,
+        presentation: BrowserSpaceSettingsPresentationState? = nil
+    ) -> BrowserSettingsTabContent {
         BrowserSettingsTabContent { runtime in
             BrowserSettingsView(
-                browser: browser, pages: pages, cloudSync: cloudSync,
+                browser: browser.profileSettingsBrowser, pages: pages, cloudSync: cloudSync,
                 spaceAccess: spaceAccess, dataDeleter: pagePoolRegistry, shortcuts: shortcuts,
                 onboardingCoordinator: onboardingCoordinator, spaceSettingsPresentation: spaceSettingsPresentation,
+                usesLiveSidebar: !browser.isTemporaryWorkspace,
                 tabState: runtime.model(BrowserSettingsTabState.self) { BrowserSettingsTabState() },
                 tabAssignment: runtime.assignment
             )
         }
     }
 
+    @ViewBuilder
+    private func browserWindowContent(_ request: BrowserMacWindowRequest) -> some View {
+        if let model = windowCoordinator.model(for: request) {
+            BrowserMacWindowScene(
+                model: model, coordinator: windowCoordinator,
+                extensionControllerPool: extensionControllerPool,
+                pagePoolRegistry: pagePoolRegistry, spaceAccess: spaceAccess,
+                spaceSettingsPresentation: spaceSettingsPresentation,
+                startupBehavior: request == .initial ? startupBehavior : .lastActiveTab,
+                shortcuts: shortcuts, sidebarWidgets: sidebarWidgets, softwareUpdates: softwareUpdates
+            )
+            .environment(
+                \.browserSettingsTabContent,
+                settingsTabContent(
+                    browser: model.browser, pages: model.pages, presentation: model.spaceSettingsPresentation)
+            )
+            .environment(windowTransparency)
+            .environment(splitFocus)
+            .environment(softwareUpdates)
+            .environment(extensionSidebar)
+            .environment(extensionDebugger)
+            .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
+        } else {
+            Color.clear.background(
+                BrowserMacWindowAttachment(
+                    attach: { $0.close() }, focusChanged: { _ in }, close: {}))
+        }
+    }
+
     var body: some Scene {
-        Window(
+        WindowGroup(
             ProductIdentity.name,
             id: presentsInstalledApplicationUI
                 ? BrowserSceneID.browser.rawValue
-                : "crest-xctest-host"
-        ) {
+                : "crest-xctest-host",
+            for: BrowserMacWindowRequest.self
+        ) { $request in
             if presentsInstalledApplicationUI {
                 Group {
                     if onboardingProgress.isLaunchGateActive {
@@ -585,32 +622,7 @@ struct CrestApp: App {
                             coordinator: onboardingCoordinator
                         )
                     } else {
-                        BrowserMacWindowScene(
-                            id: .main,
-                            browser: browser,
-                            pages: pages,
-                            chrome: chrome,
-                            transientBrowsing: transientBrowsing,
-                            windowState: mainWindowState,
-                            extensionControllerPool: extensionControllerPool,
-                            pagePoolRegistry: pagePoolRegistry,
-                            spaceAccess: spaceAccess,
-                            spaceSettingsPresentation: spaceSettingsPresentation,
-                            startupBehavior: startupBehavior,
-                            shortcuts: shortcuts,
-                            sidebarWidgets: sidebarWidgets,
-                            softwareUpdates: softwareUpdates
-                        )
-                        .environment(\.browserSettingsTabContent, settingsTabContent(browser: browser, pages: pages))
-                        .environment(windowTransparency)
-                        .environment(splitFocus)
-                        .environment(softwareUpdates)
-                        .environment(extensionSidebar)
-                        .environment(extensionDebugger)
-                        .environment(
-                            \.browserSidebarWidgetRuntime,
-                            sidebarWidgets
-                        )
+                        browserWindowContent(request ?? .initial)
                     }
                 }
                 .task {
@@ -640,6 +652,19 @@ struct CrestApp: App {
                 spaceAccess: spaceAccess
             )
         }
+
+        WindowGroup("Blank Window", id: BrowserSceneID.blankWindow.rawValue, for: BrowserMacWindowRequest.self) {
+            $request in
+            if presentsInstalledApplicationUI, let request {
+                browserWindowContent(request)
+            }
+        }
+        .defaultSize(
+            width: BrowserMainWindowSizingPolicy.idealContentSize.width,
+            height: BrowserMainWindowSizingPolicy.idealContentSize.height
+        )
+        .windowResizability(.contentMinSize)
+        .restorationBehavior(.disabled)
 
         WindowGroup(
             "Quick Window",

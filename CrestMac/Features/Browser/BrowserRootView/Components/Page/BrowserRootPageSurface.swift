@@ -50,6 +50,7 @@ struct BrowserRootPageSurface: View {
             .overlay {
                 BrowserRootPeekLayer(model: model, transientBrowsing: transientBrowsing, space: space)
             }
+            .environment(\.browserPagePresentationWindowID, model.windowState?.id)
             .environment(\.spaceContentIsInteractive, isSelectedSpace)
             .allowsHitTesting(isSelectedSpace)
             .accessibilityHidden(!isSelectedSpace)

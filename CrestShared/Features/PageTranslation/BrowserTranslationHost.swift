@@ -9,6 +9,7 @@ struct BrowserTranslationHost: ViewModifier {
     let isLoading: Bool
     let isReaderActive: Bool
 
+    @State private var hostID = UUID()
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
     private var automaticallyTranslates = false
@@ -22,7 +23,9 @@ struct BrowserTranslationHost: ViewModifier {
         return
             content
             .task(id: detectionID) {
-                translation.setActive(isActive && !isReaderActive && scenePhase != .background, in: webView)
+                guard !Task.isCancelled else { return }
+                translation.setActive(
+                    isActive && !isReaderActive && scenePhase != .background, in: webView, hostID: hostID)
                 guard !isLoading, !isReaderActive, isActive else { return }
                 await translation.detect(in: webView)
                 await translation.automaticallyTranslateIfAvailable(enabled: automaticallyTranslates)
@@ -34,7 +37,7 @@ struct BrowserTranslationHost: ViewModifier {
             .translationTask(configuration) { session in
                 await translation.run(using: session, configuration: configuration)
             }
-            .onDisappear { translation.setActive(false, in: webView) }
+            .onDisappear { translation.setActive(false, in: webView, hostID: hostID) }
             .sheet(isPresented: $translation.showsInformation) {
                 BrowserTranslationInformation(translation: translation)
             }

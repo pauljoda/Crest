@@ -162,6 +162,7 @@ final class BrowserShortcutTests: XCTestCase {
             },
             [
                 "newWindow=character:n:1",
+                "newBlankWindow=unassigned",
                 "newTab=character:t:1",
                 "newQuickWindow=character:n:3",
                 "newPrivateWindow=character:n:9",

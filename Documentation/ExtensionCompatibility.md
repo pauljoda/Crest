@@ -155,9 +155,11 @@ instead.
 Some WebExtension capabilities describe a browser Crest is not. These are left
 unimplemented on purpose rather than faked:
 
-- **Closing or restaging a window.** A Space is not an operating-system window,
-  so `windows.remove` and `windows.update` state changes are refused. Reading a
-  window's frame, screen, and state is supported.
+- **Window state changes.** Registered macOS windows expose their actual frame,
+  screen, focus, and close action. Focus and close requests target that host;
+  resizing or changing its minimized/full-screen state remains unavailable.
+  A shared tab appears in the extension window that owns its live page, even
+  when another Crest window shows the same tab in its sidebar.
 - **Tab audio.** Crest tracks no per-tab audio state, so `mutedInfo` and
   `audible` are not reported and muting is unavailable.
 - **Parent tabs.** Crest records no opener relationship between tabs.

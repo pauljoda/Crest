@@ -23,6 +23,15 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     var lastState: BrowserExtensionSessionState?
     weak var browser: (any BrowserExtensionTabWindowSessionHandling)?
     weak var pageProvider: (any BrowserExtensionPageProviding)?
+    var hostWindows: [BrowserWindowID: BrowserExtensionHostWindow] = [:]
+    var hostWindowOrder: [BrowserWindowID] = []
+    var windowsBySpace: [SpaceID: [BrowserWindowID: BrowserExtensionWindowAdapter]] = [:]
+    var tabOwnerWindowIDs: [TabID: BrowserWindowID] = [:]
+    var focusedHostWindowID: BrowserWindowID?
+    var hasRegisteredHostWindows = false
+    var lastSelectedTabsByWindow: [ObjectIdentifier: TabID] = [:]
+    var lastWindowsByTabID: [TabID: BrowserExtensionWindowAdapter] = [:]
+    var tabGroupWindowDescriptors: [BrowserExtensionTabGroupID: [String: Any]] = [:]
     var openCommandSettings: ((BrowserExtensionCommandSettingsRoute, SpaceID) -> Bool)?
     var nativeMessagingHandler: BrowserExtensionNativeMessagingHandling?
     var sidebarService: (any BrowserExtensionSidebarHandling)?
@@ -82,7 +91,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     #endif
     var actionDidUpdate: (() -> Void)?
     private var isHostWindowFocused = true
-    private var reportedFocusedWindow: BrowserExtensionWindowAdapter?
+    var reportedFocusedWindow: BrowserExtensionWindowAdapter?
 
     init(
         webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry =
@@ -134,6 +143,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         }
         let window = BrowserExtensionWindowAdapter(
             spaceID: spaceID,
+            hostWindowID: preferredHost(in: spaceID)?.id,
             coordinator: self
         )
         controllers[spaceID] = BrowserExtensionControllerEntry(
@@ -142,6 +152,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         )
         controller.delegate = self
         controller.didOpenWindow(window)
+        registerHostAdapters(in: spaceID)
         if let state = currentState?.space(spaceID) {
             ensureAdapters(for: state)
             for tab in state.tabs {
@@ -180,18 +191,29 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
                 entry.controller.didCloseTab(adapter, windowIsClosing: true)
             }
         }
+        let hostAdapters = windowsBySpace.removeValue(forKey: spaceID)?.values.map { $0 } ?? []
+        for window in hostAdapters where window !== entry.window { entry.controller.didCloseWindow(window) }
         entry.controller.didCloseWindow(entry.window)
         entry.controller.delegate = nil
     }
 
     func reconcile(session: BrowserSession) {
+        let session = combinedSession(fallback: session)
+        reconcileTabOwners()
         sidebarService?.repair(using: session)
-        tabGroupService?.repair(using: session)
+        if hostWindows.isEmpty { tabGroupService?.repair(using: session) }
         // A closed tab must end its debugger session now, not at the next
         // command: the session holds a live Inspector connection to the page.
         debuggerService?.reconcileTargets()
         let newState = projectedState(for: session)
         let oldState = lastState
+        for space in session.spaces {
+            for group in tabGroupService?.groups(in: space.id) ?? [] {
+                if let descriptor = brokerWindowDescriptor(group.tabs.first.flatMap { window(for: $0, in: space.id) }) {
+                    tabGroupWindowDescriptors[group.id] = descriptor
+                }
+            }
+        }
 
         for (spaceID, entry) in controllers {
             reconcile(
@@ -204,6 +226,10 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         }
 
         lastState = newState
+        lastWindowsByTabID = Dictionary(
+            uniqueKeysWithValues: newState.spaces.flatMap { space in
+                space.tabs.compactMap { tab in window(for: tab.id, in: space.id).map { (tab.id, $0) } }
+            })
         reconcileWindowFocus(selectedSpaceID: newState.selectedSpaceID)
         permissionPrompts.reconcile()
     }
@@ -216,7 +242,15 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         reconcileWindowFocus()
     }
 
-    private func reconcileWindowFocus(selectedSpaceID: SpaceID? = nil) {
+    func reconcileWindowFocus(selectedSpaceID: SpaceID? = nil) {
+        if !hostWindows.isEmpty {
+            let host = focusedHostWindowID.flatMap { hostWindows[$0] }
+            let window = host.flatMap { host in
+                host.browser.flatMap { windowsBySpace[$0.session.selectedSpaceID]?[host.id] }
+            }
+            reportFocusedWindow(window)
+            return
+        }
         let selectedSpaceID = selectedSpaceID ?? browser?.session.selectedSpaceID ?? lastState?.selectedSpaceID
         let desiredFocusedWindow: BrowserExtensionWindowAdapter?
         if isHostWindowFocused,
@@ -231,7 +265,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         reportFocusedWindow(desiredFocusedWindow)
     }
 
-    private func reportFocusedWindow(
+    func reportFocusedWindow(
         _ desiredFocusedWindow: BrowserExtensionWindowAdapter?
     ) {
         guard reportedFocusedWindow !== desiredFocusedWindow else { return }
@@ -252,7 +286,10 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     }
 
     var currentState: BrowserExtensionSessionState? {
-        browser.map { projectedState(for: $0.session) } ?? lastState
+        if let session = browser?.session ?? hostWindowOrder.compactMap({ hostWindows[$0]?.browser?.session }).first {
+            return projectedState(for: combinedSession(fallback: session))
+        }
+        return lastState
     }
 
     /// Reads only the requested tab's live activity. Native metadata getters
@@ -262,12 +299,15 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         for tabID: TabID,
         in spaceID: SpaceID
     ) -> BrowserExtensionTabState? {
-        guard let browser else { return lastState?.space(spaceID)?.tab(tabID) }
+        guard let browser = browser(for: tabID, in: spaceID) else {
+            return self.browser == nil && hostWindows.isEmpty ? lastState?.space(spaceID)?.tab(tabID) : nil
+        }
         guard let space = browser.session.space(id: spaceID) else { return nil }
         if let index = space.tabs.firstIndex(where: { $0.id == tabID }) {
             return BrowserExtensionTabState(
                 tab: space.tabs[index],
-                index: index,
+                index: hostWindows.isEmpty
+                    ? index : ownedTabIDs(in: window(for: tabID, in: spaceID)).firstIndex(of: tabID) ?? index,
                 isSelected: tabID == space.selectedTabID,
                 runtimeActivity: runtimeActivity(for: tabID, in: spaceID)
             )
@@ -288,12 +328,22 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     private func projectedState(
         for session: BrowserSession
     ) -> BrowserExtensionSessionState {
-        let projected = BrowserExtensionSessionState(
+        let initial = BrowserExtensionSessionState(
             session: session,
             runtimeActivity: { [weak self] spaceID, tabID in
                 self?.runtimeActivity(for: tabID, in: spaceID) ?? .settled
             }
         )
+        let projected: BrowserExtensionSessionState
+        if hostWindows.isEmpty {
+            projected = initial
+        } else {
+            projected = .init(
+                selectedSpaceID: initial.selectedSpaceID,
+                spaces: initial.spaces.map { space in
+                    .init(id: space.id, tabs: space.tabs.compactMap { projectedTabState(for: $0.id, in: space.id) })
+                })
+        }
         guard !transientTabsBySpace.isEmpty else { return projected }
         return BrowserExtensionSessionState(
             selectedSpaceID: projected.selectedSpaceID,
@@ -321,7 +371,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         for tabID: TabID,
         in spaceID: SpaceID
     ) -> BrowserExtensionTabRuntimeActivity {
-        guard let pageProvider else { return .settled }
+        guard let pageProvider = pageProvider(for: tabID, in: spaceID) else { return .settled }
         return BrowserExtensionTabRuntimeActivity(
             isLoadingComplete: pageProvider.extensionWebView(
                 for: tabID,
@@ -352,7 +402,7 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
         in spaceID: SpaceID,
         at index: Int
     ) -> BrowserExtensionTabState {
-        let webView = pageProvider?.extensionWebView(for: tab.id, in: spaceID)
+        let webView = pageProvider(for: tab.id, in: spaceID)?.extensionWebView(for: tab.id, in: spaceID)
         let activity = runtimeActivity(for: tab.id, in: spaceID)
         return BrowserExtensionTabState(
             id: tab.id,
@@ -367,14 +417,16 @@ final class BrowserExtensionTabWindowCoordinator: NSObject {
     }
 
     func window(for spaceID: SpaceID) -> BrowserExtensionWindowAdapter? {
-        controllers[spaceID]?.window
+        preferredHost(in: spaceID).flatMap { windowsBySpace[spaceID]?[$0.id] } ?? controllers[spaceID]?.window
     }
 
     func window(
         for tabID: TabID,
         in spaceID: SpaceID
     ) -> BrowserExtensionWindowAdapter? {
-        auxiliaryWindowByTabID[tabID] ?? controllers[spaceID]?.window
+        auxiliaryWindowByTabID[tabID]
+            ?? ownerHost(for: tabID, in: spaceID).flatMap { windowsBySpace[spaceID]?[$0.id] }
+            ?? controllers[spaceID]?.window
     }
 
     func tab(
@@ -402,9 +454,10 @@ extension BrowserExtensionTabWindowCoordinator {
         context: WKWebExtensionContext
     ) -> [BrowserExtensionTabAdapter] {
         let spaceID = window.spaceID
-        guard owns(context: context, spaceID: spaceID), let ids = tabIDs(in: spaceID) else { return [] }
+        guard owns(context: context, spaceID: spaceID) else { return [] }
+        let ids = ownedTabIDs(in: window)
         return ids.compactMap { tabID in
-            let assignedWindow = auxiliaryWindowByTabID[tabID] ?? controllers[spaceID]?.window
+            let assignedWindow = self.window(for: tabID, in: spaceID)
             guard assignedWindow === window else { return nil }
             return registeredAdapter(for: tabID, in: spaceID)
         }
@@ -417,7 +470,9 @@ extension BrowserExtensionTabWindowCoordinator {
     }
 
     func selectedTabID(in spaceID: SpaceID) -> TabID? {
-        guard let browser else { return lastState?.space(spaceID)?.selectedTabID }
+        guard let browser = preferredHost(in: spaceID)?.browser ?? browser else {
+            return lastState?.space(spaceID)?.selectedTabID
+        }
         guard let space = browser.session.space(id: spaceID), let id = space.selectedTabID,
             space.tabs.contains(where: { $0.id == id })
         else { return nil }
@@ -428,7 +483,7 @@ extension BrowserExtensionTabWindowCoordinator {
         in spaceID: SpaceID,
         context: WKWebExtensionContext
     ) -> [BrowserExtensionTabAdapter] {
-        guard let window = controllers[spaceID]?.window else { return [] }
+        guard let window = window(for: spaceID) else { return [] }
         return tabs(in: window, context: context)
     }
 
@@ -442,9 +497,15 @@ extension BrowserExtensionTabWindowCoordinator {
             return nil
         }
         if window.isPrimary {
+            let selected: TabID?
+            if let host = host(for: window) {
+                selected = host.browser?.session.space(id: spaceID)?.selectedTabID
+            } else {
+                selected = selectedTabID(in: spaceID)
+            }
             guard
-                let selectedID = selectedTabID(in: spaceID),
-                auxiliaryWindowByTabID[selectedID] == nil
+                let selectedID = selected,
+                self.window(for: selectedID, in: spaceID) === window
             else {
                 return nil
             }
@@ -464,7 +525,7 @@ extension BrowserExtensionTabWindowCoordinator {
         in spaceID: SpaceID,
         context: WKWebExtensionContext
     ) -> BrowserExtensionTabAdapter? {
-        guard let window = controllers[spaceID]?.window else { return nil }
+        guard let window = window(for: spaceID) else { return nil }
         return activeTab(in: window, context: context)
     }
 
@@ -496,7 +557,7 @@ extension BrowserExtensionTabWindowCoordinator {
         context: WKWebExtensionContext
     ) -> WKWebView? {
         guard owns(context: context, spaceID: spaceID) else { return nil }
-        return pageProvider?.extensionWebView(for: tabID, in: spaceID)
+        return pageProvider(for: tabID, in: spaceID)?.extensionWebView(for: tabID, in: spaceID)
     }
 
     func windowGeometry(
@@ -507,6 +568,10 @@ extension BrowserExtensionTabWindowCoordinator {
         ] {
             return presentation.geometry
         }
+        if let host = host(for: window) {
+            return host.pageProvider?.extensionWindowGeometry(in: window.spaceID) ?? .unavailable
+        }
+        guard !hasRegisteredHostWindows else { return .unavailable }
         return pageProvider?.extensionWindowGeometry(in: window.spaceID)
             ?? .unavailable
     }
@@ -586,8 +651,10 @@ extension BrowserExtensionTabWindowCoordinator {
             else {
                 continue
             }
-            if oldTab.index != newTab.index {
-                controller.didMoveTab(adapter, from: oldTab.index, in: window)
+            let currentWindow = self.window(for: newTab.id, in: spaceID) ?? window
+            let previousWindow = lastWindowsByTabID[newTab.id] ?? currentWindow
+            if oldTab.index != newTab.index || previousWindow !== currentWindow {
+                controller.didMoveTab(adapter, from: oldTab.index, in: previousWindow)
             }
             var changed: WKWebExtension.TabChangedProperties = []
             if oldTab.title != newTab.title { changed.insert(.title) }
@@ -604,6 +671,10 @@ extension BrowserExtensionTabWindowCoordinator {
             }
         }
 
+        if !hostWindows.isEmpty {
+            reconcileHostSelections(in: spaceID, controller: controller)
+            return
+        }
         let oldSelected = previous?.selectedTabID
         let newSelected = next?.selectedTabID
         if oldSelected != newSelected {
@@ -681,6 +752,7 @@ extension BrowserExtensionTabWindowCoordinator {
             return false
         }
         return adapter === controllers[spaceID]?.window
+            || windowsBySpace[spaceID]?.values.contains(where: { $0 === adapter }) == true
             || auxiliaryWindowsBySpace[spaceID]?.contains(where: {
                 $0 === adapter
             }) == true
@@ -737,14 +809,15 @@ extension BrowserExtensionTabWindowCoordinator {
             completionHandler(nil)
             return
         }
-        guard let browser,
+        guard let browser = browser(for: tabID, in: spaceID),
             browser.activateExtensionTab(tabID, in: spaceID)
         else {
             completionHandler(adapterError(.tabUnavailable))
             return
         }
         let session = browser.session
-        pageProvider?.select(session: session)
+        ownerHost(for: tabID, in: spaceID)?.focus()
+        pageProvider(for: tabID, in: spaceID)?.select(session: session)
         reconcile(session: session)
         completionHandler(nil)
     }
@@ -763,7 +836,8 @@ extension BrowserExtensionTabWindowCoordinator {
             completionHandler(nil)
             return
         }
-        guard let browser,
+        let pageProvider = pageProvider(for: tabID, in: spaceID)
+        guard let browser = browser(for: tabID, in: spaceID),
             browser.closeExtensionTab(tabID, in: spaceID)
         else {
             completionHandler(adapterError(.tabUnavailable))
@@ -814,7 +888,7 @@ extension BrowserExtensionTabWindowCoordinator {
         completionHandler: @escaping (Error?) -> Void
     ) {
         if auxiliaryWindowByTabID[tabID] != nil,
-            let webView = pageProvider?.extensionWebView(
+            let webView = pageProvider(for: tabID, in: spaceID)?.extensionWebView(
                 for: tabID,
                 in: spaceID
             )
@@ -824,14 +898,14 @@ extension BrowserExtensionTabWindowCoordinator {
             completionHandler(nil)
             return
         }
-        guard let browser,
+        guard let browser = browser(for: tabID, in: spaceID),
             browser.loadExtensionURL(url, in: tabID, spaceID: spaceID)
         else {
             completionHandler(adapterError(.tabUnavailable))
             return
         }
         let session = browser.session
-        pageProvider?.loadExtensionURL(
+        pageProvider(for: tabID, in: spaceID)?.loadExtensionURL(
             url,
             for: tabID,
             in: spaceID,
@@ -847,7 +921,7 @@ extension BrowserExtensionTabWindowCoordinator {
         spaceID: SpaceID,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        guard let browser,
+        guard let browser = browser(for: tabID, in: spaceID),
             browser.setExtensionTabPinned(
                 pinned,
                 tabID: tabID,
@@ -912,7 +986,7 @@ extension BrowserExtensionTabWindowCoordinator {
         for tabID: TabID,
         in spaceID: SpaceID
     ) -> BrowserReaderModeState {
-        pageProvider?.extensionReaderModeState(for: tabID, in: spaceID)
+        pageProvider(for: tabID, in: spaceID)?.extensionReaderModeState(for: tabID, in: spaceID)
             ?? .unavailable
     }
 
@@ -922,7 +996,7 @@ extension BrowserExtensionTabWindowCoordinator {
         spaceID: SpaceID,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        guard let pageProvider else {
+        guard let pageProvider = pageProvider(for: tabID, in: spaceID) else {
             completionHandler(adapterError(.tabUnavailable))
             return
         }
@@ -933,7 +1007,7 @@ extension BrowserExtensionTabWindowCoordinator {
                     for: tabID,
                     in: spaceID
                 )
-                if let session = self?.browser?.session {
+                if let session = self?.browser(for: tabID, in: spaceID)?.session {
                     self?.reconcile(session: session)
                 }
                 completionHandler(nil)
@@ -953,12 +1027,17 @@ extension BrowserExtensionTabWindowCoordinator {
             completionHandler(nil, adapterError(.crossSpaceRequest))
             return
         }
-        guard let browser,
+        let destination =
+            host(for: configuration.window as? BrowserExtensionWindowAdapter) ?? ownerHost(for: tabID, in: spaceID)
+        let destinationWindow = destination.flatMap { windowsBySpace[spaceID]?[$0.id] }
+        guard let browser = destination?.browser ?? browser(for: tabID, in: spaceID),
             let duplicateID = browser.duplicateExtensionTab(
                 tabID,
                 in: spaceID,
                 pinned: configuration.shouldBePinned,
-                requestedIndex: normalized(index: configuration.index),
+                requestedIndex: normalized(index: configuration.index).map {
+                    sessionInsertionIndex($0, in: destinationWindow)
+                },
                 shouldSelect: configuration.shouldBeActive
             )
         else {
@@ -966,8 +1045,9 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
         let session = browser.session
+        if let destination { tabOwnerWindowIDs[duplicateID] = destination.id }
         if configuration.shouldBeActive {
-            pageProvider?.select(session: session)
+            (destination?.pageProvider ?? pageProvider(for: tabID, in: spaceID))?.select(session: session)
         }
         reconcile(session: session)
         completionHandler(adapter(for: duplicateID, in: spaceID), nil)
@@ -977,7 +1057,7 @@ extension BrowserExtensionTabWindowCoordinator {
         spaceID: SpaceID,
         completionHandler: @escaping (Error?) -> Void
     ) {
-        guard let browser,
+        guard let browser = preferredHost(in: spaceID)?.browser ?? browser,
             browser.session.space(id: spaceID) != nil
         else {
             completionHandler(adapterError(.windowUnavailable))
@@ -985,7 +1065,8 @@ extension BrowserExtensionTabWindowCoordinator {
         }
         browser.selectSpace(spaceID)
         let session = browser.session
-        pageProvider?.select(session: session)
+        preferredHost(in: spaceID)?.focus()
+        (preferredHost(in: spaceID)?.pageProvider ?? pageProvider)?.select(session: session)
         reconcile(session: session)
         completionHandler(nil)
     }
@@ -994,6 +1075,14 @@ extension BrowserExtensionTabWindowCoordinator {
         window: BrowserExtensionWindowAdapter,
         completionHandler: @escaping (Error?) -> Void
     ) {
+        if let host = host(for: window), let browser = host.browser {
+            browser.selectSpace(window.spaceID)
+            host.focus()
+            host.pageProvider?.select(session: browser.session)
+            reconcile(session: browser.session)
+            completionHandler(nil)
+            return
+        }
         if window.isPrimary {
             focus(
                 spaceID: window.spaceID,
@@ -1017,6 +1106,11 @@ extension BrowserExtensionTabWindowCoordinator {
         window: BrowserExtensionWindowAdapter,
         completionHandler: @escaping (Error?) -> Void
     ) {
+        if let host = host(for: window) {
+            host.close()
+            completionHandler(nil)
+            return
+        }
         guard !window.isPrimary,
             let presentation = auxiliaryPresentations[
                 ObjectIdentifier(window)
@@ -1035,21 +1129,26 @@ extension BrowserExtensionTabWindowCoordinator {
         pinned: Bool,
         index: Int?,
         selected: Bool,
+        window: BrowserExtensionWindowAdapter? = nil,
         completionHandler: @escaping ((any WKWebExtensionTab)?, Error?) -> Void
     ) {
         let url = BrowserExtensionNewTabURL.resolve(url)
-        guard let browser,
+        let host = host(for: window) ?? preferredHost(in: spaceID)
+        let destinationWindow = window ?? host.flatMap { windowsBySpace[spaceID]?[$0.id] }
+        let pageProvider = host?.pageProvider ?? pageProvider
+        guard let browser = host?.browser ?? browser,
             let tabID = browser.openExtensionTab(
                 url: url,
                 in: spaceID,
                 pinned: pinned,
-                requestedIndex: index,
+                requestedIndex: index.map { sessionInsertionIndex($0, in: destinationWindow) },
                 shouldSelect: selected
             )
         else {
             completionHandler(nil, adapterError(.tabUnavailable))
             return
         }
+        if let host { tabOwnerWindowIDs[tabID] = host.id }
         let session = browser.session
         // Prepare every requested tab before reporting it, then navigate after
         // the announcement. Inactive extension tabs also run immediately: an
@@ -1085,7 +1184,8 @@ extension BrowserExtensionTabWindowCoordinator {
     /// of that document.
     func registerTransientTab(
         _ tab: BrowserExtensionTransientTab,
-        in spaceID: SpaceID
+        in spaceID: SpaceID,
+        windowID: BrowserWindowID? = nil
     ) {
         if let pendingAuxiliaryWindow,
             pendingAuxiliaryWindow.spaceID == spaceID
@@ -1099,6 +1199,7 @@ extension BrowserExtensionTabWindowCoordinator {
             transient.append(tab)
         }
         transientTabsBySpace[spaceID] = transient
+        if let windowID { tabOwnerWindowIDs[tab.id] = windowID }
         reconcileCurrentSession()
     }
 
@@ -1125,7 +1226,7 @@ extension BrowserExtensionTabWindowCoordinator {
     /// Transient pages appear and disappear without the session changing at all,
     /// so they have no store update to ride in on.
     func reconcileCurrentSession() {
-        guard let browser else { return }
+        guard let browser = browser ?? hostWindowOrder.compactMap({ hostWindows[$0]?.browser }).first else { return }
         reconcile(session: browser.session)
     }
 }
@@ -1140,9 +1241,9 @@ extension BrowserExtensionTabWindowCoordinator {
         completionHandler:
             @escaping ((any WKWebExtensionWindow)?, Error?) -> Void
     ) {
-        guard let browser,
+        guard let browser = preferredHost(in: spaceID)?.browser ?? browser,
             let space = browser.session.space(id: spaceID),
-            let pageProvider,
+            let pageProvider = preferredHost(in: spaceID)?.pageProvider ?? pageProvider,
             let extensionController = controllers[spaceID]?.controller
         else {
             completionHandler(nil, adapterError(.windowUnavailable))
@@ -1230,15 +1331,17 @@ extension BrowserExtensionTabWindowCoordinator {
         else {
             return []
         }
-        let auxiliary = auxiliaryWindowsBySpace[entry.window.spaceID] ?? []
+        let spaceID = entry.window.spaceID
+        let primary = hostWindowOrder.compactMap { windowsBySpace[spaceID]?[$0] }
+        let windows =
+            (primary.isEmpty ? [entry.window] : primary)
+            + (auxiliaryWindowsBySpace[spaceID] ?? [])
         if let reportedFocusedWindow,
-            reportedFocusedWindow.spaceID == entry.window.spaceID,
-            !reportedFocusedWindow.isPrimary
+            reportedFocusedWindow.spaceID == spaceID
         {
-            return [reportedFocusedWindow, entry.window]
-                + auxiliary.filter { $0 !== reportedFocusedWindow }
+            return [reportedFocusedWindow] + windows.filter { $0 !== reportedFocusedWindow }
         }
-        return [entry.window] + auxiliary
+        return windows
     }
 
     func webExtensionController(
@@ -1286,6 +1389,7 @@ extension BrowserExtensionTabWindowCoordinator {
             pinned: configuration.shouldBePinned,
             index: normalized(index: configuration.index),
             selected: configuration.shouldBeActive,
+            window: configuration.window as? BrowserExtensionWindowAdapter,
             completionHandler: completionHandler
         )
     }
@@ -1342,6 +1446,10 @@ extension BrowserExtensionTabWindowCoordinator {
             return
         }
 
+        let host = preferredHost(in: spaceID)
+        let browser = host?.browser ?? browser
+        let pageProvider = host?.pageProvider ?? pageProvider
+
         for existingTab in configuration.tabs {
             guard let adapter = existingTab as? BrowserExtensionTabAdapter else {
                 continue
@@ -1377,12 +1485,12 @@ extension BrowserExtensionTabWindowCoordinator {
                 pageProvider?.prepareExtensionSelection(session: session)
             }
             reconcile(session: session)
-            completionHandler(entry.window, nil)
+            completionHandler(window(for: spaceID) ?? entry.window, nil)
             if configuration.shouldBeFocused {
                 pageProvider?.select(session: browser.session)
             }
             return
         }
-        completionHandler(entry.window, nil)
+        completionHandler(window(for: spaceID) ?? entry.window, nil)
     }
 }

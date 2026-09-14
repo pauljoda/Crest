@@ -178,8 +178,16 @@ final class BrowserExtensionControllerPool {
     }
 
     func setTabGroupService(_ service: (any BrowserExtensionTabGroupHandling)?) {
-        tabWindowCoordinator.tabGroupService = service
+        guard let service else {
+            tabWindowCoordinator.tabGroupService = nil
+            return
+        }
+        tabWindowCoordinator.tabGroupService = BrowserExtensionTabGroupRoutingService { [weak tabWindowCoordinator] in
+            tabWindowCoordinator?.tabGroupSources(default: service) ?? [.init(service: service, session: nil)]
+        }
     }
+
+    var extensionTabGroupService: (any BrowserExtensionTabGroupHandling)? { tabWindowCoordinator.tabGroupService }
 
     func setDeclarativeNetRequestService(
         _ service: (any BrowserExtensionDeclarativeNetRequestHandling)?

@@ -120,10 +120,9 @@ extension BrowserExtensionTabWindowCoordinator {
         }
 
         if includes("OFFSCREEN_DOCUMENT"),
-            let document = pageProvider?.extensionOffscreenDocument(
-                extensionBaseURL: extensionContext.baseURL,
-                in: spaceID
-            )
+            let document = pageProviders(in: spaceID).lazy.compactMap({
+                $0.extensionOffscreenDocument(extensionBaseURL: extensionContext.baseURL, in: spaceID)
+            }).first
         {
             contexts.append(
                 Self.context(
@@ -137,26 +136,34 @@ extension BrowserExtensionTabWindowCoordinator {
 
         guard includes("SIDE_PANEL") else { return contexts }
         let space = currentState?.space(spaceID)
-        for document in pageProvider?.extensionSidebarDocuments(
-            extensionBaseURL: extensionContext.baseURL,
-            in: spaceID
-        ) ?? [] {
-            var context = Self.context(
-                type: "SIDE_PANEL",
-                contextID: document.contextID,
-                origin: origin,
-                documentURL: document.url
-            )
-            context["windowKind"] = "primary"
-            if let tabID = document.tabID {
-                // A panel scoped to a tab the session no longer has is still
-                // an open document; it simply has no tab left to name.
-                if let tab = space?.tab(tabID) {
-                    context["tabIndex"] = tab.index
-                    context["tabURL"] = tab.url?.absoluteString
+        var seen: Set<String> = []
+        for provider in pageProviders(in: spaceID) {
+            for document in provider.extensionSidebarDocuments(extensionBaseURL: extensionContext.baseURL, in: spaceID)
+            {
+                guard seen.insert(document.contextID).inserted else { continue }
+                var context = Self.context(
+                    type: "SIDE_PANEL",
+                    contextID: document.contextID,
+                    origin: origin,
+                    documentURL: document.url
+                )
+                context["windowKind"] = "primary"
+                let hostWindow =
+                    document.windowID.flatMap { windowsBySpace[spaceID]?[$0] }
+                    ?? document.tabID.flatMap { window(for: $0, in: spaceID) }
+                context["window"] = brokerWindowDescriptor(hostWindow)
+                if let tabID = document.tabID {
+                    // A panel scoped to a tab the session no longer has is still
+                    // an open document; it simply has no tab left to name.
+                    if let tab = space?.tab(tabID),
+                        let index = hostWindow.map({ ownedTabIDs(in: $0).firstIndex(of: tabID) }) ?? tab.index
+                    {
+                        context["tabIndex"] = index
+                        context["tabURL"] = tab.url?.absoluteString
+                    }
                 }
+                contexts.append(context)
             }
-            contexts.append(context)
         }
         return contexts
     }

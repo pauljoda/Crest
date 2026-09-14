@@ -9,7 +9,7 @@ struct BrowserWindowID: RawRepresentable, Codable, Hashable, Identifiable, Senda
         self.rawValue = rawValue
     }
 
-    /// The one regular browser shell shared by every non-private Space.
+    /// The stable identity of the initial normal browser window.
     static let main = BrowserWindowID(
         // 3A92C7E8-46F1-4D55-86BB-0F226747F8D1
         rawValue: UUID(

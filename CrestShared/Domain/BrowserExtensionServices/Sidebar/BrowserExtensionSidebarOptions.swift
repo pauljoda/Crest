@@ -12,6 +12,7 @@ enum BrowserExtensionSidebarIcon: Equatable, Sendable {
 enum BrowserExtensionSidebarScope: Hashable, Sendable {
     case `default`
     case window
+    case hostWindow(BrowserWindowID)
     case tab(TabID)
 }
 

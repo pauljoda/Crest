@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 @MainActor
@@ -25,16 +26,18 @@ final class BrowserCredentialTests: XCTestCase {
     }
 
     func testCredentialOriginRejectsOpaqueWebKitOriginsBeforeURLConstruction() throws {
-        XCTAssertNil(CredentialOrigin(
-            securityProtocol: "data",
-            host: "",
-            port: 0
-        ))
-        XCTAssertNil(CredentialOrigin(
-            securityProtocol: "https:",
-            host: "example.com",
-            port: 443
-        ))
+        XCTAssertNil(
+            CredentialOrigin(
+                securityProtocol: "data",
+                host: "",
+                port: 0
+            ))
+        XCTAssertNil(
+            CredentialOrigin(
+                securityProtocol: "https:",
+                host: "example.com",
+                port: 443
+            ))
         XCTAssertEqual(
             CredentialOrigin(
                 securityProtocol: "HTTPS",
@@ -285,7 +288,8 @@ final class BrowserCredentialTests: XCTestCase {
             origin: origin,
             credentialScope: .httpBasic(realm: "Members")
         )
-        let reusedHTTPAuthentication = try await store
+        let reusedHTTPAuthentication =
+            try await store
             .httpAuthenticationCredential(
                 for: protectionSpace,
                 in: space.id
@@ -449,9 +453,10 @@ final class BrowserCredentialTests: XCTestCase {
                 )
             )
         )
-        XCTAssertFalse(requests.contains { request in
-            request.service == CredentialKeychainNamespace.productionPrefix
-        })
+        XCTAssertFalse(
+            requests.contains { request in
+                request.service == CredentialKeychainNamespace.productionPrefix
+            })
 
         let storedWorkItemResult = await itemStore.storedItem(
             service: workService,
@@ -607,10 +612,47 @@ final class BrowserCredentialTests: XCTestCase {
         XCTAssertEqual(migratedWork?.password, "work-secret")
         XCTAssertFalse(try XCTUnwrap(migratedWork).descriptor.isSynchronizable)
         XCTAssertTrue(try XCTUnwrap(untouchedPersonal).descriptor.isSynchronizable)
-        XCTAssertFalse(try XCTUnwrap(store.session.space(id: work.id))
-            .credentialPreferences.syncsCrestPasswordsWithICloud)
-        XCTAssertTrue(try XCTUnwrap(store.session.space(id: personal.id))
-            .credentialPreferences.syncsCrestPasswordsWithICloud)
+        XCTAssertFalse(
+            try XCTUnwrap(store.session.space(id: work.id))
+                .credentialPreferences.syncsCrestPasswordsWithICloud)
+        XCTAssertTrue(
+            try XCTUnwrap(store.session.space(id: personal.id))
+                .credentialPreferences.syncsCrestPasswordsWithICloud)
+    }
+
+    func testSynchronizationCompletionRespectsProfileIdentityAndNewerPreferences() async throws {
+        for replacesProfile in [false, true] {
+            let vault = CredentialSynchronizationInterleavingVault()
+            let store = BrowserStore(
+                session: .preview, persistence: InMemoryBrowserSessionPersistence(), credentialVault: vault)
+            let otherWindow = store.makeWindowStore()
+            let original = try XCTUnwrap(store.selectedSpace)
+            vault.duringSynchronization = {
+                var preferences = original.credentialPreferences
+                preferences.isEnabled = false
+                if replacesProfile {
+                    otherWindow.session.spaces[0] = BrowserSpace(
+                        id: original.id, profile: BrowsingProfile(), name: "Replacement", symbol: original.symbol,
+                        accent: original.accent,
+                        folders: [], tabs: original.tabs, credentialPreferences: preferences,
+                        selectedTabID: original.selectedTabID)
+                } else {
+                    otherWindow.updateCredentialPreferences(preferences, in: original.id)
+                }
+            }
+
+            do {
+                try await store.setCrestPasswordSynchronization(false, in: original.id)
+                XCTAssertFalse(replacesProfile, "A replacement profile must reject the stale completion")
+            } catch {
+                XCTAssertTrue(replacesProfile)
+                XCTAssertEqual(error as? CredentialVaultError, .missingSpace)
+            }
+
+            let preferences = try XCTUnwrap(store.selectedSpace).credentialPreferences
+            XCTAssertFalse(preferences.isEnabled)
+            XCTAssertEqual(preferences.syncsCrestPasswordsWithICloud, replacesProfile)
+        }
     }
 
     func testBrowserStoreDoesNotSuggestOrSavePasswordsOnHTTP() async throws {
@@ -673,7 +715,7 @@ final class BrowserCredentialTests: XCTestCase {
         )
 
         XCTAssertEqual(result.disposition, .created)
-        guard case let .alreadyStored(existing) = unchangedPlan else {
+        guard case .alreadyStored(let existing) = unchangedPlan else {
             return XCTFail("An identical submitted password should not prompt again")
         }
         XCTAssertEqual(existing.id, result.descriptor.id)
@@ -717,7 +759,7 @@ final class BrowserCredentialTests: XCTestCase {
             in: work.id,
             now: updatedAt
         )
-        guard case let .update(existing) = plan else {
+        guard case .update(let existing) = plan else {
             return XCTFail("A changed password for the same username should update")
         }
         XCTAssertEqual(existing.id, created.descriptor.id)
@@ -815,7 +857,7 @@ final class BrowserCredentialTests: XCTestCase {
                     BrowserCredentialCapturePolicy.candidateLifetime + 1
                 )
             ),
-            (future, submittedAt)
+            (future, submittedAt),
         ] {
             do {
                 _ = try await store.commitCredentialSave(
@@ -998,11 +1040,13 @@ final class BrowserCredentialTests: XCTestCase {
                 in: work.id,
                 now: submittedAt
             )
-            guard case .alreadyStored = try await store.credentialSavePlan(
-                for: original,
-                in: work.id,
-                now: submittedAt
-            ) else {
+            guard
+                case .alreadyStored = try await store.credentialSavePlan(
+                    for: original,
+                    in: work.id,
+                    now: submittedAt
+                )
+            else {
                 return XCTFail("The real Keychain should suppress an unchanged prompt")
             }
 
@@ -1249,7 +1293,7 @@ private actor RecordingCredentialKeychainStore: CredentialKeychainStoring {
         var service: String {
             switch self {
             case .descriptorItems(let service), .items(let service),
-                 .upsert(let service), .deleteAll(let service):
+                .upsert(let service), .deleteAll(let service):
                 service
             case .item(let service, _), .delete(let service, _):
                 service
@@ -1303,7 +1347,8 @@ private actor RecordingCredentialKeychainStore: CredentialKeychainStoring {
 
 final class BrowserCredentialCSVImportTests: XCTestCase {
     func testParsesBrowserCSVWithQuotedUnicodeCommasAndNewlines() throws {
-        let csv = "name,url,username,password,note\r\n"
+        let csv =
+            "name,url,username,password,note\r\n"
             + "\"Café, Admin\",https://EXAMPLE.com:443/login,\"zoë@example.com\","
             + "\"line one\nline two, \"\"quoted\"\"\",\"optional, note\"\r\n"
 
@@ -1628,5 +1673,52 @@ final class BrowserCredentialCSVImportTests: XCTestCase {
         XCTAssertEqual(workUsernames, ["replacement"])
         XCTAssertEqual(personalUsernames, ["personal"])
         XCTAssertEqual(authenticator.reasons.count, 1)
+    }
+}
+
+@MainActor
+private final class CredentialSynchronizationInterleavingVault: CredentialVault {
+    let storage = InMemoryCredentialVault()
+    var duringSynchronization: (() -> Void)?
+
+    func descriptors(in spaceID: SpaceID) async throws -> [CredentialDescriptor] {
+        await storage.descriptors(in: spaceID)
+    }
+
+    func descriptors(matching origin: CredentialOrigin, in spaceID: SpaceID) async throws -> [CredentialDescriptor] {
+        await storage.descriptors(matching: origin, in: spaceID)
+    }
+
+    func descriptors(
+        matching protectionSpace: BrowserHTTPAuthenticationProtectionSpace, in spaceID: SpaceID
+    ) async throws -> [CredentialDescriptor] {
+        await storage.descriptors(matching: protectionSpace, in: spaceID)
+    }
+
+    func credential(id: CredentialID, in spaceID: SpaceID) async throws -> BrowserCredential? {
+        await storage.credential(id: id, in: spaceID)
+    }
+
+    func save(_ credential: BrowserCredential, in spaceID: SpaceID) async throws {
+        try await storage.save(credential, in: spaceID)
+    }
+
+    func replaceAll(_ credentials: [BrowserCredential], in spaceID: SpaceID) async throws {
+        try await storage.replaceAll(credentials, in: spaceID)
+    }
+
+    func setSynchronizable(_ isSynchronizable: Bool, in spaceID: SpaceID) async throws {
+        await storage.setSynchronizable(isSynchronizable, in: spaceID)
+        let callback = duringSynchronization
+        duringSynchronization = nil
+        callback?()
+    }
+
+    func delete(id: CredentialID, in spaceID: SpaceID) async throws {
+        await storage.delete(id: id, in: spaceID)
+    }
+
+    func deleteAll(in spaceID: SpaceID) async throws {
+        await storage.deleteAll(in: spaceID)
     }
 }

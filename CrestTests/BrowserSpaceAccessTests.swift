@@ -286,7 +286,32 @@ final class BrowserSpaceAccessTests: XCTestCase {
         )
     }
 
-    func testNewWindowUsesTheDefaultSpaceInsteadOfItsSavedSpace() throws {
+    func testAuthenticatedPolicyChangeCannotChangeAReplacementProfile() async throws {
+        let store = BrowserStore(session: .preview, persistence: InMemoryBrowserSessionPersistence())
+        let otherWindow = store.makeWindowStore()
+        let original = try XCTUnwrap(store.selectedSpace)
+        store.updateSpaceAccessPolicy(.deviceOwnerAuthentication, in: original.id)
+        let assignment = BrowserSpaceRuntimeAssignment(space: original)
+        let authenticator = SuspendedBrowserDeviceAuthenticator()
+        let access = BrowserSpaceAccessController(authenticator: authenticator)
+        let update = Task { await access.updatePolicy(.open, matching: assignment, in: store) }
+        while authenticator.attemptCount == 0 { await Task.yield() }
+        let replacement = BrowserSpace(
+            id: original.id, profile: BrowsingProfile(), name: "Replacement", symbol: original.symbol,
+            accent: original.accent,
+            folders: [], tabs: original.tabs, accessPolicy: .deviceOwnerAuthentication,
+            selectedTabID: original.selectedTabID)
+        otherWindow.session.spaces[0] = replacement
+
+        authenticator.complete(with: true)
+        let changed = await update.value
+
+        XCTAssertFalse(changed)
+        XCTAssertEqual(store.selectedSpace?.accessPolicy, .deviceOwnerAuthentication)
+        XCTAssertTrue(access.isLocked(replacement))
+    }
+
+    func testRestoredWindowKeepsItsSpaceWhenTheDefaultSpaceDiffers() throws {
         var session = BrowserSession.preview
         let work = try XCTUnwrap(session.spaces.first)
         let personal = try XCTUnwrap(session.spaces.last)
@@ -302,7 +327,8 @@ final class BrowserSpaceAccessTests: XCTestCase {
 
         let window = root.makeWindowStore(restoring: savedState)
 
-        XCTAssertEqual(window.session.selectedSpaceID, personal.id)
+        XCTAssertEqual(window.session.selectedSpaceID, work.id)
+        XCTAssertEqual(root.makeWindowStore().session.selectedSpaceID, personal.id)
     }
 }
 

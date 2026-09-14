@@ -11,6 +11,7 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
     var registersContainer = true
     var isEnabled = true
 
+    @Environment(\.browserSidebarWindowDrop) private var windowDrop
     @State private var liftSessionToken: BrowserDragSessionToken?
     @State private var rejectedGesture = false
 
@@ -39,6 +40,11 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
     /// Keeps captured selection and live source authorization with the shared session.
     private var applyLift: (BrowserSidebarReorderLiftPhase) -> Void {
         { phase in
+            if liftSessionToken != nil, !ownsLift {
+                liftSessionToken = nil
+                if case .moved = phase { rejectedGesture = true }
+                return
+            }
             if rejectedGesture {
                 if case .released = phase {
                     rejectedGesture = false
@@ -117,6 +123,11 @@ struct BrowserSidebarReorderSourceModifier: ViewModifier {
                 }
             case .released(let previewOwner):
                 guard continuingLift else { return }
+                if let item = state.lift?.item, windowDrop?.perform(item) == true {
+                    cancelLift()
+                    state.suppressActivation()
+                    return
+                }
                 self.liftSessionToken = nil
                 // Replace the temporary gap with its real row in one layout
                 // transaction. The floating preview owns the visible landing.

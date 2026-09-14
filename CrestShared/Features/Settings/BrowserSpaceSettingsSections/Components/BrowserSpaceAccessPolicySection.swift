@@ -48,17 +48,10 @@ struct BrowserSpaceAccessPolicySection: View {
         isUpdating = true
         defer { isUpdating = false }
 
-        if !isRequired {
-            guard await spaceAccess.unlock(browser.liveSpace(space)) else {
-                return
-            }
-        }
-        browser.updateSpaceAccessPolicy(
+        await spaceAccess.updatePolicy(
             isRequired ? .deviceOwnerAuthentication : .open,
-            in: space.id
+            matching: BrowserSpaceRuntimeAssignment(space: space),
+            in: browser
         )
-        if isRequired {
-            spaceAccess.lock(space.id)
-        }
     }
 }

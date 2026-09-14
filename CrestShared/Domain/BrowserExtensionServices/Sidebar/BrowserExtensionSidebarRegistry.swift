@@ -7,6 +7,7 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
     let displayName: String
     private(set) var defaultLayer = BrowserExtensionSidebarOptions()
     private(set) var windowLayer = BrowserExtensionSidebarOptions()
+    private(set) var hostWindowLayers: [BrowserWindowID: BrowserExtensionSidebarOptions] = [:]
     private(set) var tabLayers: [TabID: BrowserExtensionSidebarOptions] = [:]
     private var chromeTabIDs: Set<TabID> = []
 
@@ -19,6 +20,7 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
         switch scope {
         case .default: defaultLayer
         case .window: windowLayer
+        case .hostWindow(let id): hostWindowLayers[id] ?? .init()
         case .tab(let tabID): tabLayers[tabID] ?? .init()
         }
     }
@@ -64,11 +66,13 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
         setLayer(current, at: scope)
     }
 
-    func resolved(for tabID: TabID?) -> BrowserExtensionSidebarResolvedOptions {
-        resolved(at: tabID.map(BrowserExtensionSidebarScope.tab) ?? .window)
+    func resolved(for tabID: TabID?, in windowID: BrowserWindowID? = nil) -> BrowserExtensionSidebarResolvedOptions {
+        resolved(at: tabID.map(BrowserExtensionSidebarScope.tab) ?? .window, in: windowID)
     }
 
-    func resolved(at requestedScope: BrowserExtensionSidebarScope) -> BrowserExtensionSidebarResolvedOptions {
+    func resolved(at requestedScope: BrowserExtensionSidebarScope, in windowID: BrowserWindowID? = nil)
+        -> BrowserExtensionSidebarResolvedOptions
+    {
         var options = BrowserExtensionSidebarOptions(
             path: defaults.path ?? "", isEnabled: true,
             title: defaults.title ?? displayName, icon: defaults.icon
@@ -78,6 +82,12 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
         if requestedScope != .default {
             options.merge(windowLayer)
             if windowLayer.path != nil { scope = .window }
+            let hostID: BrowserWindowID?
+            if case .hostWindow(let id) = requestedScope { hostID = id } else { hostID = windowID }
+            if let hostID, let layer = hostWindowLayers[hostID] {
+                options.merge(layer)
+                if layer.path != nil { scope = .hostWindow(hostID) }
+            }
         }
         if case .tab(let tabID) = requestedScope, let tab = tabLayers[tabID] {
             options.merge(tab)
@@ -95,12 +105,15 @@ struct BrowserExtensionSidebarRegistry: Equatable, Sendable {
         chromeTabIDs.formIntersection(liveTabs)
     }
 
+    mutating func release(windowID: BrowserWindowID) { hostWindowLayers[windowID] = nil }
+
     private mutating func setLayer(
         _ options: BrowserExtensionSidebarOptions, at scope: BrowserExtensionSidebarScope
     ) {
         switch scope {
         case .default: defaultLayer = options
         case .window: windowLayer = options
+        case .hostWindow(let id): hostWindowLayers[id] = options
         case .tab(let tabID): tabLayers[tabID] = options
         }
     }

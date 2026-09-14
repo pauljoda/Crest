@@ -3,7 +3,7 @@ enum BrowserShortcutSectionPolicy {
         for command: BrowserShortcutCommand
     ) -> BrowserShortcutSection {
         switch command {
-        case .newWindow, .newTab, .newQuickWindow, .newPrivateWindow,
+        case .newBlankWindow, .newWindow, .newTab, .newQuickWindow, .newPrivateWindow,
             .closeTabOrWindow, .closeWindow, .openLocation, .back, .forward,
             .reloadPage, .stopLoading, .reloadFromOrigin:
             .everyday

@@ -66,11 +66,12 @@ struct BrowserRootSidebarContent: View {
     }
 
     private var chromeActions: BrowserSidebarChromeActions {
-        BrowserSidebarChromeActions(
+        let create: (() -> Void)? = model.browser.isTemporaryWorkspace ? nil : { createSpace() }
+        return BrowserSidebarChromeActions(
             presentSpaceSettings: presentSpaceSettings(for:),
             presentHistory: { model.chrome.utilityPresentation.present(.history) },
             presentExtensions: presentExtensions(for:),
-            createSpace: createSpace
+            createSpace: create
         )
     }
 

@@ -75,7 +75,7 @@ struct BrowserTabSelectionMonitor: NSViewRepresentable {
             }
             let selection = browser.tabMultiSelection
             if event.type == .keyDown {
-                if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .escape, selection.isEngaged,
+                if BrowserShortcutHardwareKeyCode(rawValue: event.keyCode) == .escape,
                     sidebarInteraction.sidebarReorderState.hasLiftInFlight
                 {
                     sidebarInteraction.sidebarReorderState.cancel()

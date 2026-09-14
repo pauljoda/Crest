@@ -190,9 +190,11 @@ extension BrowserStore {
         return tabID
     }
 
-    func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int) -> Bool {
+    func moveExtensionTabs(_ ids: [TabID], in spaceID: SpaceID, to index: Int, among windowTabs: Set<TabID>? = nil)
+        -> Bool
+    {
         let before = session
-        guard session.moveExtensionTabs(ids, in: spaceID, to: index) else { return false }
+        guard session.moveExtensionTabs(ids, in: spaceID, to: index, among: windowTabs) else { return false }
         if session != before { persist(scope: .core) }
         return true
     }

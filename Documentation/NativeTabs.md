@@ -8,13 +8,15 @@ The Mac and mobile page stores recognize native selection without allocating a `
 
 ## Loaded state
 
-Each window's page store owns a `BrowserNativeTabStore`. Presenting a native card loads a runtime identified by its tab, Space, profile, and complete content descriptor. The runtime owns typed content models, independent of whether SwiftUI currently mounts the card. Switching tabs or Spaces preserves those models; it does not retain hidden view hierarchies or add another presentation layer.
+Page stores use a `BrowserNativeTabStore`. Normal macOS windows share it through their workspace's runtime owner; temporary windows have their own store. Presenting a native card loads a runtime identified by its tab, Space, profile, and complete content descriptor. The runtime owns typed content models, independent of whether SwiftUI currently mounts the card. Switching tabs, Spaces, or normal windows preserves those models; it does not retain hidden view hierarchies or add another presentation layer.
 
-Explicit unload, tab removal, assignment or descriptor replacement, and window runtime teardown end that lifetime. Memory pressure may unload an offscreen native runtime under the platform's existing release limits. Presented native cards are excluded. Locking a Space preserves its loaded state behind the existing access boundary. Runtime state stays in memory and is neither synchronized nor written into session archives.
+Explicit unload, tab removal, assignment or descriptor replacement, and workspace runtime teardown end that lifetime. Closing one normal macOS window retains the shared runtime. Moving a tab into or out of a temporary workspace transfers its loaded model without recreating it. Memory pressure may unload an offscreen native runtime under the platform's existing release limits. Presented native cards are excluded. Locking a Space preserves its loaded state behind the existing access boundary. Runtime state stays in memory and is neither synchronized nor written into session archives.
 
 Content chooses what belongs in its model: navigation, practice edits, filters, and scroll positions can survive remounting. Focus, active gestures, authorization, and confirmation dialogs belong to the current presentation. A model must not retain a hosting controller, running task, or callback that keeps an inactive view operating. Persistent document data belongs in its own Space/profile store and outlives this runtime only according to that store's policy.
 
 Settings activation follows the host layout: Mac and regular-width mobile windows open the native Settings page in the browsing canvas. Compact mobile layouts present a sheet while retaining the browsing selection. An unfocused Settings split card uses the same routing, validated against its captured tab, Space and profile. In compact layouts, a restored or synchronized selected Settings descriptor presents the sheet and uses the normal native-tab dismissal fallback while retaining the tab. Switching the active Space from embedded Settings also validates the owning Settings tab and destination access before opening or reusing Settings there.
+
+Settings in a temporary macOS workspace retain their native tab locally while editing the canonical source workspace. The pane uses its own Space picker rather than changing the temporary window's borrowed Space. Profile policy, credentials, and deletion therefore use the source authority, while the temporary window's tabs and organization stay local.
 
 ## Adding a content type
 

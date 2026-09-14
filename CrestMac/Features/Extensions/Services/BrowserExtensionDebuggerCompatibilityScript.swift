@@ -39,16 +39,16 @@ enum BrowserExtensionDebuggerCompatibilityScript {
             let tab;
             try { tab = await sidebarNative("tabs", "get", tabId); } catch { throw new Error(`No tab with given id ${tabId}.`); }
             if (!Number.isInteger(tab?.index) || tab.index < 0) throw new Error(`No tab with given id ${tabId}.`);
-            return {tabIndex: tab.index, ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
+            return {tabIndex: tab.index, window: await sidebarWindowDescriptor(tab.windowId), ...(typeof tab.url === "string" && tab.url.length > 0 ? {url: tab.url} : {})};
         };
         const debuggerTabsByIndex = async () => {
             let windowId;
             try { windowId = await sidebarPrimaryWindowId(); } catch {}
             let tabs = [];
-            try { tabs = await sidebarNative("tabs", "query", windowId === undefined ? {} : {windowId}); } catch {}
+            try { tabs = await sidebarNative("tabs", "query", {}); } catch {}
             const byIndex = new Map();
             for (const tab of Array.isArray(tabs) ? tabs : []) {
-                if (Number.isInteger(tab?.index) && Number.isInteger(tab?.id)) byIndex.set(tab.index, tab);
+                if (Number.isInteger(tab?.index) && Number.isInteger(tab?.id)) byIndex.set(`${tab.windowId}:${tab.index}`, tab);
             }
             return byIndex;
         };
@@ -154,7 +154,7 @@ enum BrowserExtensionDebuggerCompatibilityScript {
                 return sidebarCall("debugger.getTargets", args, () => ({}), async response => {
                     const entries = Array.isArray(response?.targets) ? response.targets : [];
                     const byIndex = await debuggerTabsByIndex();
-                    return entries.map(entry => {
+                    return Promise.all(entries.map(async entry => {
                         const info = {
                             type: debuggerTargetInfoType.PAGE,
                             id: String(entry?.id ?? ""),
@@ -162,13 +162,15 @@ enum BrowserExtensionDebuggerCompatibilityScript {
                             title: typeof entry?.title === "string" ? entry.title : "",
                             url: typeof entry?.url === "string" ? entry.url : ""
                         };
-                        const tab = byIndex.get(entry?.tabIndex);
+                        let windowId;
+                        try { windowId = await sidebarWindowIdFor(entry?.window); } catch {}
+                        const tab = byIndex.get(`${windowId}:${entry?.tabIndex}`);
                         if (tab !== undefined && (typeof tab.url !== "string" || typeof entry?.url !== "string" || tab.url === entry.url)) {
                             info.tabId = tab.id;
                         }
                         if (typeof entry?.faviconUrl === "string") info.faviconUrl = entry.faviconUrl;
                         return info;
-                    });
+                    }));
                 });
             },
             onEvent: debuggerEvent("event"),

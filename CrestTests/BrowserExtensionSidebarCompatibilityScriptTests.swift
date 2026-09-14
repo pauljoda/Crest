@@ -91,6 +91,35 @@ final class BrowserExtensionSidebarCompatibilityScriptTests: XCTestCase {
         XCTAssertEqual(requests[0]["windowKind"] as? String, "primary")
     }
 
+    func testExplicitSecondaryWindowUsesItsBoundsAndReconstructsItsOwnEventTab() async throws {
+        let result = try await evaluate(
+            """
+            const windows = [
+                {id: 12, type: 'normal', left: 0, top: 0, width: 800, height: 600, focused: true},
+                {id: 42, type: 'normal', left: 900, top: 0, width: 800, height: 600, focused: false}
+            ];
+            primaryRoot.windows.getAll = async () => windows;
+            primaryRoot.tabs.get = async id => ({id, windowId: 42, index: 0, url: 'https://example.com/'});
+            primaryRoot.tabs.query = async options => [{id: options.windowId === 42 ? 7 : 8, windowId: options.windowId, index: 0, url: 'https://example.com/'}];
+            activation = true;
+            await sidePanel.open({tabId: 7, windowId: 42});
+            const received = [];
+            sidePanel.onOpened.addListener(info => received.push(info));
+            await watchOptions.onMessage({api: 'sidebar.event', kind: 'opened', windowKind: 'primary',
+                window: windows[1], tabIndex: 0, url: 'https://example.com/', path: 'local.html'});
+            windows[1].left = 0;
+            await watchOptions.onMessage({api: 'sidebar.event', kind: 'opened', windowKind: 'primary',
+                window: windows[1], tabIndex: 0, url: 'https://example.com/', path: 'ambiguous.html'});
+            return {requests, received};
+            """)
+        let requests = try XCTUnwrap(result["requests"] as? [[String: Any]])
+        XCTAssertEqual((requests.first?["window"] as? [String: Any])?["left"] as? Int, 900)
+        let received = try XCTUnwrap(result["received"] as? [[String: Any]])
+        XCTAssertEqual(received.count, 1, "Focus must not resolve identical native window bounds")
+        XCTAssertEqual(received.first?["windowId"] as? Int, 42)
+        XCTAssertEqual(received.first?["tabId"] as? Int, 7)
+    }
+
     private func evaluate(_ body: String) async throws -> [String: Any] {
         let script = """
             let activation = false;

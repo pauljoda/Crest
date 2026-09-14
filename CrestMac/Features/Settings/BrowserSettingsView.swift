@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct BrowserSettingsView: View {
@@ -11,6 +12,7 @@ struct BrowserSettingsView: View {
     let shortcuts: BrowserShortcutStore
     let onboardingCoordinator: BrowserOnboardingCoordinator
     let spaceSettingsPresentation: BrowserSpaceSettingsPresentationState
+    let usesLiveSidebar: Bool
 
     @Bindable var tabState: BrowserSettingsTabState
     let tabAssignment: BrowserTabRuntimeAssignment?
@@ -25,6 +27,7 @@ struct BrowserSettingsView: View {
         onboardingCoordinator: BrowserOnboardingCoordinator,
         spaceSettingsPresentation: BrowserSpaceSettingsPresentationState =
             BrowserSpaceSettingsPresentationState(),
+        usesLiveSidebar: Bool = true,
         tabState: BrowserSettingsTabState = BrowserSettingsTabState(),
         tabAssignment: BrowserTabRuntimeAssignment? = nil
     ) {
@@ -38,6 +41,7 @@ struct BrowserSettingsView: View {
         self.shortcuts = shortcuts
         self.onboardingCoordinator = onboardingCoordinator
         self.spaceSettingsPresentation = spaceSettingsPresentation
+        self.usesLiveSidebar = usesLiveSidebar
     }
 
     var body: some View {
@@ -79,11 +83,11 @@ struct BrowserSettingsView: View {
         .environment(\.browserSettingsTabState, tabState)
         .environment(\.browserSettingsSelections, tabState.selections)
         .environment(\.browserSettingsIsTab, true)
-        .environment(\.browserSettingsUsesLiveSidebar, true)
+        .environment(\.browserSettingsUsesLiveSidebar, usesLiveSidebar)
         .environment(
             \.browserSettingsSelectLiveSpace,
             BrowserSettingsLiveSpaceSelection { id in
-                guard let tabAssignment,
+                guard usesLiveSidebar, let tabAssignment,
                     let selected = BrowserSettingsSpaceSelectionAction(browser: browser, spaceAccess: spaceAccess)
                         .select(id, matching: tabAssignment)
                 else { return }
@@ -115,7 +119,7 @@ struct BrowserSettingsView: View {
         _ previousPhase: ScenePhase,
         _ phase: ScenePhase
     ) {
-        guard phase != previousPhase else { return }
+        guard phase != previousPhase, !NSApp.isActive else { return }
 
         switch phase {
         case .active:

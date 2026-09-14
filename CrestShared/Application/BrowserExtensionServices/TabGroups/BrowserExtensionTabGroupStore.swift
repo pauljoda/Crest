@@ -7,7 +7,7 @@ import Observation
 @MainActor
 final class BrowserExtensionTabGroupStore: BrowserExtensionTabGroupHandling {
     private(set) var revision = 0
-    @ObservationIgnored private var nextID = 1
+    private static var nextID = 1
     @ObservationIgnored private var idsBySpace: [SpaceID: [FolderID: BrowserExtensionTabGroupID]] = [:]
     /// Last announced projection, used only to derive API events.
     @ObservationIgnored private var positions: [BrowserExtensionTabGroupID: Int] = [:]
@@ -186,8 +186,8 @@ final class BrowserExtensionTabGroupStore: BrowserExtensionTabGroupHandling {
                 if let existing = idsBySpace[space.id]?[folder.id] {
                     id = existing
                 } else {
-                    id = .init(rawValue: nextID)
-                    nextID += 1
+                    id = .init(rawValue: Self.nextID)
+                    Self.nextID += 1
                     idsBySpace[space.id, default: [:]][folder.id] = id
                 }
                 nextPositions[id] = tabs.first.flatMap { tabPositions[$0] }

@@ -93,8 +93,9 @@ extension BrowserPagePool {
     {
         extensionSidebarDocuments.filter {
             $0.key.spaceID == spaceID && $0.key.extensionBaseURL == extensionBaseURL && $0.value.webView != nil
-        }.values.map {
-            BrowserExtensionHostedDocument(contextID: $0.contextID, url: $0.url, tabID: $0.tabID)
+        }.map { key, document in
+            BrowserExtensionHostedDocument(
+                contextID: document.contextID, url: document.url, tabID: document.tabID, windowID: key.windowID)
         }.sorted { $0.contextID < $1.contextID }
     }
 }

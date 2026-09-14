@@ -251,7 +251,7 @@ final class BrowserExtensionTabGroupsCompatibilityScriptTests: XCTestCase {
             [
                 "The tab group ID must be an integer.",
                 "Invalid enumeration value: chartreuse",
-                "No window with id: 99.",
+                "Invalid window ID: 99",
                 "collapsed must be boolean.",
                 "Missing required property 'index'.",
                 "Missing required property 'tabIds'.",

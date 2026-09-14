@@ -178,7 +178,7 @@ enum BrowserExtensionRuntimeContextsCompatibilityScript {
                 let windowId = -1;
                 let tabId = -1;
                 if (entry.windowKind === "primary") {
-                    windowId = await primaryWindowId();
+                    try { windowId = entry.window ? await sidebarWindowIdFor(entry.window) : await primaryWindowId(); } catch {}
                 }
                 if (windowId >= 0 && Number.isInteger(entry.tabIndex)) {
                     try {

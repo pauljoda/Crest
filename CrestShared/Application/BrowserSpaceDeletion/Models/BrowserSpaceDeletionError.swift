@@ -5,6 +5,7 @@ enum BrowserSpaceDeletionError: LocalizedError, Equatable {
     case cannotDeleteLastSpace
     case alreadyDeleting
     case spaceChangedDuringDeletion
+    case borrowedProfile
 
     var errorDescription: String? {
         switch self {
@@ -16,6 +17,8 @@ enum BrowserSpaceDeletionError: LocalizedError, Equatable {
             "Crest is already deleting that Space."
         case .spaceChangedDuringDeletion:
             "The Space changed while Crest was deleting its data. No Space record was removed."
+        case .borrowedProfile:
+            "Manage this Space in Settings to delete its shared profile."
         }
     }
 }

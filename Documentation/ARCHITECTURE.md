@@ -40,6 +40,16 @@ Crest can import browser bookmarks and sessions, and its portable archive format
 
 Import adapters share URL and whitespace sanitation while retaining their own title limits, fallback rules, and errors. Arc bookmark and session imports read one typed source document and apply separate placement and traversal policies. Related background-page metadata and completed visits publish together, using one combined persistence scope.
 
+## Windows on macOS
+
+**New Window** opens another view of the same browsing workspace. `BrowserStoreFamily` owns one observable session; each `BrowserStore` retains only its window's selections and projects them over that session. Changes are visible across windows before persistence. Mutations run on the main actor, and family revisions reject stale background sync work. A restored window keeps its own Space and tab selections, including an intentionally empty selection.
+
+Normal windows share a `BrowserPageRuntimeStore`. Each tab has one `BrowserTabRuntime` owning its live WebKit view, suspended configurations, and history. The focused window hosts the live view; other windows showing the same tab use its preview and can take over presentation. Native tab models share the same workspace lifetime. Closing a normal window releases its presentation while retaining shared tabs and their loaded state.
+
+**Blank Window** creates a temporary workspace with no initial tabs. It borrows the source Space's website profile, credentials, permissions, identity, and settings. Its tabs, pins, folders, history, archive, favicons, and tab-state storage remain local and in memory, with no sync coordinator or window restoration. Settings edit the canonical source profile through a separate selection facade. Source policy changes apply immediately; removing or replacing the source profile ends the temporary workspace. Closing it discards its local browsing records.
+
+Dragging one tab between workspaces moves its existing identity and runtime, including native content models and retained navigation state. The destination receives a Current tab without source folder or split membership, and the transfer does not archive the source tab. An empty source window stays open. A tear-off prepares a destination first and commits only after the native window attaches and both model and runtime assignments pass validation. Cancellation or a stale assignment leaves the source tab in place.
+
 ## Credentials and privacy
 
 Crest Passwords are stored in the Keychain and matched by origin. Each Space can disable Crest-owned suggestions, generation, save prompts, and HTTP-auth reuse without deleting its stored credentials. Sensitive reveals and exports require device authentication. Page-to-app credential messages are schema-checked and origin-bound.
@@ -52,7 +62,7 @@ Shared infrastructure decides navigation, downloads, content blocking, reader mo
 
 `BrowserFaviconSession` owns capture, fallback, and retry lifetime through a document adapter. Authenticated icon discovery stays inside the live WebKit context; public fallback remains credential-free and profile-scoped. Native pages invalidate requests on navigation and icon changes and stop them on removal.
 
-`BrowserReaderModeSession` owns request cancellation and document changes through a document adapter. `BrowserWebKitCredentialSession` shares origin validation and filling while the platform page owns its WebKit host. Root metadata and history updates use `BrowserPageSessionSynchronizer` with an exact, unlocked tab assignment; native page stores validate the page before supplying its metadata.
+`BrowserReaderModeSession` owns request cancellation and document changes through a document adapter. `BrowserWebKitCredentialSession` shares origin validation and filling while the platform page owns its WebKit host. On macOS, the shared runtime publishes a page's metadata and completed visits once through its current window owner. Other hosts use `BrowserPageSessionSynchronizer` with an exact, unlocked tab assignment; page stores validate the page before supplying its metadata.
 
 Shared page operations own common navigation and media behavior. `BrowserPageContentRuleSession` tracks only Crest's content rules, and `BrowserTabStateCoordinator` owns archive eligibility and pending copies without retaining pages. Platform stores apply a shared reconciliation plan and retain their own presentation and memory-pressure policies. On macOS, each `BrowserTabRuntime` owns a tab's current and suspended WebKit configurations together with their history links, so releasing the tab releases every configuration it retained.
 

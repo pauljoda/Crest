@@ -4,11 +4,8 @@ import WebKit
 extension BrowserExtensionTabWindowCoordinator {
     /// The wire shape of one `TabGroup`, minus `windowId`.
     ///
-    /// The window is deliberately absent. Crest never mints a WebKit window
-    /// identifier of its own — the compatibility runtime asks the native
-    /// `windows.getCurrent()` for it, exactly as the sidebar fragment does —
-    /// so the broker names the window by kind and lets JavaScript supply the
-    /// number WebKit actually issued.
+    /// Crest never mints a WebKit window identifier. The owning payload adds
+    /// public geometry so JavaScript can resolve the number WebKit issued.
     static func tabGroupPayload(_ group: BrowserExtensionTabGroup) -> [String: Any] {
         var payload: [String: Any] = [
             "id": group.id.rawValue,
@@ -22,11 +19,26 @@ extension BrowserExtensionTabWindowCoordinator {
         return payload
     }
 
+    private func ownedGroupPayload(_ group: BrowserExtensionTabGroup) -> [String: Any] {
+        var payload = Self.tabGroupPayload(group)
+        payload["window"] =
+            brokerWindowDescriptor(group.tabs.first.flatMap { window(for: $0, in: group.spaceID) })
+            ?? tabGroupWindowDescriptors[group.id]
+        return payload
+    }
+
     func tabGroupEventMessage(_ event: BrowserExtensionTabGroupEvent) -> [String: Any] {
-        [
+        var result: [String: Any] = [
             "api": "tabGroups.event", "kind": event.kind.rawValue, "windowKind": "primary",
             "group": Self.tabGroupPayload(event.group),
         ]
+        result["window"] =
+            event.kind == .removed
+            ? tabGroupWindowDescriptors[event.group.id]
+            : brokerWindowDescriptor(event.group.tabs.first.flatMap { window(for: $0, in: event.group.spaceID) })
+        // Every subscribed extension receives this event independently, so
+        // retain the last descriptor until all queued deliveries can resolve it.
+        return result
     }
 
     func handleCapabilityBrokerTabGroups(
@@ -50,10 +62,18 @@ extension BrowserExtensionTabWindowCoordinator {
                 throw BrowserExtensionCapabilityBrokerError.permissionDenied(capability)
             }
             guard let (spaceID, _) = verifiedSpaceAndEntry(controller: controller, context: extensionContext),
-                let service = tabGroupService, let state = currentState?.space(spaceID)
+                let service = tabGroupService
             else {
                 throw BrowserExtensionTabGroupBrokerError.unavailable
             }
+            let targets = payload["tabs"] as? [[String: Any]] ?? []
+            let window = try brokerWindow(in: spaceID, message: targets.first ?? payload)
+            for target in targets {
+                guard try brokerWindow(in: spaceID, message: target) === window else {
+                    throw BrowserExtensionTabGroupBrokerError.invalidRequest
+                }
+            }
+            let state = brokerState(in: spaceID, window: window)
             if let client = authorization.clientID { service.register(client: client, spaceID: spaceID) }
             // A Peek is announced to extensions but is not a session tab, so
             // it can never join a group.
@@ -61,7 +81,7 @@ extension BrowserExtensionTabWindowCoordinator {
                 (transientTabsBySpace[spaceID] ?? []).map(\.id)
             )
             replyHandler(
-                try tabGroupResponse(request, service: service, space: state, liveTabs: liveTabs), nil)
+                try tabGroupResponse(request, service: service, space: state, liveTabs: liveTabs, window: window), nil)
         } catch {
             replyHandler(nil, error)
         }
@@ -71,28 +91,37 @@ extension BrowserExtensionTabWindowCoordinator {
     private func tabGroupResponse(
         _ request: BrowserExtensionTabGroupBrokerRequest,
         service: any BrowserExtensionTabGroupHandling,
-        space: BrowserExtensionSpaceState, liveTabs: Set<TabID>
+        space: BrowserExtensionSpaceState, liveTabs: Set<TabID>, window: BrowserExtensionWindowAdapter?
     ) throws -> [String: Any] {
         switch request.operation {
         case .get:
-            return ["group": Self.tabGroupPayload(try group(request, service: service, in: space.id))]
+            return ["group": ownedGroupPayload(try group(request, service: service, in: space.id))]
         case .query:
+            let available = Set(space.tabs.map(\.id))
             return [
-                "groups": service.groups(in: space.id).filter(request.filter.matches)
-                    .map(Self.tabGroupPayload)
+                "groups": service.groups(in: space.id).filter {
+                    !$0.tabs.isEmpty && $0.tabs.allSatisfy(available.contains)
+                }
+                .filter(request.filter.matches)
+                .map(ownedGroupPayload)
             ]
         case .update:
             let existing = try group(request, service: service, in: space.id)
             let updated = try service.update(
                 existing.id, in: space.id, title: request.title, color: request.color,
                 isCollapsed: request.isCollapsed)
-            return ["group": Self.tabGroupPayload(updated)]
+            return ["group": ownedGroupPayload(updated)]
         case .move:
             let existing = try group(request, service: service, in: space.id)
             guard let index = request.index else { throw BrowserExtensionTabGroupBrokerError.invalidRequest }
-            let moved = try service.move(existing.id, in: space.id, to: index)
+            let owner = existing.tabs.first.flatMap { self.window(for: $0, in: space.id) }
+            guard existing.tabs.allSatisfy({ self.window(for: $0, in: space.id) === owner }) else {
+                throw BrowserExtensionTabGroupBrokerError.failedToMove
+            }
+            let moved = try service.move(
+                existing.id, in: space.id, to: sessionInsertionIndex(index, in: owner, excluding: Set(existing.tabs)))
             reconcileCurrentSession()
-            return ["group": Self.tabGroupPayload(moved)]
+            return ["group": ownedGroupPayload(moved)]
         case .membership:
             let membership = membershipPayload(service: service, space: space)
             return [
@@ -110,12 +139,12 @@ extension BrowserExtensionTabWindowCoordinator {
             reconcileCurrentSession()
             return [
                 "groupId": created.id.rawValue,
-                "membership": membershipPayload(service: service, space: currentState?.space(space.id) ?? space),
+                "membership": membershipPayload(service: service, space: brokerState(in: space.id, window: window)),
             ]
         case .ungroup:
             service.ungroup(try request.resolveTabs(in: space, liveTabs: liveTabs), in: space.id)
             reconcileCurrentSession()
-            return ["membership": membershipPayload(service: service, space: currentState?.space(space.id) ?? space)]
+            return ["membership": membershipPayload(service: service, space: brokerState(in: space.id, window: window))]
         }
     }
 
@@ -132,8 +161,7 @@ extension BrowserExtensionTabWindowCoordinator {
         return group
     }
 
-    /// `Tab.groupId` for the whole Space, addressed the way the wire addresses
-    /// every tab: by its index in the primary window.
+    /// `Tab.groupId` for this host window, addressed by its native tab index.
     private func membershipPayload(
         service: any BrowserExtensionTabGroupHandling, space: BrowserExtensionSpaceState
     ) -> [[String: Any]] {

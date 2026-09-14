@@ -320,8 +320,13 @@ final class BrowserWebHostView: NSView {
 
     func attach(
         _ webView: WKWebView,
-        focusRestoration: BrowserWebFocusRestorationController? = nil
+        focusRestoration: BrowserWebFocusRestorationController? = nil,
+        allowsAttachment: Bool = true
     ) {
+        guard allowsAttachment else {
+            detach()
+            return
+        }
         if hostedWebView === webView {
             if webView.superview === self {
                 self.focusRestoration = focusRestoration

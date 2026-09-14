@@ -1,6 +1,27 @@
 import Foundation
 
 extension BrowserExtensionControllerPool {
+    func registerWindow(
+        id: BrowserWindowID, browser: BrowserStore,
+        pageProvider: any BrowserExtensionPageProviding,
+        focus: @escaping () -> Void, close: @escaping () -> Void
+    ) {
+        tabWindowCoordinator.registerWindow(
+            id: id, browser: browser, pageProvider: pageProvider, focus: focus, close: close)
+    }
+
+    func unregisterWindow(id: BrowserWindowID) {
+        tabWindowCoordinator.unregisterWindow(id: id)
+    }
+
+    func setHostWindowFocused(_ isFocused: Bool, windowID: BrowserWindowID) {
+        tabWindowCoordinator.setHostWindowFocused(isFocused, windowID: windowID)
+    }
+
+    func setExtensionTabOwner(_ tabID: TabID, in spaceID: SpaceID, windowID: BrowserWindowID) {
+        tabWindowCoordinator.setExtensionTabOwner(tabID, in: spaceID, windowID: windowID)
+    }
+
     func connect<PageProvider: BrowserExtensionPageProviding>(
         browser: BrowserStore,
         pageProvider: PageProvider
@@ -24,9 +45,10 @@ extension BrowserExtensionControllerPool {
 
     func registerTransientExtensionTab(
         _ tab: BrowserExtensionTransientTab,
-        in spaceID: SpaceID
+        in spaceID: SpaceID,
+        windowID: BrowserWindowID? = nil
     ) {
-        tabWindowCoordinator.registerTransientTab(tab, in: spaceID)
+        tabWindowCoordinator.registerTransientTab(tab, in: spaceID, windowID: windowID)
     }
 
     func unregisterTransientExtensionTab(
@@ -37,9 +59,11 @@ extension BrowserExtensionControllerPool {
     }
 
     func extensionWindow(
-        in spaceID: SpaceID
+        in spaceID: SpaceID,
+        windowID: BrowserWindowID? = nil
     ) -> BrowserExtensionWindowAdapter? {
-        tabWindowCoordinator.window(for: spaceID)
+        if let windowID { return tabWindowCoordinator.windowsBySpace[spaceID]?[windowID] }
+        return tabWindowCoordinator.window(for: spaceID)
     }
 
     func sidebarEventMessage(_ event: BrowserExtensionSidebarEvent) -> [String: Any]? {

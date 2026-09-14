@@ -379,6 +379,9 @@ manifest. A changed resource replaces that window document; an unchanged resourc
 keeps it. `sidebarAction.setPanel(null)` and an empty path remove the specified
 override and restore inheritance. Switching Spaces retains the last selected
 resource until its own tab selection or settings change.
+Window overrides use the registered host identity, so a temporary window's
+Firefox settings do not replace another window's overrides. Closing that host
+releases its overrides and retained panel documents.
 
 These contracts follow [Chrome's panel scopes](https://developer.chrome.com/docs/extensions/reference/api/sidePanel#type-OpenOptions)
 and [Firefox's sidebar resource inheritance](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/sidebarAction/setPanel).
@@ -439,12 +442,19 @@ complete Chrome and Firefox member lists only in privileged extension contexts.
 
 ## Tab groups — `chrome.tabGroups`, `tabs.group`, `tabs.ungroup`
 
-One registry per Space, shared by every extension in it, because Chrome's
-groups are browser-wide rather than per package: an extension can read and
-update a group another extension created. `windowId` is always that Space's
-primary extension window — the compatibility runtime resolves the number from
-the native `windows.getCurrent()` rather than inventing an identifier, exactly
-as the sidebar fragment does, and the broker names the window only by kind.
+Each workspace owns its group registry, shared by every extension in its Space:
+an extension can read and update a group another extension created. Temporary
+windows retain separate registries and group identifiers while borrowing their
+source Space's extension context. Group edits route to the owning workspace.
+The compatibility runtime reads native window bounds to match the registered
+host; it never invents WebKit identifiers. Coincident bounds can be resolved by
+a tab's index and URL only when that target uniquely identifies a host. Focus
+does not determine identity, and ambiguous broker requests or event mappings
+are refused. This limits emulated APIs for overlapping windows with identical
+targets; native WebKit APIs still route by their own window identifiers.
+A shared tab appears in only the window that owns its live page.
+Window-scoped queries expose groups whose members all belong to that window;
+moving a group with members currently hosted in different windows is refused.
 `tabGroups.watch` is a permission-checked event stream separate from the
 notification, idle, and sidebar watches. `tabGroups.*` require the `tabGroups`
 permission. `tabs.group`, `tabs.ungroup`, and the `Tab.groupId` mirror require
@@ -482,7 +492,7 @@ preserves its extension group ID as well as its folder ID.
   before replying with membership indexed against the updated session.
 - `tabGroups.move` moves the complete run and emits `onMoved`; it refuses a
   destination that would split another group or insert into a different folder
-  hierarchy. Group indexes use the Space's primary extension window; an index
+  hierarchy. Group indexes use the owning extension window; an index
   in another section moves the folder there. Native tab order and folder order
   change in the same session transaction. Cross-Space group moves remain unavailable.
 - `Tab.groupId` is projected onto every `tabs.get` and `tabs.query` result from
@@ -495,8 +505,10 @@ preserves its extension group ID as well as its folder ID.
   moving within a group keeps membership, and insertion between two members
   joins their group. A singleton leaf folder moves with its identity. Results
   are read back through WebKit so native tab IDs and sensitive-property access
-  remain authoritative. Only the Space's normal window accepts moves; auxiliary
-  windows and cross-Space destinations are refused. Nested folder boundaries
+  remain authoritative. Moves stay within one registered normal or temporary
+  window; auxiliary windows and cross-Space destinations are refused. Indices
+  omit tabs hosted in other windows and are translated into shared session
+  order before the transaction. Nested folder boundaries
   remain subject to the shared tree's movement constraints.
 - Native `tabs.onCreated` and `tabs.onUpdated` tab objects receive group metadata.
   Folder membership changes also deliver `tabs.onUpdated(tabId, {groupId}, tab)`
@@ -836,9 +848,9 @@ streaming body or early-response buffering is provided.
 
 ### Binding, consent, and the Stop control
 
-A tab is named once, at attach, by the primary session index and URL the
-caller's JavaScript resolved from a native `tabs.get`. Crest re-checks that
-pair against live session state, binds the resulting tab to a minted session
+A tab is named once, at attach, by its owning window's public bounds, tab index,
+and URL resolved from a native `tabs.get`. Crest re-checks that target against
+the registered host and live session state, binds the resulting tab to a minted session
 token, and every later command addresses the token. Reordering, replacing, or
 navigating tabs cannot redirect a live session, and the tab id the caller sends
 is used only to reproduce Chrome's error text.

@@ -215,6 +215,7 @@ extension BrowserExtensionTabWindowCoordinator {
                 "attached": attached.contains(.init(spaceID: spaceID, tabID: tab.id)),
             ]
             if let url = tab.url?.absoluteString { info["url"] = url }
+            info["window"] = brokerWindowDescriptor(window(for: tab.id, in: spaceID))
             return info
         }
     }
@@ -227,7 +228,13 @@ extension BrowserExtensionTabWindowCoordinator {
     private func debuggerTarget(
         _ request: BrowserExtensionDebuggerBrokerRequest, in spaceID: SpaceID
     ) throws -> BrowserExtensionDebuggerTarget {
-        guard let state = currentState?.space(spaceID), let index = request.tabIndex,
+        var descriptor: [String: Any] = [:]
+        descriptor["window"] = request.windowDescriptor
+        descriptor["tabIndex"] = request.tabIndex
+        descriptor["url"] = request.url
+        let window = try brokerWindow(in: spaceID, message: descriptor)
+        let state = brokerState(in: spaceID, window: window)
+        guard let index = request.tabIndex,
             let tab = state.tabs.first(where: { $0.index == index }),
             !(transientTabsBySpace[spaceID] ?? []).contains(where: { $0.id == tab.id })
         else {

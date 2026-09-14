@@ -22,6 +22,10 @@ protocol BrowserExtensionSidebarHandling: AnyObject {
         -> BrowserExtensionSidebarResolvedOptions
     func resolvedOptions(at scope: BrowserExtensionSidebarScope, client: BrowserExtensionServiceClientID) throws
         -> BrowserExtensionSidebarResolvedOptions
+    func resolvedOptions(
+        at scope: BrowserExtensionSidebarScope, client: BrowserExtensionServiceClientID, windowID: BrowserWindowID?
+    ) throws
+        -> BrowserExtensionSidebarResolvedOptions
     func hostWindow(for spaceID: SpaceID) -> BrowserWindowID?
     func flavor(for client: BrowserExtensionServiceClientID) -> BrowserExtensionSidebarFlavor?
     func setBehavior(_ behavior: BrowserExtensionSidebarBehavior, from client: BrowserExtensionServiceClientID) throws
@@ -33,6 +37,16 @@ protocol BrowserExtensionSidebarHandling: AnyObject {
     func isOpen(for client: BrowserExtensionServiceClientID, in window: BrowserWindowID) -> Bool
     func events(for client: BrowserExtensionServiceClientID) -> AsyncStream<BrowserExtensionSidebarEvent>
     func repair(using session: BrowserSession)
+}
+
+extension BrowserExtensionSidebarHandling {
+    func resolvedOptions(
+        at scope: BrowserExtensionSidebarScope, client: BrowserExtensionServiceClientID, windowID: BrowserWindowID?
+    ) throws
+        -> BrowserExtensionSidebarResolvedOptions
+    {
+        try resolvedOptions(at: scope, client: client)
+    }
 }
 
 @MainActor

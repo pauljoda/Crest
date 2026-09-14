@@ -1161,6 +1161,14 @@
     "shared-state-and-runtime-ownership": {
       "category": "internal",
       "message": "Consolidate tab updates, import parsing, extension events, and WebKit runtime ownership"
+    },
+    "shared-browser-windows": {
+      "category": "new",
+      "message": "Open multiple windows with shared Spaces and tabs, keeping your place in each window"
+    },
+    "temporary-blank-windows": {
+      "category": "new",
+      "message": "Open disposable blank windows with your Space’s cookies and extensions, or create one by dragging a tab outside the window"
     }
   }
 }

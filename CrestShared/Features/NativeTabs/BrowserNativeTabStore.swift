@@ -1,7 +1,7 @@
 import Observation
 import SwiftUI
 
-/// Window-owned, memory-only state for loaded native tabs. Views may disappear
+/// Workspace-owned, memory-only state for loaded native tabs. Views may disappear
 /// without ending this lifetime; unloading or changing the assignment ends it.
 @Observable @MainActor
 final class BrowserNativeTabStore {
@@ -38,6 +38,21 @@ final class BrowserNativeTabStore {
             runtimes[tab.id] = BrowserNativeTabRuntime(assignment: assignment, content: content, at: time)
             residencyRevision &+= 1
         }
+    }
+
+    /// Moves the loaded model without rebuilding native content or copying its
+    /// state. Matching assignments remain mandatory across workspace owners.
+    @discardableResult
+    func transfer(matching assignment: BrowserTabRuntimeAssignment, to destination: BrowserNativeTabStore) -> Bool {
+        guard destination !== self else { return true }
+        guard let runtime = runtimes[assignment.tabID], runtime.assignment == assignment,
+            destination.runtimes[assignment.tabID] == nil
+        else { return false }
+        runtimes.removeValue(forKey: assignment.tabID)
+        destination.runtimes[assignment.tabID] = runtime
+        residencyRevision &+= 1
+        destination.residencyRevision &+= 1
+        return true
     }
 
     func remove(_ tabID: TabID) {

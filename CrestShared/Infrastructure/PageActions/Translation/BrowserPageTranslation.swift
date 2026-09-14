@@ -32,6 +32,7 @@ final class BrowserPageTranslation {
 
     @ObservationIgnored private weak var webView: WKWebView?
     @ObservationIgnored private var isActive = false
+    @ObservationIgnored private var activeHostID: UUID?
     @ObservationIgnored private var token: String?
     @ObservationIgnored private var session: TranslationSession?
     @ObservationIgnored private var hasDetected = false
@@ -55,7 +56,11 @@ final class BrowserPageTranslation {
         return Locale.current.localizedString(forIdentifier: identifier) ?? identifier
     }
 
-    func setActive(_ active: Bool, in webView: WKWebView) {
+    func setActive(_ active: Bool, in webView: WKWebView, hostID: UUID? = nil) {
+        // Reparenting a live page can mount its next host before the previous
+        // host disappears. Only the current host may end that presentation.
+        if !active, let hostID, activeHostID != hostID { return }
+        activeHostID = active ? hostID : nil
         self.webView = webView
         isActive = active
         if !active { cancel() }
@@ -382,6 +387,7 @@ final class BrowserPageTranslation {
     }
 
     func suspend() {
+        activeHostID = nil
         isActive = false
         cancel()
     }

@@ -32,6 +32,26 @@ final class BrowserSpaceAccessController {
         authenticatingAssignment == BrowserSpaceRuntimeAssignment(space: space)
     }
 
+    /// Authentication authorizes one profile identity. A window may replace or
+    /// delete that profile while the system prompt is awaiting a response.
+    @discardableResult
+    func updatePolicy(
+        _ policy: BrowserSpaceAccessPolicy,
+        matching assignment: BrowserSpaceRuntimeAssignment,
+        in browser: BrowserStore
+    ) async -> Bool {
+        guard let space = browser.space(matching: assignment) else { return false }
+        if !policy.requiresAuthentication {
+            guard await unlock(space) else { return false }
+        }
+        guard browser.space(matching: assignment) != nil else { return false }
+        browser.updateSpaceAccessPolicy(policy, in: assignment.spaceID)
+        if policy.requiresAuthentication {
+            lock(assignment.spaceID)
+        }
+        return true
+    }
+
     @discardableResult
     func unlock(_ space: BrowserSpace) async -> Bool {
         guard isLocked(space) else { return true }

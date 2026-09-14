@@ -114,6 +114,10 @@ extension BrowserStore {
         _ preferences: BrowserCredentialPreferences,
         in spaceID: SpaceID
     ) {
+        if isTemporaryWorkspace {
+            temporaryProfileSettingsAuthority(in: spaceID)?.updateCredentialPreferences(preferences, in: spaceID)
+            return
+        }
         guard session.space(id: spaceID) != nil else { return }
         session.updateCredentialPreferences(preferences, in: spaceID)
         persist(scope: .core)
@@ -123,6 +127,13 @@ extension BrowserStore {
         _ isSynchronizable: Bool,
         in spaceID: SpaceID
     ) async throws {
+        if isTemporaryWorkspace {
+            guard let source = temporaryProfileSettingsAuthority(in: spaceID) else {
+                throw CredentialVaultError.missingSpace
+            }
+            try await source.setCrestPasswordSynchronization(isSynchronizable, in: spaceID)
+            return
+        }
         guard let space = session.space(id: spaceID) else {
             throw CredentialVaultError.missingSpace
         }
@@ -131,7 +142,10 @@ extension BrowserStore {
         }
 
         try await credentialVault.setSynchronizable(isSynchronizable, in: spaceID)
-        var preferences = space.credentialPreferences
+        guard let current = self.space(matching: BrowserSpaceRuntimeAssignment(space: space)) else {
+            throw CredentialVaultError.missingSpace
+        }
+        var preferences = current.credentialPreferences
         preferences.syncsCrestPasswordsWithICloud = isSynchronizable
         session.updateCredentialPreferences(preferences, in: spaceID)
         persist(scope: .core)

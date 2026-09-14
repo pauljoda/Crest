@@ -1,11 +1,13 @@
 import SwiftUI
 
 extension EnvironmentValues {
+    @Entry var browserPagePresentationWindowID: BrowserWindowID? = nil
     @Entry var browserWebFocusRestorationGate =
         BrowserWebFocusRestorationGate.suppressed
 }
 
 struct BrowserPlatformWebView: NSViewRepresentable {
+    @Environment(\.browserPagePresentationWindowID) private var presentationWindowID
     let page: BrowserPage
     let isPageActive: Bool
     let focusRestorationGate: BrowserWebFocusRestorationGate
@@ -14,7 +16,8 @@ struct BrowserPlatformWebView: NSViewRepresentable {
         let host = BrowserWebHostView()
         host.attach(
             page.webView,
-            focusRestoration: page.focusRestoration
+            focusRestoration: page.focusRestoration,
+            allowsAttachment: allowsAttachment
         )
         host.updateFocusPresentation(
             isPageActive: isPageActive,
@@ -26,7 +29,8 @@ struct BrowserPlatformWebView: NSViewRepresentable {
     func updateNSView(_ host: BrowserWebHostView, context: Context) {
         host.attach(
             page.webView,
-            focusRestoration: page.focusRestoration
+            focusRestoration: page.focusRestoration,
+            allowsAttachment: allowsAttachment
         )
         host.updateFocusPresentation(
             isPageActive: isPageActive,
@@ -36,5 +40,10 @@ struct BrowserPlatformWebView: NSViewRepresentable {
 
     static func dismantleNSView(_ host: BrowserWebHostView, coordinator: Void) {
         host.detach()
+    }
+
+    private var allowsAttachment: Bool {
+        guard let presentationWindowID, let owner = page.windowRouting?.pool else { return true }
+        return owner.windowID == presentationWindowID
     }
 }
