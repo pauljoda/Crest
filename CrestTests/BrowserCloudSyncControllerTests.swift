@@ -523,7 +523,7 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             Container: iCloud.com.pauldavis.crest
             Enabled: true
             Account: Available
-            Status: Up to date
+            Status: Ready
             Local records: 8
             Pending uploads: 2
             Cloud records observed: 7
@@ -569,6 +569,76 @@ final class BrowserCloudSyncControllerTests: XCTestCase {
             service.message(for: CKError(.requestRateLimited)),
             "iCloud is temporarily busy. Crest will retry automatically."
         )
+    }
+
+    func testPullUsesFreshSnapshotTransportAndReportsItsCount() async throws {
+        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [testRecord(index: 1)])
+        let factory = TestBrowserCloudSyncTransportFactory()
+        let controller = BrowserCloudSyncController(
+            workflow: workflow, configuration: testConfiguration,
+            preferences: TestBrowserCloudSyncPreferences(),
+            remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
+            transportFactory: factory
+        )
+        await controller.start()
+        await controller.pullFromICloud()
+
+        let transport = try XCTUnwrap(factory.transports.first)
+        let pulls = await transport.pullCount
+        XCTAssertEqual(pulls, 1)
+        XCTAssertEqual(controller.lastFetchedRecordCount, 4)
+        XCTAssertEqual(controller.observedCloudRecordCount, 4)
+        XCTAssertNotNil(controller.lastSuccessAt)
+        XCTAssertTrue(workflow.replacedLocalSnapshots.isEmpty)
+        XCTAssertTrue(workflow.preparedCloudSnapshots.isEmpty)
+
+        controller.isEnabled = false
+        for _ in 0..<100 where await transport.stopCount == 0 { await Task.yield() }
+        await transport.emit(.fetched(recordCount: 99))
+        await transport.emit(.idle)
+        await controller.pullFromICloud()
+        let pullsAfterStop = await transport.pullCount
+        XCTAssertEqual(pullsAfterStop, 1)
+        XCTAssertEqual(controller.phase, .disabled)
+        XCTAssertEqual(controller.lastFetchedRecordCount, 4)
+    }
+
+    func testDisablingSyncCancelsASuspendedPullWithoutReportingSuccess() async throws {
+        let factory = TestBrowserCloudSyncTransportFactory(suspendsPull: true)
+        let controller = BrowserCloudSyncController(
+            workflow: TestBrowserCloudSyncWorkflowGateway(), configuration: testConfiguration,
+            preferences: TestBrowserCloudSyncPreferences(),
+            remoteService: TestBrowserCloudSyncRemoteService(accountState: .available), transportFactory: factory
+        )
+        await controller.start()
+        let transport = try XCTUnwrap(factory.transports.first)
+        let pull = Task { await controller.pullFromICloud() }
+        for _ in 0..<1_000 where !(await transport.isPullSuspended) { await Task.yield() }
+        let suspended = await transport.isPullSuspended
+        XCTAssertTrue(suspended)
+        controller.isEnabled = false
+        await pull.value
+        XCTAssertEqual(controller.phase, .disabled)
+        XCTAssertNil(controller.lastSuccessAt)
+        XCTAssertNil(controller.observedCloudRecordCount)
+    }
+
+    func testFailedPullDoesNotReportSuccessOrReplaceEitherCopy() async {
+        let workflow = TestBrowserCloudSyncWorkflowGateway(records: [testRecord(index: 1)])
+        let controller = BrowserCloudSyncController(
+            workflow: workflow, configuration: testConfiguration,
+            preferences: TestBrowserCloudSyncPreferences(),
+            remoteService: TestBrowserCloudSyncRemoteService(accountState: .available),
+            transportFactory: TestBrowserCloudSyncTransportFactory(
+                syncFailure: TestBrowserCloudSyncRemoteService.TestFailure.unavailable)
+        )
+        await controller.start()
+        await controller.pullFromICloud()
+        XCTAssertNotEqual(controller.phase, .ready)
+        XCTAssertNil(controller.lastSuccessAt)
+        XCTAssertNil(controller.observedCloudRecordCount)
+        XCTAssertTrue(workflow.replacedLocalSnapshots.isEmpty)
+        XCTAssertTrue(workflow.preparedCloudSnapshots.isEmpty)
     }
 
     private var testConfiguration: BrowserCloudSyncConfiguration {
@@ -750,9 +820,11 @@ private actor TestBrowserCloudSyncRemoteService: BrowserCloudSyncRemoteService {
 private final class TestBrowserCloudSyncTransportFactory: BrowserCloudSyncTransportFactory {
     private(set) var transports: [TestBrowserCloudSyncTransport] = []
     private let syncFailure: (any Error)?
+    private let suspendsPull: Bool
 
-    init(syncFailure: (any Error)? = nil) {
+    init(syncFailure: (any Error)? = nil, suspendsPull: Bool = false) {
         self.syncFailure = syncFailure
+        self.suspendsPull = suspendsPull
     }
 
     func makeTransport(
@@ -762,7 +834,8 @@ private final class TestBrowserCloudSyncTransportFactory: BrowserCloudSyncTransp
         let transport = TestBrowserCloudSyncTransport(
             statusHandler: statusHandler,
             activityHandler: activityHandler,
-            syncFailure: syncFailure
+            syncFailure: syncFailure,
+            suspendsPull: suspendsPull
         )
         transports.append(transport)
         return transport
@@ -773,6 +846,11 @@ private actor TestBrowserCloudSyncTransport: BrowserCloudSyncTransport {
     private(set) var startCount = 0
     private(set) var syncCount = 0
     private(set) var notifyCount = 0
+    private(set) var pullCount = 0
+    private(set) var stopCount = 0
+    private let suspendsPull: Bool
+    private var pullWaiter: CheckedContinuation<Void, Never>?
+    var isPullSuspended: Bool { pullWaiter != nil }
     private let statusHandler: @Sendable (BrowserCloudSyncStatus) async -> Void
     private let activityHandler: @Sendable (BrowserCloudSyncActivity) async -> Void
     private let syncFailure: (any Error)?
@@ -780,11 +858,13 @@ private actor TestBrowserCloudSyncTransport: BrowserCloudSyncTransport {
     init(
         statusHandler: @escaping @Sendable (BrowserCloudSyncStatus) async -> Void,
         activityHandler: @escaping @Sendable (BrowserCloudSyncActivity) async -> Void,
-        syncFailure: (any Error)? = nil
+        syncFailure: (any Error)? = nil,
+        suspendsPull: Bool = false
     ) {
         self.statusHandler = statusHandler
         self.activityHandler = activityHandler
         self.syncFailure = syncFailure
+        self.suspendsPull = suspendsPull
     }
 
     func start() async {
@@ -800,6 +880,20 @@ private actor TestBrowserCloudSyncTransport: BrowserCloudSyncTransport {
             throw syncFailure
         }
         await statusHandler(.idle)
+    }
+
+    func stop() async {
+        stopCount += 1
+        pullWaiter?.resume()
+        pullWaiter = nil
+    }
+
+    func pullFromICloud() async throws -> Int {
+        pullCount += 1
+        if suspendsPull { await withCheckedContinuation { pullWaiter = $0 } }
+        if stopCount > 0 { throw CancellationError() }
+        if let syncFailure { throw syncFailure }
+        return 4
     }
 
     func notifyLocalChanges() async {

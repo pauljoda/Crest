@@ -6,6 +6,7 @@ struct BrowserSyncSettingsView: View {
 
     @State private var confirmsUsingDevice = false
     @State private var confirmsUsingICloud = false
+    @State private var confirmsPullingFromICloud = false
 
     var body: some View {
         BrowserSettingsPane(.sync) {
@@ -28,12 +29,32 @@ struct BrowserSyncSettingsView: View {
                     }
                     .disabled(!canSyncNow)
                     .accessibilityIdentifier("icloud-sync-now")
+
+                    Button("Pull from iCloud…", systemImage: "icloud.and.arrow.down") {
+                        confirmsPullingFromICloud = true
+                    }
+                    .disabled(!canSyncNow)
+                    .accessibilityIdentifier("icloud-sync-pull")
+                    .accessibilityHint("Downloads a fresh copy and merges it with this device’s content")
                 }
 
                 if let error = cloudSync.errorDescription {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                         .accessibilityIdentifier("icloud-sync-error")
+                }
+
+                if let localError = browser.localSyncErrorDescription {
+                    Label(localError, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                }
+
+                if cloudSync.skippedRecordCount > 0 {
+                    Label(
+                        "Some iCloud changes could not be read. Update Crest on all devices, then pull from iCloud.",
+                        systemImage: "exclamationmark.icloud"
+                    )
+                    .foregroundStyle(.orange)
                 }
 
                 Text(
@@ -141,6 +162,20 @@ struct BrowserSyncSettingsView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             }
+        }
+        .confirmationDialog(
+            "Pull the Latest from iCloud?",
+            isPresented: $confirmsPullingFromICloud,
+            titleVisibility: .visible
+        ) {
+            Button("Pull and Merge") {
+                Task { await cloudSync.pullFromICloud() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "Crest will download all synced Spaces and browser content and merge them with this device. Newer changes and synced deletions will be applied. Content found only on this device will be kept unless it was explicitly deleted on another device."
+            )
         }
         .confirmationDialog(
             "Replace the iCloud Copy?",

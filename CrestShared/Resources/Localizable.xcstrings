@@ -5503,6 +5503,9 @@
         }
       }
     },
+    "Crest will download all synced Spaces and browser content and merge them with this device. Newer changes and synced deletions will be applied. Content found only on this device will be kept unless it was explicitly deleted on another device." : {
+
+    },
     "Crest will replace the synced Spaces and browser content on this device with the current iCloud copy." : {
       "localizations" : {
         "ar" : {
@@ -6233,6 +6236,9 @@
       }
     },
     "Downloads (%lld)" : {
+
+    },
+    "Downloads a fresh copy and merges it with this device’s content" : {
 
     },
     "Downloads from this Space appear here." : {
@@ -12016,6 +12022,12 @@
         }
       }
     },
+    "Pull and Merge" : {
+
+    },
+    "Pull from iCloud…" : {
+
+    },
     "Pull New Icon" : {
       "localizations" : {
         "ar" : {
@@ -12025,6 +12037,9 @@
           }
         }
       }
+    },
+    "Pull the Latest from iCloud?" : {
+
     },
     "Put new sites in" : {
       "localizations" : {
@@ -14347,6 +14362,9 @@
           }
         }
       }
+    },
+    "Some iCloud changes could not be read. Update Crest on all devices, then pull from iCloud." : {
+
     },
     "Something to read" : {
       "extractionState" : "stale",

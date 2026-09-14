@@ -53,7 +53,7 @@ enum BrowserCloudSyncPhase: Equatable, Sendable {
         switch self {
         case .disabled: "Off"
         case .checking: "Checking iCloud"
-        case .ready: "Up to date"
+        case .ready: "Ready"
         case .syncing: "Syncing"
         case .needsReconciliation: "Choose which copy to keep"
         case .waitingForAccount: "Waiting for iCloud"

@@ -6,6 +6,9 @@ struct BrowserCloudSyncState: Codable, Sendable {
     var systemFields: BrowserCloudRecordSystemFields
     var reconciliationReason: BrowserCloudReconciliationReason?
     var conflictResolution: BrowserCloudConflictResolution?
+    /// The download cursor may have advanced before a local merge completed.
+    /// Keep this across launches until a complete snapshot has been applied.
+    var requiresFullPull: Bool
 
     var requiresAccountConfirmation: Bool {
         reconciliationReason == .accountChange
@@ -15,12 +18,14 @@ struct BrowserCloudSyncState: Codable, Sendable {
         engineStateSerialization: CKSyncEngine.State.Serialization? = nil,
         systemFields: BrowserCloudRecordSystemFields = BrowserCloudRecordSystemFields(),
         reconciliationReason: BrowserCloudReconciliationReason? = nil,
-        conflictResolution: BrowserCloudConflictResolution? = nil
+        conflictResolution: BrowserCloudConflictResolution? = nil,
+        requiresFullPull: Bool = false
     ) {
         self.engineStateSerialization = engineStateSerialization
         self.systemFields = systemFields
         self.reconciliationReason = reconciliationReason
         self.conflictResolution = conflictResolution
+        self.requiresFullPull = requiresFullPull
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -30,10 +35,12 @@ struct BrowserCloudSyncState: Codable, Sendable {
         case reconciliationReason
         case requiresAccountConfirmation
         case conflictResolution
+        case requiresFullPull
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        requiresFullPull = try container.decodeIfPresent(Bool.self, forKey: .requiresFullPull) ?? false
         let previousSchema = try container.decodeIfPresent(Int.self, forKey: .recordSchemaVersion) ?? 1
         if previousSchema < BrowserCloudRecordCodec.currentSchemaVersion {
             // A skipped record still advances CKSyncEngine's cursor. Replay
@@ -72,6 +79,7 @@ struct BrowserCloudSyncState: Codable, Sendable {
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(BrowserCloudRecordCodec.currentSchemaVersion, forKey: .recordSchemaVersion)
+        try container.encode(requiresFullPull, forKey: .requiresFullPull)
         try container.encodeIfPresent(
             engineStateSerialization,
             forKey: .engineStateSerialization

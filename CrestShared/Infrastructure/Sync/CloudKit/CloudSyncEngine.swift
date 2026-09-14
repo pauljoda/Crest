@@ -2,7 +2,7 @@ import CloudKit
 import Foundation
 
 actor BrowserCloudSyncEngine {
-    private let database: CKDatabase
+    private let database: @Sendable () -> CKDatabase
     private let gateway: any BrowserCloudSyncModelGateway
     private let persistence: any BrowserCloudSyncStatePersisting
     private let codec = BrowserCloudRecordCodec()
@@ -12,10 +12,15 @@ actor BrowserCloudSyncEngine {
     private var persistedState: BrowserCloudSyncState
     private var engine: CKSyncEngine?
     private var eventFailureDescription: String?
+    private var isPullingSnapshot = false
+    private var isStopped = false
+    private var activeMerges = 0
+    private var failedMerges = 0
+    private var needsRecovery: Bool
     private(set) var status: BrowserCloudSyncStatus = .stopped
 
     init(
-        database: CKDatabase,
+        database: @autoclosure @escaping @Sendable () -> CKDatabase,
         gateway: any BrowserCloudSyncModelGateway,
         persistence: any BrowserCloudSyncStatePersisting = UserDefaultsBrowserCloudSyncStatePersistence(),
         automaticallySync: Bool = true,
@@ -29,6 +34,7 @@ actor BrowserCloudSyncEngine {
         self.statusHandler = statusHandler
         self.activityHandler = activityHandler
         persistedState = try persistence.load() ?? BrowserCloudSyncState()
+        needsRecovery = persistedState.requiresFullPull
         if persistedState.reconciliationReason == .legacyRecordConflict {
             persistedState.reconciliationReason = nil
             try persistence.save(persistedState)
@@ -46,14 +52,16 @@ actor BrowserCloudSyncEngine {
         statusHandler: (@Sendable (BrowserCloudSyncStatus) async -> Void)? = nil,
         activityHandler: (@Sendable (BrowserCloudSyncActivity) async -> Void)? = nil
     ) throws {
-        let container = CKContainer(identifier: configuration.containerIdentifier)
-        self.database = container.privateCloudDatabase
+        self.database = {
+            CKContainer(identifier: configuration.containerIdentifier).privateCloudDatabase
+        }
         self.gateway = gateway
         self.persistence = persistence
         self.automaticallySync = automaticallySync
         self.statusHandler = statusHandler
         self.activityHandler = activityHandler
         persistedState = try persistence.load() ?? BrowserCloudSyncState()
+        needsRecovery = persistedState.requiresFullPull
         if persistedState.reconciliationReason == .legacyRecordConflict {
             persistedState.reconciliationReason = nil
             try persistence.save(persistedState)
@@ -64,6 +72,7 @@ actor BrowserCloudSyncEngine {
     }
 
     func start() async {
+        isStopped = false
         guard !persistedState.requiresAccountConfirmation else {
             await updateStatus(.pausedForAccountConfirmation)
             return
@@ -74,7 +83,16 @@ actor BrowserCloudSyncEngine {
             await updateStatus(.failed(String(describing: error)))
             return
         }
+        guard !isStopped else { return }
         let syncEngine = initializedEngine()
+        if persistedState.requiresFullPull {
+            do {
+                _ = try await pullFromICloud()
+            } catch {
+                await updateStatus(.failed(String(describing: error)))
+                return
+            }
+        }
         if persistedState.engineStateSerialization == nil {
             syncEngine.state.add(pendingDatabaseChanges: [
                 .saveZone(BrowserCloudRecordCodec.recordZone)
@@ -84,13 +102,20 @@ actor BrowserCloudSyncEngine {
         await updateStatus(.idle)
     }
 
+    func stop() async {
+        isStopped = true
+        await engine?.cancelOperations()
+        engine = nil
+    }
+
     func notifyLocalChanges() async {
-        guard !persistedState.requiresAccountConfirmation else { return }
+        guard !isStopped, !persistedState.requiresAccountConfirmation else { return }
         let syncEngine = initializedEngine()
         await enqueueLocalChanges(on: syncEngine)
     }
 
     func syncNow() async throws {
+        guard !isStopped else { throw CancellationError() }
         guard !persistedState.requiresAccountConfirmation else {
             await updateStatus(.pausedForAccountConfirmation)
             return
@@ -99,18 +124,28 @@ actor BrowserCloudSyncEngine {
         eventFailureDescription = nil
         await updateStatus(.syncing)
         do {
+            if persistedState.requiresFullPull {
+                _ = try await pullFromICloud()
+            }
             try await syncEngine.fetchChanges()
+            guard !isStopped else { throw CancellationError() }
             guard !persistedState.requiresAccountConfirmation else {
                 await updateStatus(.pausedForAccountConfirmation)
                 return
             }
-            await enqueueLocalChanges(on: syncEngine)
-            try await syncEngine.sendChanges()
             // `fetchChanges` and `sendChanges` return normally even when the
             // events they drove failed, so reporting success from here would
             // paint "Up to date" over records that never landed.
             if let failure = eventFailureDescription {
-                eventFailureDescription = nil
+                throw BrowserSyncError.remoteChangeNotApplied(failure)
+            }
+            guard !persistedState.requiresFullPull else {
+                throw BrowserSyncError.remoteChangeNotApplied("Pull from iCloud to recover an incomplete download.")
+            }
+            await enqueueLocalChanges(on: syncEngine)
+            try await syncEngine.sendChanges()
+            guard !isStopped else { throw CancellationError() }
+            if let failure = eventFailureDescription {
                 throw BrowserSyncError.remoteChangeNotApplied(failure)
             }
             await updateStatus(.idle)
@@ -120,10 +155,77 @@ actor BrowserCloudSyncEngine {
         }
     }
 
+    func pullFromICloud() async throws -> Int {
+        guard !isStopped, !persistedState.requiresAccountConfirmation, !isPullingSnapshot else {
+            throw BrowserSyncError.remoteChangeNotApplied("Sync is paused.")
+        }
+        isPullingSnapshot = true
+        defer { isPullingSnapshot = false }
+        await updateStatus(.syncing)
+        do {
+            let records = try await BrowserCloudSnapshotLoader(database: database())
+                .load(requiresCompleteSnapshot: true)
+            guard !isStopped, !persistedState.requiresAccountConfirmation else {
+                throw BrowserSyncError.remoteChangeNotApplied("The iCloud account changed during the download.")
+            }
+            try await mergeDownloadedRecords(records, isFullSnapshot: true)
+            guard !persistedState.requiresFullPull else {
+                throw BrowserSyncError.remoteChangeNotApplied("Some incoming changes still need to be recovered.")
+            }
+            eventFailureDescription = nil
+            isPullingSnapshot = false
+            await enqueueLocalChanges(on: initializedEngine())
+            await activityHandler?(.fetched(recordCount: records.count))
+            await updateStatus(.idle)
+            return records.count
+        } catch {
+            await updateStatus(.failed(String(describing: error)))
+            throw error
+        }
+    }
+
+    /// Write the recovery marker before applying content. State-update events
+    /// may persist a newer cursor even when this merge fails or the app exits.
+    func mergeDownloadedRecords(
+        _ records: [BrowserSyncRecord],
+        isFullSnapshot: Bool = false
+    ) async throws {
+        let failuresBeforeMerge = failedMerges
+        activeMerges += 1
+        do {
+            persistedState.requiresFullPull = true
+            try persistence.save(persistedState)
+            try await gateway.mergeCloudSyncRecords(records)
+            guard !isStopped, !persistedState.requiresAccountConfirmation else {
+                throw BrowserSyncError.remoteChangeNotApplied("Sync stopped while applying downloaded content.")
+            }
+            if isFullSnapshot, failedMerges == failuresBeforeMerge {
+                needsRecovery = false
+            }
+        } catch {
+            activeMerges -= 1
+            failedMerges += 1
+            needsRecovery = true
+            persistedState.requiresFullPull = true
+            if !isStopped { try? persistence.save(persistedState) }
+            throw error
+        }
+        activeMerges -= 1
+        persistedState.requiresFullPull = needsRecovery || activeMerges > 0
+        do {
+            try persistence.save(persistedState)
+        } catch {
+            needsRecovery = true
+            persistedState.requiresFullPull = true
+            throw error
+        }
+    }
+
     /// Account switches are deliberately paused. Calling this is the explicit user
     /// decision to upload this device's local Spaces into the currently signed-in account.
     func resumeAfterAccountChange() async throws {
         persistedState = BrowserCloudSyncState()
+        needsRecovery = false
         try persistence.save(persistedState)
         engine = nil
         await updateStatus(.stopped)
@@ -134,6 +236,7 @@ actor BrowserCloudSyncEngine {
         _ event: CKSyncEngine.Event,
         syncEngine: CKSyncEngine
     ) async {
+        guard !isStopped else { return }
         do {
             switch event {
             case .stateUpdate(let event):
@@ -170,11 +273,16 @@ actor BrowserCloudSyncEngine {
         _ context: CKSyncEngine.SendChangesContext,
         syncEngine: CKSyncEngine
     ) async -> CKSyncEngine.RecordZoneChangeBatch? {
-        guard !persistedState.requiresAccountConfirmation else { return nil }
+        guard !isStopped, !persistedState.requiresAccountConfirmation,
+            !persistedState.requiresFullPull, !isPullingSnapshot
+        else { return nil }
         let changes = syncEngine.state.pendingRecordZoneChanges.filter {
             context.options.scope.contains($0)
         }
         let records = await gateway.cloudSyncRecords()
+        guard !isStopped, !persistedState.requiresAccountConfirmation,
+            !persistedState.requiresFullPull, !isPullingSnapshot
+        else { return nil }
         var recordsByName: [String: BrowserSyncRecord] = [:]
         for record in records {
             recordsByName[record.id.recordName] = record
@@ -195,7 +303,7 @@ actor BrowserCloudSyncEngine {
     private func initializedEngine() -> CKSyncEngine {
         if let engine { return engine }
         var configuration = CKSyncEngine.Configuration(
-            database: database,
+            database: database(),
             stateSerialization: persistedState.engineStateSerialization,
             delegate: self
         )
@@ -207,6 +315,7 @@ actor BrowserCloudSyncEngine {
 
     private func enqueueLocalChanges(on syncEngine: CKSyncEngine) async {
         let pendingIDs = await gateway.cloudSyncPendingRecordIDs()
+        guard !isStopped, !persistedState.requiresAccountConfirmation else { return }
         let changes = pendingIDs.map { id in
             CKSyncEngine.PendingRecordZoneChange.saveRecord(
                 CKRecord.ID(recordName: id.recordName, zoneID: BrowserCloudRecordCodec.zoneID)
@@ -242,10 +351,12 @@ actor BrowserCloudSyncEngine {
             if BrowserCloudConflictResolutionPolicy.shouldMergeFetchedContent(
                 resolution: persistedState.conflictResolution
             ) {
-                try await gateway.mergeCloudSyncRecords(batch.records)
+                try await mergeDownloadedRecords(batch.records)
             }
             await enqueueLocalChanges(on: syncEngine)
-            await activityHandler?(.fetched(recordCount: batch.records.count))
+            if !persistedState.requiresFullPull {
+                await activityHandler?(.fetched(recordCount: batch.records.count))
+            }
         }
         let skippedCount =
             batch.undecodableRecordNames.count + batch.newerSchemaRecordNames.count
@@ -365,7 +476,9 @@ actor BrowserCloudSyncEngine {
         }
         if !uploaded.isEmpty {
             try await gateway.markCloudSyncRecordsUploaded(uploaded)
-            await activityHandler?(.uploaded(recordCount: uploaded.count))
+            if !persistedState.requiresFullPull {
+                await activityHandler?(.uploaded(recordCount: uploaded.count))
+            }
         }
 
         for failure in event.failedRecordSaves {
@@ -403,7 +516,7 @@ actor BrowserCloudSyncEngine {
                     // retry base. The journal deterministically reconciles the
                     // semantic values, then the refreshed system fields let the
                     // next save target that server version.
-                    try await gateway.mergeCloudSyncRecords([decoded])
+                    try await mergeDownloadedRecords([decoded])
                     await enqueueLocalChanges(on: syncEngine)
                 }
             case .zoneNotFound:

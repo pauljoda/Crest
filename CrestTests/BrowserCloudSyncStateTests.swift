@@ -143,7 +143,7 @@ final class BrowserCloudSyncStateTests: XCTestCase {
 
         XCTAssertEqual(
             Set(object.keys),
-            ["recordSchemaVersion", "systemFields", "reconciliationReason", "conflictResolution"]
+            ["recordSchemaVersion", "systemFields", "reconciliationReason", "conflictResolution", "requiresFullPull"]
         )
         XCTAssertEqual(object["reconciliationReason"] as? String, "accountChange")
         XCTAssertEqual(object["conflictResolution"] as? String, "useThisDevice")
@@ -311,6 +311,34 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testFailedMergeSurvivesRestartUntilAFullSnapshotIsApplied() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let persistence = FileBrowserCloudSyncStatePersistence(fileURL: directory.appendingPathComponent("state.json"))
+        let gateway = RecoveryTestGateway()
+        let engine = try BrowserCloudSyncEngine(
+            configuration: BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest"),
+            gateway: gateway, persistence: persistence, automaticallySync: false
+        )
+        do {
+            try await engine.mergeDownloadedRecords([testSpaceRecord(index: 1)])
+            XCTFail("Expected local persistence failure")
+        } catch {}
+        XCTAssertTrue(try XCTUnwrap(persistence.load()).requiresFullPull)
+
+        gateway.failsMerge = false
+        let restarted = try BrowserCloudSyncEngine(
+            configuration: BrowserCloudSyncConfiguration(containerIdentifier: "iCloud.com.pauldavis.crest"),
+            gateway: gateway, persistence: persistence, automaticallySync: false
+        )
+        try await restarted.mergeDownloadedRecords([testSpaceRecord(index: 2)])
+        XCTAssertTrue(try XCTUnwrap(persistence.load()).requiresFullPull)
+        try await restarted.mergeDownloadedRecords(
+            [testSpaceRecord(index: 1), testSpaceRecord(index: 2)], isFullSnapshot: true)
+        XCTAssertFalse(try XCTUnwrap(persistence.load()).requiresFullPull)
+    }
+
     private func testSpaceRecord(index: Int) -> BrowserSyncRecord {
         let space = BrowserSyncSpace(
             id: SpaceID(rawValue: testUUID(prefix: 5, index: index)),
@@ -407,4 +435,15 @@ final class BrowserCloudSyncStateTests: XCTestCase {
         XCTAssertEqual(reloaded.reconciliationReason, .accountChange)
     }
 
+}
+
+@MainActor
+private final class RecoveryTestGateway: BrowserCloudSyncModelGateway {
+    var failsMerge = true
+    func cloudSyncRecords() async -> [BrowserSyncRecord] { [] }
+    func cloudSyncPendingRecordIDs() async -> Set<BrowserSyncRecordID> { [] }
+    func markCloudSyncRecordsUploaded(_ versions: [BrowserSyncRecordID: BrowserSyncVersion]) async throws {}
+    func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
+        if failsMerge { throw BrowserSyncError.remoteChangeNotApplied("Storage unavailable") }
+    }
 }

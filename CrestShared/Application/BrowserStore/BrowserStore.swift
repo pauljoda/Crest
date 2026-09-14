@@ -357,7 +357,13 @@ extension BrowserStore: BrowserCloudSyncModelGateway {
     }
 
     func mergeCloudSyncRecords(_ records: [BrowserSyncRecord]) async throws {
-        try mergeRemoteSyncRecords(records)
+        do {
+            try mergeRemoteSyncRecords(records)
+            await persistence.flushPendingSaves()
+        } catch {
+            localSyncErrorDescription = String(describing: error)
+            throw error
+        }
     }
 
     func markCloudSyncRecordsUploaded(

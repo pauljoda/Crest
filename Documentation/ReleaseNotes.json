@@ -1129,6 +1129,10 @@
     "look-and-feel-preview-cloud-compiler-compatibility": {
       "category": "internal",
       "message": "Give the Look and Feel sidebar preview an explicit initializer for Xcode 26.6 archive compatibility"
+    },
+    "icloud-full-pull-and-merge-recovery": {
+      "category": "fixed",
+      "message": "Recover missing iCloud changes with a confirmed Pull from iCloud action, and keep blank tabs from blocking Space and tab updates"
     }
   }
 }

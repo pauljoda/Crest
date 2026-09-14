@@ -4,6 +4,51 @@ import XCTest
 @testable import Crest
 
 final class BrowserSyncTests: XCTestCase {
+    func testBlankArchivedPageDoesNotBlockIncomingSpaceChanges() throws {
+        var local = oneSpaceSession()
+        let blank = BrowserTab(
+            id: TabID(rawValue: fixedUUID(1_300)), title: "Blank",
+            url: URL(string: "about:blank"), symbol: "globe", placement: .current,
+            lastActivatedAt: fixedDate(100)
+        )
+        local.spaces[0].archivedTabs.append(
+            ArchivedTab(tab: blank, archivedAt: fixedDate(100), reason: .closed)
+        )
+        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
+        try coordinator.stage(session: local, at: fixedDate(100))
+        var remote = local.spaces[0]
+        remote.branding.crest.symbol = .raven
+        let remoteRecord = BrowserSyncRecord.save(
+            .space(
+                BrowserSyncSpace(
+                    id: remote.id, profileID: remote.profile.id, name: remote.name,
+                    symbol: remote.symbol, accent: remote.accent, branding: remote.branding, orderToken: "a"
+                )),
+            version: BrowserSyncVersion(logicalClock: 10_000, deviceID: fixedUUID(1_301))
+        )
+
+        let merged = try coordinator.merge(remoteRecords: [remoteRecord], into: local, at: fixedDate(200))
+
+        XCTAssertEqual(merged.spaces[0].branding, remote.branding)
+        XCTAssertEqual(merged.spaces[0].tabs.map(\.id), local.spaces[0].tabs.map(\.id))
+        XCTAssertEqual(merged.spaces[0].archivedTabs.first?.tab.url, blank.url)
+        let reloaded = try JSONDecoder().decode(
+            BrowserSyncJournal.self, from: JSONEncoder().encode(coordinator.journal))
+        XCTAssertEqual(reloaded.records, coordinator.journal.records)
+    }
+
+    func testBlankPageAllowanceDoesNotPermitOtherNonWebSyncURLs() throws {
+        let session = oneSpaceSession()
+        var tab = syncTab(session.spaces[0].tabs[0], spaceID: session.spaces[0].id)
+        for value in [
+            "file:///private/secret", "javascript:alert(1)", "data:text/html,hello", "about:config",
+            "about:blank?script=1",
+        ] {
+            tab.url = URL(string: value)
+            XCTAssertThrowsError(try BrowserSyncPayload.tab(tab).validate())
+        }
+    }
+
     func testJournalPayloadIsAPrivacyAllowlistRatherThanAnEncodedSession() throws {
         var session = BrowserSession.preview
         session.spaces[0].credentialPreferences = BrowserCredentialPreferences(

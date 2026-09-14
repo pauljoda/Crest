@@ -10,7 +10,7 @@ struct BrowserCloudSnapshotLoader: Sendable {
     /// the snapshot is what account reconciliation and both conflict answers
     /// compare, so failing here would leave somebody unable to choose between
     /// their devices at all.
-    func load() async throws -> [BrowserSyncRecord] {
+    func load(requiresCompleteSnapshot: Bool = false) async throws -> [BrowserSyncRecord] {
         var token: CKServerChangeToken?
         var recordsByID: [BrowserSyncRecordID: BrowserSyncRecord] = [:]
         var hasMore = true
@@ -27,10 +27,18 @@ struct BrowserCloudSnapshotLoader: Sendable {
                 // incomplete snapshot must never drive an overwrite decision.
                 fetched.append(try result.get().record)
             }
-            for decoded in BrowserCloudSyncEngine.fetchedBatch(
+            let batch = BrowserCloudSyncEngine.fetchedBatch(
                 decoding: fetched,
                 using: codec
-            ).records {
+            )
+            if requiresCompleteSnapshot,
+                !batch.undecodableRecordNames.isEmpty || !batch.newerSchemaRecordNames.isEmpty
+            {
+                throw BrowserSyncError.remoteChangeNotApplied(
+                    "Some iCloud records could not be read. Update Crest on all devices and try again."
+                )
+            }
+            for decoded in batch.records {
                 recordsByID[decoded.id] = decoded
             }
             for deletion in changes.deletions {

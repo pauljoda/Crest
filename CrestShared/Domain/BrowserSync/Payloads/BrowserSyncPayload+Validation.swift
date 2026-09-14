@@ -68,7 +68,11 @@ extension BrowserSyncPayload {
             }
             try validateText(tab.symbol, limit: 128, field: "tab.symbol")
             try validateOrderToken(tab.orderToken, field: "tab.orderToken")
-            if let url = tab.url { try validateURL(url) }
+            // WebKit can leave a blank document in a live or archived tab.
+            // It is safe to restore and must not abort an unrelated sync batch.
+            if let url = tab.url, url.absoluteString != "about:blank" {
+                try validateURL(url)
+            }
             if tab.placement == .pinned, tab.folderID != nil {
                 throw BrowserSyncError.invalidField("tab.folderID")
             }

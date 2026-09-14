@@ -170,6 +170,35 @@ final class BrowserCloudSyncController {
         await transport?.notifyLocalChanges()
     }
 
+    /// Called only after the settings confirmation. A full pull merges content;
+    /// it never chooses either side as an authoritative replacement.
+    func pullFromICloud() async {
+        guard isEnabled, conflict == nil, !isRunning,
+            accountState == .available, let transport
+        else { return }
+        isRunning = true
+        let generation = startGeneration
+        defer {
+            isRunning = false
+            scheduleAccountRestartIfNeeded()
+            scheduleRetryIfNeeded()
+        }
+        lastAttemptAt = .now
+        phase = .syncing
+        do {
+            let count = try await transport.pullFromICloud()
+            guard isCurrentStart(generation), !accountRestartRequested else { return }
+            observedCloudRecordCount = count
+            lastFetchedRecordCount = count
+            skippedRecordCount = 0
+            requiresAppUpdate = false
+            recordSuccess()
+        } catch {
+            guard isCurrentStart(generation) else { return }
+            fail(error)
+        }
+    }
+
     func resolveUsingThisDevice() async {
         guard isEnabled, conflict != nil, configuration != nil else { return }
         await resolve(usesCloud: false)
@@ -204,15 +233,22 @@ final class BrowserCloudSyncController {
 
     private func enabledStateDidChange() async {
         if isEnabled {
+            if isRunning {
+                accountRestartRequested = true
+                return
+            }
             await start()
         } else {
             startGeneration += 1
             cancelRetry()
+            let previous = transport
             transport = nil
             conflict = nil
             accountRestartRequested = false
             phase = .disabled
             errorDescription = nil
+            await previous?.stop()
+            guard !isEnabled else { return }
             resetTransportStateUnlessAnAccountDecisionIsPending()
         }
     }
@@ -281,16 +317,16 @@ final class BrowserCloudSyncController {
         if transport == nil {
             let created = try transportFactory.makeTransport(
                 statusHandler: { [weak self] status in
-                    await self?.receive(status)
+                    await self?.receive(status, generation: generation)
                 },
                 activityHandler: { [weak self] activity in
-                    await self?.receive(activity)
+                    await self?.receive(activity, generation: generation)
                 }
             )
             transport = created
             await created.start()
             guard isCurrentStart(generation) else {
-                transport = nil
+                await created.stop()
                 return
             }
         }
@@ -332,8 +368,8 @@ final class BrowserCloudSyncController {
         }
     }
 
-    private func receive(_ status: BrowserCloudSyncStatus) {
-        guard conflict == nil else { return }
+    private func receive(_ status: BrowserCloudSyncStatus, generation: Int) {
+        guard isCurrentStart(generation), conflict == nil else { return }
         switch status {
         case .stopped:
             phase = isEnabled ? .checking : .disabled
@@ -350,7 +386,8 @@ final class BrowserCloudSyncController {
         }
     }
 
-    private func receive(_ activity: BrowserCloudSyncActivity) {
+    private func receive(_ activity: BrowserCloudSyncActivity, generation: Int) {
+        guard isCurrentStart(generation) else { return }
         switch activity {
         case .fetched(let recordCount):
             lastFetchedRecordCount = recordCount
@@ -361,7 +398,10 @@ final class BrowserCloudSyncController {
             lastSuccessAt = .now
             clearRecoveredFailureIfNeeded()
         case .accountChanged:
+            let previous = transport
             transport = nil
+            startGeneration += 1
+            Task { await previous?.stop() }
             conflict = nil
             accountRestartRequested = true
             phase = .checking
@@ -375,6 +415,11 @@ final class BrowserCloudSyncController {
     }
 
     private func recordSuccess() {
+        if let localError = workflow.cloudSyncLocalErrorDescription {
+            phase = .failed("Local changes could not be saved for sync.")
+            errorDescription = localError
+            return
+        }
         lastSuccessAt = .now
         phase = .ready
         errorDescription = nil
@@ -455,9 +500,12 @@ final class BrowserCloudSyncController {
     func accountAvailabilityDidChange() async {
         cancelRetry()
         retryAttempts = 0
+        startGeneration += 1
+        let previous = transport
         transport = nil
         conflict = nil
-        accountRestartRequested = false
+        accountRestartRequested = isRunning
+        await previous?.stop()
         guard isEnabled else { return }
         phase = .checking
         await start()
