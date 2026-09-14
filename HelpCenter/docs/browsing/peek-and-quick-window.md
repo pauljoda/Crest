@@ -15,7 +15,7 @@ Peek opens a link above the source page. Close it to return immediately, or choo
 
 In **Settings → Quick Window and Peek**, you can automatically open cross-site links from pinned and saved tabs in Peek. You can also choose whether **Option-click** or **Command-click** explicitly opens Peek; the other modifier opens the link in a new tab.
 
-Peek remains attached to the source context. If the source is one card in Split View, promotion and page commands follow that focused card.
+Peek stays attached to its source tab when you open another tab or switch Spaces. Return to the source tab to continue in its Peek. If the source is one card in Split View, promotion and page commands follow that focused card.
 
 ### Pull a link into Peek on Mac
 
@@ -29,7 +29,17 @@ On iPhone and iPad, touch and hold webpage links for the native link preview and
 
 Quick Window handles a link from another app without dropping it immediately into the durable sidebar. It uses the configured Space’s cookies and passwords. When the page matters, move it into a normal window and choose the right Space.
 
-Open a blank Quick Window with **Option-Command-N** on Mac. In **Settings → Quick Window and Peek**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+Open a blank Quick Window with **Option-Shift-Command-N** on Mac. In **Settings → Quick Window and Peek**, choose whether external links use Quick Window, the most recent Space, or a chosen Space.
+
+## Shared windows and Blank Window on Mac
+
+Use **Command-N** for another window onto your shared Spaces and tabs. Each window keeps its own selected Space and tab. Organizing or closing a tab changes the shared workspace; closing the window itself keeps your tabs available in the other windows.
+
+When two windows show the same tab, the focused window holds the live page and the other displays its preview. Focus the other window to continue there with the same page state.
+
+Use **Option-Command-N** for a **New Blank Window**: a disposable workspace using the current Space's cookies, passwords, extensions, and settings. Its tabs, folders, history, and archive are temporary, stay out of iCloud sync, and are discarded when the window closes. It shares the Space's signed-in website session; use a Private Space when you need temporary website storage too.
+
+Drag a tab outside the window to move it into a blank window at the drop location. Move a tab back into a normal window to keep it in the shared workspace.
 
 ## Cleanup and remembered destinations
 

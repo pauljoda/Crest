@@ -24,7 +24,7 @@ def hex_color(channels):
 
 def dark_flag_color(color, minimum_lightness):
     # Space fields are intentionally dark, but an app icon's small flag must
-    # remain legible against its navy tile. Keep the palette's hue/saturation.
+    # remain legible against the system dark background. Keep the palette's hue/saturation.
     hue, lightness, saturation = colorsys.rgb_to_hls(*rgb(color))
     return hex_color(colorsys.hls_to_rgb(hue, max(lightness, minimum_lightness), saturation))
 

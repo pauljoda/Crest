@@ -1240,7 +1240,11 @@ final class MobileBrowserInteropTests: XCTestCase {
         let pages = MobileBrowserPageStore()
         pages.select(session: session)
         let original = try XCTUnwrap(pages.activePage)
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        let scene = try XCTUnwrap(
+            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        )
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 390, height: 700)
         let controller = UIViewController()
         let host = MobileBrowserWebHostView(frame: window.bounds)
         controller.view = host
@@ -1254,11 +1258,17 @@ final class MobileBrowserInteropTests: XCTestCase {
         }
         try await load(firstURL, in: original)
         try await load(secondURL, in: original)
+        // A JavaScript scroll can precede UIKit's first rendered layout. Wait
+        // for the real scrolling surface before exercising detach/reattach.
+        try await waitUntil(timeout: 5) {
+            original.webView.scrollView.contentSize.height > original.webView.bounds.height
+        }
         _ = try await original.webView.evaluateJavaScript(
             "document.body.innerHTML += '<input id=note>'; document.getElementById('note').value = 'draft'; window.scrollTo(0, 850);"
         )
         try await waitUntil(timeout: 5) {
-            ((try? await original.webView.evaluateJavaScript("window.scrollY")) as? Double ?? 0) > 0
+            let scroll = (try? await original.webView.evaluateJavaScript("window.scrollY")) as? Double ?? 0
+            return scroll > 0 && original.webView.scrollView.contentOffset.y > 0
         }
         let scrollValue = try await original.webView.evaluateJavaScript("window.scrollY")
         let scroll = try XCTUnwrap(scrollValue as? Double)

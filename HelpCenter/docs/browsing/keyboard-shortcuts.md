@@ -14,8 +14,9 @@ These are the current defaults. On Mac, open **Settings → Shortcuts** to searc
 | Action | Default |
 | --- | --- |
 | New Window | Command-N |
+| New Blank Window (Mac) | Option-Command-N |
 | New Tab | Command-T |
-| New Quick Window | Option-Command-N |
+| New Quick Window (Mac) | Option-Shift-Command-N |
 | New Private Window | Shift-Command-N |
 | Close Current Tab or Window | Command-W |
 | Close Window | Shift-Command-W |
@@ -25,6 +26,8 @@ These are the current defaults. On Mac, open **Settings → Shortcuts** to searc
 | Reload Page | Command-R |
 | Stop Loading | Command-. |
 | Reload from Origin | Shift-Command-R |
+
+On Mac, **Command-L** opens the address editor while keeping a collapsed sidebar collapsed.
 
 ## Tabs and Spaces
 
@@ -87,6 +90,8 @@ These are the current defaults. On Mac, open **Settings → Shortcuts** to searc
 ## iPad hardware keyboards
 
 iPad uses Crest’s shipped defaults for the commands available on that platform. Hold the Command key to inspect commands exposed by the current menu context. Full shortcut rebinding is a Mac feature.
+
+On iPad, **Option-Command-N** remains New Quick Window. New Blank Window is a Mac command.
 
 ## Context-only keys
 

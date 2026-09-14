@@ -584,17 +584,21 @@ final class BrowserChromeLayoutTests: XCTestCase {
     }
 
     @MainActor
-    func testOpenLocationRevealsTheSidebarAndPresentsTheCommandSurface() {
-        let chrome = BrowserChromeState()
-        chrome.hideSidebar()
+    func testOpenLocationPreservesSidebarStateAndPresentsTheCommandSurface() {
+        for sidebarIsPresented in [false, true] {
+            let chrome = BrowserChromeState(sidebarIsPresented: sidebarIsPresented)
+            let visibility = chrome.columnVisibility
 
-        chrome.openLocation("https://example.com")
+            chrome.openLocation("https://example.com")
 
-        XCTAssertEqual(chrome.columnVisibility, .all)
-        XCTAssertEqual(
-            chrome.commandPaletteMode,
-            .editLocation("https://example.com")
-        )
+            XCTAssertEqual(chrome.columnVisibility, visibility)
+            XCTAssertEqual(
+                chrome.commandPaletteMode,
+                .editLocation("https://example.com")
+            )
+            chrome.dismissCommandPalette()
+            XCTAssertEqual(chrome.columnVisibility, visibility)
+        }
     }
 
     @MainActor

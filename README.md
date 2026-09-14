@@ -52,6 +52,7 @@ Switching Spaces changes more than the color of the window. It changes the brows
 - **Split View.** Keep two to four live pages in a group. Resize columns on Mac and iPad; move through focused cards on iPhone.
 - **Peek.** Preview a link above the current page, then close it or keep it as a tab. On Mac, drag a link into a live Peek. On iPhone and iPad, native link and image menus keep touch actions close by.
 - **Quick Window on Mac.** Open a link from another app using the right Space’s signed-in session. Promote it to a regular tab when it deserves to stay. Link Routing sends matching external links to their chosen Space.
+- **Shared windows on Mac.** Open another window onto the same Spaces and tabs, with its own selection. Use a disposable Blank Window for temporary tabs with your Space’s signed-in session, or create one by dragging a tab outside the window.
 - **Search and commands.** Open a URL, search the web, find tabs and history in your Space, or run a command from one field. Choose custom search engines and optional suggestions. Mac shortcuts can be rebound.
 - **Getting Started.** Learn tabs, pins, and folders in an interactive browser tab, with Split View practice and extension guidance on Mac.
 
@@ -124,6 +125,10 @@ open Crest.xcodeproj
 `project.yml` is the source of truth for targets and build settings. Run `xcodegen generate` after changing source roots, targets, or project configuration.
 
 ## Releases and updates
+
+Read the [Crest 0.6 release notes](CHANGELOG.md#060---2026-09-14) for the
+changes since 0.5.7, including Crest Studio, Look and Feel, translation,
+extension side panels, and shared Mac windows.
 
 macOS releases are distributed directly through GitHub Releases as signed,
 notarized Apple-silicon disk images. Crest uses Sparkle 2 with a native SwiftUI

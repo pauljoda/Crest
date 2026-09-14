@@ -131,8 +131,10 @@ installation lifecycle.
 
 ## GitHub production environment
 
-The `production` environment supplies release-only secrets. They are not kept
-in the repository, copied into forks, or exposed to pull-request builds.
+The release job runs in the `production` environment and consumes the seven
+GitHub Actions secrets below. They may be configured at repository scope or in
+that environment. Their values are not kept in source, copied into forks, or
+exposed to pull-request builds.
 
 | Secret | Purpose |
 | --- | --- |
@@ -156,12 +158,28 @@ Before publishing a stable tag:
    version are ready;
 2. complete local app and release-script tests for the commit being published;
 3. confirm the main-branch validation and Pages workflows are green;
-4. confirm the production environment contains all seven release secrets;
+4. confirm all seven release secrets are available to the production job;
 5. create and push the exact version tag;
 6. inspect the workflow's signature, notarization, Gatekeeper, checksum, and
    attestation results;
 7. install the published disk image on a clean macOS account and exercise both
    a manual update check and the normal relaunch path.
+
+For a new release line, explicitly set the intended version with
+`Scripts/set-version.sh --release X.Y.Z`. Routine fixes use
+`Scripts/set-version.sh --patch`. Keep `CURRENT_PROJECT_VERSION` unchanged;
+the distribution workflows own build numbers. Update the changelog, refresh
+the public roadmap with `Scripts/render-roadmap.py --write`, and review the
+maintained [iPhone and iPad listing](../Marketing/AppStore/README.md) against
+the release's mobile capabilities.
+
+Commit the version and release documentation together, push that commit to
+`main`, and wait for its validation workflow to pass before creating and
+pushing an annotated `vX.Y.Z` tag at that same commit. A new release line uses
+`Scripts/check-version.sh` and the release-note catalog check;
+`--fix-commit` applies only to patch increases on the existing line.
+Pushing the stable tag starts macOS publication. App Store build selection,
+submission, and release are separate steps in App Store Connect.
 
 Nightly and development builds use the same signing, notarization, and
 verification gates as a stable build. Each prerelease retains its own

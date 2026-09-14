@@ -7,30 +7,57 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-14
+
+Crest 0.6 brings more ways to organize, personalize, and work across pages on
+Mac, iPhone, and iPad.
+
+### Added
+
+- Create Space banners in Crest Studio with templates, heraldic artwork, shapes, patterns, independent colors, emoji, monograms, and searchable symbols.
+- Customize sidebar placement, borderless windows, tab shape and scale, pin layout, address-field colors, app icon palettes, and page zoom from 25% to 500% in Look and Feel, with live previews and individual resets.
+- Translate webpages on device with language detection and optional automatic translation. Supported languages may require a download.
+- Open multiple Mac windows with shared Spaces and tabs while keeping your place in each window. Open disposable blank windows with the Space's cookies and extensions, or tear off a tab where you want its window to appear.
+- Drag webpage links into a live Peek on Mac. Peeks stay with their tabs when opening another tab or switching Spaces.
+- Use compatible extension side panels, Firefox sidebars, tab groups, and approved page debugging on Mac. Extension compatibility still depends on WebKit and the APIs each extension requires.
+- Preview phone, desktop, and custom viewport sizes from the Mac developer toolbar with Shift-Command-I.
+
+### Changed
+
+- Select tabs, Split Views, and folders together to move and organize them on every platform, including touch menus and VoiceOver actions on iPhone and iPad.
+- Drag individual tabs out of a Split View, or move the whole group from its header. Return pinned and saved tabs to their home URL with a double-click or an optional reset when closing.
+- Open Settings in the browsing canvas on wider layouts and in a dismissible sheet on compact layouts. Keep Settings and Getting Started where you left them when switching tabs or Spaces.
+- Customize folder icons, emoji, colors, title tint, and tab counts. Reorder Spaces directly in Settings.
+- Preview link destinations on hover, complete addresses from the current Space, and copy a tab's link from its menu. Search selected text in a new Crest tab.
+- Use native link and image menus and choose Photos, camera, or Files for webpage uploads on iPhone and iPad. Clear current tabs with a dedicated control while retaining pinned and saved tabs.
+- Open Getting Started in the first Space after setup, and rerun onboarding from Advanced settings.
+- Open a blank Mac window with Command-Option-N and a Quick Window with Command-Option-Shift-N.
+
+### Fixed
+
+- Keep a collapsed Mac sidebar collapsed when opening the address editor with Command-L.
+- Use the system dark background for Crest's app icon and every color palette.
+- Recover missing iCloud changes with a confirmed Pull from iCloud action. Preserve Space customization during overlapping sync, and keep blank, built-in, and extension pages from blocking web-tab synchronization.
+- Keep page titles, history, Reader requests, favicons, extension panels, and sign-in links attached to their owning page and Space.
+- Keep visible pages loaded when switching windows during memory cleanup, and reduce unnecessary background work while preserving loaded browsing state.
+- Improve extension sign-in, background wake-up, popups, screenshots, permission prompts, and side-panel restoration, with stronger cookie and request-rule boundaries.
+- Restore website camera and notification permission prompts with remembered per-Space choices, and stop camera capture when permission is revoked.
+- Keep private and locked Space actions protected, clear unfinished drags when private browsing ends, and keep site-icon discovery private with bounded downloads.
+- Improve first-page loading on iPhone and iPad, Space switching, webpage editor focus, high-resolution canvas rendering, and tab dragging through long sidebars.
+- Keep sidebar selection, address completions, icon pickers, touch navigation, download feedback, and media controls consistent as pages and layouts change.
+
+## [0.5.7] - 2026-08-27
+
 ### Added
 
 - Added a public Crest 0.5 project and milestone, clear Reddit/GitHub/security support routes, maintainer governance, a documentation index, and Ko-fi and GitHub Sponsors links.
 - Added simple monthly sponsor levels with optional public recognition and clear boundaries around access, endorsement, and roadmap influence.
-- Added live drag-to-Peek previews for webpage links on Mac.
-
-### Changed
-
-- Drag an individual sidebar tab out of Split View, or drag the group's header to move the whole split.
-- Select multiple tabs and folders on iPhone and iPad through context menus and VoiceOver actions.
-- Reorder Spaces with Move Up and Move Down controls in Settings, with more responsive appearance previews while scrolling and editing.
-- Rerun onboarding from the Welcome screen through Advanced settings.
 
 ### Fixed
 
 - Made setup request Safari access before reading protected data, stopped empty Arc records from tripping the Space limit, and kept browser import to only the Spaces explicitly reviewed, finishing setup without an extra blank Space or manual-customization detour.
 - Made a site's allowed location request resume immediately with a real Core Location result, and surfaced the macOS system-privacy block with a direct Settings recovery path instead of failing invisibly or asking again after refresh.
 - Delivered allowed website notifications through macOS Notification Center, while keeping Crest's per-site decision boundary and surfacing the system notification setting when macOS blocks delivery.
-- Open Getting Started in the first Space after initial setup or an explicit onboarding rerun, reusing an existing guide when available.
-- Open Settings in the browsing canvas on wider windows and in a sheet on compact layouts, while preserving loaded Settings and guide state when switching tabs or Spaces.
-- Keep Settings actions within the current unlocked Space and reject locked destinations.
-- Restore native link previews and image actions on iPhone and iPad.
-- Keep page titles, history, Reader Mode, and favicon updates attached to the page and Space that requested them.
-- Clear unfinished sidebar drags when private browsing ends and preserve an active drag when another tab moves between Spaces.
 
 ## [0.4.0] - 2026-08-18
 
@@ -297,6 +324,8 @@ and Crest uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Crest releases before 0.3.0 predate this changelog. Their development history remains available in Git.
 
-[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pauljoda/Crest/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/pauljoda/Crest/compare/v0.5.7...v0.6.0
+[0.5.7]: https://github.com/pauljoda/Crest/releases/tag/v0.5.7
 [0.4.0]: https://github.com/pauljoda/Crest/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pauljoda/Crest/releases/tag/v0.3.0

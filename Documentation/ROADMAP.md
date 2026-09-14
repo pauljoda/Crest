@@ -53,10 +53,6 @@ the live status for each issue.
 
 ### [0.6](https://github.com/pauljoda/Crest/milestone/2)
 
-#### Planned and in progress
-
-- [ ] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
-
 #### Completed
 
 - [x] [Restore pinned and saved tabs to their root URL predictably](https://github.com/pauljoda/Crest/issues/41) — [`ce2661bd`](https://github.com/pauljoda/Crest/commit/ce2661bd41bbef282d7a4644c6cf07e83ee70530)
@@ -117,6 +113,7 @@ the live status for each issue.
 - [x] [Make Clear Open Tabs reachable on touch devices](https://github.com/pauljoda/Crest/issues/117)
 - [x] [Offer a continuous, wider default page-zoom range](https://github.com/pauljoda/Crest/issues/118)
 - [x] [Add icon-only folders and folder-title tint options](https://github.com/pauljoda/Crest/issues/119)
+- [x] [Open Peek by dragging a webpage link](https://github.com/pauljoda/Crest/issues/120)
 - [x] [Keep native Settings tabs consistent across layouts](https://github.com/pauljoda/Crest/issues/121)
 - [x] [Restore the saved-tab icon picker on iPad](https://github.com/pauljoda/Crest/issues/123)
 - [x] [Keep the pin icon picker visible beside a right-side iPad sidebar](https://github.com/pauljoda/Crest/issues/124)

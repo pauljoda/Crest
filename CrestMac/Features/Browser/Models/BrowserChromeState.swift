@@ -35,7 +35,6 @@ final class BrowserChromeState {
     }
 
     func openLocation(_ address: String = "") {
-        showSidebar()
         commandPaletteMode = .editLocation(address)
     }
 
