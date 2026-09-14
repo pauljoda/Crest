@@ -17,9 +17,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
             .modifier(
                 BrowserTabAppearanceSurface(
                     appearance: appearance,
-                    accent: appearance.usesWebsitePinColor
-                        ? (accent?.color ?? selectionAccent)
-                        : selectionAccent,
+                    accent: resolvedAccent,
                     isPinned: true, isSelected: isSelected, isHovering: isHovering,
                     selectionEmphasis: isMultiSelected)
             )
@@ -28,7 +26,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
                     CrestMotion.palette,
                     reduceMotion: reduceMotion
                 ),
-                value: palette
+                value: resolvedAccent
             )
             .task(id: faviconData) {
                 guard let faviconData else {
@@ -46,6 +44,10 @@ struct PinnedTabInteractionSurface: ViewModifier {
             siteTheme: siteTheme,
             extracted: palette?.primary.iconAccent
         )
+    }
+
+    private var resolvedAccent: Color {
+        appearance.usesWebsitePinColor ? (accent?.color ?? selectionAccent) : selectionAccent
     }
 
     private var selectionAccent: Color {

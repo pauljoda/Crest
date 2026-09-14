@@ -19,7 +19,17 @@ enum BrowserTabIconAccentResolver {
         siteTheme: BrowserTabIconAccent?,
         extracted: BrowserTabIconAccent?
     ) -> BrowserTabIconAccent? {
-        siteTheme ?? extracted
+        if let siteTheme, isDistinctive(siteTheme) { return siteTheme }
+        if let extracted, isDistinctive(extracted) { return extracted }
+        return nil
+    }
+
+    private static func isDistinctive(_ color: BrowserTabIconAccent) -> Bool {
+        let brightest = max(color.red, color.green, color.blue)
+        let darkest = min(color.red, color.green, color.blue)
+        // Page chrome often declares neutral or subtly tinted system surfaces.
+        // Keep those out of the outline, including monochrome favicon artwork.
+        return brightest - darkest >= 0.08 && brightest >= 0.18 && darkest <= 0.90
     }
 }
 
