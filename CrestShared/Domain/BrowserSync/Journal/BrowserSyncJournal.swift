@@ -121,6 +121,16 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
         for record in existingRecords where record.payload != nil {
             guard let payload = record.payload, preferences.includes(payload) else { continue }
             guard desiredByID[record.id] == nil else { continue }
+            // Older builds synced native and blank tabs. Retire those cloud
+            // records without treating their still-open local pages as deleted.
+            if !BrowserSyncContentPolicy.includes(payload) {
+                byID[record.id] = .delete(
+                    id: record.id, spaceID: record.spaceID, version: try nextVersion(),
+                    reason: .superseded, at: date
+                )
+                pendingRecordIDs.insert(record.id)
+                continue
+            }
             guard knownSpaceIDs.contains(record.spaceID) else { continue }
             let ancestryHasArrived = Self.ancestryHasArrived(
                 payload,

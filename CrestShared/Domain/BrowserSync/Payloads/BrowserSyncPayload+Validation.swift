@@ -68,8 +68,8 @@ extension BrowserSyncPayload {
             }
             try validateText(tab.symbol, limit: 128, field: "tab.symbol")
             try validateOrderToken(tab.orderToken, field: "tab.orderToken")
-            // WebKit can leave a blank document in a live or archived tab.
-            // It is safe to restore and must not abort an unrelated sync batch.
+            // Older builds synced blank documents. Keep their records readable
+            // so projection can retire them without discarding the journal.
             if let url = tab.url, url.absoluteString != "about:blank" {
                 try validateURL(url)
             }

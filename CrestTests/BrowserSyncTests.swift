@@ -49,6 +49,133 @@ final class BrowserSyncTests: XCTestCase {
         }
     }
 
+    func testOnlyWebPagesSyncAndDeviceOnlyContentSurvivesMerges() throws {
+        var local = oneSpaceSession()
+        let spaceID = local.spaces[0].id
+        let urls = [
+            "https://example.org", "http://localhost:3000", "https://localhost:8443", "http://127.0.0.1:8080",
+            "http://[::1]:8080",
+            "chrome-extension://extension-test/index.html#/onboarding", "webkit-extension://extension-test/page.html",
+            "file:///private/local.html", "data:text/html,hello", "javascript:alert(1)", "about:blank",
+        ]
+        for (index, value) in urls.enumerated() {
+            let tab = BrowserTab(
+                id: TabID(rawValue: fixedUUID(1_400 + index)), title: "Page",
+                url: URL(string: value), placement: index % 2 == 0 ? .saved : .current,
+                lastActivatedAt: fixedDate(100))
+            local.spaces[0].tabs.append(tab)
+            let archived = BrowserTab(
+                id: TabID(rawValue: fixedUUID(1_500 + index)), title: "Archived",
+                url: tab.url, placement: .current, lastActivatedAt: fixedDate(100))
+            local.spaces[0].archivedTabs.append(ArchivedTab(tab: archived, archivedAt: fixedDate(100), reason: .closed))
+            local.spaces[0].history.append(
+                BrowserHistoryEntry(
+                    id: fixedUUID(1_600 + index), url: tab.url!, title: "Visited",
+                    firstVisitedAt: fixedDate(100), lastVisitedAt: fixedDate(100), visitCount: 1))
+        }
+        let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+        let guide = BrowserTab(title: "Getting Started", url: nil, nativeContent: .gettingStarted, placement: .current)
+        let start = BrowserTab.startPage(lastActivatedAt: fixedDate(100))
+        local.spaces[0].tabs.insert(contentsOf: [settings, guide, start], at: 1)
+        local.spaces[0].selectedTabID = settings.id
+        local.repairRuntimeIntegrity()
+        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
+        try coordinator.stage(session: local, at: fixedDate(100))
+        let journal = coordinator.journal
+        let syncedTabs = journal.records.filter { $0.id.kind == .tab }
+        XCTAssertEqual(syncedTabs.count, 6)
+        XCTAssertEqual(journal.records.filter { $0.id.kind == .archive }.count, 5)
+        XCTAssertEqual(journal.records.filter { $0.id.kind == .history }.count, 5)
+        XCTAssertFalse(
+            journal.records.contains {
+                [settings.id.rawValue, guide.id.rawValue, start.id.rawValue].contains($0.id.value)
+            })
+        var remoteTab = syncTab(local.spaces[0].tabs[0], spaceID: spaceID)
+        remoteTab.title = "Updated elsewhere"
+        let merged = try coordinator.merge(
+            remoteRecords: [
+                .save(
+                    .tab(remoteTab),
+                    version: BrowserSyncVersion(logicalClock: 10_000, deviceID: fixedUUID(1_700)))
+            ], into: local, at: fixedDate(200))
+        XCTAssertEqual(merged.spaces[0].selectedTabID, settings.id)
+        XCTAssertEqual(merged.spaces[0].tabs.first { $0.id == remoteTab.id }?.title, "Updated elsewhere")
+        XCTAssertEqual(
+            merged.spaces[0].tabs.filter { !BrowserSyncContentPolicy.includes($0) },
+            local.spaces[0].tabs.filter { !BrowserSyncContentPolicy.includes($0) })
+        XCTAssertEqual(Set(merged.spaces[0].archivedTabs.map(\.id)), Set(local.spaces[0].archivedTabs.map(\.id)))
+        XCTAssertEqual(Set(merged.spaces[0].history.map(\.id)), Set(local.spaces[0].history.map(\.id)))
+        XCTAssertEqual(merged.spaces[0].tabs.firstIndex { $0.id == settings.id }, 1)
+    }
+
+    func testLegacyNativeCloudTabsAreRetiredWithoutClosingLocalViews() throws {
+        var local = oneSpaceSession()
+        let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .current)
+        local.spaces[0].tabs.append(settings)
+        local.spaces[0].selectedTabID = settings.id
+        local.repairRuntimeIntegrity()
+        var native = syncTab(settings, spaceID: local.spaces[0].id)
+        native.nativeContent = .settings
+        let legacy = BrowserSyncRecord.save(
+            .tab(native),
+            version: BrowserSyncVersion(logicalClock: 5, deviceID: fixedUUID(1_701)))
+        var journal = BrowserSyncJournal()
+        try journal.merge([spaceRecord(local.spaces[0], clock: 1), legacy])
+        let firstSync = try journal.materializedSession(applyingTo: oneSpaceSession())
+        XCTAssertFalse(firstSync.spaces[0].tabs.contains { $0.id == settings.id })
+        try journal.stage(session: local, at: fixedDate(200))
+        XCTAssertEqual(journal.records.first { $0.id == legacy.id }?.tombstone?.reason, .superseded)
+        let merged = try journal.materializedSession(applyingTo: local)
+        XCTAssertEqual(
+            merged.spaces[0].tabs.first { $0.id == settings.id }, local.spaces[0].tabs.first { $0.id == settings.id })
+        XCTAssertEqual(merged.spaces[0].selectedTabID, settings.id)
+        XCTAssertFalse(merged.spaces[0].archivedTabs.contains { $0.id == settings.id })
+    }
+
+    func testWebTabNavigatedToAnExtensionStaysLocalDespiteRemoteChanges() throws {
+        var local = oneSpaceSession()
+        let coordinator = BrowserSyncCoordinator(persistence: InMemoryBrowserSyncJournalPersistence())
+        try coordinator.stage(session: local, at: fixedDate(100))
+        let tabID = local.spaces[0].tabs[0].id
+        local.spaces[0].tabs[0].url = URL(string: "chrome-extension://test/onboarding.html")
+        local.repairRuntimeIntegrity()
+        let tombstone = BrowserSyncRecord.delete(
+            id: .init(kind: .tab, value: tabID.rawValue),
+            spaceID: local.spaces[0].id, version: .init(logicalClock: 10_000, deviceID: fixedUUID(1_702)),
+            reason: .explicitDelete, at: fixedDate(150))
+        let merged = try coordinator.merge(remoteRecords: [tombstone], into: local, at: fixedDate(200))
+        XCTAssertEqual(merged.spaces[0].tabs, local.spaces[0].tabs)
+        XCTAssertTrue(merged.spaces[0].archivedTabs.isEmpty)
+
+        let archived = ArchivedTab(tab: local.spaces[0].tabs[0], archivedAt: fixedDate(200), reason: .closed)
+        local.spaces[0].archivedTabs = [archived]
+        local.spaces[0].tabs = [BrowserTab.startPage(lastActivatedAt: fixedDate(200))]
+        let oldWebTab = syncTab(oneSpaceSession().spaces[0].tabs[0], spaceID: local.spaces[0].id)
+        let reopened = try coordinator.merge(
+            remoteRecords: [
+                .save(
+                    .tab(oldWebTab),
+                    version: .init(logicalClock: 20_000, deviceID: fixedUUID(1_702)))
+            ], into: local, at: fixedDate(250))
+        XCTAssertFalse(reopened.spaces[0].tabs.contains { $0.id == tabID })
+        XCTAssertEqual(reopened.spaces[0].archivedTabs.first { $0.id == tabID }?.tab.url, archived.tab.url)
+    }
+
+    func testLocalNativePinDoesNotBlockAFullSetOfCloudPins() throws {
+        var remote = currentTabSession(count: BrowserSpace.maximumPinnedTabs)
+        for index in remote.spaces[0].tabs.indices { remote.spaces[0].tabs[index].placement = .pinned }
+        var journal = BrowserSyncJournal()
+        try journal.stage(session: remote)
+        var local = remote
+        let settings = BrowserTab(title: "Settings", url: nil, nativeContent: .settings, placement: .pinned)
+        local.spaces[0].tabs = [settings]
+        local.spaces[0].selectedTabID = settings.id
+        let merged = try journal.materializedSession(applyingTo: local)
+        XCTAssertEqual(merged.spaces[0].tabs.count, BrowserSpace.maximumPinnedTabs + 1)
+        XCTAssertEqual(merged.spaces[0].pinnedTabs.count, BrowserSpace.maximumPinnedTabs)
+        XCTAssertEqual(merged.spaces[0].selectedTabID, settings.id)
+    }
+
     func testJournalPayloadIsAPrivacyAllowlistRatherThanAnEncodedSession() throws {
         var session = BrowserSession.preview
         session.spaces[0].credentialPreferences = BrowserCredentialPreferences(
@@ -436,7 +563,7 @@ final class BrowserSyncTests: XCTestCase {
         try mac.stage(session: macEdit, at: fixedDate(200))
 
         var phoneEdit = base
-        let cloudTab = BrowserTab.startPage()
+        let cloudTab = BrowserTab(title: "Cloud page", url: URL(string: "http://localhost:3000"), placement: .current)
         phoneEdit.spaces[0].tabs.append(cloudTab)
         try phone.stage(session: phoneEdit, at: fixedDate(200))
 
@@ -2234,7 +2361,7 @@ final class BrowserSyncTests: XCTestCase {
             id: tabID,
             spaceID: space.id,
             title: "Dangling",
-            url: nil,
+            url: URL(string: "https://example.com/dangling"),
             symbol: "globe",
             placement: .saved,
             folderID: danglingFolderID,
@@ -3122,7 +3249,7 @@ final class BrowserSyncTests: XCTestCase {
             id: tabID,
             spaceID: space.id,
             title: "Dangling",
-            url: nil,
+            url: URL(string: "https://example.com/dangling"),
             symbol: "globe",
             placement: .saved,
             folderID: folderID,

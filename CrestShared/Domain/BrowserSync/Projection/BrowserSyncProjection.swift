@@ -17,6 +17,12 @@ enum BrowserSyncProjection {
         )
 
         for (space, spaceRecordID) in zip(session.spaces, spaceRecordIDs) {
+            let includedTabs = space.tabs.filter { tab in
+                BrowserSyncContentPolicy.includes(tab)
+                    && (tab.placement == .current ? preferences.currentTabs : preferences.savedStructure)
+            }
+            let includedSplitIDs = Set(
+                space.tabs.filter { BrowserSyncContentPolicy.includes($0) }.compactMap(\.splitGroupID))
             payloads.append(
                 .space(
                     BrowserSyncSpace(
@@ -30,7 +36,7 @@ enum BrowserSyncProjection {
                         accessPolicy: space.accessPolicy,
                         isSavedTabsExpanded: space.isSavedTabsExpanded,
                         savedTabsExpansionModifiedAt: space.savedTabsExpansionModifiedAt,
-                        splitGroups: space.splitGroups,
+                        splitGroups: space.splitGroups.filter { includedSplitIDs.contains($0.id) },
                         orderToken: try requiredOrderToken(
                             for: spaceRecordID,
                             in: spaceTokens
@@ -91,11 +97,6 @@ enum BrowserSyncProjection {
                 }
             }
 
-            let includedTabs = space.tabs.filter { tab in
-                tab.placement == .current
-                    ? preferences.currentTabs
-                    : preferences.savedStructure
-            }
             let tabRecordIDs = includedTabs.map {
                 BrowserSyncRecordID(kind: .tab, value: $0.id.rawValue)
             }
@@ -130,7 +131,7 @@ enum BrowserSyncProjection {
             }
 
             if preferences.historyAndArchive {
-                for history in space.history {
+                for history in space.history where BrowserSyncContentPolicy.includes(history.url) {
                     payloads.append(
                         .history(
                             BrowserSyncHistory(
@@ -143,7 +144,8 @@ enum BrowserSyncProjection {
                                 visitCount: history.visitCount
                             )))
                 }
-                let archiveRecordIDs = space.archivedTabs.map {
+                let includedArchive = space.archivedTabs.filter { BrowserSyncContentPolicy.includes($0.tab) }
+                let archiveRecordIDs = includedArchive.map {
                     BrowserSyncRecordID(kind: .archive, value: $0.id.rawValue)
                 }
                 let archiveTokens = BrowserSyncOrderTokenAllocator.allocate(
@@ -151,7 +153,7 @@ enum BrowserSyncProjection {
                     existingTokens: existingTokens
                 )
                 for (archive, recordID) in zip(
-                    space.archivedTabs,
+                    includedArchive,
                     archiveRecordIDs
                 ) {
                     payloads.append(
@@ -219,5 +221,33 @@ enum BrowserSyncProjection {
                     nil
                 }
             })
+    }
+}
+
+/// Only portable web pages enter sync. Native documents and device-specific
+/// schemes remain in the local session, including when remote changes arrive.
+enum BrowserSyncContentPolicy {
+    static func includes(_ url: URL?) -> Bool {
+        guard let url, let host = url.host, !host.isEmpty else { return false }
+        return ["http", "https"].contains(url.scheme?.lowercased() ?? "")
+    }
+
+    static func includes(_ tab: BrowserTab) -> Bool {
+        tab.nativeContent == nil && includes(tab.url)
+            && (tab.savedSiteURL == nil || includes(tab.savedSiteURL))
+    }
+
+    static func includes(_ tab: BrowserSyncTab) -> Bool {
+        tab.nativeContent == nil && includes(tab.url)
+            && (tab.savedURL == nil || includes(tab.savedURL))
+    }
+
+    static func includes(_ payload: BrowserSyncPayload) -> Bool {
+        switch payload {
+        case .space, .folder: true
+        case .tab(let tab): includes(tab)
+        case .archive(let archive): includes(archive.tab)
+        case .history(let history): includes(history.url)
+        }
     }
 }

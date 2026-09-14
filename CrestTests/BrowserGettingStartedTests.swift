@@ -237,7 +237,7 @@ final class BrowserGettingStartedTests: XCTestCase {
         XCTAssertTrue(practice.browser.persistence is InMemoryBrowserSessionPersistence)
     }
 
-    func testNativeSyncAndPortableExportPreserveContent() throws {
+    func testNativeTabsStayLocalWhilePortableExportPreservesContent() throws {
         let browser = BrowserStore.preview()
         let id = try XCTUnwrap(browser.openGettingStarted())
         // Whole-second fixture avoids Date epoch-conversion rounding in the
@@ -253,11 +253,7 @@ final class BrowserGettingStartedTests: XCTestCase {
         let records = payloads.map {
             BrowserSyncRecord.save($0, version: BrowserSyncVersion(logicalClock: 1, deviceID: UUID()))
         }
-        let native = try XCTUnwrap(records.first { $0.id.value == id.rawValue })
-        let codec = BrowserCloudRecordCodec()
-        let cloud = try codec.encode(native)
-        XCTAssertEqual((cloud["schemaVersion"] as? NSNumber)?.intValue, 3)
-        XCTAssertEqual(try codec.decode(cloud), native)
+        XCTAssertFalse(records.contains { $0.id.value == id.rawValue })
         let restored = try BrowserSyncMaterializer.materialize(
             records: records, preferences: .default, localSession: browser.session)
         XCTAssertEqual(restored.selectedSpace?.tabs.first { $0.id == id }?.nativeContent, .gettingStarted)

@@ -1751,7 +1751,7 @@ final class BrowserStoreTests: XCTestCase {
         var remote = BrowserSyncJournal()
         try remote.merge(coordinator.journal.records)
         var remoteSession = session
-        let newTab = BrowserTab.startPage()
+        let newTab = BrowserTab(title: "Cloud page", url: URL(string: "http://localhost:3000"), placement: .current)
         remoteSession.spaces[0].tabs.append(newTab)
         try remote.stage(session: remoteSession)
 

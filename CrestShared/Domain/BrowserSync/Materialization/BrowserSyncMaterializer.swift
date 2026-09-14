@@ -61,6 +61,12 @@ enum BrowserSyncMaterializer {
                 preferences: preferences,
                 local: local
             )
+            let localOnlySplitIDs = Set(
+                (local?.tabs ?? [])
+                    .filter { !BrowserSyncContentPolicy.includes($0) }.compactMap(\.splitGroupID))
+            let syncedGroups = syncedSpace.splitGroups ?? local?.splitGroups ?? []
+            let retainedGroups = (local?.splitGroups ?? []).filter { localOnlySplitIDs.contains($0.id) }
+            let syncedGroupIDs = Set(syncedGroups.map(\.id))
             let usableTabs =
                 tabs.isEmpty
                 ? [BrowserTab.startPage()]
@@ -79,9 +85,7 @@ enum BrowserSyncMaterializer {
                     branding: syncedSpace.branding,
                     folders: folders,
                     tabs: usableTabs,
-                    splitGroups: syncedSpace.splitGroups
-                        ?? local?.splitGroups
-                        ?? [],
+                    splitGroups: syncedGroups + retainedGroups.filter { !syncedGroupIDs.contains($0.id) },
                     archivedTabs: archive,
                     history: history,
                     browsingPreferences: syncedSpace.browsingPreferences,
@@ -282,8 +286,16 @@ enum BrowserSyncMaterializer {
         folderRecordSpaceIDs: [FolderID: SpaceID],
         tombstonedFolderIDs: Set<FolderID>
     ) throws -> [BrowserTab] {
+        let localOnlyTabs = (local?.tabs ?? []).enumerated().filter {
+            !BrowserSyncContentPolicy.includes($0.element)
+        }
+        let localOnlyIDs = Set(localOnlyTabs.map { $0.element.id }).union(
+            (local?.archivedTabs ?? []).filter { !BrowserSyncContentPolicy.includes($0.tab) }.map(\.id)
+        )
         let synced = records.compactMap { record -> BrowserSyncTab? in
-            guard case .tab(let tab)? = record.payload, tab.spaceID == spaceID else { return nil }
+            guard case .tab(let tab)? = record.payload, tab.spaceID == spaceID,
+                BrowserSyncContentPolicy.includes(tab), !localOnlyIDs.contains(tab.id)
+            else { return nil }
             return tab
         }
         .filter { tab in
@@ -296,7 +308,8 @@ enum BrowserSyncMaterializer {
         }
 
         var tabs = (local?.tabs ?? []).filter { tab in
-            tab.placement == .current ? !preferences.currentTabs : !preferences.savedStructure
+            BrowserSyncContentPolicy.includes(tab)
+                && (tab.placement == .current ? !preferences.currentTabs : !preferences.savedStructure)
         }
         let localTabsByID = Dictionary(uniqueKeysWithValues: (local?.tabs ?? []).map { ($0.id, $0) })
         let localFoldersByID = Dictionary(
@@ -363,6 +376,11 @@ enum BrowserSyncMaterializer {
         if tabs.filter({ $0.placement == .pinned }).count > BrowserSpace.maximumPinnedTabs {
             throw BrowserSyncError.tooManyPinnedTabs(spaceID)
         }
+        // Retained local pages may fill additional pin slots. Session repair
+        // preserves overflow as saved tabs instead of rejecting the cloud batch.
+        for (index, tab) in localOnlyTabs {
+            tabs.insert(tab, at: min(index, tabs.count))
+        }
         return tabs
     }
 
@@ -406,9 +424,14 @@ enum BrowserSyncMaterializer {
         let localArchiveByID = Dictionary(
             uniqueKeysWithValues: (local?.archivedTabs ?? []).map { ($0.id, $0) }
         )
+        let localOnlyArchive = (local?.archivedTabs ?? []).filter {
+            !BrowserSyncContentPolicy.includes($0.tab) && !activeTabIDs.contains($0.id)
+        }
+        let localOnlyIDs = Set(localOnlyArchive.map(\.id))
         let projected = records.compactMap { record -> BrowserSyncArchive? in
             guard case .archive(let archive)? = record.payload,
                 archive.spaceID == spaceID,
+                BrowserSyncContentPolicy.includes(archive.tab), !localOnlyIDs.contains(archive.id),
                 !activeTabIDs.contains(archive.id)
             else { return nil }
             return archive
@@ -450,7 +473,7 @@ enum BrowserSyncMaterializer {
                 record.tombstone?.reason == .explicitDelete,
                 !projectedIDs.contains(TabID(rawValue: record.id.value)),
                 let localTab = local?.tabs.first(where: {
-                    $0.id.rawValue == record.id.value
+                    $0.id.rawValue == record.id.value && BrowserSyncContentPolicy.includes($0)
                 })
             else { return nil }
             var archivedTab = localTab
@@ -465,7 +488,7 @@ enum BrowserSyncMaterializer {
                 reason: .deletedOnAnotherDevice
             )
         }
-        return (projected + explicitDeletions).sorted {
+        return (projected + explicitDeletions + localOnlyArchive).sorted {
             $0.archivedAt > $1.archivedAt
         }
     }
@@ -477,8 +500,12 @@ enum BrowserSyncMaterializer {
         local: BrowserSpace?
     ) -> [BrowserHistoryEntry] {
         guard preferences.historyAndArchive else { return local?.history ?? [] }
-        return records.compactMap { record -> BrowserSyncHistory? in
-            guard case .history(let history)? = record.payload, history.spaceID == spaceID else { return nil }
+        let localOnly = (local?.history ?? []).filter { !BrowserSyncContentPolicy.includes($0.url) }
+        let localOnlyIDs = Set(localOnly.map(\.id))
+        let synced = records.compactMap { record -> BrowserSyncHistory? in
+            guard case .history(let history)? = record.payload, history.spaceID == spaceID,
+                BrowserSyncContentPolicy.includes(history.url), !localOnlyIDs.contains(history.id)
+            else { return nil }
             return history
         }
         .sorted { first, second in
@@ -498,6 +525,7 @@ enum BrowserSyncMaterializer {
                 visitCount: $0.visitCount
             )
         }
+        return (synced + localOnly).sorted { $0.lastVisitedAt > $1.lastVisitedAt }
     }
 
     private static func ordered(_ first: BrowserSyncSpace, _ second: BrowserSyncSpace) -> Bool {
