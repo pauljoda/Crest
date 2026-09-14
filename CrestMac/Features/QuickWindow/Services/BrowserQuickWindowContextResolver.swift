@@ -31,6 +31,11 @@ struct BrowserQuickWindowContextResolver {
         guard let runtime = pagePoolRegistry.runtime(for: targetWindowID) else {
             return nil
         }
+        // Blank windows own disposable tabs. A Quick Window opened from one
+        // promotes into the shared workspace, never back into that blank window.
+        if runtime.browser.isTemporaryWorkspace {
+            return context(targetWindowID: nil)
+        }
         return BrowserQuickWindowBrowsingContext(
             browser: runtime.browser,
             pages: runtime.pages,

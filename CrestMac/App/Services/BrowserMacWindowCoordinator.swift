@@ -32,6 +32,30 @@ final class BrowserMacWindowCoordinator {
 
     func existingModel(for id: BrowserWindowID) -> BrowserMacWindowModel? { windows[id] }
 
+    @discardableResult
+    func activateExistingWindow(for source: BrowserStore) -> Bool {
+        guard let space = source.selectedSpace, !spaceAccess.isLocked(space) else { return false }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        let candidates = windows.values.filter {
+            !$0.isTemporary && $0.window != nil && $0.browser.family === source.family
+                && $0.browser.space(matching: assignment) != nil
+        }
+        let destination =
+            candidates.first { $0.browser === source }
+            ?? candidates.first { $0.browser.selectedSpace?.id == space.id }
+            ?? candidates.first
+        guard let destination, let window = destination.window else { return false }
+        destination.browser.selectSpace(space.id)
+        if let tab = source.selectedTab {
+            destination.browser.selectTab(tab.id)
+        }
+        destination.pages.select(session: destination.browser.session)
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate()
+        return true
+    }
+
     func preparePresentation(_ window: NSWindow, for id: BrowserWindowID) {
         guard let model = windows[id] else { return }
         model.window = window

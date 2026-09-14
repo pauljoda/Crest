@@ -678,7 +678,8 @@ struct CrestApp: App {
                     browser: browser,
                     pages: pages,
                     spaceAccess: spaceAccess,
-                    pagePoolRegistry: pagePoolRegistry
+                    pagePoolRegistry: pagePoolRegistry,
+                    windowCoordinator: windowCoordinator
                 )
                 .environment(windowTransparency)
                 .frame(

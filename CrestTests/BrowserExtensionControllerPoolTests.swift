@@ -2216,7 +2216,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         )
     }
 
-    func testPersistentNativeMessagingPortSurvivesDelayedCompanionReply()
+    func testPersistentNativeMessagingPortSurvivesBackgroundIdleTimeout()
         async throws
     {
         guard
@@ -2262,7 +2262,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             header = sys.stdin.buffer.read(4)
             size = struct.unpack('<I', header)[0]
             message = json.loads(sys.stdin.buffer.read(size))
-            time.sleep(0.25)
+            time.sleep(155)
             payload = json.dumps({'echo': message}).encode('utf-8')
             sys.stdout.buffer.write(struct.pack('<I', len(payload)) + payload)
             sys.stdout.buffer.flush()
@@ -2311,7 +2311,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                 searchDirectories: [hostDirectoryURL]
             )
         )
-        let pool = BrowserExtensionControllerPool()
+        let pool = BrowserExtensionControllerPool(usesEphemeralWebKitStorage: false)
         pool.setNativeMessagingHandler(service)
         let space = BrowserSession.preview.spaces[0]
         let source = BrowserExtensionInstallationSource.chromeWebStore(
@@ -2337,7 +2337,17 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
                     hosts: []
                 )
         )
-        XCTAssertTrue(context.hasAccessToPrivateData)
+        defer {
+            try? pool.controller(for: space).unload(context)
+            Task { @MainActor in
+                await withCheckedContinuation { continuation in
+                    WKWebsiteDataStore.remove(forIdentifier: space.profile.id) { _ in
+                        continuation.resume()
+                    }
+                }
+            }
+        }
+        XCTAssertFalse(context.hasAccessToPrivateData)
         let configuration = try XCTUnwrap(context.webViewConfiguration)
         let webView = WKWebView(frame: .zero, configuration: configuration)
         let extensionPageURL = context.baseURL.appending(path: "manifest.json")
@@ -2347,6 +2357,9 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             responseHTML: "<!doctype html><html><body>Native echo</body></html>"
         )
 
+        // WebKit may retire a worker even with an open port after two idle minutes.
+        // Leave a full 30-second unload interval beyond that boundary.
+        try await Task.sleep(for: .seconds(157))
         var nativeEcho: String?
         for _ in 0..<200 {
             nativeEcho =

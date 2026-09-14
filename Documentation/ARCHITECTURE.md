@@ -62,7 +62,7 @@ The macOS window coordinator, live-page handoff and mirrored preview, Blank Wind
 
 Crest Passwords are stored in the Keychain and matched by origin. Each Space can disable Crest-owned suggestions, generation, save prompts, and HTTP-auth reuse without deleting its stored credentials. Sensitive reveals and exports require device authentication. Page-to-app credential messages are schema-checked and origin-bound.
 
-The privacy manifest is shipped from `CrestShared/Resources/PrivacyInfo.xcprivacy`. Default-browser and browser-passkey capabilities remain gated on Apple approval; no managed entitlement is added speculatively.
+The privacy manifest is shipped from `CrestShared/Resources/PrivacyInfo.xcprivacy`. The macOS app declares Apple's approved Web Browser Public Key Credential entitlement for system passkey access and the iCloud Passwords helper. Its signing profiles must include that capability; system passkey access also requires the user's authorization. Other managed capabilities remain gated on platform-specific Apple approval.
 
 ## WebKit boundary
 

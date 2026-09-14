@@ -8,6 +8,7 @@ struct BrowserQuickWindowScene: View {
     let pagePoolRegistry: BrowserPagePoolRegistry?
     let preferences: BrowserTransientBrowsingPreferences
     let previewModel: BrowserQuickWindowModel?
+    let windowCoordinator: BrowserMacWindowCoordinator?
 
     @Environment(\.dismissWindow) private var dismissWindow
     @Environment(\.openWindow) private var openWindow
@@ -19,6 +20,7 @@ struct BrowserQuickWindowScene: View {
         pages: BrowserPagePool,
         spaceAccess: BrowserSpaceAccessController,
         pagePoolRegistry: BrowserPagePoolRegistry,
+        windowCoordinator: BrowserMacWindowCoordinator,
         preferences: BrowserTransientBrowsingPreferences = .production
     ) {
         _request = request
@@ -26,6 +28,7 @@ struct BrowserQuickWindowScene: View {
         self.pages = pages
         self.spaceAccess = spaceAccess
         self.pagePoolRegistry = pagePoolRegistry
+        self.windowCoordinator = windowCoordinator
         self.preferences = preferences
         previewModel = nil
     }
@@ -40,6 +43,7 @@ struct BrowserQuickWindowScene: View {
         pages = nil
         self.spaceAccess = spaceAccess
         pagePoolRegistry = nil
+        windowCoordinator = nil
         preferences = .isolated
         previewModel = model
     }
@@ -145,6 +149,11 @@ struct BrowserQuickWindowScene: View {
     }
 
     private func openBrowserWindow() {
-        openWindow(id: BrowserSceneID.browser.rawValue)
+        let destinationBrowser = resolvedContext?.browser ?? browser
+        if windowCoordinator?.activateExistingWindow(for: destinationBrowser) == true { return }
+        openWindow(
+            id: BrowserSceneID.browser.rawValue,
+            value: BrowserMacWindowRequest.normal(sourceWindowID: nil)
+        )
     }
 }

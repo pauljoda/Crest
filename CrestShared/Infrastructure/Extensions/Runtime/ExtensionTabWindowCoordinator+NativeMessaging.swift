@@ -668,7 +668,7 @@ extension BrowserExtensionTabWindowCoordinator {
     }
 
     func webExtensionController(
-        _: WKWebExtensionController,
+        _ controller: WKWebExtensionController,
         connectUsing port: WKWebExtension.MessagePort,
         for extensionContext: WKWebExtensionContext,
         completionHandler: @escaping ((any Error)?) -> Void
@@ -702,7 +702,27 @@ extension BrowserExtensionTabWindowCoordinator {
             port: port,
             extensionIdentity: extensionIdentity,
             authorization: authorization,
-            completionHandler: completionHandler
+            completionHandler: { [weak extensionContext, weak controller, weak port] error in
+                #if os(macOS)
+                    if error == nil, let extensionContext, let controller, let port,
+                        port.applicationIdentifier
+                            != BrowserExtensionNativeMessagingApplication.capabilityBrokerIdentifier
+                    {
+                        // Chromium keeps a worker alive for an open native-host
+                        // connection. WebKit otherwise retires it after two idle
+                        // minutes, discarding password-manager pairing state.
+                        BrowserExtensionBackgroundActivityLease(
+                            context: extensionContext,
+                            isActive: { [weak extensionContext, weak controller, weak port] in
+                                guard let extensionContext, let controller, let port else { return false }
+                                return !port.isDisconnected
+                                    && extensionContext.webExtensionController === controller
+                            }
+                        ).start()
+                    }
+                #endif
+                completionHandler(error)
+            }
         )
     }
 

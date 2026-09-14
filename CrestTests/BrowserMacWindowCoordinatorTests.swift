@@ -5,6 +5,94 @@ import XCTest
 
 @MainActor
 final class BrowserMacWindowCoordinatorTests: XCTestCase {
+    func testQuickWindowPromotionReusesAHiddenWindowAndRevealsThePromotedTab() throws {
+        let fixture = makeFixture()
+        let destination = try XCTUnwrap(fixture.coordinator.model(for: .initial))
+        let window = makeNativeWindow()
+        defer {
+            fixture.coordinator.closeWindow(destination.id)
+            window.close()
+        }
+        XCTAssertTrue(fixture.coordinator.attach(window, to: destination.id))
+        let previousTabID = destination.browser.selectedTab?.id
+        let promotedTabID = try XCTUnwrap(fixture.browser.openNewTab(url: URL(string: "about:blank")!))
+        XCTAssertEqual(destination.browser.selectedTab?.id, previousTabID)
+        XCTAssertFalse(window.isVisible)
+
+        XCTAssertTrue(fixture.coordinator.activateExistingWindow(for: fixture.browser))
+
+        XCTAssertEqual(destination.browser.selectedTab?.id, promotedTabID)
+        XCTAssertTrue(window.isVisible)
+        XCTAssertNotNil(destination.pages.activePage)
+    }
+
+    func testQuickWindowPromotionPrefersItsOwningWindowAndFallsBackAfterItCloses() throws {
+        let fixture = makeFixture()
+        let source = try XCTUnwrap(fixture.coordinator.model(for: .initial))
+        let other = try XCTUnwrap(fixture.coordinator.model(for: .normal(sourceWindowID: source.id)))
+        let sourceWindow = makeNativeWindow()
+        let otherWindow = makeNativeWindow()
+        defer {
+            fixture.coordinator.closeWindow(source.id)
+            fixture.coordinator.closeWindow(other.id)
+            sourceWindow.close()
+            otherWindow.close()
+        }
+        XCTAssertTrue(fixture.coordinator.attach(sourceWindow, to: source.id))
+        XCTAssertTrue(fixture.coordinator.attach(otherWindow, to: other.id))
+        let otherTabID = other.browser.selectedTab?.id
+        let promotedTabID = try XCTUnwrap(source.browser.openNewTab(url: URL(string: "about:blank")!))
+
+        XCTAssertTrue(fixture.coordinator.activateExistingWindow(for: source.browser))
+        XCTAssertEqual(other.browser.selectedTab?.id, otherTabID)
+        XCTAssertTrue(sourceWindow.isVisible)
+        XCTAssertFalse(otherWindow.isVisible)
+
+        fixture.coordinator.closeWindow(source.id)
+        sourceWindow.close()
+        XCTAssertTrue(fixture.coordinator.activateExistingWindow(for: source.browser))
+        XCTAssertEqual(other.browser.selectedTab?.id, promotedTabID)
+        XCTAssertTrue(otherWindow.isVisible)
+
+        fixture.coordinator.closeWindow(other.id)
+        otherWindow.close()
+        XCTAssertFalse(fixture.coordinator.activateExistingWindow(for: source.browser))
+    }
+
+    func testQuickWindowPromotionDoesNotUseATemporaryWindowForTheSharedWorkspace() throws {
+        let fixture = makeFixture()
+        let source = try XCTUnwrap(fixture.coordinator.model(for: .initial))
+        XCTAssertFalse(fixture.coordinator.activateExistingWindow(for: source.browser))
+        let space = try XCTUnwrap(source.browser.selectedSpace)
+        let temporary = try XCTUnwrap(
+            fixture.coordinator.model(
+                for: .temporary(
+                    sourceWindowID: source.id, assignment: BrowserSpaceRuntimeAssignment(space: space))))
+        let window = makeNativeWindow()
+        defer {
+            fixture.coordinator.closeWindow(temporary.id)
+            fixture.coordinator.closeWindow(source.id)
+            window.close()
+        }
+        XCTAssertTrue(fixture.coordinator.attach(window, to: temporary.id))
+
+        XCTAssertFalse(fixture.coordinator.activateExistingWindow(for: source.browser))
+        XCTAssertFalse(window.isVisible)
+        XCTAssertFalse(fixture.coordinator.activateExistingWindow(for: temporary.browser))
+        XCTAssertFalse(window.isVisible)
+
+        let primaryPages = BrowserPagePool(monitorsMemoryPressure: false)
+        let registry = BrowserPagePoolRegistry(primary: primaryPages)
+        registry.register(temporary.pages, browser: temporary.browser, for: temporary.id)
+        let context = try XCTUnwrap(
+            BrowserQuickWindowContextResolver(
+                browser: fixture.browser, pages: primaryPages, pagePoolRegistry: registry
+            ).context(targetWindowID: temporary.id))
+        XCTAssertTrue(context.browser === fixture.browser)
+        XCTAssertTrue(context.pages === primaryPages)
+        XCTAssertFalse(context.supportsLivePagePromotion)
+    }
+
     func testTearOffWaitsForDestinationAndMovesTheLivePageWithoutClosingSourceWindow() throws {
         let fixture = makeFixture()
         let source = try XCTUnwrap(fixture.coordinator.model(for: .initial))
@@ -130,6 +218,14 @@ final class BrowserMacWindowCoordinatorTests: XCTestCase {
         XCTAssertFalse(window.ignoresMouseEvents)
         XCTAssertEqual(destination.browser.selectedTab?.id, tab.id)
         XCTAssertTrue(source.browser.selectedSpace?.tabs.isEmpty == true)
+    }
+
+    private func makeNativeWindow() -> NSWindow {
+        let window = NSWindow(
+            contentRect: CGRect(x: 100, y: 100, width: 900, height: 600),
+            styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        return window
     }
 
     private func makeFixture() -> (browser: BrowserStore, coordinator: BrowserMacWindowCoordinator) {
