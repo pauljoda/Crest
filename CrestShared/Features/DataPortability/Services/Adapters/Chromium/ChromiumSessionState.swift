@@ -201,7 +201,7 @@ struct ChromiumSessionState {
         else {
             throw BrowserTabMigrationError.invalidContents
         }
-        guard let url = BrowserTabMigrationSanitizer.url(urlString) else { return }
+        guard let url = BrowserImportValueSanitizer.url(urlString) else { return }
         let navigation = ChromiumSessionNavigation(
             index: Int(index),
             title: title,

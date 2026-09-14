@@ -11,47 +11,24 @@ enum ArcTabSessionAdapter {
                 importedAt: importedAt
             )
         }
-        let root: [String: Any]
-        do {
-            guard
-                let object = try JSONSerialization.jsonObject(with: data)
-                    as? [String: Any]
-            else {
-                throw BrowserTabMigrationError.invalidContents
-            }
-            root = object
-        } catch let error as BrowserTabMigrationError {
-            throw error
-        } catch {
-            throw BrowserTabMigrationError.invalidContents
-        }
-        guard let sidebar = root["sidebar"] as? [String: Any],
-            let rawContainers = sidebar["containers"] as? [Any]
-        else {
+        guard let document = ArcSidebarDocument(data: data) else {
             throw BrowserTabMigrationError.invalidContents
         }
 
         var drafts: [BrowserTabSessionDraft] = []
-        for rawContainer in rawContainers {
-            guard let container = rawContainer as? [String: Any] else { continue }
-            let items = alternatingObjects(container["items"])
-            let spaces = alternatingObjects(container["spaces"])
+        for container in document.containers {
             let itemsByID = Dictionary(
-                uniqueKeysWithValues: items.compactMap { item in
-                    (item["id"] as? String).map { ($0, item) }
+                uniqueKeysWithValues: container.items.compactMap { item in
+                    item.id.map { ($0, item) }
                 }
             )
-            let favoriteContainers = favoriteContainerIDs(
-                container["topAppsContainerIDs"]
-            )
 
-            for (spaceIndex, space) in spaces.enumerated() {
-                let profileKey = profileKey(space["profile"])
+            for (spaceIndex, space) in container.spaces.enumerated() {
                 var folders: [BrowserTabSessionFolderDraft] = []
                 var tabs: [BrowserTabSessionTabDraft] = []
                 var visited: Set<String> = []
 
-                if let favoriteRootID = favoriteContainers[profileKey] {
+                if let favoriteRootID = container.favoriteContainerIDs[space.profileKey] {
                     try appendItem(
                         favoriteRootID,
                         placement: .pinned,
@@ -67,9 +44,9 @@ enum ArcTabSessionAdapter {
 
                 var placement = TabPlacement.current
                 let sectionIDs =
-                    stringValues(space["containerIDs"]).isEmpty
-                    ? stringValues(space["newContainerIDs"])
-                    : stringValues(space["containerIDs"])
+                    space.containerIDs.isEmpty
+                    ? space.newContainerIDs
+                    : space.containerIDs
                 for sectionID in sectionIDs {
                     switch sectionID {
                     case "unpinned":
@@ -91,13 +68,13 @@ enum ArcTabSessionAdapter {
                     }
                 }
 
-                let symbol = symbol(space["customInfo"])
-                let colors = colors(space["customInfo"])
+                let symbol = symbol(space.customInfo)
+                let colors = colors(space.customInfo)
                 let accent = accent(for: colors.first)
                 drafts.append(
                     BrowserTabSessionDraft(
                         sourceOrdinal: drafts.count + 1,
-                        name: space["title"] as? String ?? "Arc Space \(spaceIndex + 1)",
+                        name: space.title ?? "Arc Space \(spaceIndex + 1)",
                         tabs: tabs,
                         selectedTabIndex: tabs.indices.last,
                         folders: folders,
@@ -119,7 +96,7 @@ enum ArcTabSessionAdapter {
         placement: TabPlacement,
         parentFolderSourceID: String?,
         depth: Int,
-        itemsByID: [String: [String: Any]],
+        itemsByID: [String: ArcSidebarDocument.Item],
         importedAt: Date,
         visited: inout Set<String>,
         folders: inout [BrowserTabSessionFolderDraft],
@@ -128,40 +105,38 @@ enum ArcTabSessionAdapter {
         guard depth < BrowserSpace.maximumFolderDepth,
             visited.insert(id).inserted,
             let item = itemsByID[id],
-            let itemData = item["data"] as? [String: Any]
+            let content = item.content
         else { return }
-        if let tab = itemData["tab"] as? [String: Any],
-            let sourceURL = tab["savedURL"] as? String,
-            let url = BrowserTabMigrationSanitizer.url(sourceURL)
+        if let tab = content.tab,
+            let sourceURL = tab.url,
+            let url = BrowserImportValueSanitizer.url(sourceURL)
         {
             guard tabs.count < BrowserTabMigration.maximumTabCountPerSpace else {
                 throw BrowserTabMigrationError.resourceLimitExceeded
             }
             tabs.append(
                 BrowserTabSessionTabDraft(
-                    title: tab["savedTitle"] as? String
-                        ?? item["title"] as? String
-                        ?? "",
+                    title: tab.title,
                     url: url,
                     placement: placement,
                     folderSourceID: parentFolderSourceID,
                     lastActivatedAt: date(
-                        tab["timeLastActiveAt"] ?? item["createdAt"],
+                        tab.lastActivatedAtValue,
                         fallback: importedAt
                     )
                 ))
             return
         }
 
-        let childIDs = stringValues(item["childrenIds"])
-        if itemData["list"] is [String: Any], placement == .saved {
+        let childIDs = item.childrenIDs
+        if content.isFolder, placement == .saved {
             guard folders.count < BrowserSpace.maximumFolderCount else {
                 throw BrowserTabMigrationError.resourceLimitExceeded
             }
             folders.append(
                 BrowserTabSessionFolderDraft(
                     sourceID: id,
-                    title: item["title"] as? String ?? "Untitled Folder",
+                    title: item.title ?? "Untitled Folder",
                     parentSourceID: parentFolderSourceID
                 ))
             for childID in childIDs {
@@ -193,58 +168,6 @@ enum ArcTabSessionAdapter {
                 tabs: &tabs
             )
         }
-    }
-
-    private static func alternatingObjects(_ value: Any?) -> [[String: Any]] {
-        if let array = value as? [Any] {
-            var result: [[String: Any]] = []
-            var pendingID: String?
-            for value in array {
-                if let id = value as? String {
-                    pendingID = id
-                } else if var object = value as? [String: Any] {
-                    if object["id"] == nil { object["id"] = pendingID }
-                    result.append(object)
-                    pendingID = nil
-                }
-            }
-            return result
-        }
-        guard let dictionary = value as? [String: Any] else { return [] }
-        return dictionary.compactMap { id, raw in
-            guard var object = raw as? [String: Any] else { return nil }
-            if object["id"] == nil { object["id"] = id }
-            return object
-        }
-    }
-
-    private static func stringValues(_ value: Any?) -> [String] {
-        (value as? [Any])?.compactMap { $0 as? String } ?? []
-    }
-
-    private static func favoriteContainerIDs(_ value: Any?) -> [String: String] {
-        guard let values = value as? [Any] else { return [:] }
-        var result: [String: String] = [:]
-        var index = 0
-        while index + 1 < values.count {
-            if let id = values[index + 1] as? String {
-                result[profileKey(values[index])] = id
-            }
-            index += 2
-        }
-        return result
-    }
-
-    private static func profileKey(_ value: Any?) -> String {
-        guard let dictionary = value as? [String: Any] else { return "unknown" }
-        if (dictionary["default"] as? NSNumber)?.boolValue == true {
-            return "default"
-        }
-        let custom = dictionary["custom"] as? [String: Any]
-        let details = custom?["_0"] as? [String: Any]
-        let machine = details?["machineID"] as? String ?? ""
-        let directory = details?["directoryBasename"] as? String ?? ""
-        return "custom:\(machine):\(directory)"
     }
 
     private static func symbol(_ value: Any?) -> String {

@@ -111,7 +111,7 @@ enum SafariTabSessionAdapter {
         guard
             let urlString = string(in: source, keys: urlKeys)
                 ?? nested.flatMap({ string(in: $0, keys: urlKeys) }),
-            let url = BrowserTabMigrationSanitizer.url(urlString)
+            let url = BrowserImportValueSanitizer.url(urlString)
         else { return nil }
         let title =
             string(in: source, keys: titleKeys)

@@ -53,7 +53,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     private(set) var pageZoom: CGFloat = BrowserPageZoomPolicy.defaultLevel
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession.state }
-    private(set) var isContentBlockingActive = false
+    var isContentBlockingActive: Bool { contentRuleSession.isActive }
     private(set) var isRequestingDesktopSite = false
     var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
     /// True once iOS reclaimed this page's web-content process while it was off
@@ -80,7 +80,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let externalSchemeCoordinator: BrowserExternalSchemeCoordinator
     /// The URL Crest asked this page to load, as opposed to one web content
     /// asked for. Only an app-initiated load may reach a `file:` URL.
-    @ObservationIgnored private var appInitiatedURL: URL?
+    @ObservationIgnored var appInitiatedURL: URL?
     @ObservationIgnored private(set) var appInitiatedNavigationCount = 0
     @ObservationIgnored let openPeek: (BrowserPeekRequest) -> Void
     @ObservationIgnored var contextMenuPreviewCommit: (() -> Void)?
@@ -113,7 +113,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var geolocationCoordinator: BrowserGeolocationCoordinator?
     @ObservationIgnored private var userActivityHandler: (() -> Void)?
     @ObservationIgnored let httpAuthenticationSession: BrowserHTTPAuthenticationSession
-    @ObservationIgnored private var appliedContentRuleLists: [WKContentRuleList]
+    @ObservationIgnored private let contentRuleSession: BrowserPageContentRuleSession
 
     /// False when this page shares the opener's `WKUserContentController`, which
     /// every popup does. Installing the same script message handler twice on it
@@ -124,14 +124,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     var displayURL: URL? {
         navigationFailure?.failingURL ?? pendingNavigationURL ?? url
-    }
-
-    var canReturnFromNavigationFailure: Bool {
-        guard let navigationFailure else { return false }
-        if navigationFailure.phase == .provisional, webView.url != nil {
-            return true
-        }
-        return webView.canGoBack
     }
 
     init(
@@ -177,13 +169,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.openNewTab = openNewTab
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
-        appliedContentRuleLists = contentRuleLists
-        if let contentRuleList,
-            !appliedContentRuleLists.contains(where: { $0 === contentRuleList })
-        {
-            appliedContentRuleLists.append(contentRuleList)
-        }
-        isContentBlockingActive = !appliedContentRuleLists.isEmpty
+        contentRuleSession = BrowserPageContentRuleSession(
+            ruleLists: contentRuleLists,
+            additionalRuleList: contentRuleList
+        )
         spaceName = space.name
         navigationContext = BrowserPageNavigationContext(
             tab: tab,
@@ -257,7 +246,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             configuration = BrowserPageConfiguration.make(
                 for: space.profile,
                 websiteDataStore: websiteDataStore,
-                contentRuleLists: appliedContentRuleLists,
+                contentRuleLists: contentRuleSession.ruleLists,
                 preferredContentMode: .recommended
             ) { configuration in
                 configuration.allowsInlineMediaPlayback = true
@@ -578,88 +567,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         userActivityHandler = nil
     }
 
-    func goBack() {
-        if navigationFailure != nil {
-            returnFromNavigationFailure()
-            return
-        }
-        webView.goBack()
-    }
-
-    func goForward() {
-        webView.goForward()
-    }
-
-    var backHistory: [BrowserNavigationHistoryItem] {
-        webView.backForwardList.backList.reversed().enumerated().map { index, item in
-            BrowserNavigationHistoryItem(
-                depth: index + 1,
-                title: Self.navigationTitle(for: item),
-                url: item.url
-            )
-        }
-    }
-
-    var forwardHistory: [BrowserNavigationHistoryItem] {
-        webView.backForwardList.forwardList.enumerated().map { index, item in
-            BrowserNavigationHistoryItem(
-                depth: index + 1,
-                title: Self.navigationTitle(for: item),
-                url: item.url
-            )
-        }
-    }
-
-    func goBack(toDepth depth: Int) {
-        let items = webView.backForwardList.backList
-        let index = items.count - depth
-        guard items.indices.contains(index) else { return }
-        clearNavigationFailure()
-        webView.go(to: items[index])
-    }
-
-    func goForward(toDepth depth: Int) {
-        let items = webView.backForwardList.forwardList
-        let index = depth - 1
-        guard items.indices.contains(index) else { return }
-        clearNavigationFailure()
-        webView.go(to: items[index])
-    }
-
     func reloadOrStop() {
         performReload(.standard)
-    }
-
-    func reload() {
-        webView.reload()
-    }
-
-    func clearSiteDataAndReload() async {
-        guard let targetURL = displayURL ?? webView.url else { return }
-        await BrowserWebsiteDataStore.clearSiteData(
-            for: targetURL,
-            in: webView.configuration.websiteDataStore
-        )
-        if webView.url == nil {
-            load(targetURL)
-        } else {
-            webView.reloadFromOrigin()
-        }
-    }
-
-    func stopLoading() {
-        webView.stopLoading()
-    }
-
-    func performReload(_ mode: BrowserPageReloadMode) {
-        switch BrowserPageReloadPolicy.action(isLoading: isLoading, mode: mode) {
-        case .stop:
-            webView.stopLoading()
-        case .reload:
-            webView.reload()
-        case .reloadFromOrigin:
-            webView.reloadFromOrigin()
-        }
     }
 
     func togglePreferredContentMode() {
@@ -670,92 +579,23 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webView.reloadFromOrigin()
     }
 
-    /// Swaps the content rule lists this page loads with.
-    ///
-    /// WebKit takes the new set on the page's next navigation, so by default the
-    /// document on screen is left exactly as the person left it — a filter-list
-    /// update can never discard a half-filled form. `activation` decides whether
-    /// this page is also reloaded to surface the change at once, which only the
-    /// page the user just changed protection for asks for.
     func applyContentBlocking(
         policy: BrowserContentBlockingPolicy,
         balancedRuleLists: [WKContentRuleList],
         activation: BrowserContentRuleListActivation = .onNextNavigation
     ) {
-        let desiredRuleLists = policy == .balanced ? balancedRuleLists : []
-        guard !Self.identical(appliedContentRuleLists, desiredRuleLists) else { return }
-
-        let userContentController = webView.configuration.userContentController
-        // Exactly what this page installed, never `removeAllContentRuleLists()`,
-        // which would also strip a list another owner put on this controller.
-        for ruleList in appliedContentRuleLists {
-            userContentController.remove(ruleList)
-        }
-        for ruleList in desiredRuleLists {
-            userContentController.add(ruleList)
-        }
-        appliedContentRuleLists = desiredRuleLists
-        isContentBlockingActive = !desiredRuleLists.isEmpty
-        guard activation == .immediately, url != nil else { return }
-        webView.reload()
-    }
-
-    func applyContentBlocking(
-        policy: BrowserContentBlockingPolicy,
-        balancedRuleList: WKContentRuleList?,
-        activation: BrowserContentRuleListActivation = .onNextNavigation
-    ) {
-        applyContentBlocking(
+        contentRuleSession.apply(
             policy: policy,
-            balancedRuleLists: balancedRuleList.map { [$0] } ?? [],
-            activation: activation
+            balancedRuleLists: balancedRuleLists,
+            to: webView,
+            reloadsImmediately: activation == .immediately && url != nil
         )
-    }
-
-    private static func identical(
-        _ lhs: [WKContentRuleList],
-        _ rhs: [WKContentRuleList]
-    ) -> Bool {
-        lhs.count == rhs.count && zip(lhs, rhs).allSatisfy { $0 === $1 }
     }
 
     func retryAfterProcessFailure() {
         processRecovery.reset()
         showsProcessFailure = false
         webView.reload()
-    }
-
-    func retryAfterNavigationFailure() {
-        guard
-            let url = navigationFailure?.failingURL
-                ?? pendingNavigationURL
-                ?? self.url
-        else { return }
-        load(url)
-    }
-
-    var canProceedAfterCertificateFailure: Bool {
-        navigationFailure?.kind == .secureConnectionFailed
-            && pendingServerTrustIdentity != nil
-    }
-
-    func proceedAfterCertificateFailure() {
-        guard canProceedAfterCertificateFailure,
-            let identity = pendingServerTrustIdentity
-        else { return }
-        serverTrustOverrides.approve(identity, for: profileID)
-        retryAfterNavigationFailure()
-    }
-
-    func returnFromNavigationFailure() {
-        guard let navigationFailure else { return }
-        let shouldNavigateBack =
-            navigationFailure.phase == .committed
-            && webView.canGoBack
-        clearNavigationFailure()
-        if shouldNavigateBack {
-            webView.goBack()
-        }
     }
 
     func presentFind() {
@@ -827,12 +667,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             .replacingOccurrences(of: "]", with: "\\]")
         UIPasteboard.general.string = "[\(escapedLabel)](\(url.absoluteString))"
         return true
-    }
-
-    private static func navigationTitle(for item: WKBackForwardListItem) -> String {
-        let title = item.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !title.isEmpty { return title }
-        return item.url.host() ?? item.url.absoluteString
     }
 
     func printPage() {
@@ -1112,88 +946,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             completedNavigationCount == 0 ? .clear : themeColor
     }
 
-    func receiveMediaSessionMessage(_ message: WKScriptMessage) {
-        guard message.webView === webView else {
-            host?.routeMediaSessionMessage(message)
-            return
-        }
-        mediaSessionCoordinator?.receive(message)
-    }
-
-    func performMediaSessionAction(
-        _ action: BrowserMediaSessionAction,
-        documentIdentifier: String
-    ) {
-        mediaSessionCoordinator?.perform(
-            action,
-            documentIdentifier: documentIdentifier
-        )
-    }
-
-    func setMediaSessionMuted(
-        _ muted: Bool,
-        documentIdentifier: String
-    ) {
-        mediaSessionCoordinator?.setMuted(
-            muted,
-            documentIdentifier: documentIdentifier
-        )
-    }
-
-    func synchronizePopupPermission(for url: URL? = nil) {
-        let origin = (url ?? displayURL ?? webView.url)
-            .flatMap(BrowserSiteOrigin.init(url:))
-        let decision =
-            origin.map {
-                permissionCenter.decision(for: .popups, origin: $0, in: spaceID)
-            } ?? .ask
-        let allowsAutomaticPopups =
-            BrowserAutomaticPopupPolicy.allowsAutomaticPopups(decision: decision)
-        webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically =
-            allowsAutomaticPopups
-        recordPopupPermissionSynchronized(
-            allowsAutomaticPopups: allowsAutomaticPopups,
-            origin: origin
-        )
-    }
-
-    /// True when Crest, not web content, asked for this navigation. Two signals
-    /// answer that: the exact URL Crest last passed to `load(_:)`, which web
-    /// content never reaches, and a source frame that is not a web document —
-    /// WebKit reports an empty origin for a load the app started against a web
-    /// view with no page yet, and a `file:` origin for a local document's own
-    /// links. Only such a navigation may reach a `file:` URL.
-    func isAppInitiated(_ navigationAction: WKNavigationAction) -> Bool {
-        if let appInitiatedURL, navigationAction.request.url == appInitiatedURL {
-            return true
-        }
-        if let sourceOriginProvider = navigationAction as? any BrowserNavigationActionSourceOriginProviding {
-            guard let origin = sourceOriginProvider.browserSourceOrigin else {
-                return false
-            }
-            if origin.scheme.isEmpty, origin.host.isEmpty {
-                return true
-            }
-            return origin.scheme == "file"
-        }
-        let origin = navigationAction.sourceFrame.securityOrigin
-        let scheme = origin.protocol.lowercased()
-        if scheme.isEmpty, origin.host.isEmpty {
-            return true
-        }
-        return scheme == "file"
-    }
-
-    /// Forgets the URL Crest asked this page to load, once WebKit has begun the
-    /// navigation that honored it.
-    ///
-    /// The marker is a one-shot authorization. Leaving it in place would let web
-    /// content replay the exact URL Crest once loaded — the one way past the gate
-    /// that keeps `file:` destinations app-initiated.
-    func consumeAppInitiatedURL() {
-        appInitiatedURL = nil
-    }
-
     func recordNavigationFailure(
         _ error: any Error,
         phase: BrowserNavigationFailurePhase,
@@ -1217,16 +969,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             pendingNavigationURL = nil
         }
         canGoBack = webView.canGoBack
-    }
-
-    func isCurrentNavigation(_ navigation: WKNavigation?) -> Bool {
-        // WebKit can deliver a callback late, after its navigation finished or
-        // was replaced. An identified navigation is only current while it is
-        // still the active one, so a stale failure cannot paint an error over a
-        // page that already loaded. Callbacks that identify no navigation stay
-        // accepted because WebKit reports unattributed loads that way.
-        guard let navigation else { return true }
-        return activeNavigation === navigation
     }
 
     private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {

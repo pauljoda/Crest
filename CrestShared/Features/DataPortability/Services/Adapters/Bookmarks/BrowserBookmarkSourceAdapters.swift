@@ -88,32 +88,24 @@ enum BrowserBookmarkSourceAdapters {
         source: BrowserBookmarkMigrationSource,
         fallbackDate: Date
     ) throws -> [BrowserBookmarkSpaceDraft] {
-        let root = try jsonDictionary(data)
-        guard let sidebar = root["sidebar"] as? [String: Any],
-            let containers = sidebar["containers"] as? [Any]
-        else {
+        guard let document = ArcSidebarDocument(data: data) else {
             throw BrowserBookmarkMigrationError.invalidContents
         }
 
         var drafts: [BrowserBookmarkSpaceDraft] = []
-        for rawContainer in containers {
-            guard let container = rawContainer as? [String: Any] else { continue }
-            let itemObjects = alternatingObjectValues(container["items"])
-            let spaceObjects = alternatingObjectValues(container["spaces"])
-            var itemsByID: [String: [String: Any]] = [:]
-            for item in itemObjects {
-                guard let id = item["id"] as? String else { continue }
+        for container in document.containers {
+            var itemsByID: [String: ArcSidebarDocument.Item] = [:]
+            for item in container.items {
+                guard let id = item.id else { continue }
                 itemsByID[id] = item
             }
 
-            for (index, space) in spaceObjects.enumerated() {
+            for (index, space) in container.spaces.enumerated() {
                 let fallbackName = "Arc Space \(index + 1)"
-                let name = space["title"] as? String ?? fallbackName
+                let name = space.title ?? fallbackName
                 var draft = BrowserBookmarkSpaceDraft(name: name)
                 var visited: Set<String> = []
-                let containerIDs =
-                    stringValues(space["containerIDs"])
-                    + stringValues(space["newContainerIDs"])
+                let containerIDs = space.containerIDs + space.newContainerIDs
                 for id in containerIDs {
                     try appendArcItem(
                         id,
@@ -260,7 +252,7 @@ enum BrowserBookmarkSourceAdapters {
 
     private static func appendArcItem(
         _ id: String,
-        itemsByID: [String: [String: Any]],
+        itemsByID: [String: ArcSidebarDocument.Item],
         parentFolderID: UUID?,
         depth: Int,
         fallbackDate: Date,
@@ -269,22 +261,18 @@ enum BrowserBookmarkSourceAdapters {
     ) throws {
         guard visited.insert(id).inserted,
             let item = itemsByID[id],
-            let data = item["data"] as? [String: Any]
+            let content = item.content
         else { return }
 
-        if let tab = data["tab"] as? [String: Any],
-            let url = tab["savedURL"] as? String
+        if let tab = content.tab,
+            let url = tab.url
         {
-            let title =
-                tab["savedTitle"] as? String
-                ?? item["title"] as? String
-                ?? ""
             try draft.appendBookmark(
-                title: title,
+                title: tab.title,
                 url: url,
                 folderID: parentFolderID,
                 addedAt: BrowserBookmarkValueSanitizer.date(
-                    tab["timeLastActiveAt"] ?? item["createdAt"],
+                    tab.lastActivatedAtValue,
                     epoch: .adaptive,
                     fallback: fallbackDate
                 )
@@ -292,10 +280,10 @@ enum BrowserBookmarkSourceAdapters {
             return
         }
 
-        let children = stringValues(item["childrenIds"])
-        if data["list"] is [String: Any] {
+        let children = item.childrenIDs
+        if content.isFolder {
             let folderID = try draft.appendFolder(
-                title: item["title"] as? String ?? "Untitled Folder",
+                title: item.title ?? "Untitled Folder",
                 parentID: parentFolderID,
                 depth: depth
             )
@@ -337,38 +325,5 @@ enum BrowserBookmarkSourceAdapters {
         } catch {
             throw BrowserBookmarkMigrationError.invalidContents
         }
-    }
-
-    private static func alternatingObjectValues(_ rawValue: Any?) -> [[String: Any]] {
-        if let array = rawValue as? [Any] {
-            var objects: [[String: Any]] = []
-            var pendingKey: String?
-            for value in array {
-                if let key = value as? String {
-                    pendingKey = key
-                } else if var object = value as? [String: Any] {
-                    if object["id"] == nil, let pendingKey {
-                        object["id"] = pendingKey
-                    }
-                    objects.append(object)
-                    pendingKey = nil
-                }
-            }
-            return objects
-        }
-        if let dictionary = rawValue as? [String: Any] {
-            return dictionary.compactMap { key, value in
-                guard var object = value as? [String: Any] else { return nil }
-                if object["id"] == nil {
-                    object["id"] = key
-                }
-                return object
-            }
-        }
-        return []
-    }
-
-    private static func stringValues(_ rawValue: Any?) -> [String] {
-        (rawValue as? [Any])?.compactMap { $0 as? String } ?? []
     }
 }

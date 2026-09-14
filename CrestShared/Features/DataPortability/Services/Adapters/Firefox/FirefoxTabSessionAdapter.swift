@@ -39,7 +39,7 @@ enum FirefoxTabSessionAdapter {
                 let entryIndex = min(selectedEntryIndex, entries.count - 1)
                 guard let entry = entries[entryIndex] as? [String: Any],
                     let urlString = entry["url"] as? String,
-                    let url = BrowserTabMigrationSanitizer.url(urlString)
+                    let url = BrowserImportValueSanitizer.url(urlString)
                 else { return nil }
                 let rawLastAccessed = (tab["lastAccessed"] as? NSNumber)?.doubleValue
                 let lastActivatedAt =

@@ -38,6 +38,8 @@ Local state is durable first. CloudKit synchronizes portable Space, tab, history
 
 Crest can import browser bookmarks and sessions, and its portable archive format keeps migration separate from live CloudKit records. Archive readers validate identifiers and relationships before applying imported state.
 
+Import adapters share URL and whitespace sanitation while retaining their own title limits, fallback rules, and errors. Arc bookmark and session imports read one typed source document and apply separate placement and traversal policies. Related background-page metadata and completed visits publish together, using one combined persistence scope.
+
 ## Credentials and privacy
 
 Crest Passwords are stored in the Keychain and matched by origin. Each Space can disable Crest-owned suggestions, generation, save prompts, and HTTP-auth reuse without deleting its stored credentials. Sensitive reveals and exports require device authentication. Page-to-app credential messages are schema-checked and origin-bound.
@@ -51,6 +53,8 @@ Shared infrastructure decides navigation, downloads, content blocking, reader mo
 `BrowserFaviconSession` owns capture, fallback, and retry lifetime through a document adapter. Authenticated icon discovery stays inside the live WebKit context; public fallback remains credential-free and profile-scoped. Native pages invalidate requests on navigation and icon changes and stop them on removal.
 
 `BrowserReaderModeSession` owns request cancellation and document changes through a document adapter. `BrowserWebKitCredentialSession` shares origin validation and filling while the platform page owns its WebKit host. Root metadata and history updates use `BrowserPageSessionSynchronizer` with an exact, unlocked tab assignment; native page stores validate the page before supplying its metadata.
+
+Shared page operations own common navigation and media behavior. `BrowserPageContentRuleSession` tracks only Crest's content rules, and `BrowserTabStateCoordinator` owns archive eligibility and pending copies without retaining pages. Platform stores apply a shared reconciliation plan and retain their own presentation and memory-pressure policies. On macOS, each `BrowserTabRuntime` owns a tab's current and suspended WebKit configurations together with their history links, so releasing the tab releases every configuration it retained.
 
 ## Platform shape
 

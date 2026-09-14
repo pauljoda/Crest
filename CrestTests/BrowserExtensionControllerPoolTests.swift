@@ -2866,6 +2866,46 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
         XCTAssertEqual(standardPage.pendingNavigationURL, webURL)
     }
 
+    func testBulkSpaceReleaseDropsEveryRuntimeAfterCrossingAnExtensionBoundary() async throws {
+        let tab = BrowserTab(title: "Runtime ownership", url: nil, placement: .current)
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Runtime ownership",
+            symbol: "globe", accent: .indigo, folders: [], tabs: [tab], selectedTabID: tab.id
+        )
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+            persistence: InMemoryBrowserSessionPersistence()
+        )
+        let pool = BrowserExtensionControllerPool()
+        let pages = BrowserPagePool(monitorsMemoryPressure: false, extensionControllerPool: pool)
+        pool.connect(browser: browser, pageProvider: pages)
+        let context = try await pool.loadExtension(at: fixtureURL, extensionID: extensionID, in: space)
+        pages.select(session: browser.session)
+        let ordinaryPage = BrowserSpaceDataReleaseProbe(try XCTUnwrap(pages.activePage))
+        let adapter = try XCTUnwrap(pool.extensionTab(tab.id, in: space.id))
+        let extensionURL = try XCTUnwrap(context.optionsPageURL)
+        var loadError: Error?
+        adapter.loadURL(extensionURL, for: context) { loadError = $0 }
+        XCTAssertNil(loadError)
+        XCTAssertNotNil(pages.activePage?.extensionBaseURL)
+        XCTAssertTrue(pages.canGoBack)
+        let extensionPage = BrowserSpaceDataReleaseProbe(try XCTUnwrap(pages.activePage))
+
+        pages.goBack()
+        XCTAssertNil(pages.activePage?.extensionBaseURL)
+        XCTAssertTrue(pages.canGoForward)
+        pages.goForward()
+        XCTAssertNotNil(pages.activePage?.extensionBaseURL)
+
+        pages.unloadPages(in: space.id)
+        await BrowserSpaceDataReleaseBarrier.waitForRetainedViews([ordinaryPage, extensionPage])
+
+        XCTAssertTrue(ordinaryPage.isReleased, "A runtime history link must not retain a released Space's page.")
+        XCTAssertTrue(extensionPage.isReleased)
+        XCTAssertNil(pages.activePage)
+        XCTAssertFalse(pages.containsResidentPage(for: tab.id))
+    }
+
     func testExtensionPageReplacesItsRuntimeInTheExistingTabWithHistoryIntact()
         async throws
     {

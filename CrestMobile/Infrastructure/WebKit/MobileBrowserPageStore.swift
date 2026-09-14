@@ -96,12 +96,9 @@ final class MobileBrowserPageStore:
     @ObservationIgnored private var transientLeases: [UUID: WeakBrowserTransientPageLease] = [:]
     @ObservationIgnored private var spacesReleasingData: Set<SpaceID> = []
     @ObservationIgnored private var spacesDeletingData: Set<SpaceID> = []
-    /// Where unloaded tabs leave their WebKit session state. Always nil for a
-    /// private store, so private browsing cannot write one even if an archive is
-    /// handed in.
-    @ObservationIgnored private let tabStateArchive: (any BrowserTabStateArchiving)?
-    @ObservationIgnored private var pendingTabCopyStates: [BrowserTabRuntimeAssignment: BrowserTabStateEnvelope] = [:]
-    @ObservationIgnored private var lastPrunedTabIDsByProfileID: [UUID: Set<TabID>] = [:]
+    /// Where unloaded tabs leave their WebKit session state. Its archive is nil
+    /// for a private store, even if an archive is handed in.
+    @ObservationIgnored private let tabState: BrowserTabStateCoordinator
 
     init(
         monitorsMemoryPressure: Bool = false,
@@ -138,10 +135,9 @@ final class MobileBrowserPageStore:
         self.usesEphemeralWebsiteDataStores =
             usesEphemeralWebsiteDataStores || browsingMode.isPrivate
         self.pageZoomPreferences = pageZoomPreferences
-        self.tabStateArchive =
-            self.usesEphemeralWebsiteDataStores
-            ? nil
-            : tabStateArchive
+        tabState = BrowserTabStateCoordinator(
+            archive: self.usesEphemeralWebsiteDataStores ? nil : tabStateArchive
+        )
         self.popupTabHost = popupTabHost
         self.mediaSessionStore = browsingMode.isPrivate ? nil : mediaSessionStore
         self.permissionCenter = permissionCenter
@@ -271,7 +267,7 @@ final class MobileBrowserPageStore:
             return
         }
         if let mismatched = pagesByTabID.removeValue(forKey: tabID) {
-            tabStateArchive?.removeState(profileID: mismatched.profileID, tabID: tabID)
+            tabState.removeState(profileID: mismatched.profileID, tabID: tabID)
             mismatched.prepareForSpaceDeletion()
             inactiveSinceByTabID[tabID] = nil
         }
@@ -447,7 +443,7 @@ final class MobileBrowserPageStore:
         if let mismatched = pagesByTabID.removeValue(forKey: tab.id) {
             // The tab moved to another Space, so the state archived under its old
             // profile describes a runtime it no longer belongs to.
-            tabStateArchive?.removeState(
+            tabState.removeState(
                 profileID: mismatched.profileID,
                 tabID: tab.id
             )
@@ -517,7 +513,7 @@ final class MobileBrowserPageStore:
         }
 
         if let mismatched = pagesByTabID.removeValue(forKey: tabID) {
-            tabStateArchive?.removeState(
+            tabState.removeState(
                 profileID: mismatched.profileID,
                 tabID: tabID
             )
@@ -593,7 +589,7 @@ final class MobileBrowserPageStore:
 
     func reconcile(validTabIDs: Set<TabID>) {
         nativeTabs.reconcile(validTabIDs: validTabIDs)
-        pendingTabCopyStates = pendingTabCopyStates.filter { validTabIDs.contains($0.key.tabID) }
+        tabState.retainCopies(for: validTabIDs)
         let removedTabIDs = Set(pagesByTabID.keys).subtracting(validTabIDs)
         for tabID in removedTabIDs {
             // These tabs are gone from the tab list rather than unloaded after
@@ -614,63 +610,24 @@ final class MobileBrowserPageStore:
 
     func reconcile(session: BrowserSession) {
         nativeTabs.reconcile(session: session)
-        let validCopyAssignments = Set(session.tabRuntimeAssignments)
-        pendingTabCopyStates = pendingTabCopyStates.filter { validCopyAssignments.contains($0.key) }
-        let tabsByID = Dictionary(
-            uniqueKeysWithValues: session.spaces.flatMap { space in
-                space.tabs.map { tab in
-                    (tab.id, (tab: tab, space: space))
-                }
-            }
+        let reconciliation = BrowserPageReconciliation(
+            session: session,
+            residentPages: pagesByTabID.lazy.map { ($0.key, $0.value) }
         )
-        let assignments = Dictionary(
-            uniqueKeysWithValues: session.tabRuntimeAssignments.map {
-                ($0.tabID, $0)
-            }
-        )
-        let invalidTabIDs: Set<TabID> = Set(
-            pagesByTabID.compactMap { tabID, page in
-                guard let assignment = assignments[tabID],
-                    tabsByID[tabID]?.tab.nativeContent == nil,
-                    assignment.spaceID == page.spaceID,
-                    assignment.profileID == page.profileID
-                else {
-                    return tabID
-                }
-                return nil
-            })
-        let archivedAssignments = Dictionary(
-            uniqueKeysWithValues: session.spaces.flatMap { space in
-                space.archivedTabs.map { archivedTab in
-                    (archivedTab.id, BrowserSpaceRuntimeAssignment(space: space))
-                }
-            }
-        )
-        for tabID in invalidTabIDs {
-            guard let page = pagesByTabID[tabID],
-                let assignment = archivedAssignments[tabID],
-                assignment.spaceID == page.spaceID,
-                assignment.profileID == page.profileID
-            else { continue }
-            // Closing removes the tab from the live runtime assignments before
-            // reconciliation. Capture its WebKit stack while the page still
-            // exists; releasing first leaves both restore paths with only the
-            // tab's final URL.
+        tabState.retainCopies(matching: reconciliation.validAssignments)
+        // Capture a closed tab's WebKit stack before releasing its page.
+        for tabID in reconciliation.tabIDsToArchive {
             archiveTabState(for: tabID)
         }
-        releasePages(for: invalidTabIDs)
-        for (tabID, page) in pagesByTabID {
-            guard let resident = tabsByID[tabID],
-                resident.space.id == page.spaceID,
-                resident.space.profile.id == page.profileID
-            else { continue }
-            page.updateNavigationContext(
-                tab: resident.tab,
+        releasePages(for: reconciliation.invalidTabIDs)
+        for context in reconciliation.navigationContexts {
+            context.page.updateNavigationContext(
+                tab: context.tab,
                 automaticallyOpensPeek: BrowserLinkPreferenceStore.shared
                     .preferences.automaticallyOpensPeek
             )
         }
-        pruneArchivedTabStates(in: session)
+        tabState.prune(keeping: reconciliation.retainedTabIDsByProfileID)
         reconcileCredentialAccess(in: session)
     }
 
@@ -728,7 +685,7 @@ final class MobileBrowserPageStore:
         )
         // Deleting a Space deletes its WebKit data, so the archived session state
         // of its tabs goes with it: nothing may outlive the profile it describes.
-        tabStateArchive?.removeStates(profileID: space.profile.id)
+        tabState.removeStates(profileID: space.profile.id)
         serverTrustOverrides.removeApprovals(for: space.profile.id)
         if !usesEphemeralWebsiteDataStores {
             try await websiteDataStoreRemover.removePersistentDataStore(
@@ -1054,8 +1011,7 @@ final class MobileBrowserPageStore:
     }
 
     func discardArchivedTabState(matching assignment: BrowserTabRuntimeAssignment) {
-        pendingTabCopyStates.removeValue(forKey: assignment)
-        tabStateArchive?.removeState(profileID: assignment.profileID, tabID: assignment.tabID)
+        tabState.discardState(matching: assignment)
     }
 
     func unloadPage(for tabID: TabID) {
@@ -1131,7 +1087,7 @@ final class MobileBrowserPageStore:
         {
             deactivatePagePresentation()
         }
-        tabStateArchive?.removeStates(profileID: space.profile.id)
+        tabState.removeStates(profileID: space.profile.id)
     }
 
     func reloadOrStop() {
@@ -1583,57 +1539,22 @@ final class MobileBrowserPageStore:
     /// this when a scene stops being active, so state survives a termination
     /// before an inactive page reaches its idle deadline.
     func archiveResidentTabStates() {
-        guard tabStateArchive != nil else { return }
+        guard tabState.archivesResidentPages else { return }
         for tabID in pagesByTabID.keys {
             archiveTabState(for: tabID)
         }
     }
 
     func flushPendingTabStateWrites() async {
-        await tabStateArchive?.flushPendingWrites()
+        await tabState.flushPendingWrites()
     }
 
-    /// Reading `interactionState` is main-actor work; the archive takes the write
-    /// off the main thread from here.
+    /// Capture stays on the main actor; the archive schedules disk writes.
     private func archiveTabState(for tabID: TabID) {
-        guard let tabStateArchive, let page = pagesByTabID[tabID] else { return }
-        // An adopted popup's window is WebKit's to drive, and its tab is a
-        // web-content artefact rather than something the user placed, so it is
-        // never archived.
-        guard !page.wasOpenedAsPopup, let state = page.interactionState else { return }
-        tabStateArchive.archive(
-            interactionState: state,
-            url: page.url,
-            profileID: page.profileID,
-            tabID: tabID
-        )
+        guard let page = pagesByTabID[tabID] else { return }
+        tabState.archivePage(page, for: tabID)
     }
 
-    /// Drops archived state for tabs a Space no longer has at all.
-    ///
-    /// Archived tabs keep theirs: reopening a closed tab is a restore path, and it
-    /// is the one place the state is most worth having. Only a tab that is neither
-    /// current nor archived — permanently deleted, or aged out of the archive — has
-    /// nothing left to restore into.
-    private func pruneArchivedTabStates(in session: BrowserSession) {
-        guard let tabStateArchive else { return }
-        var tabIDsByProfileID: [UUID: Set<TabID>] = [:]
-        for space in session.spaces {
-            let tabIDs = Set(space.tabs.map(\.id) + space.archivedTabs.map(\.tab.id))
-            tabIDsByProfileID[space.profile.id, default: []].formUnion(tabIDs)
-        }
-        // Reconciliation runs on every session change, and a sweep reads a
-        // directory per profile. Only the tab membership can change what the sweep
-        // would do, so an unchanged membership skips it.
-        guard !tabIDsByProfileID.isEmpty,
-            tabIDsByProfileID != lastPrunedTabIDsByProfileID
-        else { return }
-        lastPrunedTabIDsByProfileID = tabIDsByProfileID
-        tabStateArchive.pruneStates(keeping: tabIDsByProfileID)
-    }
-
-    /// The state archived for `tab`, once it is one this build may restore and one
-    /// that still belongs where the tab points.
     private func archivedInteractionState(
         for tab: BrowserTab,
         spaceID: SpaceID,
@@ -1641,27 +1562,11 @@ final class MobileBrowserPageStore:
         expecting url: URL,
         consumePendingCopy: Bool = true
     ) -> Data? {
-        let assignment = BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: spaceID, profileID: profileID)
-        let pending = pendingTabCopyStates[assignment]
-        if consumePendingCopy { pendingTabCopyStates.removeValue(forKey: assignment) }
-        if let pending,
-            BrowserTabStateRestorePolicy.restoresArchivedState(archivedURL: pending.url, tabURL: url)
-        {
-            return pending.interactionState
-        }
-        guard let tabStateArchive,
-            let archived = tabStateArchive.archivedState(
-                profileID: profileID,
-                tabID: tab.id
-            ),
-            let envelope = BrowserTabStateEnvelope.decode(archived),
-            envelope.isRestorable,
-            BrowserTabStateRestorePolicy.restoresArchivedState(
-                archivedURL: envelope.url,
-                tabURL: url
-            )
-        else { return nil }
-        return envelope.interactionState
+        tabState.interactionState(
+            for: BrowserTabRuntimeAssignment(tabID: tab.id, spaceID: spaceID, profileID: profileID),
+            expecting: url,
+            consumePendingCopy: consumePendingCopy
+        )
     }
 
     private func releaseTransientPages(for level: BrowserMemoryPressureLevel) {
@@ -1740,7 +1645,7 @@ extension MobileBrowserPageStore: BrowserTabCopying {
         }
         guard let state else { return }
         let assignment = BrowserTabRuntimeAssignment(tabID: copy.id, spaceID: space.id, profileID: space.profile.id)
-        pendingTabCopyStates[assignment] = BrowserTabStateEnvelope(interactionState: state, url: copy.url)
+        tabState.prepareCopy(state, url: copy.url, for: assignment)
     }
 }
 

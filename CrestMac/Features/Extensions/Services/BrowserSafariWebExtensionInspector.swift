@@ -79,11 +79,12 @@ struct BrowserSafariWebExtensionInspector {
                         webExtension.allRequestedMatchPatterns
                         .map(\.string)
                         .sorted(),
-                    errors: BrowserWebExtensionManifestCompatibilityPolicy
+                    errors:
+                        BrowserWebExtensionManifestCompatibilityPolicy
                         .displayErrors(for: webExtension),
                     iconPayload: BrowserExtensionIconPayloadFactory.production
                         .payload(
-                            for: pngData(
+                            for: BrowserExtensionIconPNGEncoder.data(
                                 for: webExtension.icon(
                                     for: CGSize(width: 64, height: 64)
                                 )
@@ -145,17 +146,5 @@ struct BrowserSafariWebExtensionInspector {
                 .invalidCodeSignature(itemName: url.lastPathComponent)
         }
         return code
-    }
-
-    private func pngData(for image: NSImage?) -> Data? {
-        guard let tiffData = image?.tiffRepresentation,
-            let representation = NSBitmapImageRep(data: tiffData)
-        else {
-            return nil
-        }
-        return representation.representation(
-            using: .png,
-            properties: [:]
-        )
     }
 }

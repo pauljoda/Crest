@@ -71,10 +71,11 @@ struct BrowserSafariCustomExtensionProvider {
             requestedHosts: webExtension.allRequestedMatchPatterns
                 .map(\.string)
                 .sorted(),
-            errors: BrowserWebExtensionManifestCompatibilityPolicy
+            errors:
+                BrowserWebExtensionManifestCompatibilityPolicy
                 .displayErrors(for: webExtension),
             iconPayload: BrowserExtensionIconPayloadFactory.production.payload(
-                for: pngData(
+                for: BrowserExtensionIconPNGEncoder.data(
                     for: webExtension.icon(
                         for: CGSize(width: 96, height: 96)
                     )
@@ -83,18 +84,6 @@ struct BrowserSafariCustomExtensionProvider {
             hasOptionsPage: webExtension.hasOptionsPage,
             hasCommands: webExtension.hasCommands,
             nativeMessagingCapability: nativeMessagingCapability
-        )
-    }
-
-    private func pngData(for image: NSImage?) -> Data? {
-        guard let tiffData = image?.tiffRepresentation,
-            let representation = NSBitmapImageRep(data: tiffData)
-        else {
-            return nil
-        }
-        return representation.representation(
-            using: .png,
-            properties: [:]
         )
     }
 }

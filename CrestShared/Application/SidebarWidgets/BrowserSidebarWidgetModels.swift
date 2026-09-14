@@ -363,7 +363,3 @@ struct BrowserSidebarWidgetInstance: Equatable, Identifiable, Sendable {
     let presentation: BrowserSidebarWidgetPresentation
     let availableActions: Set<BrowserSidebarWidgetAction>
 }
-
-extension String {
-    fileprivate var nilIfEmpty: String? { isEmpty ? nil : self }
-}

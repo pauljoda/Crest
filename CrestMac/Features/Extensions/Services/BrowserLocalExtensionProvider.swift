@@ -94,7 +94,7 @@ final class BrowserLocalExtensionProvider {
                 BrowserWebExtensionManifestCompatibilityPolicy
                 .displayErrors(for: webExtension),
             iconPayload: BrowserExtensionIconPayloadFactory.production.payload(
-                for: pngData(
+                for: BrowserExtensionIconPNGEncoder.data(
                     for: webExtension.icon(
                         for: CGSize(width: 96, height: 96)
                     )
@@ -161,17 +161,5 @@ final class BrowserLocalExtensionProvider {
             ?? manifest["applications"] as? [String: Any]
         let gecko = settings?["gecko"] as? [String: Any]
         return gecko?["id"] as? String
-    }
-
-    private func pngData(for image: NSImage?) -> Data? {
-        guard let tiffData = image?.tiffRepresentation,
-            let representation = NSBitmapImageRep(data: tiffData)
-        else {
-            return nil
-        }
-        return representation.representation(
-            using: .png,
-            properties: [:]
-        )
     }
 }

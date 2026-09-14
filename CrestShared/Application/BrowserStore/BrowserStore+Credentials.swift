@@ -277,7 +277,7 @@ extension BrowserStore {
                 throw CredentialVaultError.invalidOrigin
             }
             existing.username = username
-            existing.displayName = BrowserStoredStringPolicy.normalized(displayName) ?? existing.displayName
+            existing.displayName = displayName?.nilIfEmpty ?? existing.displayName
             existing.updatedAt = now
             existing.isSynchronizable = resolvedSynchronization
             descriptor = existing
@@ -286,7 +286,7 @@ extension BrowserStore {
                 spaceID: spaceID,
                 origin: origin,
                 username: username,
-                displayName: BrowserStoredStringPolicy.normalized(displayName),
+                displayName: displayName?.nilIfEmpty,
                 createdAt: now,
                 isSynchronizable: resolvedSynchronization
             )

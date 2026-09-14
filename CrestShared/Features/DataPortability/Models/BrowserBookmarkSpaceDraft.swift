@@ -42,7 +42,7 @@ struct BrowserBookmarkSpaceDraft: Equatable, Sendable {
         guard bookmarks.count < 5_000 else {
             throw BrowserBookmarkMigrationError.resourceLimitExceeded
         }
-        guard let url = BrowserBookmarkValueSanitizer.url(sourceURL) else { return }
+        guard let url = BrowserImportValueSanitizer.url(sourceURL) else { return }
         let normalizedTitle = try BrowserBookmarkValueSanitizer.title(
             title,
             fallback: url.host ?? url.absoluteString,

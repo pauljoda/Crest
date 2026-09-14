@@ -1,8 +1,6 @@
-import Dispatch
 import Foundation
 import Observation
 import WebKit
-import os
 
 @Observable
 @MainActor
@@ -19,35 +17,35 @@ final class BrowserTransientPageLease {
             profileID: profileID
         )
     }
-    private(set) var page: BrowserPage?
+    private(set) var page: BrowserPlatformPage?
     private(set) var wasReleasedForMemoryPressure = false
     var recoverableURL: URL { page?.url ?? reloadURL }
     var canBeReused: Bool { page != nil || wasReleasedForMemoryPressure }
 
     @ObservationIgnored private(set) var isActive = true
     @ObservationIgnored private var reloadURL: URL
-    @ObservationIgnored private let rebuild: () -> BrowserPage?
+    @ObservationIgnored private let rebuild: () -> BrowserPlatformPage?
     @ObservationIgnored private let userActivity: () -> Void
     @ObservationIgnored private let onDownloadOnlyNavigation: (() -> Void)?
     /// Reports the page now standing behind `extensionTabID`, or its absence.
     ///
     /// Called before a rebuilt page is navigated, because the announcement has
     /// to precede the load that injects content scripts into it.
-    @ObservationIgnored private let extensionPageDidChange: (BrowserPage?) -> Void
+    @ObservationIgnored private let extensionPageDidChange: (BrowserPlatformPage?) -> Void
     @ObservationIgnored private var contentBlockingPolicy: BrowserContentBlockingPolicy
     @ObservationIgnored private var balancedContentRuleLists: [WKContentRuleList]
     @ObservationIgnored private var isInvalidated = false
 
     init(
-        extensionTabID: TabID,
-        page: BrowserPage,
+        extensionTabID: TabID = TabID(),
+        page: BrowserPlatformPage,
         url: URL,
         contentBlockingPolicy: BrowserContentBlockingPolicy,
         balancedContentRuleLists: [WKContentRuleList],
-        rebuild: @escaping () -> BrowserPage?,
+        rebuild: @escaping () -> BrowserPlatformPage?,
         userActivity: @escaping () -> Void,
         onDownloadOnlyNavigation: (() -> Void)? = nil,
-        extensionPageDidChange: @escaping (BrowserPage?) -> Void = { _ in }
+        extensionPageDidChange: @escaping (BrowserPlatformPage?) -> Void = { _ in }
     ) {
         self.extensionTabID = extensionTabID
         self.page = page
@@ -124,7 +122,7 @@ final class BrowserTransientPageLease {
         page?.setCredentialAccessEnabled(isEnabled)
     }
 
-    func relinquishPage() -> BrowserPage? {
+    func relinquishPage() -> BrowserPlatformPage? {
         guard let page else { return nil }
         isInvalidated = true
         page.stopMonitoringUserActivity()

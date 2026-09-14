@@ -65,11 +65,12 @@ final class BrowserMozillaAddonsProvider {
             requestedHosts: webExtension.allRequestedMatchPatterns
                 .map(\.string)
                 .sorted(),
-            errors: BrowserWebExtensionManifestCompatibilityPolicy
+            errors:
+                BrowserWebExtensionManifestCompatibilityPolicy
                 .displayErrors(for: webExtension),
             iconPayload: BrowserExtensionIconPayloadFactory.production
                 .payload(
-                    for: pngData(
+                    for: BrowserExtensionIconPNGEncoder.data(
                         for: webExtension.icon(
                             for: CGSize(width: 96, height: 96)
                         )
@@ -190,17 +191,5 @@ final class BrowserMozillaAddonsProvider {
         defer { try? fileManager.removeItem(at: temporaryURL) }
         try package.archiveData.write(to: temporaryURL, options: [.atomic])
         return try await WKWebExtension(resourceBaseURL: temporaryURL)
-    }
-
-    private func pngData(for image: NSImage?) -> Data? {
-        guard let tiffData = image?.tiffRepresentation,
-            let representation = NSBitmapImageRep(data: tiffData)
-        else {
-            return nil
-        }
-        return representation.representation(
-            using: .png,
-            properties: [:]
-        )
     }
 }

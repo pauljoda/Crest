@@ -1,6 +1,6 @@
 import Foundation
 
-/// Fan-out for tab-group events, shaped like the sidebar hub.
+/// Keeps visual changes and membership changes on separate streams.
 ///
 /// The one difference is deliberate: a sidebar event belongs to the extension
 /// that owns the panel, so it is published *to* a client. A group belongs to
@@ -8,58 +8,36 @@ import Foundation
 /// delivers the same event to all of them.
 @MainActor
 final class BrowserExtensionTabGroupEventHub {
-    private var subscribers:
-        [BrowserExtensionServiceClientID: [UUID: AsyncStream<BrowserExtensionTabGroupEvent>.Continuation]] =
-            [:]
-    private var membershipSubscribers:
-        [BrowserExtensionServiceClientID: [UUID: AsyncStream<BrowserExtensionTabGroupEvent.Membership>.Continuation]] =
-            [:]
+    private let events = BrowserExtensionClientEventHub<BrowserExtensionTabGroupEvent>()
+    private let membership = BrowserExtensionClientEventHub<BrowserExtensionTabGroupEvent.Membership>()
 
     func membershipEvents(for client: BrowserExtensionServiceClientID)
         -> AsyncStream<BrowserExtensionTabGroupEvent.Membership>
     {
-        let (stream, continuation) = AsyncStream<BrowserExtensionTabGroupEvent.Membership>.makeStream()
-        let token = UUID()
-        membershipSubscribers[client, default: [:]][token] = continuation
-        continuation.onTermination = { [weak self] _ in
-            Task { @MainActor [weak self] in self?.membershipSubscribers[client]?[token] = nil }
-        }
-        return stream
+        membership.events(for: client)
     }
 
     func publishMembership(
         _ event: BrowserExtensionTabGroupEvent.Membership,
         to clients: some Sequence<BrowserExtensionServiceClientID>
     ) {
-        for client in clients {
-            for subscriber in membershipSubscribers[client]?.values ?? [:].values { subscriber.yield(event) }
-        }
+        membership.publish(event, to: clients)
     }
 
     func events(for client: BrowserExtensionServiceClientID)
         -> AsyncStream<BrowserExtensionTabGroupEvent>
     {
-        let (stream, continuation) = AsyncStream<BrowserExtensionTabGroupEvent>.makeStream()
-        let token = UUID()
-        subscribers[client, default: [:]][token] = continuation
-        continuation.onTermination = { [weak self] _ in
-            Task { @MainActor [weak self] in self?.subscribers[client]?[token] = nil }
-        }
-        return stream
+        events.events(for: client)
     }
 
     func publish(
         _ event: BrowserExtensionTabGroupEvent, to clients: some Sequence<BrowserExtensionServiceClientID>
     ) {
-        for client in clients {
-            for subscriber in subscribers[client]?.values ?? [:].values { subscriber.yield(event) }
-        }
+        events.publish(event, to: clients)
     }
 
     func remove(client: BrowserExtensionServiceClientID) {
-        let removed = subscribers.removeValue(forKey: client)
-        for subscriber in removed?.values ?? [:].values { subscriber.finish() }
-        let memberships = membershipSubscribers.removeValue(forKey: client)
-        for subscriber in memberships?.values ?? [:].values { subscriber.finish() }
+        events.remove(client: client)
+        membership.remove(client: client)
     }
 }

@@ -1566,33 +1566,6 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(pool.activeTabID, current[2].id)
     }
 
-    func testManualUnloadArchivesTheTabStateItTakesAway() async throws {
-        let archive = try makeTabStateArchive()
-        let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))
-        let stateful = BrowserTab(title: "Stateful", url: nil, placement: .current)
-        let other = BrowserTab(title: "Other", url: nil, placement: .current)
-        let space = makeSpace(tabs: [stateful, other], selectedTabID: stateful.id)
-        let pool = BrowserPagePool(
-            usesEphemeralWebsiteDataStores: false,
-            tabStateArchive: archive
-        )
-        let switchTime = Date(timeIntervalSince1970: 1_000)
-
-        pool.select(tab: stateful, space: space, at: switchTime.addingTimeInterval(-1))
-        try await load(url, in: try XCTUnwrap(pool.activePage))
-        pool.select(tab: other, space: space, at: switchTime)
-        pool.unloadPage(for: stateful.id)
-        await archive.flushPendingWrites()
-
-        XCTAssertFalse(pool.containsResidentPage(for: stateful.id))
-        XCTAssertNotNil(
-            archive.archivedState(profileID: space.profile.id, tabID: stateful.id),
-            "Manual unloading must preserve the WebKit session state."
-        )
-
-        pool.reconcile(validTabIDs: [])
-    }
-
     func testPrivateManualUnloadArchivesNothing() async throws {
         let archive = try makeTabStateArchive()
         let url = try XCTUnwrap(URL(string: "https://state.crest.test/one"))

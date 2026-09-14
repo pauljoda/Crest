@@ -6,6 +6,11 @@ struct BrowserTabBatchActions {
     let spaceAccess: BrowserSpaceAccessController
 
     func validate(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) throws {
+        try authorize(request, action: action)
+        _ = try browser.prepareTabBatch(request, action: action)
+    }
+
+    private func authorize(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) throws {
         guard
             BrowserSidebarAccessPolicy.selectedUnlockedSpace(
                 matching: request.assignment, in: browser, accessController: spaceAccess) != nil
@@ -16,7 +21,6 @@ struct BrowserTabBatchActions {
         {
             throw BrowserTabBatchError.lockedSpace
         }
-        _ = try browser.prepareTabBatch(request, action: action)
     }
 
     func reason(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> String? {
@@ -29,7 +33,7 @@ struct BrowserTabBatchActions {
     @discardableResult
     func perform(_ request: BrowserTabBatchRequest, action: BrowserTabBatchAction) -> Bool {
         do {
-            try validate(request, action: action)
+            try authorize(request, action: action)
             try browser.commitTabBatch(request, action: action)
             return true
         } catch {

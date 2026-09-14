@@ -157,7 +157,8 @@ enum BrowserCredentialCSVImportParser {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
 
-        let cappedReadCount = limits.maximumByteCount == Int.max
+        let cappedReadCount =
+            limits.maximumByteCount == Int.max
             ? Int.max
             : limits.maximumByteCount + 1
         let data = try handle.read(upToCount: cappedReadCount) ?? Data()
@@ -205,11 +206,13 @@ enum BrowserCredentialCSVImportParser {
             }
             let rawOrigin = headerMap.value(in: row, at: headerMap.originIndex)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            let originString = rawOrigin.contains("://")
+            let originString =
+                rawOrigin.contains("://")
                 ? rawOrigin
                 : "https://\(rawOrigin)"
             guard let url = URL(string: originString),
-                  let origin = CredentialOrigin(url: url) else {
+                let origin = CredentialOrigin(url: url)
+            else {
                 rejections.append(
                     BrowserCredentialCSVRowRejection(
                         rowNumber: rowNumber,
@@ -232,7 +235,7 @@ enum BrowserCredentialCSVImportParser {
             records.append(
                 BrowserCredentialCSVImportRecord(
                     rowNumber: rowNumber,
-                    displayName: BrowserStoredStringPolicy.normalized(name),
+                    displayName: name?.nilIfEmpty,
                     origin: origin,
                     username: headerMap.value(in: row, at: headerMap.usernameIndex),
                     password: password
@@ -563,9 +566,11 @@ struct BrowserCredentialImportPlan:
                 candidates.append(record)
             }
             let existing = existingByID[id]?.max(by: Self.isLessRecent)
-            let onlyCandidateMatchesExisting = candidates.count == 1
+            let onlyCandidateMatchesExisting =
+                candidates.count == 1
                 && candidates.first?.password == existing?.password
-            let requiresChoice = candidates.count > 1
+            let requiresChoice =
+                candidates.count > 1
                 || (existing != nil && !onlyCandidateMatchesExisting)
             let selection: BrowserCredentialImportSelection
             if let existing {
@@ -632,7 +637,7 @@ struct BrowserCredentialImportPlan:
         case .existing where !groups[index].hasExistingCredential:
             return
         case .imported(let rowNumber)
-            where !groups[index].candidates.contains(where: { $0.rowNumber == rowNumber }):
+        where !groups[index].candidates.contains(where: { $0.rowNumber == rowNumber }):
             return
         default:
             groups[index].selection = selection
@@ -651,14 +656,16 @@ struct BrowserCredentialImportPlan:
         var acceptedCount = 0
         for group in groups {
             guard case .imported(let rowNumber) = group.selection,
-                  let candidate = group.candidates.first(where: { $0.rowNumber == rowNumber })
+                let candidate = group.candidates.first(where: { $0.rowNumber == rowNumber })
             else { continue }
 
             if let existing = group.existingCredential {
                 guard candidate.password != existing.password else { continue }
-                guard let index = resolved.firstIndex(where: {
-                    $0.descriptor.id == existing.descriptor.id
-                }) else {
+                guard
+                    let index = resolved.firstIndex(where: {
+                        $0.descriptor.id == existing.descriptor.id
+                    })
+                else {
                     throw BrowserCredentialSensitiveAccessError.malformedCredentialInventory
                 }
                 var descriptor = existing.descriptor

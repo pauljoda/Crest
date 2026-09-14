@@ -31,7 +31,7 @@ final class BrowserExtensionDeclarativeNetRequestStore:
         [:]
     @ObservationIgnored private var spacesByClient: [BrowserExtensionServiceClientID: SpaceID] = [:]
     @ObservationIgnored private let persistence: any BrowserExtensionDeclarativeNetRequestPersisting
-    @ObservationIgnored private let eventHub = BrowserExtensionDeclarativeNetRequestEventHub()
+    @ObservationIgnored private let eventHub = BrowserExtensionClientEventHub<BrowserExtensionEmulatedHeaderRulesets>()
 
     init(persistence: any BrowserExtensionDeclarativeNetRequestPersisting) {
         self.persistence = persistence

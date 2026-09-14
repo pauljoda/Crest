@@ -7,7 +7,7 @@ enum BrowserHistoryMigrationPolicy {
     ) -> [BrowserHistoryEntry] {
         var entriesByURL: [URL: BrowserHistoryEntry] = [:]
         for record in records {
-            guard let url = sanitizedHistoryURL(record.url) else { continue }
+            guard let url = BrowserImportValueSanitizer.url(record.url, removesFragment: true) else { continue }
             let firstVisitedAt = date(
                 from: min(record.firstVisit, record.lastVisit),
                 source: source
@@ -65,28 +65,8 @@ enum BrowserHistoryMigrationPolicy {
         }
     }
 
-    private static func sanitizedHistoryURL(_ source: String) -> URL? {
-        guard source.count <= 8_192,
-            let candidate = URL(string: source),
-            var components = URLComponents(
-                url: candidate,
-                resolvingAgainstBaseURL: false
-            ),
-            let scheme = components.scheme?.lowercased(),
-            scheme == "http" || scheme == "https",
-            components.host?.isEmpty == false
-        else { return nil }
-        components.scheme = scheme
-        components.user = nil
-        components.password = nil
-        components.fragment = nil
-        return components.url
-    }
-
     private static func normalizedTitle(_ source: String, fallback: String) -> String {
-        let collapsed = source.components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        let collapsed = BrowserImportValueSanitizer.collapsedWhitespace(source)
         let value = collapsed.isEmpty ? fallback : collapsed
         return String(value.prefix(4_096))
     }

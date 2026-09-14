@@ -24,7 +24,7 @@ final class BrowserExtensionSidebarStore: BrowserExtensionSidebarHandling {
     @ObservationIgnored private var visibility: [BrowserWindowID: [SpaceID: Visibility]] = [:]
     @ObservationIgnored private var visiblePanels: [BrowserWindowID: [SpaceID: BrowserExtensionSidebarPanel]] = [:]
     @ObservationIgnored private let behaviorPersistence: any BrowserExtensionSidebarBehaviorPersisting
-    @ObservationIgnored private let eventHub = BrowserExtensionSidebarEventHub()
+    @ObservationIgnored private let eventHub = BrowserExtensionClientEventHub<BrowserExtensionSidebarEvent>()
     @ObservationIgnored var hostWindowResolver: (SpaceID) -> BrowserWindowID? = { _ in nil }
     @ObservationIgnored private var hostWindowsBySpace: [SpaceID: BrowserWindowID] = [:]
     @ObservationIgnored private var pendingInstallOpens: [BrowserExtensionServiceClientID: () -> Void] = [:]

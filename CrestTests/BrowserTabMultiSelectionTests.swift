@@ -187,9 +187,11 @@ final class BrowserTabMultiSelectionTests: XCTestCase {
                     session: session, persistence: persistence, browsingMode: mode, linkPreferences: preferences)
                 let initialSaves = persistence.savedScopes.count
                 let ids = [source.tabs[2].id, source.tabs[0].id]
-                try browser.commitTabBatch(
-                    BrowserTabBatchRequest(ids: ids, in: source),
-                    action: .moveToSpace(BrowserSpaceRuntimeAssignment(space: destination)))
+                let actions = BrowserTabBatchActions(browser: browser, spaceAccess: BrowserSpaceAccessController())
+                XCTAssertTrue(
+                    actions.perform(
+                        BrowserTabBatchRequest(ids: ids, in: source),
+                        action: .moveToSpace(BrowserSpaceRuntimeAssignment(space: destination))))
                 XCTAssertEqual(browser.session.spaces[1].tabs.suffix(2).map(\.id), ids)
                 XCTAssertEqual(browser.session.selectedSpaceID, follows ? destination.id : source.id)
                 XCTAssertEqual(

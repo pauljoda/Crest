@@ -109,7 +109,7 @@ enum BrowserNetscapeBookmarkAdapter {
         let prefix = String(repeating: "    ", count: indentation)
         for tab in tabs {
             guard let sourceURL = tab.savedSiteURL ?? tab.url,
-                let url = BrowserBookmarkValueSanitizer.url(
+                let url = BrowserImportValueSanitizer.url(
                     sourceURL.absoluteString
                 )
             else { continue }

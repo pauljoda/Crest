@@ -250,6 +250,77 @@ final class BrowserMigrationTests: XCTestCase {
         XCTAssertEqual(space.tabs[1].folderID, space.folders[0].id)
     }
 
+    func testArcImportsKeepTheirContainerSelectionAndTimestampPoliciesAcrossSourceShapes() throws {
+        let importedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let entries: [(String, [String: Any])] = [
+            (
+                "current",
+                [
+                    "data": [
+                        "tab": [
+                            "savedTitle": "Current",
+                            "savedURL": "https://current.example/",
+                            "timeLastActiveAt": "1700000000",
+                        ]
+                    ]
+                ]
+            ),
+            (
+                "additional",
+                [
+                    "data": [
+                        "tab": [
+                            "savedTitle": "Additional",
+                            "savedURL": "https://additional.example/",
+                        ]
+                    ]
+                ]
+            ),
+        ]
+        let space: [String: Any] = [
+            "title": "Work",
+            "containerIDs": ["current"],
+            "newContainerIDs": ["additional"],
+        ]
+        let shapes: [(items: Any, spaces: Any)] = [
+            (entries.flatMap { [$0.0, $0.1] as [Any] }, ["space", space] as [Any]),
+            (Dictionary(uniqueKeysWithValues: entries), ["space": space]),
+        ]
+
+        for shape in shapes {
+            let data = try JSONSerialization.data(withJSONObject: [
+                "sidebar": ["containers": [["items": shape.items, "spaces": shape.spaces]]]
+            ])
+            let session = try BrowserTabMigration.decode(data, source: .arc, importedAt: importedAt)
+            let bookmarks = try BrowserBookmarkMigration.decode(data, source: .arcSidebar, importedAt: importedAt)
+
+            XCTAssertEqual(session.spaces.first?.tabs.map(\.title), ["Current"])
+            XCTAssertEqual(session.spaces.first?.tabs.first?.lastActivatedAt, importedAt)
+            XCTAssertEqual(bookmarks.spaces.first?.tabs.map(\.title), ["Current", "Additional"])
+            XCTAssertEqual(
+                bookmarks.spaces.first?.tabs.first?.lastActivatedAt,
+                Date(timeIntervalSince1970: 1_700_000_000)
+            )
+        }
+    }
+
+    func testArcBookmarkImportKeepsTheLastItemForADuplicateSourceID() throws {
+        let json = """
+            {
+              "sidebar": {"containers": [{
+                "items": [
+                  "tab", {"data":{"tab":{"savedURL":"https://old.example/"}}},
+                  "tab", {"data":{"tab":{"savedURL":"https://current.example/"}}}
+                ],
+                "spaces": ["space", {"containerIDs":["tab"]}]
+              }]}
+            }
+            """
+        let imported = try BrowserBookmarkMigration.decode(Data(json.utf8), source: .arcSidebar)
+
+        XCTAssertEqual(imported.spaces.first?.tabs.compactMap(\.url), [URL(string: "https://current.example/")!])
+    }
+
     func testBrowserWithoutAnExposedThemeUsesNeutralImportBranding() throws {
         let json = """
             {

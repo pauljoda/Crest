@@ -526,31 +526,19 @@ extension BrowserStore {
         faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil
     ) {
-        let resolvedURL = observedURL ?? selectedTab?.url
-        let updatesAutomaticIcon =
-            selectedTab?.iconMode == .automatic
-            && (faviconData != selectedTab?.faviconData
-                || iconAccent != selectedTab?.iconAccent)
         guard
-            resolvedURL != selectedTab?.url
-                || BrowserStoredStringPolicy.normalized(title)
-                    != BrowserStoredStringPolicy.normalized(selectedTab?.title)
-                || updatesAutomaticIcon
+            let change = pageMetadataChange(
+                url: observedURL, title: title, faviconData: faviconData,
+                iconAccent: iconAccent, for: selectedTab
+            )
         else { return }
-        // The hot path: a page that rewrites `document.title` reaches here on
-        // every mutation. Only an icon change may touch the favicon store, so a
-        // title change rewrites the core alone.
-        let iconTabID = updatesAutomaticIcon ? selectedTab?.id : nil
         session.updateSelectedTab(
-            url: resolvedURL,
+            url: change.url,
             title: title,
             faviconData: faviconData,
             iconAccent: iconAccent
         )
-        persist(
-            syncUrgency: .coalesced,
-            scope: iconTabID.map(BrowserSessionSaveScope.favicon(for:)) ?? .core
-        )
+        persist(syncUrgency: .coalesced, scope: change.scope)
     }
 
     /// The per-tab twin of ``updateSelectedTabFromPage(url:title:faviconData:iconAccent:)``.
@@ -566,6 +554,8 @@ extension BrowserStore {
     /// Space assignment: a card binds a tab it did not select, so the write is
     /// confirmed against the Space and profile the caller is drawing before it
     /// touches the session. A stale card mid-Space-switch writes nothing.
+    /// A completed navigation records its visit in the same publication. The
+    /// return value reports whether the page metadata changed.
     @discardableResult
     func updateTabFromPage(
         url observedURL: URL?,
@@ -573,46 +563,71 @@ extension BrowserStore {
         faviconData: Data? = nil,
         iconAccent: BrowserTabIconAccent? = nil,
         for tabID: TabID,
-        matching assignment: BrowserSpaceRuntimeAssignment
+        matching assignment: BrowserSpaceRuntimeAssignment,
+        completedNavigationURL: URL? = nil
     ) -> Bool {
-        guard let space = space(matching: assignment),
-            let tab = space.tabs.first(where: { $0.id == tabID })
-        else { return false }
-        let resolvedURL = observedURL ?? tab.url
-        let updatesAutomaticIcon =
-            tab.iconMode == .automatic
-            && (faviconData != tab.faviconData || iconAccent != tab.iconAccent)
-        guard
-            resolvedURL != tab.url
-                || BrowserStoredStringPolicy.normalized(title)
-                    != BrowserStoredStringPolicy.normalized(tab.title)
-                || updatesAutomaticIcon
-        else { return false }
-        guard
-            session.updateTab(
-                url: resolvedURL,
+        guard let space = space(matching: assignment) else { return false }
+        var draft = session
+        var scope: BrowserSessionSaveScope?
+        if let tab = space.tabs.first(where: { $0.id == tabID }),
+            let change = pageMetadataChange(
+                url: observedURL, title: title, faviconData: faviconData,
+                iconAccent: iconAccent, for: tab
+            ),
+            draft.updateTab(
+                url: change.url,
                 title: title,
                 faviconData: faviconData,
                 iconAccent: iconAccent,
                 tabID: tabID,
                 in: assignment.spaceID
             )
-        else { return false }
-        persist(
-            syncUrgency: .coalesced,
-            scope: updatesAutomaticIcon ? .favicon(for: tabID) : .core
-        )
-        return true
+        {
+            scope = change.scope
+        }
+        let changedMetadata = scope != nil
+        if let url = completedNavigationURL {
+            draft.recordVisit(url: url, title: title, in: assignment.spaceID)
+            scope = scope ?? .history(in: assignment.spaceID)
+            scope?.history = .only([assignment.spaceID])
+        }
+        guard let scope else { return false }
+        session = draft
+        persist(syncUrgency: .coalesced, scope: scope)
+        return changedMetadata
     }
 
     func updateBackgroundPage(_ update: BrowserBackgroundPageUpdate) {
         updateTabFromPage(
             url: update.url, title: update.title, faviconData: update.faviconData,
-            iconAccent: update.iconAccent, for: update.tabID, matching: update.assignment
+            iconAccent: update.iconAccent, for: update.tabID, matching: update.assignment,
+            completedNavigationURL: update.completedNavigationURL
         )
-        if let url = update.completedNavigationURL {
-            recordVisit(url: url, title: update.title, matching: update.assignment)
-        }
+    }
+
+    private func pageMetadataChange(
+        url observedURL: URL?,
+        title: String?,
+        faviconData: Data?,
+        iconAccent: BrowserTabIconAccent?,
+        for tab: BrowserTab?
+    ) -> (url: URL?, scope: BrowserSessionSaveScope)? {
+        let resolvedURL = observedURL ?? tab?.url
+        let updatesAutomaticIcon =
+            tab?.iconMode == .automatic
+            && (faviconData != tab?.faviconData || iconAccent != tab?.iconAccent)
+        guard
+            resolvedURL != tab?.url
+                || title?.nilIfEmpty != tab?.title.nilIfEmpty
+                || updatesAutomaticIcon
+        else { return nil }
+        // A title rewrite touches only the core; automatic icon changes also
+        // reconcile that tab's favicon bytes.
+        let iconTabID = updatesAutomaticIcon ? tab?.id : nil
+        return (
+            resolvedURL,
+            iconTabID.map(BrowserSessionSaveScope.favicon(for:)) ?? .core
+        )
     }
 
 }

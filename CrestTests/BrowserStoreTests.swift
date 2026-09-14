@@ -2244,6 +2244,71 @@ final class BrowserStoreSaveScopeTests: XCTestCase {
         XCTAssertEqual(store.session.space(id: otherSpaceID)?.history.count, 1)
     }
 
+    func testCompletedBackgroundNavigationPublishesMetadataAndHistoryTogetherOnce() throws {
+        for (changesTitle, changesIcon) in [(false, false), (true, false), (true, true)] {
+            let persistence = InMemoryBrowserSessionPersistence()
+            let store = BrowserStore(session: .preview, persistence: persistence)
+            let otherWindow = store.makeWindowStore()
+            let space = try XCTUnwrap(store.selectedSpace)
+            let tab = try XCTUnwrap(space.tabs.first { $0.url != nil })
+            let url = try XCTUnwrap(tab.url)
+            let selectedTabID = otherWindow.selectedTab?.id
+            let revision = store.family.syncRevision
+            let title = changesTitle ? "Completed background navigation" : tab.title
+            let faviconData = changesIcon ? Data("new icon".utf8) : tab.faviconData
+
+            store.updateBackgroundPage(
+                BrowserBackgroundPageUpdate(
+                    tabID: tab.id, assignment: BrowserSpaceRuntimeAssignment(space: space),
+                    url: url, title: title, faviconData: faviconData, iconAccent: tab.iconAccent,
+                    estimatedProgress: 1, isLoading: false, readerModeState: .unavailable,
+                    completedNavigationURL: url, processTerminationCount: 0
+                )
+            )
+
+            XCTAssertEqual(
+                persistence.savedScopes,
+                [
+                    BrowserSessionSaveScope(
+                        writesCore: changesTitle || changesIcon,
+                        history: .only([space.id]),
+                        favicons: changesIcon ? .only([tab.id]) : .nothing
+                    )
+                ]
+            )
+            XCTAssertEqual(store.family.syncRevision, revision.successor())
+            XCTAssertEqual(persistence.session, store.session)
+            let sharedSpace = try XCTUnwrap(otherWindow.session.space(id: space.id))
+            XCTAssertEqual(sharedSpace.tabs.first { $0.id == tab.id }?.title, title)
+            XCTAssertEqual(sharedSpace.tabs.first { $0.id == tab.id }?.faviconData, faviconData)
+            XCTAssertEqual(sharedSpace.history.first?.url, url)
+            XCTAssertEqual(sharedSpace.history.first?.title, title)
+            XCTAssertEqual(sharedSpace.history.first?.visitCount, 1)
+            XCTAssertEqual(otherWindow.selectedTab?.id, selectedTabID)
+        }
+    }
+
+    func testCompletedBackgroundNavigationRejectsAReplacedProfileWithoutWritingHistory() throws {
+        let persistence = InMemoryBrowserSessionPersistence()
+        let store = BrowserStore(session: .preview, persistence: persistence)
+        let space = try XCTUnwrap(store.selectedSpace)
+        let tab = try XCTUnwrap(space.tabs.first { $0.url != nil })
+        let before = store.session
+
+        store.updateBackgroundPage(
+            BrowserBackgroundPageUpdate(
+                tabID: tab.id,
+                assignment: BrowserSpaceRuntimeAssignment(spaceID: space.id, profileID: UUID()),
+                url: tab.url, title: "Stale page", faviconData: nil, iconAccent: nil,
+                estimatedProgress: 1, isLoading: false, readerModeState: .unavailable,
+                completedNavigationURL: tab.url, processTerminationCount: 0
+            )
+        )
+
+        XCTAssertEqual(store.session, before)
+        XCTAssertTrue(persistence.savedScopes.isEmpty)
+    }
+
     func testClearingHistoryPersistsOnlyTheSelectedSpacesHistory() throws {
         let persistence = InMemoryBrowserSessionPersistence()
         let store = BrowserStore(session: .preview, persistence: persistence)

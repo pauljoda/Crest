@@ -98,7 +98,7 @@ enum ZenTabSessionAdapter {
         )
         guard let entry = entries[selectedIndex] as? [String: Any],
             let sourceURL = entry["url"] as? String,
-            let url = BrowserTabMigrationSanitizer.url(sourceURL)
+            let url = BrowserImportValueSanitizer.url(sourceURL)
         else { return nil }
         let isEssential = (tab["zenEssential"] as? NSNumber)?.boolValue ?? false
         let isPinned = (tab["pinned"] as? NSNumber)?.boolValue ?? false

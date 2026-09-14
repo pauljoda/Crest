@@ -109,7 +109,7 @@ final class BrowserExtensionDebuggerSessionStore: BrowserExtensionDebuggerHandli
     @ObservationIgnored private let authorizeClient: (BrowserExtensionServiceClientID) -> Bool
     @ObservationIgnored private let resolveTarget:
         (BrowserExtensionDebuggerTarget) -> BrowserExtensionDebuggerTargetAccess
-    @ObservationIgnored private let eventHub = BrowserExtensionDebuggerEventHub()
+    @ObservationIgnored private let eventHub = BrowserExtensionClientEventHub<BrowserExtensionDebuggerEvent>()
     /// Supplies the tab operations `Page.close`, `Page.bringToFront`, and
     /// `Target.closeTarget` need. Absent, those commands report unsupported
     /// rather than reaching for a tab through some other path.
