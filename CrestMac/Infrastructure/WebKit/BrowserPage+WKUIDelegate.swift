@@ -162,7 +162,21 @@ extension BrowserPage: WKUIDelegate {
         dialogPresenter.presentFileInput(
             parameters: parameters,
             request: frame.request,
-            completion: completionHandler
+            completion: { [weak self] urls in
+                guard let self, let urls else {
+                    completionHandler(nil)
+                    return
+                }
+                do {
+                    try self.fileUploadAccess.prepare(urls)
+                    completionHandler(urls)
+                } catch {
+                    self.dialogPresenter.presentFileAccessFailure(
+                        error,
+                        request: frame.request
+                    ) { completionHandler(nil) }
+                }
+            }
         )
     }
 

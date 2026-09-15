@@ -1245,6 +1245,18 @@
     "sync-settings-section-composition": {
       "category": "internal",
       "message": "Extract the sync content summary into a settings component"
+    },
+    "passkey-consent-during-sign-in": {
+      "category": "fixed",
+      "message": "Request macOS passkey permission when you sign in on a website"
+    },
+    "selected-upload-file-access": {
+      "category": "fixed",
+      "message": "Keep selected upload files accessible and explain blocked file access"
+    },
+    "ipad-command-palette-standard-keyboard": {
+      "category": "fixed",
+      "message": "Use the standard keyboard with a spacebar in the iPad command palette"
     }
   }
 }

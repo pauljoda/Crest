@@ -102,6 +102,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var viewportFitGeneration = 0
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
+    @ObservationIgnored let fileUploadAccess = BrowserFileUploadAccess()
     @ObservationIgnored var downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
     @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
@@ -154,6 +155,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
+    @ObservationIgnored private var passkeyConsentBridge: BrowserPasskeyConsentBridge?
     @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
     @ObservationIgnored private var extensionWebPageRuntimeProxy: BrowserExtensionWebPageRuntimeDiagnosticsProxy?
     @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
@@ -439,6 +441,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             }
         }
         observeWebViewState()
+        if extensionBaseURL == nil, ownsUserContentController {
+            passkeyConsentBridge = BrowserPasskeyConsentBridge.install(
+                in: webView.configuration.userContentController
+            )
+        }
         if allowsCredentialAccess, ownsUserContentController {
             credentialMessageProxy = BrowserCredentialContentBridge.install(
                 in: webView.configuration.userContentController
@@ -664,6 +671,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
+        fileUploadAccess.invalidate()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         (webView as? BrowserDesktopWebView)?.menuHost = nil
@@ -679,6 +687,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             chromeWebStoreMessageProxy = nil
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
+            passkeyConsentBridge = nil
             blockedPopupMessageProxy = nil
             extensionWebPageRuntimeProxy = nil
             geolocationCoordinator = nil
@@ -696,6 +705,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
         }
         credentialMessageProxy = nil
+        if passkeyConsentBridge != nil {
+            webView.configuration.userContentController.removeScriptMessageHandler(
+                forName: BrowserPasskeyConsentBridge.messageHandlerName, contentWorld: .page
+            )
+            passkeyConsentBridge = nil
+        }
         if linkContextMessageProxy != nil {
             webView.configuration.userContentController
                 .removeScriptMessageHandler(
