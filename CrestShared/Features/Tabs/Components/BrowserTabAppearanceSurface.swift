@@ -34,26 +34,10 @@ struct BrowserTabAppearanceSurface: ViewModifier {
             )
             .background {
                 if isSelected, appearance.pinGlow > 0, !reduceTransparency {
-                    let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    GeometryReader { geometry in
-                        let spread: CGFloat = 12
-                        let tabBounds = CGRect(origin: CGPoint(x: spread, y: spread), size: geometry.size)
-                        let canvasBounds = tabBounds.insetBy(dx: -spread, dy: -spread)
-                        shape
-                            .fill(accent.opacity(BrowserTabAppearance.intensity(appearance.pinGlow) * 0.6))
-                            .frame(width: geometry.size.width, height: geometry.size.height)
-                            .blur(radius: 5)
-                            .padding(spread)
-                            .mask {
-                                Path { path in
-                                    path.addRect(canvasBounds)
-                                    path.addPath(shape.path(in: tabBounds))
-                                }
-                                .fill(style: FillStyle(eoFill: true))
-                            }
-                            .offset(x: -spread, y: -spread)
-                    }
-                    .allowsHitTesting(false)
+                    BrowserTabSelectionGlow(
+                        cornerRadius: radius,
+                        color: accent.opacity(BrowserTabAppearance.intensity(appearance.pinGlow) * 0.6)
+                    )
                 }
             }
     }

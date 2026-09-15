@@ -44,6 +44,9 @@ struct SpaceSidebarBrowsingContent: View {
             select: activate
         )
         .padding(.horizontal, CrestSpacing.small)
+        // The native Space host clips at this section's top edge. Keep the
+        // glow's drawing margin inside it, including below extension toolbars.
+        .padding(.top, tabSections.pinnedTabs.isEmpty ? 0 : BrowserTabSelectionGlow.outset)
         .padding(.bottom, pinnedTabsBottomInset)
 
         BrowserSpaceHeader(

@@ -1313,6 +1313,10 @@
     "command-palette-keyboard-scrolling": {
       "category": "fixed",
       "message": "Keep selected search results visible when navigating with arrow keys"
+    },
+    "preserve-pinned-tab-glow-below-address-bar": {
+      "category": "fixed",
+      "message": "Keep the selected pinned tab's glow from being cut off below the address bar"
     }
   }
 }
