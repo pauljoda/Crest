@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "command-palette-keyboard-scrolling",
+    "development": "keep-site-control-popover-text-readable",
     "nightly": "reactive-picture-in-picture-discovery"
   }
 }

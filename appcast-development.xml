@@ -6,34 +6,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.11</title>
-            <pubDate>Tue, 15 Sep 2026 18:45:49 +0000</pubDate>
+            <title>0.6.13</title>
+            <pubDate>Tue, 15 Sep 2026 19:38:35 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1108</sparkle:version>
-            <sparkle:shortVersionString>0.6.11</sparkle:shortVersionString>
+            <sparkle:version>1109</sparkle:version>
+            <sparkle:shortVersionString>0.6.13</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Open new tabs and search from empty Spaces on macOS
-- Keep selected search results visible when navigating with arrow keys
+- Keep the selected pinned tab's glow from being cut off below the address bar
+- Keep site controls and permission prompts readable in light-colored Spaces
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/8e505f36aa7f6d322f4eec3d8041f154150b3714...5913edca21afc511a7e3c73850d7266f4602daa5) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.11-2026-09-15-1108-r108.1/Installer-Crest-0.6.11-development-2026-09-15-5913edc-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/5913edca21afc511a7e3c73850d7266f4602daa5...35d529a9e698a6607fa1b7c76201b015d017b6b7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.13-2026-09-15-1109-r109.1/Installer-Crest-0.6.13-development-2026-09-15-35d529a-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.11-2026-09-15-1108-r108.1/Installer-Crest-0.6.11-development-2026-09-15-5913edc-arm64.dmg" length="26920757" type="application/octet-stream" sparkle:edSignature="hFGBzShBAkEi+jOft2yLqwf2X3iNTGE9AzVuqs4xJWAgemz0lYeuAQV46nVT7Wqbe7NLEe6HkP6mcmkxQj3XAQ=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.13-2026-09-15-1109-r109.1/Installer-Crest-0.6.13-development-2026-09-15-35d529a-arm64.dmg" length="26929460" type="application/octet-stream" sparkle:edSignature="Ts95n2mXXpeDhhicV7KC1P4FAxz2iOz1g+w4U6Aygjbz7OKUuH6zgoWsJjYtSZ9ItiIU5BBMVwyTvrXGQ3RrDw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: TpWBo3r393m9ubuN0tQk6MhlaMfj+5lgemWbMnNBCHLJbjyQKnMAkoMXEmgJSzeQkbEv9B+udysAaRp10PoKAg==
-length: 2084
+edSignature: ge5L+wD5eah2qIBITuhViRSxkTaGnvC0xws+k6bSENNHJfasyYwjSLymAb9hH2ctHHwk8BmdwnY4RMBDbcYFCg==
+length: 2115
 -->
