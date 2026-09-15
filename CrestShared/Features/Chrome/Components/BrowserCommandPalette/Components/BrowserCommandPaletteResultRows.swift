@@ -8,8 +8,10 @@ struct BrowserCommandPaletteResultRows: View {
         ForEach(items) { item in
             if item.result.isIntent {
                 BrowserCommandPaletteIntentRow(model: model, item: item)
+                    .id(item.id)
             } else {
                 BrowserCommandPaletteResultRow(model: model, item: item)
+                    .id(item.id)
             }
         }
     }

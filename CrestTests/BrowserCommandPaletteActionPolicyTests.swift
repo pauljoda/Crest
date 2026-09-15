@@ -5,6 +5,40 @@ import XCTest
 
 @MainActor
 final class BrowserCommandPaletteActionPolicyTests: XCTestCase {
+    func testEmptySelectionActionsRejectChangedSelectionSpaceProfileAndLock() throws {
+        var source = makeSpace(index: 1)
+        let target = try assignment(for: source)
+        source.selectedTabID = nil
+        let other = makeSpace(index: 2)
+        let browser = makeBrowser(spaces: [source, other], selected: source.id)
+        var selectionCount = 0
+        let actions = BrowserEmptySelectionPaletteActions(
+            source: BrowserSpaceRuntimeAssignment(space: source), browser: browser,
+            accessController: BrowserSpaceAccessController(), didSelectTab: { selectionCount += 1 })
+        XCTAssertTrue(actions.isAvailable)
+        XCTAssertFalse(actions.selectTab(try assignment(for: other)))
+
+        var selectedSource = source
+        selectedSource.selectedTabID = target.tabID
+        var lockedSource = source
+        lockedSource.accessPolicy = .deviceOwnerAuthentication
+        let unavailableSessions = [
+            BrowserSession(spaces: [selectedSource, other], selectedSpaceID: source.id),
+            BrowserSession(spaces: [source, other], selectedSpaceID: other.id),
+            BrowserSession(spaces: [replacingProfile(in: source), other], selectedSpaceID: source.id),
+            BrowserSession(spaces: [lockedSource, other], selectedSpaceID: source.id),
+            BrowserSession(spaces: [other], selectedSpaceID: other.id),
+        ]
+        for session in unavailableSessions {
+            browser.session = session
+            XCTAssertFalse(actions.isAvailable)
+            XCTAssertFalse(actions.selectTab(target))
+            XCTAssertFalse(actions.openURL(URL(string: "about:blank")!))
+            XCTAssertEqual(browser.session, session)
+        }
+        XCTAssertEqual(selectionCount, 0)
+    }
+
     func testTargetRequiresCurrentSpaceAndRejectsReplacementOrLock() throws {
         let source = makeSpace(index: 1)
         let destination = makeSpace(index: 2)

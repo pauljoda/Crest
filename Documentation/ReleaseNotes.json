@@ -1305,6 +1305,14 @@
     "space-settings-name-focus": {
       "category": "fixed",
       "message": "Rename Spaces without freezing Settings on macOS"
+    },
+    "empty-space-new-tab-launcher": {
+      "category": "fixed",
+      "message": "Open new tabs and search from empty Spaces on macOS"
+    },
+    "command-palette-keyboard-scrolling": {
+      "category": "fixed",
+      "message": "Keep selected search results visible when navigating with arrow keys"
     }
   }
 }

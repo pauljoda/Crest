@@ -6,6 +6,150 @@ import XCTest
 
 @MainActor
 final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
+    func testArrowNavigationScrollsResultsAndWrapsWhileKeepingTheEditorFocused() async throws {
+        let tabs = (0..<8).map {
+            BrowserTab(title: "Result \($0)", url: URL(string: "https://example.invalid/\($0)"), placement: .current)
+        }
+        let space = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Results", symbol: "globe",
+            accent: .indigo, folders: [], tabs: tabs, selectedTabID: tabs[0].id)
+        let model = BrowserCommandPaletteModel(
+            space: space, selectedTabID: tabs[0].id, initialQuery: "Result", commands: nil,
+            isSourceAvailable: { _ in true }, selectTab: { _, _ in false },
+            openURL: { _, _ in false }, dismiss: {})
+        let fieldView = BrowserPlatformCommandPaletteField(
+            model: model, presentation: .overlay, identifier: "command-palette-field", focused: false)
+        let coordinator = fieldView.makeCoordinator()
+        let field = fieldView.makeField(coordinator: coordinator)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 300),
+            styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 300))
+        field.frame = NSRect(x: 0, y: 250, width: 600, height: 40)
+        let host = NSHostingView(rootView: BrowserCommandPaletteResultList(model: model, maximumResultAreaHeight: 180))
+        host.frame = NSRect(x: 0, y: 0, width: 600, height: 180)
+        window.contentView?.addSubview(host)
+        window.contentView?.addSubview(field)
+        defer { window.close() }
+        window.contentView?.layoutSubtreeIfNeeded()
+        window.makeFirstResponder(field)
+        field.selectText(nil)
+        try await Task.sleep(for: .milliseconds(100))
+        let editor = try XCTUnwrap(field.currentEditor() as? NSTextView)
+        let scroll = try XCTUnwrap(descendants(of: host).compactMap { $0 as? NSScrollView }.first)
+        let initialOffset = scroll.contentView.bounds.minY
+        XCTAssertGreaterThan(model.results.count, 5)
+
+        for _ in 1..<model.results.count {
+            XCTAssertTrue(
+                coordinator.control(field, textView: editor, doCommandBy: #selector(NSResponder.moveDown(_:))))
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(30))
+        }
+        XCTAssertEqual(model.selectedResultIndex, model.results.count - 1)
+        XCTAssertGreaterThan(
+            scroll.contentView.bounds.minY, initialOffset, "Arrow selection must reveal results below the viewport")
+        XCTAssertTrue(field.currentEditor() === editor)
+        let bottomOffset = scroll.contentView.bounds.minY
+
+        XCTAssertTrue(coordinator.control(field, textView: editor, doCommandBy: #selector(NSResponder.moveDown(_:))))
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(model.selectedResultIndex, 0)
+        XCTAssertLessThan(
+            scroll.contentView.bounds.minY, bottomOffset, "Wrapping must bring the first result back into view")
+
+        XCTAssertTrue(coordinator.control(field, textView: editor, doCommandBy: #selector(NSResponder.moveUp(_:))))
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(model.selectedResultIndex, model.results.count - 1)
+        XCTAssertGreaterThan(scroll.contentView.bounds.minY, initialOffset)
+        XCTAssertTrue(field.currentEditor() === editor)
+
+        let keyboardOffset = scroll.contentView.bounds.minY
+        model.selectResult(at: model.results.count - 2)
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(
+            scroll.contentView.bounds.minY, keyboardOffset, accuracy: 1,
+            "Hover must not move the list under the pointer")
+
+        model.query = "Result 0"
+        await model.waitForPendingResults()
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(model.selectedResultIndex, 0)
+        XCTAssertLessThan(scroll.contentView.bounds.minY, keyboardOffset, "A new query must reveal its first result")
+    }
+
+    func testEmptySpaceLauncherAcceptsNativeInputBeforeAndAfterClosingLastTab() async throws {
+        let empty = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Empty", symbol: "globe",
+            accent: .indigo, folders: [], tabs: [], selectedTabID: nil)
+        let other = BrowserSpace(
+            id: SpaceID(), profile: BrowsingProfile(), name: "Other", symbol: "globe",
+            accent: .indigo, folders: [], tabs: [BrowserTab.startPage()], selectedTabID: nil)
+        let browser = BrowserStore(
+            session: BrowserSession(spaces: [empty, other], selectedSpaceID: empty.id),
+            persistence: InMemoryBrowserSessionPersistence(), browsingMode: .privateBrowsing)
+        let pages = BrowserPagePool()
+        let chrome = BrowserChromeState()
+        let root = BrowserRootModel(
+            browser: browser, pages: pages, chrome: chrome,
+            spaceAccess: BrowserSpaceAccessController(), windowState: nil,
+            startupBehavior: .lastActiveTab,
+            persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth)
+        let host = NSHostingView(rootView: EmptySpacePaletteHost(model: root))
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 700),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        defer { window.close() }
+
+        for useLocation in [false, true] {
+            XCTAssertNil(browser.selectedTab)
+            if useLocation { chrome.openLocation() } else { root.openNewTab() }
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(100))
+            let field = try XCTUnwrap(
+                descendants(of: host).compactMap { $0 as? NSTextField }.first {
+                    $0.accessibilityIdentifier() == "command-palette-field"
+                }, "An empty Space must expose the launcher without a source tab")
+            XCTAssertTrue(browser.selectedSpace?.tabs.isEmpty == true)
+            let coordinator = try XCTUnwrap(field.delegate as? BrowserPlatformCommandPaletteField.Coordinator)
+            coordinator.model.dismiss()
+            XCTAssertNil(chrome.commandPaletteMode)
+            XCTAssertTrue(browser.selectedSpace?.tabs.isEmpty == true, "Cancel must not create a draft tab")
+
+            if useLocation { chrome.openLocation() } else { root.openNewTab() }
+            host.layoutSubtreeIfNeeded()
+            window.makeFirstResponder(field)
+            field.selectText(nil)
+            let editor = try XCTUnwrap(field.currentEditor() as? NSTextView)
+            editor.insertText(
+                "https://empty-space.invalid/",
+                replacementRange: NSRange(location: 0, length: editor.string.utf16.count))
+            coordinator.editingChanged()
+            await coordinator.model.waitForPendingResults()
+            XCTAssertTrue(
+                coordinator.control(field, textView: editor, doCommandBy: #selector(NSResponder.insertNewline(_:))))
+
+            let tab = try XCTUnwrap(browser.selectedTab)
+            XCTAssertEqual(tab.url?.absoluteString, "https://empty-space.invalid/")
+            XCTAssertEqual(browser.selectedSpace?.id, empty.id)
+            XCTAssertEqual(browser.selectedSpace?.tabs.count, 1)
+            XCTAssertEqual(pages.activeTabID, tab.id)
+            XCTAssertEqual(root.address, "https://empty-space.invalid/")
+            XCTAssertNil(chrome.commandPaletteMode)
+            XCTAssertEqual(browser.session.space(id: other.id), other)
+            browser.closeTab(tab.id)
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
     func testRetainedStartPageCannotTakeFocusUntilEnabled() async throws {
         let fixture = makeEditor()
         let palette = BrowserCommandPalette(
@@ -153,5 +297,14 @@ final class BrowserCommandPaletteNativeEditingTests: XCTestCase {
         window.makeFirstResponder(field)
         field.selectText(nil)
         return (window, field, coordinator, model)
+    }
+}
+
+private struct EmptySpacePaletteHost: View {
+    let model: BrowserRootModel
+    @Namespace private var namespace
+
+    var body: some View {
+        BrowserRootCommandPaletteLayer(model: model, shortcuts: nil, commandSurfaceNamespace: namespace)
     }
 }

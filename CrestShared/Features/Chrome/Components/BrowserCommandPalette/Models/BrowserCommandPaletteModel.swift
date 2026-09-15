@@ -70,6 +70,7 @@ final class BrowserCommandPaletteModel {
     }
 
     private(set) var selectedResultIndex = 0
+    private(set) var keyboardSelectionRevision = 0
     private(set) var results: [BrowserCommandPaletteResult]
     private(set) var resultGroups: [BrowserCommandPaletteResultGroup]
 
@@ -147,6 +148,7 @@ final class BrowserCommandPaletteModel {
         rejectURLCompletion()
         guard publishedQuery == query, !results.isEmpty else { return }
         selectedResultIndex = (selectedResultIndex + offset + results.count) % results.count
+        keyboardSelectionRevision &+= 1
     }
 
     func selectResult(at index: Int) {
