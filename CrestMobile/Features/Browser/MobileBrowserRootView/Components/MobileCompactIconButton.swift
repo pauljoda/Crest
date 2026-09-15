@@ -25,3 +25,12 @@ struct MobileCompactIconButton: View {
         .accessibilityLabel(title)
     }
 }
+
+#if DEBUG
+    #Preview("Enabled and disabled") {
+        HStack {
+            MobileCompactIconButton(title: "New Tab", systemImage: "plus", action: {})
+            MobileCompactIconButton(title: "Back", systemImage: "chevron.left", enabled: false, action: {})
+        }.padding()
+    }
+#endif

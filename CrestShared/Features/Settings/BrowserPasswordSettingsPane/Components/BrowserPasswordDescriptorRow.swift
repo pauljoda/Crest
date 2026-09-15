@@ -143,7 +143,8 @@ struct BrowserPasswordDescriptorRow: View {
     }
 
     private var secondaryLabel: String {
-        let account = descriptor.username.isEmpty
+        let account =
+            descriptor.username.isEmpty
             ? String(localized: "No username")
             : descriptor.username
         return descriptor.displayName == nil
@@ -159,3 +160,13 @@ struct BrowserPasswordDescriptorRow: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Saved account") {
+        BrowserPasswordDescriptorRow(
+            descriptor: BrowserCredentialDetailPreviewFixture.descriptor,
+            space: BrowserSpaceBrandingPreviewFixture.simpleSpace, showDetails: {}, requestDeletion: {}
+        )
+        .padding().frame(width: 400)
+    }
+#endif

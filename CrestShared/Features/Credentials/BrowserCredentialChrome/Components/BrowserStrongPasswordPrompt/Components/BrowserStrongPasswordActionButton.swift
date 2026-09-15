@@ -34,3 +34,12 @@ struct BrowserStrongPasswordActionButton: View {
         .disabled(isWorking)
     }
 }
+
+#if DEBUG
+    #Preview("Ready and working") {
+        VStack(spacing: 20) {
+            BrowserStrongPasswordActionButton(isWorking: false, tint: .indigo, metrics: .pointer, action: {})
+            BrowserStrongPasswordActionButton(isWorking: true, tint: .indigo, metrics: .touch, action: {})
+        }.padding().frame(width: 380)
+    }
+#endif

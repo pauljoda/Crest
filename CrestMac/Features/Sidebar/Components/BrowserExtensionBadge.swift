@@ -15,3 +15,12 @@ struct BrowserExtensionBadge: View {
             .offset(x: 5, y: -5)
     }
 }
+
+#if DEBUG
+    #Preview("Badge lengths") {
+        HStack(spacing: 20) {
+            BrowserExtensionBadge(text: "3")
+            BrowserExtensionBadge(text: "99+")
+        }.padding()
+    }
+#endif

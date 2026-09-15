@@ -20,3 +20,10 @@ struct BrowserExtensionPinButton: View {
         .help(isPinned ? "Unpin Extension" : "Pin Extension")
     }
 }
+
+#if DEBUG
+    #Preview("Pin and unpin") {
+        @Previewable @State var pinned = false
+        BrowserExtensionPinButton(isPinned: pinned, action: { pinned.toggle() }).padding()
+    }
+#endif

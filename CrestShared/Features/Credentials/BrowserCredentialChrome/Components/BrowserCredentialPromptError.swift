@@ -18,3 +18,9 @@ struct BrowserCredentialPromptError: View {
             .foregroundStyle(.red)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCredentialPromptError("The password could not be saved. Try again.").padding().frame(width: 360)
+    }
+#endif

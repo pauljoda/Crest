@@ -53,3 +53,9 @@ struct MobileOnboardingAddSpaceCard: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingAddSpaceCard(action: {}).padding().frame(width: 320, height: 460)
+    }
+#endif

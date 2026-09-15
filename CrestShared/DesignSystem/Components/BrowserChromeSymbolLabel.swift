@@ -12,3 +12,14 @@ struct BrowserChromeSymbolLabel: View {
             .font(.system(size: pointSize, weight: .regular))
     }
 }
+
+#if DEBUG
+    #Preview("Chrome symbols") {
+        HStack {
+            BrowserChromeSymbolLabel(systemName: "arrow.left")
+            BrowserChromeSymbolLabel(systemName: "arrow.right")
+            BrowserChromeSymbolLabel(systemName: "arrow.clockwise")
+            BrowserChromeSymbolLabel(systemName: "sidebar.left")
+        }.padding()
+    }
+#endif

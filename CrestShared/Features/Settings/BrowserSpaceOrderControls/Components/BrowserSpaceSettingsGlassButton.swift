@@ -18,3 +18,9 @@ struct BrowserSpaceSettingsGlassButton: View {
         .glassEffect(.regular.interactive(), in: .capsule)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSpaceSettingsGlassButton(title: "Customize", symbol: "paintpalette", action: {}).padding()
+    }
+#endif

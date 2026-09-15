@@ -30,3 +30,11 @@ struct BrowserPeekDestinationPrimaryButton: View {
         .help("Open in \(selectedSpace?.name ?? "Space") (⌘O)")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserPeekDestinationPrimaryButton(
+            selectedSpace: BrowserSpaceBrandingPreviewFixture.simpleSpace, openInSelectedSpace: {}
+        ).padding()
+    }
+#endif

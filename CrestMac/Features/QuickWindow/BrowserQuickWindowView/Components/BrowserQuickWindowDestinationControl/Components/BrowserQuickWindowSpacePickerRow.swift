@@ -39,3 +39,14 @@ struct BrowserQuickWindowSpacePickerRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
+
+#if DEBUG
+    #Preview("Destination selection") {
+        VStack(spacing: 8) {
+            BrowserQuickWindowSpacePickerRow(
+                space: BrowserSpaceBrandingPreviewFixture.simpleSpace, isSelected: true, select: {})
+            BrowserQuickWindowSpacePickerRow(
+                space: BrowserSpaceBrandingPreviewFixture.crestSpace, isSelected: false, select: {})
+        }.padding().frame(width: 320)
+    }
+#endif

@@ -208,3 +208,14 @@ private struct BrowserDownloadFeedbackIcon: View {
         presentation == .destinationFade && !hasArrived ? 0.92 : 1
     }
 }
+
+#if DEBUG
+    #Preview("Download states") {
+        HStack(spacing: 20) {
+            BrowserDownloadStatusIcon(item: BrowserUtilityListPreviewFixture.preparingDownload)
+            BrowserDownloadStatusIcon(item: BrowserUtilityListPreviewFixture.activeDownload)
+            BrowserDownloadStatusIcon(item: BrowserUtilityListPreviewFixture.finishedDownload)
+            BrowserDownloadStatusIcon(item: BrowserUtilityListPreviewFixture.failedDownload)
+        }.padding()
+    }
+#endif

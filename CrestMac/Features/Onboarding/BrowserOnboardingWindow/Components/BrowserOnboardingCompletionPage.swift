@@ -34,3 +34,9 @@ struct BrowserOnboardingCompletionPage: View {
         .background(BrowserOnboardingPalette.parchment)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserOnboardingCompletionPage(summary: "Your Spaces are ready.", openCrest: {}).frame(width: 780, height: 580)
+    }
+#endif

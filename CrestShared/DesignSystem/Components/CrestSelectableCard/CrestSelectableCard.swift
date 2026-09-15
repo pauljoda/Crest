@@ -53,3 +53,23 @@ struct CrestSelectableCard<Content: View>: View {
             .accessibilityHidden(true)
     }
 }
+
+#if DEBUG
+    #Preview("Interactive selection") {
+        @Previewable @State var selected = 0
+        VStack {
+            ForEach(0..<2) { index in
+                CrestSelectableCard(
+                    isSelected: selected == index, accessibilityLabel: Text(index == 0 ? "Banner" : "Gradient"),
+                    action: { selected = index }
+                ) {
+                    Label(
+                        index == 0 ? "Banner" : "Gradient",
+                        systemImage: index == 0 ? "flag.fill" : "circle.lefthalf.filled"
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }.padding().frame(width: 360)
+    }
+#endif

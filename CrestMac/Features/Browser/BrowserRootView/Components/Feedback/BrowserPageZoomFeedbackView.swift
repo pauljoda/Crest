@@ -39,3 +39,9 @@ struct BrowserPageZoomFeedbackView: View {
             .zIndex(BrowserRootMetrics.feedbackZIndex)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserPageZoomFeedbackView(label: "125%").padding().frame(width: 320, height: 150)
+    }
+#endif

@@ -126,3 +126,15 @@ struct BrowserSpaceHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Saved tabs header") {
+        @Previewable @State var expanded = true
+        BrowserSpaceHeader(
+            space: BrowserSpaceBrandingPreviewFixture.simpleSpace, isPrivateBrowsing: false,
+            isSavedTabsExpanded: $expanded, capabilities: BrowserInteractionCapabilities(),
+            actions: BrowserSpaceHeaderActions(openNewTab: {}, createFolder: {}, showHistory: {}, cleanup: {})
+        )
+        .padding().frame(width: 320)
+    }
+#endif

@@ -33,3 +33,9 @@ struct BrowserOnboardingHeroPreview: View {
         .accessibilityLabel("Preview of a Crest Work Space")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserOnboardingHeroPreview().frame(width: 700, height: 480)
+    }
+#endif

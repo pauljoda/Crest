@@ -74,3 +74,11 @@ struct BrowserCrestStudioMark: View {
         return BrowserSpaceIdentityIcon(space: space, size: size)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCrestStudioPreview(
+            branding: BrowserSpaceBrandingPreviewFixture.crestBranding, symbol: "crown.fill", name: "Work"
+        ).padding().frame(width: 420, height: 580)
+    }
+#endif

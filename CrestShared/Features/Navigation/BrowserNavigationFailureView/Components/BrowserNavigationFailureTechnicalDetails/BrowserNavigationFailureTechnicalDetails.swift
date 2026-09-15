@@ -40,3 +40,10 @@ struct BrowserNavigationFailureTechnicalDetails: View {
         .textSelection(.enabled)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserNavigationFailureTechnicalDetails(failure: BrowserNavigationFailurePreviewFixture.certificate).padding()
+            .frame(width: 460)
+    }
+#endif

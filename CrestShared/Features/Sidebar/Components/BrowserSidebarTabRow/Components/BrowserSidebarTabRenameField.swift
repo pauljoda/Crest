@@ -47,3 +47,21 @@ struct BrowserSidebarTabRenameField: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Rename a tab") {
+        @Previewable @State var title = "Example"
+        @Previewable @FocusState var focused: Bool
+        let configuration = BrowserSidebarTabRowPreviewFixture.configuration()
+        BrowserSidebarTabRenameField(
+            tab: configuration.tab, spaceID: configuration.spaceID, profileID: configuration.profileID,
+            metrics: configuration.metrics, draftTitle: $title, isTitleFocused: $focused,
+            commitTitle: { focused = false },
+            cancelTitleEditing: {
+                title = "Example"
+                focused = false
+            }
+        )
+        .padding().frame(width: 320)
+    }
+#endif

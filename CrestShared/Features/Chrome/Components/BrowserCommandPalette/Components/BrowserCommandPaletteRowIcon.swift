@@ -39,3 +39,14 @@ struct BrowserCommandPaletteRowIcon: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Result icons") {
+        let model = BrowserCommandPalettePreviewFixture.model(query: "swift")
+        HStack(spacing: 20) {
+            BrowserCommandPaletteRowIcon(model: model, result: BrowserCommandPalettePreviewFixture.intentResult)
+            BrowserCommandPaletteRowIcon(model: model, result: BrowserCommandPalettePreviewFixture.tabResult)
+            BrowserCommandPaletteRowIcon(model: model, result: BrowserCommandPalettePreviewFixture.commandResult)
+        }.padding()
+    }
+#endif

@@ -44,3 +44,10 @@ struct BrowserUtilityFilterMenu: View {
         .accessibilityIdentifier("utility-filter-button")
     }
 }
+
+#if DEBUG
+    #Preview("History filters") {
+        @Previewable @State var filter: BrowserUtilityListFilter = .all
+        BrowserUtilityFilterMenu(surface: .history, filter: $filter, clearHistory: {}).padding()
+    }
+#endif

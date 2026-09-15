@@ -51,3 +51,16 @@ struct MobileOnboardingPageActions: View {
         .frame(maxWidth: .infinity)
     }
 }
+
+#if DEBUG
+    #Preview("Ready and working") {
+        @Previewable @State var busy = false
+        VStack {
+            MobileOnboardingPageActions(
+                primaryTitle: "Continue", primarySystemImage: "arrow.right", primaryIdentifier: "preview-continue",
+                primaryDisabled: busy, showsActivity: busy, secondaryTitle: "Back", secondaryIdentifier: "preview-back",
+                secondaryAction: {}, primaryAction: { busy = true })
+            Toggle("Working", isOn: $busy)
+        }.padding().frame(width: 360)
+    }
+#endif

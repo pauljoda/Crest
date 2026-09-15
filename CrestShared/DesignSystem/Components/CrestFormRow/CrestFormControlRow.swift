@@ -36,3 +36,16 @@ struct CrestFormControlRow<Control: View>: View {
         .frame(minHeight: CrestFormRowMetrics.minimumHeight)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        @Previewable @State var enabled = true
+        Form {
+            CrestFormControlRow(
+                "Content Blocking", subtitle: "Block known trackers", systemImage: "shield.lefthalf.filled"
+            ) {
+                Toggle("Content Blocking", isOn: $enabled).labelsHidden()
+            }
+        }.crestSettingsForm().frame(width: 420, height: 180)
+    }
+#endif

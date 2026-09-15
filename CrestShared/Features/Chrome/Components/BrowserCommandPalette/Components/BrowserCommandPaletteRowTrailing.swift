@@ -33,3 +33,12 @@ struct BrowserCommandPaletteRowTrailing: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Command shortcut") {
+        BrowserCommandPaletteRowTrailing(
+            model: BrowserCommandPalettePreviewFixture.model(query: "swift"),
+            result: BrowserCommandPalettePreviewFixture.commandResult
+        ).padding()
+    }
+#endif

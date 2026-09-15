@@ -50,3 +50,10 @@ struct BrowserSpaceCrestField: View {
     }
 
 }
+
+#if DEBUG
+    #Preview("Quartered field") {
+        BrowserSpaceCrestField(division: .quarterly, primaryColor: .indigo, secondaryColor: .orange)
+            .frame(width: 200, height: 240).padding()
+    }
+#endif

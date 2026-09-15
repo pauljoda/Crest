@@ -21,3 +21,10 @@ struct BrowserNavigationFailureDetailsButton: View {
         .accessibilityIdentifier("navigation-failure-details")
     }
 }
+
+#if DEBUG
+    #Preview("Toggle details") {
+        @Previewable @State var details = false
+        BrowserNavigationFailureDetailsButton(showsDetails: details, action: { details.toggle() }).padding()
+    }
+#endif

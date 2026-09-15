@@ -24,3 +24,12 @@ struct BrowserSpaceIdentityLabel: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Space identities") {
+        VStack(alignment: .leading, spacing: 20) {
+            BrowserSpaceIdentityLabel(space: BrowserSpaceBrandingPreviewFixture.simpleSpace)
+            BrowserSpaceIdentityLabel(space: BrowserSpaceBrandingPreviewFixture.crestSpace)
+        }.padding()
+    }
+#endif

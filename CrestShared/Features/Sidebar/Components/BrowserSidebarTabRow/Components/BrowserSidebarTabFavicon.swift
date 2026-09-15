@@ -14,36 +14,9 @@ struct BrowserSidebarTabFavicon: View {
         var iconScale = 1.0
 
     var body: some View {
-        TabFaviconView(
-            tab: tab, profileID: profileID,
-            size: TabFaviconMetrics.defaultSize * BrowserSidebarDensityPolicy.scale(iconScale)
+        BrowserSidebarTabFaviconContent(
+            tab: tab, profileID: profileID, metrics: metrics, isProminent: isProminent,
+            isLoaded: isLoaded, sidePanelSpaceID: sidePanelSpaceID, iconScale: iconScale
         )
-        .browserTabResidency(isLoaded: isLoaded)
-        .overlay(alignment: .bottomTrailing) {
-            if let sidePanelSpaceID {
-                BrowserTabSidePanelBadge(
-                    tabID: tab.id, spaceID: sidePanelSpaceID,
-                    scale: BrowserSidebarDensityPolicy.scale(iconScale))
-            }
-        }
-        .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))
-        .foregroundStyle(isProminent ? .primary : .secondary)
-    }
-}
-
-/// Holds the favicon in a fixed column and sizes the symbol a tab falls back
-/// to, where the shell asks for one.
-private struct BrowserSidebarTabFaviconColumn: ViewModifier {
-    let slot: BrowserSidebarTabFaviconSlot?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let slot {
-            content
-                .font(.system(size: slot.glyphSize, weight: slot.glyphWeight))
-                .frame(width: slot.width)
-        } else {
-            content
-        }
     }
 }

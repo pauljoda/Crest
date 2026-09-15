@@ -13,3 +13,9 @@ struct BrowserStrongPasswordExplanation: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserStrongPasswordExplanation(spaceName: "Work").padding().frame(width: 360)
+    }
+#endif

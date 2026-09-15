@@ -72,3 +72,15 @@ private struct BrowserCredentialCompactLabelStyle: LabelStyle {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Loading, empty, and available") {
+        VStack(spacing: 20) {
+            BrowserCredentialSuggestionState(isLoading: true, suggestions: [], metrics: .pointer, fill: { _ in })
+            BrowserCredentialSuggestionState(isLoading: false, suggestions: [], metrics: .pointer, fill: { _ in })
+            BrowserCredentialSuggestionState(
+                isLoading: false, suggestions: [BrowserCredentialDetailPreviewFixture.descriptor], metrics: .pointer,
+                fill: { _ in })
+        }.padding().frame(width: 380)
+    }
+#endif

@@ -51,3 +51,16 @@ struct BrowserUtilitySearchToolbar: View {
         .accessibilityElement(children: .contain)
     }
 }
+
+#if DEBUG
+    #Preview("Search and filter") {
+        @Previewable @State var query = ""
+        @Previewable @State var filter: BrowserUtilityListFilter = .all
+        @Previewable @Namespace var namespace
+        BrowserUtilitySearchToolbar(
+            surface: .history, searchText: $query, filter: $filter, morphNamespace: namespace, morphID: "preview",
+            clearHistory: {}
+        )
+        .padding().frame(width: 360)
+    }
+#endif

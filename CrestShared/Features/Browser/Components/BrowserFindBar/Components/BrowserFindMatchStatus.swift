@@ -68,3 +68,20 @@ struct BrowserFindMatchStatus: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Search states on pointer and touch") {
+        VStack(spacing: 16) {
+            HStack {
+                BrowserFindMatchStatus(state: .searching, metrics: .pointer)
+                BrowserFindMatchStatus(state: .found, metrics: .pointer)
+                BrowserFindMatchStatus(state: .notFound, metrics: .pointer)
+            }
+            HStack {
+                BrowserFindMatchStatus(state: .searching, metrics: .touch)
+                BrowserFindMatchStatus(state: .found, metrics: .touch)
+                BrowserFindMatchStatus(state: .notFound, metrics: .touch)
+            }
+        }.padding()
+    }
+#endif

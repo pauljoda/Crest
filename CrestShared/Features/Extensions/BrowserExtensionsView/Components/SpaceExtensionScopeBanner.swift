@@ -17,3 +17,9 @@ struct SpaceExtensionScopeBanner: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        SpaceExtensionScopeBanner(space: BrowserSpaceBrandingPreviewFixture.simpleSpace).padding().frame(width: 420)
+    }
+#endif

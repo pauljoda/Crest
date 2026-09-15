@@ -19,3 +19,11 @@ struct BrowserExtensionInstallPreparingContent: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserExtensionInstallPreparingContent(
+            title: "Preparing Extension", detail: "Checking the extension and its requested permissions."
+        ).padding().frame(width: 420, height: 260)
+    }
+#endif

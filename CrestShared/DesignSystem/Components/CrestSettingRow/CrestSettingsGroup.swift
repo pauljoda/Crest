@@ -68,3 +68,19 @@ extension CrestSettingsGroup where Preview == EmptyView {
         self.init(title, settings: settings, footnote: footnote, preview: { EmptyView() }, content: content)
     }
 }
+
+#if DEBUG
+    #Preview("Group reset") {
+        @Previewable @State var opacity = 0.65
+        Form {
+            CrestSettingsGroup(
+                "Appearance", settings: [CrestSettingValue($opacity, default: 1).resettable("Opacity")],
+                footnote: "Customize how your Space looks."
+            ) {
+                CrestIconTile(systemImage: "paintpalette.fill", color: .indigo)
+            } content: {
+                CrestSettingSlider("Opacity", value: CrestSettingValue($opacity, default: 1))
+            }
+        }.crestSettingsForm().frame(width: 420, height: 320)
+    }
+#endif

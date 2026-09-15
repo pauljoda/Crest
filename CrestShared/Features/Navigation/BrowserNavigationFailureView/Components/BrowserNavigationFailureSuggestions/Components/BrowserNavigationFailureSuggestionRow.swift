@@ -16,3 +16,11 @@ struct BrowserNavigationFailureSuggestionRow: View {
         .font(.callout)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserNavigationFailureSuggestionRow(
+            suggestion: "Check your internet connection and try again.", accent: .indigo
+        ).padding().frame(width: 360)
+    }
+#endif

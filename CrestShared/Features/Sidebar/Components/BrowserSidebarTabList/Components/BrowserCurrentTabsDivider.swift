@@ -79,3 +79,11 @@ struct BrowserCurrentTabsDivider: View {
         BrowserSidebarInteractionPolicy.revealsRowControlsOnHoverOnly(capabilities)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCurrentTabsDivider(
+            capabilities: BrowserInteractionCapabilities(), showsClearAction: true, canClear: true, clear: {}
+        ).padding().frame(width: 320)
+    }
+#endif

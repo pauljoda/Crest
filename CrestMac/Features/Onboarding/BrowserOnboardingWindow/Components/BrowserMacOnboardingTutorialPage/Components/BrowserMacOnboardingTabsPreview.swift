@@ -39,3 +39,9 @@ struct BrowserMacOnboardingTabsPreview: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserMacOnboardingTabsPreview().frame(width: 500, height: 420)
+    }
+#endif

@@ -17,3 +17,12 @@ struct BrowserOnboardingImportSelectionAction: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Selected and empty") {
+        VStack(spacing: 20) {
+            BrowserOnboardingImportSelectionAction(hasSelection: true, skip: {}, continueImport: {})
+            BrowserOnboardingImportSelectionAction(hasSelection: false, skip: {}, continueImport: {})
+        }.padding().frame(width: 500)
+    }
+#endif

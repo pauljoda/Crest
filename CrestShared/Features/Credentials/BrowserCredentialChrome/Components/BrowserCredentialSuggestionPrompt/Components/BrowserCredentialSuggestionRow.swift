@@ -105,3 +105,14 @@ private struct BrowserCredentialSuggestionRowStyle: ButtonStyle {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Pointer and touch") {
+        VStack(spacing: 20) {
+            BrowserCredentialSuggestionRow(
+                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, metrics: .pointer, fill: {})
+            BrowserCredentialSuggestionRow(
+                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, metrics: .touch, fill: {})
+        }.padding().frame(width: 380)
+    }
+#endif

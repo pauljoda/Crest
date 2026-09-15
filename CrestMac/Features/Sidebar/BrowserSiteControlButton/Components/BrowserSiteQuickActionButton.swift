@@ -24,3 +24,9 @@ struct BrowserSiteQuickActionButton: View {
         .help(Text(title))
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSiteQuickActionButton(title: "Site Settings", systemImage: "gearshape", action: {}).padding()
+    }
+#endif

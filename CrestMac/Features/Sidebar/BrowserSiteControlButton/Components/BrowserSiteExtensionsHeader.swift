@@ -25,3 +25,9 @@ struct BrowserSiteExtensionsHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSiteExtensionsHeader(manageExtensions: {}).padding().frame(width: 340)
+    }
+#endif

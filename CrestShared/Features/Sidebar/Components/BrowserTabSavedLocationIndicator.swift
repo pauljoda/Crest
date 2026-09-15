@@ -21,3 +21,9 @@ struct BrowserTabSavedLocationIndicator: View {
     }
 
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserTabSavedLocationIndicator(restore: {}).padding()
+    }
+#endif

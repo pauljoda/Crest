@@ -13,3 +13,9 @@ struct BrowserNavigationFailureRetryButton: View {
             .accessibilityIdentifier("navigation-failure-retry")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserNavigationFailureRetryButton(accent: .indigo, action: {}).padding()
+    }
+#endif

@@ -32,3 +32,12 @@ struct MobileOnboardingFeatureRow: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingFeatureRow(
+            symbol: "square.grid.2x2.fill", title: "Separate Spaces",
+            detail: "Give each part of your day its own tabs and identity."
+        ).padding().frame(width: 360)
+    }
+#endif

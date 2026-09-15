@@ -193,3 +193,15 @@ struct BrowserCrestStudioBackground: View {
         BrowserCrestStudioSlider(title: title, value: context.setting(path), range: range, readout: readout)
     }
 }
+
+#if DEBUG
+    #Preview("Interactive crest controls") {
+        @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
+        Form {
+            BrowserCrestStudioColors(
+                context: BrowserCrestStudioContext(
+                    branding: $branding, defaults: BrowserSpaceBrandingPreviewFixture.crestBranding, compact: false),
+                symbol: "crown.fill")
+        }.crestSettingsForm().frame(width: 480, height: 650)
+    }
+#endif

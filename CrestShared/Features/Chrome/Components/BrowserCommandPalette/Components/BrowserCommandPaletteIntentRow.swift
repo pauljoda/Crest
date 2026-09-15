@@ -71,3 +71,13 @@ struct BrowserCommandPaletteIntentRow: View {
         .browserCommandPaletteHoverSelection(model: model, index: item.index)
     }
 }
+
+#if DEBUG
+    #Preview("Search intent") {
+        BrowserCommandPaletteIntentRow(
+            model: BrowserCommandPalettePreviewFixture.model(query: "swift"),
+            item: BrowserCommandPalettePreviewFixture.intentItem
+        )
+        .padding().frame(width: 600)
+    }
+#endif

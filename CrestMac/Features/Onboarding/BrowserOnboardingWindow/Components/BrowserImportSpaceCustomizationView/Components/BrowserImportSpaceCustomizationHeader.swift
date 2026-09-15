@@ -35,3 +35,9 @@ struct BrowserImportSpaceCustomizationHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserImportSpaceCustomizationHeader(done: {}).padding().frame(width: 500)
+    }
+#endif

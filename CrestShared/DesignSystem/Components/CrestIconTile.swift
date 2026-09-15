@@ -24,3 +24,13 @@ struct CrestIconTile: View {
             )
     }
 }
+
+#if DEBUG
+    #Preview("Sizes and colors") {
+        HStack(spacing: 20) {
+            CrestIconTile(systemImage: "gearshape.fill", color: .indigo)
+            CrestIconTile(systemImage: "lock.shield.fill", color: .green, castsShadow: true)
+            CrestIconTile(systemImage: "square.grid.2x2.fill", color: .orange, size: 48, symbolSize: 24)
+        }.padding()
+    }
+#endif

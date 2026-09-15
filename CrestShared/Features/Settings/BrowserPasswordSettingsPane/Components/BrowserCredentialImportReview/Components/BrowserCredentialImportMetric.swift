@@ -36,3 +36,14 @@ struct BrowserCredentialImportMetric: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+    #Preview("Import totals") {
+        HStack {
+            BrowserCredentialImportMetric(
+                title: "Accounts", value: 24, systemImage: "person.crop.circle", color: .indigo)
+            BrowserCredentialImportMetric(
+                title: "Warnings", value: 2, systemImage: "exclamationmark.triangle", color: .orange)
+        }.padding()
+    }
+#endif

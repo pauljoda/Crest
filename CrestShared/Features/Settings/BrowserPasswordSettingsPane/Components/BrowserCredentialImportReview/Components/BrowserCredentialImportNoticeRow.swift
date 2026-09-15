@@ -21,3 +21,11 @@ struct BrowserCredentialImportNoticeRow: View {
         .padding(.vertical, CrestSpacing.medium)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCredentialImportNoticeRow(
+            rowNumber: 3, message: "This account already has a saved password.", tint: .orange
+        ).padding().frame(width: 400)
+    }
+#endif

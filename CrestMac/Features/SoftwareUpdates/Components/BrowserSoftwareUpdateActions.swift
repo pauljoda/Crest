@@ -51,3 +51,16 @@ struct BrowserSoftwareUpdateActions: View {
         .tint(CrestBrandTheme.accent)
     }
 }
+
+#if DEBUG
+    #Preview("Update available") {
+        let model = BrowserSoftwareUpdateModel()
+        BrowserSoftwareUpdateActions(model: model)
+            .padding().frame(width: 500)
+            .task {
+                model.presentUpdate(
+                    title: "Crest Update", version: "1.0", releaseNotes: "A new update is ready.",
+                    isInformationOnly: false, install: {}, skip: {})
+            }
+    }
+#endif

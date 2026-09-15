@@ -10,3 +10,12 @@ struct MobileSpaceUtilityButtonLabel: View {
             .contentShape(.rect)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        HStack {
+            MobileSpaceUtilityButtonLabel(systemImage: "archivebox")
+            MobileSpaceUtilityButtonLabel(systemImage: "gearshape")
+        }.padding()
+    }
+#endif

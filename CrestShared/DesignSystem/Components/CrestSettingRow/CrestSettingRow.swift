@@ -95,3 +95,16 @@ private struct CrestSettingResetContextMenu: ViewModifier {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Toggle and reset") {
+        @Previewable @State var enabled = true
+        Form {
+            CrestSettingRow(
+                "Show sidebar", setting: CrestSettingValue($enabled, default: false).resettable("Show sidebar")
+            ) {
+                Toggle("Show sidebar", isOn: $enabled).labelsHidden()
+            }
+        }.crestSettingsForm().frame(width: 420, height: 160)
+    }
+#endif

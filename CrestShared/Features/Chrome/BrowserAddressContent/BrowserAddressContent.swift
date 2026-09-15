@@ -140,3 +140,12 @@ struct BrowserAddressContent: View {
         selection = TextSelection(range: text.startIndex..<text.endIndex)
     }
 }
+
+#if DEBUG
+    #Preview("Editable address") {
+        @Previewable @State var text = "crestbrowser.com"
+        @Previewable @State var editing = false
+        BrowserAddressContent(text: $text, isEditing: $editing, submit: { editing = false })
+            .padding().frame(width: 320)
+    }
+#endif

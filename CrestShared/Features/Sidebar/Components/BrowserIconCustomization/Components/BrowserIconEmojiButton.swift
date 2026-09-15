@@ -50,3 +50,18 @@ struct BrowserIconEmojiButton: View {
         selectEmoji(emoji)
     }
 }
+
+#if DEBUG
+    #Preview("Emoji selection") {
+        @Previewable @State var variant: BrowserTabEmojiChoice?
+        @Previewable @State var selected: String? = "🌊"
+        HStack {
+            BrowserIconEmojiButton(
+                choice: BrowserTabEmojiChoice(emoji: "🌊", name: "Water wave", category: .nature),
+                currentEmoji: selected, variantChoice: $variant, selectEmoji: { selected = $0 })
+            BrowserIconEmojiButton(
+                choice: BrowserTabEmojiChoice(emoji: "🌿", name: "Herb", category: .nature), currentEmoji: selected,
+                variantChoice: $variant, selectEmoji: { selected = $0 })
+        }.padding()
+    }
+#endif

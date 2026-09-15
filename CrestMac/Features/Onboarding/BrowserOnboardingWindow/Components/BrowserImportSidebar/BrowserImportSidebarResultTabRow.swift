@@ -46,3 +46,15 @@ struct BrowserImportSidebarResultTabRow: View {
         .accessibilityValue(isMatched ? "Matched in source browser" : "In Crest")
     }
 }
+
+#if DEBUG
+    #Preview("Selected and matched import") {
+        let configuration = BrowserSidebarTabRowPreviewFixture.configuration()
+        VStack {
+            BrowserImportSidebarResultTabRow(
+                tab: configuration.tab, profileID: configuration.profileID, isSelected: true)
+            BrowserImportSidebarResultTabRow(
+                tab: configuration.tab, profileID: configuration.profileID, isSelected: false, isMatched: true)
+        }.padding().frame(width: 320)
+    }
+#endif

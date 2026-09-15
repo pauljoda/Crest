@@ -153,3 +153,15 @@ struct BrowserCrestStudioEmblem: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Interactive crest controls") {
+        @Previewable @State var branding = BrowserSpaceBrandingPreviewFixture.crestBranding
+        Form {
+            BrowserCrestStudioEmblem(
+                context: BrowserCrestStudioContext(
+                    branding: $branding, defaults: BrowserSpaceBrandingPreviewFixture.crestBranding, compact: false),
+                symbol: "crown.fill")
+        }.crestSettingsForm().frame(width: 480, height: 650)
+    }
+#endif

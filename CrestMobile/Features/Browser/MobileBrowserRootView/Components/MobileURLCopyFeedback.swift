@@ -36,3 +36,9 @@ struct MobileURLCopyFeedback: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileURLCopyFeedback(isVisible: true, topPadding: 16).frame(width: 390, height: 180)
+    }
+#endif

@@ -17,3 +17,12 @@ struct BrowserExtensionValueList: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        Form {
+            BrowserExtensionValueList(
+                title: "Website Access", values: ["example.com", "*.example.org"], symbol: "globe")
+        }.crestSettingsForm().frame(width: 420, height: 240)
+    }
+#endif

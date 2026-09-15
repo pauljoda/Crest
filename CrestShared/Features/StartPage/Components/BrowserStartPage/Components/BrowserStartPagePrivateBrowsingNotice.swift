@@ -23,3 +23,9 @@ struct BrowserStartPagePrivateBrowsingNotice: View {
         .accessibilityIdentifier("private-browsing-notice")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserStartPagePrivateBrowsingNotice(spacing: 6).padding().frame(width: 360)
+    }
+#endif

@@ -21,3 +21,11 @@ struct BrowserQuickWindowBackdrop: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserQuickWindowBackdrop(
+            space: BrowserSpaceBrandingPreviewFixture.simpleSpace, opacity: 0.8, reduceMotion: true
+        ).frame(width: 540, height: 360)
+    }
+#endif

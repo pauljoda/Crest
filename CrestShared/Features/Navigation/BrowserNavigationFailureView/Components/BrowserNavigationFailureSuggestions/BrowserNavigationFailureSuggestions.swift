@@ -28,3 +28,13 @@ struct BrowserNavigationFailureSuggestions: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Certificate guidance") {
+        BrowserNavigationFailureSuggestions(
+            presentation: BrowserNavigationFailurePresentation(
+                failure: BrowserNavigationFailurePreviewFixture.certificate), accent: .orange
+        )
+        .padding().frame(width: 420)
+    }
+#endif

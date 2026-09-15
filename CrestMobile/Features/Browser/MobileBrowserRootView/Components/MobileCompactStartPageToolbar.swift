@@ -27,3 +27,9 @@ struct MobileCompactStartPageToolbar: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileCompactStartPageToolbar(showTabViewer: {}).frame(width: 390).padding()
+    }
+#endif

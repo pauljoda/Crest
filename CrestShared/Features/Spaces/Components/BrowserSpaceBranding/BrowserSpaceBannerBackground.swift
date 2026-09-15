@@ -81,3 +81,12 @@ struct BrowserSpaceBannerBackground: View {
         previewContrast ?? contrast
     }
 }
+
+#if DEBUG
+    #Preview("Banner and gradient") {
+        HStack(spacing: 16) {
+            BrowserSpaceBannerBackground(branding: BrowserSpaceBrandingPreviewFixture.bannerBranding)
+            BrowserSpaceBannerBackground(branding: BrowserSpaceBrandingPreviewFixture.gradientBranding)
+        }.frame(width: 500, height: 360).padding()
+    }
+#endif

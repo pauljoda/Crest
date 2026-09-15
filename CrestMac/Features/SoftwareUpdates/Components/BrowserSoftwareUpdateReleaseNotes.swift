@@ -28,3 +28,22 @@ struct BrowserSoftwareUpdateReleaseNotes: View {
         .tint(CrestBrandTheme.accent)
     }
 }
+
+#if DEBUG
+    #Preview("Release note typography") {
+        BrowserSoftwareUpdateReleaseNotes(
+            releaseNotes: """
+                ## Highlights
+
+                ### Improved
+
+                - Spaces are easier to customize.
+                - Find your saved tabs faster.
+
+                ### Fixed
+
+                - More reliable download recovery.
+                """
+        ).padding().frame(width: 500, height: 360)
+    }
+#endif

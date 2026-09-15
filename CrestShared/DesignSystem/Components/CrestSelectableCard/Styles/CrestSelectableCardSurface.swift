@@ -27,10 +27,12 @@ struct CrestSelectableCardSurface: View {
                     lineWidth: borderWidth
                 )
             }
-            .contentShape(.rect(
-                cornerRadius: CrestSelectableCardMetrics.cornerRadius,
-                style: .continuous
-            ))
+            .contentShape(
+                .rect(
+                    cornerRadius: CrestSelectableCardMetrics.cornerRadius,
+                    style: .continuous
+                )
+            )
             .crestFocusShape(shape)
             .crestPressFeedback(
                 isPressed: configuration.isPressed,
@@ -70,3 +72,12 @@ struct CrestSelectableCardSurface: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Card surface") {
+        @Previewable @State var selected = false
+        CrestSelectableCard(isSelected: selected, accessibilityLabel: Text("Banner"), action: { selected.toggle() }) {
+            Label("Banner", systemImage: "flag.fill").frame(maxWidth: .infinity, alignment: .leading)
+        }.padding().frame(width: 320)
+    }
+#endif

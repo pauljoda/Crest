@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserSystemSymbolPicker: View {
     @Binding var selection: String
+    var loadNames: @MainActor () async -> [String] = { await BrowserSystemSymbolCatalog.availableNames() }
     @State private var isPresented = false
 
     var body: some View {
@@ -16,7 +17,7 @@ struct BrowserSystemSymbolPicker: View {
         .accessibilityValue(selection)
         .help(selection.isEmpty ? "Choose an SF Symbol" : selection)
         .popover(isPresented: $isPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .trailing) {
-            BrowserSystemSymbolCatalogPicker(selection: $selection)
+            BrowserSystemSymbolCatalogPicker(selection: $selection, loadNames: loadNames)
                 .presentationCompactAdaptation(.sheet)
         }
     }
@@ -24,6 +25,7 @@ struct BrowserSystemSymbolPicker: View {
 
 private struct BrowserSystemSymbolCatalogPicker: View {
     @Binding var selection: String
+    var loadNames: @MainActor () async -> [String] = { await BrowserSystemSymbolCatalog.availableNames() }
     @State private var query = ""
     @Environment(\.dismiss) private var dismiss
     @FocusState private var searchFocused: Bool
@@ -47,7 +49,7 @@ private struct BrowserSystemSymbolCatalogPicker: View {
             }
             .padding(12)
             .background(.primary.opacity(0.05), in: .rect(cornerRadius: 10))
-            BrowserSystemSymbolCatalogGrid(selection: selection, query: query) { name in
+            BrowserSystemSymbolCatalogGrid(selection: selection, query: query, loadNames: loadNames) { name in
                 selection = name
                 dismiss()
             }
@@ -64,6 +66,7 @@ private struct BrowserSystemSymbolCatalogPicker: View {
 struct BrowserSystemSymbolCatalogGrid: View {
     let selection: String?
     let query: String
+    var loadNames: @MainActor () async -> [String] = { await BrowserSystemSymbolCatalog.availableNames() }
     let select: (String) -> Void
     @State private var names: [String] = []
     @State private var isLoading = true
@@ -117,41 +120,33 @@ struct BrowserSystemSymbolCatalogGrid: View {
             Text("\(matches.count) symbols").font(.caption).foregroundStyle(.secondary)
         }
         .task {
-            names = await BrowserSystemSymbolCatalog.availableNames()
+            names = await loadNames()
             isLoading = false
         }
     }
 }
 
-/// The name catalog is generated from a versioned export, never discovered via
-/// private OS bundles. Artwork and availability come from public platform APIs.
-@MainActor
-private enum BrowserSystemSymbolCatalog {
-    private static var loading: Task<[String], Never>?
-
-    static func availableNames() async -> [String] {
-        if let loading { return await loading.value }
-        let task = Task { @MainActor in
-            guard let url = Bundle.main.url(forResource: "SFSymbolNames", withExtension: "txt"),
-                let text = try? String(contentsOf: url, encoding: .utf8)
-            else { return [String]() }
-            let candidates = text.split(whereSeparator: \.isNewline)
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty && !$0.hasPrefix("//") }
-            var available: [String] = []
-            for (index, name) in candidates.enumerated() {
-                let exists: Bool
-                #if os(macOS)
-                    exists = NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil
-                #else
-                    exists = UIImage(systemName: name) != nil
-                #endif
-                if exists { available.append(name) }
-                if index.isMultiple(of: 100) { await Task.yield() }
-            }
-            return Array(Set(available)).sorted()
-        }
-        loading = task
-        return await task.value
+#if DEBUG
+    #Preview("Choose a symbol") {
+        @Previewable @State var symbol = "briefcase.fill"
+        BrowserSystemSymbolPicker(
+            selection: $symbol,
+            loadNames: { ["briefcase.fill", "house.fill", "star.fill", "globe", "leaf.fill", "heart.fill"] }
+        ).padding().frame(width: 360, height: 460)
     }
-}
+#endif
+
+#if DEBUG
+    #Preview("Symbol catalog") {
+        @Previewable @State var selection = "briefcase.fill"
+        @Previewable @State var query = ""
+        VStack {
+            TextField("Search symbols", text: $query)
+            BrowserSystemSymbolCatalogGrid(
+                selection: selection, query: query,
+                loadNames: {
+                    ["briefcase.fill", "house.fill", "star.fill", "globe", "leaf.fill", "heart.fill"]
+                }, select: { selection = $0 })
+        }.padding().frame(width: 480, height: 500)
+    }
+#endif

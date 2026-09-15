@@ -18,3 +18,10 @@ struct BrowserSettingsPrivateSpaceIdentity: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSettingsPrivateSpaceIdentity(space: BrowserSpaceBrandingPreviewFixture.crestSpace).padding().frame(
+            width: 360)
+    }
+#endif

@@ -27,3 +27,12 @@ struct BrowserUtilityListEmptyState: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Empty and no search results") {
+        VStack {
+            BrowserUtilityListEmptyState(surface: .history, searchText: "", filter: .all, dismiss: nil)
+            BrowserUtilityListEmptyState(surface: .downloads, searchText: "report", filter: .all, dismiss: nil)
+        }.frame(width: 360, height: 420)
+    }
+#endif

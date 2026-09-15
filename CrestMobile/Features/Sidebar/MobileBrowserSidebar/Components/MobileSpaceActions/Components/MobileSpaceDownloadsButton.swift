@@ -51,3 +51,12 @@ struct MobileSpaceDownloadsButton: View {
         return "arrow.down.circle.fill"
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileSpaceDownloadsButton(
+            downloads: [BrowserUtilityListPreviewFixture.activeDownload],
+            newDownloads: [BrowserUtilityListPreviewFixture.finishedDownload], badgeColor: .indigo, action: {}
+        ).padding()
+    }
+#endif

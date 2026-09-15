@@ -46,3 +46,14 @@ struct BrowserIconPickerHeader: View {
     }
 
 }
+
+#if DEBUG
+    #Preview("Icon modes and reset") {
+        @Previewable @State var mode: BrowserIconPickerMode = .emoji
+        BrowserIconPickerHeader(
+            title: "Tab Icon", showsSystemSymbols: true, mode: $mode, showsReset: true, resetTitle: "Reset Icon",
+            reset: {}
+        )
+        .padding().frame(width: 360)
+    }
+#endif

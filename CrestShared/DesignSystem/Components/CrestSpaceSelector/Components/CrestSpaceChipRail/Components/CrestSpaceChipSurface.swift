@@ -66,3 +66,14 @@ struct CrestSpaceChipSurface<LabelContent: View>: View {
         return CrestBrandTheme.canvas
     }
 }
+
+#if DEBUG
+    #Preview("Selected and unselected") {
+        HStack {
+            CrestSpaceChipSurface(
+                tint: .indigo, isSelected: true, isPressed: false, label: Label("Work", systemImage: "briefcase.fill"))
+            CrestSpaceChipSurface(
+                tint: .orange, isSelected: false, isPressed: false, label: Label("Personal", systemImage: "house.fill"))
+        }.padding()
+    }
+#endif

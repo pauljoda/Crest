@@ -11,3 +11,9 @@ struct BrowserNavigationFailureBackButton: View {
             .accessibilityIdentifier("navigation-failure-back")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserNavigationFailureBackButton(action: {}).padding()
+    }
+#endif

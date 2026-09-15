@@ -75,3 +75,14 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
         return .download(newDownloads.first?.id)
     }
 }
+
+#if DEBUG
+    #Preview("Download badge and expansion") {
+        @Previewable @State var expanded = false
+        BrowserSpaceSwitcherCommonListsButton(
+            isExpanded: expanded, downloads: [BrowserUtilityListPreviewFixture.activeDownload],
+            newDownloads: [BrowserUtilityListPreviewFixture.finishedDownload], badgeColor: .indigo,
+            action: { expanded.toggle() }, recordFrame: { _ in }
+        ).padding()
+    }
+#endif

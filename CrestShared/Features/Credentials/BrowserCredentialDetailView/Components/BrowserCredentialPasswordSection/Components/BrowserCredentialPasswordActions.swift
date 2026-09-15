@@ -47,3 +47,10 @@ struct BrowserCredentialPasswordActions: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Reveal and copy") {
+        Form { BrowserCredentialPasswordActions(model: BrowserCredentialDetailPreviewFixture.makeModel()) }
+            .crestSettingsForm().frame(width: 420, height: 180)
+    }
+#endif

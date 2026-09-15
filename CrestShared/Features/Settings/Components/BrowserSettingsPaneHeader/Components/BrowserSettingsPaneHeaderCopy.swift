@@ -17,3 +17,9 @@ struct BrowserSettingsPaneHeaderCopy: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSettingsPaneHeaderCopy(destination: .privacy).padding().frame(width: 380)
+    }
+#endif

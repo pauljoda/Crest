@@ -12,3 +12,9 @@ struct BrowserSpaceAddButton: View {
         .fixedSize()
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSpaceAddButton(action: {}).padding()
+    }
+#endif

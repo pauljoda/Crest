@@ -28,7 +28,7 @@ struct CrestButtonSurface: View {
             tertiary
         case .destructive:
             destructive
-        case let .icon(diameter, isProminent):
+        case .icon(let diameter, let isProminent):
             icon(diameter: diameter, isProminent: isProminent)
         }
     }
@@ -175,3 +175,15 @@ struct CrestButtonSurface: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Button roles") {
+        VStack(spacing: 16) {
+            Button("Save Setup") {}.buttonStyle(.crestPrimary)
+            Button("Back") {}.buttonStyle(.crestSecondary)
+            Button("Delete") {}.buttonStyle(.crestDestructive)
+            Button("Manage Filter Lists") {}.buttonStyle(.crestTertiary)
+            Button("Disabled") {}.buttonStyle(.crestPrimary).disabled(true)
+        }.padding().frame(width: 300)
+    }
+#endif

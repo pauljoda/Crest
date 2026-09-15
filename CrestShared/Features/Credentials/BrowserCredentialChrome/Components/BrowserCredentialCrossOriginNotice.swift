@@ -14,3 +14,10 @@ struct BrowserCredentialCrossOriginNotice: View {
         .foregroundStyle(.orange)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCredentialCrossOriginNotice(message: "This sign-in form belongs to a different website.").padding()
+            .frame(width: 360)
+    }
+#endif

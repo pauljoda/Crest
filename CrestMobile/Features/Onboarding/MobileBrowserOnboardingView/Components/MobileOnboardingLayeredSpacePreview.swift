@@ -38,3 +38,12 @@ struct MobileOnboardingLayeredSpacePreview: View {
         .frame(maxWidth: .infinity)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingLayeredSpacePreview(
+            previewWidth: 320, personalSpace: MobileOnboardingPreviewFixtures.tutorialPersonalSpace,
+            workSpace: MobileOnboardingPreviewFixtures.tutorialWorkSpace
+        ).frame(width: 380, height: 500)
+    }
+#endif

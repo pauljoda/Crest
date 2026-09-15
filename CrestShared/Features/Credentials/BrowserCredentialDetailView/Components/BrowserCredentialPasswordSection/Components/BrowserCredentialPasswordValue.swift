@@ -18,3 +18,12 @@ struct BrowserCredentialPasswordValue: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Hidden and revealed") {
+        VStack(spacing: 20) {
+            BrowserCredentialPasswordValue(password: nil)
+            BrowserCredentialPasswordValue(password: "sample-password-for-preview")
+        }.padding().frame(width: 360)
+    }
+#endif

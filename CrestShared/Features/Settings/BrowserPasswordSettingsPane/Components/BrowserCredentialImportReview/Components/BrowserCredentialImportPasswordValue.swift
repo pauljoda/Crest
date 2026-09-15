@@ -23,3 +23,10 @@ struct BrowserCredentialImportPasswordValue: View {
         .accessibilityLabel("Password value shown visually")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCredentialImportPasswordValue(label: "Imported password", password: "sample-password-for-preview")
+            .padding().frame(width: 380)
+    }
+#endif

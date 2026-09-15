@@ -40,3 +40,12 @@ struct BrowserStartPageHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Standard and private") {
+        VStack(spacing: 32) {
+            BrowserStartPageHeader(isPrivateBrowsing: false, layout: .macOSPage, colorScheme: nil)
+            BrowserStartPageHeader(isPrivateBrowsing: true, layout: .mobileCompactPage, colorScheme: nil)
+        }.padding().frame(width: 380)
+    }
+#endif

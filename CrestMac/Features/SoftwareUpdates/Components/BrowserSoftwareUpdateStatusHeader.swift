@@ -59,3 +59,16 @@ struct BrowserSoftwareUpdateStatusHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Update available") {
+        let model = BrowserSoftwareUpdateModel()
+        BrowserSoftwareUpdateStatusHeader(model: model)
+            .padding().frame(width: 500)
+            .task {
+                model.presentUpdate(
+                    title: "Crest Update", version: "1.0", releaseNotes: "A new update is ready.",
+                    isInformationOnly: false, install: {}, skip: {})
+            }
+    }
+#endif

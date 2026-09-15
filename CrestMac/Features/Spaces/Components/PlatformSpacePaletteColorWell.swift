@@ -40,3 +40,10 @@ struct PlatformSpacePaletteColorWell: NSViewRepresentable {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Choose a color") {
+        @Previewable @State var color: Color = .indigo
+        PlatformSpacePaletteColorWell(selection: $color).padding()
+    }
+#endif

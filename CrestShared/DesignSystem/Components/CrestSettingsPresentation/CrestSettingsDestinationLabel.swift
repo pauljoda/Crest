@@ -72,3 +72,15 @@ struct CrestSettingsDestinationLabel: View {
             : CrestSettingsPresentationMetrics.regularIconCornerRadius
     }
 }
+
+#if DEBUG
+    #Preview("Regular and compact") {
+        VStack(alignment: .leading, spacing: 20) {
+            CrestSettingsDestinationLabel(
+                title: "Appearance", subtitle: "Make Crest your own", systemImage: "paintpalette.fill", color: .indigo)
+            CrestSettingsDestinationLabel(
+                title: "Privacy", subtitle: "Control your browsing data", systemImage: "hand.raised.fill",
+                color: .green, compact: true)
+        }.padding().frame(width: 380)
+    }
+#endif

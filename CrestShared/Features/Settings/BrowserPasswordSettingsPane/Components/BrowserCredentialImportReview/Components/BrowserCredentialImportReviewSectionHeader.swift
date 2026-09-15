@@ -15,3 +15,11 @@ struct BrowserCredentialImportReviewSectionHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCredentialImportReviewSectionHeader(
+            title: "Review Passwords", detail: "Choose which accounts to import."
+        ).padding().frame(width: 380)
+    }
+#endif

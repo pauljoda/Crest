@@ -55,3 +55,10 @@ struct BrowserEmojiCategoryBar: View {
     }
 
 }
+
+#if DEBUG
+    #Preview("Choose a category") {
+        @Previewable @State var category: BrowserEmojiCategory = .nature
+        BrowserEmojiCategoryBar(category: $category, contentWidth: 320).padding()
+    }
+#endif

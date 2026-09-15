@@ -55,3 +55,14 @@ struct BrowserCommandPaletteSearchField: View {
         .frame(minHeight: BrowserCommandPaletteMetrics.searchFieldMinimumHeight)
     }
 }
+
+#if DEBUG
+    #Preview("Search field") {
+        @Previewable @FocusState var focused: Bool
+        BrowserCommandPaletteSearchField(
+            model: BrowserCommandPalettePreviewFixture.model(query: "swift"), presentation: .overlay,
+            queryIsFocused: $focused
+        )
+        .padding().frame(width: 600)
+    }
+#endif

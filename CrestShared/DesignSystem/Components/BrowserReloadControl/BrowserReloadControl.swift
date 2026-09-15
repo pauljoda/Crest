@@ -127,3 +127,15 @@ struct BrowserReloadControl: View {
         isPlayingReloadFeedback = false
     }
 }
+
+#if DEBUG
+    #Preview("Reload, stop, and developer menu") {
+        @Previewable @State var loading = false
+        VStack {
+            BrowserReloadControl(
+                isLoading: loading, isDeveloperMode: true, reloadOrStop: { loading.toggle() },
+                reload: { loading = true }, reloadFromOrigin: { loading = true }, clearSiteDataAndReload: {})
+            Toggle("Loading", isOn: $loading)
+        }.padding().frame(width: 240)
+    }
+#endif

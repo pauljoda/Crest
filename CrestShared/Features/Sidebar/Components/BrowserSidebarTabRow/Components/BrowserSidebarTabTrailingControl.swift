@@ -125,3 +125,14 @@ private struct BrowserSidebarTabTrailingControlStyle: ViewModifier {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Close and unload") {
+        HStack(spacing: 20) {
+            BrowserSidebarTabTrailingControl(
+                configuration: BrowserSidebarTabRowPreviewFixture.configuration(), isHovering: true)
+            BrowserSidebarTabTrailingControl(
+                configuration: BrowserSidebarTabRowPreviewFixture.configuration(placement: .saved), isHovering: true)
+        }.padding()
+    }
+#endif

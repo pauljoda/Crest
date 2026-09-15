@@ -15,3 +15,10 @@ struct BrowserCredentialErrorSection: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        Form { BrowserCredentialErrorSection(message: "Unable to unlock this password. Try again.") }
+            .crestSettingsForm().frame(width: 400, height: 160)
+    }
+#endif

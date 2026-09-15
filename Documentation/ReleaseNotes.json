@@ -1297,6 +1297,10 @@
     "accept-xcode-27-submission-build-in-cloud": {
       "category": "internal",
       "message": "Allow Apple's submission-supported Xcode 27 build in the Cloud archive guard"
+    },
+    "preview-editable-ui-components-in-place": {
+      "category": "internal",
+      "message": "Add interactive component previews beside editable UI and isolate visual content from saved appearance preferences"
     }
   }
 }

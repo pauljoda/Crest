@@ -20,3 +20,11 @@ struct SyncSettingsFactRow: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        SyncSettingsFactRow(
+            title: "Private by Space", detail: "Each Space keeps its browsing data separate.", symbol: "lock.shield"
+        ).padding().frame(width: 380)
+    }
+#endif

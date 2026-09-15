@@ -112,3 +112,10 @@ struct BrowserSpaceGradientAngleDial: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Interactive angle") {
+        @Previewable @State var angle = 45.0
+        BrowserSpaceGradientAngleDial(angle: $angle, color: .indigo).padding()
+    }
+#endif

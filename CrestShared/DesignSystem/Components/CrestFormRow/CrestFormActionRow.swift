@@ -50,3 +50,14 @@ struct CrestFormActionRow: View {
         .buttonStyle(.plain)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        Form {
+            CrestFormActionRow(
+                "Manage Filter Lists", subtitle: "Choose which blocklists a Space loads",
+                systemImage: "shield.lefthalf.filled", value: "3 lists"
+            ) {}
+        }.crestSettingsForm().frame(width: 420, height: 180)
+    }
+#endif

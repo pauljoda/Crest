@@ -19,3 +19,12 @@ struct BrowserSettingsDestinationRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
+
+#if DEBUG
+    #Preview("Selected and unselected") {
+        VStack(spacing: 8) {
+            BrowserSettingsDestinationRow(destination: .general, isSelected: true)
+            BrowserSettingsDestinationRow(destination: .privacy, isSelected: false)
+        }.padding().frame(width: 280)
+    }
+#endif

@@ -27,3 +27,9 @@ struct MobileCompactDomainChip: View {
         url?.host() ?? url?.absoluteString ?? "Show Toolbar"
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileCompactDomainChip(url: URL(string: "https://crestbrowser.com"), showToolbar: {}).padding()
+    }
+#endif

@@ -10,3 +10,12 @@ struct BrowserQuickWindowAddressSecurityIcon: View {
             .accessibilityHidden(true)
     }
 }
+
+#if DEBUG
+    #Preview("Secure and insecure") {
+        HStack {
+            BrowserQuickWindowAddressSecurityIcon(isSecure: true)
+            BrowserQuickWindowAddressSecurityIcon(isSecure: false)
+        }.padding()
+    }
+#endif

@@ -30,3 +30,9 @@ struct BrowserQuickWindowSourceSpaceIndicator: View {
         .accessibilityValue(space?.name ?? "Space")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserQuickWindowSourceSpaceIndicator(space: BrowserSpaceBrandingPreviewFixture.simpleSpace).padding()
+    }
+#endif

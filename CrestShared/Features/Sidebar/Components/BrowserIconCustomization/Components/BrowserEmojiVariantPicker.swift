@@ -60,3 +60,15 @@ struct BrowserEmojiVariantPicker: View {
         .accessibilityIdentifier("browser-emoji-variant-picker")
     }
 }
+
+#if DEBUG
+    #Preview("Emoji variants") {
+        BrowserEmojiVariantPicker(
+            variants: [
+                BrowserTabEmojiVariant(emoji: "👍", name: "Thumbs up"),
+                BrowserTabEmojiVariant(emoji: "👍🏽", name: "Thumbs up: medium skin tone"),
+                BrowserTabEmojiVariant(emoji: "👍🏿", name: "Thumbs up: dark skin tone"),
+            ], selectEmoji: { _ in }
+        ).padding()
+    }
+#endif

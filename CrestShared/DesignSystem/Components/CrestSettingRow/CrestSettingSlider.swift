@@ -93,3 +93,12 @@ struct CrestSettingSlider: View {
 
     private var valueLabel: String { readout.label(value.wrappedValue) }
 }
+
+#if DEBUG
+    #Preview("Adjust and reset") {
+        @Previewable @State var opacity = 0.65
+        Form {
+            CrestSettingSlider("Opacity", value: CrestSettingValue($opacity, default: 1))
+        }.crestSettingsForm().frame(width: 420, height: 180)
+    }
+#endif

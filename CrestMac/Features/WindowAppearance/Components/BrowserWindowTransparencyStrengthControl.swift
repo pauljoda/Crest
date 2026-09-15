@@ -25,3 +25,10 @@ struct BrowserWindowTransparencyStrengthControl: View {
         .disabled(!isEnabled)
     }
 }
+
+#if DEBUG
+    #Preview("Adjust transparency") {
+        @Previewable @State var strength = 0.6
+        BrowserWindowTransparencyStrengthControl(strength: $strength, isEnabled: true).padding().frame(width: 380)
+    }
+#endif

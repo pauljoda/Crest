@@ -64,3 +64,10 @@ struct MobileOnboardingSyncFeaturePage: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingSyncFeaturePage(secondaryTitle: "Back", secondaryAction: {}, primaryAction: {}).frame(
+            width: 390, height: 844)
+    }
+#endif

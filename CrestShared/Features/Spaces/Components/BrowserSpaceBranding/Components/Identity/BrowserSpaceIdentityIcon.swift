@@ -28,3 +28,12 @@ struct BrowserSpaceIdentityIcon: View {
         .accessibilityHidden(true)
     }
 }
+
+#if DEBUG
+    #Preview("Symbol and locked crest") {
+        HStack(spacing: 24) {
+            BrowserSpaceIdentityIcon(space: BrowserSpaceBrandingPreviewFixture.simpleSpace, size: 32)
+            BrowserSpaceIdentityIcon(space: BrowserSpaceBrandingPreviewFixture.crestSpace, size: 64)
+        }.padding()
+    }
+#endif

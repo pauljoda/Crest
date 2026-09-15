@@ -33,3 +33,10 @@ struct BrowserSourceImportSpaceHeader: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSourceImportSpaceHeader(application: nil, space: BrowserSpaceBrandingPreviewFixture.simpleSpace)
+            .padding().frame(width: 320)
+    }
+#endif

@@ -26,3 +26,12 @@ struct BrowserSpaceAccessActionLabel: View {
         .accessibilityHidden(true)
     }
 }
+
+#if DEBUG
+    #Preview("Unlock and authenticating") {
+        VStack(spacing: 20) {
+            BrowserSpaceAccessActionLabel(isAuthenticating: false)
+            BrowserSpaceAccessActionLabel(isAuthenticating: true)
+        }.padding()
+    }
+#endif

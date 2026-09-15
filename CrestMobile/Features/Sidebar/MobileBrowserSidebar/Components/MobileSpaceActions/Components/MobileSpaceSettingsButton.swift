@@ -12,3 +12,9 @@ struct MobileSpaceSettingsButton: View {
         .accessibilityIdentifier("space-settings-button")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileSpaceSettingsButton(action: {}).padding()
+    }
+#endif

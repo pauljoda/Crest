@@ -61,3 +61,10 @@ private struct NativePalettePicker: UIViewControllerRepresentable {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Choose a color") {
+        @Previewable @State var color: Color = .indigo
+        PlatformSpacePaletteColorWell(selection: $color).padding()
+    }
+#endif

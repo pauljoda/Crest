@@ -27,3 +27,14 @@ struct BrowserNavigationFailureHeadline: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Offline headline") {
+        let failure = BrowserNavigationFailurePreviewFixture.offline
+        BrowserNavigationFailureHeadline(
+            failure: failure, presentation: BrowserNavigationFailurePresentation(failure: failure), alignment: .leading,
+            textAlignment: .leading
+        )
+        .padding().frame(width: 420)
+    }
+#endif

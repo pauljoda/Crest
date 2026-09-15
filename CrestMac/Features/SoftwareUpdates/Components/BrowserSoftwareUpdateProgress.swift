@@ -15,3 +15,9 @@ struct BrowserSoftwareUpdateProgress: View {
         .accessibilityLabel("Software update progress")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSoftwareUpdateProgress(progress: 0.64).padding().frame(width: 420)
+    }
+#endif

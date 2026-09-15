@@ -14,3 +14,12 @@ struct MobileSettingsDestinationRow: View {
         .accessibilityElement(children: .contain)
     }
 }
+
+#if DEBUG
+    #Preview("Settings destinations") {
+        List {
+            MobileSettingsDestinationRow(destination: .general)
+            MobileSettingsDestinationRow(destination: .privacy)
+        }.frame(width: 390, height: 240)
+    }
+#endif

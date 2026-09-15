@@ -20,3 +20,9 @@ struct BrowserPeekCloseButton: View {
         .help(Text(help))
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserPeekCloseButton(accessibilityLabel: "Close Peek", help: "Close Peek", dismiss: {}).padding()
+    }
+#endif

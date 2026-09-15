@@ -31,3 +31,13 @@ struct MobileOnboardingProgressIndicator: View {
         return "Onboarding step \(currentIndex + 1) of \(MobileOnboardingLayout.progressStepCount)"
     }
 }
+
+#if DEBUG
+    #Preview("Progress states") {
+        VStack(spacing: 24) {
+            MobileOnboardingProgressIndicator(currentIndex: 0)
+            MobileOnboardingProgressIndicator(currentIndex: 2)
+            MobileOnboardingProgressIndicator(currentIndex: nil)
+        }.padding()
+    }
+#endif

@@ -33,3 +33,13 @@ struct BrowserCredentialSearchField: View {
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
+
+#if DEBUG
+    #Preview("Interactive search") {
+        @Previewable @State var query = ""
+        BrowserCredentialSearchField(
+            title: "Search Passwords", text: $query, accessibilityIdentifier: "preview-password-search"
+        )
+        .padding().frame(width: 360)
+    }
+#endif

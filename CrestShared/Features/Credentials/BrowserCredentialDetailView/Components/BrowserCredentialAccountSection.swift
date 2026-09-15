@@ -23,3 +23,12 @@ struct BrowserCredentialAccountSection: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        Form {
+            BrowserCredentialAccountSection(
+                descriptor: BrowserCredentialDetailPreviewFixture.descriptor, spaceName: "Design")
+        }.crestSettingsForm().frame(width: 420, height: 300)
+    }
+#endif

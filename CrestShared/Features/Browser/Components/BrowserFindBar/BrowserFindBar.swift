@@ -138,3 +138,22 @@ struct BrowserFindBar: View {
         let isPageActive: Bool
     }
 }
+
+#if DEBUG
+    #Preview("Interactive find field") {
+        @Previewable @State var query = "Crest"
+        @Previewable @State var match: BrowserFindMatchState = .found
+        BrowserFindBar(
+            port: BrowserFindPort(
+                find: { text, _ in
+                    query = text
+                    match = text.isEmpty ? .idle : .found
+                }, query: { query }, matchState: { match }, focusRequest: { 0 },
+                dismiss: {
+                    query = ""
+                    match = .idle
+                }),
+            capabilities: BrowserInteractionCapabilities(), isPageActive: true
+        ).padding().frame(width: 480)
+    }
+#endif

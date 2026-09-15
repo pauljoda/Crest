@@ -24,3 +24,13 @@ struct BrowserSpaceGradientField: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Gradient angle") {
+        @Previewable @State var angle = 45.0
+        VStack {
+            BrowserSpaceGradientField(colors: [.indigo, .cyan, .orange], angle: angle).frame(height: 280)
+            Slider(value: $angle, in: 0...360)
+        }.padding().frame(width: 360)
+    }
+#endif

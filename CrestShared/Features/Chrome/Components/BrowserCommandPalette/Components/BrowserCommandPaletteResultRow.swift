@@ -43,3 +43,13 @@ struct BrowserCommandPaletteResultRow: View {
         .browserCommandPaletteHoverSelection(model: model, index: item.index)
     }
 }
+
+#if DEBUG
+    #Preview("Tab and command results") {
+        let model = BrowserCommandPalettePreviewFixture.model(query: "swift")
+        VStack(spacing: 4) {
+            BrowserCommandPaletteResultRow(model: model, item: BrowserCommandPalettePreviewFixture.tabItem)
+            BrowserCommandPaletteResultRow(model: model, item: BrowserCommandPalettePreviewFixture.commandItem)
+        }.padding().frame(width: 600)
+    }
+#endif

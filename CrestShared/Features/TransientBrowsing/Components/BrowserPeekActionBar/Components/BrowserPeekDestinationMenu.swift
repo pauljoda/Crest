@@ -39,3 +39,12 @@ struct BrowserPeekDestinationMenu: View {
         .help("Open in another Space")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserPeekDestinationMenu(
+            spaces: BrowserSession.preview.spaces, selectedSpace: BrowserSession.preview.spaces[0],
+            openInSpace: { _ in }
+        ).padding()
+    }
+#endif

@@ -20,3 +20,10 @@ struct BrowserPlatformEmojiEntryField: View {
         BrowserNativeEmojiPickerButton { isFocused = true }
     }
 }
+
+#if DEBUG
+    #Preview("Enter an emoji") {
+        @Previewable @State var text = "🌊"
+        BrowserPlatformEmojiEntryField(text: $text, commit: {}).padding().frame(width: 320)
+    }
+#endif

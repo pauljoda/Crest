@@ -32,3 +32,14 @@ struct CrestFormRowLabel: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+#if DEBUG
+    #Preview("With and without subtitle") {
+        VStack(alignment: .leading, spacing: 20) {
+            CrestFormRowLabel(title: "Default Space", systemImage: "square.grid.2x2")
+            CrestFormRowLabel(
+                title: "Content Blocking", subtitle: "Choose which blocklists this Space loads",
+                systemImage: "shield.lefthalf.filled", tint: .green)
+        }.padding().frame(width: 360)
+    }
+#endif

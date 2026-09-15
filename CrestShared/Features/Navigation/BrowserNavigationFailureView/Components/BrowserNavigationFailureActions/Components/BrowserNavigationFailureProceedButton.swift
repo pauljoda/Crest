@@ -12,3 +12,9 @@ struct BrowserNavigationFailureProceedButton: View {
             )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserNavigationFailureProceedButton(action: {}).padding()
+    }
+#endif

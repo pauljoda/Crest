@@ -13,32 +13,14 @@ struct BrowserSidebarTabLabel: View {
     var titleOpacity = 1.0
     var iconOffset: CGFloat = 0
     var sidePanelSpaceID: SpaceID?
-    @Environment(\.browserInteractionCapabilities) private var capabilities
     @AppStorage(BrowserSidebarDensityPreference.scaleKey, store: BrowserSidebarDensityPreference.defaults) private
         var textScale = 1.0
 
     var body: some View {
-        Label {
-            Text(tab.displayTitle)
-                .modifier(BrowserSidebarDensityFont(scale: textScale, supportsTouch: capabilities.supportsTouch))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .browserTabResidency(isLoaded: isLoaded)
-                .opacity(titleOpacity)
-        } icon: {
-            HStack(spacing: 3) {
-                BrowserSidebarTabFavicon(
-                    tab: tab, profileID: profileID, metrics: metrics,
-                    isProminent: isSelected, isLoaded: isLoaded, sidePanelSpaceID: sidePanelSpaceID)
-                if tab.placement == .saved, tab.isAwayFromSavedLocation, let restoreSavedLocation {
-                    BrowserTabSavedLocationIndicator(restore: restoreSavedLocation)
-                        .browserTabResidency(isLoaded: isLoaded)
-                }
-            }
-            .offset(x: iconOffset)
-        }
-        .padding(.leading, leadingInset)
-        .frame(maxWidth: .infinity, maxHeight: metrics.fillsRowHeight ? .infinity : nil, alignment: .leading)
-        .contentShape(.rect)
+        BrowserSidebarTabLabelContent(
+            tab: tab, profileID: profileID, isSelected: isSelected, isLoaded: isLoaded,
+            metrics: metrics, leadingInset: leadingInset, restoreSavedLocation: restoreSavedLocation,
+            titleOpacity: titleOpacity, iconOffset: iconOffset, sidePanelSpaceID: sidePanelSpaceID, textScale: textScale
+        )
     }
 }

@@ -12,3 +12,10 @@ struct MobileSpaceCustomizationPreview: View {
             .accessibilityIdentifier("mobile-space-customization-preview")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileSpaceCustomizationPreview(space: MobileOnboardingPreviewFixtures.tutorialWorkSpace, wide: false).frame(
+            width: 390, height: 480)
+    }
+#endif

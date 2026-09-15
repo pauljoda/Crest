@@ -18,3 +18,9 @@ struct BrowserExtensionEmptyState: View {
         .padding(.vertical, CrestSpacing.small)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserExtensionEmptyState().padding().frame(width: 380, height: 260)
+    }
+#endif

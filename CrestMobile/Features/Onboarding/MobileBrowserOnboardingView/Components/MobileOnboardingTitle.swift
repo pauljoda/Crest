@@ -18,3 +18,11 @@ struct MobileOnboardingTitle: View {
         .frame(maxWidth: MobileOnboardingLayout.titleMaximumWidth)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingTitle(
+            title: "A Space for everything", detail: "Keep work, personal browsing, and projects organized."
+        ).padding().frame(width: 360)
+    }
+#endif

@@ -54,3 +54,9 @@ struct BrowserURLCompletionSuffix: View {
             .fixedSize(horizontal: true, vertical: false)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserURLCompletionSuffix(text: "browser.com", font: .title2).padding()
+    }
+#endif

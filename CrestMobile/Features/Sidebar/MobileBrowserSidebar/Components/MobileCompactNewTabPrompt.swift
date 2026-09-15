@@ -38,3 +38,14 @@ struct MobileCompactNewTabPrompt: View {
         .accessibilityIdentifier("new-tab-prompt")
     }
 }
+
+#if DEBUG
+    #Preview("New tab prompt") {
+        @Previewable @Namespace var namespace
+        MobileCompactNewTabPrompt(
+            namespace: namespace, geometryID: BrowserSession.preview.selectedSpaceID, transitionEnded: { _ in },
+            openNewTab: {}
+        )
+        .padding().frame(width: 340)
+    }
+#endif

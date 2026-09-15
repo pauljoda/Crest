@@ -19,3 +19,12 @@ struct MobileSpacePrivateBrowsingButton: View {
         .accessibilityIdentifier("private-browsing-toggle")
     }
 }
+
+#if DEBUG
+    #Preview("Toggle private appearance") {
+        @Previewable @State var isPrivate = false
+        MobileSpacePrivateBrowsingButton(
+            isPrivateBrowsing: isPrivate, accentColor: .indigo, action: { isPrivate.toggle() }
+        ).padding()
+    }
+#endif

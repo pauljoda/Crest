@@ -42,3 +42,10 @@ struct BrowserNativeEmojiPickerButton: View {
         .accessibilityHint("Inserts any emoji through the system text input experience.")
     }
 }
+
+#if DEBUG
+    #Preview("Search icons") {
+        @Previewable @State var query = ""
+        BrowserIconSearchField(mode: .emoji, query: $query, commitEmoji: {}).padding().frame(width: 340)
+    }
+#endif

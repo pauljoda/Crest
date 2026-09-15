@@ -57,3 +57,10 @@ struct CrestSpaceAddChipSurface<LabelContent: View>: View {
             .onHover { isHovering = $0 && isEnabled }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        CrestSpaceAddChipSurface(tint: .indigo, isPressed: false, label: Label("New Space", systemImage: "plus"))
+            .padding()
+    }
+#endif

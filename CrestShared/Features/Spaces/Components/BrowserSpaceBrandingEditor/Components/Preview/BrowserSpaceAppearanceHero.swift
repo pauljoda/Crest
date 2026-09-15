@@ -87,3 +87,14 @@ struct BrowserSpaceAppearanceHero: View {
         .accessibilityLabel("Live sidebar preview for \(preview.name)")
     }
 }
+
+#if DEBUG
+    #Preview("Editable Space identity") {
+        @Previewable @State var name = "Work"
+        BrowserSpaceAppearanceHero(
+            branding: BrowserSpaceBrandingPreviewFixture.crestBranding, symbol: "crown.fill", name: name,
+            editableName: $name, showsNameHint: true
+        )
+        .frame(width: 420, height: 440)
+    }
+#endif

@@ -35,3 +35,13 @@ struct BrowserQuickWindowDestinationPickerButton: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Destination picker") {
+        @Previewable @State var presented = false
+        BrowserQuickWindowDestinationPickerButton(
+            spaces: BrowserSession.preview.spaces, selectedSpaceID: BrowserSession.preview.selectedSpaceID,
+            isPresented: $presented, promote: { _ in }
+        ).padding()
+    }
+#endif

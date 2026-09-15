@@ -33,3 +33,9 @@ struct BrowserSettingsCompactPageIdentity: View {
         .accessibilityIdentifier("settings-page-header")
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSettingsCompactPageIdentity(destination: .privacy).padding()
+    }
+#endif

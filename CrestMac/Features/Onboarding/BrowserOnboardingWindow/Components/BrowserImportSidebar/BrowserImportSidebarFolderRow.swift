@@ -21,3 +21,10 @@ struct BrowserImportSidebarFolderRow: View {
         .frame(height: 40)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserImportSidebarFolderRow(folder: BrowserFolder(title: "Research", symbol: "folder.fill")).padding().frame(
+            width: 300)
+    }
+#endif

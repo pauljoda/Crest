@@ -29,3 +29,9 @@ struct BrowserFolderMenuIcon: View {
         return Image(decorative: image, scale: displayScale)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserFolderMenuIcon(systemName: "folder.fill", color: .ocean).padding()
+    }
+#endif

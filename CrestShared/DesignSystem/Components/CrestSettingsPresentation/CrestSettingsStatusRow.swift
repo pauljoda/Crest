@@ -25,3 +25,13 @@ struct CrestSettingsStatusRow<Status: View>: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        Form {
+            CrestSettingsStatusRow("Sync") {
+                Label("Up to date", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            }
+        }.crestSettingsForm().frame(width: 400, height: 150)
+    }
+#endif

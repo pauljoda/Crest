@@ -92,3 +92,12 @@ struct BrowserSpaceBannerField: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Banner pattern") {
+        BrowserSpaceBannerField(
+            pattern: .diagonal, colors: [.indigo, .cyan, .orange], size: CGSize(width: 320, height: 400)
+        )
+        .frame(width: 320, height: 400)
+    }
+#endif

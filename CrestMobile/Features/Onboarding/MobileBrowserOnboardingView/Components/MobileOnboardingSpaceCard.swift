@@ -41,3 +41,14 @@ struct MobileOnboardingSpaceCard: View {
         .accessibilityElement(children: .contain)
     }
 }
+
+#if DEBUG
+    #Preview("Editable Space card") {
+        @Previewable @State var name = "Work"
+        MobileOnboardingSpaceCard(
+            previewSpace: MobileOnboardingPreviewFixtures.tutorialWorkSpace, name: $name, canRemove: true,
+            customize: {}, remove: {}
+        )
+        .padding().frame(width: 360, height: 620)
+    }
+#endif

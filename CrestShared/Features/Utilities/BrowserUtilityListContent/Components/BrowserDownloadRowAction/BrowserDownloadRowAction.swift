@@ -44,3 +44,16 @@ struct BrowserDownloadRowAction: View {
             )
     }
 }
+
+#if DEBUG
+    #Preview("Download actions") {
+        VStack {
+            BrowserDownloadRowAction(
+                item: BrowserUtilityListPreviewFixture.activeDownload, destinations: [], perform: { _ in })
+            BrowserDownloadRowAction(
+                item: BrowserUtilityListPreviewFixture.failedDownload, destinations: [], perform: { _ in })
+            BrowserDownloadRowAction(
+                item: BrowserUtilityListPreviewFixture.finishedDownload, destinations: [], perform: { _ in })
+        }.padding()
+    }
+#endif

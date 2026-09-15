@@ -14,3 +14,9 @@ struct BrowserCredentialCopyConfirmation: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCredentialCopyConfirmation(isPresented: true).padding()
+    }
+#endif

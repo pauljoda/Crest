@@ -26,3 +26,13 @@ struct BrowserSidebarAddressClearButton: View {
         .foregroundStyle(.tertiary)
     }
 }
+
+#if DEBUG
+    #Preview("Clear address") {
+        @Previewable @State var text = "crestbrowser.com"
+        HStack {
+            TextField("Address", text: $text)
+            BrowserSidebarAddressClearButton(text: $text)
+        }.padding().frame(width: 320)
+    }
+#endif

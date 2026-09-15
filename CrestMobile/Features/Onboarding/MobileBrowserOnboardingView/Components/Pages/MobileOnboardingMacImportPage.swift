@@ -58,3 +58,9 @@ struct MobileOnboardingMacImportPage: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingMacImportPage(close: {}, reviewFeatures: {}).frame(width: 390, height: 844)
+    }
+#endif

@@ -38,3 +38,11 @@ struct BrowserSpaceEditorIdentityPreview: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSpaceEditorIdentityPreview(
+            branding: BrowserSpaceBrandingPreviewFixture.crestBranding, symbol: "crown.fill"
+        ).padding()
+    }
+#endif

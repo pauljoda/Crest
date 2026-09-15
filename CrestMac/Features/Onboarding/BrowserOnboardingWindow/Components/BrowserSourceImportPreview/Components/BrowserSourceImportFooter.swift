@@ -24,3 +24,9 @@ struct BrowserSourceImportFooter: View {
         .background(.ultraThinMaterial)
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserSourceImportFooter().padding().frame(width: 360)
+    }
+#endif

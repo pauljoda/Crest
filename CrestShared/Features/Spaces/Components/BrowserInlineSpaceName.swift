@@ -111,3 +111,10 @@ struct BrowserInlineSpaceName: View {
         isEditing = false
     }
 }
+
+#if DEBUG
+    #Preview("Rename a Space") {
+        @Previewable @State var name = "Work"
+        BrowserInlineSpaceName(name: $name).padding().frame(width: 360)
+    }
+#endif

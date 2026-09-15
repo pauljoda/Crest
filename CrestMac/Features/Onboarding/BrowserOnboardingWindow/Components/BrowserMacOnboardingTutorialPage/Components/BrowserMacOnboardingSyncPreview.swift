@@ -38,3 +38,9 @@ struct BrowserMacOnboardingSyncPreview: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserMacOnboardingSyncPreview().frame(width: 500, height: 420)
+    }
+#endif

@@ -83,3 +83,11 @@ struct CrestSpaceChipRail: View {
         spaces.first { $0.id == selection }?.tint ?? CrestBrandTheme.accent
     }
 }
+
+#if DEBUG
+    #Preview("Select a Space") {
+        @Previewable @State var selection: SpaceID? = BrowserSession.preview.selectedSpaceID
+        CrestSpaceChipRail(spaces: CrestSpaceIdentity.list(BrowserSession.preview.spaces), selection: $selection)
+            .padding().frame(width: 360)
+    }
+#endif

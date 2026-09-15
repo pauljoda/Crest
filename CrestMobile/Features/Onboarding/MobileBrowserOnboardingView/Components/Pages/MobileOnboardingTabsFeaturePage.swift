@@ -59,3 +59,12 @@ struct MobileOnboardingTabsFeaturePage: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        MobileOnboardingTabsFeaturePage(
+            workSpace: MobileOnboardingPreviewFixtures.tutorialWorkSpace, secondaryTitle: "Back", secondaryAction: {},
+            primaryAction: {}
+        ).frame(width: 390, height: 844)
+    }
+#endif

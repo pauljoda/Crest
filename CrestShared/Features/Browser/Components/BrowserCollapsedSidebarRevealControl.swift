@@ -66,3 +66,10 @@ struct BrowserCollapsedSidebarRevealControl: View {
         showSidebar()
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserCollapsedSidebarRevealControl(capabilities: BrowserInteractionCapabilities(), showSidebar: {}).padding()
+            .frame(width: 160, height: 120)
+    }
+#endif

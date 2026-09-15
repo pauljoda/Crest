@@ -47,3 +47,9 @@ struct CrestStartPageMark: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        CrestStartPageMark().frame(width: 80, height: 80).padding()
+    }
+#endif

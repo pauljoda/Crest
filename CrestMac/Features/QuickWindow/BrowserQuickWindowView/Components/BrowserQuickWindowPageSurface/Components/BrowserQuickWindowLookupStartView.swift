@@ -11,3 +11,10 @@ struct BrowserQuickWindowLookupStartView: View {
             )
     }
 }
+
+#if DEBUG
+    #Preview("Component") {
+        BrowserQuickWindowLookupStartView(space: BrowserSpaceBrandingPreviewFixture.simpleSpace).frame(
+            width: 540, height: 360)
+    }
+#endif

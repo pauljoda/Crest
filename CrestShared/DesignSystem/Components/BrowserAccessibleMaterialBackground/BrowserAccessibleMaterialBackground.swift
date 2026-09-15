@@ -16,3 +16,10 @@ struct BrowserAccessibleMaterialBackground<BackgroundShape: Shape>: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Material surface") {
+        BrowserAccessibleMaterialBackground(material: .regular, shape: RoundedRectangle(cornerRadius: 20))
+            .frame(width: 300, height: 160).padding().background(.indigo.gradient)
+    }
+#endif

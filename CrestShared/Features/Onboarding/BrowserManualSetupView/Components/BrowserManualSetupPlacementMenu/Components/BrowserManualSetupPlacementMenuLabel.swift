@@ -32,3 +32,13 @@ struct BrowserManualSetupPlacementMenuLabel: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Tab placements") {
+        HStack(spacing: 24) {
+            BrowserManualSetupPlacementMenuLabel(placement: .pinned, symbol: "pin.fill")
+            BrowserManualSetupPlacementMenuLabel(placement: .saved, symbol: "bookmark.fill")
+            BrowserManualSetupPlacementMenuLabel(placement: .current, symbol: "globe")
+        }.padding()
+    }
+#endif
