@@ -6,42 +6,43 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.6</title>
-            <pubDate>Tue, 15 Sep 2026 01:33:29 +0000</pubDate>
+            <title>0.6.8</title>
+            <pubDate>Tue, 15 Sep 2026 14:58:59 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1103</sparkle:version>
-            <sparkle:shortVersionString>0.6.6</sparkle:shortVersionString>
+            <sparkle:version>1105</sparkle:version>
+            <sparkle:shortVersionString>0.6.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Improved
 
-- Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension
+- Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse
+- Check and repair macOS permissions in General settings, verify download folder access, and stop requesting passkey access during ordinary browsing
+- Reduce pauses during iCloud sync by avoiding repeated sorting work in large browsing histories
+- Choose which downloaded languages translate automatically and their destination languages in General settings
+- Gray out language mappings while automatic translation is off and restore their controls when it is enabled
 
 ### Fixed
 
-- Open Quick Window pages in an existing normal browser window instead of creating a duplicate
-- Keep password manager extensions connected while idle to avoid repeated pairing prompts
-- Request macOS passkey permission when you sign in on a website
-- Keep selected upload files accessible and explain blocked file access
-- Use the standard keyboard with a spacebar in the iPad command palette
-- Let the system handle passkey sign-in directly without an extra permission check
+- Translate automatically without pop-ups, turn off translation offers, and manage download and location permissions from site controls without saving accidental blocks
+- Keep the tab you select while Crest starts instead of returning to the Start Page when extensions finish loading
+- Keep dragging links into Peek available after following an in-page link
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/dec7187c890d6729bec1b62b9322761dfc315daa...db691fbc3472fd45b3b4fc5062c75abe381b151d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.6-2026-09-15-1103-r103.1/Installer-Crest-0.6.6-development-2026-09-15-db691fb-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/db691fbc3472fd45b3b4fc5062c75abe381b151d...69ea275c3b4020c24b543d5a8b0cc53611f35869) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.8-2026-09-15-1105-r105.1/Installer-Crest-0.6.8-development-2026-09-15-69ea275-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.6-2026-09-15-1103-r103.1/Installer-Crest-0.6.6-development-2026-09-15-db691fb-arm64.dmg" length="26822450" type="application/octet-stream" sparkle:edSignature="GtDRlF4Ysx6ZntvQjFv+cdHj69q66bwKBf2LmnMxSjWhJkgHu3/I4QNYdwoW9D7wjIXXD1C8/CaSaDTlDM1xAA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.8-2026-09-15-1105-r105.1/Installer-Crest-0.6.8-development-2026-09-15-69ea275-arm64.dmg" length="26911027" type="application/octet-stream" sparkle:edSignature="BcpE/AO7dZBb1mg6g4ItmC65g5Q9L40TUCekg5r960jfUqxAjJtWCMktHB8lGRvKr38NwcBVDCWF9VfTN0q3CA=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: QVyq1KZXDReZBPouGUyc4Ammkx796Lfzld05RCGWYQpJW60Wm71awauScRgweIJs0+YBv6vlHpVno4P2RbMjDg==
-length: 2544
+edSignature: qWiKdFiTaCLyKiyayZqNcoMXcgxTdVk2EyIiAGOpnNKRlH2ALTiZhvu3UMqIVYlc+34gswa6kTW1aBr0nodfBw==
+length: 2893
 -->
