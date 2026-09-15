@@ -4,6 +4,15 @@ import XCTest
 
 @MainActor
 final class BrowserSystemPermissionTests: XCTestCase {
+    func testPasskeyStatusReadsDoNotBlockTheMainThread() async {
+        let service = BrowserSystemPermissionService {
+            XCTAssertFalse(Thread.isMainThread, "Passkey status can wait synchronously for a system process.")
+            return .authorized
+        }
+        let status = await service.status(for: .passkeys, spaceID: nil)
+        XCTAssertEqual(status.state, .allowed)
+    }
+
     func testFailedRequestRestoresActionWithoutInventingPermissionDecision() async {
         let service = TestSystemPermissionService()
         service.requestError = NSError(domain: "test", code: 1)

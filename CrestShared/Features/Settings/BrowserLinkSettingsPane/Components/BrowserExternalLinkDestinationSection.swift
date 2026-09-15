@@ -6,7 +6,7 @@ struct BrowserExternalLinkDestinationSection: View {
     let spaces: [BrowserSpace]
 
     var body: some View {
-        Section("Links from other apps") {
+        Section("Links from other apps", systemImage: "link") {
             Picker("Open in", selection: $destination) {
                 ForEach(BrowserExternalLinkDestination.allCases) { destination in
                     Text(destination.title).tag(destination)

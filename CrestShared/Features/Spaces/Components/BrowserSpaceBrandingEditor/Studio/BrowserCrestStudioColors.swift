@@ -17,7 +17,10 @@ struct BrowserCrestStudioColors: View {
     }
 
     var body: some View {
-        BrowserCrestStudioGroup(title: "Crest colors", preview: context.compact ? context.value : nil, symbol: symbol) {
+        BrowserCrestStudioGroup(
+            title: "Crest colors", systemImage: "paintpalette", preview: context.compact ? context.value : nil,
+            symbol: symbol
+        ) {
             let palette = context.crest(\.palette)
             CrestSettingRow("Follow Space colors", setting: palette.resettable("Crest colors")) {
                 Toggle("Follow Space colors", isOn: followsSpace).labelsHidden()
@@ -111,7 +114,7 @@ struct BrowserCrestStudioBackground: View {
     let context: BrowserCrestStudioContext
     let symbol: String
     var body: some View {
-        BrowserCrestStudioGroup(title: "Space background") {
+        BrowserCrestStudioGroup(title: "Space background", systemImage: "rectangle.inset.filled") {
             if context.compact {
                 BrowserCrestStudioPreview(branding: context.value, symbol: symbol, compact: true)
             }

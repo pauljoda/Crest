@@ -15,7 +15,7 @@ struct BrowserSpaceAccessPolicySection: View {
     @State private var isUpdating = false
 
     var body: some View {
-        Section("Private Space") {
+        Section("Private Space", systemImage: "lock.shield") {
             Toggle(
                 "Require device authentication to view this Space",
                 isOn: requiresAuthentication

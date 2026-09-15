@@ -5,7 +5,7 @@ struct BrowserPictureInPictureSettingsSection: View {
     private var automaticallyEntersPictureInPicture = true
 
     var body: some View {
-        Section("Video") {
+        Section("Video", systemImage: "pip") {
             Toggle("Automatically enter Picture in Picture", isOn: $automaticallyEntersPictureInPicture)
                 .accessibilityIdentifier("automatic-picture-in-picture-toggle")
             CrestFormFootnote(

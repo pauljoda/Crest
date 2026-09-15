@@ -21,28 +21,10 @@ struct BrowserAboutSettingsPane: View {
     var body: some View {
         BrowserSettingsPane(.about) {
             Section {
-                VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-                    Text(ProductIdentity.name)
-                        .font(.title2.weight(.semibold))
-                    Text("An open source browser for Mac, iPhone, and iPad.")
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityElement(children: .combine)
-
-                CrestSettingsStatusRow("Version") {
-                    Text(buildInformation.version)
-                        .textSelection(.enabled)
-                }
-                CrestSettingsStatusRow("Build") {
-                    Text(buildInformation.build)
-                        .textSelection(.enabled)
-                }
-                CrestSettingsStatusRow("Bundle identifier") {
-                    Text(buildInformation.bundleIdentifier)
-                        .textSelection(.enabled)
-                }
+                appIdentity
             }
+
+            BrowserPlatformSoftwareUpdateSettingsSection()
 
             if !releaseNotes.isEmpty {
                 Section {
@@ -68,7 +50,7 @@ struct BrowserAboutSettingsPane: View {
                 }
             }
 
-            Section("Community & support") {
+            Section("Community & support", systemImage: "bubble.left.and.bubble.right") {
                 BrowserAboutLink(
                     title: "Share Feedback on r/CrestBrowser",
                     subtitle: "Ask questions, compare experiences, and discuss ideas",
@@ -96,9 +78,48 @@ struct BrowserAboutSettingsPane: View {
                 )
             }
 
-            BrowserPlatformSoftwareUpdateSettingsSection()
         }
     }
+
+    private var appIdentity: some View {
+        HStack(alignment: .top, spacing: 20) {
+            BrowserPlatformCurrentAppIcon()
+                .frame(width: 80, height: 80)
+                .clipShape(.rect(cornerRadius: 18))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(ProductIdentity.name)
+                        .font(CrestTypography.display(32, relativeTo: .title))
+                        .accessibilityAddTraits(.isHeader)
+                    Text("An open source browser for Mac, iPhone, and iPad.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text("Version \(buildInformation.version)")
+                    .font(.caption.monospacedDigit())
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.primary.opacity(0.045), in: .capsule)
+
+                Text("Build \(buildInformation.build) · \(buildInformation.bundleIdentifier)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel(
+                        Text("Build \(buildInformation.build), bundle identifier: \(buildInformation.bundleIdentifier)")
+                    )
+            }
+        }
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
 }
 
 private struct BrowserAboutWhatsNewDisclosureStyle: DisclosureGroupStyle {

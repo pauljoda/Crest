@@ -36,7 +36,9 @@ struct BrowserCrestStudioEmblem: View {
     }
 
     var body: some View {
-        BrowserCrestStudioGroup(title: "Emblem", preview: context.compact ? context.value : nil, symbol: symbol) {
+        BrowserCrestStudioGroup(
+            title: "Emblem", systemImage: "seal", preview: context.compact ? context.value : nil, symbol: symbol
+        ) {
             let value = context.crest(\.charge)
             CrestSettingRow("Source", setting: value.resettable("Emblem")) {
                 Picker("Emblem source", selection: $source) {

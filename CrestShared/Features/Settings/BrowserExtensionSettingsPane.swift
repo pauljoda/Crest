@@ -22,7 +22,7 @@ struct BrowserExtensionSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.extensions) {
-            Section("Space") {
+            Section("Space", systemImage: "square.grid.2x2") {
                 CrestSpaceMenuPicker(
                     "Manage extensions for",
                     selection: selectedSpaceBinding,

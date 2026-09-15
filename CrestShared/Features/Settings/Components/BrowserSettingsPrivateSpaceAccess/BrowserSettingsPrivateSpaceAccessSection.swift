@@ -6,7 +6,7 @@ struct BrowserSettingsPrivateSpaceAccessSection: View {
     var detail = "Unlock this Space to view or change its private settings."
 
     var body: some View {
-        Section("Private Space") {
+        Section("Private Space", systemImage: "lock.shield") {
             Text(detail)
                 .crestFormFootnote()
 

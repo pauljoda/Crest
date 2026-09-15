@@ -6,7 +6,7 @@ struct BrowserCrestStudioComposition: View {
     private var preview: BrowserSpaceBranding? { context.compact ? context.value : nil }
 
     var body: some View {
-        BrowserCrestStudioGroup(title: "Shape", preview: preview, symbol: symbol) {
+        BrowserCrestStudioGroup(title: "Shape", systemImage: "shield", preview: preview, symbol: symbol) {
             gallery("Plate", \.backplate, BrowserSpaceCrestBackplate.allCases)
             if context.value.crest.backplate == .seal {
                 context.count("Teeth", \.sealTeeth, range: 6...24)
@@ -15,7 +15,7 @@ struct BrowserCrestStudioComposition: View {
             BrowserCrestStudioColorRow(context: context, title: "Edge & outline", path: \.edgeColorIndex)
             context.slider("Plate size", \.plateScale, range: BrowserSpaceCrest.plateScaleRange)
         }
-        BrowserCrestStudioGroup(title: "Field", preview: preview, symbol: symbol) {
+        BrowserCrestStudioGroup(title: "Field", systemImage: "square.grid.2x2", preview: preview, symbol: symbol) {
             gallery("Division", \.fieldDivision, BrowserSpaceCrestFieldDivision.allCases)
             BrowserCrestStudioColorRow(context: context, title: "Field color", path: \.backplateColorIndex)
             if context.value.crest.fieldDivision != .plain {
@@ -44,7 +44,9 @@ struct BrowserCrestStudioOrnaments: View {
     private var preview: BrowserSpaceBranding? { context.compact ? context.value : nil }
 
     var body: some View {
-        BrowserCrestStudioGroup(title: "Band", preview: preview, symbol: symbol) {
+        BrowserCrestStudioGroup(
+            title: "Band", systemImage: "rectangle.center.inset.filled", preview: preview, symbol: symbol
+        ) {
             BrowserCrestStudioGallery(
                 context: context, title: "Design", path: \.ordinary, options: BrowserSpaceCrestOrdinary.allCases)
             if context.value.crest.ordinary != .none {
@@ -52,7 +54,7 @@ struct BrowserCrestStudioOrnaments: View {
                 context.slider("Width", \.ordinaryWidth, range: BrowserSpaceCrest.ordinaryWidthRange)
             }
         }
-        BrowserCrestStudioGroup(title: "Border", preview: preview, symbol: symbol) {
+        BrowserCrestStudioGroup(title: "Border", systemImage: "square.dashed", preview: preview, symbol: symbol) {
             BrowserCrestStudioGallery(
                 context: context, title: "Design", path: \.trim, options: BrowserSpaceCrestTrim.allCases)
             if context.value.crest.trim != .none {
@@ -63,7 +65,7 @@ struct BrowserCrestStudioOrnaments: View {
                 context.count("Details", \.trimDetail, range: BrowserSpaceCrest.trimDetailRange)
             }
         }
-        BrowserCrestStudioGroup(title: "Depth", preview: preview, symbol: symbol) {
+        BrowserCrestStudioGroup(title: "Depth", systemImage: "square.3.layers.3d", preview: preview, symbol: symbol) {
             context.picker("Shadow", \.depth, options: BrowserSpaceCrestDepth.allCases)
             let outline = context.crest(\.showsOutline)
             CrestSettingRow("Outline", setting: outline.resettable("Outline")) {

@@ -10,7 +10,7 @@ struct BrowserSpaceDeletionSection: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        Section("Delete Space") {
+        Section("Delete Space", systemImage: "trash") {
             Button(
                 isDeleting ? "Deleting Space…" : "Delete \(spaceName)…",
                 systemImage: "trash",

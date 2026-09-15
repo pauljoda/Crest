@@ -20,6 +20,7 @@ struct BrowserFolderAppearanceGroup: View {
     var body: some View {
         CrestSettingsGroup(
             "Folders",
+            systemImage: "folder",
             settings: settings,
             footnote: "Adjust folder color intensity and Space text color in each Space's appearance."
         ) {

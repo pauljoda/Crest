@@ -4,7 +4,7 @@ struct BrowserPlatformSoftwareUpdateSettingsSection: View {
     @Environment(BrowserSoftwareUpdateService.self) private var softwareUpdates
 
     var body: some View {
-        Section("Software updates") {
+        Section("Software updates", systemImage: "arrow.triangle.2.circlepath") {
             Toggle(
                 "Check for updates automatically",
                 isOn: Binding(

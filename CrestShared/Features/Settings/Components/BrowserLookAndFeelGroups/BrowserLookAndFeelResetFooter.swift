@@ -27,6 +27,8 @@ struct BrowserLookAndFeelResetFooter: View {
             } message: {
                 Text("Window, tab, address field, folder, and app icon choices return to their defaults.")
             }
+        } header: {
+            CrestSettingsSectionHeading(title: "Defaults", systemImage: "arrow.counterclockwise")
         }
     }
 

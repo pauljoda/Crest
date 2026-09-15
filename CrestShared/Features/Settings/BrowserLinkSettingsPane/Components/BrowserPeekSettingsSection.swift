@@ -5,7 +5,7 @@ struct BrowserPeekSettingsSection: View {
     @Binding var clickModifier: BrowserLinkClickModifier
 
     var body: some View {
-        Section("Peek") {
+        Section("Peek", systemImage: "rectangle.on.rectangle") {
             Toggle(
                 "Open cross-site links from pinned and saved tabs in Peek",
                 isOn: $automaticallyOpensPeek

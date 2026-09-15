@@ -46,7 +46,7 @@ struct BrowserSearchEngineEditor: View {
                     .focused($focusedField, equals: .searchURL)
                     .accessibilityIdentifier("custom-search-provider-url")
             } header: {
-                Text("Search Engine")
+                CrestSettingsSectionHeading(title: "Search Engine", systemImage: "magnifyingglass")
             } footer: {
                 Text(
                     "Use exactly one %s or {searchTerms} where the encoded search should appear. HTTPS is required."
@@ -59,7 +59,7 @@ struct BrowserSearchEngineEditor: View {
                     .focused($focusedField, equals: .suggestionURL)
                     .accessibilityIdentifier("custom-search-suggestion-url")
             } header: {
-                Text("Suggestions (Optional)")
+                CrestSettingsSectionHeading(title: "Suggestions (Optional)", systemImage: "text.bubble")
             } footer: {
                 Text(
                     "The endpoint must return an OpenSearch JSON array. Leave this blank when the engine does not offer suggestions."

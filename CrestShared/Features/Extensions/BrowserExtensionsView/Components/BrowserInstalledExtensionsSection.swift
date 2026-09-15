@@ -5,7 +5,7 @@ struct BrowserInstalledExtensionsSection: View {
     let platformActions: BrowserExtensionPlatformActions
 
     var body: some View {
-        Section("Installed in this Space") {
+        Section("Installed in this Space", systemImage: "puzzlepiece.extension") {
             SpaceExtensionScopeBanner(space: model.space)
 
             if model.extensions.isEmpty {

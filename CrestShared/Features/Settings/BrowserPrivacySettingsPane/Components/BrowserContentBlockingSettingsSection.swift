@@ -5,7 +5,7 @@ struct BrowserContentBlockingSettingsSection: View {
     let errorDescription: String?
 
     var body: some View {
-        Section("Content blocking") {
+        Section("Content blocking", systemImage: "hand.raised.slash") {
             Toggle("Block known ads and trackers", isOn: isEnabled)
                 .accessibilityIdentifier("content-blocking-enabled")
 

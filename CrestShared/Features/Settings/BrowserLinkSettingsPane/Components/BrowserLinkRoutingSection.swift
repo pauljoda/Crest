@@ -34,7 +34,7 @@ struct BrowserLinkRoutingSection: View {
             }
             .buttonStyle(.bordered)
         } header: {
-            Text("Routing")
+            CrestSettingsSectionHeading(title: "Routing", systemImage: "arrow.triangle.branch")
         } footer: {
             Text("The first matching route wins. Other links use your default destination.")
         }

@@ -6,7 +6,7 @@ struct MobileSpaceCustomizationSection: View {
     let editAppearance: () -> Void
 
     var body: some View {
-        Section("Appearance") {
+        Section("Appearance", systemImage: "paintpalette") {
             Button(action: editAppearance) {
                 HStack(spacing: 16) {
                     BrowserSpaceIdentityIcon(space: browser.liveSpace(space), size: 44)

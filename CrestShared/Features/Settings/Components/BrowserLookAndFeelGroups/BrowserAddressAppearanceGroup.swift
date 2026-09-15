@@ -8,7 +8,7 @@ struct BrowserAddressAppearanceGroup: View {
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
     var body: some View {
-        CrestSettingsGroup("Address field", settings: settings) {
+        CrestSettingsGroup("Address field", systemImage: "magnifyingglass", settings: settings) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .addressField)
             }

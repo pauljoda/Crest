@@ -6,7 +6,7 @@ struct BrowserSavedSitePermissionSection: View {
     let resetAll: () -> Void
 
     var body: some View {
-        Section("Saved decisions") {
+        Section("Saved decisions", systemImage: "checkmark.shield") {
             if records.isEmpty {
                 ContentUnavailableView(
                     "No Saved Permissions",

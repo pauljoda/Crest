@@ -20,6 +20,7 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     var body: some View {
         CrestSettingsGroup(
             "Window",
+            systemImage: "macwindow",
             settings: settings,
             footnote: "Borderless lets pages reach the window's edges."
         ) {

@@ -2,7 +2,7 @@ import AuthenticationServices
 
 @MainActor
 enum BrowserPasskeyAuthorizationSystem {
-    static func deviceConfiguration() -> BrowserPasskeyDeviceConfiguration {
+    nonisolated static func deviceConfiguration() -> BrowserPasskeyDeviceConfiguration {
         if #available(macOS 26.2, iOS 26.2, *) {
             return ASAuthorizationWebBrowserPublicKeyCredentialManager
                 .isDeviceConfiguredForPasskeys ? .configured : .notConfigured
@@ -10,7 +10,7 @@ enum BrowserPasskeyAuthorizationSystem {
         return .unknown
     }
 
-    static func authorizationState() -> BrowserPasskeyAuthorizationState {
+    nonisolated static func authorizationState() -> BrowserPasskeyAuthorizationState {
         BrowserPasskeyAuthorizationState(
             ASAuthorizationWebBrowserPublicKeyCredentialManager()
                 .authorizationStateForPlatformCredentials

@@ -87,14 +87,15 @@ struct BrowserCrestStudioSlider: View {
 /// Small cards keep one scroll owner in Settings and in onboarding.
 struct BrowserCrestStudioGroup<Content: View>: View {
     let title: LocalizedStringKey
+    let systemImage: String
     var preview: BrowserSpaceBranding? = nil
     var symbol: String = "sparkles"
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(title).font(.headline)
+                CrestSettingsSectionHeading(title: title, systemImage: systemImage)
                 Spacer()
                 if let preview {
                     BrowserCrestStudioMark(branding: preview, symbol: symbol, size: 56)
@@ -104,12 +105,17 @@ struct BrowserCrestStudioGroup<Content: View>: View {
                         .accessibilityHidden(true)
                 }
             }
-            content
+            .crestSettingsCardHeader()
+            VStack(alignment: .leading, spacing: 16) { content }
+                .padding(20)
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.primary.opacity(0.035), in: .rect(cornerRadius: 16))
-        .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(.primary.opacity(0.055)) }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(.primary.opacity(0.055))
+                .allowsHitTesting(false)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(title))
     }

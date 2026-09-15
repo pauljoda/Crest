@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserSyncContentScopeSection: View {
     var body: some View {
-        Section("What Syncs") {
+        Section("What Syncs", systemImage: "checklist") {
             SyncSettingsFactRow(
                 title: "Spaces and browser content",
                 detail:

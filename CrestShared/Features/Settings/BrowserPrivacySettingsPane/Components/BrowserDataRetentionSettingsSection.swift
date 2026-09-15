@@ -8,7 +8,7 @@ struct BrowserDataRetentionSettingsSection: View {
     @State private var pendingChange: BrowserDataRetentionChange?
 
     var body: some View {
-        Section("Data retention") {
+        Section("Data retention", systemImage: "clock.arrow.circlepath") {
             ForEach(BrowserDataRetentionCategory.allCases) { category in
                 LabeledContent(category.title) {
                     Picker(category.title, selection: binding(for: category)) {

@@ -23,7 +23,7 @@ struct BrowserGeneralSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.general) {
-            Section("Startup") {
+            Section("Startup", systemImage: "power") {
                 #if os(macOS)
                     Picker("When Crest opens", selection: startupBehavior) {
                         ForEach(BrowserStartupBehavior.allCases) { behavior in
@@ -50,7 +50,7 @@ struct BrowserGeneralSettingsPane: View {
 
             #if os(macOS)
                 BrowserSplitFocusSettingsSection()
-                Section("Link dragging") {
+                Section("Link dragging", systemImage: "cursorarrow.motionlines") {
                     Toggle("Drag links to Peek", isOn: $linkPreferences.dragsLinksToPeek)
                         .accessibilityIdentifier("drag-links-to-peek-toggle")
                     CrestFormFootnote(
@@ -67,7 +67,7 @@ struct BrowserGeneralSettingsPane: View {
                 BrowserSpellCheckingSettingsSection()
             #endif
 
-            Section("Default browser") {
+            Section("Default browser", systemImage: "globe") {
                 HStack(spacing: 12) {
                     defaultBrowserStatus
                     Spacer(minLength: 8)
@@ -198,7 +198,7 @@ struct BrowserNewTabSettingsSection: View {
     @Bindable var preferences: BrowserLinkPreferenceStore
 
     var body: some View {
-        Section("Tabs") {
+        Section("Tabs", systemImage: "square.stack") {
             Toggle(
                 "Focus new tabs opened from links",
                 isOn: $preferences.focusesNewTabsOpenedFromLinks
@@ -232,7 +232,7 @@ struct BrowserNewTabSettingsSection: View {
             BrowserMacWebTextAssistancePolicy.defaultIsSpellCheckingEnabled
 
         var body: some View {
-            Section("Typing") {
+            Section("Typing", systemImage: "keyboard") {
                 Toggle(
                     "Check spelling on webpages",
                     isOn: $isEnabled

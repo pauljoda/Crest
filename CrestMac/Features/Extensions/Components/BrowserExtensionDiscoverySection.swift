@@ -131,7 +131,7 @@ struct BrowserExtensionDiscoverySection: View {
                 )
             }
         } header: {
-            Text("Find Extensions")
+            CrestSettingsSectionHeading(title: "Find Extensions", systemImage: "puzzlepiece.extension")
         } footer: {
             Text(
                 "Safari-created extensions are copied into this Space and reviewed with fresh Crest permissions. Safari content blockers and legacy Safari App Extensions can’t be hosted by another browser."

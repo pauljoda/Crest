@@ -15,7 +15,7 @@ struct BrowserDurableTabSettingsSection: View {
                 "Choose where pinned and saved tabs open after you close them. Switching Spaces or unloading inactive pages keeps your last location."
             )
         } header: {
-            Text("Pinned and saved tabs")
+            CrestSettingsSectionHeading(title: "Pinned and saved tabs", systemImage: "pin")
         }
     }
 }

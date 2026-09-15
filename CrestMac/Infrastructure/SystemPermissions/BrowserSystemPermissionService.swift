@@ -7,11 +7,19 @@ import UserNotifications
 final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
     private let location = BrowserGeolocationSystemService()
     private let folderAccess = BrowserSystemFolderAccess()
+    private let readPasskeyStatus: @Sendable () -> BrowserPasskeyAccessStatus
+
+    init(
+        readPasskeyStatus: @escaping @Sendable () -> BrowserPasskeyAccessStatus = BrowserSystemPermissionService
+            .passkeyStatus
+    ) {
+        self.readPasskeyStatus = readPasskeyStatus
+    }
 
     func status(for permission: BrowserSystemPermission, spaceID: SpaceID?) async -> BrowserSystemPermissionStatus {
         switch permission {
-        case .camera: return captureStatus(.video)
-        case .microphone: return captureStatus(.audio)
+        case .camera: return await captureStatus(.video)
+        case .microphone: return await captureStatus(.audio)
         case .location:
             let enabled = await Task.detached { CLLocationManager.locationServicesEnabled() }.value
             guard enabled else {
@@ -39,10 +47,12 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
             @unknown default: return .init(state: .unavailable)
             }
         case .passkeys:
-            let access = BrowserPasskeyAccessController.shared
-            access.refreshStatus()
+            let readPasskeyStatus = readPasskeyStatus
+            // These read-only APIs can wait for synchronous system IPC.
+            // Keep that wait away from the UI while General settings opens.
+            let status = await Task.detached(priority: .userInitiated) { readPasskeyStatus() }.value
             let state: BrowserSystemPermissionState
-            switch access.status {
+            switch status {
             case .checking: state = .checking
             case .notDetermined: state = .notRequested
             case .authorized: state = .allowed
@@ -50,9 +60,9 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
             case .managedCapabilityRequired: state = .unavailable
             }
             let detail: String?
-            switch access.status {
+            switch status {
             case .authorized, .checking, .notDetermined: detail = nil
-            case .denied: detail = access.status.detail
+            case .denied: detail = status.detail
             case .deviceNotConfigured:
                 detail = String(localized: "Finish setting up passkeys in System Settings, then check again.")
             case .managedCapabilityRequired:
@@ -110,8 +120,20 @@ final class BrowserSystemPermissionService: BrowserSystemPermissionServicing {
         return NSWorkspace.shared.open(url)
     }
 
-    private func captureStatus(_ type: AVMediaType) -> BrowserSystemPermissionStatus {
-        switch AVCaptureDevice.authorizationStatus(for: type) {
+    nonisolated private static func passkeyStatus() -> BrowserPasskeyAccessStatus {
+        guard BrowserPasskeyAccessSystem.hasManagedCapability() else { return .managedCapabilityRequired }
+        return BrowserPasskeyAccessPolicy.status(
+            hasManagedCapability: true,
+            deviceConfiguration: BrowserPasskeyAccessSystem.deviceConfiguration(),
+            authorizationState: BrowserPasskeyAccessSystem.authorizationState()
+        )
+    }
+
+    private func captureStatus(_ type: AVMediaType) async -> BrowserSystemPermissionStatus {
+        let status = await Task.detached(priority: .userInitiated) {
+            AVCaptureDevice.authorizationStatus(for: type)
+        }.value
+        return switch status {
         case .authorized: .init(state: .allowed)
         case .notDetermined: .init(state: .notRequested)
         case .denied: .init(state: .blocked)

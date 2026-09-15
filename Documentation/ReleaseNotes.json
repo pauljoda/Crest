@@ -1321,6 +1321,18 @@
     "keep-site-control-popover-text-readable": {
       "category": "fixed",
       "message": "Keep site controls and permission prompts readable in light-colored Spaces"
+    },
+    "look-and-feel-card-headers": {
+      "category": "improved",
+      "message": "Find settings and customize Spaces more easily with distinct card headers and icons"
+    },
+    "responsive-settings-permission-checks": {
+      "category": "fixed",
+      "message": "Keep General settings responsive while checking system permissions"
+    },
+    "cleaner-about-app-summary": {
+      "category": "improved",
+      "message": "See your chosen app icon, app details, and software updates together in a cleaner About page"
     }
   }
 }

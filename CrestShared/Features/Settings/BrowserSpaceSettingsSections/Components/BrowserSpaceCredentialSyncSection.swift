@@ -18,7 +18,7 @@ struct BrowserSpaceCredentialSyncSection: View {
     @State private var synchronizationError: String?
 
     var body: some View {
-        Section("Crest Passwords") {
+        Section("Crest Passwords", systemImage: "key") {
             Toggle(
                 "Use Crest Passwords in this Space",
                 isOn: browser.credentialPreferenceBinding(

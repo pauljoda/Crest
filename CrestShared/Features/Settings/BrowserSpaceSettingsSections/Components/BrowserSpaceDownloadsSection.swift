@@ -10,7 +10,7 @@ struct BrowserSpaceDownloadsSection: View {
     let settings: BrowserSpaceDownloadSettings
 
     var body: some View {
-        Section("Downloads") {
+        Section("Downloads", systemImage: "arrow.down.circle") {
             Toggle(
                 "Ask where to save each download",
                 isOn: settings.asksWhereToSave

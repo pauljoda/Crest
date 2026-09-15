@@ -13,7 +13,7 @@ struct BrowserSystemPermissionSettingsSection: View {
     }
 
     var body: some View {
-        Section("System Permissions") {
+        Section("System Permissions", systemImage: "hand.raised") {
             VStack(spacing: 0) {
                 ForEach(BrowserSystemPermission.allCases) { permission in
                     BrowserSystemPermissionRow(

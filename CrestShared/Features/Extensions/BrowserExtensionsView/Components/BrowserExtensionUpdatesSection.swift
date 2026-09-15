@@ -24,7 +24,7 @@ struct BrowserExtensionUpdatesSection: View {
 
             BrowserExtensionUpdateStatus(model: model)
         } header: {
-            Text("Updates")
+            CrestSettingsSectionHeading(title: "Updates", systemImage: "arrow.triangle.2.circlepath")
         } footer: {
             Text(
                 "Crest records where each extension came from and updates only the ones installed from the Chrome Web Store, using the same signature and identity checks as the original install. Extensions you switched off, unpacked extensions, and extensions loaded from an installed app are left alone."

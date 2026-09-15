@@ -23,7 +23,7 @@ struct BrowserSearchEngineManager: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Built-In") {
+                Section("Built-In", systemImage: "magnifyingglass") {
                     ForEach(BrowserSearchProvider.allCases) { provider in
                         providerRow(provider)
                     }
@@ -45,7 +45,7 @@ struct BrowserSearchEngineManager: View {
                     }
                 } header: {
                     HStack {
-                        Text("Custom")
+                        CrestSettingsSectionHeading(title: "Custom", systemImage: "slider.horizontal.3")
                         Spacer()
                         Button {
                             editorRequest = .new()

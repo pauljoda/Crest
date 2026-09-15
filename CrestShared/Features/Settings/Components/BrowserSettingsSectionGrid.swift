@@ -10,12 +10,13 @@ struct BrowserSettingsSectionGrid<Content: View>: View {
     var body: some View {
         BrowserSettingsCardLayout(allowsColumns: allowsColumns && !dynamicTypeSize.isAccessibilitySize) {
             ForEach(sections: content) { section in
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 0) {
                     if !section.header.isEmpty {
                         section.header
-                            .font(.headline)
+                            .font(CrestTypography.displaySection)
                             .foregroundStyle(.primary)
                             .textCase(nil)
+                            .crestSettingsCardHeader()
                     }
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(subviews: section.content) { row in
@@ -23,18 +24,23 @@ struct BrowserSettingsSectionGrid<Content: View>: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 10)
                         }
+                        if !section.footer.isEmpty {
+                            section.footer
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 14)
+                        }
                     }
-                    if !section.footer.isEmpty {
-                        section.footer.font(.caption).foregroundStyle(.secondary)
-                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
                 }
                 .accessibilityElement(children: .contain)
-                .padding(20)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .background(BrowserSettingsCanvas.card, in: .rect(cornerRadius: 16))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16)
                         .strokeBorder(.primary.opacity(0.065), lineWidth: 1)
+                        .allowsHitTesting(false)
                 }
                 .layoutValue(key: SettingsCardFullWidth.self, value: section.containerValues.settingsFullWidth)
             }
@@ -77,24 +83,49 @@ private struct BrowserSettingsCardLayout: Layout {
     var spacing: CGFloat = 20
     @Environment(\.layoutDirection) private var layoutDirection
 
+    struct Cache {
+        var width: CGFloat?
+        var columns = 0
+        var spacing: CGFloat = 0
+        var frames: [CGRect] = []
+    }
+
+    func makeCache(subviews: Subviews) -> Cache { Cache() }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) {
+        cache = Cache()
+    }
+
     private func columns(for width: CGFloat) -> Int { allowsColumns && width >= 860 ? 2 : 1 }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
         let width = proposal.width ?? 600
         let count = columns(for: width)
-        let frames = frames(width: width, count: count, subviews: subviews)
+        let frames = measuredFrames(width: width, count: count, subviews: subviews, cache: &cache)
         return CGSize(width: width, height: frames.map(\.maxY).max() ?? 0)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
         let count = columns(for: bounds.width)
-        let frames = frames(width: bounds.width, count: count, subviews: subviews)
+        let frames = measuredFrames(width: bounds.width, count: count, subviews: subviews, cache: &cache)
         for (view, frame) in zip(subviews, frames) {
             let x = layoutDirection == .rightToLeft ? bounds.width - frame.maxX : frame.minX
             view.place(
                 at: CGPoint(x: bounds.minX + x, y: bounds.minY + frame.minY),
                 anchor: .topLeading, proposal: .init(frame.size))
         }
+    }
+
+    // Measurement and placement share frames until SwiftUI invalidates the
+    // children or the available width changes. Scrolling only changes origin.
+    private func measuredFrames(width: CGFloat, count: Int, subviews: Subviews, cache: inout Cache) -> [CGRect] {
+        if cache.width != width || cache.columns != count || cache.spacing != spacing {
+            cache.frames = frames(width: width, count: count, subviews: subviews)
+            cache.width = width
+            cache.columns = count
+            cache.spacing = spacing
+        }
+        return cache.frames
     }
 
     private func frames(width: CGFloat, count: Int, subviews: Subviews) -> [CGRect] {

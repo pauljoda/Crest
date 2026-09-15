@@ -158,11 +158,11 @@ struct BrowserPasswordSettingsPane: View {
 
     @ViewBuilder
     private var settingsSections: some View {
-        Section("System passkeys") {
+        Section("System passkeys", systemImage: "person.badge.key") {
             BrowserPasskeyAccessView()
         }
 
-        Section("Space") {
+        Section("Space", systemImage: "square.grid.2x2") {
             CrestSpaceMenuPicker(
                 "Passwords for",
                 selection: selectedSpaceBinding,
@@ -172,7 +172,7 @@ struct BrowserPasswordSettingsPane: View {
 
         if let space {
             if canRevealSelectedSpaceData {
-                Section("Crest Passwords") {
+                Section("Crest Passwords", systemImage: "key") {
                     Toggle(
                         "Use Crest Passwords in this Space",
                         isOn: browser.credentialPreferenceBinding(
@@ -225,7 +225,7 @@ struct BrowserPasswordSettingsPane: View {
                 }
 
                 if layout.showsSavedPasswords {
-                    Section("Saved passwords") {
+                    Section("Saved passwords", systemImage: "key.horizontal") {
                         if !credentials.descriptors.isEmpty || !searchText.isEmpty {
                             BrowserCredentialSearchField(
                                 title: "Search saved passwords",

@@ -34,7 +34,7 @@ struct BrowserLinkSettingsContent: View {
                 add: links.addRoute
             )
         } else {
-            Section("Routing") {
+            Section("Routing", systemImage: "arrow.triangle.branch") {
                 Text("Unlock the private Spaces below before viewing or changing URL route patterns that target them.")
                     .crestFormFootnote()
 

@@ -6,7 +6,7 @@ struct BrowserSplitFocusSettingsSection: View {
 
     var body: some View {
         @Bindable var splitFocus = splitFocus
-        Section("Split View") {
+        Section("Split View", systemImage: "rectangle.split.2x1") {
             Toggle(
                 "Focus Follows Mouse in Split View",
                 isOn: $splitFocus.followsMouse

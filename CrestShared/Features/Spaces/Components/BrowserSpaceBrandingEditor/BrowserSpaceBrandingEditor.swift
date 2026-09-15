@@ -89,7 +89,7 @@ struct BrowserSpaceBrandingEditor: View {
     }
 
     private var presets: some View {
-        BrowserCrestStudioGroup(title: "Start from") {
+        BrowserCrestStudioGroup(title: "Start from", systemImage: "sparkles") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 10)], spacing: 10) {
                 ForEach(BrowserSpaceBrandingPreset.curated) { preset in
                     BrowserCrestStudioChoice(title: preset.titleKey, selected: preset.isSelected(in: branding)) {
@@ -109,7 +109,9 @@ struct BrowserSpaceBrandingEditor: View {
     }
 
     private var identity: some View {
-        BrowserCrestStudioGroup(title: "Identity", preview: compact ? branding : nil, symbol: symbol) {
+        BrowserCrestStudioGroup(
+            title: "Identity", systemImage: "person.crop.square", preview: compact ? branding : nil, symbol: symbol
+        ) {
             if let editableName {
                 BrowserCrestStudioTextField(
                     title: "Space name", symbol: "rectangle.and.pencil.and.ellipsis", text: editableName)

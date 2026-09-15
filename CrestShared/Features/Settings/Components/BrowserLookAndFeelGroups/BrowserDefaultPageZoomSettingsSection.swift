@@ -15,6 +15,7 @@ struct BrowserDefaultPageZoomSettingsSection: View {
     var body: some View {
         CrestSettingsGroup(
             "Page",
+            systemImage: "doc.text",
             settings: [zoom.resettable("Default page zoom")],
             footnote:
                 "Pages using the default update immediately. Page Zoom commands override it while you browse, and Actual Size returns here."

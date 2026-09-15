@@ -26,7 +26,7 @@ struct BrowserSpaceBrowsingSection: View {
     }
 
     var body: some View {
-        Section("Browsing") {
+        Section("Browsing", systemImage: "globe") {
             searchProviderPicker
 
             Button("Manage Search Engines…", systemImage: "magnifyingglass") {

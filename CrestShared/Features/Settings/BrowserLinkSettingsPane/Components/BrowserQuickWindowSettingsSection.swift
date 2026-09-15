@@ -5,7 +5,7 @@ struct BrowserQuickWindowSettingsSection: View {
     @Binding var remembersSpaceBySite: Bool
 
     var body: some View {
-        Section("Quick Window") {
+        Section("Quick Window", systemImage: "macwindow.badge.plus") {
             Picker("Auto-archive", selection: $archivePolicy) {
                 ForEach(BrowserQuickWindowArchivePolicy.allCases) { policy in
                     Text(policy.title).tag(policy)

@@ -9,6 +9,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
     var body: some View {
         CrestSettingsGroup(
             "App icon",
+            systemImage: "app.badge",
             settings: [resettable],
             footnote:
                 "Choose a palette for Crest’s Home Screen icon. Your device controls its light, dark, tinted, or clear appearance."

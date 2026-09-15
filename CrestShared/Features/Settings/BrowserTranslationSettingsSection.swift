@@ -25,7 +25,7 @@ struct BrowserTranslationSettingsSection: View {
     }
 
     var body: some View {
-        Section("Page Translation") {
+        Section("Page Translation", systemImage: "character.bubble") {
             Toggle("Offer to Translate", isOn: $offersTranslation)
             Toggle("Automatically Translate", isOn: $automaticallyTranslates)
                 .accessibilityIdentifier("automatic-translation-toggle")

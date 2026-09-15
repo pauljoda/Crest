@@ -14,6 +14,7 @@ struct BrowserTabAppearanceGroup: View {
     var body: some View {
         CrestSettingsGroup(
             "Tabs and pins",
+            systemImage: "square.stack",
             settings: settings,
             footnote: "Text, icons, and spacing scale together, and pins balance across rows."
         ) {

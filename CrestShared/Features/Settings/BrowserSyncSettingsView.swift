@@ -10,7 +10,7 @@ struct BrowserSyncSettingsView: View {
 
     var body: some View {
         BrowserSettingsPane(.sync) {
-            Section("iCloud Sync") {
+            Section("iCloud Sync", systemImage: "icloud") {
                 Toggle("Sync Crest with iCloud", isOn: $cloudSync.isEnabled)
                     .accessibilityIdentifier("icloud-sync-enabled")
 
@@ -65,7 +65,7 @@ struct BrowserSyncSettingsView: View {
             }
 
             if let conflict = cloudSync.conflict {
-                Section("Choose Which Copy to Keep") {
+                Section("Choose Which Copy to Keep", systemImage: "doc.on.doc") {
                     Label(
                         "Crest found different content on this device and in iCloud. Sync is paused so neither copy is combined or overwritten without your choice.",
                         systemImage: "exclamationmark.arrow.triangle.2.circlepath"
@@ -94,7 +94,7 @@ struct BrowserSyncSettingsView: View {
                 }
             }
 
-            Section("Sync Monitor") {
+            Section("Sync Monitor", systemImage: "waveform.path") {
                 LabeledContent("Local journal", value: localJournalStatus)
                 LabeledContent(
                     "Local records",
@@ -126,7 +126,7 @@ struct BrowserSyncSettingsView: View {
 
             BrowserSyncContentScopeSection()
 
-            Section("Diagnostics") {
+            Section("Diagnostics", systemImage: "stethoscope") {
                 LabeledContent(
                     "CloudKit container",
                     value: cloudSync.containerIdentifier ?? "Not configured"
