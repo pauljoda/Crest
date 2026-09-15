@@ -6,43 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.8</title>
-            <pubDate>Tue, 15 Sep 2026 14:58:59 +0000</pubDate>
+            <title>0.6.10</title>
+            <pubDate>Tue, 15 Sep 2026 18:20:09 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1105</sparkle:version>
-            <sparkle:shortVersionString>0.6.8</sparkle:shortVersionString>
+            <sparkle:version>1107</sparkle:version>
+            <sparkle:shortVersionString>0.6.10</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
-
-- Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse
-- Check and repair macOS permissions in General settings, verify download folder access, and stop requesting passkey access during ordinary browsing
-- Reduce pauses during iCloud sync by avoiding repeated sorting work in large browsing histories
-- Choose which downloaded languages translate automatically and their destination languages in General settings
-- Gray out language mappings while automatic translation is off and restore their controls when it is enabled
-
 ### Fixed
 
-- Translate automatically without pop-ups, turn off translation offers, and manage download and location permissions from site controls without saving accidental blocks
-- Keep the tab you select while Crest starts instead of returning to the Start Page when extensions finish loading
-- Keep dragging links into Peek available after following an in-page link
+- Rename Spaces without freezing Settings on macOS
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/db691fbc3472fd45b3b4fc5062c75abe381b151d...69ea275c3b4020c24b543d5a8b0cc53611f35869) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.8-2026-09-15-1105-r105.1/Installer-Crest-0.6.8-development-2026-09-15-69ea275-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/69ea275c3b4020c24b543d5a8b0cc53611f35869...8e505f36aa7f6d322f4eec3d8041f154150b3714) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.10-2026-09-15-1107-r107.1/Installer-Crest-0.6.10-development-2026-09-15-8e505f3-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.8-2026-09-15-1105-r105.1/Installer-Crest-0.6.8-development-2026-09-15-69ea275-arm64.dmg" length="26911027" type="application/octet-stream" sparkle:edSignature="BcpE/AO7dZBb1mg6g4ItmC65g5Q9L40TUCekg5r960jfUqxAjJtWCMktHB8lGRvKr38NwcBVDCWF9VfTN0q3CA=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.10-2026-09-15-1107-r107.1/Installer-Crest-0.6.10-development-2026-09-15-8e505f3-arm64.dmg" length="26929971" type="application/octet-stream" sparkle:edSignature="gfRw93CYoCqGjPJoNB4CN4RRbsd0VF1dmYz3WkfvV0a3reIliupLov24TjkhyA6deBPO9YHFclWXp8WsCjBeCg=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: qWiKdFiTaCLyKiyayZqNcoMXcgxTdVk2EyIiAGOpnNKRlH2ALTiZhvu3UMqIVYlc+34gswa6kTW1aBr0nodfBw==
-length: 2893
+edSignature: QTa9LSk+hK2A8Z9alGiLxNpnyqZcriw5xpkPj3f+svMmBXc6j333MCfSa6GVWtXIH1MQYV2n3++9o4aW2iBTBQ==
+length: 2010
 -->
