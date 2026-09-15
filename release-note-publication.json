@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channels": {
-    "stable": "pinned-outlines-preserve-monochrome-favicons",
+    "stable": "sync-settings-section-composition",
     "development": "pinned-outlines-preserve-monochrome-favicons",
     "nightly": "simulator-cloudkit-startup-guard"
   }

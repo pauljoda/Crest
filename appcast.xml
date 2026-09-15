@@ -6,6 +6,35 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.6.4</title>
+            <pubDate>Tue, 15 Sep 2026 00:00:40 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1101</sparkle:version>
+            <sparkle:shortVersionString>0.6.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### New
+
+- Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension
+
+### Fixed
+
+- Open Quick Window pages in an existing normal browser window instead of creating a duplicate
+- Keep password manager extensions connected while idle to avoid repeated pairing prompts
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/dec7187c890d6729bec1b62b9322761dfc315daa...3cb440b612961c14394b16fbb0a120e80c13073e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.4/Installer-Crest-0.6.4-arm64.dmg)
+
+[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.4/Installer-Crest-0.6.4-arm64.dmg" length="26816244" type="application/octet-stream" sparkle:edSignature="GkXkZ3oIdVjlyYxicSeWVI3UrxbcAFHj6FQ8e2JXJgVBcePJda7nPCX8R9pxq1BXiZFXPEiNUsWmAZ0gkAp/AQ=="/>
+        </item>
+        <item>
             <title>0.6.3</title>
             <pubDate>Mon, 14 Sep 2026 20:22:18 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -130,6 +159,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: EWBMwPJG8P2SjmadtH4AIfbbCmk3xXEgbZAS3Gq6kWlaJtMo09XOJhjxSi78jkHl62Pcmoi1OjxjJ+18UeGTAg==
-length: 7616
+edSignature: xHqrhM4ZZfT1uYCvg/o12g1FXlnsykP8kiODxMNBIHEvWzxsgww0avKkZzLUD6npYihbLS0U0yUb5qUMZ6GwDQ==
+length: 9195
 -->
