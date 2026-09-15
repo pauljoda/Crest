@@ -11,24 +11,20 @@ struct BrowserSiteControlButton: View {
             blockedPopupNotice: configuration.page.blockedPopupState.notice
         )
         .popover(isPresented: presentationBinding, arrowEdge: .top) {
-            if let request = configuration.page.sitePermissionRequests.current {
-                BrowserPagePermissionPrompt(
-                    request: request,
-                    controller: configuration.page.sitePermissionRequests
-                )
-                .presentationBackground(Color(white: 0.12))
-                .preferredColorScheme(.dark)
-                .environment(\.colorScheme, .dark)
-            } else {
-                BrowserSiteControlPopover(
-                    configuration: configuration,
-                    dismiss: { presentationBinding.wrappedValue = false }
-                )
-                // Bright page content must not wash out the popover's light labels.
-                .presentationBackground(Color(white: 0.12))
-                .preferredColorScheme(.dark)
-                .environment(\.colorScheme, .dark)
+            Group {
+                if let request = configuration.page.sitePermissionRequests.current {
+                    BrowserPagePermissionPrompt(
+                        request: request,
+                        controller: configuration.page.sitePermissionRequests
+                    )
+                } else {
+                    BrowserSiteControlPopover(
+                        configuration: configuration,
+                        dismiss: { presentationBinding.wrappedValue = false }
+                    )
+                }
             }
+            .modifier(BrowserSiteControlPopoverStyle())
         }
         .pagePermissionHost(configuration.page.sitePermissionRequests)
         .onChange(of: configuration.page.sitePermissionRequests.current?.id) {
