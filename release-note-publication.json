@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channels": {
-    "stable": "native-webkit-passkey-sign-in",
+    "stable": "keep-link-dragging-after-in-page-navigation",
     "development": "keep-link-dragging-after-in-page-navigation",
     "nightly": "reactive-picture-in-picture-discovery"
   }

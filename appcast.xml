@@ -6,6 +6,40 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.6.8</title>
+            <pubDate>Tue, 15 Sep 2026 15:25:03 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1106</sparkle:version>
+            <sparkle:shortVersionString>0.6.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### Improved
+
+- Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse
+- Check and repair macOS permissions in General settings, verify download folder access, and stop requesting passkey access during ordinary browsing
+- Reduce pauses during iCloud sync by avoiding repeated sorting work in large browsing histories
+- Choose which downloaded languages translate automatically and their destination languages in General settings
+- Gray out language mappings while automatic translation is off and restore their controls when it is enabled
+
+### Fixed
+
+- Translate automatically without pop-ups, turn off translation offers, and manage download and location permissions from site controls without saving accidental blocks
+- Keep the tab you select while Crest starts instead of returning to the Start Page when extensions finish loading
+- Keep dragging links into Peek available after following an in-page link
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/db691fbc3472fd45b3b4fc5062c75abe381b151d...69ea275c3b4020c24b543d5a8b0cc53611f35869) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.8/Installer-Crest-0.6.8-arm64.dmg)
+
+[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.8/Installer-Crest-0.6.8-arm64.dmg" length="26905844" type="application/octet-stream" sparkle:edSignature="1L8YsihjU115Qx7nd0w9Xx8cUWp9xFOoS9IJhr4RW/5c7pppPsdGnglWieTOevgsbzRZT4LQ2zJFihDgBVzyCA=="/>
+        </item>
+        <item>
             <title>0.6.7</title>
             <pubDate>Tue, 15 Sep 2026 13:42:13 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -79,6 +113,6 @@ Stable releases are signed, notarized, and ready for everyday use.
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: SD1TdGM++cpNooucU21OyVv1F5vF4pQKbn/sPujgdZP5efDUT8k1zjMaXqMNfLpZCIcF3IXN0nNghJpmSkKfAw==
-length: 4617
+edSignature: MRktUNPjlNpD/3YtKqiuCEx0XmIlzBs0qnh24qTmg45zH+vcXsDFgQyvSXDrLueL43Em/9mx0/aDH3n2HD0/BA==
+length: 6837
 -->
