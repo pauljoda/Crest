@@ -12,7 +12,15 @@ enum BrowserPictureInPictureScript {
           const interacted = new WeakSet();
           const knownVideos = new Set();
           const knownFrames = new Set();
+          const interestedFrames = new Set();
+          const frameVisibility = new WeakMap();
           const observedRoots = new WeakSet();
+          const roots = new Set([document]);
+          const pendingRoots = new Set();
+          let discoveryTimer = null;
+          let observesAttributes = false;
+          let reportedInterest = false;
+          let publishedActive = false;
           let nextID = 0;
           let scheduled = false;
           let lastState = '';
@@ -38,38 +46,56 @@ enum BrowserPictureInPictureScript {
           };
           const videos = () => connected(knownVideos);
           \#(BrowserMediaPlayerPolicyScript.source)
+          const potentiallyPlayable = video => !video.paused && !video.ended && video.readyState >= 2
+            && video.videoWidth > 0 && video.videoHeight > 0
+            && !video.disablePictureInPicture && !video.controlsList?.contains('nopictureinpicture');
+          const hasInterest = () => videos().some(video => potentiallyPlayable(video) || isActive(video))
+            || connected(interestedFrames).length > 0;
+          const reportInterest = () => {
+            const interested = hasInterest();
+            if (window === top || interested === reportedInterest) return;
+            reportedInterest = interested;
+            parent.postMessage({ crestPiPFrame: 'interest', interested }, '*');
+          };
           const candidate = video => {
+            const videoID = idFor(video);
+            // Layout reads can synchronously flush an otherwise unrelated page
+            // mutation. A paused, unloaded or disallowed player needs none.
+            if (!parentAllows || !potentiallyPlayable(video)) return { videoID, eligible: false, score: 0 };
             const bounds = video.getBoundingClientRect();
             const inViewport = bounds.bottom > 0 && bounds.right > 0
               && bounds.top < innerHeight && bounds.left < innerWidth;
-            const eligible = parentAllows && !video.paused && !video.ended && video.readyState >= 2
-              && video.videoWidth > 0 && video.videoHeight > 0
-              && bounds.width >= 160 && bounds.height >= 90 && inViewport
-              && !video.disablePictureInPicture && !video.controlsList?.contains('nopictureinpicture')
+            const eligible = bounds.width >= 160 && bounds.height >= 90 && inViewport
               && video.webkitSupportsPresentationMode?.('picture-in-picture') === true
               && !isDecorative(video) && hasPlayerControls(video, interacted.has(video));
-            return { videoID: idFor(video), eligible,
+            return { videoID, eligible,
               score: bounds.width * bounds.height + (interacted.has(video) ? 100000000 : 0) };
           };
           const isActive = video => document.pictureInPictureElement === video
             || video.webkitPresentationMode === 'picture-in-picture';
           const snapshot = () => {
+            flushDiscovery();
             const found = videos();
             const candidates = found.map(candidate).filter(item => item.eligible)
               .sort((a, b) => b.score - a.score);
             return { kind: 'state', ...candidates[0], eligible: candidates.length > 0,
               active: found.some(isActive) };
           };
-          const publish = () => {
+          const publish = (refreshFrames = false) => {
             scheduled = false;
-            publishFrameEligibility();
+            flushDiscovery();
+            reportInterest();
+            publishFrameEligibility(refreshFrames);
             const state = snapshot();
+            publishedActive = state.eligible || state.active;
             const encoded = JSON.stringify(state);
             if (encoded === lastState) return;
             lastState = encoded;
             send(state);
           };
           const schedule = () => {
+            reportInterest();
+            if (!hasInterest() && !publishedActive) return;
             if (scheduled) return;
             scheduled = true;
             setTimeout(publish, 100);
@@ -77,26 +103,35 @@ enum BrowserPictureInPictureScript {
           // The parent can see whether an iframe is decorative; a cross-origin
           // child cannot inspect that DOM. Propagate only this boolean, never media
           // URLs or page contents. Each hop validates the sending Window identity.
-          const publishFrameEligibility = () => {
-            for (const frame of connected(knownFrames)) {
+          const publishFrameEligibility = (refresh = false) => {
+            for (const frame of connected(interestedFrames)) {
               const bounds = frame.getBoundingClientRect();
               const allowed = parentAllows && !isDecorative(frame)
                 && bounds.width >= 160 && bounds.height >= 90
                 && bounds.bottom > 0 && bounds.right > 0
                 && bounds.top < innerHeight && bounds.left < innerWidth;
-              frame.contentWindow?.postMessage({ crestPiPFrame: 'visibility', allowed }, '*');
+              if (!refresh && frameVisibility.get(frame) === allowed) continue;
+              frameVisibility.set(frame, allowed);
+              frame.contentWindow?.postMessage({ crestPiPFrame: 'visibility', allowed, refresh }, '*');
             }
           };
           addEventListener('message', event => {
             if (event.data?.crestPiPFrame === 'visibility' && window !== top && event.source === parent) {
               const allowed = event.data.allowed === true;
+              if (parentAllows === allowed && event.data.refresh !== true) return;
               parentAllows = allowed;
-              lastState = '';
+              if (event.data.refresh === true) { lastState = ''; publish(true); return; }
               schedule();
             }
-            if (event.data?.crestPiPFrame === 'ready'
-                && connected(knownFrames).some(frame => frame.contentWindow === event.source)) {
-              publishFrameEligibility();
+            if (event.data?.crestPiPFrame === 'interest') {
+              if (event.data.interested === true) flushDiscovery();
+              const frame = connected(knownFrames).find(frame => frame.contentWindow === event.source);
+              if (!frame) return;
+              if (event.data.interested === true) interestedFrames.add(frame);
+              else interestedFrames.delete(frame);
+              frameVisibility.delete(frame);
+              updateObservation();
+              schedule();
             }
           });
           const cancel = requestID => {
@@ -133,9 +168,16 @@ enum BrowserPictureInPictureScript {
             }
             schedule();
           };
+          const observeMedia = event => {
+            if (!(event.target instanceof HTMLVideoElement)) return;
+            if (knownVideos.size < 32) knownVideos.add(event.target);
+            idFor(event.target);
+            updateObservation();
+            schedule();
+          };
           for (const type of ['playing', 'pause', 'ended', 'emptied', 'loadedmetadata', 'resize',
                               'enterpictureinpicture', 'leavepictureinpicture', 'webkitpresentationmodechanged']) {
-            document.addEventListener(type, schedule, true);
+            document.addEventListener(type, observeMedia, true);
           }
           document.addEventListener('pointerdown', observeInteraction, true);
           document.addEventListener('keydown', observeInteraction, true);
@@ -144,9 +186,11 @@ enum BrowserPictureInPictureScript {
           addEventListener('scroll', schedule, { passive: true, capture: true });
           addEventListener('pageshow', () => { lastState = ''; schedule(); });
           addEventListener('pagehide', () => send({ kind: 'removed' }));
-          // Discover only inserted subtrees. Playback and layout changes inspect
-          // the bounded media set rather than rescanning a large page's entire DOM.
-          const observerOptions = { childList: true, subtree: true, attributes: true,
+          // Keep discovery cheap on documents without media, including app-like
+          // pages that continually rebuild DOM. Scan coalesced inserted subtrees
+          // outside mutation delivery; media events and explicit entry/refresh
+          // can discover a player immediately when necessary.
+          const observerOptions = { subtree: true, attributes: true,
             attributeFilter: ['controls', 'autoplay', 'loop', 'muted', 'hidden', 'aria-hidden',
                              'disablepictureinpicture', 'role', 'class', 'style'] };
           const discover = (root, scannedRoots = new WeakSet()) => {
@@ -161,13 +205,22 @@ enum BrowserPictureInPictureScript {
             const inspect = element => {
               if (element.matches?.('video') && knownVideos.size < 32) knownVideos.add(element);
               if (element.matches?.('iframe') && knownFrames.size < 64) knownFrames.add(element);
-              if (element.shadowRoot && !observedRoots.has(element.shadowRoot)) {
-                observedRoots.add(element.shadowRoot);
-                mutationObserver.observe(element.shadowRoot, observerOptions);
+              if (element.shadowRoot && !roots.has(element.shadowRoot)) {
+                roots.add(element.shadowRoot);
+                mutationObserver.observe(element.shadowRoot, { childList: true, subtree: true });
+                if (!observedRoots.has(element.shadowRoot)) {
+                  observedRoots.add(element.shadowRoot);
+                  element.shadowRoot.addEventListener('playing', observeMedia, true);
+                }
+                if (observesAttributes) attributeObserver.observe(element.shadowRoot, observerOptions);
                 discover(element.shadowRoot, scannedRoots);
               }
             };
             inspect(root);
+            // A deferred scan may first encounter a shadow root after a large
+            // subtree was inserted. Find its media even beyond the bounded
+            // general walk used to discover further open shadow roots.
+            for (const element of root.querySelectorAll('video, iframe')) inspect(element);
             let visited = 0;
             const elements = root.querySelectorAll('*');
             for (const element of elements) {
@@ -177,16 +230,49 @@ enum BrowserPictureInPictureScript {
             // A truncated scan must not suppress later records beyond its limit.
             if (elements.length <= 10000) scannedRoots.add(root);
           };
-          const mutationObserver = new MutationObserver(records => {
+          const updateObservation = () => {
+            let removedRoot = false;
+            for (const root of roots) {
+              if (root !== document && !root.host?.isConnected) { roots.delete(root); removedRoot = true; }
+            }
+            const needed = connected(knownVideos).length > 0 || connected(interestedFrames).length > 0;
+            if (needed === observesAttributes && !removedRoot) return;
+            observesAttributes = needed;
+            attributeObserver.disconnect();
+            if (!needed) return;
+            for (const root of roots) {
+              attributeObserver.observe(root, observerOptions);
+            }
+          };
+          const flushDiscovery = () => {
+            if (discoveryTimer !== null) clearTimeout(discoveryTimer);
+            discoveryTimer = null;
+            if (!pendingRoots.size) return;
             const scannedRoots = new WeakSet();
-            for (const record of records) for (const node of record.addedNodes) discover(node, scannedRoots);
-            if (knownVideos.size || knownFrames.size) schedule();
+            for (const root of pendingRoots) if (root.isConnected) discover(root, scannedRoots);
+            pendingRoots.clear();
+            updateObservation();
+          };
+          const queueDiscovery = node => {
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            if (pendingRoots.has(document)) return;
+            if (pendingRoots.size >= 256) { pendingRoots.clear(); pendingRoots.add(document); }
+            else pendingRoots.add(node);
+            if (discoveryTimer !== null) return;
+            discoveryTimer = setTimeout(() => { flushDiscovery(); schedule(); }, 100);
+          };
+          const attributeObserver = new MutationObserver(schedule);
+          const mutationObserver = new MutationObserver(records => {
+            for (const record of records) for (const node of record.addedNodes) queueDiscovery(node);
+            updateObservation();
+            schedule();
           });
-          mutationObserver.observe(document, observerOptions);
+          mutationObserver.observe(document, { childList: true, subtree: true });
           discover(document);
+          updateObservation();
           globalThis.__crestPictureInPicture = Object.freeze({ enter, cancel, snapshot,
-            emit() { lastState = ''; publish(); } });
-          if (window !== top) parent.postMessage({ crestPiPFrame: 'ready' }, '*');
+            emit() { lastState = ''; publish(true); } });
+          if (window !== top) parent.postMessage({ crestPiPFrame: 'interest', interested: false }, '*');
           schedule();
         })();
         """#

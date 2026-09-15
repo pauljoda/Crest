@@ -1261,6 +1261,10 @@
     "native-webkit-passkey-sign-in": {
       "category": "fixed",
       "message": "Let the system handle passkey sign-in directly without an extra permission check"
+    },
+    "reactive-picture-in-picture-discovery": {
+      "category": "improved",
+      "message": "Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse"
     }
   }
 }
