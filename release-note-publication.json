@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "space-settings-name-focus",
+    "development": "command-palette-keyboard-scrolling",
     "nightly": "reactive-picture-in-picture-discovery"
   }
 }
