@@ -1293,6 +1293,10 @@
     "keep-link-dragging-after-in-page-navigation": {
       "category": "fixed",
       "message": "Keep dragging links into Peek available after following an in-page link"
+    },
+    "accept-xcode-27-submission-build-in-cloud": {
+      "category": "internal",
+      "message": "Allow Apple's submission-supported Xcode 27 build in the Cloud archive guard"
     }
   }
 }

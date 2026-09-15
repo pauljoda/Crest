@@ -77,7 +77,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
         ):
             self.assertIn(required, contents)
 
-    def test_post_clone_guard_accepts_release_xcode_and_rejects_prerelease(self) -> None:
+    def test_post_clone_guard_accepts_submission_xcode_and_rejects_unknown_prerelease(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_clone.sh"
 
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -113,14 +113,17 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             }
 
-            for build_version, expected_return_code in (
-                ("17F113", 0),
-                ("27A5228h", 64),
+            for xcode_version, build_version, expected_return_code in (
+                ("26.6", "17F113", 0),
+                ("27.0", "27A266a", 0),
+                ("27.0", "27A5228h", 64),
+                ("27.0", "27A266b", 64),
             ):
                 with self.subTest(build_version=build_version):
                     fake_xcodebuild.write_text(
                         "#!/bin/sh\n"
-                        'printf \'Xcode 26.6\\nBuild version %s\\n\'\n' % build_version
+                        'printf \'Xcode %s\\nBuild version %s\\n\'\n'
+                        % (xcode_version, build_version)
                     )
                     fake_xcodebuild.chmod(0o755)
                     result = subprocess.run(

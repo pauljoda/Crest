@@ -49,8 +49,13 @@ esac
 [ "$xcode_major" -ge 26 ] \
     || fail "Crest requires Xcode 26 or newer; Xcode Cloud selected $xcode_version."
 case "$xcode_build" in
+    27A266a)
+        # Apple accepts Xcode 27 RC for App Store and TestFlight submissions.
+        # Release-capable builds can retain a trailing letter.
+        # https://developer.apple.com/help/app-store-connect/release-notes/
+        ;;
     *[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ])
-        fail "Crest Cloud archives require a release Xcode; build $xcode_build is a beta or prerelease image."
+        fail "Crest Cloud archives require a release Xcode or an explicitly supported submission build; build $xcode_build is an unverified beta or prerelease image."
         ;;
 esac
 
@@ -89,4 +94,4 @@ grep -q 'macOS: "26.1"' "$project" \
 CREST_VERSION_REPOSITORY_ROOT="$repository_path" \
     "$repository_path/Scripts/check-version.sh" --static
 
-echo "Validated manual ${CI_PRODUCT_PLATFORM} archive for ${cloud_commit} from ${repository_url} with ${expected_scheme} on release Xcode ${xcode_version}."
+echo "Validated manual ${CI_PRODUCT_PLATFORM} archive for ${cloud_commit} from ${repository_url} with ${expected_scheme} on submission-supported Xcode ${xcode_version} (${xcode_build})."
