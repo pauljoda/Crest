@@ -37,13 +37,6 @@ final class BrowserDownloadCenter: NSObject {
             String
         ) async -> Bool
 
-    typealias AutomaticDownloadApprovalHandler =
-        @MainActor (
-            String,
-            BrowserSiteOrigin,
-            String
-        ) async -> BrowserSitePermissionPromptResponse
-
     typealias DownloadDestinationResolver =
         @MainActor (
             String,
@@ -65,6 +58,8 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var spaceNames: [ObjectIdentifier: String] = [:]
     @ObservationIgnored private var spaceIDs: [ObjectIdentifier: SpaceID] = [:]
     @ObservationIgnored private var sourceOrigins: [ObjectIdentifier: BrowserSiteOrigin] = [:]
+    @ObservationIgnored private var permissionRequests:
+        [ObjectIdentifier: (controller: BrowserPagePermissionController, generation: UUID)] = [:]
     @ObservationIgnored private var sourceWebViewIDs: [ObjectIdentifier: ObjectIdentifier] = [:]
     @ObservationIgnored private var automaticDownloadSequences:
         [AutomaticDownloadScope: BrowserAutomaticDownloadSequence] = [:]
@@ -84,7 +79,6 @@ final class BrowserDownloadCenter: NSObject {
     @ObservationIgnored private var credentialAccessBySpaceID: [SpaceID: Bool] = [:]
     @ObservationIgnored private let approveRiskyDownload: RiskApprovalHandler
     @ObservationIgnored private let permissionCenter: BrowserSitePermissionCenter
-    @ObservationIgnored private let approveAutomaticDownload: AutomaticDownloadApprovalHandler
     @ObservationIgnored private let resolveDownloadDestination: DownloadDestinationResolver
 
     init(
@@ -95,8 +89,6 @@ final class BrowserDownloadCenter: NSObject {
         saveCredential: @escaping CredentialSaver = { _, _ in },
         approveRiskyDownload: @escaping RiskApprovalHandler = { _, _, _ in false },
         permissionCenter: BrowserSitePermissionCenter = BrowserSitePermissionCenter(),
-        approveAutomaticDownload:
-            @escaping AutomaticDownloadApprovalHandler = { _, _, _ in .denyPersistently },
         resolveDownloadDestination:
             @escaping DownloadDestinationResolver = {
                 suggestedFilename,
@@ -116,7 +108,6 @@ final class BrowserDownloadCenter: NSObject {
         self.saveCredential = saveCredential
         self.approveRiskyDownload = approveRiskyDownload
         self.permissionCenter = permissionCenter
-        self.approveAutomaticDownload = approveAutomaticDownload
         self.resolveDownloadDestination = resolveDownloadDestination
         super.init()
     }
@@ -505,8 +496,15 @@ final class BrowserDownloadCenter: NSObject {
         spaceNames[key] = spaceName
         spaceIDs[key] = spaceID
         sourceWebViewIDs[key] = ObjectIdentifier(sourceWebView)
+        if let controller = (sourceWebView.uiDelegate as? any BrowserPagePermissionProviding)?.sitePermissionRequests {
+            permissionRequests[key] = (controller, controller.generation)
+        }
         let frameOrigin = BrowserSiteOrigin(download.originatingFrame.securityOrigin)
-        if !frameOrigin.host.isEmpty {
+        // Automatic downloads belong to the visible site, including files served
+        // by its embedded frames or a CDN, so site controls can change the rule.
+        if let origin = sourceWebView.url.flatMap(BrowserSiteOrigin.init(url:)) {
+            sourceOrigins[key] = origin
+        } else if !frameOrigin.host.isEmpty {
             sourceOrigins[key] = frameOrigin
         } else if let sourceURL = download.originalRequest?.url,
             let sourceOrigin = BrowserSiteOrigin(url: sourceURL)
@@ -648,10 +646,7 @@ final class BrowserDownloadCenter: NSObject {
             return nil
         case .requestPermission:
             guard
-                await approveAutomaticDownloadIfNeeded(
-                    download,
-                    filename: assessment.sanitizedFilename
-                )
+                await approveAutomaticDownloadIfNeeded(download)
             else {
                 update(download) { ledger, itemID in
                     ledger.blockAutomaticDownload(itemID)
@@ -700,7 +695,15 @@ final class BrowserDownloadCenter: NSObject {
             release(download)
             return nil
         case .unavailable:
-            fail(download, message: "The Downloads folder is unavailable.")
+            #if os(macOS)
+                fail(
+                    download,
+                    message:
+                        "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
+                )
+            #else
+                fail(download, message: "The Downloads folder is unavailable.")
+            #endif
             release(download)
             return nil
         }
@@ -830,8 +833,7 @@ final class BrowserDownloadCenter: NSObject {
     }
 
     private func approveAutomaticDownloadIfNeeded(
-        _ download: WKDownload,
-        filename: String
+        _ download: WKDownload
     ) async -> Bool {
         let key = ObjectIdentifier(download)
         guard let spaceID = spaceIDs[key],
@@ -853,12 +855,19 @@ final class BrowserDownloadCenter: NSObject {
             update(download) { ledger, itemID in
                 ledger.markAwaitingApproval(itemID)
             }
-            let response = await approveAutomaticDownload(
-                filename,
-                origin,
-                spaceNames[key] ?? "this"
+            guard let request = permissionRequests[key],
+                request.generation == request.controller.generation
+            else { return false }
+            let response = await request.controller.response(
+                to: .automaticDownloads, origin: origin, topLevelOrigin: origin,
+                spaceName: spaceNames[key] ?? "this"
             )
+            guard itemIDs[key] != nil, request.generation == request.controller.generation else { return false }
+            let latest = permissionCenter.decision(for: .automaticDownloads, origin: origin, in: spaceID)
+            guard latest != .denyPersistently, latest != .denyForSession else { return false }
             switch response {
+            case .denyOnce:
+                return false
             case .allowOnce:
                 return true
             case .grantPersistently:
@@ -906,6 +915,7 @@ final class BrowserDownloadCenter: NSObject {
         spaceIDs.removeValue(forKey: key)
         sourceOrigins.removeValue(forKey: key)
         sourceWebViewIDs.removeValue(forKey: key)
+        permissionRequests.removeValue(forKey: key)
         approvedRetryKeys.remove(key)
         userInitiatedOverrideKeys.remove(key)
         requestedFilenames.removeValue(forKey: key)

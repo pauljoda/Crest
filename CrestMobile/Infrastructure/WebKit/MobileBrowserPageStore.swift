@@ -170,14 +170,7 @@ final class MobileBrowserPageStore:
                     spaceName: spaceName
                 )
             },
-            permissionCenter: permissionCenter,
-            approveAutomaticDownload: { filename, origin, spaceName in
-                await MobileBrowserDialogPresenter.presentAutomaticDownloadPermission(
-                    filename: filename,
-                    origin: origin,
-                    spaceName: spaceName
-                )
-            }
+            permissionCenter: permissionCenter
         )
         if monitorsMemoryPressure {
             installMemoryPressureSource()

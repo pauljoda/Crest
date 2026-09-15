@@ -213,7 +213,11 @@ final class BrowserGeolocationCoordinator {
         case .ask:
             let response = await prompt(origin, webView.url, spaceName)
             guard isCurrentDocument(documentIdentifier) else { return false }
+            let latest = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
+            guard latest != .denyPersistently, latest != .denyForSession else { return false }
             switch response {
+            case .denyOnce:
+                return false
             case .allowOnce:
                 break
             case .grantPersistently:
@@ -245,6 +249,8 @@ final class BrowserGeolocationCoordinator {
         guard isSystemAuthorized,
             isCurrentDocument(documentIdentifier)
         else { return false }
+        let latest = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
+        guard latest != .denyPersistently, latest != .denyForSession else { return false }
         if let decisionToPersist {
             permissionCenter.setDecision(
                 decisionToPersist,

@@ -107,10 +107,11 @@ struct BrowserSyncJournal: Codable, Equatable, Sendable {
             }
         }
 
-        for payload in desiredPayloads.sorted(by: { $0.recordID.recordName < $1.recordID.recordName }) {
-            if byID[payload.recordID]?.payload == payload {
-                continue
-            }
+        // Unchanged records do not receive a new version and need no ordering work.
+        let changes = desiredPayloads.filter { byID[$0.recordID]?.payload != $0 }
+            .map { (name: $0.recordID.recordName, payload: $0) }
+            .sorted { $0.name < $1.name }
+        for (_, payload) in changes {
             let record = BrowserSyncRecord.save(payload, version: try nextVersion())
             try record.validate()
             byID[record.id] = record

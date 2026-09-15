@@ -55,28 +55,6 @@ enum MobileBrowserDialogPresenter {
         present(alert) { completion(nil) }
     }
 
-    static func presentGeolocationPermission(
-        origin: BrowserSiteOrigin,
-        topLevelURL: URL?,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        var message =
-            "This site will be able to use your current location for this request. "
-            + "The choice belongs only to the \(spaceName) Space."
-        if let topLevelHost = topLevelURL?.host(),
-            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
-        {
-            message += " It comes from \(origin.displayName) inside \(topLevelHost)."
-        }
-        return await presentSitePermission(
-            title: "Allow \(origin.host) to use your location?",
-            message: message,
-            allowOnceTitle: "Allow Once",
-            alwaysAllowTitle: "Always Allow",
-            blockTitle: "Block"
-        )
-    }
-
     /// Keeps the originating web request alive while the person repairs the
     /// app-level permission in Settings, then lets the coordinator recheck it.
     static func recoverGeolocationSystemAuthorization() async {
@@ -165,21 +143,6 @@ enum MobileBrowserDialogPresenter {
         let remainder = url.absoluteString.dropFirst(scheme.count + 1)
         let trimmed = remainder.prefix(while: { $0 != "?" })
         return trimmed.isEmpty ? url.absoluteString : "\(scheme):\(trimmed)"
-    }
-
-    static func presentAutomaticDownloadPermission(
-        filename: String,
-        origin: BrowserSiteOrigin,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        await presentSitePermission(
-            title: "Allow automatic downloads from \(origin.host)?",
-            message:
-                "The site started “\(filename)” without a direct download action. The choice belongs only to the \(spaceName) Space.",
-            allowOnceTitle: "Download Once",
-            alwaysAllowTitle: "Always Allow",
-            blockTitle: "Block"
-        )
     }
 
     static func presentHTTPAuthentication(
@@ -305,37 +268,6 @@ enum MobileBrowserDialogPresenter {
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, fallback: {})
-    }
-
-    private static func presentSitePermission(
-        title: String,
-        message: String,
-        allowOnceTitle: String,
-        alwaysAllowTitle: String,
-        blockTitle: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        await withCheckedContinuation { continuation in
-            let alert = UIAlertController(
-                title: title,
-                message: message,
-                preferredStyle: .alert
-            )
-            alert.addAction(
-                UIAlertAction(title: blockTitle, style: .destructive) { _ in
-                    continuation.resume(returning: .denyPersistently)
-                })
-            alert.addAction(
-                UIAlertAction(title: allowOnceTitle, style: .default) { _ in
-                    continuation.resume(returning: .allowOnce)
-                })
-            alert.addAction(
-                UIAlertAction(title: alwaysAllowTitle, style: .default) { _ in
-                    continuation.resume(returning: .grantPersistently)
-                })
-            present(alert) {
-                continuation.resume(returning: .denyPersistently)
-            }
-        }
     }
 
     private static func present(

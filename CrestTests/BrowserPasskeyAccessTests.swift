@@ -151,42 +151,25 @@ final class BrowserPasskeyAccessTests: XCTestCase {
         XCTAssertEqual(controller.status, .authorized)
     }
 
-    func testBrowsingRequestsUndeterminedConsentOnceAndDoesNotRepeatAfterDenial() async {
-        var checks = 0
+    func testCheckingStatusAcrossRelaunchesNeverRequestsSystemConsent() async {
         var requests = 0
-        let controller = BrowserPasskeyAccessController(
-            capabilityCheck: { true },
-            deviceConfigurationCheck: { .configured },
-            authorizationCheck: {
-                checks += 1
-                return .notDetermined
-            },
-            authorizationRequester: {
-                requests += 1
-                return .denied
+        for state in [BrowserPasskeyAuthorizationState.notDetermined, .authorized, .denied] {
+            for _ in 0..<2 {
+                let controller = BrowserPasskeyAccessController(
+                    capabilityCheck: { true },
+                    deviceConfigurationCheck: { .configured },
+                    authorizationCheck: { state },
+                    authorizationRequester: {
+                        requests += 1
+                        return .authorized
+                    }
+                )
+                await controller.prepareForBrowsing()
+                controller.refreshStatus()
+                XCTAssertEqual(
+                    requests, 0,
+                    "Navigation and status checks must never request passkey consent, even after a relaunch.")
             }
-        )
-        await controller.prepareForBrowsing()
-        await controller.prepareForBrowsing()
-        XCTAssertEqual(checks, 1)
-        XCTAssertEqual(requests, 1)
-        XCTAssertEqual(controller.status, .denied)
-    }
-
-    func testBrowsingNeverPromptsForAlreadyDeterminedConsent() async {
-        for state in [BrowserPasskeyAuthorizationState.authorized, .denied] {
-            var requests = 0
-            let controller = BrowserPasskeyAccessController(
-                capabilityCheck: { true },
-                deviceConfigurationCheck: { .configured },
-                authorizationCheck: { state },
-                authorizationRequester: {
-                    requests += 1
-                    return .authorized
-                }
-            )
-            await controller.prepareForBrowsing()
-            XCTAssertEqual(requests, 0)
         }
     }
 

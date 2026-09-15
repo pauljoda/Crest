@@ -41,6 +41,9 @@ enum BrowserPlatformDownloadDirectory {
                 securityScopedURL: customDirectory
             )
         }
+        guard preferences.directoryDisplayName(for: spaceID) == nil else {
+            return .unavailable
+        }
 
         guard
             let downloadsDirectory = fileManager.urls(
@@ -154,6 +157,8 @@ final class BrowserPlatformDownloadPreferences {
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
             )
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             var isDirectory: ObjCBool = false
             guard
                 FileManager.default.fileExists(
@@ -161,7 +166,6 @@ final class BrowserPlatformDownloadPreferences {
                     isDirectory: &isDirectory
                 ), isDirectory.boolValue
             else {
-                clearDirectory(for: spaceID)
                 return nil
             }
             if isStale {
@@ -169,7 +173,6 @@ final class BrowserPlatformDownloadPreferences {
             }
             return url
         } catch {
-            clearDirectory(for: spaceID)
             return nil
         }
     }

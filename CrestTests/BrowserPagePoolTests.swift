@@ -986,6 +986,44 @@ final class BrowserPagePoolTests: XCTestCase {
         XCTAssertEqual(pool.retainedTabIDs, [current.id])
     }
 
+    func testTabSelectedDuringBrowserPreparationSurvivesCompletion() async {
+        for behavior in [BrowserStartupBehavior.showStartPage, .lastActiveTab] {
+            let restored = BrowserTab(title: "Restored", url: URL(string: "about:blank#restored"), placement: .current)
+            let chosen = BrowserTab(title: "Chosen", url: URL(string: "about:blank#chosen"), placement: .current)
+            let space = makeSpace(tabs: [restored, chosen], selectedTabID: restored.id)
+            let browser = BrowserStore(
+                session: BrowserSession(spaces: [space], selectedSpaceID: space.id),
+                persistence: InMemoryBrowserSessionPersistence()
+            )
+            let started = expectation(description: "Startup is waiting for content blocking")
+            let provider = SuspendedStartupContentRuleListProvider(started: { started.fulfill() })
+            let pages = BrowserPagePool(contentRuleListProvider: provider)
+            let model = BrowserRootModel(
+                browser: browser, pages: pages, chrome: BrowserChromeState(),
+                spaceAccess: BrowserSpaceAccessController(), windowState: nil,
+                startupBehavior: behavior, persistedSidebarWidth: BrowserChromeLayout.sidebarIdealWidth
+            )
+            let preparation = Task { await model.prepareBrowser() }
+            await fulfillment(of: [started], timeout: 2)
+            XCTAssertFalse(model.hasRestoredExtensions)
+            if behavior == .showStartPage {
+                XCTAssertTrue(
+                    browser.selectedTab?.isStartPage == true, "Apply the startup choice before waiting for services.")
+            }
+
+            browser.selectTab(chosen.id)
+            model.synchronizeAfterSelectionChange()
+            provider.resume()
+            await preparation.value
+
+            XCTAssertEqual(browser.selectedTab?.id, chosen.id, "Finishing startup must preserve the user's selection.")
+            XCTAssertEqual(pages.activeTabID, chosen.id)
+            XCTAssertEqual(model.address, chosen.url?.absoluteString)
+            await model.prepareBrowser()
+            XCTAssertEqual(browser.selectedTab?.id, chosen.id, "Reappearing must not reapply the launch choice.")
+        }
+    }
+
     func testBrowserPreparationOnlyLoadsTheRestoredTabWhenStartupOptsIn() async {
         let selected = BrowserTab(
             title: "Selected",
@@ -3871,4 +3909,24 @@ private final class PagePoolAuthenticationChallengeSenderStub:
     func cancel(_ challenge: URLAuthenticationChallenge) {}
     func performDefaultHandling(for challenge: URLAuthenticationChallenge) {}
     func rejectProtectionSpaceAndContinue(with challenge: URLAuthenticationChallenge) {}
+}
+
+@MainActor
+private final class SuspendedStartupContentRuleListProvider: BrowserContentRuleListProviding {
+    private let started: () -> Void
+    private var continuation: CheckedContinuation<[WKContentRuleList], Never>?
+
+    init(started: @escaping () -> Void) { self.started = started }
+
+    func balancedRuleLists() async throws -> [WKContentRuleList] {
+        await withCheckedContinuation {
+            continuation = $0
+            started()
+        }
+    }
+
+    func resume() {
+        continuation?.resume(returning: [])
+        continuation = nil
+    }
 }

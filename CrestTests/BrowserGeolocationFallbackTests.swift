@@ -5,6 +5,46 @@ import XCTest
 
 @MainActor
 final class BrowserGeolocationBridgeTests: XCTestCase {
+    func testDismissingLocationPromptKeepsAskAndRememberedAllowSkipsTheNextPrompt() async throws {
+        let fixture = try makeFixture()
+        defer { fixture.page.prepareForSpaceDeletion() }
+        let origin = try XCTUnwrap(BrowserSiteOrigin(url: fixture.url))
+        fixture.page.permissionCenter.setDecision(.ask, for: .location, origin: origin, in: fixture.page.spaceID)
+        fixture.page.sitePermissionRequests.setPresentationAvailable(true)
+        fixture.page.webView.loadSimulatedRequest(URLRequest(url: fixture.url), responseHTML: "<title>Location</title>")
+        try await waitUntil("the loaded location document") {
+            guard fixture.page.webView.url == fixture.url, !fixture.page.webView.isLoading else { return false }
+            return try await fixture.page.webView.evaluateJavaScript("Boolean(globalThis.__crestGeolocationBridge)")
+                as? Bool == true
+        }
+        try await waitUntil("the location bridge") {
+            try await self.permissionState(in: fixture.page.webView) == "prompt"
+        }
+        func requestPosition() async throws {
+            _ = try await fixture.page.webView.evaluateJavaScript(
+                "globalThis.locationError = null; navigator.geolocation.getCurrentPosition(() => {}, e => { globalThis.locationError = e.code; });"
+            )
+        }
+        try await requestPosition()
+        try await waitUntil("the site location prompt") { fixture.page.sitePermissionRequests.current != nil }
+        XCTAssertEqual(fixture.page.sitePermissionRequests.current?.permission, .location)
+        fixture.page.sitePermissionRequests.cancelAll()
+        try await waitUntil("the dismissed request callback") {
+            try await self.doubleResult(in: fixture.page.webView, script: "return globalThis.locationError;") == 1
+        }
+        XCTAssertEqual(
+            fixture.page.permissionCenter.decision(for: .location, origin: origin, in: fixture.page.spaceID), .ask)
+        XCTAssertTrue(fixture.service.currentRequests.isEmpty)
+        try await requestPosition()
+        try await waitUntil("a new location request") { fixture.page.sitePermissionRequests.current != nil }
+        fixture.page.sitePermissionRequests.resolve(
+            try XCTUnwrap(fixture.page.sitePermissionRequests.current?.id), response: .grantPersistently)
+        try await waitUntil("the authorized location request") { fixture.service.currentRequests.count == 1 }
+        try await requestPosition()
+        try await waitUntil("the next request without another prompt") { fixture.service.currentRequests.count == 2 }
+        XCTAssertNil(fixture.page.sitePermissionRequests.current)
+    }
+
     func testSecurePageReceivesPositionAndCanCancelWatch() async throws {
         let fixture = try makeFixture()
         defer { fixture.page.prepareForSpaceDeletion() }

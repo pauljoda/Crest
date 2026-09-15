@@ -19,7 +19,6 @@ final class BrowserPasskeyAccessController {
     @ObservationIgnored private let authorizationCheck: AuthorizationCheck
     @ObservationIgnored private let authorizationRequester: AuthorizationRequester
     @ObservationIgnored private var authorizationTask: Task<BrowserPasskeyAuthorizationState, Never>?
-    @ObservationIgnored private var hasPreparedForBrowsing = false
 
     init(
         capabilityCheck: @escaping CapabilityCheck =
@@ -45,13 +44,11 @@ final class BrowserPasskeyAccessController {
         status = evaluatedStatus()
     }
 
-    /// Establish browser-wide consent once, independently of WebKit's
-    /// credential requests. Already determined system decisions are honored.
+    /// Navigation may check capability, but only an explicit user action may
+    /// request browser-wide access to saved accounts. The system can return an
+    /// undetermined state again after a relaunch or a keychain availability change.
     func prepareForBrowsing() async {
-        guard !hasPreparedForBrowsing else { return }
-        hasPreparedForBrowsing = true
         refreshStatus()
-        await requestAccess()
     }
 
     func requestAccess() async {

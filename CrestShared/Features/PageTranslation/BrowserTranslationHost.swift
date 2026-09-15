@@ -13,9 +13,14 @@ struct BrowserTranslationHost: ViewModifier {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
     private var automaticallyTranslates = false
+    @AppStorage(BrowserTranslationPreference.offersKey, store: BrowserTranslationPreference.defaults)
+    private var offersTranslation = true
+
+    @AppStorage(BrowserTranslationPreference.rulesKey, store: BrowserTranslationPreference.defaults)
+    private var languageRulesRawValue = ""
 
     private var detectionID: String {
-        "\(translation.documentRevision)-\(isActive)-\(isLoading)-\(isReaderActive)-\(scenePhase == .background)-\(automaticallyTranslates)"
+        "\(translation.documentRevision)-\(isActive)-\(isLoading)-\(isReaderActive)-\(scenePhase == .background)-\(automaticallyTranslates)-\(languageRulesRawValue)"
     }
 
     func body(content: Content) -> some View {
@@ -24,6 +29,9 @@ struct BrowserTranslationHost: ViewModifier {
             content
             .task(id: detectionID) {
                 guard !Task.isCancelled else { return }
+                translation.updatePreferences(
+                    automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
+                    languageRules: .init(rawValue: languageRulesRawValue))
                 translation.setActive(
                     isActive && !isReaderActive && scenePhase != .background, in: webView, hostID: hostID)
                 guard !isLoading, !isReaderActive, isActive else { return }
@@ -36,6 +44,11 @@ struct BrowserTranslationHost: ViewModifier {
             }
             .translationTask(configuration) { session in
                 await translation.run(using: session, configuration: configuration)
+            }
+            .onChange(of: offersTranslation) {
+                translation.updatePreferences(
+                    automaticallyTranslates: automaticallyTranslates, offersTranslation: offersTranslation,
+                    languageRules: .init(rawValue: languageRulesRawValue))
             }
             .onDisappear { translation.setActive(false, in: webView, hostID: hostID) }
             .sheet(isPresented: $translation.showsInformation) {
@@ -59,7 +72,7 @@ private struct BrowserTranslationInformation: View {
                         "Apple translates page text on this device. Languages may need to download first; Apple asks before downloading. Downloaded languages are shared with other apps and remain available after Private Browsing ends."
                     )
                     Text(
-                        "Automatically Translate is off by default. When enabled, Crest uses your preferred device language and only languages already downloaded. The translation controls show when a page was automatically translated. Show Original keeps that page in its original language until you navigate or reload."
+                        "Automatically Translate is off by default. Choose which languages to translate and their destination languages in Settings → General → Page Translation. Only enabled language mappings with downloaded languages translate automatically. Automatic translation never opens a translation bar or asks to download languages. Open the translation controls to check status or download missing languages. Turn off Offer to Translate to stop automatic offers. Show Original keeps that page in its original language until you navigate or reload."
                     )
                     #if os(iOS)
                         Text(

@@ -272,14 +272,7 @@ final class BrowserPagePool:
                         spaceName: spaceName
                     )
                 },
-                permissionCenter: permissionCenter,
-                approveAutomaticDownload: { filename, origin, spaceName in
-                    await dialogPresenter.presentAutomaticDownloadPermission(
-                        filename: filename,
-                        origin: origin,
-                        spaceName: spaceName
-                    )
-                }
+                permissionCenter: permissionCenter
             )
         if monitorsMemoryPressure {
             installMemoryPressureSource()

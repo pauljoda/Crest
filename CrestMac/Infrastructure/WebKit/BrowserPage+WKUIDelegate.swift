@@ -215,50 +215,22 @@ extension BrowserPage: WKUIDelegate {
         initiatedByFrame frame: WKFrameInfo,
         decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
     ) {
-        let siteOrigin =
-            frame.request.url.flatMap { BrowserSiteOrigin(url: $0) }
-            ?? BrowserSiteOrigin(origin)
-        switch permissionCenter.decision(
-            for: .location,
-            origin: siteOrigin,
-            in: spaceID
-        ) {
-        case .grantForSession, .grantPersistently:
-            decisionHandler(.grant)
-        case .denyForSession, .denyPersistently:
+        guard frame.webView === webView,
+            let topLevelOrigin = webView.url.flatMap(BrowserSiteOrigin.init(url:))
+        else {
             decisionHandler(.deny)
-        case .ask:
-            Task { @MainActor [weak self] in
-                guard let self else {
-                    decisionHandler(.deny)
-                    return
-                }
-                let response = await dialogPresenter.presentGeolocationPermission(
-                    origin: siteOrigin,
-                    topLevelURL: webView.url,
-                    spaceName: spaceName
-                )
-                switch response {
-                case .allowOnce:
-                    decisionHandler(.grant)
-                case .grantPersistently:
-                    permissionCenter.setDecision(
-                        .grantPersistently,
-                        for: .location,
-                        origin: siteOrigin,
-                        in: spaceID
-                    )
-                    decisionHandler(.grant)
-                case .denyPersistently:
-                    permissionCenter.setDecision(
-                        .denyPersistently,
-                        for: .location,
-                        origin: siteOrigin,
-                        in: spaceID
-                    )
-                    decisionHandler(.deny)
-                }
+            return
+        }
+        let siteOrigin = BrowserSiteOrigin(origin)
+        Task { @MainActor [weak self] in
+            guard let self else {
+                decisionHandler(.deny)
+                return
             }
+            let allowed = await sitePermissionRequests.authorize(
+                .location, origin: siteOrigin, topLevelOrigin: topLevelOrigin,
+                spaceID: spaceID, spaceName: spaceName, permissionCenter: permissionCenter)
+            decisionHandler(allowed ? .grant : .deny)
         }
     }
 }

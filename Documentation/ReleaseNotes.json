@@ -1265,6 +1265,34 @@
     "reactive-picture-in-picture-discovery": {
       "category": "improved",
       "message": "Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse"
+    },
+    "quiet-translation-and-site-permission-choices": {
+      "category": "fixed",
+      "message": "Translate automatically without pop-ups, turn off translation offers, and manage download and location permissions from site controls without saving accidental blocks"
+    },
+    "system-access-status-and-explicit-passkey-consent": {
+      "category": "improved",
+      "message": "Check and repair macOS permissions in General settings, verify download folder access, and stop requesting passkey access during ordinary browsing"
+    },
+    "preserve-tab-selection-during-startup": {
+      "category": "fixed",
+      "message": "Keep the tab you select while Crest starts instead of returning to the Start Page when extensions finish loading"
+    },
+    "reduce-large-sync-journal-sorting-work": {
+      "category": "improved",
+      "message": "Reduce pauses during iCloud sync by avoiding repeated sorting work in large browsing histories"
+    },
+    "choose-automatic-translation-language-mappings": {
+      "category": "improved",
+      "message": "Choose which downloaded languages translate automatically and their destination languages in General settings"
+    },
+    "disable-paused-translation-mapping-controls": {
+      "category": "improved",
+      "message": "Gray out language mappings while automatic translation is off and restore their controls when it is enabled"
+    },
+    "keep-link-dragging-after-in-page-navigation": {
+      "category": "fixed",
+      "message": "Keep dragging links into Peek available after following an in-page link"
     }
   }
 }

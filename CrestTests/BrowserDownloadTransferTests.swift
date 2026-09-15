@@ -8,6 +8,83 @@ import XCTest
 @testable import Crest
 
 final class BrowserDownloadTransferTests: XCTestCase {
+    @MainActor
+    func testAutomaticDownloadsUseSiteControlsAndDismissalDoesNotSaveABlock() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "crest-download-permissions-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let persistence = InMemoryBrowserSitePermissionPersistence()
+        let permissions = BrowserSitePermissionCenter(persistence: persistence)
+        let center = BrowserDownloadCenter(
+            permissionCenter: permissions,
+            resolveDownloadDestination: { filename, _, _ in
+                .destination(root.appending(path: "\(UUID())-\(filename)"), securityScopedURL: nil)
+            })
+        let web = WKWebView()
+        let owner = DownloadPermissionOwner()
+        web.uiDelegate = owner
+        web.navigationDelegate = owner
+        owner.sitePermissionRequests.setPresentationAvailable(true)
+        let url = try XCTUnwrap(URL(string: "https://downloads.crest.test/"))
+        web.loadSimulatedRequest(
+            URLRequest(url: url),
+            responseHTML: """
+                <title>Downloads</title><script>
+                window.pendingDownloads = 0;
+                setInterval(() => {
+                  if (!window.pendingDownloads) return;
+                  window.pendingDownloads--;
+                  const link = document.createElement('a');
+                  link.href = 'data:text/plain;base64,aGVsbG8=';
+                  link.download = 'hello.txt';
+                  link.click();
+                }, 100);
+                </script>
+                """)
+        let spaceID = SpaceID()
+        let profileID = UUID()
+        let origin = try XCTUnwrap(BrowserSiteOrigin(url: url))
+        try await waitForDownloadCondition { web.url == url && !web.isLoading }
+        owner.receiveDownload = { download in
+            XCTAssertFalse(download.isUserInitiated)
+            center.start(download, in: web, profileID: profileID, spaceID: spaceID, spaceName: "Work")
+        }
+        func start() async throws {
+            _ = try await web.callAsyncJavaScript(
+                "window.pendingDownloads++;",
+                arguments: [:], in: nil, contentWorld: .page)
+        }
+        try await start()
+        try await waitForDownloadCondition { center.items.filter { $0.state == .finished }.count == 1 }
+        XCTAssertNil(owner.sitePermissionRequests.current)
+        try await start()
+        try await waitForDownloadCondition { owner.sitePermissionRequests.current != nil }
+        XCTAssertEqual(owner.sitePermissionRequests.current?.permission, .automaticDownloads)
+        XCTAssertEqual(owner.sitePermissionRequests.current?.origin, origin)
+        owner.sitePermissionRequests.cancelAll()
+        try await waitForDownloadCondition { center.items.contains { $0.state == .blockedAutomaticDownload } }
+        XCTAssertEqual(permissions.decision(for: .automaticDownloads, origin: origin, in: spaceID), .ask)
+        XCTAssertTrue(persistence.records.isEmpty)
+        try await start()
+        try await waitForDownloadCondition { owner.sitePermissionRequests.current != nil }
+        owner.sitePermissionRequests.resolve(
+            try XCTUnwrap(owner.sitePermissionRequests.current?.id), response: .grantPersistently)
+        try await waitForDownloadCondition { center.items.filter { $0.state == .finished }.count == 2 }
+        try await start()
+        try await waitForDownloadCondition { center.items.filter { $0.state == .finished }.count == 3 }
+        XCTAssertNil(owner.sitePermissionRequests.current)
+        XCTAssertEqual(persistence.records.first?.decision, .grantPersistently)
+    }
+
+    @MainActor
+    private func waitForDownloadCondition(_ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !condition() && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertTrue(condition())
+    }
+
     func testStagingURLLivesInsideTheAppOwnedDirectory() {
         let directory = URL(fileURLWithPath: "/Application Support/Crest/Download Staging", isDirectory: true)
         let itemID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
@@ -168,5 +245,24 @@ final class BrowserDownloadTransferTests: XCTestCase {
             CGImageSourceCreateWithData(savedData as CFData, nil)
         )
         XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.jpeg.identifier)
+    }
+}
+
+@MainActor
+private final class DownloadPermissionOwner: NSObject, WKUIDelegate, WKNavigationDelegate,
+    BrowserPagePermissionProviding
+{
+    let sitePermissionRequests = BrowserPagePermissionController()
+    var receiveDownload: ((WKDownload) -> Void)?
+
+    func webView(
+        _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+    ) {
+        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        receiveDownload?(download)
     }
 }

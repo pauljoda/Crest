@@ -3,20 +3,21 @@ import SwiftUI
 /// Startup, browsing preferences, and the platform's default-browser actions.
 struct BrowserGeneralSettingsPane: View {
     let browser: BrowserStore
+    let spaceAccess: BrowserSpaceAccessController
 
     @Bindable private var linkPreferences: BrowserLinkPreferenceStore
     @State private var defaultBrowser = BrowserDefaultBrowserController()
     @State private var isCheckingDefaultBrowser = true
-    @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
-    private var automaticallyTranslates = false
     @AppStorage(BrowserStartupPreference.key) private var startupBehaviorRawValue =
         BrowserStartupBehavior.defaultBehavior.rawValue
 
     init(
         browser: BrowserStore,
+        spaceAccess: BrowserSpaceAccessController,
         linkPreferences: BrowserLinkPreferenceStore = .shared
     ) {
         self.browser = browser
+        self.spaceAccess = spaceAccess
         _linkPreferences = Bindable(wrappedValue: linkPreferences)
     }
 
@@ -58,15 +59,10 @@ struct BrowserGeneralSettingsPane: View {
                 }
             #endif
 
-            Section("Page Translation") {
-                Toggle("Automatically Translate", isOn: $automaticallyTranslates)
-                    .accessibilityIdentifier("automatic-translation-toggle")
-                CrestFormFootnote(
-                    "Translate pages into your preferred device language when the required languages are already downloaded. Other pages show a translation offer. Automatic translation never downloads languages."
-                )
-            }
+            BrowserTranslationSettingsSection()
 
             #if os(macOS)
+                BrowserSystemPermissionSettingsSection(browser: browser, spaceAccess: spaceAccess)
                 BrowserPictureInPictureSettingsSection()
                 BrowserSpellCheckingSettingsSection()
             #endif

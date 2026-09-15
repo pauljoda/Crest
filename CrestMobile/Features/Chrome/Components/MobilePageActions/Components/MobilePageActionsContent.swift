@@ -100,6 +100,7 @@ struct MobilePageActionsContent: View {
         }
 
         if let page = pages.activePage {
+            sitePermissions(for: page)
             Menu("Translate Page", systemImage: "translate") {
                 BrowserTranslationActions(translation: page.translation)
                     .crestMenuActionLabelStyle()
@@ -179,6 +180,32 @@ struct MobilePageActionsContent: View {
                     }
                 }
                 .crestMenuActionLabelStyle()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sitePermissions(for page: MobileBrowserPage) -> some View {
+        if let origin = page.url.flatMap(BrowserSiteOrigin.init(url:)) {
+            Menu("Site Permissions", systemImage: "slider.horizontal.3") {
+                ForEach(BrowserSitePermission.allCases, id: \.self) { permission in
+                    Picker(
+                        permission.settingsLabel,
+                        selection: Binding {
+                            page.permissionCenter.decision(for: permission, origin: origin, in: page.spaceID)
+                        } set: { decision in
+                            page.permissionCenter.setDecision(
+                                decision, for: permission, origin: origin, in: page.spaceID)
+                            if permission == .popups { page.synchronizePopupPermission() }
+                            if permission == .location { page.geolocationCoordinator?.synchronizeMainFramePermission() }
+                        }
+                    ) {
+                        Text(permission.defaultDecisionLabel).tag(BrowserSitePermissionDecision.ask)
+                        Text("Allow").tag(BrowserSitePermissionDecision.grantPersistently)
+                        Text("Block").tag(BrowserSitePermissionDecision.denyPersistently)
+                    }
+                    .pickerStyle(.menu)
+                }
             }
         }
     }

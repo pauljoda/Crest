@@ -39,6 +39,7 @@ final class BrowserRootModel {
         }
     )
     var hasRestoredExtensions = false
+    @ObservationIgnored private var isPreparingBrowser = false
     var isURLCopiedFeedbackVisible = false
     var visiblePageZoomFeedbackLabel: String?
     var isFloatingSidebarPresented = false
@@ -101,16 +102,20 @@ extension BrowserRootModel {
             BrowserExtensionStartupLog.skippedAlreadyRestored()
             return
         }
-        await pages.restoreExtensions(in: browser.session)
-        await pages.prepareContentBlocking()
-        hasRestoredExtensions = true
-        switch startupBehavior {
-        case .lastActiveTab:
-            synchronizeSelection()
-        case .showStartPage:
+        guard !isPreparingBrowser else { return }
+        isPreparingBrowser = true
+        defer { isPreparingBrowser = false }
+
+        // Apply the launch choice before yielding to extension and rule-list startup.
+        // Once the window accepts input, the user's current selection takes precedence.
+        if startupBehavior == .showStartPage {
             browser.presentStartPageForLaunch()
             address = ""
         }
+        await pages.restoreExtensions(in: browser.session)
+        await pages.prepareContentBlocking()
+        hasRestoredExtensions = true
+        synchronizeSelection()
     }
 
     func reconcileExtensions() {

@@ -4,6 +4,8 @@ import Translation
 @MainActor
 enum BrowserTranslationPreference {
     static let automaticKey = "crest.translation.automaticallyTranslate"
+    static let rulesKey = "crest.translation.languageRules"
+    static let offersKey = "crest.translation.offerToTranslate"
 
     static let defaults: UserDefaults = {
         let environment = BrowserLaunchEnvironment.current

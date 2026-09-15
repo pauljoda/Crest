@@ -1,8 +1,24 @@
 import Foundation
 import XCTest
+
 @testable import Crest
 
 final class BrowserDownloadDestinationTests: XCTestCase {
+    @MainActor
+    func testUnavailableSavedFolderIsRetainedForRecoveryInsteadOfFallingBackToDownloads() async {
+        let preferences = BrowserPlatformDownloadPreferences.shared
+        let spaceID = SpaceID()
+        defer { preferences.clearDirectory(for: spaceID) }
+        preferences.setDirectoryMetadata(bookmark: Data([1, 2, 3]), displayName: "Work Files", for: spaceID)
+        let resolution = await BrowserPlatformDownloadDirectory.resolve(
+            suggestedFilename: "report.txt", spaceID: spaceID)
+        guard case .unavailable = resolution else {
+            XCTFail("A broken saved folder must not silently redirect a download.")
+            return
+        }
+        XCTAssertEqual(preferences.directoryDisplayName(for: spaceID), "Work Files")
+    }
+
     func testUsesTheSuggestedFilenameWhenItIsAvailable() {
         let directory = URL(fileURLWithPath: "/Downloads", isDirectory: true)
 

@@ -74,6 +74,8 @@ struct BrowserPagePermissionPrompt: View {
         case .microphone: "Wants to use your microphone"
         case .cameraAndMicrophone: "Wants to use your camera and microphone"
         case .notifications: "Wants to send notifications while this page is open"
+        case .location: "Wants to use your location"
+        case .automaticDownloads: "Wants to download multiple files automatically"
         default: "Requests permission"
         }
     }

@@ -38,6 +38,23 @@ struct BrowserTranslationActions: View {
     let translation: BrowserPageTranslation
     @AppStorage(BrowserTranslationPreference.automaticKey, store: BrowserTranslationPreference.defaults)
     private var automaticallyTranslates = false
+    @AppStorage(BrowserTranslationPreference.offersKey, store: BrowserTranslationPreference.defaults)
+    private var offersTranslation = true
+
+    @AppStorage(BrowserTranslationPreference.rulesKey, store: BrowserTranslationPreference.defaults)
+    private var rulesRawValue = ""
+
+    private var automaticallyTranslatesSource: Binding<Bool> {
+        Binding {
+            automaticallyTranslates
+                && BrowserAutomaticTranslationRules(rawValue: rulesRawValue).target(for: translation.sourceID) != nil
+        } set: { enabled in
+            var rules = BrowserAutomaticTranslationRules(rawValue: rulesRawValue)
+            rules.set(sourceID: translation.sourceID, targetID: translation.targetID, isEnabled: enabled)
+            rulesRawValue = rules.rawValue
+            if enabled { automaticallyTranslates = true }
+        }
+    }
 
     var body: some View {
         if !translation.status.isEmpty { Text(translation.status) }
@@ -57,9 +74,17 @@ struct BrowserTranslationActions: View {
             Button("Show Original", systemImage: "arrow.uturn.backward", action: translation.showOriginal)
         }
         Divider()
-        Toggle(isOn: $automaticallyTranslates) {
-            Label("Automatically Translate", systemImage: "arrow.triangle.2.circlepath")
+        if !translation.sourceID.isEmpty {
+            Toggle(isOn: automaticallyTranslatesSource) {
+                Label(
+                    "Always Translate \(translation.languageName(translation.sourceID))",
+                    systemImage: "arrow.triangle.2.circlepath")
+            }
+            .disabled(
+                translation.targetID.isEmpty
+                    || BrowserAutomaticTranslationRules.matches(translation.sourceID, translation.targetID))
         }
+        Toggle("Offer to Translate", isOn: $offersTranslation)
         Button("Download More Languages…", systemImage: "arrow.down.circle") { translation.showsInformation = true }
         Button("About Page Translation", systemImage: "info.circle") { translation.showsInformation = true }
     }

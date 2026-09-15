@@ -93,8 +93,7 @@ final class MobileBrowserInteropTests: XCTestCase {
             selectedTabID: tab.id
         )
         let center = BrowserDownloadCenter(
-            approveRiskyDownload: { _, _, _ in true },
-            approveAutomaticDownload: { _, _, _ in .allowOnce }
+            approveRiskyDownload: { _, _, _ in true }
         )
         let page = MobileBrowserPage(
             tab: tab,
@@ -254,8 +253,7 @@ final class MobileBrowserInteropTests: XCTestCase {
                 XCTAssertEqual(requestedSpaceID, space.id)
                 saveCount += 1
             },
-            approveRiskyDownload: { _, _, _ in true },
-            approveAutomaticDownload: { _, _, _ in .allowOnce }
+            approveRiskyDownload: { _, _, _ in true }
         )
         let page = MobileBrowserPage(
             tab: tab,

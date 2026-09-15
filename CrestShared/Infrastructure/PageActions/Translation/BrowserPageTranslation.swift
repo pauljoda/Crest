@@ -43,12 +43,37 @@ final class BrowserPageTranslation {
     @ObservationIgnored private var restorationTask: Task<Void, Error>?
     private var translatedSourceID = ""
     private var translatedTargetID = ""
+    private var languageRules = BrowserAutomaticTranslationRules()
+    private var automaticallyTranslates = false
+    private var offersTranslation = true
+    private var isManuallyPresented = false
 
     var hasSelectedTranslation: Bool {
         isTranslated && sourceID == translatedSourceID && targetID == translatedTargetID
     }
 
-    var showsToolbar: Bool { isOffered && !isDismissed }
+    var showsToolbar: Bool {
+        isOffered && !isDismissed
+            && (isManuallyPresented || (offersTranslation && !automaticallyTranslates))
+    }
+
+    func updatePreferences(
+        automaticallyTranslates: Bool, offersTranslation: Bool,
+        languageRules: BrowserAutomaticTranslationRules = .init()
+    ) {
+        if languageRules != self.languageRules {
+            if isAutomaticOperation { cancel() }
+            self.languageRules = languageRules
+            automaticAttempted = false
+        }
+        if automaticallyTranslates && !self.automaticallyTranslates {
+            automaticAttempted = false
+            isDismissed = false
+            isManuallyPresented = false
+        }
+        self.automaticallyTranslates = automaticallyTranslates
+        self.offersTranslation = offersTranslation
+    }
     var targetName: String { languageName(targetID) }
 
     func languageName(_ identifier: String) -> String {
@@ -81,7 +106,10 @@ final class BrowserPageTranslation {
                 hasDetected = true
                 sourceID = detected
                 let preferred = Locale.Language(identifier: Locale.preferredLanguages.first ?? "en")
-                guard preferred.languageCode != Locale.Language(identifier: detected).languageCode else { return }
+                guard
+                    languageRules.target(for: detected) != nil
+                        || preferred.languageCode != Locale.Language(identifier: detected).languageCode
+                else { return }
                 await loadLanguages()
                 guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
                 let detectedLanguage = Locale.Language(identifier: detected)
@@ -92,6 +120,7 @@ final class BrowserPageTranslation {
                     }?.minimalIdentifier
                     ?? detected
                 guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
+                if let target = languageRules.target(for: sourceID), automaticallyTranslates { targetID = target }
                 let availability = await BrowserTranslationPreference.languageAvailability().status(
                     from: .init(identifier: sourceID), to: .init(identifier: targetID))
                 guard isActive, revision == documentRevision, !isWorking, !Task.isCancelled else { return }
@@ -182,6 +211,7 @@ final class BrowserPageTranslation {
     }
 
     func present() {
+        isManuallyPresented = true
         isOffered = true
         isDismissed = false
         Task { await loadLanguages() }
@@ -189,14 +219,13 @@ final class BrowserPageTranslation {
 
     func automaticallyTranslateIfAvailable(enabled: Bool) async {
         if !enabled, isAutomaticOperation { cancel() }
-        guard enabled, isActive, hasDetected, isOffered, !isDismissed,
+        guard enabled, isActive, hasDetected, !isDismissed,
             !automaticAttempted, !isWorking, !isTranslated, !sourceID.isEmpty
         else { return }
         let revision = documentRevision
         let source = Locale.Language(identifier: sourceID)
-        let preferred = Locale.Language(identifier: Locale.preferredLanguages.first ?? "en")
-        guard source.languageCode != preferred.languageCode else { return }
-        let target = BrowserTranslationPreference.preferredTarget(in: languages, preferred: preferred)
+        guard let mappedTarget = languageRules.target(for: sourceID) else { return }
+        let target = Locale.Language(identifier: mappedTarget)
         let confirmedPair = detectedInstalledPair == "\(sourceID)|\(target.minimalIdentifier)"
         let availability: LanguageAvailability.Status
         if confirmedPair {
@@ -205,7 +234,8 @@ final class BrowserPageTranslation {
             availability = await BrowserTranslationPreference.languageAvailability().status(from: source, to: target)
         }
         guard !Task.isCancelled, isActive, revision == documentRevision,
-            source == Locale.Language(identifier: sourceID), !isWorking, !isTranslated,
+            source == Locale.Language(identifier: sourceID), languageRules.target(for: sourceID) == mappedTarget,
+            !isWorking, !isTranslated,
             !automaticAttempted, !isDismissed
         else { return }
         automaticAttempted = true
@@ -248,6 +278,7 @@ final class BrowserPageTranslation {
 
     func start() {
         guard isActive, !isWorking, !targetID.isEmpty else { return }
+        isManuallyPresented = true
         automaticAttempted = true
         isAutomaticOperation = false
         isOffered = true
@@ -443,6 +474,7 @@ final class BrowserPageTranslation {
         detectedInstalledPair = nil
         sourceID = ""
         isOffered = false
+        isManuallyPresented = false
         isDismissed = false
         showsInformation = false
         status = ""

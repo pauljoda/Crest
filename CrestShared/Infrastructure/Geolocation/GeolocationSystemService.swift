@@ -9,11 +9,20 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
     }
 
     private lazy var manager: CLLocationManager = {
-        let manager = CLLocationManager()
+        let manager = providedManager ?? CLLocationManager()
         manager.delegate = self
         manager.distanceFilter = kCLDistanceFilterNone
         return manager
     }()
+    private let providedManager: CLLocationManager?
+    private let authorizationTimeout: Duration
+    private var authorizationTimeoutTask: Task<Void, Never>?
+
+    init(manager: CLLocationManager? = nil, authorizationTimeout: Duration = .seconds(30)) {
+        self.providedManager = manager
+        self.authorizationTimeout = authorizationTimeout
+        super.init()
+    }
 
     private var authorizationContinuations: [CheckedContinuation<BrowserGeolocationSystemAuthorization, Never>] = []
     private var oneShotRegistrations: [String: Registration] = [:]
@@ -30,6 +39,13 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
         return await withCheckedContinuation { continuation in
             authorizationContinuations.append(continuation)
             if authorizationContinuations.count == 1 {
+                // Core Location can decline to present a prompt without a terminal callback.
+                // Finish with the actual status so callers can offer recovery without saving a denial.
+                authorizationTimeoutTask = Task { [weak self, authorizationTimeout] in
+                    do { try await Task.sleep(for: authorizationTimeout) } catch { return }
+                    guard let self else { return }
+                    finishAuthorization(with: currentAuthorization())
+                }
                 manager.requestWhenInUseAuthorization()
             }
         }
@@ -118,14 +134,20 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
     private func receiveAuthorizationChange() {
         let authorization = currentAuthorization()
         if authorization != .notDetermined {
-            let continuations = authorizationContinuations
-            authorizationContinuations.removeAll()
-            for continuation in continuations {
-                continuation.resume(returning: authorization)
-            }
+            finishAuthorization(with: authorization)
         }
         if authorization == .denied {
             failAll(with: .permissionDenied)
+        }
+    }
+
+    private func finishAuthorization(with authorization: BrowserGeolocationSystemAuthorization) {
+        authorizationTimeoutTask?.cancel()
+        authorizationTimeoutTask = nil
+        let continuations = authorizationContinuations
+        authorizationContinuations.removeAll()
+        for continuation in continuations {
+            continuation.resume(returning: authorization)
         }
     }
 

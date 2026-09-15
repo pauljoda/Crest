@@ -12,7 +12,7 @@ import WebKit
 
 @Observable
 @MainActor
-final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
+final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPagePermissionProviding {
     var opensModifiedLinksInForeground = false
     private(set) var tabID: TabID
     let spaceID: SpaceID
@@ -317,10 +317,11 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             service: geolocationService,
             spaceID: space.id,
             spaceName: space.name,
-            prompt: { origin, topLevelURL, requestedSpaceName in
-                await MobileBrowserDialogPresenter.presentGeolocationPermission(
-                    origin: origin,
-                    topLevelURL: topLevelURL,
+            prompt: { [weak self] origin, topLevelURL, requestedSpaceName in
+                guard let self else { return .denyOnce }
+                return await self.sitePermissionRequests.response(
+                    to: .location, origin: origin,
+                    topLevelOrigin: topLevelURL.flatMap(BrowserSiteOrigin.init(url:)) ?? origin,
                     spaceName: requestedSpaceName
                 )
             },

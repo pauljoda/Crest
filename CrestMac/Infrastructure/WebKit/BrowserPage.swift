@@ -8,7 +8,7 @@ import os
 
 @Observable
 @MainActor
-final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
+final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPagePermissionProviding {
     var opensModifiedLinksInForeground = false
     @ObservationIgnored private static let lifecycleSignposter = OSSignposter(
         subsystem: "com.pauldavis.crest",
@@ -474,10 +474,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 service: geolocationService,
                 spaceID: spaceID,
                 spaceName: spaceName,
-                prompt: { origin, topLevelURL, requestedSpaceName in
-                    await dialogPresenter.presentGeolocationPermission(
-                        origin: origin,
-                        topLevelURL: topLevelURL,
+                prompt: { [weak self] origin, topLevelURL, requestedSpaceName in
+                    guard let self else { return .denyOnce }
+                    return await self.sitePermissionRequests.response(
+                        to: .location, origin: origin,
+                        topLevelOrigin: topLevelURL.flatMap(BrowserSiteOrigin.init(url:)) ?? origin,
                         spaceName: requestedSpaceName
                     )
                 },
@@ -1308,7 +1309,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     func prepareForNavigation(to url: URL?) {
-        linkDrag.beginNavigation()
+        // Same-document navigation never commits a replacement document.
+        // Cancel the current pull here; suspend new pulls only when WebKit
+        // actually starts provisional navigation.
+        linkDrag.cancel()
         mediaCaptureSession.reset()
         sitePermissionRequests.cancelAll()
         translation.reset()

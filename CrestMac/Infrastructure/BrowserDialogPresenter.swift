@@ -146,29 +146,6 @@ final class BrowserDialogPresenter {
         }
     }
 
-    func presentGeolocationPermission(
-        origin: BrowserSiteOrigin,
-        topLevelURL: URL?,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        var message =
-            "This site will be able to use your current location for this request. "
-            + "The choice belongs only to the \(spaceName) Space."
-        if let topLevelURL,
-            let topLevelHost = topLevelURL.host(),
-            topLevelHost.caseInsensitiveCompare(origin.host) != .orderedSame
-        {
-            message += "\n\nThe request comes from \(origin.displayName) inside \(topLevelHost)."
-        }
-        return await presentSitePermission(
-            title: "Allow \(origin.host) to use your location?",
-            message: message,
-            allowOnceTitle: "Allow Once",
-            alwaysAllowTitle: "Always Allow in \(spaceName)",
-            blockTitle: "Block in \(spaceName)"
-        )
-    }
-
     /// Explains the second, app-level permission boundary before leaving Crest.
     /// The caller keeps the page's original request pending, then rechecks the
     /// system authorization after Crest becomes active again.
@@ -255,22 +232,6 @@ final class BrowserDialogPresenter {
         return trimmed.isEmpty ? url.absoluteString : "\(scheme):\(trimmed)"
     }
 
-    func presentAutomaticDownloadPermission(
-        filename: String,
-        origin: BrowserSiteOrigin,
-        spaceName: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        await presentSitePermission(
-            title: "Allow automatic downloads from \(origin.host)?",
-            message:
-                "The site started “\(filename)” without a direct download action. "
-                + "The choice belongs only to the \(spaceName) Space.",
-            allowOnceTitle: "Download Once",
-            alwaysAllowTitle: "Always Allow in \(spaceName)",
-            blockTitle: "Block in \(spaceName)"
-        )
-    }
-
     func approveRiskyDownload(
         assessment: BrowserDownloadRiskAssessment,
         sourceURL: URL?,
@@ -350,34 +311,6 @@ final class BrowserDialogPresenter {
             components.append("Warning: this connection is not protected by HTTPS.")
         }
         return components.joined(separator: "\n\n")
-    }
-
-    private func presentSitePermission(
-        title: String,
-        message: String,
-        allowOnceTitle: String,
-        alwaysAllowTitle: String,
-        blockTitle: String
-    ) async -> BrowserSitePermissionPromptResponse {
-        await withCheckedContinuation { continuation in
-            let alert = NSAlert()
-            alert.messageText = title
-            alert.informativeText = message
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: allowOnceTitle)
-            alert.addButton(withTitle: alwaysAllowTitle)
-            alert.addButton(withTitle: blockTitle)
-            present(alert) { response in
-                switch response {
-                case .alertFirstButtonReturn:
-                    continuation.resume(returning: .allowOnce)
-                case .alertSecondButtonReturn:
-                    continuation.resume(returning: .grantPersistently)
-                default:
-                    continuation.resume(returning: .denyPersistently)
-                }
-            }
-        }
     }
 
     private func presentSystemPermissionRecovery(

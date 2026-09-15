@@ -1,5 +1,5 @@
 enum BrowserSitePermissionDisclosurePolicy {
-    static let defaultIsExpanded = false
+    static let defaultIsExpanded = true
 
     static func visiblePermissions(
         isExpanded: Bool

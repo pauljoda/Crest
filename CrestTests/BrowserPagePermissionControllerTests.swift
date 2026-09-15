@@ -5,6 +5,70 @@ import XCTest
 
 @MainActor
 final class BrowserPagePermissionControllerTests: XCTestCase {
+    func testLocationAuthorizationRemembersAllowAndCannotOverrideANewerBlock() async throws {
+        let controller = BrowserPagePermissionController()
+        controller.setPresentationAvailable(true)
+        let persistence = InMemoryBrowserSitePermissionPersistence()
+        let center = BrowserSitePermissionCenter(persistence: persistence)
+        let origin = BrowserSiteOrigin(scheme: "https", host: "location.example", port: 443)
+        let spaceID = SpaceID()
+        func authorize() async -> Bool {
+            await controller.authorize(
+                .location, origin: origin, topLevelOrigin: origin,
+                spaceID: spaceID, spaceName: "Work", permissionCenter: center)
+        }
+        let first = Task { await authorize() }
+        controller.resolve(try await pendingRequest(in: controller), response: .grantPersistently)
+        let firstAllowed = await first.value
+        XCTAssertTrue(firstAllowed)
+        let remembered = await authorize()
+        XCTAssertTrue(remembered)
+        XCTAssertNil(controller.current)
+        XCTAssertEqual(persistence.records.first?.decision, .grantPersistently)
+        center.setDecision(.ask, for: .location, origin: origin, in: spaceID)
+        let second = Task { await authorize() }
+        let requestID = try await pendingRequest(in: controller)
+        center.setDecision(.denyPersistently, for: .location, origin: origin, in: spaceID)
+        controller.resolve(requestID, response: .grantPersistently)
+        let secondAllowed = await second.value
+        XCTAssertFalse(secondAllowed)
+        XCTAssertEqual(persistence.records.first?.decision, .denyPersistently)
+    }
+
+    func testDownloadAndLocationDismissalAreTemporaryAndExplicitChoicesArePreserved() async throws {
+        let controller = BrowserPagePermissionController()
+        let origin = BrowserSiteOrigin(scheme: "https", host: "files.example", port: 443)
+        for permission in [BrowserSitePermission.automaticDownloads, .location] {
+            let unavailable = await controller.response(
+                to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
+            XCTAssertEqual(unavailable, .denyOnce)
+            controller.setPresentationAvailable(true)
+            for choice in [BrowserPagePermissionController.Response.grantPersistently, .denyPersistently] {
+                let task = Task {
+                    await controller.response(to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
+                }
+                controller.resolve(try await pendingRequest(in: controller), response: choice)
+                let response = await task.value
+                XCTAssertEqual(response, choice == .grantPersistently ? .grantPersistently : .denyPersistently)
+            }
+            let task = Task {
+                await controller.response(to: permission, origin: origin, topLevelOrigin: origin, spaceName: "Work")
+            }
+            _ = try await pendingRequest(in: controller)
+            controller.setPresentationAvailable(false)
+            let dismissed = await task.value
+            XCTAssertEqual(dismissed, .denyOnce)
+        }
+    }
+
+    private func pendingRequest(in controller: BrowserPagePermissionController) async throws -> UUID {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while controller.current == nil && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        return try XCTUnwrap(controller.current?.id)
+    }
+
     func testMediaRevocationStopsOnlyTheRevokedCapture() async throws {
         let view = RecordingCaptureWebView()
         let center = BrowserSitePermissionCenter()

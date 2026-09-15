@@ -43,7 +43,7 @@ struct BrowserSettingsDestinationRouter: View {
     var body: some View {
         switch destination {
         case .general:
-            BrowserGeneralSettingsPane(browser: browser)
+            BrowserGeneralSettingsPane(browser: browser, spaceAccess: spaceAccess)
         case .lookAndFeel:
             BrowserLookAndFeelSettingsPane(space: browser.selectedSpace)
         case .links:
