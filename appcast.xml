@@ -6,6 +6,50 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.6.7</title>
+            <pubDate>Tue, 15 Sep 2026 13:42:13 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1104</sparkle:version>
+            <sparkle:shortVersionString>0.6.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 24 user-facing changes.
+
+### New
+
+- Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension
+
+### Improved
+
+- Fade smoothly between pinned-tab outline colors as website colors become available
+- Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse
+
+### Fixed
+
+- Keep pinned-tab colors consistent when pages unload and use more representative website colors
+- Use favicon colors for pinned outlines when websites declare black, white, or neutral theme colors
+- Keep black, white, and gray favicon colors in pinned-tab outlines
+- Open Quick Window pages in an existing normal browser window instead of creating a duplicate
+- Keep password manager extensions connected while idle to avoid repeated pairing prompts
+- Request macOS passkey permission when you sign in on a website
+- Keep selected upload files accessible and explain blocked file access
+- Use the standard keyboard with a spacebar in the iPad command palette
+- Let the system handle passkey sign-in directly without an extra permission check
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/c13a1a6d8ed718401b1de11e8bd47b37dace83a0...3f3a19021daf4cb4324ff75eae8e2d388b23f7f4) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.7-2026-09-15-1104-r104.1/Installer-Crest-0.6.7-nightly-2026-09-15-3f3a190-arm64.dmg)
+
+[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.7-2026-09-15-1104-r104.1/Installer-Crest-0.6.7-nightly-2026-09-15-3f3a190-arm64.dmg" length="26819371" type="application/octet-stream" sparkle:edSignature="pv0uhTFp2NL02klRo6JjZmwp4mnAzYjNyAEQC6mcp181PPCXjA4hpiUZST9P/5F192U25h3mKu8uief7lsO7Aw=="/>
+        </item>
+        <item>
             <title>0.6.6</title>
             <pubDate>Tue, 15 Sep 2026 01:04:05 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -32,160 +76,9 @@ Stable releases are signed, notarized, and ready for everyday use.
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.6/Installer-Crest-0.6.6-arm64.dmg" length="26817268" type="application/octet-stream" sparkle:edSignature="gLCAGlrapBp59I+FpRZWAMI9XVxVcmsMF+TEGzqw+vfWGXwet5cFcUbW1fQ+uEKsCjnyx6UH7cFHNhEQy++/BQ=="/>
         </item>
-        <item>
-            <title>0.6.4</title>
-            <pubDate>Tue, 15 Sep 2026 00:00:40 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1101</sparkle:version>
-            <sparkle:shortVersionString>0.6.4</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### New
-
-- Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension
-
-### Fixed
-
-- Open Quick Window pages in an existing normal browser window instead of creating a duplicate
-- Keep password manager extensions connected while idle to avoid repeated pairing prompts
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/dec7187c890d6729bec1b62b9322761dfc315daa...3cb440b612961c14394b16fbb0a120e80c13073e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.4/Installer-Crest-0.6.4-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.4/Installer-Crest-0.6.4-arm64.dmg" length="26816244" type="application/octet-stream" sparkle:edSignature="GkXkZ3oIdVjlyYxicSeWVI3UrxbcAFHj6FQ8e2JXJgVBcePJda7nPCX8R9pxq1BXiZFXPEiNUsWmAZ0gkAp/AQ=="/>
-        </item>
-        <item>
-            <title>0.6.3</title>
-            <pubDate>Mon, 14 Sep 2026 20:22:18 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1099</sparkle:version>
-            <sparkle:shortVersionString>0.6.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 209 user-facing changes.
-
-### Improved
-
-- Position torn-off windows where you drop the tab, keeping the window within the display
-- Choose folder icons from the full searchable SF Symbols catalog
-- Read tinted folder titles more easily with semibold text and stronger contrast
-- Fade smoothly between pinned-tab outline colors as website colors become available
-
-### Fixed
-
-- Keep pages loaded when you switch to them in another window during memory cleanup
-- Keep extension and built-in pages on their own device so they cannot block iCloud sync
-- Keep the Mac sidebar collapsed when opening the address editor with Command-L
-- Match the system dark background across Crest's app icon color palettes
-- Keep wide folder symbols fully visible in Icon only mode
-- Keep pinned-tab colors consistent when pages unload and use more representative website colors
-- Use favicon colors for pinned outlines when websites declare black, white, or neutral theme colors
-- Keep black, white, and gray favicon colors in pinned-tab outlines
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85...dec7187c890d6729bec1b62b9322761dfc315daa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.3/Installer-Crest-0.6.3-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.3/Installer-Crest-0.6.3-arm64.dmg" length="26805492" type="application/octet-stream" sparkle:edSignature="UBrnLZpsxFLQtI8xJQOsVQGKz8viGpCbHgRhv5ZaOEr7wHCCWajaG3H2eGVum9l1UFB8A6MZHXgwqfjjFJqNCQ=="/>
-        </item>
-        <item>
-            <title>0.5.142</title>
-            <pubDate>Mon, 14 Sep 2026 15:12:16 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1096</sparkle:version>
-            <sparkle:shortVersionString>0.5.142</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 39 user-facing changes.
-
-### Improved
-
-- Reorder Spaces directly in Settings with Up and Down controls
-- Reduce unnecessary icon and thumbnail redraws while adjusting Space appearance
-- Use Liquid Glass controls for reordering and adding Spaces
-- Keep a visible gap between tab highlights at the default spacing
-- Drag individual tabs out of a split, or move the whole split from its header
-- Keep Peeks with their tabs while opening new tabs, switching Spaces, and browsing inside the Peek
-- Blend address bar colors with the background when switching Spaces
-
-### Fixed
-
-- Keep Space appearance settings responsive while scrolling
-- Keep Settings actions within the current unlocked Space and protect locked destinations
-- Recover missing iCloud changes with a confirmed Pull from iCloud action, and keep blank tabs from blocking Space and tab updates
-- Search selected text in a new Crest tab using the current Space’s search engine
-- Prevent a crash when displaying sidebar previews during setup
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/940dd40a4ade3d9c11a1a2fc6e70a466cca42e52...c13a1a6d8ed718401b1de11e8bd47b37dace83a0) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.5.142-2026-09-14-1096-r96.1/Installer-Crest-0.5.142-nightly-2026-09-14-c13a1a6-arm64.dmg)
-
-[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.5.142-2026-09-14-1096-r96.1/Installer-Crest-0.5.142-nightly-2026-09-14-c13a1a6-arm64.dmg" length="25884973" type="application/octet-stream" sparkle:edSignature="29iUXQOTyDAKeeweXW19QPo8FYVxk9uiP/nd6isJ/ATasBhqoTBK0Y4r45OX75XO2X+51TuLmgRTGkFGPOhHDw=="/>
-        </item>
-        <item>
-            <title>0.5.7</title>
-            <pubDate>Thu, 27 Aug 2026 15:18:32 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1054</sparkle:version>
-            <sparkle:shortVersionString>0.5.7</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 56 user-facing changes.
-
-### New
-
-- Use custom search engines with website icons and optional search suggestions in each Space
-- See update availability and control media from a global sidebar widget deck across Spaces
-
-### Improved
-
-- Follow new downloads into Downloads and see live size, progress, speed, and time remaining across Mac and iPhone
-
-### Fixed
-
-- Show blocked pop-ups in Site Controls with a one-step allow action
-- Keep loading pages on-brand, reuse an open Start Page, and search tabs only in the current Space
-- Keep Space navigation centered and Archive controls reachable as more Spaces are added
-- Continue typing with the same caret or selection after returning to a webpage tab on Mac
-- Use compatible browser extension actions directly from webpage context menus
-- Keep mouse back and forward navigation within the webpage or sidebar under the pointer
-- Keep new-window links inside Peek and Quick Window instead of hiding them in background tabs
-- Start loading tabs opened from links right away, with an option to select them automatically
-- Refresh available updates to the newest eligible build before downloading
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View source](https://github.com/pauljoda/Crest/commit/e4b3a1eefa1b84e0620fcf9cb12b54abb3d01a85) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.5.7/Installer-Crest-0.5.7-arm64.dmg)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.5.7/Installer-Crest-0.5.7-arm64.dmg" length="8799967" type="application/octet-stream" sparkle:edSignature="0p3SBXDxGINRTOmn8PmK20C/cCnUGJ5xVmWGPDeSoEFWSOcyvX1zWsB/W0zaOqingd55ah3Hp5VBXReTUvTuCw=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: O612iTuL3XezBljaMJv/WWlB6EgBwJ0k8tPz/Bg8LmCDXmja4orWm8+aU17uGloTXdbRg2UQSIfVx1mOaR39Bw==
-length: 10767
+edSignature: SD1TdGM++cpNooucU21OyVv1F5vF4pQKbn/sPujgdZP5efDUT8k1zjMaXqMNfLpZCIcF3IXN0nNghJpmSkKfAw==
+length: 4617
 -->

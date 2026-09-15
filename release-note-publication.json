@@ -3,6 +3,6 @@
   "channels": {
     "stable": "native-webkit-passkey-sign-in",
     "development": "native-webkit-passkey-sign-in",
-    "nightly": "simulator-cloudkit-startup-guard"
+    "nightly": "reactive-picture-in-picture-discovery"
   }
 }
