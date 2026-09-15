@@ -1301,6 +1301,10 @@
     "preview-editable-ui-components-in-place": {
       "category": "internal",
       "message": "Add interactive component previews beside editable UI and isolate visual content from saved appearance preferences"
+    },
+    "space-settings-name-focus": {
+      "category": "fixed",
+      "message": "Rename Spaces without freezing Settings on macOS"
     }
   }
 }
