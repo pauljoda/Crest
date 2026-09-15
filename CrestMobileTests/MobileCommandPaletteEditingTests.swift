@@ -5,28 +5,30 @@ import XCTest
 
 @MainActor
 final class MobileCommandPaletteEditingTests: XCTestCase {
-    func testStartPageUsesNormalTextInputAndSubmitsSearchesAndURLs() async {
-        var openedURLs: [URL] = []
-        let fixture = makeEditor(presentation: .embedded) { url in
-            openedURLs.append(url)
-            return true
+    func testEveryPresentationUsesNormalTextInputAndSubmitsSearchesAndURLs() async {
+        for presentation in [BrowserCommandPalettePresentation.embedded, .overlay] {
+            var openedURLs: [URL] = []
+            let fixture = makeEditor(presentation: presentation) { url in
+                openedURLs.append(url)
+                return true
+            }
+            XCTAssertEqual(fixture.field.keyboardType, .default)
+            XCTAssertNil(fixture.field.textContentType)
+            fixture.field.insertText("kroger pharmacy")
+            fixture.coordinator.editingChanged()
+            await fixture.model.waitForPendingResults()
+            XCTAssertEqual(fixture.model.query, "kroger pharmacy")
+            XCTAssertNil(fixture.model.urlCompletion)
+            XCTAssertFalse(fixture.coordinator.textFieldShouldReturn(fixture.field))
+            XCTAssertEqual(openedURLs.map(\.absoluteString), ["https://www.google.com/search?q=kroger%20pharmacy"])
+            fixture.field.selectedTextRange = fixture.field.textRange(
+                from: fixture.field.beginningOfDocument, to: fixture.field.endOfDocument)
+            fixture.field.insertText("example.org")
+            fixture.coordinator.editingChanged()
+            await fixture.model.waitForPendingResults()
+            XCTAssertFalse(fixture.coordinator.textFieldShouldReturn(fixture.field))
+            XCTAssertEqual(openedURLs.last?.absoluteString, "https://example.org")
         }
-        XCTAssertEqual(fixture.field.keyboardType, .default)
-        XCTAssertNil(fixture.field.textContentType)
-        fixture.field.insertText("kroger pharmacy")
-        fixture.coordinator.editingChanged()
-        await fixture.model.waitForPendingResults()
-        XCTAssertEqual(fixture.model.query, "kroger pharmacy")
-        XCTAssertNil(fixture.model.urlCompletion)
-        XCTAssertFalse(fixture.coordinator.textFieldShouldReturn(fixture.field))
-        XCTAssertEqual(openedURLs.map(\.absoluteString), ["https://www.google.com/search?q=kroger%20pharmacy"])
-        fixture.field.selectedTextRange = fixture.field.textRange(
-            from: fixture.field.beginningOfDocument, to: fixture.field.endOfDocument)
-        fixture.field.insertText("example.org")
-        fixture.coordinator.editingChanged()
-        await fixture.model.waitForPendingResults()
-        XCTAssertFalse(fixture.coordinator.textFieldShouldReturn(fixture.field))
-        XCTAssertEqual(openedURLs.last?.absoluteString, "https://example.org")
     }
 
     func testNativeFieldAcceptsCompletionWithoutNavigationAndProvidesTabAction() throws {
@@ -47,8 +49,6 @@ final class MobileCommandPaletteEditingTests: XCTestCase {
             field.perform(rightArrow.action, with: rightArrow)
             XCTAssertEqual(field.text, "example.com/path")
             XCTAssertEqual(fixture.model.query, "example.com/path")
-            XCTAssertEqual(field.keyboardType, presentation == .embedded ? .default : .URL)
-            XCTAssertEqual(field.textContentType, presentation == .embedded ? nil : .URL)
             XCTAssertEqual(field.autocorrectionType, .no)
             XCTAssertTrue(field.adjustsFontForContentSizeCategory)
         }

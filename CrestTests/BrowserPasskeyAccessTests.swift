@@ -122,6 +122,74 @@ final class BrowserPasskeyAccessTests: XCTestCase {
         XCTAssertFalse(controller.canRequestAccess)
     }
 
+    func testConcurrentConsentRequestsWaitForTheSameSystemConsent() async {
+        var requestCount = 0
+        var consent: CheckedContinuation<BrowserPasskeyAuthorizationState, Never>?
+        let controller = BrowserPasskeyAccessController(
+            capabilityCheck: { true },
+            deviceConfigurationCheck: { .configured },
+            authorizationCheck: { .notDetermined },
+            authorizationRequester: {
+                requestCount += 1
+                return await withCheckedContinuation { consent = $0 }
+            }
+        )
+        controller.refreshStatus()
+        let first = Task { await controller.requestAccess() }
+        while consent == nil { await Task.yield() }
+        var secondCompleted = false
+        let second = Task {
+            await controller.requestAccess()
+            secondCompleted = true
+        }
+        for _ in 0..<10 { await Task.yield() }
+        XCTAssertFalse(secondCompleted, "Every caller must wait until consent resolves.")
+        consent?.resume(returning: .authorized)
+        await first.value
+        await second.value
+        XCTAssertEqual(requestCount, 1)
+        XCTAssertEqual(controller.status, .authorized)
+    }
+
+    func testBrowsingRequestsUndeterminedConsentOnceAndDoesNotRepeatAfterDenial() async {
+        var checks = 0
+        var requests = 0
+        let controller = BrowserPasskeyAccessController(
+            capabilityCheck: { true },
+            deviceConfigurationCheck: { .configured },
+            authorizationCheck: {
+                checks += 1
+                return .notDetermined
+            },
+            authorizationRequester: {
+                requests += 1
+                return .denied
+            }
+        )
+        await controller.prepareForBrowsing()
+        await controller.prepareForBrowsing()
+        XCTAssertEqual(checks, 1)
+        XCTAssertEqual(requests, 1)
+        XCTAssertEqual(controller.status, .denied)
+    }
+
+    func testBrowsingNeverPromptsForAlreadyDeterminedConsent() async {
+        for state in [BrowserPasskeyAuthorizationState.authorized, .denied] {
+            var requests = 0
+            let controller = BrowserPasskeyAccessController(
+                capabilityCheck: { true },
+                deviceConfigurationCheck: { .configured },
+                authorizationCheck: { state },
+                authorizationRequester: {
+                    requests += 1
+                    return .authorized
+                }
+            )
+            await controller.prepareForBrowsing()
+            XCTAssertEqual(requests, 0)
+        }
+    }
+
     func testSystemPasswordWriteThroughRequiresMobileAPIAndManagedBrowserCapability() {
         XCTAssertEqual(
             BrowserSystemPasswordWriteThroughPolicy.availability(

@@ -102,6 +102,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var viewportFitGeneration = 0
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
+    @ObservationIgnored let fileUploadAccess = BrowserFileUploadAccess()
     @ObservationIgnored var downloadCenter: BrowserDownloadCenter
     let sitePermissionRequests = BrowserPagePermissionController()
     @ObservationIgnored lazy var mediaCaptureSession = BrowserMediaCaptureSession(
@@ -664,6 +665,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         webView.stopLoading()
         webView.removeFromSuperview()
+        fileUploadAccess.invalidate()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         (webView as? BrowserDesktopWebView)?.menuHost = nil

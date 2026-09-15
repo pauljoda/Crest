@@ -3,7 +3,7 @@ import SwiftUI
 struct BrowserPasskeyAccessView: View {
     @State private var access: BrowserPasskeyAccessController
 
-    init(access: BrowserPasskeyAccessController = BrowserPasskeyAccessController()) {
+    init(access: BrowserPasskeyAccessController = .shared) {
         _access = State(initialValue: access)
     }
 

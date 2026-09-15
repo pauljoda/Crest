@@ -76,6 +76,12 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Websites can request camera access for calls and other browser features.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Crest accesses Downloads when you select files to upload or save downloads there.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Crest accesses Documents when you select files to upload or save downloads there.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Crest accesses Desktop when you select files to upload or save downloads there.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>

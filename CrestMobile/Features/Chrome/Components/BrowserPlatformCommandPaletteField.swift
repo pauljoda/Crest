@@ -17,8 +17,8 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         field.font = .preferredFont(forTextStyle: .title2)
         field.adjustsFontForContentSizeCategory = true
         field.placeholder = String(localized: "Search or Enter URL…")
-        field.keyboardType = presentation == .embedded ? .default : .URL
-        field.textContentType = presentation == .embedded ? nil : .URL
+        field.keyboardType = BrowserAddressKeyboardPolicy.keyboardType
+        field.textContentType = nil
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.spellCheckingType = .no

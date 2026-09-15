@@ -60,6 +60,32 @@ final class BrowserDialogPresenter {
         }
     }
 
+    func presentFileAccessFailure(
+        _ error: Error,
+        request: URLRequest,
+        completion: @escaping @MainActor @Sendable () -> Void
+    ) {
+        let alert = makeAlert(message: "Crest couldn’t open the selected files.", request: request)
+        alert.informativeText = error.localizedDescription
+        let denied =
+            (error as NSError).domain == NSCocoaErrorDomain
+            && (error as NSError).code == CocoaError.fileReadNoPermission.rawValue
+        if denied {
+            alert.informativeText +=
+                " Allow Crest in Privacy & Security > Files and Folders, then choose the files again."
+            alert.addButton(withTitle: "Open Files and Folders Settings")
+        }
+        alert.addButton(withTitle: "OK")
+        present(alert) { response in
+            if denied, response == .alertFirstButtonReturn,
+                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")
+            {
+                NSWorkspace.shared.open(url)
+            }
+            completion()
+        }
+    }
+
     func presentHTTPAuthentication(
         prompt: BrowserHTTPAuthenticationPrompt,
         spaceName: String
