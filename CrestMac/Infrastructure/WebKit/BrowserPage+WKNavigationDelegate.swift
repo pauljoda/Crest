@@ -42,6 +42,13 @@ extension BrowserPage: WKNavigationDelegate {
         pictureInPicture.navigationDidCommit()
         committedNavigationCount += 1
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
+        Task { [weak self] in
+            guard let self, self.extensionBaseURL == nil,
+                self.webView.url?.scheme == "https",
+                self.webView.window?.isKeyWindow == true, NSApp.isActive
+            else { return }
+            await BrowserPasskeyAccessController.shared.prepareForBrowsing()
+        }
     }
 
     func webView(

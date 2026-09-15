@@ -155,7 +155,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var chromeWebStoreMessageProxy: BrowserChromeWebStoreScriptMessageProxy?
     @ObservationIgnored private var userActivityMessageProxy: BrowserUserActivityScriptMessageProxy?
     @ObservationIgnored private var geolocationMessageProxy: BrowserGeolocationScriptMessageProxy?
-    @ObservationIgnored private var passkeyConsentBridge: BrowserPasskeyConsentBridge?
     @ObservationIgnored private var blockedPopupMessageProxy: BrowserBlockedPopupScriptMessageProxy?
     @ObservationIgnored private var extensionWebPageRuntimeProxy: BrowserExtensionWebPageRuntimeDiagnosticsProxy?
     @ObservationIgnored private var mediaSessionMessageProxy: BrowserMediaSessionScriptMessageProxy?
@@ -441,11 +440,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             }
         }
         observeWebViewState()
-        if extensionBaseURL == nil, ownsUserContentController {
-            passkeyConsentBridge = BrowserPasskeyConsentBridge.install(
-                in: webView.configuration.userContentController
-            )
-        }
         if allowsCredentialAccess, ownsUserContentController {
             credentialMessageProxy = BrowserCredentialContentBridge.install(
                 in: webView.configuration.userContentController
@@ -687,7 +681,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             chromeWebStoreMessageProxy = nil
             userActivityMessageProxy = nil
             geolocationMessageProxy = nil
-            passkeyConsentBridge = nil
             blockedPopupMessageProxy = nil
             extensionWebPageRuntimeProxy = nil
             geolocationCoordinator = nil
@@ -705,12 +698,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
         }
         credentialMessageProxy = nil
-        if passkeyConsentBridge != nil {
-            webView.configuration.userContentController.removeScriptMessageHandler(
-                forName: BrowserPasskeyConsentBridge.messageHandlerName, contentWorld: .page
-            )
-            passkeyConsentBridge = nil
-        }
         if linkContextMessageProxy != nil {
             webView.configuration.userContentController
                 .removeScriptMessageHandler(

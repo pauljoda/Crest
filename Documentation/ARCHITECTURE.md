@@ -64,7 +64,7 @@ Crest Passwords are stored in the Keychain and matched by origin. Each Space can
 
 The privacy manifest is shipped from `CrestShared/Resources/PrivacyInfo.xcprivacy`. The macOS app declares Apple's approved Web Browser Public Key Credential entitlement for system passkey access and the iCloud Passwords helper. Its signing profiles must include that capability; system passkey access also requires the user's authorization. Other managed capabilities remain gated on platform-specific Apple approval.
 
-On macOS, explicit website passkey requests first check the shared browser consent controller. The page bridge passes only a permission request to native code; credential options and results stay with WebKit. Conditional autofill and silent requests do not open consent UI. File uploads validate reads in the host app before handing paths to WebKit, retain picker security scopes until the page is removed, and surface denied access with a route to system settings.
+On macOS, Crest requests browser-wide passkey consent through AuthenticationServices when the first foreground HTTPS page opens, only if the system decision is undetermined. WebKit handles website credential requests directly; Crest does not intercept WebAuthn calls or insert permission checks into sign-in. Settings shares the same consent controller. File uploads validate reads in the host app before handing paths to WebKit, retain picker security scopes until the page is removed, and surface denied access with a route to system settings.
 
 ## WebKit boundary
 

@@ -1257,6 +1257,10 @@
     "ipad-command-palette-standard-keyboard": {
       "category": "fixed",
       "message": "Use the standard keyboard with a spacebar in the iPad command palette"
+    },
+    "native-webkit-passkey-sign-in": {
+      "category": "fixed",
+      "message": "Let the system handle passkey sign-in directly without an extra permission check"
     }
   }
 }

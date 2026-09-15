@@ -209,17 +209,6 @@ final class BrowserDialogPresenter {
         )
     }
 
-    func recoverPasskeySystemAuthorization() async {
-        guard let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security") else { return }
-        await presentSystemPermissionRecovery(
-            title: "Passkey Access Is Off for Crest",
-            message:
-                "Turn on Crest in Privacy & Security > Passkeys Access for Web Browsers, then return to continue signing in.",
-            openButtonTitle: "Open Privacy Settings",
-            settingsURL: settingsURL
-        )
-    }
-
     /// Asks before Crest leaves the browser for another application. Cancelling
     /// is not offered as a saved block, so Escape declines this one hand-off
     /// rather than silently muting the site for good.
