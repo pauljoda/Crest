@@ -6,44 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.3</title>
-            <pubDate>Mon, 14 Sep 2026 20:36:39 +0000</pubDate>
+            <title>0.6.6</title>
+            <pubDate>Tue, 15 Sep 2026 01:33:29 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1100</sparkle:version>
-            <sparkle:shortVersionString>0.6.3</sparkle:shortVersionString>
+            <sparkle:version>1103</sparkle:version>
+            <sparkle:shortVersionString>0.6.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### New
 
-- Choose folder icons from the full searchable SF Symbols catalog
-- Read tinted folder titles more easily with semibold text and stronger contrast
-- Fade smoothly between pinned-tab outline colors as website colors become available
+- Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension
 
 ### Fixed
 
-- Keep the Mac sidebar collapsed when opening the address editor with Command-L
-- Match the system dark background across Crest's app icon color palettes
-- Keep wide folder symbols fully visible in Icon only mode
-- Keep pinned-tab colors consistent when pages unload and use more representative website colors
-- Use favicon colors for pinned outlines when websites declare black, white, or neutral theme colors
-- Keep black, white, and gray favicon colors in pinned-tab outlines
+- Open Quick Window pages in an existing normal browser window instead of creating a duplicate
+- Keep password manager extensions connected while idle to avoid repeated pairing prompts
+- Request macOS passkey permission when you sign in on a website
+- Keep selected upload files accessible and explain blocked file access
+- Use the standard keyboard with a spacebar in the iPad command palette
+- Let the system handle passkey sign-in directly without an extra permission check
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/ec2540db692c3addf57b3ae57093696b6732f554...dec7187c890d6729bec1b62b9322761dfc315daa) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.3-2026-09-14-1100-r100.1/Installer-Crest-0.6.3-development-2026-09-14-dec7187-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/dec7187c890d6729bec1b62b9322761dfc315daa...db691fbc3472fd45b3b4fc5062c75abe381b151d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.6-2026-09-15-1103-r103.1/Installer-Crest-0.6.6-development-2026-09-15-db691fb-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.3-2026-09-14-1100-r100.1/Installer-Crest-0.6.3-development-2026-09-14-dec7187-arm64.dmg" length="26805043" type="application/octet-stream" sparkle:edSignature="yHjEDkG0sFJcfmOX1Y9oyEkFsEojpikWJZk7JKIUKRqp3jMZblzrLVVwHibiTn9AMY29/OQGkcHxjhxvGglGCw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.6-2026-09-15-1103-r103.1/Installer-Crest-0.6.6-development-2026-09-15-db691fb-arm64.dmg" length="26822450" type="application/octet-stream" sparkle:edSignature="GtDRlF4Ysx6ZntvQjFv+cdHj69q66bwKBf2LmnMxSjWhJkgHu3/I4QNYdwoW9D7wjIXXD1C8/CaSaDTlDM1xAA=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: TpmVxgUV+pPlYD1OVwcIDSyZUtxa7rPnDPuQ556ptPB23SCmfgrKhArUrOk2T/rbfuW3OHrB97ig65QH9ieFBQ==
-length: 2679
+edSignature: QVyq1KZXDReZBPouGUyc4Ammkx796Lfzld05RCGWYQpJW60Wm71awauScRgweIJs0+YBv6vlHpVno4P2RbMjDg==
+length: 2544
 -->

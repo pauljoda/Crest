@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "native-webkit-passkey-sign-in",
-    "development": "pinned-outlines-preserve-monochrome-favicons",
+    "development": "native-webkit-passkey-sign-in",
     "nightly": "simulator-cloudkit-startup-guard"
   }
 }
