@@ -6,34 +6,49 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.13</title>
-            <pubDate>Tue, 15 Sep 2026 19:38:35 +0000</pubDate>
+            <title>0.6.15</title>
+            <pubDate>Wed, 16 Sep 2026 13:09:18 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1109</sparkle:version>
-            <sparkle:shortVersionString>0.6.13</sparkle:shortVersionString>
+            <sparkle:version>1110</sparkle:version>
+            <sparkle:shortVersionString>0.6.15</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 13 user-facing changes.
+
+### Improved
+
+- See your chosen app icon, app details, and software updates together in a cleaner About page
+- Keep extensions responsive when browsing with many tabs and windows
+- Check installed translation languages more efficiently in Settings
+- Reduce delays when opening and closing large tab folders
+- Scroll more smoothly through long lists of saved and current tabs
+- Open and search large browsing histories with fewer pauses
+
 ### Fixed
 
-- Keep the selected pinned tab's glow from being cut off below the address bar
-- Keep site controls and permission prompts readable in light-colored Spaces
+- Keep General settings responsive while checking system permissions
+- Keep browsing responsive while large sessions and history sync in the background
+- Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate
+- Move large tab selections between Spaces reliably
+- Reduce memory growth when repeatedly opening the address bar
+- Avoid repeated background requests and memory growth on pages without a site icon
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/5913edca21afc511a7e3c73850d7266f4602daa5...35d529a9e698a6607fa1b7c76201b015d017b6b7) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.13-2026-09-15-1109-r109.1/Installer-Crest-0.6.13-development-2026-09-15-35d529a-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/35d529a9e698a6607fa1b7c76201b015d017b6b7...b4fe18277cf7420c897cb15718590077e123323c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.15-2026-09-16-1110-r110.1/Installer-Crest-0.6.15-development-2026-09-16-b4fe182-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.13-2026-09-15-1109-r109.1/Installer-Crest-0.6.13-development-2026-09-15-35d529a-arm64.dmg" length="26929460" type="application/octet-stream" sparkle:edSignature="Ts95n2mXXpeDhhicV7KC1P4FAxz2iOz1g+w4U6Aygjbz7OKUuH6zgoWsJjYtSZ9ItiIU5BBMVwyTvrXGQ3RrDw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.15-2026-09-16-1110-r110.1/Installer-Crest-0.6.15-development-2026-09-16-b4fe182-arm64.dmg" length="27049779" type="application/octet-stream" sparkle:edSignature="bMB0zsPhvyo4lFle317HKQWyi9lEklVFq//tAw55TTREQ/4c4ReirtZs6Dz0K5fMWUy8lKUJU+BA4+LVduzWBw=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ge5L+wD5eah2qIBITuhViRSxkTaGnvC0xws+k6bSENNHJfasyYwjSLymAb9hH2ctHHwk8BmdwnY4RMBDbcYFCg==
-length: 2115
+edSignature: Ijzze27GUaPdaN7Q08iY50Yt4rLrrxJh6fx7hWBcFv+SwBtaNfIPOISl+MgPjEtVTvSFOthRh6T9Qr0GukiTDQ==
+length: 2925
 -->

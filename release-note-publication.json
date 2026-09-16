@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "keep-site-control-popover-text-readable",
+    "development": "bounded-missing-site-icon-requests",
     "nightly": "reactive-picture-in-picture-discovery"
   }
 }
