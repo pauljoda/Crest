@@ -59,9 +59,8 @@ final class BrowserMozillaAddonsProvider {
             version: webExtension.displayVersion ?? listing.version,
             displayDescription: webExtension.displayDescription
                 ?? listing.summary,
-            requestedPermissions: webExtension.requestedPermissions
-                .map(\.rawValue)
-                .sorted(),
+            requestedPermissions: BrowserExtensionManagedPermissionPolicy.requestedPermissions(
+                native: webExtension.requestedPermissions.map(\.rawValue), manifest: webExtension.manifest),
             requestedHosts: webExtension.allRequestedMatchPatterns
                 .map(\.string)
                 .sorted(),

@@ -5,6 +5,8 @@ struct BrowserManagedExtensionRow: View {
     let summary: BrowserExtensionSummary
     let platformActions: BrowserExtensionPlatformActions
 
+    @State private var isCopying = false
+
     var body: some View {
         BrowserExtensionRow(
             summary: summary,
@@ -40,7 +42,11 @@ struct BrowserManagedExtensionRow: View {
             },
             requestRemoval: {
                 model.requestRemoval(of: summary)
-            }
+            },
+            requestCopy: { isCopying = true }
         )
+        .sheet(isPresented: $isCopying) {
+            BrowserExtensionCopySheet(summary: summary, sourceSpace: model.space, pool: model.extensionControllerPool)
+        }
     }
 }

@@ -439,10 +439,40 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         }
     }
 
+    func testLocalInstallReportsCommittedPrimaryWhenAnAdditionalSpaceIsUnavailable() async throws {
+        let fixture = try archiveFixture(permissions: ["storage"])
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let source = root.appending(path: "extension.xpi")
+        try fixture.archiveData.write(to: source)
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")), registry: registry)
+        let space = BrowserSession.preview.spaces[0]
+        pool.installationSpaces = { [space] }
+        let session = BrowserLocalExtensionInstallSession(space: space, extensionControllerPool: pool)
+        await session.prepare(from: .success([source]))
+        var review = BrowserExtensionInstallationPermissionPolicy.Review()
+        review.additionalSpaceIDs = [SpaceID()]
+        session.install(review: review)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while session.isInstalling && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertFalse(session.isInstalling)
+        XCTAssertNotNil(registry.installation(extensionID: fixture.extensionID.rawValue, in: space.id))
+        guard case .installed = session.phase else {
+            return XCTFail("The committed primary must have completion state, not a retry-install action")
+        }
+        XCTAssertFalse(session.installedCopyWarnings.isEmpty, "Destination failures must remain visible")
+        XCTAssertEqual(session.installedAdditionalSpaceCount, 0)
+    }
+
     func testDirectXPIIsReviewedAndInstalledAsALocalSpacePackage()
         async throws
     {
-        let fixture = try archiveFixture()
+        let fixture = try archiveFixture(permissions: ["storage", "declarativeNetRequest"])
         let fileManager = FileManager.default
         let rootURL = fileManager.temporaryDirectory.appending(
             path: "crest-local-xpi-import-\(UUID().uuidString)",
@@ -460,7 +490,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         )
         try fixture.archiveData.write(to: sourceURL)
 
-        let candidate = try await BrowserLocalExtensionProvider(
+        var candidate = try await BrowserLocalExtensionProvider(
             fileManager: fileManager,
             nativeMessagingCapability: .available
         ).candidate(for: sourceURL)
@@ -483,7 +513,11 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             ),
             registry: registry
         )
-        let space = BrowserSession.preview.spaces[0]
+        let spaces = BrowserSession.preview.spaces
+        pool.installationSpaces = { spaces }
+        let space = spaces[0]
+        candidate.accessReview.permissions["declarativeNetRequest"] = false
+        candidate.accessReview.additionalSpaceIDs = [spaces[1].id]
         let summary = try await pool.installLocalExtension(
             candidate,
             in: space
@@ -492,6 +526,12 @@ final class BrowserMozillaAddonsTests: XCTestCase {
             registry.installation(extensionID: candidate.id, in: space.id)
         )
 
+        let other = try XCTUnwrap(registry.installation(extensionID: candidate.id, in: spaces[1].id))
+        XCTAssertEqual(other.permissionSnapshot, installation.permissionSnapshot)
+        XCTAssertEqual(installation.permissionSnapshot.grantedPermissions["storage"], .distantFuture)
+        XCTAssertEqual(installation.permissionSnapshot.deniedPermissions["declarativeNetRequest"], .distantFuture)
+        XCTAssertNil(installation.permissionSnapshot.grantedPermissions["declarativeNetRequest"])
+        XCTAssertNotEqual(other.packageName, installation.packageName)
         XCTAssertEqual(summary.sourceDisplayName, "Local Firefox Package")
         XCTAssertEqual(installation.source, .localPackage(candidate.source))
         XCTAssertEqual(
@@ -1291,7 +1331,8 @@ final class BrowserMozillaAddonsTests: XCTestCase {
     /// Builds a real ZIP whose entry names reproduce a Mozilla-signed XPI.
     private func archiveFixture(
         includesManifest: Bool = true,
-        isMozillaSigned: Bool = true
+        isMozillaSigned: Bool = true,
+        permissions: [String] = []
     ) throws -> ArchiveFixture {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appending(
@@ -1316,6 +1357,7 @@ final class BrowserMozillaAddonsTests: XCTestCase {
                 withJSONObject: [
                     "manifest_version": 2,
                     "name": "Dark Reader",
+                    "permissions": permissions,
                     "version": "4.9.129",
                     "browser_specific_settings": [
                         "gecko": ["id": darkReaderGUID]

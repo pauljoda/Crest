@@ -346,6 +346,27 @@ final class BrowserExtensionPackageStore: BrowserExtensionPackageStoring {
         )
     }
 
+    func stageCopy(
+        packageName: String, extensionID: String, from sourceSpace: SpaceID, in destinationSpace: SpaceID
+    ) throws -> BrowserExtensionPackage {
+        let sourceURL = try resourceURL(packageName: packageName, in: sourceSpace)
+        try validate(sourceURL)
+        let copyName =
+            "copy-\(UUID().uuidString.lowercased())"
+            + (sourceURL.pathExtension.isEmpty ? "" : ".\(sourceURL.pathExtension)")
+        let destinationURL = try resourceURL(
+            packageName: copyName, in: destinationSpace, requiresExistingFile: false)
+        try fileManager.createDirectory(
+            at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        do {
+            try fileManager.copyItem(at: sourceURL, to: destinationURL)
+        } catch {
+            try? fileManager.removeItem(at: destinationURL)
+            throw error
+        }
+        return BrowserExtensionPackage(extensionID: extensionID, packageName: copyName, resourceURL: destinationURL)
+    }
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,

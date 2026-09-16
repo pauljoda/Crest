@@ -314,6 +314,14 @@ final class BrowserExtensionPersistenceController {
         try await packageStore.stage(package, in: spaceID)
     }
 
+    func stageCopy(of installation: BrowserExtensionInstallation, in spaceID: SpaceID) async throws
+        -> BrowserExtensionPackage
+    {
+        try await packageStore.stageCopy(
+            packageName: installation.packageName, extensionID: installation.id, from: installation.spaceID, in: spaceID
+        )
+    }
+
     func stageVerifiedChromeResource(
         _ sourceURL: URL,
         extensionID: BrowserChromeExtensionID,

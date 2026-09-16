@@ -3496,7 +3496,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             )
             context.setPermissionStatus(
                 .deniedExplicitly,
-                for: .tabs,
+                for: .activeTab,
                 expirationDate: .distantFuture
             )
             context.setPermissionStatus(
@@ -3534,7 +3534,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             .grantedExplicitly
         )
         XCTAssertEqual(
-            restoredContext.permissionStatus(for: .tabs),
+            restoredContext.permissionStatus(for: .activeTab),
             .deniedExplicitly
         )
         XCTAssertEqual(
@@ -5085,6 +5085,9 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             from: popupReloadProbeFixtureURL,
             in: space
         )
+        // This fixture tests messaging through an authorized offscreen page;
+        // loading an unpacked declaration does not approve that capability.
+        try await pool.setPermissionDecision(.allow, for: "offscreen", extensionID: summary.id, in: space)
         let context = try XCTUnwrap(
             pool.loadedContext(extensionID: summary.id, in: space.id)
         )

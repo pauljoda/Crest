@@ -1,0 +1,24 @@
+name: Publish development build after merge
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    name: Start development publication
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Do not check out PR code. The release workflow builds trusted main
+      # with its existing signing environment and publication concurrency.
+      - name: Dispatch the macOS development release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run release.yml --ref main -f channel=development

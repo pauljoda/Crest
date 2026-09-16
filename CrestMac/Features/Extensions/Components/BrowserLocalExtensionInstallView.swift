@@ -4,49 +4,71 @@ struct BrowserLocalExtensionInstallView: View {
     let session: BrowserLocalExtensionInstallSession
 
     @State private var isAccessExpanded = true
+    @State private var isSelectingSpaces = false
+    @State private var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
 
     var body: some View {
         let phase = session.phase
         VStack(alignment: .leading, spacing: CrestSpacing.large) {
-            header(for: phase)
+            if isSelectingSpaces, session.phase.candidate != nil {
+                BrowserExtensionInstallSpacesPage(
+                    primarySpaceName: session.space.name, spaces: session.additionalSpaces,
+                    selection: $accessReview.additionalSpaceIDs,
+                    goBack: { isSelectingSpaces = false })
+            } else {
+                header(for: phase)
 
-            switch phase {
-            case .unavailable:
-                EmptyView()
-            case .preparing:
-                HStack(spacing: CrestSpacing.medium) {
-                    ProgressView()
-                    VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
-                        Text("Inspecting extension package…")
-                            .font(.callout.weight(.medium))
-                        Text(
-                            "Crest is validating the archive and reading its identity, requested access, and WebKit compatibility."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                switch phase {
+                case .unavailable:
+                    EmptyView()
+                case .preparing:
+                    HStack(spacing: CrestSpacing.medium) {
+                        ProgressView()
+                        VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
+                            Text("Inspecting extension package…")
+                                .font(.callout.weight(.medium))
+                            Text(
+                                "Crest is validating the archive and reading its identity, requested access, and WebKit compatibility."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                case .review(let candidate, let errorDescription):
+                    review(
+                        candidate,
+                        errorDescription: errorDescription
+                    )
+                case .installed(let name, let compatibilityIssues):
+                    BrowserExtensionInstallCompletionContent(
+                        name: name,
+                        spaceName: session.space.name,
+                        compatibilityIssues: compatibilityIssues,
+                        additionalSpaceCount: session.installedAdditionalSpaceCount,
+                        copyWarnings: session.installedCopyWarnings
+                    )
+                case .failed(let errorDescription):
+                    BrowserExtensionInstallErrorContent(
+                        error: errorDescription
+                    )
+                }
+
+                if session.phase.candidate != nil {
+                    Button("Install in other Spaces…") { isSelectingSpaces = true }
+                        .disabled(session.isBusy)
+                    if !accessReview.additionalSpaceIDs.isEmpty {
+                        Text("Additional Spaces: \(accessReview.additionalSpaceIDs.count)")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                .accessibilityElement(children: .combine)
-            case .review(let candidate, let errorDescription):
-                review(
-                    candidate,
-                    errorDescription: errorDescription
-                )
-            case .installed(let name, let compatibilityIssues):
-                BrowserExtensionInstallCompletionContent(
-                    name: name,
-                    spaceName: session.space.name,
-                    compatibilityIssues: compatibilityIssues
-                )
-            case .failed(let errorDescription):
-                BrowserExtensionInstallErrorContent(
-                    error: errorDescription
-                )
+                Divider()
+                actions(for: phase)
             }
-
-            Divider()
-            actions(for: phase)
+        }
+        .onChange(of: session.phase.candidate?.id, initial: true) {
+            if let candidate = session.phase.candidate { accessReview = candidate.accessReview }
         }
         .padding(CrestSpacing.extraLarge)
         .frame(width: BrowserExtensionInstallMetrics.width)
@@ -145,12 +167,16 @@ struct BrowserLocalExtensionInstallView: View {
                             title: "Permissions",
                             values: candidate.requestedPermissions,
                             emptyText:
-                                "No additional browser permissions requested."
+                                "No additional browser permissions requested.",
+                            choices: $accessReview.permissions,
+                            defaultAllowance: accessReview.allowsPermission
                         )
                         BrowserExtensionInstallAccessGroup(
                             title: "Website Access",
                             values: candidate.requestedHosts,
-                            emptyText: "No website access requested."
+                            emptyText: "No website access requested.",
+                            choices: $accessReview.hosts,
+                            defaultAllowance: accessReview.allowsHost
                         )
                         if !candidate.errors.isEmpty {
                             BrowserExtensionInstallAccessGroup(
@@ -220,7 +246,7 @@ struct BrowserLocalExtensionInstallView: View {
                 cancelButton
             case .review(let candidate, _):
                 cancelButton
-                Button(action: session.install) {
+                Button(action: { session.install(review: accessReview) }) {
                     if session.isInstalling {
                         ProgressView()
                             .controlSize(.small)

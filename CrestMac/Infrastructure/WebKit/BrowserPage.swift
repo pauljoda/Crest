@@ -63,6 +63,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
     private(set) var chromeWebStoreInstallItem: BrowserChromeWebStoreItem?
+    @ObservationIgnored var additionalExtensionSpaces: @MainActor (String) -> [BrowserSpace] = { _ in [] }
     private(set) var chromeWebStoreCandidate: BrowserChromeWebStoreCandidate?
     private(set) var isPreparingChromeWebStoreExtension = false
     private(set) var isInstallingChromeWebStoreExtension = false
@@ -774,6 +775,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         userActivityHandler = nil
     }
 
+    private(set) var installedChromeWebStoreAdditionalSpaceCount = 0
+    private(set) var installedChromeWebStoreCopyWarnings: [String] = []
+
     var isChromeWebStoreInstallPresented: Bool {
         chromeWebStoreInstallItem != nil
     }
@@ -792,23 +796,27 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         installedChromeWebStoreExtensionName = nil
     }
 
-    func installPreparedChromeWebStoreExtension() {
-        guard let candidate = chromeWebStoreCandidate,
+    func installPreparedChromeWebStoreExtension(review: BrowserExtensionInstallationPermissionPolicy.Review = .init()) {
+        guard var candidate = chromeWebStoreCandidate,
             !isInstallingChromeWebStoreExtension
         else {
             return
         }
+        candidate.accessReview = review
         chromeWebStoreInstallErrorDescription = nil
         isInstallingChromeWebStoreExtension = true
         chromeWebStoreTask?.cancel()
         chromeWebStoreTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let summary = try await installChromeWebStoreExtension(
-                    candidate
-                )
+                let completion = try await BrowserExtensionInstallationCompletion.perform(
+                    additionalSpaceCount: review.additionalSpaceIDs.count
+                ) { try await installChromeWebStoreExtension(candidate) }
+                let summary = completion.summary
                 guard !Task.isCancelled else { return }
                 isInstallingChromeWebStoreExtension = false
+                installedChromeWebStoreAdditionalSpaceCount = completion.additionalSpaceCount
+                installedChromeWebStoreCopyWarnings = completion.copyWarnings
                 installedChromeWebStoreExtensionName = summary.displayName
                 installedChromeWebStoreCompatibilityIssues = candidate
                     .compatibility.issues.map(\.message)

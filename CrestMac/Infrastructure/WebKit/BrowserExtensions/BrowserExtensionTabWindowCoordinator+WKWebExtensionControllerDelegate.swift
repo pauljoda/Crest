@@ -267,15 +267,8 @@ extension BrowserExtensionTabWindowCoordinator:
             controller.configuration.isPersistent
         else { return .timedOut }
         browserExtensionPopupLog.error(
-            "background did not answer; reloading context for \(context.uniqueIdentifier, privacy: .public)")
-        do {
-            // Preserve the context identity, grants and persistent storage. A
-            // full context reload closes WebKit's lingering background page;
-            // loadBackgroundContent alone cannot restart its stopped worker.
-            try controller.unload(context)
-            try controller.load(context)
-        } catch { return .failed(error) }
-        let recovered = await BrowserExtensionBackgroundWarmUp(context: context).prepare()
+            "background did not answer; restarting background for \(context.uniqueIdentifier, privacy: .public)")
+        let recovered = await BrowserExtensionBackgroundRestart.prepare(context)
         guard isCurrentPreparation() else { return .failed(CancellationError()) }
         guard case .loaded = recovered else { return recovered }
         let recoveredEndpoint = health.endpointID(for: client)

@@ -9,6 +9,8 @@ final class BrowserLocalExtensionInstallSession {
     var isChoosingPackage = false
     var isPresented = false
     private(set) var isInstalling = false
+    private(set) var installedAdditionalSpaceCount = 0
+    private(set) var installedCopyWarnings: [String] = []
     private(set) var phase: BrowserLocalExtensionInstallPhase = .unavailable
 
     @ObservationIgnored private let extensionControllerPool: BrowserExtensionControllerPool
@@ -22,6 +24,11 @@ final class BrowserLocalExtensionInstallSession {
         self.space = space
         self.extensionControllerPool = extensionControllerPool
         self.provider = provider
+    }
+
+    var additionalSpaces: [BrowserSpace] {
+        guard let candidate = phase.candidate else { return [] }
+        return extensionControllerPool.copyDestinations(extensionID: candidate.id, excluding: space.id)
     }
 
     var isBusy: Bool {
@@ -53,7 +60,10 @@ final class BrowserLocalExtensionInstallSession {
                     sourceURL.stopAccessingSecurityScopedResource()
                 }
             }
-            let candidate = try await provider.candidate(for: sourceURL)
+            var candidate = try await provider.candidate(for: sourceURL)
+            candidate.accessReview.previousSnapshot =
+                extensionControllerPool.persistenceController.installation(
+                    extensionID: candidate.id, in: space.id)?.permissionSnapshot
             phase = .review(candidate: candidate, errorDescription: nil)
         } catch {
             phase = .failed(errorDescription: error.localizedDescription)
@@ -61,20 +71,24 @@ final class BrowserLocalExtensionInstallSession {
         }
     }
 
-    func install() {
-        guard case .review(let candidate, _) = phase,
+    func install(review: BrowserExtensionInstallationPermissionPolicy.Review = .init()) {
+        guard case .review(var candidate, _) = phase,
             !isInstalling
         else {
             return
         }
+        candidate.accessReview = review
         phase = .review(candidate: candidate, errorDescription: nil)
         isInstalling = true
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let summary =
-                    try await extensionControllerPool
-                    .installLocalExtension(candidate, in: space)
+                let completion = try await BrowserExtensionInstallationCompletion.perform(
+                    additionalSpaceCount: review.additionalSpaceIDs.count
+                ) { try await extensionControllerPool.installLocalExtension(candidate, in: space) }
+                let summary = completion.summary
+                installedAdditionalSpaceCount = completion.additionalSpaceCount
+                installedCopyWarnings = completion.copyWarnings
                 isInstalling = false
                 phase = .installed(
                     name: summary.displayName,

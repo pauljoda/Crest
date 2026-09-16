@@ -1377,6 +1377,38 @@
     "consistent-in-page-navigation-history": {
       "category": "fixed",
       "message": "Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit"
+    },
+    "stop-location-watches-after-permission-revocation": {
+      "category": "fixed",
+      "message": "Stop sharing your location immediately when you block or reset a site's location permission"
+    },
+    "honor-extension-permission-revocation": {
+      "category": "fixed",
+      "message": "Keep blocked and expired extension permissions disabled after reloads and restarts"
+    },
+    "review-extension-access-and-copy-between-spaces": {
+      "category": "new",
+      "message": "Choose extension access during installation and install independent copies in multiple Spaces"
+    },
+    "single-browser-window-after-setup": {
+      "category": "fixed",
+      "message": "Open a single browser window when finishing setup"
+    },
+    "revalidate-extension-access-during-pending-operations": {
+      "category": "fixed",
+      "message": "Honor changed extension permissions and locked Spaces during pending operations"
+    },
+    "report-partial-extension-installation-success": {
+      "category": "fixed",
+      "message": "Show successful extension installations when copies in other Spaces cannot be completed"
+    },
+    "extension-idle-recovery-preserves-page-and-session-state": {
+      "category": "fixed",
+      "message": "Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state."
+    },
+    "automatic-development-publication-after-pr-merge": {
+      "category": "internal",
+      "message": "Dispatch the development release workflow when a pull request is merged into main."
     }
   }
 }

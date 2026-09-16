@@ -5,7 +5,11 @@ struct BrowserExtensionDiscoveryRow: View {
     let space: BrowserSpace
     let isInstalling: Bool
     let isDisabled: Bool
-    let install: () -> Void
+    let additionalSpaces: [BrowserSpace]
+    let previousSnapshot: BrowserExtensionPermissionSnapshot?
+    let install: (BrowserExtensionInstallationPermissionPolicy.Review) -> Void
+    @State private var isSelectingSpaces = false
+    @State private var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
 
     private var candidate: BrowserExtensionDiscoveryCandidate {
         item.candidate
@@ -48,7 +52,7 @@ struct BrowserExtensionDiscoveryRow: View {
 
                 Spacer(minLength: CrestSpacing.medium)
 
-                Button(action: install) {
+                Button(action: { install(accessReview) }) {
                     if isInstalling {
                         ProgressView()
                             .controlSize(.small)
@@ -62,6 +66,8 @@ struct BrowserExtensionDiscoveryRow: View {
             }
 
             BrowserExtensionInstallConsentText()
+            Button("Install in other Spaces…") { isSelectingSpaces = true }
+                .disabled(isDisabled)
 
             DisclosureGroup("Review Access and Compatibility") {
                 VStack(alignment: .leading, spacing: CrestSpacing.medium) {
@@ -69,15 +75,21 @@ struct BrowserExtensionDiscoveryRow: View {
                     LabeledContent("Install In", value: "\(space.name) Space")
 
                     if !candidate.requestedPermissions.isEmpty {
-                        BrowserSafariWebExtensionAccessList(
+                        BrowserExtensionInstallAccessGroup(
                             title: "Permissions",
-                            values: candidate.requestedPermissions
+                            values: candidate.requestedPermissions,
+                            emptyText: "",
+                            choices: $accessReview.permissions,
+                            defaultAllowance: accessReview.allowsPermission
                         )
                     }
                     if !candidate.requestedHosts.isEmpty {
-                        BrowserSafariWebExtensionAccessList(
+                        BrowserExtensionInstallAccessGroup(
                             title: "Website Access",
-                            values: candidate.requestedHosts
+                            values: candidate.requestedHosts,
+                            emptyText: "",
+                            choices: $accessReview.hosts,
+                            defaultAllowance: accessReview.allowsHost
                         )
                     }
                     if !candidate.errors.isEmpty {
@@ -92,6 +104,18 @@ struct BrowserExtensionDiscoveryRow: View {
                 .padding(.leading, CrestSpacing.medium)
             }
             .font(.callout)
+        }
+        .sheet(isPresented: $isSelectingSpaces) {
+            BrowserExtensionInstallSpacesPage(
+                primarySpaceName: space.name, spaces: additionalSpaces,
+                selection: $accessReview.additionalSpaceIDs,
+                goBack: { isSelectingSpaces = false }
+            )
+            .padding(CrestSpacing.extraLarge)
+            .frame(width: BrowserExtensionInstallMetrics.width)
+        }
+        .onChange(of: previousSnapshot, initial: true) {
+            accessReview.previousSnapshot = previousSnapshot
         }
         .padding(.vertical, CrestSpacing.small)
     }

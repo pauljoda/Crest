@@ -24,12 +24,15 @@ final class BrowserMozillaAddonsInstallSession {
     private(set) var isPreparing = false
     private(set) var isInstalling = false
     private(set) var errorDescription: String?
+    private(set) var installedAdditionalSpaceCount = 0
+    private(set) var installedCopyWarnings: [String] = []
     private(set) var installedExtensionName: String?
     private(set) var installedCompatibilityIssues: [String] = []
 
     let spaceID: SpaceID
     let spaceName: String
 
+    @ObservationIgnored var additionalSpaces: @MainActor (String) -> [BrowserSpace] = { _ in [] }
     @ObservationIgnored private let prepare: Prepare
     @ObservationIgnored private let install: Install
     @ObservationIgnored var reportInstalled: ReportInstalled = { _ in }
@@ -93,17 +96,23 @@ final class BrowserMozillaAddonsInstallSession {
         }
     }
 
-    func installPrepared() {
-        guard let candidate, !isInstalling else { return }
+    func installPrepared(review: BrowserExtensionInstallationPermissionPolicy.Review = .init()) {
+        guard var candidate, !isInstalling else { return }
+        candidate.accessReview = review
         errorDescription = nil
         isInstalling = true
         task?.cancel()
         task = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let summary = try await install(candidate)
+                let completion = try await BrowserExtensionInstallationCompletion.perform(
+                    additionalSpaceCount: review.additionalSpaceIDs.count
+                ) { try await install(candidate) }
+                let summary = completion.summary
                 guard !Task.isCancelled else { return }
                 isInstalling = false
+                installedAdditionalSpaceCount = completion.additionalSpaceCount
+                installedCopyWarnings = completion.copyWarnings
                 installedExtensionName = summary.displayName
                 installedCompatibilityIssues = candidate
                     .compatibility.issues.map(\.message)

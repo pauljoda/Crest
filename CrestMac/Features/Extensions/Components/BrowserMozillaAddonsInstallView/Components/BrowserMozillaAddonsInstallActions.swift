@@ -4,6 +4,8 @@ struct BrowserMozillaAddonsInstallActions: View {
     let session: BrowserMozillaAddonsInstallSession
     let phase: BrowserMozillaAddonsInstallPhase
 
+    var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+
     var body: some View {
         HStack {
             if case .failed = phase {
@@ -22,7 +24,7 @@ struct BrowserMozillaAddonsInstallActions: View {
                 cancelButton
             case .review(let candidate, _):
                 cancelButton
-                Button(action: session.installPrepared) {
+                Button(action: { session.installPrepared(review: accessReview) }) {
                     if session.isInstalling {
                         ProgressView()
                             .controlSize(.small)

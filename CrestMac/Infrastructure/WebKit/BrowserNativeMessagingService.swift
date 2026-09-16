@@ -84,7 +84,12 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let authorization: BrowserExtensionNativeMessagingAuthorization
     private let notificationService: (any BrowserExtensionNotificationHandling)?
     private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
-    private let publish: ([String: Any]) -> Void
+    private let deliver: ([String: Any]) -> Void
+    private let authorizationDidEnd: () -> Void
+    private var isStopped = false
+    private var publish: ([String: Any]) -> Void {
+        { [weak self] message in self?.publishIfAuthorized(message) }
+    }
     private let webpageMenuRegistry: BrowserExtensionWebpageMenuRegistry
     private let sidebarService: (any BrowserExtensionSidebarHandling)?
     private let sidebarEventMessage: (BrowserExtensionSidebarEvent) -> [String: Any]?
@@ -120,8 +125,10 @@ final class BrowserExtensionCapabilityBrokerConnection {
         externalMessageService: (any BrowserExtensionExternalMessageHandling)? = nil,
         externalMessageEventMessage:
             @escaping (BrowserExtensionExternalMessageDelivery) -> [String: Any]? = { _ in nil },
+        authorizationDidEnd: @escaping () -> Void = {},
         publish: @escaping ([String: Any]) -> Void
     ) {
+        self.authorizationDidEnd = authorizationDidEnd
         self.authorization = authorization
         self.notificationService = notificationService
         self.idleStateProvider = idleStateProvider
@@ -136,10 +143,11 @@ final class BrowserExtensionCapabilityBrokerConnection {
         self.debuggerEventMessage = debuggerEventMessage
         self.externalMessageService = externalMessageService
         self.externalMessageEventMessage = externalMessageEventMessage
-        self.publish = publish
+        deliver = publish
     }
 
     func receive(_ message: Any) throws {
+        guard !isStopped else { throw BrowserExtensionCapabilityBrokerError.invalidRequest }
         guard
             let request = message as? [String: Any],
             let api = request["api"] as? String
@@ -195,6 +203,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
     }
 
     func stop() {
+        isStopped = true
         if let endpoint = backgroundHealthEndpoint, let client = authorization.clientID {
             BrowserExtensionBackgroundHealth.shared.unregister(client: client, id: endpoint)
         }
@@ -221,6 +230,32 @@ final class BrowserExtensionCapabilityBrokerConnection {
             break
         }
         watch = nil
+    }
+
+    /// Events cross the same live consent boundary as calls. A revoked or
+    /// expired watch is canceled before its next event can leave the broker.
+    private func publishIfAuthorized(_ message: [String: Any]) {
+        guard !isStopped else { return }
+        let permitted: Bool
+        switch watch {
+        case .idle: permitted = authorization.grants("idle")
+        case .notifications: permitted = authorization.grants("notifications")
+        case .sidebar:
+            permitted = authorization.grants("sidePanel") || authorization.grants("sidebarAction")
+        case .tabGroups: permitted = authorization.grants("tabGroups")
+        case .declarativeNetRequest:
+            permitted = BrowserExtensionDeclarativeNetRequestBrokerRequest.requiredCapabilities.contains(
+                where: authorization.grants)
+        case .debugger: permitted = authorization.grants("debugger")
+        case .tabMembership, .runtime, .webSocket, nil: permitted = true
+        }
+        let isMenuEvent = (message["api"] as? String)?.hasPrefix("contextMenus.") == true
+        guard permitted, !isMenuEvent || authorization.grants("contextMenus") else {
+            stop()
+            authorizationDidEnd()
+            return
+        }
+        deliver(message)
     }
 
     private func replaceContextMenus(_ request: [String: Any]) throws {
@@ -869,10 +904,14 @@ final class BrowserNativeMessagingService:
                 replyTimeout: replyTimeout,
                 receive: { value in
                     guard connection != nil else { return }
-                    replyHandler(value, nil)
                     let completedConnection = connection
                     connection = nil
                     completedConnection?.disconnect()
+                    guard authorization.grants("nativeMessaging") else {
+                        replyHandler(nil, BrowserExtensionCapabilityBrokerError.permissionDenied("nativeMessaging"))
+                        return
+                    }
+                    replyHandler(value, nil)
                 },
                 disconnect: { error in
                     guard connection != nil else { return }
@@ -922,6 +961,10 @@ final class BrowserNativeMessagingService:
                 debuggerEventMessage: debuggerEventMessage,
                 externalMessageService: externalMessageService,
                 externalMessageEventMessage: externalMessageEventMessage,
+                authorizationDidEnd: { [weak self, weak port] in
+                    self?.removeCapabilityConnection(for: key)
+                    if let port, !port.isDisconnected { port.disconnect() }
+                },
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }
@@ -994,6 +1037,10 @@ final class BrowserNativeMessagingService:
             let connection = try BrowserNativeMessagingProcessConnection(
                 host: host,
                 receive: { [weak self] message in
+                    guard authorization.grants("nativeMessaging") else {
+                        self?.connections[key]?.process.disconnect()
+                        return
+                    }
                     self?.connections[key]?.port.sendMessage(
                         message,
                         completionHandler: nil
@@ -1015,6 +1062,10 @@ final class BrowserNativeMessagingService:
             )
             port.messageHandler = { [weak self] message, error in
                 guard let connection = self?.connections[key]?.process else {
+                    return
+                }
+                guard authorization.grants("nativeMessaging") else {
+                    connection.disconnect()
                     return
                 }
                 if let error {

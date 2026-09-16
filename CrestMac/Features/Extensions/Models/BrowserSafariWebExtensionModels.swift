@@ -56,6 +56,8 @@ struct BrowserSafariWebExtensionCandidate: Equatable, Identifiable {
     let hasCommands: Bool
     let hasContentModificationRules: Bool
 
+    var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+
     var id: String { source.extensionBundleIdentifier }
     var iconData: Data? { iconPayload?.data }
 }

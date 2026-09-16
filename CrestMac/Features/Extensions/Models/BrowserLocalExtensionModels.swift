@@ -13,6 +13,8 @@ struct BrowserLocalExtensionCandidate: Equatable, Identifiable, Sendable {
     let hasCommands: Bool
     let nativeMessagingCapability: BrowserExtensionNativeMessagingCapability
 
+    var accessReview = BrowserExtensionInstallationPermissionPolicy.Review()
+
     var id: String { package.extensionID }
     var iconData: Data? { iconPayload?.data }
     var format: BrowserLocalExtensionPackageFormat { package.format }

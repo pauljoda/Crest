@@ -64,10 +64,12 @@ struct BrowserOnboardingWindow: View {
     }
 
     private func openCrest() {
+        let reusesLaunchWindow = progress.isLaunchGateActive
         flow.completeSetup(progress: progress, spaceAccess: spaceAccess) {
-            // Restore the existing browser window before opening its scene.
+            // Completing the gate turns its existing WindowGroup window into
+            // the browser. Opening the scene again creates a second window.
             BrowserOnboardingLaunchGateWindow.restore()
-            openWindow(id: BrowserSceneID.browser.rawValue)
+            if !reusesLaunchWindow { openWindow(id: BrowserSceneID.browser.rawValue) }
             dismiss()
         }
     }

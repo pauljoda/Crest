@@ -26,11 +26,13 @@ extension BrowserExtensionInstallationController {
             extensionID: extensionID,
             in: space,
             unsupportedAPIs: [],
-            permissionSnapshot: previous?.permissionSnapshot
-                ?? BrowserExtensionInstallationPermissionPolicy
+            permissionSnapshot:
+                BrowserExtensionInstallationPermissionPolicy
                 .reviewedRequiredAccess(
                     permissions: candidate.requestedPermissions,
-                    hosts: candidate.requestedHosts
+                    hosts: candidate.requestedHosts,
+                    previous: previous?.permissionSnapshot,
+                    review: candidate.accessReview
                 ),
             persistsRuntimeSummary: false,
             source: .safariWebExtension(candidate.source)
@@ -148,11 +150,13 @@ extension BrowserExtensionInstallationController {
                 // every load, so the previous record's list is not replayed;
                 // doing so would freeze an old routing decision in place.
                 unsupportedAPIs: [],
-                permissionSnapshot: previous?.permissionSnapshot
-                    ?? BrowserExtensionInstallationPermissionPolicy
+                permissionSnapshot:
+                    BrowserExtensionInstallationPermissionPolicy
                     .reviewedRequiredAccess(
                         permissions: candidate.requestedPermissions,
-                        hosts: candidate.requestedHosts
+                        hosts: candidate.requestedHosts,
+                        previous: previous?.permissionSnapshot,
+                        review: candidate.accessReview
                     ),
                 persistsRuntimeSummary: false,
                 source: source,
@@ -301,11 +305,13 @@ extension BrowserExtensionInstallationController {
                 // every load, so the previous record's list is not replayed;
                 // doing so would freeze an old routing decision in place.
                 unsupportedAPIs: [],
-                permissionSnapshot: previous?.permissionSnapshot
-                    ?? BrowserExtensionInstallationPermissionPolicy
+                permissionSnapshot:
+                    BrowserExtensionInstallationPermissionPolicy
                     .reviewedRequiredAccess(
                         permissions: candidate.requestedPermissions,
-                        hosts: candidate.requestedHosts
+                        hosts: candidate.requestedHosts,
+                        previous: previous?.permissionSnapshot,
+                        review: candidate.accessReview
                     ),
                 persistsRuntimeSummary: false,
                 source: source,
@@ -453,11 +459,13 @@ extension BrowserExtensionInstallationController {
                 // every load, so the previous record's list is not replayed;
                 // doing so would freeze an old routing decision in place.
                 unsupportedAPIs: [],
-                permissionSnapshot: previous?.permissionSnapshot
-                    ?? BrowserExtensionInstallationPermissionPolicy
+                permissionSnapshot:
+                    BrowserExtensionInstallationPermissionPolicy
                     .reviewedRequiredAccess(
                         permissions: candidate.requestedPermissions,
-                        hosts: candidate.requestedHosts
+                        hosts: candidate.requestedHosts,
+                        previous: previous?.permissionSnapshot,
+                        review: candidate.accessReview
                     ),
                 persistsRuntimeSummary: false,
                 source: source,
