@@ -1401,6 +1401,10 @@
     "report-partial-extension-installation-success": {
       "category": "fixed",
       "message": "Show successful extension installations when copies in other Spaces cannot be completed"
+    },
+    "extension-idle-recovery-preserves-page-and-session-state": {
+      "category": "fixed",
+      "message": "Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state."
     }
   }
 }
