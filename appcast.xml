@@ -6,6 +6,47 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.6.15</title>
+            <pubDate>Wed, 16 Sep 2026 13:39:30 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1111</sparkle:version>
+            <sparkle:shortVersionString>0.6.15</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 25 user-facing changes.
+
+### Improved
+
+- See your chosen app icon, app details, and software updates together in a cleaner About page
+- Keep extensions responsive when browsing with many tabs and windows
+- Check installed translation languages more efficiently in Settings
+- Reduce delays when opening and closing large tab folders
+- Scroll more smoothly through long lists of saved and current tabs
+- Open and search large browsing histories with fewer pauses
+
+### Fixed
+
+- Keep General settings responsive while checking system permissions
+- Keep browsing responsive while large sessions and history sync in the background
+- Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate
+- Move large tab selections between Spaces reliably
+- Reduce memory growth when repeatedly opening the address bar
+- Avoid repeated background requests and memory growth on pages without a site icon
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[View all changes](https://github.com/pauljoda/Crest/compare/3f3a19021daf4cb4324ff75eae8e2d388b23f7f4...b4fe18277cf7420c897cb15718590077e123323c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.15-2026-09-16-1111-r111.1/Installer-Crest-0.6.15-nightly-2026-09-16-b4fe182-arm64.dmg)
+
+[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+]]></description>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.15-2026-09-16-1111-r111.1/Installer-Crest-0.6.15-nightly-2026-09-16-b4fe182-arm64.dmg" length="27044653" type="application/octet-stream" sparkle:edSignature="cxcYUnV2waU9vcTkdFd1UcmdHGxTyNDYrEtnzMxX/udvYOeCg50cm5dFBTxrQ3GnQtSnX9rgX6Hd1cbctGNcDw=="/>
+        </item>
+        <item>
             <title>0.6.8</title>
             <pubDate>Tue, 15 Sep 2026 15:25:03 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -39,80 +80,9 @@ Stable releases are signed, notarized, and ready for everyday use.
 ]]></description>
             <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.8/Installer-Crest-0.6.8-arm64.dmg" length="26905844" type="application/octet-stream" sparkle:edSignature="1L8YsihjU115Qx7nd0w9Xx8cUWp9xFOoS9IJhr4RW/5c7pppPsdGnglWieTOevgsbzRZT4LQ2zJFihDgBVzyCA=="/>
         </item>
-        <item>
-            <title>0.6.7</title>
-            <pubDate>Tue, 15 Sep 2026 13:42:13 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1104</sparkle:version>
-            <sparkle:shortVersionString>0.6.7</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 24 user-facing changes.
-
-### New
-
-- Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension
-
-### Improved
-
-- Fade smoothly between pinned-tab outline colors as website colors become available
-- Reduce browsing slowdowns from Picture in Picture while still finding videos added as you browse
-
-### Fixed
-
-- Keep pinned-tab colors consistent when pages unload and use more representative website colors
-- Use favicon colors for pinned outlines when websites declare black, white, or neutral theme colors
-- Keep black, white, and gray favicon colors in pinned-tab outlines
-- Open Quick Window pages in an existing normal browser window instead of creating a duplicate
-- Keep password manager extensions connected while idle to avoid repeated pairing prompts
-- Request macOS passkey permission when you sign in on a website
-- Keep selected upload files accessible and explain blocked file access
-- Use the standard keyboard with a spacebar in the iPad command palette
-- Let the system handle passkey sign-in directly without an extra permission check
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/c13a1a6d8ed718401b1de11e8bd47b37dace83a0...3f3a19021daf4cb4324ff75eae8e2d388b23f7f4) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.6.7-2026-09-15-1104-r104.1/Installer-Crest-0.6.7-nightly-2026-09-15-3f3a190-arm64.dmg)
-
-[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.6.7-2026-09-15-1104-r104.1/Installer-Crest-0.6.7-nightly-2026-09-15-3f3a190-arm64.dmg" length="26819371" type="application/octet-stream" sparkle:edSignature="pv0uhTFp2NL02klRo6JjZmwp4mnAzYjNyAEQC6mcp181PPCXjA4hpiUZST9P/5F192U25h3mKu8uief7lsO7Aw=="/>
-        </item>
-        <item>
-            <title>0.6.6</title>
-            <pubDate>Tue, 15 Sep 2026 01:04:05 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:version>1102</sparkle:version>
-            <sparkle:shortVersionString>0.6.6</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-### Fixed
-
-- Request macOS passkey permission when you sign in on a website
-- Keep selected upload files accessible and explain blocked file access
-- Use the standard keyboard with a spacebar in the iPad command palette
-- Let the system handle passkey sign-in directly without an extra permission check
-
----
-
-Stable releases are signed, notarized, and ready for everyday use.
-
-[View all changes](https://github.com/pauljoda/Crest/compare/3cb440b612961c14394b16fbb0a120e80c13073e...db691fbc3472fd45b3b4fc5062c75abe381b151d) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/v0.6.6/Installer-Crest-0.6.6-arm64.dmg)
-
-[Browse Stable releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse)
-]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/v0.6.6/Installer-Crest-0.6.6-arm64.dmg" length="26817268" type="application/octet-stream" sparkle:edSignature="gLCAGlrapBp59I+FpRZWAMI9XVxVcmsMF+TEGzqw+vfWGXwet5cFcUbW1fQ+uEKsCjnyx6UH7cFHNhEQy++/BQ=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: MRktUNPjlNpD/3YtKqiuCEx0XmIlzBs0qnh24qTmg45zH+vcXsDFgQyvSXDrLueL43Em/9mx0/aDH3n2HD0/BA==
-length: 6837
+edSignature: PJlru+rq0okqHvxWAONo7MmvSmWnneNKeKdsiOhBL7L4USzPya2Xy+TFwptPjJ2eRANnGaW2zHKEGYoDepnmBg==
+length: 5113
 -->

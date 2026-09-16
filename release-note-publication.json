@@ -3,6 +3,6 @@
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
     "development": "bounded-missing-site-icon-requests",
-    "nightly": "reactive-picture-in-picture-discovery"
+    "nightly": "bounded-missing-site-icon-requests"
   }
 }
