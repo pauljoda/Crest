@@ -6,49 +6,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.6.15</title>
-            <pubDate>Wed, 16 Sep 2026 13:09:18 +0000</pubDate>
+            <title>0.6.16</title>
+            <pubDate>Wed, 16 Sep 2026 16:37:56 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1110</sparkle:version>
-            <sparkle:shortVersionString>0.6.15</sparkle:shortVersionString>
+            <sparkle:version>1112</sparkle:version>
+            <sparkle:shortVersionString>0.6.16</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 13 user-facing changes.
-
-### Improved
-
-- See your chosen app icon, app details, and software updates together in a cleaner About page
-- Keep extensions responsive when browsing with many tabs and windows
-- Check installed translation languages more efficiently in Settings
-- Reduce delays when opening and closing large tab folders
-- Scroll more smoothly through long lists of saved and current tabs
-- Open and search large browsing histories with fewer pauses
-
 ### Fixed
 
-- Keep General settings responsive while checking system permissions
-- Keep browsing responsive while large sessions and history sync in the background
-- Drag tabs through long sidebars more reliably, with edge scrolling that follows your display's refresh rate
-- Move large tab selections between Spaces reliably
-- Reduce memory growth when repeatedly opening the address bar
-- Avoid repeated background requests and memory growth on pages without a site icon
+- Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/35d529a9e698a6607fa1b7c76201b015d017b6b7...b4fe18277cf7420c897cb15718590077e123323c) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.15-2026-09-16-1110-r110.1/Installer-Crest-0.6.15-development-2026-09-16-b4fe182-arm64.dmg)
+[View all changes](https://github.com/pauljoda/Crest/compare/b4fe18277cf7420c897cb15718590077e123323c...7224fb20bf57119990bb6be0d2aeee63369da055) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/development-0.6.16-2026-09-16-1112-r112.1/Installer-Crest-0.6.16-development-2026-09-16-7224fb2-arm64.dmg)
 
 [Browse Development releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.15-2026-09-16-1110-r110.1/Installer-Crest-0.6.15-development-2026-09-16-b4fe182-arm64.dmg" length="27049779" type="application/octet-stream" sparkle:edSignature="bMB0zsPhvyo4lFle317HKQWyi9lEklVFq//tAw55TTREQ/4c4ReirtZs6Dz0K5fMWUy8lKUJU+BA4+LVduzWBw=="/>
+            <enclosure url="https://github.com/pauljoda/Crest/releases/download/development-0.6.16-2026-09-16-1112-r112.1/Installer-Crest-0.6.16-development-2026-09-16-7224fb2-arm64.dmg" length="27036468" type="application/octet-stream" sparkle:edSignature="kVE7J3P9Olzj/sjwYjRig5D1fDYccVkYMW/gR0xee+MV2GmPhKEjwIXZwKskXYIFk9C8JjsU9kaZBXtlWarXBA=="/>
         </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: Ijzze27GUaPdaN7Q08iY50Yt4rLrrxJh6fx7hWBcFv+SwBtaNfIPOISl+MgPjEtVTvSFOthRh6T9Qr0GukiTDQ==
-length: 2925
+edSignature: N/ApqmkRsBaiJtgYwVJfiCqKg5gsNn0iUx3w+AfWQuWkyVM8pXb5FSKJGDb6Km9XZQ9Ei3Y5yaBaeuHGjdHJAQ==
+length: 2068
 -->

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "keep-link-dragging-after-in-page-navigation",
-    "development": "bounded-missing-site-icon-requests",
+    "development": "consistent-in-page-navigation-history",
     "nightly": "bounded-missing-site-icon-requests"
   }
 }
