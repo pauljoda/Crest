@@ -37,13 +37,14 @@ enum BrowserGeolocationContentBridge {
           if (globalThis.__crestGeolocationBridge || !globalThis.isSecureContext) return;
 
           const handler = webkit.messageHandlers.crestGeolocation;
+          const documentIdentifier = crypto.randomUUID();
           const pending = new Map();
           const watches = new Map();
           let nextIdentifier = 1;
           let permissionState = "prompt";
 
           const post = (body) => {
-            try { handler.postMessage({ version: 1, ...body }); } catch (_) {}
+            try { handler.postMessage({ version: 1, documentIdentifier, ...body }); } catch (_) {}
           };
 
           const documentAllowsGeolocation = () => {
@@ -162,6 +163,7 @@ enum BrowserGeolocationContentBridge {
           const bridge = Object.freeze({
             receive(message) {
               if (!message || typeof message !== "object") return;
+              if (message.documentIdentifier && message.documentIdentifier !== documentIdentifier) return;
               if (message.type === "permission") {
                 const nextState = message.state === "granted"
                   ? "granted" : message.state === "denied" ? "denied" : "prompt";

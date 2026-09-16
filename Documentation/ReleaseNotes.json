@@ -1377,6 +1377,10 @@
     "consistent-in-page-navigation-history": {
       "category": "fixed",
       "message": "Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit"
+    },
+    "stop-location-watches-after-permission-revocation": {
+      "category": "fixed",
+      "message": "Stop sharing your location immediately when you block or reset a site's location permission"
     }
   }
 }

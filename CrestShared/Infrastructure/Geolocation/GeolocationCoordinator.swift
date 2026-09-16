@@ -5,7 +5,7 @@ import WebKit
 /// share this coordinator so site consent, system authorization, document
 /// lifetime, and web-standard behavior cannot drift.
 @MainActor
-final class BrowserGeolocationCoordinator {
+final class BrowserGeolocationCoordinator: BrowserSitePermissionObserver {
     typealias Prompt =
         @MainActor (
             _ origin: BrowserSiteOrigin,
@@ -23,8 +23,33 @@ final class BrowserGeolocationCoordinator {
     private let recoverSystemAuthorization: RecoverSystemAuthorization
 
     private var documentIdentifier = UUID().uuidString
-    private var activeIdentifiers: Set<String> = []
-    private var requestTasks: [String: Task<Void, Never>] = [:]
+    /// Each instance is a single authorization lifetime, including time spent
+    /// awaiting consent and delivery. Removing it permanently invalidates late callbacks.
+    private final class Request {
+        let nativeIdentifier: String
+        let identifier: String
+        let origin: BrowserSiteOrigin
+        let documentIdentifier: String
+        let frameDocumentIdentifier: String
+        let frame: WKFrameInfo
+        let watchesPosition: Bool
+        var task: Task<Void, Never>?
+        var isAuthorized = false
+        var isCompleting = false
+
+        init(identifier: String, origin: BrowserSiteOrigin, documentIdentifier: String,
+             frameDocumentIdentifier: String, frame: WKFrameInfo, watchesPosition: Bool) {
+            self.identifier = identifier
+            self.origin = origin
+            self.documentIdentifier = documentIdentifier
+            self.frameDocumentIdentifier = frameDocumentIdentifier
+            self.frame = frame
+            self.watchesPosition = watchesPosition
+            nativeIdentifier = "\(documentIdentifier).\(origin.displayName).\(frameDocumentIdentifier).\(identifier)"
+        }
+    }
+
+    private var requests: [String: Request] = [:]
 
     init(
         webView: WKWebView,
@@ -42,6 +67,7 @@ final class BrowserGeolocationCoordinator {
         self.spaceName = spaceName
         self.prompt = prompt
         self.recoverSystemAuthorization = recoverSystemAuthorization
+        permissionCenter.addObserver(self)
     }
 
     func receive(_ message: WKScriptMessage) {
@@ -51,7 +77,9 @@ final class BrowserGeolocationCoordinator {
             BrowserGeolocationOriginPolicy.allows(origin),
             let body = message.body as? [String: Any],
             (body["version"] as? Int) == 1,
-            let action = body["action"] as? String
+            let action = body["action"] as? String,
+            let frameDocumentIdentifier = body["documentIdentifier"] as? String,
+            UUID(uuidString: frameDocumentIdentifier) != nil
         else { return }
 
         let messageDocumentIdentifier = documentIdentifier
@@ -60,7 +88,8 @@ final class BrowserGeolocationCoordinator {
             sendPermission(
                 origin: origin,
                 documentIdentifier: messageDocumentIdentifier,
-                frame: message.frameInfo
+                frame: message.frameInfo,
+                frameDocumentIdentifier: frameDocumentIdentifier
             )
         case "getCurrentPosition", "watchPosition":
             guard let identifier = body["identifier"] as? String,
@@ -72,15 +101,19 @@ final class BrowserGeolocationCoordinator {
                 options: Self.options(from: body["options"]),
                 origin: origin,
                 documentIdentifier: messageDocumentIdentifier,
-                frame: message.frameInfo
+                frame: message.frameInfo,
+                frameDocumentIdentifier: frameDocumentIdentifier
             )
         case "cancel":
             guard let identifier = body["identifier"] as? String,
                 Self.isValidIdentifier(identifier)
             else { return }
-            cancel(nativeIdentifier: "\(messageDocumentIdentifier).\(identifier)")
+            cancel(nativeIdentifier: "\(messageDocumentIdentifier).\(origin.displayName).\(frameDocumentIdentifier).\(identifier)")
         case "cancelAll":
-            cancelAll()
+            for request in Array(requests.values) where request.origin == origin
+                && request.frameDocumentIdentifier == frameDocumentIdentifier {
+                cancel(nativeIdentifier: request.nativeIdentifier)
+            }
         default:
             return
         }
@@ -103,15 +136,24 @@ final class BrowserGeolocationCoordinator {
     }
 
     func cancelAll() {
-        for task in requestTasks.values {
-            task.cancel()
+        for identifier in Array(requests.keys) {
+            cancel(nativeIdentifier: identifier)
         }
-        requestTasks.removeAll()
-        for identifier in activeIdentifiers {
-            service.cancel(identifier: identifier)
-        }
-        activeIdentifiers.removeAll()
         service.cancelAll()
+    }
+
+    func sitePermissionsDidChange(_ change: BrowserSitePermissionChange) {
+        for request in Array(requests.values) where change.affects(.location, origin: request.origin, in: spaceID) {
+            if change.revokesAuthorization { revoke(request) }
+            sendPermission(
+                origin: request.origin, documentIdentifier: request.documentIdentifier,
+                frame: request.frame, frameDocumentIdentifier: request.frameDocumentIdentifier
+            )
+        }
+        if let url = webView.url, let origin = BrowserSiteOrigin(url: url),
+            change.affects(.location, origin: origin, in: spaceID) {
+            synchronizeMainFramePermission()
+        }
     }
 
     private func beginRequest(
@@ -120,86 +162,75 @@ final class BrowserGeolocationCoordinator {
         options: BrowserGeolocationRequestOptions,
         origin: BrowserSiteOrigin,
         documentIdentifier: String,
-        frame: WKFrameInfo
+        frame: WKFrameInfo,
+        frameDocumentIdentifier: String
     ) {
-        let nativeIdentifier = "\(documentIdentifier).\(identifier)"
-        cancel(nativeIdentifier: nativeIdentifier)
-        requestTasks[nativeIdentifier] = Task { @MainActor [weak self] in
+        let request = Request(
+            identifier: identifier, origin: origin, documentIdentifier: documentIdentifier,
+            frameDocumentIdentifier: frameDocumentIdentifier, frame: frame, watchesPosition: watchesPosition
+        )
+        cancel(nativeIdentifier: request.nativeIdentifier)
+        requests[request.nativeIdentifier] = request
+        request.task = Task { @MainActor [weak self] in
             guard let self else { return }
-            let isAuthorized = await authorize(
-                origin: origin,
-                documentIdentifier: documentIdentifier
-            )
-            guard isAuthorized,
-                !Task.isCancelled,
-                isCurrentDocument(documentIdentifier)
-            else {
-                sendPermission(
-                    origin: origin,
-                    documentIdentifier: documentIdentifier,
-                    frame: frame
-                )
-                sendError(
-                    .permissionDenied,
-                    identifier: identifier,
-                    documentIdentifier: documentIdentifier,
-                    frame: frame
-                )
-                requestTasks.removeValue(forKey: nativeIdentifier)
-                return
-            }
-
+            let isAuthorized = await authorize(request)
+            guard isCurrentRequest(request), !Task.isCancelled else { return }
+            request.task = nil
             sendPermission(
-                origin: origin,
-                documentIdentifier: documentIdentifier,
-                frame: frame
+                origin: origin, documentIdentifier: documentIdentifier,
+                frame: frame, frameDocumentIdentifier: frameDocumentIdentifier
             )
-            activeIdentifiers.insert(nativeIdentifier)
+            guard isAuthorized else { revoke(request); return }
+            request.isAuthorized = true
             let receive: @MainActor (Result<BrowserGeolocationPosition, BrowserGeolocationError>) -> Void = {
-                [weak self] result in
-                guard let self else { return }
-                if !watchesPosition {
-                    activeIdentifiers.remove(nativeIdentifier)
-                }
-                guard isCurrentDocument(documentIdentifier) else { return }
-                switch result {
-                case .success(let position):
-                    sendPosition(
-                        position,
-                        identifier: identifier,
-                        documentIdentifier: documentIdentifier,
-                        frame: frame
-                    )
-                case .failure(let error):
-                    sendError(
-                        error,
-                        identifier: identifier,
-                        documentIdentifier: documentIdentifier,
-                        frame: frame
-                    )
-                }
+                [weak self] result in self?.receive(result, for: request)
             }
             if watchesPosition {
-                service.startWatchingPosition(
-                    identifier: nativeIdentifier,
-                    options: options,
-                    receive: receive
-                )
+                service.startWatchingPosition(identifier: request.nativeIdentifier, options: options, receive: receive)
             } else {
-                service.requestCurrentPosition(
-                    identifier: nativeIdentifier,
-                    options: options,
-                    receive: receive
-                )
+                service.requestCurrentPosition(identifier: request.nativeIdentifier, options: options, receive: receive)
             }
-            requestTasks.removeValue(forKey: nativeIdentifier)
         }
     }
 
-    private func authorize(
-        origin: BrowserSiteOrigin,
-        documentIdentifier: String
-    ) async -> Bool {
+    private func receive(_ result: Result<BrowserGeolocationPosition, BrowserGeolocationError>, for request: Request) {
+        guard isCurrentRequest(request), !request.isCompleting else { return }
+        guard hasAuthority(request) else { revoke(request); return }
+        request.isCompleting = !request.watchesPosition
+        switch result {
+        case .success(let position):
+            sendPosition(position, request: request)
+        case .failure(let error):
+            if error.code == .permissionDenied {
+                revoke(request)
+            } else {
+                sendError(error, request: request, requiresAuthority: true)
+            }
+        }
+    }
+
+    private func revoke(_ request: Request) {
+        guard isCurrentRequest(request) else { return }
+        cancel(nativeIdentifier: request.nativeIdentifier)
+        sendError(.permissionDenied, request: request, requiresAuthority: false)
+    }
+
+    private func isCurrentRequest(_ request: Request) -> Bool {
+        isCurrentDocument(request.documentIdentifier) && requests[request.nativeIdentifier] === request
+    }
+
+    private func hasAuthority(_ request: Request) -> Bool {
+        let decision = permissionCenter.decision(for: .location, origin: request.origin, in: spaceID)
+        // Allow Once deliberately leaves the stored decision at Ask. The
+        // request's lifetime carries that consent until an explicit withdrawal.
+        return isCurrentRequest(request) && request.isAuthorized
+            && decision != .denyPersistently && decision != .denyForSession
+            && service.currentAuthorization() == .authorized
+    }
+
+    private func authorize(_ request: Request) async -> Bool {
+        guard isCurrentRequest(request), !Task.isCancelled else { return false }
+        let origin = request.origin
         var decisionToPersist: BrowserSitePermissionDecision?
         switch permissionCenter.decision(
             for: .location,
@@ -212,7 +243,7 @@ final class BrowserGeolocationCoordinator {
             break
         case .ask:
             let response = await prompt(origin, webView.url, spaceName)
-            guard isCurrentDocument(documentIdentifier) else { return false }
+            guard isCurrentRequest(request) && !Task.isCancelled else { return false }
             let latest = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
             guard latest != .denyPersistently, latest != .denyForSession else { return false }
             switch response {
@@ -233,21 +264,21 @@ final class BrowserGeolocationCoordinator {
             }
         }
 
-        guard isCurrentDocument(documentIdentifier) else { return false }
+        guard isCurrentRequest(request) && !Task.isCancelled else { return false }
         let isSystemAuthorized: Bool
         switch service.currentAuthorization() {
         case .authorized:
             isSystemAuthorized = true
         case .denied:
             await recoverSystemAuthorization()
-            guard isCurrentDocument(documentIdentifier) else { return false }
+            guard isCurrentRequest(request) && !Task.isCancelled else { return false }
             isSystemAuthorized = service.currentAuthorization() == .authorized
         case .notDetermined:
             isSystemAuthorized =
                 await service.requestAuthorization() == .authorized
         }
         guard isSystemAuthorized,
-            isCurrentDocument(documentIdentifier)
+            isCurrentRequest(request) && !Task.isCancelled
         else { return false }
         let latest = permissionCenter.decision(for: .location, origin: origin, in: spaceID)
         guard latest != .denyPersistently, latest != .denyForSession else { return false }
@@ -265,7 +296,8 @@ final class BrowserGeolocationCoordinator {
     private func sendPermission(
         origin: BrowserSiteOrigin,
         documentIdentifier: String,
-        frame: WKFrameInfo?
+        frame: WKFrameInfo?,
+        frameDocumentIdentifier: String? = nil
     ) {
         let state: String
         switch permissionCenter.decision(
@@ -290,20 +322,19 @@ final class BrowserGeolocationCoordinator {
         send(
             ["type": "permission", "state": state],
             documentIdentifier: documentIdentifier,
-            frame: frame
+            frame: frame,
+            frameDocumentIdentifier: frameDocumentIdentifier
         )
     }
 
     private func sendPosition(
         _ position: BrowserGeolocationPosition,
-        identifier: String,
-        documentIdentifier: String,
-        frame: WKFrameInfo
+        request: Request
     ) {
         send(
             [
                 "type": "position",
-                "identifier": identifier,
+                "identifier": request.identifier,
                 "coords": [
                     "latitude": position.latitude,
                     "longitude": position.longitude,
@@ -316,49 +347,58 @@ final class BrowserGeolocationCoordinator {
                 ],
                 "timestamp": position.timestamp,
             ],
-            documentIdentifier: documentIdentifier,
-            frame: frame
+            documentIdentifier: request.documentIdentifier,
+            frame: request.frame,
+            frameDocumentIdentifier: request.frameDocumentIdentifier,
+            request: request
         )
     }
 
     private func sendError(
         _ error: BrowserGeolocationError,
-        identifier: String,
-        documentIdentifier: String,
-        frame: WKFrameInfo
+        request: Request,
+        requiresAuthority: Bool
     ) {
         send(
-            [
-                "type": "error",
-                "identifier": identifier,
-                "code": error.code.rawValue,
-                "message": error.message,
-            ],
-            documentIdentifier: documentIdentifier,
-            frame: frame
+            ["type": "error", "identifier": request.identifier,
+             "code": error.code.rawValue, "message": error.message],
+            documentIdentifier: request.documentIdentifier,
+            frame: request.frame,
+            frameDocumentIdentifier: request.frameDocumentIdentifier,
+            request: requiresAuthority ? request : nil
         )
     }
 
     private func send(
         _ message: [String: Any],
         documentIdentifier: String,
-        frame: WKFrameInfo?
+        frame: WKFrameInfo?,
+        frameDocumentIdentifier: String? = nil,
+        request: Request? = nil
     ) {
         guard isCurrentDocument(documentIdentifier) else { return }
+        var message = message
+        if let frameDocumentIdentifier { message["documentIdentifier"] = frameDocumentIdentifier }
         Task { @MainActor [weak self, weak webView] in
             guard let self, isCurrentDocument(documentIdentifier) else { return }
+            if let request {
+                guard isCurrentRequest(request) else { return }
+                guard hasAuthority(request) else { revoke(request); return }
+            }
             _ = try? await webView?.callAsyncJavaScript(
                 "globalThis.__crestGeolocationBridge?.receive(message);",
                 arguments: ["message": message],
                 in: frame,
                 contentWorld: .page
             )
+            if let request, request.isCompleting, isCurrentRequest(request) {
+                cancel(nativeIdentifier: request.nativeIdentifier)
+            }
         }
     }
 
     private func cancel(nativeIdentifier: String) {
-        requestTasks.removeValue(forKey: nativeIdentifier)?.cancel()
-        activeIdentifiers.remove(nativeIdentifier)
+        requests.removeValue(forKey: nativeIdentifier)?.task?.cancel()
         service.cancel(identifier: nativeIdentifier)
     }
 
