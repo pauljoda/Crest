@@ -1405,6 +1405,10 @@
     "extension-idle-recovery-preserves-page-and-session-state": {
       "category": "fixed",
       "message": "Extensions recover after becoming unresponsive without duplicating page scripts or clearing their session state."
+    },
+    "automatic-development-publication-after-pr-merge": {
+      "category": "internal",
+      "message": "Dispatch the development release workflow when a pull request is merged into main."
     }
   }
 }

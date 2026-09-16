@@ -16,7 +16,7 @@ build supports native extension companions.
 | --- | --- | --- | --- |
 | Stable | Push an exact `v<marketing-version>` tag | `v<version>`, Latest, non-prerelease | Default |
 | Nightly | Daily schedule or manual dispatch, only when the source commit changes | New `nightly-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `nightly` |
-| Development | Manual workflow dispatch after local validation | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
+| Development | PR merged into `main`, or manual workflow dispatch | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
 
 Browse [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
 [Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
@@ -29,6 +29,14 @@ accepts `prerelease:false`, `prerelease:true "Nightly builds"`, and
 descriptions. The links work for both the old channel releases and new tagged builds.
 Only stable releases receive GitHub's Latest designation. Manual dispatch
 offers development and nightly; stable publication requires a tag push.
+
+The **Publish development build after merge** workflow dispatches **Publish
+macOS release** with `channel=development` on `main`. It runs only after a PR
+is merged into `main`, including PRs from forks; closing an unmerged PR does
+nothing. The trigger does not check out PR code or use signing secrets. The
+release builds the current `main` commit when dispatched, which can include
+subsequent merges if several PRs land together, and uses the existing
+`production` environment and serialized publication queue.
 
 The marketing version comes from `Config/Version.xcconfig`. Stable tags must
 match it exactly. Distributed build numbers add the GitHub Actions run number
@@ -206,9 +214,10 @@ default. That prevents the current public build from immediately replacing a
 local iteration without outranking the next published Sparkle build. Set
 `CREST_LOCAL_BUILD_NUMBER` only when a specific local bundle version is needed.
 
-Ordinary commits to `main` do not publish or advance an appcast. After a local
-build passes the signed-app extension and update checks, dispatch **Publish
-macOS release** with the `development` channel from the validated commit.
+Merging a PR into `main` automatically starts development publication. Direct
+pushes to `main` do not publish or advance an appcast. To publish a separately
+validated branch, dispatch **Publish macOS release** with the `development`
+channel after the local build passes the signed-app extension and update checks.
 
 ## Verify a downloaded release
 
