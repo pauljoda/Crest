@@ -47,7 +47,8 @@ struct BrowserMozillaAddonsInstallView: View {
                         spaceName: session.spaceName,
                         compatibilityIssues:
                             session.installedCompatibilityIssues,
-                        additionalSpaceCount: accessReview.additionalSpaceIDs.count
+                        additionalSpaceCount: session.installedAdditionalSpaceCount,
+                        copyWarnings: session.installedCopyWarnings
                     )
                 case .review(let candidate, let errorDescription):
                     BrowserMozillaAddonsReviewContent(

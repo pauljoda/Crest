@@ -5,6 +5,7 @@ struct BrowserExtensionInstallCompletionContent: View {
     let spaceName: String
     let compatibilityIssues: [String]
     var additionalSpaceCount = 0
+    var copyWarnings: [String] = []
 
     var body: some View {
         Label {
@@ -24,7 +25,7 @@ struct BrowserExtensionInstallCompletionContent: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-                ForEach(compatibilityIssues, id: \.self) { issue in
+                ForEach(compatibilityIssues + copyWarnings, id: \.self) { issue in
                     Text(issue)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -38,18 +39,19 @@ struct BrowserExtensionInstallCompletionContent: View {
     }
 
     private var statusTitle: String {
-        compatibilityIssues.isEmpty
+        if !copyWarnings.isEmpty { return "\(name) was added, but some copies could not be installed" }
+        return compatibilityIssues.isEmpty
             ? "\(name) was added to Crest"
             : "\(name) was added with limited compatibility"
     }
 
     private var statusSymbolName: String {
-        compatibilityIssues.isEmpty
+        compatibilityIssues.isEmpty && copyWarnings.isEmpty
             ? "checkmark.circle.fill"
             : "exclamationmark.triangle.fill"
     }
 
     private var statusColor: Color {
-        compatibilityIssues.isEmpty ? .green : .orange
+        compatibilityIssues.isEmpty && copyWarnings.isEmpty ? .green : .orange
     }
 }

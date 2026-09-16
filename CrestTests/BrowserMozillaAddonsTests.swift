@@ -439,6 +439,36 @@ final class BrowserMozillaAddonsTests: XCTestCase {
         }
     }
 
+    func testLocalInstallReportsCommittedPrimaryWhenAnAdditionalSpaceIsUnavailable() async throws {
+        let fixture = try archiveFixture(permissions: ["storage"])
+        let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let source = root.appending(path: "extension.xpi")
+        try fixture.archiveData.write(to: source)
+        let registry = BrowserExtensionRegistry()
+        let pool = BrowserExtensionControllerPool(
+            packageStore: BrowserExtensionPackageStore(rootURL: root.appending(path: "Packages")), registry: registry)
+        let space = BrowserSession.preview.spaces[0]
+        pool.installationSpaces = { [space] }
+        let session = BrowserLocalExtensionInstallSession(space: space, extensionControllerPool: pool)
+        await session.prepare(from: .success([source]))
+        var review = BrowserExtensionInstallationPermissionPolicy.Review()
+        review.additionalSpaceIDs = [SpaceID()]
+        session.install(review: review)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while session.isInstalling && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertFalse(session.isInstalling)
+        XCTAssertNotNil(registry.installation(extensionID: fixture.extensionID.rawValue, in: space.id))
+        guard case .installed = session.phase else {
+            return XCTFail("The committed primary must have completion state, not a retry-install action")
+        }
+        XCTAssertFalse(session.installedCopyWarnings.isEmpty, "Destination failures must remain visible")
+        XCTAssertEqual(session.installedAdditionalSpaceCount, 0)
+    }
+
     func testDirectXPIIsReviewedAndInstalledAsALocalSpacePackage()
         async throws
     {

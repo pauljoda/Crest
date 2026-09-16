@@ -1393,6 +1393,14 @@
     "single-browser-window-after-setup": {
       "category": "fixed",
       "message": "Open a single browser window when finishing setup"
+    },
+    "revalidate-extension-access-during-pending-operations": {
+      "category": "fixed",
+      "message": "Honor changed extension permissions and locked Spaces during pending operations"
+    },
+    "report-partial-extension-installation-success": {
+      "category": "fixed",
+      "message": "Show successful extension installations when copies in other Spaces cannot be completed"
     }
   }
 }

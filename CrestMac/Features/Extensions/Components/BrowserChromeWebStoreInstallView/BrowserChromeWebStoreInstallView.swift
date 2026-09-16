@@ -48,7 +48,8 @@ struct BrowserChromeWebStoreInstallView: View {
                         spaceName: page.chromeWebStoreInstallSpaceName,
                         compatibilityIssues:
                             page.installedChromeWebStoreCompatibilityIssues,
-                        additionalSpaceCount: accessReview.additionalSpaceIDs.count
+                        additionalSpaceCount: page.installedChromeWebStoreAdditionalSpaceCount,
+                        copyWarnings: page.installedChromeWebStoreCopyWarnings
                     )
                 case .review(let candidate, let errorDescription):
                     BrowserChromeWebStoreReviewContent(

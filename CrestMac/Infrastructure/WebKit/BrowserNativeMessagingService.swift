@@ -85,6 +85,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
     private let notificationService: (any BrowserExtensionNotificationHandling)?
     private let idleStateProvider: (TimeInterval) -> BrowserExtensionSystemIdleState
     private let deliver: ([String: Any]) -> Void
+    private let authorizationDidEnd: () -> Void
     private var isStopped = false
     private var publish: ([String: Any]) -> Void {
         { [weak self] message in self?.publishIfAuthorized(message) }
@@ -124,8 +125,10 @@ final class BrowserExtensionCapabilityBrokerConnection {
         externalMessageService: (any BrowserExtensionExternalMessageHandling)? = nil,
         externalMessageEventMessage:
             @escaping (BrowserExtensionExternalMessageDelivery) -> [String: Any]? = { _ in nil },
+        authorizationDidEnd: @escaping () -> Void = {},
         publish: @escaping ([String: Any]) -> Void
     ) {
+        self.authorizationDidEnd = authorizationDidEnd
         self.authorization = authorization
         self.notificationService = notificationService
         self.idleStateProvider = idleStateProvider
@@ -249,6 +252,7 @@ final class BrowserExtensionCapabilityBrokerConnection {
         let isMenuEvent = (message["api"] as? String)?.hasPrefix("contextMenus.") == true
         guard permitted, !isMenuEvent || authorization.grants("contextMenus") else {
             stop()
+            authorizationDidEnd()
             return
         }
         deliver(message)
@@ -900,10 +904,14 @@ final class BrowserNativeMessagingService:
                 replyTimeout: replyTimeout,
                 receive: { value in
                     guard connection != nil else { return }
-                    replyHandler(value, nil)
                     let completedConnection = connection
                     connection = nil
                     completedConnection?.disconnect()
+                    guard authorization.grants("nativeMessaging") else {
+                        replyHandler(nil, BrowserExtensionCapabilityBrokerError.permissionDenied("nativeMessaging"))
+                        return
+                    }
+                    replyHandler(value, nil)
                 },
                 disconnect: { error in
                     guard connection != nil else { return }
@@ -953,6 +961,10 @@ final class BrowserNativeMessagingService:
                 debuggerEventMessage: debuggerEventMessage,
                 externalMessageService: externalMessageService,
                 externalMessageEventMessage: externalMessageEventMessage,
+                authorizationDidEnd: { [weak self, weak port] in
+                    self?.removeCapabilityConnection(for: key)
+                    if let port, !port.isDisconnected { port.disconnect() }
+                },
                 publish: { [weak port] message in
                     port?.sendMessage(message, completionHandler: nil)
                 }

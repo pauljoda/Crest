@@ -9,6 +9,8 @@ final class BrowserLocalExtensionInstallSession {
     var isChoosingPackage = false
     var isPresented = false
     private(set) var isInstalling = false
+    private(set) var installedAdditionalSpaceCount = 0
+    private(set) var installedCopyWarnings: [String] = []
     private(set) var phase: BrowserLocalExtensionInstallPhase = .unavailable
 
     @ObservationIgnored private let extensionControllerPool: BrowserExtensionControllerPool
@@ -81,9 +83,12 @@ final class BrowserLocalExtensionInstallSession {
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let summary =
-                    try await extensionControllerPool
-                    .installLocalExtension(candidate, in: space)
+                let completion = try await BrowserExtensionInstallationCompletion.perform(
+                    additionalSpaceCount: review.additionalSpaceIDs.count
+                ) { try await extensionControllerPool.installLocalExtension(candidate, in: space) }
+                let summary = completion.summary
+                installedAdditionalSpaceCount = completion.additionalSpaceCount
+                installedCopyWarnings = completion.copyWarnings
                 isInstalling = false
                 phase = .installed(
                     name: summary.displayName,

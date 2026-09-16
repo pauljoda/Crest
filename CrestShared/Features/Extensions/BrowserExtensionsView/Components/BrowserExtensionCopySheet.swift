@@ -10,6 +10,8 @@ struct BrowserExtensionCopySheet: View {
     @State private var failure: String?
 
     var body: some View {
+        let destinations = pool.copyDestinations(extensionID: summary.id, excluding: sourceSpace.id)
+        let eligibleSelection = selectedSpaces.intersection(Set(destinations.map(\.id)))
         VStack(alignment: .leading, spacing: CrestSpacing.large) {
             Text("Install a Copy in Other Spaces")
                 .font(.title2.bold())
@@ -22,7 +24,7 @@ struct BrowserExtensionCopySheet: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
             BrowserExtensionSpaceSelectionList(
-                spaces: pool.copyDestinations(extensionID: summary.id, excluding: sourceSpace.id),
+                spaces: destinations,
                 selection: $selectedSpaces
             )
             .disabled(isInstalling)
@@ -41,13 +43,13 @@ struct BrowserExtensionCopySheet: View {
                         defer { isInstalling = false }
                         do {
                             try await pool.copyExtension(
-                                extensionID: summary.id, from: sourceSpace.id, to: selectedSpaces)
+                                extensionID: summary.id, from: sourceSpace.id, to: eligibleSelection)
                             dismiss()
                         } catch { failure = error.localizedDescription }
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isInstalling || selectedSpaces.isEmpty)
+                .disabled(isInstalling || eligibleSelection.isEmpty)
             }
         }
         .padding(CrestSpacing.extraLarge)

@@ -775,6 +775,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         userActivityHandler = nil
     }
 
+    private(set) var installedChromeWebStoreAdditionalSpaceCount = 0
+    private(set) var installedChromeWebStoreCopyWarnings: [String] = []
+
     var isChromeWebStoreInstallPresented: Bool {
         chromeWebStoreInstallItem != nil
     }
@@ -806,11 +809,14 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         chromeWebStoreTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let summary = try await installChromeWebStoreExtension(
-                    candidate
-                )
+                let completion = try await BrowserExtensionInstallationCompletion.perform(
+                    additionalSpaceCount: review.additionalSpaceIDs.count
+                ) { try await installChromeWebStoreExtension(candidate) }
+                let summary = completion.summary
                 guard !Task.isCancelled else { return }
                 isInstallingChromeWebStoreExtension = false
+                installedChromeWebStoreAdditionalSpaceCount = completion.additionalSpaceCount
+                installedChromeWebStoreCopyWarnings = completion.copyWarnings
                 installedChromeWebStoreExtensionName = summary.displayName
                 installedChromeWebStoreCompatibilityIssues = candidate
                     .compatibility.issues.map(\.message)

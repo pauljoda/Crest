@@ -45,16 +45,10 @@ final class BrowserExtensionPermissionController {
         else {
             return .ask
         }
-        if installation.permissionSnapshot
-            .grantedHosts[hostPattern] != nil
-        {
-            return .allow
-        }
-        if installation.permissionSnapshot
-            .deniedHosts[hostPattern] != nil
-        {
-            return .block
-        }
+        let snapshot = installation.permissionSnapshot
+        let now = Date.now
+        if let expiration = snapshot.deniedHosts[hostPattern], expiration > now { return .block }
+        if let expiration = snapshot.grantedHosts[hostPattern], expiration > now { return .allow }
         return .ask
     }
 

@@ -3,8 +3,10 @@ import Foundation
 extension BrowserExtensionInstallationController {
     /// Copies package resources and consent, never the extension's website data.
     func copyExtension(
-        extensionID: String, from sourceSpace: SpaceID, to space: BrowserSpace
+        extensionID: String, from sourceSpace: SpaceID, to space: BrowserSpace,
+        validateAccess: () throws -> Void
     ) async throws -> BrowserExtensionSummary {
+        try validateAccess()
         guard sourceSpace != space.id,
             persistence.installation(extensionID: extensionID, in: space.id) == nil,
             let source = persistence.installation(extensionID: extensionID, in: sourceSpace)
@@ -30,17 +32,23 @@ extension BrowserExtensionInstallationController {
             installedAt: now, modifiedAt: now, sourceDisplayName: source.sourceDisplayName,
             iconData: source.iconData, hasOptionsPage: source.hasOptionsPage, hasSidebar: source.hasSidebar,
             hasCommands: source.hasCommands)
-        guard persistence.installation(extensionID: copy.id, in: space.id) == nil else {
+        do {
+            try validateAccess()
+            guard persistence.installation(extensionID: copy.id, in: space.id) == nil else {
+                throw BrowserExtensionControllerPoolError.invalidInstallationRecord
+            }
+        } catch {
             if let package { persistence.discard(package) }
-            throw BrowserExtensionControllerPoolError.invalidInstallationRecord
+            throw error
         }
         let lifecycle = prepareContextMenuInstallLifecycle(
             previous: nil, extensionID: copy.id, spaceID: space.id, requestedPermissions: copy.requestedPermissions)
         var didLoadContext = false
         do {
-            let context = try await runtime.loadInstallation(copy, in: space)
+            let context = try await runtime.loadInstallation(copy, in: space, validateAccess: validateAccess)
             didLoadContext = true
             _ = await runtime.prepareBackgroundForInitialContentScriptTraffic(context)
+            try validateAccess()
             guard persistence.upsert(copy) else {
                 throw BrowserExtensionControllerPoolError.invalidInstallationRecord
             }

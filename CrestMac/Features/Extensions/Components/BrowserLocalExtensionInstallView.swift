@@ -46,7 +46,8 @@ struct BrowserLocalExtensionInstallView: View {
                         name: name,
                         spaceName: session.space.name,
                         compatibilityIssues: compatibilityIssues,
-                        additionalSpaceCount: accessReview.additionalSpaceIDs.count
+                        additionalSpaceCount: session.installedAdditionalSpaceCount,
+                        copyWarnings: session.installedCopyWarnings
                     )
                 case .failed(let errorDescription):
                     BrowserExtensionInstallErrorContent(

@@ -186,6 +186,9 @@ final class BrowserExtensionDiscoveryModel {
                     )
             }
             discoveryItems.removeAll { $0.id == item.id }
+        } catch let partial as BrowserExtensionPartialInstallationError {
+            discoveryItems.removeAll { $0.id == item.id }
+            publishFailure(partial)
         } catch {
             publishFailure(error)
         }

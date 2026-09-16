@@ -94,10 +94,12 @@ final class BrowserExtensionDeclarativeNetRequestWatchTests: XCTestCase {
             let blocked = expectation(description: "Revoked event must not be delivered")
             blocked.isInverted = true
             var hasRevoked = false
+            var disconnectCount = 0
             let connection = BrowserExtensionCapabilityBrokerConnection(
                 authorization: .init(clientID: claude, permissionSnapshot: { snapshot }),
                 notificationService: nil, idleStateProvider: { _ in .active }, webpageMenuRegistry: .init(),
                 declarativeNetRequestService: store,
+                authorizationDidEnd: { disconnectCount += 1 },
                 publish: { _ in
                     if hasRevoked { blocked.fulfill() } else { delivered.fulfill() }
                 })
@@ -109,6 +111,7 @@ final class BrowserExtensionDeclarativeNetRequestWatchTests: XCTestCase {
             hasRevoked = true
             store.setRules([rule(id: 2)], ruleset: .session, for: claude, in: space)
             await fulfillment(of: [blocked], timeout: 0.2)
+            XCTAssertEqual(disconnectCount, 1)
             XCTAssertThrowsError(try connection.receive(["api": "dnr.watch"]))
         }
     }

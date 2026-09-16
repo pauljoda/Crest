@@ -3496,7 +3496,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             )
             context.setPermissionStatus(
                 .deniedExplicitly,
-                for: .tabs,
+                for: .activeTab,
                 expirationDate: .distantFuture
             )
             context.setPermissionStatus(
@@ -3534,7 +3534,7 @@ final class BrowserExtensionControllerPoolTests: XCTestCase {
             .grantedExplicitly
         )
         XCTAssertEqual(
-            restoredContext.permissionStatus(for: .tabs),
+            restoredContext.permissionStatus(for: .activeTab),
             .deniedExplicitly
         )
         XCTAssertEqual(

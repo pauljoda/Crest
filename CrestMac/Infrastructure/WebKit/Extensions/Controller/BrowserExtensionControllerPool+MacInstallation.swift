@@ -1,3 +1,5 @@
+import Foundation
+
 extension BrowserExtensionControllerPool {
     @discardableResult
     func installSafariWebExtension(
@@ -8,7 +10,8 @@ extension BrowserExtensionControllerPool {
             candidate,
             in: space
         )
-        try await copyExtension(extensionID: summary.id, from: space.id, to: candidate.accessReview.additionalSpaceIDs)
+        try await finishAdditionalInstallations(
+            summary: summary, in: space.id, destinations: candidate.accessReview.additionalSpaceIDs)
         return summary
     }
 
@@ -21,7 +24,8 @@ extension BrowserExtensionControllerPool {
             candidate,
             in: space
         )
-        try await copyExtension(extensionID: summary.id, from: space.id, to: candidate.accessReview.additionalSpaceIDs)
+        try await finishAdditionalInstallations(
+            summary: summary, in: space.id, destinations: candidate.accessReview.additionalSpaceIDs)
         return summary
     }
 
@@ -34,7 +38,8 @@ extension BrowserExtensionControllerPool {
             candidate,
             in: space
         )
-        try await copyExtension(extensionID: summary.id, from: space.id, to: candidate.accessReview.additionalSpaceIDs)
+        try await finishAdditionalInstallations(
+            summary: summary, in: space.id, destinations: candidate.accessReview.additionalSpaceIDs)
         return summary
     }
 
@@ -47,7 +52,23 @@ extension BrowserExtensionControllerPool {
             candidate,
             in: space
         )
-        try await copyExtension(extensionID: summary.id, from: space.id, to: candidate.accessReview.additionalSpaceIDs)
+        try await finishAdditionalInstallations(
+            summary: summary, in: space.id, destinations: candidate.accessReview.additionalSpaceIDs)
         return summary
     }
+
+    private func finishAdditionalInstallations(
+        summary: BrowserExtensionSummary, in source: SpaceID, destinations: Set<SpaceID>
+    ) async throws {
+        do {
+            try await copyExtension(extensionID: summary.id, from: source, to: destinations)
+        } catch {
+            let completedCount = destinations.filter {
+                $0 != source && persistenceController.installation(extensionID: summary.id, in: $0) != nil
+            }.count
+            throw BrowserExtensionPartialInstallationError(
+                summary: summary, additionalSpaceCount: completedCount, copyFailure: error.localizedDescription)
+        }
+    }
+
 }

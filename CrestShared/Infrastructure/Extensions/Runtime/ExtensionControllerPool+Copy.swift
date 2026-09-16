@@ -16,7 +16,12 @@ extension BrowserExtensionControllerPool {
         // Resolve again at execution time so a locked or deleted Space cannot
         // be accessed using a selection made while it was available.
         for id in spaceIDs {
-            guard let space = installationSpaces().first(where: { $0.id == id }), id != sourceSpace else {
+            let availableSpaces = installationSpaces()
+            guard availableSpaces.contains(where: { $0.id == sourceSpace }) else {
+                failures.append(String(localized: "Unlock the source Space before copying its extensions."))
+                break
+            }
+            guard let space = availableSpaces.first(where: { $0.id == id }), id != sourceSpace else {
                 failures.append(String(localized: "A selected Space is no longer available."))
                 continue
             }
@@ -24,7 +29,16 @@ extension BrowserExtensionControllerPool {
             if persistenceController.installation(extensionID: extensionID, in: id) != nil { continue }
             do {
                 _ = try await installationController.copyExtension(
-                    extensionID: extensionID, from: sourceSpace, to: space)
+                    extensionID: extensionID, from: sourceSpace, to: space,
+                    validateAccess: { [self] in
+                        try Task.checkCancellation()
+                        let available = installationSpaces()
+                        guard available.contains(where: { $0.id == sourceSpace }),
+                            available.contains(where: { $0.id == id })
+                        else {
+                            throw CopyFailure(details: String(localized: "A selected Space is no longer available."))
+                        }
+                    })
             } catch {
                 failures.append("\(space.name): \(error.localizedDescription)")
             }
