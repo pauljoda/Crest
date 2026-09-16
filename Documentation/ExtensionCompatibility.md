@@ -537,6 +537,71 @@ suspended worker, and a toolbar popover can disappear while a relayed request
 is still pending. Native authorization remains scoped to the installed
 extension and reviewed permissions, exactly as it is for a background worker.
 
+### Authenticated networking: Chrome target and system WebKit boundary
+
+Chrome compatibility is defined by the requesting document and its effective
+permissions, not by whether the document is displayed in a side panel. A side
+panel is not a grant to read every cookie in the browser. Direct cookie access
+through `chrome.cookies` requires the cookies permission and appropriate host
+access. Sending an eligible cookie on a request is a separate operation from
+exposing its value to JavaScript.
+
+The networking contract has three separate decisions:
+
+1. Whether the request may send credentials, including its credentials mode,
+   cookie attributes, partition, profile, and the user's cookie settings.
+2. Whether the initiator may read the response. Ordinary cross-origin requests
+   require CORS authorization; an extension's effective host grants can exempt
+   its own requests. A framed website does not inherit that CORS exemption.
+3. Whether script may read stored cookies. HttpOnly remains enforced, and
+   Chrome's extension network exception does not make Lax/Strict cookies
+   available through an embedded website's `document.cookie`.
+
+An extension can make ordinary credentialed CORS requests without a host grant.
+For example, a server can authorize an extension-origin request carrying an
+eligible SameSite=None cookie. Host grants additionally affect Chrome's
+SameSite network exception. Its website-frame exception depends on the
+extension's grants for both initiator and destination and their same-site
+relationship; same-site is not the same as same-origin. Redirect chains must
+retain the appropriate authorization instead of inheriting a blanket bypass
+from the first request. Partitioned cookies retain their partition identity.
+
+System WebKit does not expose a corresponding per-resource policy decision to
+the host application. Its resource-load delegate observes sent requests and
+redirects; it cannot authorize or rewrite each request before transmission.
+Its third-party-cookie relaxation setting is not the missing permission-scoped
+SameSite exception. A navigation's website-data-store override is also rejected
+for subframes, so a single WKWebView cannot use that API to put its extension
+document and embedded websites in different stores.
+
+These constraints distinguish native behavior from Crest's panel workaround:
+
+| Surface | Session and storage behavior |
+| --- | --- |
+| Native extension documents, popups, and authentication views | Use the owning Space's native store and WebKit's credential, CORS, and storage behavior. This does not imply Chrome's Lax/Strict network exception. |
+| Crest-hosted side panels | Use the isolated compatibility session described below. Ordinary direct API requests do not activate its cookie-copy path. |
+| Native extension APIs such as `chrome.storage.local` | Remain owned by the original extension context. This is distinct from DOM localStorage and IndexedDB in a panel's separate website-data store. |
+
+Restoring the native store for a panel would restore native cookie and DOM
+storage sharing, but would also remove the isolated session's authenticated
+frame workaround. It is not a transparent replacement for the current path.
+Likewise, moving a fetch into a background or helper document is not equivalent
+unless the original document's CSP, request and response semantics, permissions,
+redirect behavior, cancellation, and lifecycle remain enforced. A response that
+succeeds through a helper is not by itself evidence of Chrome compatibility.
+
+Any expansion must preserve Space/profile ownership and native identity checks,
+and compare both permitted and rejected requests against a pinned Chrome
+reference. Do not grant an extension an undeclared cookies permission, expose
+cookie values through a networking bridge, flatten partitions, or relax the
+browser's shared cookie attributes to make a panel authenticate.
+
+References: [Chrome cross-origin requests](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests),
+[Chrome cookie API permissions](https://developer.chrome.com/docs/extensions/reference/api/cookies),
+[Chromium request credential and SameSite policy](https://github.com/chromium/chromium/blob/main/services/network/url_loader_util.cc),
+[WebKit resource-load delegate](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/API/Cocoa/_WKResourceLoadDelegate.h),
+[WebKit navigation preference validation](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Cocoa/NavigationState.mm).
+
 ### Cookies for sites an extension frames
 
 Ordinary tabs, authentication views, native extension APIs and offscreen documents
