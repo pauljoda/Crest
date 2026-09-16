@@ -45,6 +45,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
     var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
+    var navigationHistory = BrowserPageNavigationHistory()
     private(set) var showsProcessFailure = false
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
@@ -414,6 +415,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         self.url = url
         appInitiatedURL = url
         prepareForNavigation(to: url)
+        navigationHistory = BrowserPageNavigationHistory()
         webView.interactionState = state
         guard webView.backForwardList.currentItem != nil else {
             pendingNavigationURL = nil
@@ -784,12 +786,16 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                     if let url = webView.url {
                         self?.translation.documentURLDidChange(from: self?.url, to: url)
                         self?.url = url
+                        self?.refreshNavigationState()
                     }
                     self?.credentialState.didChangeTopLevelURL(to: webView.url ?? self?.url)
                 }
             },
             webView.observe(\.title, options: [.initial, .new]) { [weak self] webView, _ in
-                Task { @MainActor in self?.recordObservedTitle(webView.title) }
+                Task { @MainActor in
+                    self?.recordObservedTitle(webView.title)
+                    self?.refreshNavigationState()
+                }
             },
             webView.observe(\.estimatedProgress, options: [.initial, .new]) { [weak self] webView, _ in
                 Task { @MainActor in self?.estimatedProgress = webView.estimatedProgress }
@@ -797,6 +803,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
             webView.observe(\.isLoading, options: [.initial, .new]) { [weak self] webView, _ in
                 Task { @MainActor in
                     self?.isLoading = webView.isLoading
+                    self?.refreshNavigationState()
                     if !webView.isLoading {
                         self?.pullToRefreshControl.endRefreshing()
                     }
@@ -813,10 +820,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
                 }
             },
             webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] webView, _ in
-                Task { @MainActor in self?.canGoBack = webView.canGoBack }
+                Task { @MainActor in self?.refreshNavigationState() }
             },
             webView.observe(\.canGoForward, options: [.initial, .new]) { [weak self] webView, _ in
-                Task { @MainActor in self?.canGoForward = webView.canGoForward }
+                Task { @MainActor in self?.refreshNavigationState() }
             },
         ]
     }
@@ -964,12 +971,18 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, Bro
         canGoBack = canReturnFromNavigationFailure || webView.canGoBack
     }
 
+    func refreshNavigationState() {
+        synchronizeNavigationHistory()
+        canGoBack = canReturnFromNavigationFailure || !navigationHistory.backItems.isEmpty || webView.canGoBack
+        canGoForward = !navigationHistory.forwardItems.isEmpty || webView.canGoForward
+    }
+
     func clearNavigationFailure(preservingPendingURL: Bool = false) {
         navigationFailure = nil
         if !preservingPendingURL {
             pendingNavigationURL = nil
         }
-        canGoBack = webView.canGoBack
+        refreshNavigationState()
     }
 
     private func receiveCredentialMessage(_ scriptMessage: WKScriptMessage) {

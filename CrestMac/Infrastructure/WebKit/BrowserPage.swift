@@ -45,6 +45,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?
     var pendingNavigationURL: URL?
+    var navigationHistory = BrowserPageNavigationHistory()
     var webContentFailureMessage: String?
     var isFindPresented: Bool { findSession.isPresented }
     var findQuery: String { findSession.query }
@@ -587,6 +588,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         guard !isAwaitingPopupNavigation, !wasOpenedAsPopup else { return false }
         appInitiatedURL = url
         prepareForNavigation(to: url)
+        navigationHistory = BrowserPageNavigationHistory()
         webView.interactionState = state
         guard webView.backForwardList.currentItem != nil else {
             pendingNavigationURL = nil
@@ -1364,12 +1366,18 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         navigationAction.targetFrame?.isMainFrame == true
     }
 
+    func refreshNavigationState() {
+        synchronizeNavigationHistory()
+        canGoBack = canReturnFromNavigationFailure || !navigationHistory.backItems.isEmpty || webView.canGoBack
+        canGoForward = !navigationHistory.forwardItems.isEmpty || webView.canGoForward
+    }
+
     func clearNavigationFailure(preservingPendingURL: Bool = false) {
         navigationFailure = nil
         if !preservingPendingURL {
             pendingNavigationURL = nil
         }
-        canGoBack = webView.canGoBack
+        refreshNavigationState()
     }
 
     private func presentPDFExportError(_ error: Error, in window: NSWindow) {
@@ -1391,16 +1399,24 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
     }
 
     private func observeWebViewState() {
-        webView.publisher(for: \.url, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated {
-                self?.translation.documentURLDidChange(from: self?.url, to: value)
-                self?.url = value
-                self?.credentialState.didChangeTopLevelURL(to: value)
+        webView.publisher(for: \.url, options: [.initial, .new]).sink { [weak self] _ in
+            // WebKit publishes URL before finishing its back-forward-list
+            // mutation. Read the settled URL and list together on the next turn.
+            Task { @MainActor in
+                guard let self else { return }
+                let value = self.webView.url
+                self.translation.documentURLDidChange(from: self.url, to: value)
+                self.url = value
+                self.refreshNavigationState()
+                self.credentialState.didChangeTopLevelURL(to: value)
             }
         }
         .store(in: &observations)
         webView.publisher(for: \.title, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.recordObservedTitle(value) }
+            MainActor.assumeIsolated {
+                self?.recordObservedTitle(value)
+                self?.refreshNavigationState()
+            }
         }
         .store(in: &observations)
         webView.publisher(for: \.estimatedProgress, options: [.initial, .new]).sink { [weak self] value in
@@ -1408,7 +1424,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         }
         .store(in: &observations)
         webView.publisher(for: \.isLoading, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.isLoading = value }
+            MainActor.assumeIsolated {
+                self?.isLoading = value
+                self?.refreshNavigationState()
+            }
         }
         .store(in: &observations)
         webView.publisher(for: \.hasOnlySecureContent, options: [.initial, .new]).sink { [weak self] value in
@@ -1420,11 +1439,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint, BrowserPa
         }
         .store(in: &observations)
         webView.publisher(for: \.canGoBack, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.canGoBack = value }
+            MainActor.assumeIsolated { self?.refreshNavigationState() }
         }
         .store(in: &observations)
         webView.publisher(for: \.canGoForward, options: [.initial, .new]).sink { [weak self] value in
-            MainActor.assumeIsolated { self?.canGoForward = value }
+            MainActor.assumeIsolated { self?.refreshNavigationState() }
         }
         .store(in: &observations)
     }

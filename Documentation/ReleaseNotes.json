@@ -1373,6 +1373,10 @@
     "bounded-missing-site-icon-requests": {
       "category": "fixed",
       "message": "Avoid repeated background requests and memory growth on pages without a site icon"
+    },
+    "consistent-in-page-navigation-history": {
+      "category": "fixed",
+      "message": "Keep the address bar and Back and Forward history in sync when following links within sites such as Reddit"
     }
   }
 }

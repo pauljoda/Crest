@@ -7,6 +7,97 @@ import XCTest
 final class BrowserPageNavigationMarkerTests: XCTestCase {
     private var navigationSource: WKWebView?
 
+    func testSameDocumentNavigationRetiresPendingURLAcrossHistoryTraversal() async throws {
+        let page = try makePage()
+        defer { page.prepareForSpaceDeletion() }
+        let root = try XCTUnwrap(URL(string: "https://history.crest.test/feed"))
+        let post = try XCTUnwrap(URL(string: "https://history.crest.test/post"))
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: root), responseHTML: "<html><title>Feed</title><body>Feed</body></html>")
+        try await waitForNavigation { page.completedNavigationCount == 1 }
+        let commits = page.committedNavigationCount
+
+        // A site may intercept an allowed link and finish it in the existing
+        // document. No didFinish callback will retire its pending destination.
+        page.prepareForNavigation(to: post)
+        _ = try await page.webView.evaluateJavaScript("history.pushState({}, '', '/post')")
+        try await waitForNavigation { page.url == post }
+        XCTAssertNil(page.pendingNavigationURL)
+        XCTAssertEqual(page.displayURL, post)
+        XCTAssertEqual(page.backHistory.map(\.url), page.webView.backForwardList.backList.reversed().map(\.url))
+
+        _ = try await page.webView.evaluateJavaScript("history.back()")
+        try await waitForNavigation { page.url == root }
+        XCTAssertEqual(page.displayURL, root)
+        XCTAssertEqual(page.committedNavigationCount, commits)
+
+        _ = try await page.webView.evaluateJavaScript("history.forward()")
+        try await waitForNavigation { page.url == post }
+        _ = try await page.webView.evaluateJavaScript("history.replaceState({}, '', '/updated-post')")
+        let replaced = try XCTUnwrap(URL(string: "https://history.crest.test/updated-post"))
+        try await waitForNavigation { page.url == replaced }
+        XCTAssertEqual(page.displayURL, replaced)
+        XCTAssertNil(page.pendingNavigationURL)
+    }
+
+    func testLinkHistoryRetainsSameDocumentEntriesAndDiscardsForwardBranch() async throws {
+        let page = try makePage()
+        defer { page.prepareForSpaceDeletion() }
+        let root = try XCTUnwrap(URL(string: "https://history.crest.test/root"))
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: root), responseHTML: "<html><title>History</title><body>History</body></html>")
+        try await waitForNavigation { page.completedNavigationCount == 1 }
+        let feed = try XCTUnwrap(URL(string: "https://history.crest.test/feed"))
+        let post = try XCTUnwrap(URL(string: "https://history.crest.test/post"))
+        for destination in [feed, post] {
+            page.navigationHistory.recordLink(to: destination, in: page.webView.backForwardList)
+            page.prepareForNavigation(to: destination)
+            _ = try await page.webView.evaluateJavaScript("history.pushState({}, '', '\(destination.path)')")
+            try await waitForNavigation { page.url == destination }
+        }
+        XCTAssertEqual(page.backHistory.map(\.url), [feed, root])
+        page.goBack()
+        try await waitForNavigation { page.url == feed }
+        XCTAssertEqual(page.displayURL, feed)
+        XCTAssertEqual(page.forwardHistory.map(\.url), [post])
+        page.goForward(toDepth: 1)
+        try await waitForNavigation { page.url == post }
+        page.goBack(toDepth: 2)
+        try await waitForNavigation { page.url == root }
+        XCTAssertEqual(page.forwardHistory.map(\.url), [feed, post])
+        page.goForward()
+        try await waitForNavigation { page.url == feed }
+
+        // Replacing the current entry must not create a duplicate. A new link
+        // after Back must discard the old forward branch, even for equal URLs.
+        _ = try await page.webView.evaluateJavaScript("history.replaceState({}, '', '/updated-feed')")
+        let updated = try XCTUnwrap(URL(string: "https://history.crest.test/updated-feed"))
+        try await waitForNavigation { page.url == updated }
+        XCTAssertEqual(page.backHistory.map(\.url), [root])
+        page.navigationHistory.recordLink(to: root, in: page.webView.backForwardList)
+        page.prepareForNavigation(to: root)
+        _ = try await page.webView.evaluateJavaScript("history.pushState({}, '', '/root')")
+        try await waitForNavigation { page.url == root }
+        XCTAssertEqual(page.backHistory.map(\.url), [updated, root])
+        XCTAssertTrue(page.forwardHistory.isEmpty)
+
+        // A replacement document returns ownership to WebKit's native list;
+        // supplemental same-document items must not become obsolete targets.
+        let replacement = try XCTUnwrap(URL(string: "https://history.crest.test/new-document"))
+        page.webView.loadSimulatedRequest(
+            URLRequest(url: replacement), responseHTML: "<html><body>New document</body></html>")
+        try await waitForNavigation { page.completedNavigationCount == 2 }
+        XCTAssertEqual(page.backHistory.map(\.url), page.webView.backForwardList.backList.reversed().map(\.url))
+    }
+
+    private func waitForNavigation(_ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(10)
+        while !condition(), Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertTrue(condition(), "The expected navigation did not settle.")
+    }
+
     func testLinkDraggingRemainsAvailableAcrossSameDocumentNavigation() async throws {
         let page = try makePage()
         defer { page.prepareForSpaceDeletion() }

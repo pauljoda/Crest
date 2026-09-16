@@ -41,6 +41,10 @@ extension BrowserPage: WKNavigationDelegate {
         mediaSessionCoordinator?.didCommitNavigation()
         pictureInPicture.navigationDidCommit()
         committedNavigationCount += 1
+        // Supplements belong to the current document. A document replacement
+        // can discard an item that WebKit omits from its public history lists.
+        navigationHistory = BrowserPageNavigationHistory()
+        refreshNavigationState()
         downloadCenter.resetAutomaticDownloadSequence(in: webView)
         Task { [weak self] in
             guard let self, self.extensionBaseURL == nil,
@@ -171,6 +175,9 @@ extension BrowserPage: WKNavigationDelegate {
             return
         }
         if navigationAction.targetFrame?.isMainFrame == true {
+            if navigationAction.navigationType == .linkActivated {
+                navigationHistory.recordLink(to: navigationAction.request.url, in: webView.backForwardList)
+            }
             prepareForNavigation(to: navigationAction.request.url)
         }
         decisionHandler(.allow)

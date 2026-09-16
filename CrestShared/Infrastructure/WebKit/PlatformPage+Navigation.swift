@@ -3,19 +3,29 @@ import WebKit
 
 extension BrowserPlatformPage {
     func goBack() {
+        refreshNavigationState()
         if navigationFailure != nil {
             returnFromNavigationFailure()
             return
         }
-        webView.goBack()
+        if let item = navigationHistory.backItems.last {
+            webView.go(to: item)
+        } else {
+            webView.goBack()
+        }
     }
 
     func goForward() {
-        webView.goForward()
+        refreshNavigationState()
+        if let item = navigationHistory.forwardItems.first {
+            webView.go(to: item)
+        } else {
+            webView.goForward()
+        }
     }
 
     var backHistory: [BrowserNavigationHistoryItem] {
-        webView.backForwardList.backList.reversed().enumerated().map { index, item in
+        navigationHistory.backItems.reversed().enumerated().map { index, item in
             BrowserNavigationHistoryItem(
                 depth: index + 1,
                 title: Self.navigationTitle(for: item),
@@ -25,7 +35,7 @@ extension BrowserPlatformPage {
     }
 
     var forwardHistory: [BrowserNavigationHistoryItem] {
-        webView.backForwardList.forwardList.enumerated().map { index, item in
+        navigationHistory.forwardItems.enumerated().map { index, item in
             BrowserNavigationHistoryItem(
                 depth: index + 1,
                 title: Self.navigationTitle(for: item),
@@ -35,7 +45,8 @@ extension BrowserPlatformPage {
     }
 
     func goBack(toDepth depth: Int) {
-        let items = webView.backForwardList.backList
+        refreshNavigationState()
+        let items = navigationHistory.backItems
         let index = items.count - depth
         guard items.indices.contains(index) else { return }
         clearNavigationFailure()
@@ -43,11 +54,24 @@ extension BrowserPlatformPage {
     }
 
     func goForward(toDepth depth: Int) {
-        let items = webView.backForwardList.forwardList
+        refreshNavigationState()
+        let items = navigationHistory.forwardItems
         let index = depth - 1
         guard items.indices.contains(index) else { return }
         clearNavigationFailure()
         webView.go(to: items[index])
+    }
+
+    /// Intercepted, same-document navigations have no didFinish callback.
+    /// Retire their pending destination once WebKit publishes that URL, and
+    /// publish history from the same observation path as the address bar.
+    func synchronizeNavigationHistory() {
+        if let pendingNavigationURL, webView.url == pendingNavigationURL,
+            webView.backForwardList.currentItem?.url == pendingNavigationURL
+        {
+            self.pendingNavigationURL = nil
+        }
+        navigationHistory.synchronize(with: webView.backForwardList)
     }
 
     func reload() {
